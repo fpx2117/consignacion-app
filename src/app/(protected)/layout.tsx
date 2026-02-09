@@ -2,6 +2,14 @@ import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
 import { SidebarDock } from "@/components/sidebar-dock";
 
+function normalizeBaseUrl(raw?: string) {
+  if (!raw) return "http://localhost:3000";
+  // Si ya tiene protocolo, ok
+  if (raw.startsWith("http://") || raw.startsWith("https://")) return raw;
+  // Si viene sin protocolo (caso Railway), asumimos https
+  return `https://${raw}`;
+}
+
 async function checkAuth() {
   const cookieStore = await cookies();
   const cookieHeader = cookieStore
@@ -9,7 +17,7 @@ async function checkAuth() {
     .map((c) => `${c.name}=${c.value}`)
     .join("; ");
 
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ?? "http://localhost:3000";
+  const baseUrl = normalizeBaseUrl(process.env.NEXT_PUBLIC_BASE_URL);
 
   try {
     const res = await fetch(`${baseUrl}/api/auth/me`, {
@@ -17,6 +25,7 @@ async function checkAuth() {
       cache: "no-store",
       headers: { cookie: cookieHeader },
     });
+
     return res.ok;
   } catch (error) {
     console.error("Error verificando auth:", error);
@@ -31,20 +40,11 @@ export default async function ProtectedLayout({
 }) {
   const ok = await checkAuth();
 
-  if (!ok) {
-    redirect("/login");
-  }
+  if (!ok) redirect("/login");
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Sidebar fijo (se convierte en Bottom Nav en móvil) */}
       <SidebarDock />
-
-      {/* CORRECCIÓN AQUÍ:
-         1. 'pb-24': Padding abajo en móvil para que el contenido no quede tapado por la barra de navegación.
-         2. 'md:pb-0': En desktop quitamos el padding de abajo.
-         3. 'md:ml-[84px]': El margen izquierdo SOLO se aplica en desktop (md en adelante).
-      */}
       <main className="min-h-screen p-4 pb-24 md:p-6 md:pb-6 md:ml-[84px]">
         {children}
       </main>
