@@ -1,8 +1,14 @@
+// src/app/x/[code]/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { hashCode } from "@/lib/share-links";
 
 export const dynamic = "force-dynamic";
+
+function status(state: "invalid" | "expired" | "limit") {
+  // ✅ relativo => mantiene dominio real (railway)
+  return NextResponse.redirect(`/x/status?state=${state}`);
+}
 
 export async function GET(
   req: NextRequest,
@@ -13,16 +19,21 @@ export async function GET(
 
   const link = await prisma.shareLink.findUnique({ where: { codeHash } });
 
-  if (!link) return NextResponse.redirect(new URL(`/x/status?state=invalid`, req.url));
+  if (!link) return status("invalid");
+  if (new Date() > link.expiresAt) return status("expired");
+  if (link.views >= link.maxViews) return status("limit");
 
-  if (new Date() > link.expiresAt) return NextResponse.redirect(new URL(`/x/status?state=expired`, req.url));
-
-  if (link.views >= link.maxViews) return NextResponse.redirect(new URL(`/x/status?state=limit`, req.url));
+  // ✅ Consumimos 1 vista ACÁ (único lugar)
+  await prisma.shareLink.update({
+    where: { codeHash },
+    data: { views: { increment: 1 }, lastViewedAt: new Date() },
+  });
 
   const dest =
     link.type === "TICKET"
       ? `/ver/ticket/${link.targetId}?code=${encodeURIComponent(code)}`
       : `/ver/remito/${link.targetId}?code=${encodeURIComponent(code)}`;
 
-  return NextResponse.redirect(new URL(dest, req.url));
+  // ✅ redirect relativo (sin new URL / req.url)
+  return NextResponse.redirect(dest);
 }

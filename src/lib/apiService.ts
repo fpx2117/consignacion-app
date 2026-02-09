@@ -68,28 +68,28 @@ async function apiRequest<T>(
 }
 
 function getPublicBaseUrl(): string {
-  // En el browser, usamos la URL "oficial" si está configurada.
-  // Si no, caemos a window.location.origin.
-  const envBase = process.env.NEXT_PUBLIC_APP_URL?.trim();
+  const raw =
+    process.env.NEXT_PUBLIC_BASE_URL?.trim() ||
+    process.env.NEXT_PUBLIC_APP_URL?.trim() ||
+    (typeof window !== "undefined" ? window.location.origin : "http://localhost:3000");
 
-  if (envBase && envBase.length > 0) return envBase.replace(/\/$/, "");
-  if (typeof window !== "undefined") return window.location.origin;
+  let base = raw.replace(/\/$/, "");
 
-  // fallback (no debería pasar porque estas funciones se llaman en client)
-  return "http://localhost:3000";
+  // ✅ si viene sin http/https, lo forzamos
+  if (!/^https?:\/\//i.test(base)) {
+    base = `https://${base}`;
+  }
+
+  return base;
 }
 
 function normalizeShareUrl(raw: string): string {
   const u = (raw ?? "").trim();
   if (!u) throw new Error("URL vacía");
 
-  // Si ya es absoluta, devolver tal cual
   if (u.startsWith("http://") || u.startsWith("https://")) return u;
-
-  // Si viene tipo "dominio.com/x/ABC" (sin protocolo), arreglarla
   if (/^[a-z0-9.-]+\.[a-z]{2,}\//i.test(u)) return `https://${u}`;
 
-  // Path relativo
   const path = u.startsWith("/") ? u : `/${u}`;
   return `${getPublicBaseUrl()}${path}`;
 }

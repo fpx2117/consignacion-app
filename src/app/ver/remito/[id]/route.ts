@@ -1,3 +1,4 @@
+// src/app/ver/remito/[id]/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import puppeteer from "puppeteer";
 import { verifyPdfToken } from "@/lib/crypto";
@@ -7,13 +8,14 @@ import { hashCode } from "@/lib/share-links";
 
 export const dynamic = "force-dynamic";
 
-function redirectStatus(req: NextRequest, state: "invalid" | "expired" | "limit") {
-  return NextResponse.redirect(new URL(`/x/status?state=${state}`, req.url));
+// ✅ Redirect RELATIVO: evita 0.0.0.0:8080
+function redirectStatus(state: "invalid" | "expired" | "limit") {
+  return NextResponse.redirect(`/x/status?state=${state}`);
 }
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> } // ✅ como exige tu Next
+  { params }: { params: Promise<{ id: string }> }
 ) {
   let browser: any = null;
 
@@ -31,6 +33,8 @@ export async function GET(
 
     // ---------------------------
     // ✅ Seguridad: code (sharelink) o token (legacy)
+    // ✅ IMPORTANTE: si elegiste "A" (views en /x),
+    //    acá SOLO validamos, NO incrementamos.
     // ---------------------------
     if (code) {
       const codeHash = hashCode(code);
@@ -39,16 +43,12 @@ export async function GET(
         where: { codeHash },
       });
 
-      if (!link) return redirectStatus(request, "invalid");
-      if (link.type !== "REMITO" || link.targetId !== id) return redirectStatus(request, "invalid");
-      if (new Date() > link.expiresAt) return redirectStatus(request, "expired");
-      if (link.views >= link.maxViews) return redirectStatus(request, "limit");
+      if (!link) return redirectStatus("invalid");
+      if (link.type !== "REMITO" || link.targetId !== id) return redirectStatus("invalid");
+      if (new Date() > link.expiresAt) return redirectStatus("expired");
+      if (link.views >= link.maxViews) return redirectStatus("limit");
 
-      // ✅ Consumimos 1 vista (en el PDF route)
-      await prisma.shareLink.update({
-        where: { codeHash },
-        data: { views: { increment: 1 }, lastViewedAt: new Date() },
-      });
+      // ✅ NO incrementar views acá
     } else {
       // fallback token (uso interno / legacy)
       if (!token || !verifyPdfToken(id, token)) {
@@ -99,6 +99,7 @@ export async function GET(
     const clienteNombre = (consignacion.cliente?.nombre || "Cliente")
       .replace(/\s+/g, "-")
       .replace(/[^a-z0-9\-]/gi, "");
+
     const folioFormateado = String((consignacion as any).numeroFolio ?? consignacion.id).padStart(4, "0");
     const fileName = `Remito-${clienteNombre}-${folioFormateado}.pdf`;
 
@@ -114,7 +115,6 @@ export async function GET(
     console.error("PDF REMITO ERROR:", error);
     return NextResponse.json({ error: "Error generando PDF" }, { status: 500 });
   } finally {
-    // ✅ evita procesos colgados
     try {
       if (browser) await browser.close();
     } catch {}
