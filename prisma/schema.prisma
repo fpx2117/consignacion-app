@@ -1,0 +1,229 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum RolUsuario {
+  ADMIN
+  EMPLEADO
+}
+
+enum NotificationType {
+  LOW_STOCK
+  OUT_OF_STOCK
+  SYSTEM
+}
+
+enum EstadoConsignacion {
+  ABIERTA
+  CERRADA
+}
+
+enum MetodoPago {
+  EFECTIVO
+  TRANSFERENCIA
+  TARJETA
+  OTRO
+}
+
+model Usuario {
+  id        Int        @id @default(autoincrement())
+  nombre    String
+  email     String     @unique
+  hash      String
+  rol       RolUsuario @default(EMPLEADO)
+  activo    Boolean    @default(true)
+  createdAt DateTime   @default(now())
+
+  @@index([rol])
+}
+
+model Cliente {
+  id        Int     @id @default(autoincrement())
+  nombre    String
+  telefono  String?
+  direccion String?
+  activo    Boolean @default(true)
+
+  /// saldo positivo = debe
+  saldoCuenta Decimal @default(0) @db.Decimal(10, 2)
+
+  createdAt DateTime @default(now())
+
+  consignaciones Consignacion[]
+  pagos          Pago[]
+  ventas         Venta[]
+}
+
+model Notification {
+  id Int @id @default(autoincrement())
+
+  type        NotificationType
+  title       String
+  description String
+
+  // Opcional: asociada a producto
+  productoId Int?
+  producto   Producto? @relation(fields: [productoId], references: [id], onDelete: SetNull)
+
+  // Estado
+  read Boolean @default(false)
+
+  // Evitar duplicados (ej: “Producto X sin stock” repetido 200 veces)
+  fingerprint String @unique
+
+  createdAt DateTime  @default(now())
+  readAt    DateTime?
+
+  @@index([read, createdAt])
+  @@index([type, createdAt])
+  @@index([productoId, createdAt])
+}
+
+model Producto {
+  id     Int    @id @default(autoincrement())
+  nombre String
+
+  precioVenta Decimal @db.Decimal(10, 2)
+  precioCosto Decimal @db.Decimal(10, 2)
+
+  stockDisponibleUnits Int @default(0)
+  stockConsignadoUnits Int @default(0)
+
+  packSizeUnits Int?
+
+  stockMinUnits Int @default(0) // 👈 NUEVO (0 = deshabilitado)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  consignacionDetalles ConsignacionDetalle[]
+  ventaDetalles        VentaDetalle[]
+
+  notifications Notification[] // 👈 inversa (opcional)
+}
+
+model Consignacion {
+  id Int @id @default(autoincrement())
+
+  /// Folio secuencial por cliente (ej: Pedro #1, Pedro #2)
+  numeroFolio       Int
+  porcentajeAumento Float @default(0)
+
+  clienteId Int
+  cliente   Cliente @relation(fields: [clienteId], references: [id], onDelete: Restrict)
+
+  fecha  DateTime           @default(now())
+  estado EstadoConsignacion @default(ABIERTA)
+
+  detalles      ConsignacionDetalle[]
+  liquidaciones Liquidacion[]
+
+  @@index([clienteId, fecha])
+  @@index([estado, fecha])
+  // Indexamos el folio para búsquedas rápidas si fuera necesario
+  @@index([clienteId, numeroFolio])
+}
+
+model ConsignacionDetalle {
+  id             Int          @id @default(autoincrement())
+  consignacionId Int
+  consignacion   Consignacion @relation(fields: [consignacionId], references: [id], onDelete: Cascade)
+
+  productoId     Int
+  producto       Producto @relation(fields: [productoId], references: [id], onDelete: Restrict)
+  precioUnitario Decimal  @default(0) @db.Decimal(10, 2)
+
+  /// TODO EN UNITS
+  unitsEntregadas    Int
+  unitsVendidasAcum  Int @default(0)
+  unitsDevueltasAcum Int @default(0)
+
+  /// Relación inversa requerida por LiquidacionItem.detalle
+  liquidacionItems LiquidacionItem[]
+
+  @@index([consignacionId])
+  @@index([productoId])
+}
+
+model Liquidacion {
+  id             Int          @id @default(autoincrement())
+  consignacionId Int
+  consignacion   Consignacion @relation(fields: [consignacionId], references: [id], onDelete: Cascade)
+
+  fecha DateTime @default(now())
+
+  items LiquidacionItem[]
+  venta Venta? // venta opcional asociada (si hubo unitsVendidas)
+
+  @@index([consignacionId, fecha])
+}
+
+model LiquidacionItem {
+  id            Int         @id @default(autoincrement())
+  liquidacionId Int
+  liquidacion   Liquidacion @relation(fields: [liquidacionId], references: [id], onDelete: Cascade)
+
+  consignacionDetalleId Int
+  detalle               ConsignacionDetalle @relation(fields: [consignacionDetalleId], references: [id], onDelete: Restrict)
+
+  /// TODO EN UNITS
+  unitsVendidas  Int @default(0)
+  unitsDevueltas Int @default(0)
+
+  /// snapshot del precio al liquidar
+  precioUnitario Decimal @db.Decimal(10, 2)
+
+  @@index([liquidacionId])
+  @@index([consignacionDetalleId])
+}
+
+model Venta {
+  id        Int     @id @default(autoincrement())
+  clienteId Int
+  cliente   Cliente @relation(fields: [clienteId], references: [id], onDelete: Restrict)
+
+  /// 1 venta opcional asociada a 1 liquidación
+  liquidacionId Int?         @unique
+  liquidacion   Liquidacion? @relation(fields: [liquidacionId], references: [id], onDelete: SetNull)
+
+  fecha DateTime @default(now())
+  total Decimal  @db.Decimal(10, 2)
+
+  detalles VentaDetalle[]
+
+  @@index([clienteId, fecha])
+}
+
+model VentaDetalle {
+  id      Int   @id @default(autoincrement())
+  ventaId Int
+  venta   Venta @relation(fields: [ventaId], references: [id], onDelete: Cascade)
+
+  productoId Int
+  producto   Producto @relation(fields: [productoId], references: [id], onDelete: Restrict)
+
+  /// TODO EN UNITS
+  units Int
+
+  precioUnitario Decimal @db.Decimal(10, 2)
+  subtotal       Decimal @db.Decimal(10, 2)
+
+  @@index([ventaId])
+  @@index([productoId])
+}
+
+model Pago {
+  id        Int     @id @default(autoincrement())
+  clienteId Int
+  cliente   Cliente @relation(fields: [clienteId], references: [id], onDelete: Restrict)
+
+  fecha  DateTime   @default(now())
+  monto  Decimal    @db.Decimal(10, 2)
+  metodo MetodoPago
+
+  @@index([clienteId, fecha])
+}

@@ -1,0 +1,117 @@
+"use client";
+
+import * as React from "react";
+import { Producto } from "@/lib/types";
+import { apiService } from "@/lib/apiService";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { ArrowUpCircle, ArrowDownCircle, Loader2 } from "lucide-react";
+
+interface Props {
+  producto: Producto;
+  onUpdated: () => void;
+  trigger: React.ReactNode;
+}
+
+export function AjustarStockDialog({ producto, onUpdated, trigger }: Props) {
+  const [open, setOpen] = React.useState(false);
+  const [cantidad, setCantidad] = React.useState<number>(0);
+  const [loading, setLoading] = React.useState(false);
+
+  async function handleAjuste(tipo: "suma" | "resta") {
+    if (cantidad <= 0) return;
+    setLoading(true);
+    
+    const nuevaCantidad = tipo === "suma" 
+      ? producto.stockDisponibleUnits + cantidad 
+      : producto.stockDisponibleUnits - cantidad;
+
+    try {
+      // Usamos el endpoint de actualización parcial o el de producto
+      await apiService.updateProducto(producto.id, {
+        ...producto,
+        stockDisponibleUnits: Math.max(0, nuevaCantidad),
+      });
+      onUpdated();
+      setOpen(false);
+      setCantidad(0);
+    } catch (e) {
+      alert("Error al ajustar el stock");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>{trigger}</DialogTrigger>
+      <DialogContent className="sm:max-w-[400px] border-border bg-card">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2 text-2xl font-black">
+            Ajustar Stock
+          </DialogTitle>
+          <p className="text-sm text-muted-foreground">
+            Producto: <span className="font-bold text-foreground">{producto.nombre}</span>
+          </p>
+        </DialogHeader>
+
+        <div className="py-6 space-y-6">
+          <div className="flex justify-around items-center bg-muted/30 p-4 rounded-xl border border-border/50">
+            <div className="text-center">
+              <p className="text-[10px] uppercase font-bold text-muted-foreground">Actual</p>
+              <p className="text-3xl font-black">{producto.stockDisponibleUnits}</p>
+            </div>
+            <div className="h-8 w-px bg-border" />
+            <div className="text-center">
+              <p className="text-[10px] uppercase font-bold text-muted-foreground">Nuevo</p>
+              <p className="text-3xl font-black text-primary">
+                {producto.stockDisponibleUnits + (cantidad || 0)}
+              </p>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="cantidad" className="font-bold">Cantidad a ajustar</Label>
+            <Input
+              id="cantidad"
+              type="number"
+              placeholder="Ej: 10"
+              value={cantidad || ""}
+              onChange={(e) => setCantidad(Number(e.target.value))}
+              className="text-lg h-12 text-center font-mono"
+            />
+          </div>
+        </div>
+
+        <DialogFooter className="grid grid-cols-2 gap-2 sm:gap-0">
+          <Button
+            variant="outline"
+            disabled={loading || cantidad <= 0}
+            onClick={() => handleAjuste("resta")}
+            className="h-12 border-red-500/20 hover:bg-red-500/10 hover:text-red-500 gap-2 font-bold"
+          >
+            <ArrowDownCircle className="h-5 w-5" />
+            Quitar
+          </Button>
+          <Button
+            disabled={loading || cantidad <= 0}
+            onClick={() => handleAjuste("suma")}
+            className="h-12 bg-emerald-600 hover:bg-emerald-700 text-white gap-2 font-bold"
+          >
+            {loading ? <Loader2 className="animate-spin" /> : <ArrowUpCircle className="h-5 w-5" />}
+            Agregar
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
