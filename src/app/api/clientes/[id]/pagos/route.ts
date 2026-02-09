@@ -3,11 +3,19 @@ import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/requireAuth";
 import { createPagoSchema } from "@/lib/validators/cliente";
 
-export async function POST(req: Request, { params }: { params: { id: string } }) {
+// Definimos la interfaz para Next.js 15+
+interface RouteContext {
+  params: Promise<{ id: string }>;
+}
+
+export async function POST(req: Request, { params }: RouteContext) {
   const auth = await requireAuth();
   if (!auth.ok) return auth.res;
 
-  const clienteId = Number(params.id);
+  // Resolvemos los params de forma asíncrona
+  const { id: rawId } = await params;
+  const clienteId = Number(rawId);
+  
   if (!Number.isFinite(clienteId)) {
     return NextResponse.json({ error: "ID inválido" }, { status: 400 });
   }

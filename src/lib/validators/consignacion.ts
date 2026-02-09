@@ -7,7 +7,6 @@ export const consignacionItemSchema = z.object({
 
 export const createConsignacionSchema = z.object({
   clienteId: z.number(),
-  // Agregamos esto:
   porcentajeAumento: z.number().min(0).default(0).optional(), 
   items: z.array(z.object({
     productoId: z.number(),
@@ -21,6 +20,8 @@ export const liquidacionItemSchema = z.object({
   unitsDevueltas: z.coerce.number().int().nonnegative().default(0),
 });
 
+// 👇 AQUÍ ESTABA EL ERROR: Faltaba consignacionId
 export const createLiquidacionSchema = z.object({
+  consignacionId: z.number().int().positive(), // <--- Agregado esto
   items: z.array(liquidacionItemSchema).min(1),
 });

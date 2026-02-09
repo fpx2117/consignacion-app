@@ -1,3 +1,4 @@
+import { Suspense } from "react"; // 👈 Importamos esto
 import { LoginForm } from "@/components/login-form";
 
 export default function LoginPage() {
@@ -11,7 +12,11 @@ export default function LoginPage() {
 
       {/* Wrapper */}
       <div className="w-full max-w-md">
-        <LoginForm />
+        
+        {/* 👇 Envolvemos el LoginForm en Suspense para evitar el error de prerenderizado */}
+        <Suspense fallback={<div className="text-center">Cargando formulario...</div>}>
+          <LoginForm />
+        </Suspense>
 
         {/* Footer */}
         <p className="mt-6 text-center text-xs text-muted-foreground">

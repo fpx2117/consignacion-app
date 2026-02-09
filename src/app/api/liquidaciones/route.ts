@@ -4,201 +4,98 @@ import { requireAuth } from "@/lib/requireAuth";
 import { createLiquidacionSchema } from "@/lib/validators/consignacion";
 import { notifyStockIfNeeded } from "@/lib/notifyStock";
 
-type RouteParams = { params: Promise<{ id: string }> };
-
-/**
- * GET /api/liquidaciones/:id
- */
-export async function GET(_: Request, { params }: RouteParams) {
+// ------------------------------------------------------------------
+// GET /api/liquidaciones
+// Lista todas las liquidaciones o filtra por clienteId.
+// NOTA: No recibe 'params' porque no es una ruta dinámica [id].
+// ------------------------------------------------------------------
+export async function GET(req: Request) {
   const auth = await requireAuth();
   if (!auth.ok) return auth.res;
 
-  const { id: rawId } = await params;
-  const id = Number(rawId);
+  // Obtenemos parámetros de la URL (query string)
+  const { searchParams } = new URL(req.url);
+  const clienteId = searchParams.get("clienteId");
 
-  if (!Number.isFinite(id)) {
-    return NextResponse.json({ error: "ID inválido" }, { status: 400 });
-  }
+  try {
+    const where = clienteId ? { consignacion: { clienteId: Number(clienteId) } } : {};
 
-  const liquidacion = await prisma.liquidacion.findUnique({
-    where: { id },
-    include: {
-      consignacion: {
-        include: {
-          cliente: true,
-          detalles: { include: { producto: true } },
+    const liquidaciones = await prisma.liquidacion.findMany({
+      where,
+      take: 50,
+      orderBy: { fecha: "desc" },
+      include: {
+        consignacion: {
+          include: {
+            cliente: { select: { nombre: true } },
+          },
         },
+        items: true,
+        venta: true,
       },
-      items: {
-        include: {
-          detalle: { include: { producto: true } },
-        },
-      },
-      venta: { include: { detalles: true } },
-    },
-  });
+    });
 
-  if (!liquidacion) {
-    return NextResponse.json({ error: "No encontrada" }, { status: 404 });
+    return NextResponse.json({ data: liquidaciones });
+  } catch (error) {
+    return NextResponse.json({ error: "Error al listar liquidaciones" }, { status: 500 });
   }
-
-  return NextResponse.json({ data: liquidacion });
 }
 
-/**
- * PUT /api/liquidaciones/:id
- * Corrige una liquidación existente.
- */
-export async function PUT(req: Request, { params }: RouteParams) {
+// ------------------------------------------------------------------
+// POST /api/liquidaciones
+// Crea una nueva liquidación.
+// NOTA: No recibe 'params'.
+// ------------------------------------------------------------------
+export async function POST(req: Request) {
   const auth = await requireAuth();
   if (!auth.ok) return auth.res;
-
-  const { id: rawId } = await params;
-  const liquidacionId = Number(rawId);
-
-  if (!Number.isFinite(liquidacionId)) {
-    return NextResponse.json({ error: "ID inválido" }, { status: 400 });
-  }
 
   const body = await req.json().catch(() => null);
   const parsed = createLiquidacionSchema.safeParse(body);
 
   if (!parsed.success) {
     return NextResponse.json(
-      { error: "Validación fallida", details: parsed.error.flatten() },
+      { error: "Datos inválidos", details: parsed.error.flatten() },
       { status: 400 }
     );
   }
 
+  const { consignacionId, items } = parsed.data;
   const affectedProductIds = new Set<number>();
 
   try {
     const result = await prisma.$transaction(async (tx) => {
-      // 0) Traer liquidación actual completa
-      const current = await tx.liquidacion.findUnique({
-        where: { id: liquidacionId },
-        include: {
-          items: { include: { detalle: { include: { producto: true } } } },
-          consignacion: {
-            include: {
-              cliente: true,
-              detalles: { include: { producto: true } },
-            },
-          },
-          venta: { include: { detalles: true } },
-        },
+      // 1. Verificar consignación
+      const consignacion = await tx.consignacion.findUnique({
+        where: { id: consignacionId },
+        include: { detalles: { include: { producto: true } } },
       });
 
-      if (!current) throw new Error("LIQUIDACION_NO_EXISTE");
+      if (!consignacion) throw new Error("Consignación no encontrada");
+      if (consignacion.estado === "CERRADA") throw new Error("La consignación ya está cerrada");
 
-      const consignacionId = current.consignacionId;
-
-      // 1) Revertir impactos anteriores
-      for (const it of current.items) {
-        const det = it.detalle;
-
-        const vendidasPrev = it.unitsVendidas ?? 0;
-        const devueltasPrev = it.unitsDevueltas ?? 0;
-
-        await tx.consignacionDetalle.update({
-          where: { id: det.id },
-          data: {
-            unitsVendidasAcum: { decrement: vendidasPrev },
-            unitsDevueltasAcum: { decrement: devueltasPrev },
-          },
-        });
-
-        await tx.producto.update({
-          where: { id: det.productoId },
-          data: {
-            stockConsignadoUnits: { increment: vendidasPrev + devueltasPrev },
-            ...(devueltasPrev > 0 ? { stockDisponibleUnits: { decrement: devueltasPrev } } : {}),
-          },
-        });
-
-        affectedProductIds.add(det.productoId);
-      }
-
-      // Revertir venta y saldo
-      if (current.venta) {
-        const totalPrev = Number(current.venta.total);
-
-        await tx.ventaDetalle
-          .deleteMany({ where: { ventaId: current.venta.id } })
-          .catch(() => null);
-
-        await tx.venta.delete({ where: { id: current.venta.id } });
-
-        await tx.cliente.update({
-          where: { id: current.consignacion.clienteId },
-          data: { saldoCuenta: { decrement: totalPrev } },
-        });
-      }
-
-      // 2) Validar nuevos items contra pendiente REAL (leyendo DB)
-      const consignacion = current.consignacion;
       const detallesMap = new Map(consignacion.detalles.map((d) => [d.id, d]));
-
       let totalVenta = 0;
       const soldByProduct = new Map<number, { units: number; precioUnitario: number }>();
 
-      for (const it of parsed.data.items) {
-        const det = detallesMap.get(it.consignacionDetalleId);
-        if (!det) throw new Error("DETALLE_NO_PERTENECE");
+      const liquidacionItemsData = [];
 
-        const vendidas = it.unitsVendidas ?? 0;
-        const devueltas = it.unitsDevueltas ?? 0;
+      // 2. Procesar items y validar stock
+      for (const item of items) {
+        const det = detallesMap.get(item.consignacionDetalleId);
+        if (!det) throw new Error(`Detalle ID ${item.consignacionDetalleId} no pertenece a esta consignación`);
 
-        if (vendidas === 0 && devueltas === 0) throw new Error("ITEM_VACIO");
+        const vendidas = item.unitsVendidas ?? 0;
+        const devueltas = item.unitsDevueltas ?? 0;
 
-        // ✅ pendiente REAL (después de la reversión)
-        const freshDet = await tx.consignacionDetalle.findUniqueOrThrow({
-          where: { id: det.id },
-        });
-
-        const pendiente =
-          freshDet.unitsEntregadas - freshDet.unitsVendidasAcum - freshDet.unitsDevueltasAcum;
-
+        const pendiente = det.unitsEntregadas - det.unitsVendidasAcum - det.unitsDevueltasAcum;
         if (vendidas + devueltas > pendiente) {
-          throw new Error(`EXCEDE_PENDIENTE:${det.id}`);
-        }
-
-        const precioUnit = Number(det.producto.precioVenta);
-        if (vendidas > 0) {
-          totalVenta += vendidas * precioUnit;
-
-          const prev = soldByProduct.get(det.productoId);
-          soldByProduct.set(det.productoId, {
-            units: (prev?.units ?? 0) + vendidas,
-            precioUnitario: precioUnit,
-          });
+          throw new Error(`Excede stock pendiente en producto: ${det.producto.nombre}`);
         }
 
         affectedProductIds.add(det.productoId);
-      }
 
-      // 3) Reemplazar items
-      await tx.liquidacionItem.deleteMany({ where: { liquidacionId } });
-
-      await tx.liquidacionItem.createMany({
-        data: parsed.data.items.map((it) => {
-          const det = detallesMap.get(it.consignacionDetalleId)!;
-          return {
-            liquidacionId,
-            consignacionDetalleId: it.consignacionDetalleId,
-            unitsVendidas: it.unitsVendidas ?? 0,
-            unitsDevueltas: it.unitsDevueltas ?? 0,
-            precioUnitario: det.producto.precioVenta,
-          };
-        }),
-      });
-
-      // 4) Aplicar impactos nuevos
-      for (const it of parsed.data.items) {
-        const det = detallesMap.get(it.consignacionDetalleId)!;
-        const vendidas = it.unitsVendidas ?? 0;
-        const devueltas = it.unitsDevueltas ?? 0;
-
+        // Actualizar acumulados en detalle
         await tx.consignacionDetalle.update({
           where: { id: det.id },
           data: {
@@ -207,6 +104,7 @@ export async function PUT(req: Request, { params }: RouteParams) {
           },
         });
 
+        // Actualizar Stock Producto
         await tx.producto.update({
           where: { id: det.productoId },
           data: {
@@ -214,26 +112,49 @@ export async function PUT(req: Request, { params }: RouteParams) {
             ...(devueltas > 0 ? { stockDisponibleUnits: { increment: devueltas } } : {}),
           },
         });
+
+        const precioUnit = Number(det.producto.precioVenta);
+        liquidacionItemsData.push({
+          consignacionDetalleId: det.id,
+          unitsVendidas: vendidas,
+          unitsDevueltas: devueltas,
+          precioUnitario: precioUnit, // Snapshot del precio
+        });
+
+        if (vendidas > 0) {
+          totalVenta += vendidas * precioUnit;
+          const prev = soldByProduct.get(det.productoId);
+          soldByProduct.set(det.productoId, {
+            units: (prev?.units ?? 0) + vendidas,
+            precioUnitario: precioUnit,
+          });
+        }
       }
 
-      // 5) Re-crear venta si corresponde
-      let venta = null;
+      // 3. Crear Liquidación
+      const nuevaLiquidacion = await tx.liquidacion.create({
+        data: {
+          consignacionId,
+          items: { create: liquidacionItemsData },
+        },
+      });
+
+      // 4. Generar Venta y Saldo (si hubo ventas)
       if (totalVenta > 0) {
-        venta = await tx.venta.create({
+        await tx.venta.create({
           data: {
             clienteId: consignacion.clienteId,
-            liquidacionId,
+            liquidacionId: nuevaLiquidacion.id,
             total: totalVenta,
             detalles: {
-              create: Array.from(soldByProduct.entries()).map(([productoId, info]) => ({
-                productoId,
+              create: Array.from(soldByProduct.entries()).map(([prodId, info]) => ({
+                productoId: Number(prodId),
                 units: info.units,
                 precioUnitario: info.precioUnitario,
                 subtotal: info.units * info.precioUnitario,
               })),
             },
           },
-          include: { detalles: true },
         });
 
         await tx.cliente.update({
@@ -242,69 +163,33 @@ export async function PUT(req: Request, { params }: RouteParams) {
         });
       }
 
-      // 6) Recalcular cierre
-      const detallesFinales = await tx.consignacionDetalle.findMany({
+      // 5. Verificar si se cierra la consignación
+      const estadoActualizado = await tx.consignacionDetalle.findMany({
         where: { consignacionId },
       });
-
-      const quedaPendiente = detallesFinales.some(
-        (d) => d.unitsEntregadas - d.unitsVendidasAcum - d.unitsDevueltasAcum > 0
+      
+      const todoLiquidado = estadoActualizado.every(
+        (d) => d.unitsEntregadas - d.unitsVendidasAcum - d.unitsDevueltasAcum <= 0
       );
 
-      await tx.consignacion.update({
-        where: { id: consignacionId },
-        data: { estado: quedaPendiente ? "ABIERTA" : "CERRADA" },
-      });
+      if (todoLiquidado) {
+        await tx.consignacion.update({
+          where: { id: consignacionId },
+          data: { estado: "CERRADA" },
+        });
+      }
 
-      // 7) devolver liquidación actualizada (con includes)
-      const updated = await tx.liquidacion.findUnique({
-        where: { id: liquidacionId },
-        include: {
-          items: { include: { detalle: { include: { producto: true } } } },
-          venta: { include: { detalles: true } },
-          consignacion: {
-            include: {
-              cliente: true,
-              detalles: { include: { producto: true } },
-            },
-          },
-        },
-      });
-
-      return {
-        liquidacion: updated,
-        venta,
-        totalVenta,
-        consignacionCerrada: !quedaPendiente,
-      };
+      return nuevaLiquidacion;
     });
 
-    // fuera de transacción: notificar stock
+    // Notificaciones fuera de transacción
     for (const pid of affectedProductIds) {
       await notifyStockIfNeeded(pid);
     }
 
-    return NextResponse.json({ data: result }, { status: 200 });
+    return NextResponse.json({ data: result }, { status: 201 });
+
   } catch (e: any) {
-    const msg = String(e?.message || "");
-
-    if (msg === "LIQUIDACION_NO_EXISTE") {
-      return NextResponse.json({ error: "Liquidación no existe" }, { status: 404 });
-    }
-    if (msg === "DETALLE_NO_PERTENECE") {
-      return NextResponse.json({ error: "Detalle no pertenece a la consignación" }, { status: 400 });
-    }
-    if (msg === "ITEM_VACIO") {
-      return NextResponse.json({ error: "Cada item debe tener vendidas o devueltas" }, { status: 400 });
-    }
-    if (msg.startsWith("EXCEDE_PENDIENTE:")) {
-      return NextResponse.json(
-        { error: "Vendidas + devueltas excede lo pendiente", detalleId: Number(msg.split(":")[1]) },
-        { status: 409 }
-      );
-    }
-
-    console.error("Liquidaciones PUT error:", e);
-    return NextResponse.json({ error: "Error inesperado" }, { status: 500 });
+    return NextResponse.json({ error: e.message || "Error procesando liquidación" }, { status: 400 });
   }
 }

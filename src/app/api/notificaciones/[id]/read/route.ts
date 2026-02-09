@@ -1,12 +1,23 @@
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 
+// Interfaz para cumplir con Next.js 15+
+interface RouteContext {
+  params: Promise<{ id: string }>;
+}
+
 export async function PATCH(
   req: Request,
-  { params }: { params: { id: string } }
+  { params }: RouteContext
 ) {
   try {
-    const id = Number(params.id);
+    // Resolvemos la promesa de params
+    const { id: rawId } = await params;
+    const id = Number(rawId);
+
+    if (isNaN(id)) {
+      return NextResponse.json({ error: "ID inválido" }, { status: 400 });
+    }
 
     const notification = await prisma.notification.update({
       where: { id },
@@ -18,6 +29,7 @@ export async function PATCH(
 
     return NextResponse.json({ success: true, notification });
   } catch (error) {
+    console.error("Error al marcar notificación:", error);
     return NextResponse.json(
       { error: "Notification not found" },
       { status: 404 }
