@@ -3,14 +3,10 @@ import { prisma } from "@/lib/prisma";
 import { decryptCode, encryptCode, generateShortCode, hashCode } from "@/lib/share-links";
 
 export const dynamic = "force-dynamic";
-
-function wantsJson(req: NextRequest) {
-  const accept = req.headers.get("accept") || "";
-  return accept.includes("application/json");
-}
+export const runtime = "nodejs";
 
 export async function GET(
-  req: NextRequest,
+  _req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id: idParam } = await params;
@@ -24,7 +20,9 @@ export async function GET(
   const maxViews = 3;
 
   const venta = await prisma.venta.findUnique({ where: { id } });
-  if (!venta) return NextResponse.json({ error: "Venta no encontrada" }, { status: 404 });
+  if (!venta) {
+    return NextResponse.json({ error: "Venta no encontrada" }, { status: 404 });
+  }
 
   const now = new Date();
 
@@ -77,9 +75,6 @@ export async function GET(
     }
   }
 
-  const url = `/x/${code}`;
-
-  // ✅ dual mode
-  if (wantsJson(req)) return NextResponse.json({ url });
-  return NextResponse.redirect(new URL(url, req.url));
+  // ✅ SIEMPRE JSON (sin redirects)
+  return NextResponse.json({ url: `/x/${code}` });
 }

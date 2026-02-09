@@ -3,14 +3,10 @@ import { prisma } from "@/lib/prisma";
 import { decryptCode, encryptCode, generateShortCode, hashCode } from "@/lib/share-links";
 
 export const dynamic = "force-dynamic";
-
-function wantsJson(req: NextRequest) {
-  const accept = req.headers.get("accept") || "";
-  return accept.includes("application/json");
-}
+export const runtime = "nodejs";
 
 export async function GET(
-  req: NextRequest,
+  _req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id: idParam } = await params;
@@ -30,6 +26,7 @@ export async function GET(
 
   const now = new Date();
 
+  // ✅ Reutilizar link activo
   const existing = await prisma.shareLink.findFirst({
     where: {
       type: "REMITO",
@@ -78,8 +75,6 @@ export async function GET(
     }
   }
 
-  const url = `/x/${code}`;
-
-  if (wantsJson(req)) return NextResponse.json({ url });
-  return NextResponse.redirect(new URL(url, req.url));
+  // ✅ SIEMPRE JSON (sin redirects)
+  return NextResponse.json({ url: `/x/${code}` });
 }

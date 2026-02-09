@@ -1,4 +1,3 @@
-// src/app/ver/remito/[id]/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import puppeteer from "puppeteer";
 import { verifyPdfToken } from "@/lib/crypto";
@@ -7,10 +6,25 @@ import { prisma } from "@/lib/prisma";
 import { hashCode } from "@/lib/share-links";
 
 export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
 
-// ✅ Redirect RELATIVO: evita 0.0.0.0:8080
-function redirectStatus(state: "invalid" | "expired" | "limit") {
-  return NextResponse.redirect(`/x/status?state=${state}`);
+function getPublicOrigin(req: NextRequest): string {
+  const xfProto = req.headers.get("x-forwarded-proto");
+  const xfHost = req.headers.get("x-forwarded-host");
+  const host = xfHost || req.headers.get("host");
+
+  if (host) {
+    const proto = xfProto || "https";
+    return `${proto}://${host}`;
+  }
+
+  const envBase = process.env.NEXT_PUBLIC_APP_URL?.trim() || "http://localhost:3000";
+  if (envBase.startsWith("http://") || envBase.startsWith("https://")) return envBase.replace(/\/$/, "");
+  return `https://${envBase.replace(/\/$/, "")}`;
+}
+
+function redirectStatus(req: NextRequest, state: "invalid" | "expired" | "limit") {
+  return NextResponse.redirect(new URL(`/x/status?state=${state}`, getPublicOrigin(req)));
 }
 
 export async function GET(
@@ -31,58 +45,35 @@ export async function GET(
     const code = searchParams.get("code");
     const token = searchParams.get("token");
 
-    // ---------------------------
-    // ✅ Seguridad: code (sharelink) o token (legacy)
-    // ✅ IMPORTANTE: si elegiste "A" (views en /x),
-    //    acá SOLO validamos, NO incrementamos.
-    // ---------------------------
     if (code) {
       const codeHash = hashCode(code);
+      const link = await prisma.shareLink.findUnique({ where: { codeHash } });
 
-      const link = await prisma.shareLink.findUnique({
-        where: { codeHash },
-      });
-
-      if (!link) return redirectStatus("invalid");
-      if (link.type !== "REMITO" || link.targetId !== id) return redirectStatus("invalid");
-      if (new Date() > link.expiresAt) return redirectStatus("expired");
-      if (link.views >= link.maxViews) return redirectStatus("limit");
-
-      // ✅ NO incrementar views acá
+      if (!link) return redirectStatus(request, "invalid");
+      if (link.type !== "REMITO" || link.targetId !== id) return redirectStatus(request, "invalid");
+      if (new Date() > link.expiresAt) return redirectStatus(request, "expired");
+      if (link.views >= link.maxViews) return redirectStatus(request, "limit");
+      // ✅ NO incrementar views acá (ya se hace en /x)
     } else {
-      // fallback token (uso interno / legacy)
       if (!token || !verifyPdfToken(id, token)) {
         return NextResponse.json({ error: "No autorizado" }, { status: 403 });
       }
     }
 
-    // ---------------------------
-    // Prisma fetch
-    // ---------------------------
     const consignacion = await prisma.consignacion.findUnique({
       where: { id },
-      include: {
-        cliente: true,
-        detalles: { include: { producto: true } },
-      },
+      include: { cliente: true, detalles: { include: { producto: true } } },
     });
 
-    if (!consignacion) {
-      return NextResponse.json({ error: "No encontrada" }, { status: 404 });
-    }
+    if (!consignacion) return NextResponse.json({ error: "No encontrada" }, { status: 404 });
 
-    // ---------------------------
-    // PDF con Puppeteer
-    // ---------------------------
     browser = await puppeteer.launch({
       headless: true,
       args: ["--no-sandbox", "--disable-setuid-sandbox"],
     });
 
     const page = await browser.newPage();
-    const htmlContent = buildConsignacionHtml(consignacion as any);
-
-    await page.setContent(htmlContent, {
+    await page.setContent(buildConsignacionHtml(consignacion as any), {
       waitUntil: "networkidle0",
       timeout: 30000,
     });
