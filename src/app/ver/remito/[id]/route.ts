@@ -1,5 +1,3 @@
-
-//src/app/ver/remito/[id]/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import puppeteer from "puppeteer";
 import { verifyPdfToken } from "@/lib/crypto";
@@ -10,11 +8,13 @@ export const dynamic = "force-dynamic";
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } } // ✅ NO Promise
+  { params }: { params: Promise<{ id: string }> } // ✅ como exige tu Next
 ) {
   try {
-    const id = Number(params.id);
-    if (!Number.isFinite(id)) {
+    const { id: idParam } = await params;
+    const id = Number(idParam);
+
+    if (!Number.isFinite(id) || id <= 0) {
       return NextResponse.json({ error: "ID inválido" }, { status: 400 });
     }
 
