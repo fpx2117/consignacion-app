@@ -192,21 +192,34 @@ export const apiService = {
   },
 
   async getConsignacionPdfUrl(id: number): Promise<string> {
+  if (typeof window === "undefined") {
+    throw new Error("getConsignacionPdfUrl debe ejecutarse en el cliente (window no disponible)");
+  }
+
   const res = await fetch(`/api/consignaciones/${id}/remito-link`, { cache: "no-store" });
   if (!res.ok) throw new Error("No se pudo generar el link del remito");
 
-  const data = await res.json();
-  return `${window.location.origin}${data.url}`;
+  const data: { url?: string } = await res.json();
+  if (!data?.url) throw new Error("Respuesta inválida del servidor (remito-link)");
+
+  const path = data.url.startsWith("/") ? data.url : `/${data.url}`;
+  return `${window.location.origin}${path}`;
 },
 
 
  async getVentaPdfUrl(id: number): Promise<string> {
+  if (typeof window === "undefined") {
+    throw new Error("getVentaPdfUrl debe ejecutarse en el cliente (window no disponible)");
+  }
+
   const res = await fetch(`/api/ventas/${id}/ticket-link`, { cache: "no-store" });
   if (!res.ok) throw new Error("No se pudo generar el link del ticket");
 
-  const data = await res.json();
-  // devolvemos absoluto para WhatsApp/compartir
-  return `${window.location.origin}${data.url}`;
+  const data: { url?: string } = await res.json();
+  if (!data?.url) throw new Error("Respuesta inválida del servidor (ticket-link)");
+
+  const path = data.url.startsWith("/") ? data.url : `/${data.url}`;
+  return `${window.location.origin}${path}`;
 },
 
   getDashboardConsignaciones(limit = 10) {

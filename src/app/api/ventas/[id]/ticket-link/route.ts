@@ -1,3 +1,5 @@
+//src/app/api/ventas/[id]/ticket-link/route.ts
+
 import { NextRequest, NextResponse } from "next/server";
 import { generatePdfToken } from "@/lib/crypto";
 

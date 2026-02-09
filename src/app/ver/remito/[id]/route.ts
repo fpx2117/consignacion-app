@@ -1,3 +1,5 @@
+
+//src/app/ver/remito/[id]/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import puppeteer from "puppeteer";
 import { verifyPdfToken } from "@/lib/crypto";
