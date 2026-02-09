@@ -1,3 +1,4 @@
+//src/app/(protected)/consignaciones/[id]/liquidar/page.tsx
 "use client";
 
 import * as React from "react";
@@ -41,7 +42,7 @@ const formatCurrency = (value: number) => {
 export default function LiquidarConsignacionPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
-  const consignacionId = Number(params.id);
+  const consignacionId = Number(params.id); // o const id = Number(params.id)
 
   const [consignacion, setConsignacion] = React.useState<Consignacion | null>(null);
   const [rows, setRows] = React.useState<Row[]>([]);
@@ -49,6 +50,7 @@ export default function LiquidarConsignacionPage() {
   const [saving, setSaving] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [showSuccessDialog, setShowSuccessDialog] = React.useState(false);
+  
 
   // --- CARGA DE DATOS ---
   const load = React.useCallback(async () => {
@@ -175,12 +177,14 @@ export default function LiquidarConsignacionPage() {
   };
 
  const handleDownload = async () => {
+  if (!consignacionId || Number.isNaN(consignacionId)) return;
+
   try {
     const url = await apiService.getConsignacionPdfUrl(consignacionId);
     window.open(url, "_blank");
     router.push(`/consignaciones/${consignacionId}`);
-  } catch (err) {
-    console.error(err);
+  } catch (e) {
+    console.error(e);
     toast.error("No se pudo generar el remito PDF");
   }
 };

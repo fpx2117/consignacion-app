@@ -196,7 +196,11 @@ export const apiService = {
     throw new Error("getConsignacionPdfUrl debe ejecutarse en el cliente (window no disponible)");
   }
 
-  const res = await fetch(`/api/consignaciones/${id}/remito-link`, { cache: "no-store" });
+  const res = await fetch(`/api/consignaciones/${id}/remito-link`, {
+    cache: "no-store",
+    headers: { Accept: "application/json" },
+  });
+
   if (!res.ok) throw new Error("No se pudo generar el link del remito");
 
   const data: { url?: string } = await res.json();
@@ -212,7 +216,11 @@ export const apiService = {
     throw new Error("getVentaPdfUrl debe ejecutarse en el cliente (window no disponible)");
   }
 
-  const res = await fetch(`/api/ventas/${id}/ticket-link`, { cache: "no-store" });
+  const res = await fetch(`/api/ventas/${id}/ticket-link`, {
+    cache: "no-store",
+    headers: { Accept: "application/json" },
+  });
+
   if (!res.ok) throw new Error("No se pudo generar el link del ticket");
 
   const data: { url?: string } = await res.json();

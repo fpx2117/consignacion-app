@@ -11,6 +11,11 @@ enum RolUsuario {
   EMPLEADO
 }
 
+enum ShareLinkType {
+  TICKET
+  REMITO
+}
+
 enum NotificationType {
   LOW_STOCK
   OUT_OF_STOCK
@@ -104,6 +109,28 @@ model Producto {
   ventaDetalles        VentaDetalle[]
 
   notifications Notification[] // 👈 inversa (opcional)
+}
+
+model ShareLink {
+  id Int @id @default(autoincrement())
+
+  // Lookup seguro (no reversible)
+  codeHash String @unique
+
+  // Reutilización: guardamos el code cifrado (reversible con secret)
+  codeEnc String
+
+  type     ShareLinkType
+  targetId Int
+
+  expiresAt DateTime
+  maxViews  Int      @default(3)
+  views     Int      @default(0)
+
+  createdAt    DateTime  @default(now())
+  lastViewedAt DateTime?
+
+  @@index([type, targetId, expiresAt])
 }
 
 model Consignacion {

@@ -1,3 +1,5 @@
+
+//src/app/api/ventas/route.ts
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/requireAuth";

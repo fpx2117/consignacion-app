@@ -1,13 +1,17 @@
-
-//src/app/api/consignaciones/[id]/remito-link/route.ts
-import { NextResponse } from "next/server";
-import { generatePdfToken } from "@/lib/crypto";
+import { NextRequest, NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
+import { decryptCode, encryptCode, generateShortCode, hashCode } from "@/lib/share-links";
 
 export const dynamic = "force-dynamic";
 
+function wantsJson(req: NextRequest) {
+  const accept = req.headers.get("accept") || "";
+  return accept.includes("application/json");
+}
+
 export async function GET(
-  _req: Request,
-  { params }: { params: Promise<{ id: string }> } // ✅ así lo exige tu build
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const { id: idParam } = await params;
   const id = Number(idParam);
@@ -16,12 +20,66 @@ export async function GET(
     return NextResponse.json({ error: "ID inválido" }, { status: 400 });
   }
 
-  // ✅ token generado SIEMPRE en servidor
-  const token = generatePdfToken(id);
+  const expiresInDays = 7;
+  const maxViews = 3;
 
-  // ✅ importante: token encodeado
-  const url = `/ver/remito/${id}?token=${encodeURIComponent(token)}`;
+  const consignacion = await prisma.consignacion.findUnique({ where: { id } });
+  if (!consignacion) {
+    return NextResponse.json({ error: "Consignación no encontrada" }, { status: 404 });
+  }
 
-  // ✅ respuesta simple
-  return NextResponse.json({ url }, { status: 200 });
+  const now = new Date();
+
+  const existing = await prisma.shareLink.findFirst({
+    where: {
+      type: "REMITO",
+      targetId: id,
+      expiresAt: { gt: now },
+      views: { lt: maxViews },
+      maxViews,
+    },
+    orderBy: { createdAt: "desc" },
+  });
+
+  let code: string;
+
+  if (existing) {
+    code = decryptCode(existing.codeEnc);
+  } else {
+    const expiresAt = new Date(Date.now() + expiresInDays * 86400000);
+
+    let created = false;
+    code = "";
+
+    for (let i = 0; i < 15; i++) {
+      code = generateShortCode(6);
+      const codeHash = hashCode(code);
+
+      const used = await prisma.shareLink.findUnique({ where: { codeHash } });
+      if (used) continue;
+
+      await prisma.shareLink.create({
+        data: {
+          codeHash,
+          codeEnc: encryptCode(code),
+          type: "REMITO",
+          targetId: id,
+          expiresAt,
+          maxViews,
+        },
+      });
+
+      created = true;
+      break;
+    }
+
+    if (!created) {
+      return NextResponse.json({ error: "No se pudo generar link" }, { status: 500 });
+    }
+  }
+
+  const url = `/x/${code}`;
+
+  if (wantsJson(req)) return NextResponse.json({ url });
+  return NextResponse.redirect(new URL(url, req.url));
 }

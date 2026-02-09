@@ -3,13 +3,20 @@ import puppeteer from "puppeteer";
 import { verifyPdfToken } from "@/lib/crypto";
 import { buildVentaHtml, VentaReportDTO } from "@/lib/reports/venta-report-template";
 import { prisma } from "@/lib/prisma";
+import { hashCode } from "@/lib/share-links";
 
 export const dynamic = "force-dynamic";
+
+function redirectStatus(req: NextRequest, state: "invalid" | "expired" | "limit") {
+  return NextResponse.redirect(new URL(`/x/status?state=${state}`, req.url));
+}
 
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> } // ✅ como exige tu build
 ) {
+  let browser: any = null;
+
   try {
     const { id: idParam } = await params;
     const id = Number(idParam);
@@ -19,12 +26,40 @@ export async function GET(
     }
 
     const { searchParams } = new URL(request.url);
+    const code = searchParams.get("code");
     const token = searchParams.get("token");
 
-    if (!token || !verifyPdfToken(id, token)) {
-      return NextResponse.json({ error: "No autorizado" }, { status: 403 });
+    // ---------------------------
+    // ✅ Seguridad: code (sharelink) o token (legacy)
+    // ---------------------------
+    if (code) {
+      const codeHash = hashCode(code);
+
+      const link = await prisma.shareLink.findUnique({
+        where: { codeHash },
+      });
+
+      if (!link) return redirectStatus(request, "invalid");
+      if (link.type !== "TICKET" || link.targetId !== id) return redirectStatus(request, "invalid");
+      if (new Date() > link.expiresAt) return redirectStatus(request, "expired");
+      if (link.views >= link.maxViews) return redirectStatus(request, "limit");
+
+      // ✅ Consumimos 1 vista (en el PDF route, no en /x)
+      await prisma.shareLink.update({
+        where: { codeHash },
+        data: { views: { increment: 1 }, lastViewedAt: new Date() },
+      });
+
+    } else {
+      // fallback token (para uso interno)
+      if (!token || !verifyPdfToken(id, token)) {
+        return NextResponse.json({ error: "No autorizado" }, { status: 403 });
+      }
     }
 
+    // ---------------------------
+    // Prisma fetch
+    // ---------------------------
     const ventaRaw = await prisma.venta.findUnique({
       where: { id },
       include: {
@@ -54,7 +89,10 @@ export async function GET(
       })),
     };
 
-    const browser = await puppeteer.launch({
+    // ---------------------------
+    // PDF con Puppeteer
+    // ---------------------------
+    browser = await puppeteer.launch({
       headless: true,
       args: ["--no-sandbox", "--disable-setuid-sandbox"],
     });
@@ -72,6 +110,7 @@ export async function GET(
     });
 
     await browser.close();
+    browser = null;
 
     const cleanName = reporteData.clienteNombre.replace(/[^a-z0-9]/gi, "-");
     const fileName = `Ticket-${id}-${cleanName}.pdf`;
@@ -81,11 +120,16 @@ export async function GET(
       headers: {
         "Content-Type": "application/pdf",
         "Content-Disposition": `inline; filename="${fileName}"`,
-        "Cache-Control": "public, max-age=3600",
+        "Cache-Control": "no-store",
       },
     });
   } catch (error) {
     console.error("PDF TICKET ERROR:", error);
     return NextResponse.json({ error: "Error generando Ticket PDF" }, { status: 500 });
+  } finally {
+    // ✅ evita procesos colgados si falla antes del close
+    try {
+      if (browser) await browser.close();
+    } catch {}
   }
 }

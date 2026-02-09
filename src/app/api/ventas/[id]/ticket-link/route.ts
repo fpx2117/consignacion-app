@@ -1,23 +1,85 @@
-//src/app/api/ventas/[id]/ticket-link/route.ts
-
 import { NextRequest, NextResponse } from "next/server";
-import { generatePdfToken } from "@/lib/crypto";
+import { prisma } from "@/lib/prisma";
+import { decryptCode, encryptCode, generateShortCode, hashCode } from "@/lib/share-links";
 
 export const dynamic = "force-dynamic";
 
+function wantsJson(req: NextRequest) {
+  const accept = req.headers.get("accept") || "";
+  return accept.includes("application/json");
+}
+
 export async function GET(
-  _req: NextRequest,
-  { params }: { params: Promise<{ id: string }> } // ✅
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const { id: idParam } = await params;
   const id = Number(idParam);
 
-  if (!Number.isFinite(id)) {
+  if (!Number.isFinite(id) || id <= 0) {
     return NextResponse.json({ error: "ID inválido" }, { status: 400 });
   }
 
-  const token = generatePdfToken(id);
-  const url = `/ver/ticket/${id}?token=${encodeURIComponent(token)}`;
+  const expiresInDays = 7;
+  const maxViews = 3;
 
-  return NextResponse.json({ url });
+  const venta = await prisma.venta.findUnique({ where: { id } });
+  if (!venta) return NextResponse.json({ error: "Venta no encontrada" }, { status: 404 });
+
+  const now = new Date();
+
+  // ✅ Reutilizar link activo
+  const existing = await prisma.shareLink.findFirst({
+    where: {
+      type: "TICKET",
+      targetId: id,
+      expiresAt: { gt: now },
+      views: { lt: maxViews },
+      maxViews,
+    },
+    orderBy: { createdAt: "desc" },
+  });
+
+  let code: string;
+
+  if (existing) {
+    code = decryptCode(existing.codeEnc);
+  } else {
+    const expiresAt = new Date(Date.now() + expiresInDays * 86400000);
+
+    let created = false;
+    code = "";
+
+    for (let i = 0; i < 15; i++) {
+      code = generateShortCode(6);
+      const codeHash = hashCode(code);
+
+      const used = await prisma.shareLink.findUnique({ where: { codeHash } });
+      if (used) continue;
+
+      await prisma.shareLink.create({
+        data: {
+          codeHash,
+          codeEnc: encryptCode(code),
+          type: "TICKET",
+          targetId: id,
+          expiresAt,
+          maxViews,
+        },
+      });
+
+      created = true;
+      break;
+    }
+
+    if (!created) {
+      return NextResponse.json({ error: "No se pudo generar link" }, { status: 500 });
+    }
+  }
+
+  const url = `/x/${code}`;
+
+  // ✅ dual mode
+  if (wantsJson(req)) return NextResponse.json({ url });
+  return NextResponse.redirect(new URL(url, req.url));
 }

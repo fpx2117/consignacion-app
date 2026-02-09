@@ -187,15 +187,14 @@ export default function NuevaVentaPage() {
     fetchData(); 
   };
 
-  // ✅ Función para abrir el PDF del Ticket
-const handleViewTicket = async () => {
+  const handleViewTicket = async () => {
   if (!createdVentaId) return;
 
   try {
     const url = await apiService.getVentaPdfUrl(createdVentaId);
     window.open(url, "_blank");
-  } catch (error) {
-    console.error(error);
+  } catch (e) {
+    console.error(e);
     toast.error("No se pudo generar el ticket PDF");
   }
 };

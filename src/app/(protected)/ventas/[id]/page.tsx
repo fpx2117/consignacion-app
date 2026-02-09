@@ -99,9 +99,9 @@ export default function VentaDetailPage() {
 const handlePdfAction = async (mode: "view" | "whatsapp") => {
   if (!venta) return;
 
-  let pdfUrl = "";
+  let pdfUrl: string;
   try {
-    pdfUrl = await apiService.getVentaPdfUrl(id); // ✅ ahora es await
+    pdfUrl = await apiService.getVentaPdfUrl(venta.id);
   } catch (e: any) {
     toast.error(e?.message ?? "No se pudo generar el ticket");
     return;
@@ -112,7 +112,6 @@ const handlePdfAction = async (mode: "view" | "whatsapp") => {
     return;
   }
 
-  // whatsapp logic
   const telefono = venta.cliente?.telefono;
   if (!telefono) {
     toast.error("El cliente no tiene teléfono registrado o es Consumidor Final");
@@ -123,11 +122,10 @@ const handlePdfAction = async (mode: "view" | "whatsapp") => {
   const message =
     `*AllData POS - Ticket de Compra*\n\n` +
     `Hola ${venta.cliente?.nombre}, gracias por tu compra.\n` +
-    `Aquí tienes el detalle del Ticket #${String(id).padStart(3, "0")}.\n\n` +
-    `📄 Ver comprobante: ${pdfUrl}`;
+    `📄 Comprobante: ${pdfUrl}\n\n` +
+    `⏳ Válido 7 días • Máx 3 vistas`;
 
-  const wpUrl = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
-  window.open(wpUrl, "_blank");
+  window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, "_blank");
 };
 
   // --- Anular Venta ---

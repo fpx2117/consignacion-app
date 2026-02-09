@@ -3,13 +3,20 @@ import puppeteer from "puppeteer";
 import { verifyPdfToken } from "@/lib/crypto";
 import { buildConsignacionHtml } from "@/lib/reports/consignacion-report-template";
 import { prisma } from "@/lib/prisma";
+import { hashCode } from "@/lib/share-links";
 
 export const dynamic = "force-dynamic";
+
+function redirectStatus(req: NextRequest, state: "invalid" | "expired" | "limit") {
+  return NextResponse.redirect(new URL(`/x/status?state=${state}`, req.url));
+}
 
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> } // ✅ como exige tu Next
 ) {
+  let browser: any = null;
+
   try {
     const { id: idParam } = await params;
     const id = Number(idParam);
@@ -19,12 +26,39 @@ export async function GET(
     }
 
     const { searchParams } = new URL(request.url);
+    const code = searchParams.get("code");
     const token = searchParams.get("token");
 
-    if (!token || !verifyPdfToken(id, token)) {
-      return NextResponse.json({ error: "No autorizado" }, { status: 403 });
+    // ---------------------------
+    // ✅ Seguridad: code (sharelink) o token (legacy)
+    // ---------------------------
+    if (code) {
+      const codeHash = hashCode(code);
+
+      const link = await prisma.shareLink.findUnique({
+        where: { codeHash },
+      });
+
+      if (!link) return redirectStatus(request, "invalid");
+      if (link.type !== "REMITO" || link.targetId !== id) return redirectStatus(request, "invalid");
+      if (new Date() > link.expiresAt) return redirectStatus(request, "expired");
+      if (link.views >= link.maxViews) return redirectStatus(request, "limit");
+
+      // ✅ Consumimos 1 vista (en el PDF route)
+      await prisma.shareLink.update({
+        where: { codeHash },
+        data: { views: { increment: 1 }, lastViewedAt: new Date() },
+      });
+    } else {
+      // fallback token (uso interno / legacy)
+      if (!token || !verifyPdfToken(id, token)) {
+        return NextResponse.json({ error: "No autorizado" }, { status: 403 });
+      }
     }
 
+    // ---------------------------
+    // Prisma fetch
+    // ---------------------------
     const consignacion = await prisma.consignacion.findUnique({
       where: { id },
       include: {
@@ -37,7 +71,10 @@ export async function GET(
       return NextResponse.json({ error: "No encontrada" }, { status: 404 });
     }
 
-    const browser = await puppeteer.launch({
+    // ---------------------------
+    // PDF con Puppeteer
+    // ---------------------------
+    browser = await puppeteer.launch({
       headless: true,
       args: ["--no-sandbox", "--disable-setuid-sandbox"],
     });
@@ -57,8 +94,11 @@ export async function GET(
     });
 
     await browser.close();
+    browser = null;
 
-    const clienteNombre = (consignacion.cliente?.nombre || "Cliente").replace(/\s+/g, "-");
+    const clienteNombre = (consignacion.cliente?.nombre || "Cliente")
+      .replace(/\s+/g, "-")
+      .replace(/[^a-z0-9\-]/gi, "");
     const folioFormateado = String((consignacion as any).numeroFolio ?? consignacion.id).padStart(4, "0");
     const fileName = `Remito-${clienteNombre}-${folioFormateado}.pdf`;
 
@@ -67,11 +107,16 @@ export async function GET(
       headers: {
         "Content-Type": "application/pdf",
         "Content-Disposition": `inline; filename="${fileName}"`,
-        "Cache-Control": "public, max-age=3600",
+        "Cache-Control": "no-store",
       },
     });
   } catch (error) {
-    console.error("PDF ERROR:", error);
+    console.error("PDF REMITO ERROR:", error);
     return NextResponse.json({ error: "Error generando PDF" }, { status: 500 });
+  } finally {
+    // ✅ evita procesos colgados
+    try {
+      if (browser) await browser.close();
+    } catch {}
   }
 }
