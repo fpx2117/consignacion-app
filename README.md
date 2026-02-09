@@ -1,6 +1,3 @@
-Aquí tienes el código listo para copiar y pegar en tu archivo README.md. He estructurado las secciones para que se vea profesional en GitHub, resaltando la lógica de Consignaciones y Ventas que definiste en tu esquema.
-
-Markdown
 # Sistema de Gestión de Inventario y Consignaciones (Backend)
 
 Este repositorio contiene la definición del modelo de datos para un sistema de gestión comercial robusto, construido con **Prisma ORM** y **PostgreSQL**. El sistema está diseñado para manejar ventas directas, gestión de stock por unidades y un flujo completo de mercancía en consignación.
