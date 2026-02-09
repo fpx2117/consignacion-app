@@ -8,6 +8,8 @@ import {
   Search, UserPlus, Info, ChevronRight, BadgePercent, AlertTriangle 
 } from "lucide-react";
 
+import { toast } from "sonner";
+
 import { apiService } from "@/lib/apiService";
 import type { Cliente, Producto } from "@/lib/types";
 
@@ -164,16 +166,23 @@ export default function NuevaConsignacionPage() {
     }
   };
 
-  const handleDownload = () => {
-    if (createdId) {
-      window.open(apiService.getConsignacionPdfUrl(createdId), '_blank');
-      router.push(`/consignaciones/${createdId}`);
-    }
-  };
+  const handleDownload = async () => {
+  if (!createdId) return;
 
-  const handleClose = () => {
-    if (createdId) router.push(`/consignaciones/${createdId}`);
-  };
+  try {
+    const url = await apiService.getConsignacionPdfUrl(createdId);
+
+    window.open(url, "_blank");
+    router.push(`/consignaciones/${createdId}`);
+  } catch (error) {
+    console.error(error);
+    toast.error("No se pudo generar el remito PDF");
+  }
+};
+
+const handleClose = () => {
+  if (createdId) router.push(`/consignaciones/${createdId}`);
+};
 
   return (
     <div className="max-w-7xl mx-auto space-y-8 p-4 lg:p-8 animate-in fade-in duration-500">

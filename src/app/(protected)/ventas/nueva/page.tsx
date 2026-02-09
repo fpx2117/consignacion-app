@@ -27,6 +27,7 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 // --- TIPOS ---
 type ProductoConStock = Producto & { stockDisponibleUnits?: number };
@@ -187,13 +188,17 @@ export default function NuevaVentaPage() {
   };
 
   // ✅ Función para abrir el PDF del Ticket
-  const handleViewTicket = () => {
-    if (createdVentaId) {
-      // Usamos el método que agregamos en apiService
-      const url = apiService.getVentaPdfUrl(createdVentaId);
-      window.open(url, '_blank');
-    }
-  };
+const handleViewTicket = async () => {
+  if (!createdVentaId) return;
+
+  try {
+    const url = await apiService.getVentaPdfUrl(createdVentaId);
+    window.open(url, "_blank");
+  } catch (error) {
+    console.error(error);
+    toast.error("No se pudo generar el ticket PDF");
+  }
+};
 
   // Helper para mostrar nombre del cliente seleccionado
   const getSelectedClienteLabel = () => {

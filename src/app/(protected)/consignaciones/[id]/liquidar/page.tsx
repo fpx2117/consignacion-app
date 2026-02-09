@@ -7,6 +7,7 @@ import {
   TrendingUp, Package, User, ChevronRight, BadgePercent, CheckCircle2
 } from "lucide-react";
 
+import { toast } from "sonner";
 import { apiService } from "@/lib/apiService";
 import type { Consignacion, CreateLiquidacionInput } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -173,15 +174,20 @@ export default function LiquidarConsignacionPage() {
     }
   };
 
-  const handleDownload = () => {
-    // Ajusta esta ruta a tu generador de PDF real
-    window.open(apiService.getConsignacionPdfUrl(consignacionId), '_blank');
+ const handleDownload = async () => {
+  try {
+    const url = await apiService.getConsignacionPdfUrl(consignacionId);
+    window.open(url, "_blank");
     router.push(`/consignaciones/${consignacionId}`);
-  };
+  } catch (err) {
+    console.error(err);
+    toast.error("No se pudo generar el remito PDF");
+  }
+};
 
-  const handleClose = () => {
-    router.push(`/consignaciones/${consignacionId}`);
-  };
+const handleClose = () => {
+  router.push(`/consignaciones/${consignacionId}`);
+};
 
   const porcentajeAumento = consignacion?.porcentajeAumento || 0;
 
