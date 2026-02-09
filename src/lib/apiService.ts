@@ -27,7 +27,6 @@ import type {
 
 // Importamos el tipo compartido para asegurar consistencia con el Socket
 import { AppNotification } from "@/types/notification";
-import { generatePdfToken } from "@/lib/crypto";
 
 /* =========================
    Fetch wrapper (Helper)
@@ -192,27 +191,22 @@ export const apiService = {
     );
   },
 
-  getConsignacionPdfUrl(id: number): string {
-  let token = "";
-  try { token = generatePdfToken(id); } catch {}
+  async getConsignacionPdfUrl(id: number): Promise<string> {
+  const res = await fetch(`/api/consignaciones/${id}/remito-link`, { cache: "no-store" });
+  if (!res.ok) throw new Error("No se pudo generar el link del remito");
 
-  // ✅ Siempre origen real en cliente
-  const origin = typeof window !== "undefined" ? window.location.origin : (process.env.NEXT_PUBLIC_APP_URL || "");
-  const base = origin.replace(/\/+$/, "");
-
-  return `${base}/ver/remito/${id}?token=${encodeURIComponent(token)}`;
+  const data = await res.json();
+  return `${window.location.origin}${data.url}`;
 },
 
 
- getVentaPdfUrl(id: number): string {
-  let token = "";
-  try { token = generatePdfToken(id); } catch {}
+ async getVentaPdfUrl(id: number): Promise<string> {
+  const res = await fetch(`/api/ventas/${id}/ticket-link`, { cache: "no-store" });
+  if (!res.ok) throw new Error("No se pudo generar el link del ticket");
 
-  // ✅ Siempre origen real en cliente
-  const origin = typeof window !== "undefined" ? window.location.origin : (process.env.NEXT_PUBLIC_APP_URL || "");
-  const base = origin.replace(/\/+$/, "");
-
-  return `${base}/ver/ticket/${id}?token=${encodeURIComponent(token)}`;
+  const data = await res.json();
+  // devolvemos absoluto para WhatsApp/compartir
+  return `${window.location.origin}${data.url}`;
 },
 
   getDashboardConsignaciones(limit = 10) {

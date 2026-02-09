@@ -105,29 +105,40 @@ export default function ConsignacionDetailPage() {
     router.push(`/consignaciones/${id}/liquidaciones`);
   }, [router, id]);
 
-  const handlePdfAction = (mode: "view" | "whatsapp") => {
-    if (!consignacion) return;
-    const pdfUrl = apiService.getConsignacionPdfUrl(id);
+  const handlePdfAction = async (mode: "view" | "whatsapp") => {
+  if (!consignacion) return;
 
-    if (mode === "view") {
-      window.open(pdfUrl, "_blank");
-      return;
-    }
+  let pdfUrl = "";
+  try {
+    // ✅ ahora es await porque el link lo firma el servidor
+    pdfUrl = await apiService.getConsignacionPdfUrl(id);
+  } catch (e: any) {
+    toast.error(e?.message ?? "No se pudo generar el remito");
+    return;
+  }
 
-    if (!consignacion.cliente?.telefono) {
-      toast.error("El cliente no tiene teléfono registrado");
-      return;
-    }
+  // --- Ver PDF ---
+  if (mode === "view") {
+    window.open(pdfUrl, "_blank");
+    return;
+  }
 
-    const phone = consignacion.cliente.telefono.replace(/\D/g, "");
-    const message =
-      `*AllData POS - Remito Digital*\n\n` +
-      `Hola ${consignacion.cliente.nombre}, aquí tienes el detalle de tu consignación #${id}.\n\n` +
-      `📄 Ver documento: ${pdfUrl}`;
+  // --- WhatsApp ---
+  if (!consignacion.cliente?.telefono) {
+    toast.error("El cliente no tiene teléfono registrado");
+    return;
+  }
 
-    const wpUrl = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
-    window.open(wpUrl, "_blank");
-  };
+  const phone = consignacion.cliente.telefono.replace(/\D/g, "");
+
+  const message =
+    `*AllData POS - Remito Digital*\n\n` +
+    `Hola ${consignacion.cliente.nombre}, aquí tienes el detalle de tu consignación #${id}.\n\n` +
+    `📄 Ver documento: ${pdfUrl}`;
+
+  const wpUrl = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
+  window.open(wpUrl, "_blank");
+};
 
   const detalles = consignacion?.detalles ?? [];
   const entregadas = detalles.reduce((a, d: any) => a + (d.unitsEntregadas ?? 0), 0);

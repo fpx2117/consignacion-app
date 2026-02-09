@@ -96,33 +96,39 @@ export default function VentaDetailPage() {
   }, [id, load]);
 
   // --- Lógica de Documentos (PDF / WhatsApp) ---
-  const handlePdfAction = (mode: "view" | "whatsapp") => {
-    if (!venta) return;
+const handlePdfAction = async (mode: "view" | "whatsapp") => {
+  if (!venta) return;
 
-    const pdfUrl = apiService.getVentaPdfUrl(id);
+  let pdfUrl = "";
+  try {
+    pdfUrl = await apiService.getVentaPdfUrl(id); // ✅ ahora es await
+  } catch (e: any) {
+    toast.error(e?.message ?? "No se pudo generar el ticket");
+    return;
+  }
 
-    if (mode === "view") {
-      window.open(pdfUrl, "_blank");
-      return;
-    }
+  if (mode === "view") {
+    window.open(pdfUrl, "_blank");
+    return;
+  }
 
-    // whatsapp logic
-    const telefono = venta.cliente?.telefono;
-    if (!telefono) {
-      toast.error("El cliente no tiene teléfono registrado o es Consumidor Final");
-      return;
-    }
+  // whatsapp logic
+  const telefono = venta.cliente?.telefono;
+  if (!telefono) {
+    toast.error("El cliente no tiene teléfono registrado o es Consumidor Final");
+    return;
+  }
 
-    const phone = telefono.replace(/\D/g, "");
-    const message =
-      `*AllData POS - Ticket de Compra*\n\n` +
-      `Hola ${venta.cliente?.nombre}, gracias por tu compra.\n` +
-      `Aquí tienes el detalle del Ticket #${String(id).padStart(3, '0')}.\n\n` +
-      `📄 Ver comprobante: ${pdfUrl}`;
+  const phone = telefono.replace(/\D/g, "");
+  const message =
+    `*AllData POS - Ticket de Compra*\n\n` +
+    `Hola ${venta.cliente?.nombre}, gracias por tu compra.\n` +
+    `Aquí tienes el detalle del Ticket #${String(id).padStart(3, "0")}.\n\n` +
+    `📄 Ver comprobante: ${pdfUrl}`;
 
-    const wpUrl = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
-    window.open(wpUrl, "_blank");
-  };
+  const wpUrl = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
+  window.open(wpUrl, "_blank");
+};
 
   // --- Anular Venta ---
   const handleAnular = async () => {
