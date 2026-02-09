@@ -193,37 +193,27 @@ export const apiService = {
   },
 
   getConsignacionPdfUrl(id: number): string {
-    let token = "";
-    try {
-      token = generatePdfToken(id);
-    } catch (e) {
-      console.warn("Crypto warning:", e);
-    }
-    const baseUrl =
-      typeof window !== "undefined"
-        ? process.env.NEXT_PUBLIC_APP_URL || window.location.origin
-        : "";
+  let token = "";
+  try { token = generatePdfToken(id); } catch {}
 
-    return `${baseUrl}/ver/remito/${id}?token=${token}`;
-  },
+  // ✅ Siempre origen real en cliente
+  const origin = typeof window !== "undefined" ? window.location.origin : (process.env.NEXT_PUBLIC_APP_URL || "");
+  const base = origin.replace(/\/+$/, "");
+
+  return `${base}/ver/remito/${id}?token=${encodeURIComponent(token)}`;
+},
 
 
-  getVentaPdfUrl(id: number): string {
-    let token = "";
-    try {
-      // Usamos la misma función de crypto que ya tienes importada
-      token = generatePdfToken(id);
-    } catch (e) {
-      console.warn("Crypto warning:", e);
-    }
-    const baseUrl =
-      typeof window !== "undefined"
-        ? process.env.NEXT_PUBLIC_APP_URL || window.location.origin
-        : "";
+ getVentaPdfUrl(id: number): string {
+  let token = "";
+  try { token = generatePdfToken(id); } catch {}
 
-    // Apunta a la nueva ruta que creamos en el Paso 2
-    return `${baseUrl}/ver/ticket/${id}?token=${token}`;
-  },
+  // ✅ Siempre origen real en cliente
+  const origin = typeof window !== "undefined" ? window.location.origin : (process.env.NEXT_PUBLIC_APP_URL || "");
+  const base = origin.replace(/\/+$/, "");
+
+  return `${base}/ver/ticket/${id}?token=${encodeURIComponent(token)}`;
+},
 
   getDashboardConsignaciones(limit = 10) {
     return apiRequest<DashboardConsignacionesResponse>(
