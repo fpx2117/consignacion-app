@@ -79,6 +79,21 @@ function getPublicBaseUrl(): string {
   return "http://localhost:3000";
 }
 
+function normalizeShareUrl(raw: string): string {
+  const u = (raw ?? "").trim();
+  if (!u) throw new Error("URL vacía");
+
+  // Si ya es absoluta, devolver tal cual
+  if (u.startsWith("http://") || u.startsWith("https://")) return u;
+
+  // Si viene tipo "dominio.com/x/ABC" (sin protocolo), arreglarla
+  if (/^[a-z0-9.-]+\.[a-z]{2,}\//i.test(u)) return `https://${u}`;
+
+  // Path relativo
+  const path = u.startsWith("/") ? u : `/${u}`;
+  return `${getPublicBaseUrl()}${path}`;
+}
+
 /* =========================
    Definición de Rutas
 ========================= */
@@ -220,8 +235,7 @@ export const apiService = {
   const data: { url?: string } = await res.json();
   if (!data?.url) throw new Error("Respuesta inválida del servidor (remito-link)");
 
-  const path = data.url.startsWith("/") ? data.url : `/${data.url}`;
-  return `${getPublicBaseUrl()}${path}`;
+  return normalizeShareUrl(data.url);
 },
 
 async getVentaPdfUrl(id: number): Promise<string> {
@@ -239,8 +253,7 @@ async getVentaPdfUrl(id: number): Promise<string> {
   const data: { url?: string } = await res.json();
   if (!data?.url) throw new Error("Respuesta inválida del servidor (ticket-link)");
 
-  const path = data.url.startsWith("/") ? data.url : `/${data.url}`;
-  return `${getPublicBaseUrl()}${path}`;
+  return normalizeShareUrl(data.url);
 },
 
   getDashboardConsignaciones(limit = 10) {
