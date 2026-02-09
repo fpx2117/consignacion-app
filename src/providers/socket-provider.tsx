@@ -13,9 +13,13 @@ const SocketContext = createContext<SocketContextType>({
   isConnected: false,
 });
 
-export const useSocket = () => {
-  return useContext(SocketContext);
-};
+export const useSocket = () => useContext(SocketContext);
+
+function normalizeUrl(raw?: string) {
+  if (!raw) return "";
+  if (raw.startsWith("http://") || raw.startsWith("https://")) return raw;
+  return `https://${raw}`;
+}
 
 export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
   const [socket, setSocket] = useState<Socket | null>(null);
@@ -24,19 +28,20 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
   useEffect(() => {
     if (socket) return;
 
-    // FORZAMOS LA URL EN DESARROLLO
-    // Esto asegura que se conecte al Custom Server en el puerto 3000
- const siteUrl = typeof window !== "undefined" ? window.location.origin : "";
+    const envUrl = normalizeUrl(process.env.NEXT_PUBLIC_BASE_URL);
+    const fallback = typeof window !== "undefined" ? window.location.origin : "";
+    const siteUrl = envUrl || fallback;
 
-
-    const socketInstance = new (ClientIO as any)(siteUrl, {
-  path: "/socket.io",
-  addTrailingSlash: false,
-  reconnectionAttempts: 10,
-  reconnectionDelay: 1000,
-  autoConnect: true,
-  transports: ["polling", "websocket"],
-});
+    const socketInstance = (ClientIO as any)(siteUrl, {
+      path: "/socket.io",
+      addTrailingSlash: false,
+      reconnectionAttempts: 10,
+      reconnectionDelay: 1000,
+      autoConnect: true,
+      transports: ["polling", "websocket"],
+      // Si tu auth depende de cookie en otro dominio, esto ayuda:
+      withCredentials: true,
+    });
 
     socketInstance.on("connect", () => {
       console.log("🟢 Socket Conectado (ID):", socketInstance.id);
@@ -49,19 +54,15 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
     });
 
     socketInstance.on("connect_error", (err: any) => {
-      // Ignoramos errores de conexión iniciales mientras levanta el server
-      console.warn("⚠️ Reconectando socket...", err.message);
+      console.warn("⚠️ Error socket / reconectando:", err?.message || err);
     });
 
     setSocket(socketInstance);
 
-    // ❌ ELIMINADO: Ya no necesitamos hacer fetch("/api/socket") 
-    // porque el Custom Server inicia el socket automáticamente.
-
     return () => {
       socketInstance.disconnect();
     };
-  }, []);
+  }, [socket]);
 
   return (
     <SocketContext.Provider value={{ socket, isConnected }}>
