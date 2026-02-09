@@ -1,3 +1,5 @@
+
+//src/app/(protected)/consignaciones/[id]/page.tsx
 "use client";
 
 import * as React from "react";

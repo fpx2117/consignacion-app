@@ -4,10 +4,10 @@ import { prisma } from "@/lib/prisma";
 import { hashCode } from "@/lib/share-links";
 
 export const dynamic = "force-dynamic";
+export const runtime = "nodejs"; // recomendable (Prisma)
 
-function status(state: "invalid" | "expired" | "limit") {
-  // ✅ relativo => mantiene dominio real (railway)
-  return NextResponse.redirect(`/x/status?state=${state}`);
+function abs(req: NextRequest, path: string) {
+  return new URL(path, req.url); // ✅ convierte /algo en absoluta con el host real
 }
 
 export async function GET(
@@ -19,9 +19,9 @@ export async function GET(
 
   const link = await prisma.shareLink.findUnique({ where: { codeHash } });
 
-  if (!link) return status("invalid");
-  if (new Date() > link.expiresAt) return status("expired");
-  if (link.views >= link.maxViews) return status("limit");
+  if (!link) return NextResponse.redirect(abs(req, `/x/status?state=invalid`));
+  if (new Date() > link.expiresAt) return NextResponse.redirect(abs(req, `/x/status?state=expired`));
+  if (link.views >= link.maxViews) return NextResponse.redirect(abs(req, `/x/status?state=limit`));
 
   // ✅ Consumimos 1 vista ACÁ (único lugar)
   await prisma.shareLink.update({
@@ -34,6 +34,5 @@ export async function GET(
       ? `/ver/ticket/${link.targetId}?code=${encodeURIComponent(code)}`
       : `/ver/remito/${link.targetId}?code=${encodeURIComponent(code)}`;
 
-  // ✅ redirect relativo (sin new URL / req.url)
-  return NextResponse.redirect(dest);
+  return NextResponse.redirect(abs(req, dest));
 }
