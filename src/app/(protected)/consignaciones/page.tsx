@@ -140,24 +140,50 @@ export default function ConsignacionesPage() {
         <StatCard label="Eficacia Histórica" value={`${eficacia}%`} icon={TrendingUp} color="emerald" />
       </div>
 
-      {/* FILTERS */}
-      <div className="bg-card/50 backdrop-blur-sm border border-border/50 rounded-[2rem] p-3 flex flex-col md:flex-row gap-4 items-center shadow-xl shadow-foreground/5">
-        <div className="relative w-full">
-          <Search className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground/50" />
+     {/* FILTERS CONTAINER */}
+      <div className="bg-card/50 backdrop-blur-sm border border-border/50 rounded-[2rem] p-2 md:p-3 flex flex-col md:flex-row gap-3 items-center shadow-xl shadow-foreground/5">
+        
+        {/* 1. BUSCADOR */}
+        <div className="relative w-full md:flex-1">
+          <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground/50" />
           <Input
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            placeholder="Buscar por cliente o n° de folio..."
-            className="pl-12 h-14 bg-muted/20 border-transparent focus-visible:ring-primary rounded-2xl text-lg"
+            placeholder="Buscar..." 
+            // CAMBIO: h-12 en vez de h-14 para mejor proporción
+            className="pl-11 h-12 bg-muted/20 border-transparent focus-visible:ring-primary rounded-2xl text-base w-full transition-all"
           />
         </div>
-        <Tabs defaultValue="TODAS" onValueChange={setActiveTab} className="w-full md:w-auto shrink-0">
-          <TabsList className="h-14 bg-muted/30 rounded-2xl p-1.5 w-full md:w-auto border border-border/20">
-            <TabsTrigger value="TODAS" className="h-11 rounded-xl px-8 data-[state=active]:shadow-lg">Todas</TabsTrigger>
-            <TabsTrigger value="ABIERTA" className="h-11 rounded-xl px-8 data-[state=active]:shadow-lg">Abiertas</TabsTrigger>
-            <TabsTrigger value="CERRADA" className="h-11 rounded-xl px-8 data-[state=active]:shadow-lg">Cerradas</TabsTrigger>
+
+        {/* 2. TABS */}
+        <Tabs defaultValue="TODAS" onValueChange={setActiveTab} className="w-full md:w-auto">
+          {/* CAMBIO CLAVE: 
+             - 'grid grid-cols-3': En móvil fuerza 3 columnas iguales (33% cada una).
+             - 'md:flex': En escritorio (md) se comporta como fila normal ajustada al contenido.
+             - 'h-12': Igual que el input para simetría.
+          */}
+          <TabsList className="grid grid-cols-3 md:flex h-12 bg-muted/30 rounded-2xl p-1 w-full md:w-auto border border-border/20 gap-1">
+            <TabsTrigger 
+              value="TODAS" 
+              className="w-full md:w-auto h-full rounded-xl data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm text-xs sm:text-sm font-medium"
+            >
+              Todas
+            </TabsTrigger>
+            <TabsTrigger 
+              value="ABIERTA" 
+              className="w-full md:w-auto h-full rounded-xl data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm text-xs sm:text-sm font-medium"
+            >
+              Abiertas
+            </TabsTrigger>
+            <TabsTrigger 
+              value="CERRADA" 
+              className="w-full md:w-auto h-full rounded-xl data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm text-xs sm:text-sm font-medium"
+            >
+              Cerradas
+            </TabsTrigger>
           </TabsList>
         </Tabs>
+        
       </div>
 
       {/* LISTA DE CARPETAS */}
