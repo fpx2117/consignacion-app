@@ -1,3 +1,5 @@
+
+//src/lib/apiService.ts
 import type {
   ApiResponse,
   Usuario,
@@ -63,6 +65,18 @@ async function apiRequest<T>(
   }
 
   return (await res.json()) as ApiResponse<T>;
+}
+
+function getPublicBaseUrl(): string {
+  // En el browser, usamos la URL "oficial" si está configurada.
+  // Si no, caemos a window.location.origin.
+  const envBase = process.env.NEXT_PUBLIC_APP_URL?.trim();
+
+  if (envBase && envBase.length > 0) return envBase.replace(/\/$/, "");
+  if (typeof window !== "undefined") return window.location.origin;
+
+  // fallback (no debería pasar porque estas funciones se llaman en client)
+  return "http://localhost:3000";
 }
 
 /* =========================
@@ -191,7 +205,7 @@ export const apiService = {
     );
   },
 
-  async getConsignacionPdfUrl(id: number): Promise<string> {
+ async getConsignacionPdfUrl(id: number): Promise<string> {
   if (typeof window === "undefined") {
     throw new Error("getConsignacionPdfUrl debe ejecutarse en el cliente (window no disponible)");
   }
@@ -207,11 +221,10 @@ export const apiService = {
   if (!data?.url) throw new Error("Respuesta inválida del servidor (remito-link)");
 
   const path = data.url.startsWith("/") ? data.url : `/${data.url}`;
-  return `${window.location.origin}${path}`;
+  return `${getPublicBaseUrl()}${path}`;
 },
 
-
- async getVentaPdfUrl(id: number): Promise<string> {
+async getVentaPdfUrl(id: number): Promise<string> {
   if (typeof window === "undefined") {
     throw new Error("getVentaPdfUrl debe ejecutarse en el cliente (window no disponible)");
   }
@@ -227,7 +240,7 @@ export const apiService = {
   if (!data?.url) throw new Error("Respuesta inválida del servidor (ticket-link)");
 
   const path = data.url.startsWith("/") ? data.url : `/${data.url}`;
-  return `${window.location.origin}${path}`;
+  return `${getPublicBaseUrl()}${path}`;
 },
 
   getDashboardConsignaciones(limit = 10) {
