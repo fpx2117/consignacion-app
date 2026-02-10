@@ -176,21 +176,20 @@ export default function LiquidarConsignacionPage() {
     }
   };
 
- const handleDownload = async () => {
+ const handleDownload = () => {
   if (!consignacionId || Number.isNaN(consignacionId)) return;
 
-  try {
-    const url = await apiService.getConsignacionPdfUrl(consignacionId);
-    window.open(url, "_blank");
-    router.push(`/consignaciones/${consignacionId}`);
-  } catch (e) {
-    console.error(e);
-    toast.error("No se pudo generar el remito PDF");
-  }
+  // 1. Abrimos la página de carga INMEDIATAMENTE.
+  // Al no haber 'await', el navegador detecta que es una acción directa del usuario y la permite.
+  const loadingUrl = `/consignacion-loading/${consignacionId}?mode=view`;
+  window.open(loadingUrl, "_blank");
+
+  // 2. Redirigimos la página actual al detalle
+  router.push(`/consignaciones/${consignacionId}`);
 };
 
 const handleClose = () => {
-  router.push(`/consignaciones/${consignacionId}`);
+  if (consignacionId) router.push(`/consignaciones/${consignacionId}`);
 };
 
   const porcentajeAumento = consignacion?.porcentajeAumento || 0;

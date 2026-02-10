@@ -159,12 +159,13 @@ export default function NuevaVentaPage() {
     fetchData(); 
   };
 
-  const handleViewTicket = async () => {
+ const handleViewTicket = () => {
     if (!createdVentaId) return;
-    try {
-      const url = await apiService.getVentaPdfUrl(createdVentaId);
-      window.open(url, "_blank");
-    } catch (error) { toast.error("Error PDF"); }
+
+    // Abrimos directamente tu nueva página de carga en una pestaña nueva.
+    // Al ser una navegación directa sin 'await' previo, el navegador NO la bloquea.
+    const url = `/ticket-loading/${createdVentaId}`;
+    window.open(url, '_blank');
   };
 
   const getSelectedClienteLabel = () => {
@@ -376,7 +377,7 @@ export default function NuevaVentaPage() {
           </div>
       </div>
 
-      <SuccessDialog open={showSuccessDialog} onOpenChange={setShowSuccessDialog} onConfirm={handleReset} onCancel={handleViewTicket} title="¡Venta Exitosa!" description={<span className="text-center block">Total: <span className="text-primary font-bold">{formatCurrency(totalAmount)}</span></span>} confirmText="Nueva" cancelText="Ticket PDF" />
+      <SuccessDialog open={showSuccessDialog} onOpenChange={setShowSuccessDialog} onConfirm={handleReset} onCancel={handleViewTicket} title="¡Venta Exitosa!" description={<span className="text-center block">Total: <span className="text-primary font-bold">{formatCurrency(totalAmount)}</span></span>} confirmText="Nueva" cancelText="Descargar Ticket" />
       <ErrorDialog open={errorDialog.open} onOpenChange={(isOpen) => setErrorDialog(prev => ({ ...prev, open: isOpen }))} title={errorDialog.title} description={errorDialog.description} />
     </div>
   );

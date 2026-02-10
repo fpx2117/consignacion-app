@@ -168,18 +168,17 @@ export default function NuevaConsignacionPage() {
     }
   };
 
-  const handleDownload = async () => {
+  const handleDownload = () => {
   if (!createdId) return;
 
-  try {
-    const url = await apiService.getConsignacionPdfUrl(createdId);
+  // 1. Abrimos la página intermedia inmediatamente.
+  // Al no haber 'await', el navegador confía en el click y abre la pestaña.
+  // Usamos el parámetro '?mode=view' para que la página sepa que solo debe mostrar el PDF.
+  const loadingUrl = `/consignacion-loading/${createdId}?mode=view`;
+  window.open(loadingUrl, "_blank");
 
-    window.open(url, "_blank");
-    router.push(`/consignaciones/${createdId}`);
-  } catch (error) {
-    console.error(error);
-    toast.error("No se pudo generar el remito PDF");
-  }
+  // 2. Redirigimos la página actual al detalle de la consignación
+  router.push(`/consignaciones/${createdId}`);
 };
 
 const handleClose = () => {

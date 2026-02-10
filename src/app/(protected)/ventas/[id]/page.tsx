@@ -91,16 +91,14 @@ export default function VentaDetailPage() {
     if (id) load();
   }, [id, load]);
 
-  // --- Acción solo para TICKET (Ver/Descargar) ---
-  const handleDownloadPdf = async () => {
+ // --- Acción solo para TICKET (Ver/Descargar) ---
+  const handleDownloadPdf = () => {
     if (!venta) return;
-    try {
-      const pdfUrl = await apiService.getVentaPdfUrl(venta.id);
-      // Abre el PDF en nueva pestaña (mejor experiencia en mobile para descargar)
-      window.open(pdfUrl, '_blank');
-    } catch (e: any) {
-      toast.error(e?.message ?? "No se pudo generar el ticket");
-    }
+
+    // 1. Redirigimos a nuestra página de carga intermedia
+    // Al ser inmediato, el navegador NO lo bloquea.
+    const url = `/ticket-loading/${venta.id}`;
+    window.open(url, '_blank');
   };
 
   // --- Anular Venta ---
@@ -215,12 +213,18 @@ export default function VentaDetailPage() {
 
         {/* Total Gigante en el Header */}
         <div className="text-right relative z-10">
-            <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest mb-1">Total Abonado</p>
-            <p className="text-4xl md:text-5xl font-black tracking-tighter text-foreground">
-                {loading ? <Skeleton className="h-12 w-32 ml-auto" /> : formatCurrency(Number(venta?.total || 0))}
-            </p>
-        </div>
-      </div>
+    <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest mb-1">Total Abonado</p>
+    
+    {/* ✅ CAMBIO: Usamos <div> aquí porque adentro puede haber un Skeleton (que es otro div) */}
+    <div className="text-4xl md:text-5xl font-black tracking-tighter text-foreground">
+        {loading ? (
+            <Skeleton className="h-12 w-32 ml-auto" /> 
+        ) : (
+            formatCurrency(Number(venta?.total || 0))
+        )}
+    </div>
+</div>
+</div>
 
       {/* KPI Section */}
       <div className="grid gap-4 grid-cols-2 md:grid-cols-3 animate-in fade-in slide-in-from-bottom-4 duration-700">

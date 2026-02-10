@@ -170,15 +170,9 @@ export function buildVentaHtml(data: VentaReportDTO) {
             <div class="flex justify-between items-end">
                <div>
                   <p class="text-xs font-bold text-slate-400">Gracias por su compra</p>
-                  <p class="text-[10px] text-slate-300 mt-1">Este documento no es válido como factura fiscal.</p>
-               </div>
-               <div class="text-right">
-                  <p class="text-[10px] font-bold text-slate-300 uppercase tracking-widest">ID Global: ${data.id}</p>
-                  <p class="text-[12px] font-black text-slate-800 uppercase tracking-widest mt-1">Ticket ${ticket.full}</p>
                </div>
             </div>
         </div>
-        
       </body>
     </html>
   `;
