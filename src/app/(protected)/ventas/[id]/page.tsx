@@ -5,22 +5,18 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import {
   ArrowLeft,
-  ArrowRight,
-  RefreshCcw,
   Package,
   ShoppingCart,
   Clock,
   FileText,
-  AlertCircle,
   Share2,
   Download,
-  MessageCircle,
-  Printer,
   Trash2,
   CreditCard,
   CheckCircle2,
   User,
-  AlertTriangle
+  AlertTriangle,
+  Printer
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -95,39 +91,17 @@ export default function VentaDetailPage() {
     if (id) load();
   }, [id, load]);
 
-  const handlePdfAction = async (mode: "view" | "whatsapp") => {
-  if (!venta) return;
-
-  try {
-    const pdfUrl = await apiService.getVentaPdfUrl(venta.id);
-
-    if (mode === "view") {
-      // ✅ en mobile evita bloqueo de popups
-      window.location.href = pdfUrl;
-      return;
+  // --- Acción solo para TICKET (Ver/Descargar) ---
+  const handleDownloadPdf = async () => {
+    if (!venta) return;
+    try {
+      const pdfUrl = await apiService.getVentaPdfUrl(venta.id);
+      // Abre el PDF en nueva pestaña (mejor experiencia en mobile para descargar)
+      window.open(pdfUrl, '_blank');
+    } catch (e: any) {
+      toast.error(e?.message ?? "No se pudo generar el ticket");
     }
-
-    const telefono = venta.cliente?.telefono;
-    if (!telefono) {
-      toast.error("El cliente no tiene teléfono registrado o es Consumidor Final");
-      return;
-    }
-
-    const phone = telefono.replace(/\D/g, "");
-    const message =
-      `*AllData POS - Ticket de Compra*\n\n` +
-      `Hola ${venta.cliente?.nombre}, gracias por tu compra.\n` +
-      `📄 Comprobante: ${pdfUrl}\n\n` +
-      `⏳ Válido 7 días • Máx 3 vistas`;
-
-    const waUrl = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
-
-    // ✅ en mobile abre siempre
-    window.location.href = waUrl;
-  } catch (e: any) {
-    toast.error(e?.message ?? "No se pudo generar el ticket");
-  }
-};
+  };
 
   // --- Anular Venta ---
   const handleAnular = async () => {
@@ -202,14 +176,12 @@ export default function VentaDetailPage() {
 
           <div className="h-8 w-px bg-border mx-1 hidden sm:block" />
 
-          <Button variant="outline" size="sm" onClick={() => handlePdfAction("view")} disabled={loading}>
+          {/* Botón Imprimir (Acción rápida Header) */}
+          <Button variant="outline" size="sm" onClick={handleDownloadPdf} disabled={loading}>
             <Printer className="h-4 w-4 mr-2 text-indigo-500" />
             Imprimir Ticket
           </Button>
 
-          <Button variant="outline" size="sm" onClick={load} disabled={loading} className="border-border">
-            <RefreshCcw className={cn("h-4 w-4", loading && "animate-spin")} />
-          </Button>
         </div>
       </div>
 
@@ -304,13 +276,13 @@ export default function VentaDetailPage() {
           <Card className="shadow-xl border-indigo-500/20 bg-indigo-500/5 dark:bg-indigo-500/10 overflow-hidden">
             <CardHeader className="pb-3">
               <CardTitle className="text-lg font-bold flex items-center gap-2">
-                <Share2 className="h-5 w-5 text-indigo-500" /> Compartir
+                <Share2 className="h-5 w-5 text-indigo-500" /> Comprobante
               </CardTitle>
-              <CardDescription>Envía el comprobante digital.</CardDescription>
+              <CardDescription>Opciones del documento digital.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
               <Button
-                onClick={() => handlePdfAction("view")}
+                onClick={handleDownloadPdf}
                 variant="outline"
                 className="w-full justify-start bg-background hover:bg-muted shadow-sm h-12"
                 disabled={loading}
@@ -318,16 +290,11 @@ export default function VentaDetailPage() {
                 <Download className="h-4 w-4 mr-3 text-indigo-500" />
                 Descargar Ticket PDF
               </Button>
+              
+              {/* [NOTA]: Se eliminó el botón de WhatsApp porque esta vista corresponde a TICKET POS.
+                 Solo debe mostrarse en la vista de REMITO / CONSIGNACION.
+              */}
 
-              <Button
-                onClick={() => handlePdfAction("whatsapp")}
-                className="w-full justify-start bg-emerald-600 hover:bg-emerald-700 text-white border-none h-12 shadow-emerald-900/10"
-                disabled={loading || !venta?.cliente?.telefono}
-                title={!venta?.cliente?.telefono ? "Cliente sin teléfono" : "Enviar WhatsApp"}
-              >
-                <MessageCircle className="h-4 w-4 mr-3" />
-                Enviar por WhatsApp
-              </Button>
             </CardContent>
           </Card>
 
@@ -346,7 +313,7 @@ export default function VentaDetailPage() {
   );
 }
 
-// --- Subcomponentes Adaptados para Venta ---
+// --- Subcomponentes ---
 
 function KpiCard({ title, value, loading, icon, textTransform }: any) {
   return (
@@ -371,7 +338,6 @@ function KpiCard({ title, value, loading, icon, textTransform }: any) {
 }
 
 function ProductRowVenta({ d }: { d: any }) {
-  // En ventas directas, el subtotal es simple
   const precio = Number(d.precioUnitario);
   const subtotal = precio * d.units;
 

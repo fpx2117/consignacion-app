@@ -1,176 +1,156 @@
 "use client";
 
 import * as React from "react";
-import type { CreateClienteInput } from "@/lib/types";
-import { apiService } from "@/lib/apiService";
+import { useForm } from "react-hook-form";
+import { Plus, Loader2, User, Phone, MapPin } from "lucide-react";
 
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  DialogFooter,
 } from "@/components/ui/dialog";
-import { User, Phone, MapPin, Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { apiService } from "@/lib/apiService";
+import { toast } from "sonner"; // O tu librería de notificaciones
 
-export function CreateClienteDialog({
-  trigger,
-  onCreated,
-}: {
-  trigger: React.ReactNode;
-  onCreated?: () => void;
-}) {
+interface CreateClienteDialogProps {
+  onCreated: () => void;
+  trigger?: React.ReactNode;
+}
+
+export function CreateClienteDialog({ onCreated, trigger }: CreateClienteDialogProps) {
   const [open, setOpen] = React.useState(false);
-  const [saving, setSaving] = React.useState(false);
+  const [loading, setLoading] = React.useState(false);
 
-  // Estado inicial del formulario
-  const [form, setForm] = React.useState<CreateClienteInput>({
-    nombre: "",
-    telefono: "", // Inicializado como string vacío para inputs controlados
-    direccion: "",
+  const { register, handleSubmit, reset, formState: { errors } } = useForm({
+    defaultValues: {
+      nombre: "",
+      telefono: "",
+      direccion: "",
+    }
   });
 
-  const canSubmit = form.nombre.trim().length >= 2;
-
-  // Función genérica para actualizar campos
-  function update(key: keyof CreateClienteInput, value: string) {
-    setForm((prev) => ({ ...prev, [key]: value }));
-  }
-
-  async function onSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    if (!canSubmit || saving) return;
-
-    setSaving(true);
+  const onSubmit = async (data: any) => {
+    setLoading(true);
     try {
-      const payload: CreateClienteInput = {
-        nombre: form.nombre.trim(),
-        telefono: form.telefono?.trim() || null,
-        direccion: form.direccion?.trim() || null,
-      };
-
-      await apiService.createCliente(payload);
-
+      await apiService.createCliente({ ...data, activo: true });
+      toast.success("Cliente creado correctamente");
       setOpen(false);
-      setForm({ nombre: "", telefono: "", direccion: "" }); // Reset limpio
-      onCreated?.();
-    } catch (err: any) {
-      console.error(err);
-      // Idealmente usarías un componente Toast aquí
-      alert(err?.message ?? "No se pudo crear el cliente");
+      reset();
+      onCreated();
+    } catch (error) {
+      console.error(error);
+      toast.error("Error al crear el cliente");
     } finally {
-      setSaving(false);
+      setLoading(false);
     }
-  }
+  };
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>{trigger}</DialogTrigger>
+      <DialogTrigger asChild>
+        {trigger || (
+          <Button className="bg-primary text-primary-foreground font-bold rounded-2xl">
+            <Plus className="mr-2 h-4 w-4" /> Nuevo Cliente
+          </Button>
+        )}
+      </DialogTrigger>
+      
+      <DialogContent className="sm:max-w-[425px] rounded-[2.5rem] border-border bg-background p-8 shadow-2xl">
+        <DialogHeader className="space-y-3">
+          <DialogTitle className="text-3xl font-black uppercase italic tracking-tighter text-foreground">
+            Nuevo Registro
+          </DialogTitle>
+          <DialogDescription className="text-muted-foreground font-medium">
+            Ingresa los datos del nuevo cliente para el sistema.
+          </DialogDescription>
+        </DialogHeader>
 
-      <DialogContent className="sm:max-w-[425px] p-0 overflow-hidden gap-0">
-        <div className="p-6 pb-4 border-b bg-muted/10">
-          <DialogHeader>
-            <DialogTitle className="text-xl flex items-center gap-2">
-              <div className="p-2 bg-primary/10 rounded-lg">
-                <User className="h-5 w-5 text-primary" />
-              </div>
-              Nuevo Cliente
-            </DialogTitle>
-            <DialogDescription>
-              Ingresá los datos personales del cliente para registrarlo en el sistema.
-            </DialogDescription>
-          </DialogHeader>
-        </div>
+       <form 
+  onSubmit={handleSubmit(onSubmit)} 
+  className="space-y-6 py-4"
+  autoComplete="off" // Desactiva el autocompletado a nivel formulario
+>
+  {/* Campo Nombre */}
+  <div className="space-y-2">
+    <Label htmlFor="nombre" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">
+      Nombre Completo
+    </Label>
+    <div className="relative">
+      <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+      <Input
+        id="nombre"
+        {...register("nombre", { required: "El nombre es obligatorio" })}
+        placeholder="Ej. Juan Pérez"
+        autoComplete="one-time-code" // Técnica para forzar al navegador a ignorar el historial
+        className="pl-10 h-12 bg-muted/50 border-border rounded-xl text-foreground placeholder:text-muted-foreground/50 focus-visible:ring-primary"
+      />
+    </div>
+  </div>
 
-        <form onSubmit={onSubmit}>
-          <div className="p-6 space-y-5">
-            {/* Nombre */}
-            <div className="space-y-2">
-              <Label htmlFor="nombre" className="text-xs font-bold uppercase text-muted-foreground tracking-wider">
-                Nombre Completo <span className="text-destructive">*</span>
-              </Label>
-              <div className="relative">
-                <User className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input
-                  id="nombre"
-                  value={form.nombre}
-                  onChange={(e) => update("nombre", e.target.value)}
-                  placeholder="Ej: Juan Pérez"
-                  className="pl-9 bg-background focus-visible:ring-primary/20"
-                  autoFocus
-                  autoComplete="name"
-                />
-              </div>
-            </div>
+  {/* Campo Teléfono */}
+  <div className="space-y-2">
+    <Label htmlFor="telefono" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">
+      Teléfono / WhatsApp
+    </Label>
+    <div className="relative">
+      <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+      <Input
+        id="telefono"
+        {...register("telefono")}
+        placeholder="Ej. 11 2345 6789"
+        autoComplete="off"
+        className="pl-10 h-12 bg-muted/50 border-border rounded-xl text-foreground placeholder:text-muted-foreground/50 focus-visible:ring-primary"
+      />
+    </div>
+  </div>
 
-            {/* Teléfono */}
-            <div className="space-y-2">
-              <Label htmlFor="telefono" className="text-xs font-bold uppercase text-muted-foreground tracking-wider">
-                Teléfono
-              </Label>
-              <div className="relative">
-                <Phone className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input
-                  id="telefono"
-                  value={form.telefono || ""}
-                  onChange={(e) => update("telefono", e.target.value)}
-                  placeholder="Ej: 11 2345-6789"
-                  className="pl-9 bg-background focus-visible:ring-primary/20"
-                  type="tel"
-                  autoComplete="tel"
-                />
-              </div>
-            </div>
+  {/* Campo Dirección */}
+  <div className="space-y-2">
+    <Label htmlFor="direccion" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">
+      Ubicación / Dirección
+    </Label>
+    <div className="relative">
+      <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+      <Input
+        id="direccion"
+        {...register("direccion")}
+        placeholder="Ej. Av. Siempre Viva 742"
+        autoComplete="off"
+        className="pl-10 h-12 bg-muted/50 border-border rounded-xl text-foreground placeholder:text-muted-foreground/50 focus-visible:ring-primary"
+      />
+    </div>
+  </div>
+        
 
-            {/* Dirección */}
-            <div className="space-y-2">
-              <Label htmlFor="direccion" className="text-xs font-bold uppercase text-muted-foreground tracking-wider">
-                Dirección
-              </Label>
-              <div className="relative">
-                <MapPin className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input
-                  id="direccion"
-                  value={form.direccion || ""}
-                  onChange={(e) => update("direccion", e.target.value)}
-                  placeholder="Calle, número, localidad"
-                  className="pl-9 bg-background focus-visible:ring-primary/20"
-                  autoComplete="street-address"
-                />
-              </div>
-            </div>
-          </div>
-
-          <DialogFooter className="p-6 pt-2 bg-muted/5 flex-col-reverse sm:flex-row gap-2">
-             <Button
-                type="button"
-                variant="outline"
-                onClick={() => setOpen(false)}
-                disabled={saving}
-                className="w-full sm:w-auto"
-              >
-                Cancelar
-              </Button>
-
-              <Button 
-                type="submit" 
-                disabled={!canSubmit || saving}
-                className="w-full sm:w-auto min-w-[140px]"
-              >
-                {saving ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Guardando...
-                  </>
-                ) : (
-                  "Crear Cliente"
-                )}
-              </Button>
+          <DialogFooter className="pt-4 flex-col sm:flex-row gap-3">
+            <Button 
+              type="button" 
+              variant="ghost" 
+              onClick={() => setOpen(false)}
+              className="rounded-xl font-bold uppercase text-[10px] tracking-widest"
+            >
+              Cancelar
+            </Button>
+            <Button 
+              type="submit" 
+              disabled={loading}
+              className="rounded-xl h-12 px-8 bg-primary text-primary-foreground font-bold uppercase text-[10px] tracking-widest shadow-lg shadow-primary/20"
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Guardando...
+                </>
+              ) : (
+                "Guardar Cliente"
+              )}
+            </Button>
           </DialogFooter>
         </form>
       </DialogContent>

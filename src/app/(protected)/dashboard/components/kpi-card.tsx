@@ -25,7 +25,6 @@ export function KpiCard({
   emphasis,
   variant = "default",
 }: KpiCardProps) {
-  
   const isDestructive = variant === "destructive";
   const isSuccess = variant === "success";
   const isWarning = variant === "warning";
@@ -39,14 +38,10 @@ export function KpiCard({
     >
       <Card
         className={cn(
-          // ESTRUCTURA BASE
           "group relative flex flex-col justify-between overflow-hidden transition-all duration-500",
-          // h-full y min-h aseguran consistencia, pero h-auto interno permite crecer sin límites
-          "h-full min-h-[120px]", 
-          "border-none shadow-[0_4px_20px_rgb(0,0,0,0.03)]",
-          
+          "h-full min-h-[140px] sm:min-h-[160px]", // Aumentamos min-h ligeramente para evitar colapsos
+          "border-none shadow-sm",
           emphasis && "shadow-xl ring-1 ring-inset ring-black/10 dark:ring-white/10 z-10",
-
           isDestructive && "bg-destructive/5 dark:bg-destructive/10 border-l-4 border-destructive/50",
           isSuccess && "bg-emerald-500/5 dark:bg-emerald-500/10 border-l-4 border-emerald-500/50",
           isWarning && "bg-amber-500/5 dark:bg-amber-500/10 border-l-4 border-amber-500/50",
@@ -54,53 +49,48 @@ export function KpiCard({
         )}
       >
         {/* Glow Effects */}
-        {isDestructive && <div className="absolute -left-6 -top-6 h-24 w-24 bg-destructive/10 blur-3xl" />}
-        {isSuccess && <div className="absolute -left-6 -top-6 h-24 w-24 bg-emerald-500/10 blur-3xl" />}
-        {isWarning && <div className="absolute -left-6 -top-6 h-24 w-24 bg-amber-500/10 blur-3xl" />}
+        <div className={cn(
+          "absolute -left-6 -top-6 h-24 w-24 blur-3xl opacity-20 transition-opacity group-hover:opacity-40",
+          isDestructive && "bg-destructive",
+          isSuccess && "bg-emerald-500",
+          isWarning && "bg-amber-500",
+          isDefault && "bg-primary"
+        )} />
 
-        {/* CONTENIDO PRINCIPAL */}
-        {/* Usamos flex h-full para distribuir el espacio uniformemente */}
-        <div className="relative z-10 flex h-full flex-col justify-between p-4 sm:p-5">
+        <div className="relative z-10 flex h-full flex-col justify-between p-3 sm:p-5">
           
-          <div className="flex flex-col gap-4"> {/* Gap un poco mayor para respirar */}
+          <div className="flex flex-col gap-2 sm:gap-4">
             
-            {/* ENCABEZADO: CENTRADO VERTICALMENTE */}
-            {/* items-center: El icono SIEMPRE estará en el centro vertical del bloque de texto */}
-            <div className="flex items-center gap-3 w-full">
+            {/* ENCABEZADO: Responsivo (Column en muy pequeños, Row en el resto) */}
+            <div className="flex flex-col xs:flex-row items-start xs:items-center gap-2 xs:gap-3 w-full">
               <div
                 className={cn(
-                  "shrink-0 rounded-xl p-2.5 transition-all duration-300 ring-1 ring-inset shadow-sm", // p-2.5 para un toque más de aire
+                  "shrink-0 rounded-lg p-2 transition-all duration-300 ring-1 ring-inset",
                   isDestructive && "bg-destructive/10 text-destructive ring-destructive/20",
                   isSuccess && "bg-emerald-500/10 text-emerald-600 ring-emerald-500/20 dark:text-emerald-400",
                   isWarning && "bg-amber-500/10 text-amber-600 ring-amber-500/20 dark:text-amber-400",
                   isDefault && "bg-primary/10 text-primary ring-primary/20"
                 )}
               >
-                <Icon className="h-4 w-4" />
+                <Icon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
               </div>
 
-              {/* TÍTULO */}
-              {/* break-words: Rompe palabras largas si es necesario */}
-              {/* text-balance: Equilibra las líneas para que no quede una palabra sola */}
-              <p className="text-[10px] font-black uppercase tracking-[0.15em] text-muted-foreground/80 break-words leading-tight text-balance w-full">
+              <p className="text-[9px] sm:text-[10px] font-black uppercase tracking-wider text-muted-foreground/80 leading-tight text-balance overflow-hidden">
                 {title}
               </p>
             </div>
 
-            {/* VALOR */}
+            {/* VALOR: Ajuste de tamaño dinámico */}
             {loading ? (
-              <div className="pt-1">
-                <Skeleton className="h-8 w-[70%] rounded-lg" />
-              </div>
+              <Skeleton className="h-7 w-[60%] rounded-lg mt-1" />
             ) : (
               <motion.div
                 initial={{ opacity: 0, y: 5 }}
                 animate={{ opacity: 1, y: 0 }}
                 className={cn(
-                  // text-2xl base (móvil) -> sm:text-3xl (tablet/desktop)
-                  // break-all: Evita que números gigantes rompan el layout horizontal
-                  "font-black tabular-nums tracking-tighter leading-none transition-colors break-all",
-                  "text-2xl sm:text-3xl", 
+                  "font-black tabular-nums tracking-tighter leading-none transition-colors",
+                  "text-xl xs:text-2xl sm:text-3xl lg:text-4xl", // Escala fluida
+                  "break-all hyphens-auto", // Para números excesivamente largos o divisas
                   isDestructive && "text-destructive",
                   isSuccess && "text-emerald-600 dark:text-emerald-400",
                   isWarning && "text-amber-600 dark:text-amber-400",
@@ -112,34 +102,32 @@ export function KpiCard({
             )}
           </div>
 
-          {/* FOOTER */}
-          {/* items-center: Alinea el puntito con el centro vertical del texto del footer */}
-          <div className="mt-4 flex items-center gap-2.5">
+          {/* FOOTER: Ajuste de padding y tamaño */}
+          <div className="mt-3 flex items-center gap-2 border-t border-foreground/5 pt-2 sm:pt-3">
             <div
               className={cn(
-                "shrink-0 h-1.5 w-1.5 rounded-full ring-2 ring-opacity-20",
-                isDestructive && "bg-destructive ring-destructive",
-                isSuccess && "bg-emerald-500 ring-emerald-500",
-                isWarning && "bg-amber-500 ring-amber-500",
-                isDefault && "bg-primary/80 ring-primary"
+                "shrink-0 h-1.5 w-1.5 rounded-full animate-pulse",
+                isDestructive && "bg-destructive",
+                isSuccess && "bg-emerald-500",
+                isWarning && "bg-amber-500",
+                isDefault && "bg-primary"
               )}
             />
-            {/* TEXTO SUBTÍTULO */}
-            <p className="text-[11px] font-bold text-muted-foreground/90 italic break-words leading-tight text-balance">
+            <p className="text-[10px] sm:text-[11px] font-medium text-muted-foreground/70 italic line-clamp-1 group-hover:line-clamp-none transition-all">
               {subtitle}
             </p>
           </div>
         </div>
 
-        {/* ICONO DE FONDO */}
+        {/* ICONO DE FONDO: Ajustado para no molestar visualmente en móvil */}
         <Icon
           className={cn(
-            "absolute -right-6 -bottom-6 h-32 w-32 transition-all duration-700 pointer-events-none z-0",
-            "-rotate-12 group-hover:rotate-0 group-hover:scale-110",
-            isDestructive && "text-destructive opacity-[0.08]",
-            isSuccess && "text-emerald-500 opacity-[0.08]",
-            isWarning && "text-amber-500 opacity-[0.08]",
-            isDefault && "text-primary opacity-[0.06]"
+            "absolute -right-4 -bottom-4 h-20 w-20 sm:h-32 sm:w-32 transition-all duration-700 pointer-events-none z-0",
+            "-rotate-12 group-hover:rotate-0 group-hover:scale-110 opacity-[0.05]",
+            isDestructive && "text-destructive",
+            isSuccess && "text-emerald-500",
+            isWarning && "text-amber-500",
+            isDefault && "text-primary"
           )}
         />
       </Card>

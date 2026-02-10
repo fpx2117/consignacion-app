@@ -1,99 +1,49 @@
 "use client";
 
 import * as React from "react";
-import { Search, X, ChevronLeft, ChevronRight } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Search } from "lucide-react";
 
 interface ClienteFiltersProps {
   q: string;
   setQ: (value: string) => void;
   statusFilter: string;
   setStatusFilter: (value: string) => void;
-  currentPage: number;
-  totalPages: number;
-  onPageChange: (page: number) => void;
 }
 
-export function ClienteFilters({ 
-  q, 
-  setQ, 
-  statusFilter, 
-  setStatusFilter,
-  currentPage,
-  totalPages,
-  onPageChange
-}: ClienteFiltersProps) {
+export function ClienteFilters({ q, setQ, statusFilter, setStatusFilter }: ClienteFiltersProps) {
   return (
-    <div className="flex flex-col gap-6 p-4 bg-card/50 border rounded-2xl shadow-sm">
+    <div className="flex flex-col lg:flex-row items-center gap-4 w-full bg-card p-3 md:p-4 rounded-[1.5rem] border border-border shadow-sm">
       {/* Buscador */}
-      <div className="relative w-full">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+      <div className="relative w-full flex-1">
+        <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
         <Input
           placeholder="Buscar por nombre, teléfono..."
           value={q}
-          onChange={(e) => { setQ(e.target.value); onPageChange(1); }}
-          className="pl-10 bg-muted/30 border-none focus-visible:ring-1 focus-visible:ring-primary/50"
+          onChange={(e) => setQ(e.target.value)}
+          className="w-full pl-11 h-12 bg-background border-border rounded-xl focus-visible:ring-primary"
         />
-        {q && (
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            onClick={() => setQ("")}
-            className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7"
-          >
-            <X className="h-3 w-3" />
-          </Button>
-        )}
       </div>
 
-      {/* Filtros de Estado Centrados */}
-      <div className="flex flex-col items-center gap-4">
-        <div className="flex items-center justify-center gap-1 p-1 bg-muted/40 rounded-xl w-full max-w-sm border border-white/5">
-          {["all", "active", "inactive"].map((status) => (
-            <Button
-              key={status}
-              variant={statusFilter === status ? "secondary" : "ghost"}
-              size="sm"
-              onClick={() => { setStatusFilter(status); onPageChange(1); }}
-              className={`flex-1 rounded-lg px-4 h-9 text-xs font-bold transition-all ${
-                statusFilter === status 
-                  ? 'bg-background shadow-lg text-foreground' 
-                  : 'text-muted-foreground hover:bg-transparent'
-              }`}
-            >
-              {status === "all" ? "Todos" : status === "active" ? "Activos" : "Inactivos"}
-            </Button>
-          ))}
-        </div>
-
-        {/* Controles de Paginación */}
-        {totalPages > 1 && (
-          <div className="flex items-center gap-4 pt-2">
-            <Button
-              variant="outline"
-              size="icon"
-              className="h-8 w-8 rounded-lg border-white/10"
-              onClick={() => onPageChange(currentPage - 1)}
-              disabled={currentPage === 1}
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-            <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
-              Página {currentPage} de {totalPages}
-            </span>
-            <Button
-              variant="outline"
-              size="icon"
-              className="h-8 w-8 rounded-lg border-white/10"
-              onClick={() => onPageChange(currentPage + 1)}
-              disabled={currentPage === totalPages}
-            >
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-          </div>
-        )}
-      </div>
+      {/* Tabs - En móvil ocupan todo el ancho */}
+      <Tabs 
+        value={statusFilter} 
+        onValueChange={setStatusFilter} 
+        className="w-full lg:w-auto"
+      >
+        <TabsList className="grid grid-cols-3 w-full lg:w-[300px] h-12 bg-muted/50 border border-border rounded-xl p-1">
+          <TabsTrigger value="all" className="text-[10px] font-bold uppercase tracking-widest">
+            Todos
+          </TabsTrigger>
+          <TabsTrigger value="active" className="text-[10px] font-bold uppercase tracking-widest">
+            Activos
+          </TabsTrigger>
+          <TabsTrigger value="inactive" className="text-[10px] font-bold uppercase tracking-widest">
+            Inactivos
+          </TabsTrigger>
+        </TabsList>
+      </Tabs>
     </div>
   );
 }
