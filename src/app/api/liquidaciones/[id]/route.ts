@@ -1,12 +1,14 @@
+
+//src/app/api/liquidaciones/[id]/route.ts
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/requireAuth";
-import { createLiquidacionSchema } from "@/lib/validators/consignacion";
+import { createLiquidacionBodySchema } from "@/lib/validators/liquidacion";
 import { notifyStockIfNeeded } from "@/lib/notifyStock";
 
 // Corrección de tipos para Next.js 15+
-type RouteParams = { 
-  params: Promise<{ id: string }> 
+type RouteParams = {
+  params: Promise<{ id: string }>;
 };
 
 /**
@@ -17,7 +19,6 @@ export async function GET(_: Request, { params }: RouteParams) {
   const auth = await requireAuth();
   if (!auth.ok) return auth.res;
 
-  // Resolvemos la promesa de params
   const { id: rawId } = await params;
   const liquidacionId = Number(rawId);
 
@@ -51,12 +52,18 @@ export async function GET(_: Request, { params }: RouteParams) {
 /**
  * PUT /api/liquidaciones/[id]
  * Corregir una liquidación existente (reversa + aplica nuevo)
+ *
+ * Body esperado:
+ * {
+ *   items: [{ consignacionDetalleId, unitsVendidas, unitsDevueltas }]
+ * }
+ *
+ * NOTA: consignacionId NO va en el body (sale de la liquidación existente).
  */
 export async function PUT(req: Request, { params }: RouteParams) {
   const auth = await requireAuth();
   if (!auth.ok) return auth.res;
 
-  // Resolvemos la promesa de params
   const { id: rawId } = await params;
   const liquidacionId = Number(rawId);
 
@@ -65,7 +72,7 @@ export async function PUT(req: Request, { params }: RouteParams) {
   }
 
   const body = await req.json().catch(() => null);
-  const parsed = createLiquidacionSchema.safeParse(body);
+  const parsed = createLiquidacionBodySchema.safeParse(body);
 
   if (!parsed.success) {
     return NextResponse.json(
@@ -85,7 +92,10 @@ export async function PUT(req: Request, { params }: RouteParams) {
           items: true,
           venta: true,
           consignacion: {
-            include: { cliente: true, detalles: { include: { producto: true } } },
+            include: {
+              cliente: true,
+              detalles: { include: { producto: true } },
+            },
           },
         },
       });
@@ -171,7 +181,10 @@ export async function PUT(req: Request, { params }: RouteParams) {
 
         affectedProductIds.add(det.productoId);
 
+        // OJO: acá vos venías usando precioVenta del producto.
+        // Si querés usar el precio fijado en consignación, reemplazá por freshDet.precioUnitario si existe.
         const precioUnit = Number(det.producto.precioVenta);
+
         if (vendidas > 0) {
           nuevoTotalVenta += vendidas * precioUnit;
           const prev = soldByProduct.get(det.productoId);
@@ -283,10 +296,17 @@ export async function PUT(req: Request, { params }: RouteParams) {
     return NextResponse.json({ data: result }, { status: 200 });
   } catch (e: any) {
     const msg = String(e?.message || "");
-    if (msg === "LIQUIDACION_NO_ENCONTRADA") return NextResponse.json({ error: "No encontrada" }, { status: 404 });
-    if (msg === "DETALLE_NO_PERTENECE") return NextResponse.json({ error: "Detalle inválido" }, { status: 400 });
+    if (msg === "LIQUIDACION_NO_ENCONTRADA") {
+      return NextResponse.json({ error: "No encontrada" }, { status: 404 });
+    }
+    if (msg === "DETALLE_NO_PERTENECE") {
+      return NextResponse.json({ error: "Detalle inválido" }, { status: 400 });
+    }
     if (msg.startsWith("EXCEDE_PENDIENTE:")) {
-      return NextResponse.json({ error: "Excede el pendiente", detalleId: Number(msg.split(":")[1]) }, { status: 409 });
+      return NextResponse.json(
+        { error: "Excede el pendiente", detalleId: Number(msg.split(":")[1]) },
+        { status: 409 }
+      );
     }
     console.error(e);
     return NextResponse.json({ error: "Error inesperado" }, { status: 500 });

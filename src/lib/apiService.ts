@@ -120,10 +120,10 @@ export const API_ROUTES = {
   CONSIGNACIONES: "/api/consignaciones",
   CONSIGNACION_ID: (id: number) => `/api/consignaciones/${id}`,
 
- LIQUIDACIONES: {
-  BY_ID: (liquidacionId: number) => `/api/liquidaciones/${liquidacionId}`, // GET/PUT
-  CREATE_FOR_CONSIGNACION: (consignacionId: number) => `/api/consignaciones/${consignacionId}`, // POST (tu route actual)
-  // si luego lo cambiás a /api/consignaciones/:id/liquidaciones, lo actualizamos acá
+LIQUIDACIONES: {
+  BY_ID: (liquidacionId: number) => `/api/liquidaciones/${liquidacionId}`,
+  CREATE_FOR_CONSIGNACION: (consignacionId: number) =>
+    `/api/liquidaciones/consignacion/${consignacionId}`,
 },
 
   PAGOS: "/api/pagos",
