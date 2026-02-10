@@ -3,29 +3,12 @@ import { prisma } from "@/lib/prisma";
 import { requireAuth, requireRole } from "@/lib/requireAuth";
 import { updateProductoSchema } from "@/lib/validators/producto";
 
-type RouteParams = { params: Promise<{ id: string }> };
+// ✅ Imports del Sistema de Notificaciones
+import { sendNotification } from "@/lib/socket-trigger";
+import { NOTIFICATION_TYPE } from "@/lib/notificationes/notificaciones-types";
+import { obtenerConfiguracionGlobal } from "@/lib/config";
 
-// --- FUNCIÓN AUXILIAR PARA NOTIFICAR ---
-// Al usar Custom Server, siempre notificamos a localhost:3000 internamente.
-async function notificarSocket(payload: any) {
-  // Hardcodeamos localhost:3000 porque server.ts siempre escucha ahí.
-  // Esto es más rápido y evita errores de SSL en comunicación interna.
-  const url = "http://localhost:3000/api/socket/dispatch";
-  
-  try {
-    console.log("🔔 (Backend) Intentando notificar socket:", payload.title);
-    
-    // No usamos 'await' para no retrasar la respuesta al usuario (Fire-and-forget)
-    fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ notification: payload }),
-    }).catch((err) => console.error("⚠️ Error en dispatch socket (fetch):", err));
-    
-  } catch (error) {
-    console.error("❌ Error general intentando notificar:", error);
-  }
-}
+type RouteParams = { params: Promise<{ id: string }> };
 
 // --- GET: OBTENER UN PRODUCTO ---
 export async function GET(_: Request, { params }: RouteParams) {
@@ -61,22 +44,13 @@ export async function PUT(req: Request, { params }: RouteParams) {
     return NextResponse.json({ error: "ID inválido" }, { status: 400 });
   }
 
-  // Protección contra body vacío o mal formado
   const body = await req.json().catch(() => null);
   if (!body) {
     return NextResponse.json({ error: "Body inválido o vacío" }, { status: 400 });
   }
 
-  // LIMPIEZA: Eliminamos campos que no se deben tocar manualmente
-  const { 
-    id: _id, 
-    createdAt: _c, 
-    updatedAt: _u, 
-    stockConsignadoUnits: _s, 
-    ...dataToValidate 
-  } = body;
-
-  const parsed = updateProductoSchema.safeParse(dataToValidate);
+  // Validar Schema (Zod)
+  const parsed = updateProductoSchema.safeParse(body);
 
   if (!parsed.success) {
     return NextResponse.json(
@@ -88,32 +62,49 @@ export async function PUT(req: Request, { params }: RouteParams) {
     );
   }
 
-  // 1. OBTENEMOS EL ESTADO ANTERIOR (Vital para comparar stock)
+  // Verificar existencia previa
   const exists = await prisma.producto.findUnique({ where: { id } });
   if (!exists) return NextResponse.json({ error: "No encontrado" }, { status: 404 });
 
   try {
-    // 2. ACTUALIZAMOS EN BASE DE DATOS
+    // 1. Obtener configuración global antes de actualizar
+    const configGlobal = await obtenerConfiguracionGlobal();
+
+    // 2. Actualizar en Base de Datos
     const updated = await prisma.producto.update({
       where: { id },
       data: parsed.data, 
     });
 
-    // 3. LÓGICA DE NOTIFICACIÓN SOCKET
-    // Condición: Stock baja a 0 Y antes era mayor a 0
-    if (updated.stockDisponibleUnits === 0 && exists.stockDisponibleUnits > 0) {
+    // 3. ✅ LÓGICA DE NOTIFICACIÓN INTELIGENTE
+    // Solo notificamos si el stock cambió y está en niveles críticos
+    if (parsed.data.stockDisponibleUnits !== undefined) {
       
-      const notificationData = {
-        id: Date.now().toString(),
-        title: "¡Stock Agotado!",
-        description: `El producto "${updated.nombre}" se quedó sin stock.`,
-        type: "out_of_stock",
-        time: new Date().toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' }),
-        productoId: updated.id
-      };
+      const nuevoStock = updated.stockDisponibleUnits;
+      
+      // Definir umbral: Específico del producto > Global
+      const umbralAlerta = updated.stockMinUnits > 0 
+        ? updated.stockMinUnits 
+        : configGlobal.minStockGlobal;
 
-      // Llamamos a la función auxiliar
-      notificarSocket(notificationData);
+      // CASO A: Se puso en 0 (Agotado)
+      if (nuevoStock <= 0) {
+        await sendNotification({
+          type: NOTIFICATION_TYPE.OUT_OF_STOCK,
+          title: "Stock Agotado (Manual)",
+          message: `El inventario de "${updated.nombre}" se ha puesto en 0 manualmente.`,
+          data: { productId: updated.id }
+        });
+      }
+      // CASO B: Se puso en nivel bajo (Advertencia)
+      else if (nuevoStock <= umbralAlerta) {
+        await sendNotification({
+          type: NOTIFICATION_TYPE.LOW_STOCK,
+          title: "Stock Bajo detectado",
+          message: `Ajuste manual: "${updated.nombre}" quedó con ${nuevoStock} u. (Mínimo: ${umbralAlerta})`,
+          data: { productId: updated.id }
+        });
+      }
     }
 
     return NextResponse.json({ data: updated });
@@ -141,15 +132,13 @@ export async function DELETE(_: Request, { params }: RouteParams) {
 
   if (!Number.isFinite(id)) return NextResponse.json({ error: "ID inválido" }, { status: 400 });
 
-  const exists = await prisma.producto.findUnique({ where: { id } });
-  if (!exists) return NextResponse.json({ error: "No encontrado" }, { status: 404 });
-
   try {
     await prisma.producto.delete({ where: { id } });
     return NextResponse.json({ data: { ok: true } });
   } catch (e) {
+    // Error típico de Foreign Key (si ya se vendió, no se puede borrar)
     return NextResponse.json(
-      { error: "Conflicto: El producto tiene registros asociados y no puede eliminarse." }, 
+      { error: "No se puede eliminar: El producto tiene ventas o movimientos asociados." }, 
       { status: 409 }
     );
   }

@@ -1,131 +1,125 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, useCallback } from "react";
-import { useSocket } from "@/providers/socket-provider";
-import { apiService } from "@/lib/apiService";
-import type { AppNotification, DbNotification } from "@/types/notification";
-import { mapDbNotificationToApp } from "@/types/notification";
+import { useEffect, useState, useCallback } from "react";
+import { useSocket } from "@/providers/socket-provider"; // Ajusta la ruta a tu provider
+import { toast } from "sonner"; // Opcional, si quieres feedback visual
 
-type UseNotificationsOptions = {
-  onlyUnreadOnLoad?: boolean; // default true
-  limit?: number; // default 50
-};
+// 1. Definimos el tipo exacto que viene de Prisma/API
+export interface AppNotification {
+  id: number;
+  type: "LOW_STOCK" | "OUT_OF_STOCK" | "EXPIRATION_NEAR" | "PRODUCT_EXPIRED" | "SYSTEM";
+  title: string;
+  description: string;
+  read: boolean;
+  createdAt: string; // Desde la API las fechas vienen como string ISO
+  producto?: {
+    id: number;
+    nombre: string;
+  };
+}
 
-export const useNotifications = (options?: UseNotificationsOptions) => {
+interface UseNotificationsProps {
+  limit?: number;
+  onlyUnreadOnLoad?: boolean;
+}
+
+export function useNotifications({ limit = 50, onlyUnreadOnLoad = false }: UseNotificationsProps = {}) {
   const { socket, isConnected } = useSocket();
-
-  const onlyUnreadOnLoad = options?.onlyUnreadOnLoad ?? true;
-  const limit = options?.limit ?? 50;
-
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
-  const [hasUnread, setHasUnread] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [loading, setLoading] = useState(true);
 
-  // dedupe por id
-  const idsSetRef = useRef<Set<string>>(new Set());
+  // --- A. Cargar notificaciones iniciales (Fetch API) ---
+  const fetchNotifications = useCallback(async () => {
+    try {
+      setLoading(true);
+      const params = new URLSearchParams({
+        limit: limit.toString(),
+        onlyUnread: onlyUnreadOnLoad ? "true" : "false",
+      });
 
-  const addNotification = useCallback((n: AppNotification) => {
-    if (!n?.id) return;
+      const res = await fetch(`/api/notificaciones?${params}`);
+      const data = await res.json();
 
-    if (idsSetRef.current.has(n.id)) return;
-
-    idsSetRef.current.add(n.id);
-    setNotifications((prev) => [n, ...prev]);
-    setHasUnread(true);
-  }, []);
-
-  /* =========================
-     Carga inicial desde DB
-  ========================= */
-  useEffect(() => {
-    let mounted = true;
-
-    const load = async () => {
-      try {
-        setLoading(true);
-
-        const res = await apiService.getNotificaciones({
-          onlyUnread: onlyUnreadOnLoad,
-          limit,
-        });
-
-        const dbList = (res.data ?? []) as DbNotification[];
-        const mapped = dbList.map(mapDbNotificationToApp);
-
-        if (!mounted) return;
-
-        // Reset dedupe
-        const newSet = new Set<string>();
-        for (const n of mapped) newSet.add(n.id);
-        idsSetRef.current = newSet;
-
-        setNotifications(mapped);
-
-        // Si pedís onlyUnread, entonces si hay items => hay unread
-        // Si pedís historial (onlyUnread=false), el badge se maneja con eventos nuevos
-        setHasUnread(onlyUnreadOnLoad ? mapped.length > 0 : false);
-      } catch (e) {
-        console.warn("Error loading notifications:", e);
-      } finally {
-        if (mounted) setLoading(false);
+      if (data.data) {
+        setNotifications(data.data);
+        setUnreadCount(data.unreadCount || 0);
       }
-    };
+    } catch (error) {
+      console.error("Error cargando notificaciones:", error);
+    } finally {
+      setLoading(false);
+    }
+  }, [limit, onlyUnreadOnLoad]);
 
-    load();
-
-    return () => {
-      mounted = false;
-    };
-  }, [onlyUnreadOnLoad, limit]);
-
-  /* =========================
-     Socket listener (en vivo)
-  ========================= */
   useEffect(() => {
-    if (!socket || !isConnected) return;
+    fetchNotifications();
+  }, [fetchNotifications]);
 
-    const onNewNotification = (data: AppNotification) => {
-      if (!data?.id || !data?.title) return;
-      addNotification(data);
-    };
+  // --- B. Escuchar nuevos eventos del Socket ---
+  useEffect(() => {
+    if (!socket) return;
 
-    socket.off("new-notification", onNewNotification);
-    socket.on("new-notification", onNewNotification);
+    socket.on("new-notification", (newNotif: any) => {
+      // 1. Agregamos la nueva al principio de la lista
+      setNotifications((prev) => {
+        // Evitamos duplicados visuales si el socket manda lo mismo rápido
+        const exists = prev.find((n) => n.id === newNotif.id);
+        if (exists) return prev;
+
+        // Formateamos para que coincida con la interfaz AppNotification
+        const formatted: AppNotification = {
+            id: Number(newNotif.id) || Date.now(), // Fallback por si no viene ID
+            type: newNotif.type,
+            title: newNotif.title,
+            description: newNotif.message || newNotif.description, // Adaptar según qué mande tu backend
+            read: false,
+            createdAt: new Date().toISOString(),
+            producto: newNotif.data ? { id: newNotif.data.productId, nombre: "..." } : undefined
+        };
+        
+        return [formatted, ...prev];
+      });
+
+      // 2. Incrementamos contador
+      setUnreadCount((prev) => prev + 1);
+    });
 
     return () => {
-      socket.off("new-notification", onNewNotification);
+      socket.off("new-notification");
     };
-  }, [socket, isConnected, addNotification]);
+  }, [socket]);
 
-  /* =========================
-     Acciones
-  ========================= */
- const markAsRead = useCallback(async () => {
-  try {
-    await apiService.marcarTodasNotificacionesLeidas();
+  // --- C. Función para Marcar Todo como Leído ---
+  const markAllAsRead = async () => {
+    try {
+      // Optimistic Update (Actualizamos visualmente antes de que responda el server)
+      setUnreadCount(0);
+      setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
 
-    // ✅ Apaga badge
-    setHasUnread(false);
+      // Llamada a la API
+      await fetch("/api/notificaciones", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ markAll: true }),
+      });
+      
+      toast.success("Notificaciones marcadas como leídas");
 
-    // ✅ Como el panel es SOLO no leídas, al leerlas se vacía
-    setNotifications([]);
-    idsSetRef.current = new Set();
-  } catch (e) {
-    console.warn("Error marking notifications as read:", e);
-  }
-}, []);
-
-  const unreadCount = useMemo(() => {
-    // MVP: si hay unread, contamos lo que mostramos
-    return hasUnread ? notifications.length : 0;
-  }, [hasUnread, notifications.length]);
+    } catch (error) {
+      console.error("Error marcando como leídas:", error);
+      // Revertir si falla (opcional)
+      fetchNotifications(); 
+    }
+  };
 
   return {
     notifications,
-    hasUnread,
     unreadCount,
-    markAsRead,
-    isConnected,
     loading,
+    isConnected,
+    markAllAsRead, // 👈 ¡Aquí está la función que te faltaba!
+    hasUnread: unreadCount > 0,
+    refresh: fetchNotifications,
   };
-};
+}

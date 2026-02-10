@@ -3,26 +3,13 @@ import { prisma } from "@/lib/prisma";
 import { requireAuth, requireRole } from "@/lib/requireAuth";
 import { createProductoSchema } from "@/lib/validators/producto";
 
-// --- FUNCIÓN AUXILIAR (Actualizada para Custom Server) ---
-// Al usar Custom Server, siempre notificamos a localhost:3000 internamente.
-async function notificarSocket(payload: any) {
-  // Hardcodeamos localhost:3000 porque server.ts siempre escucha ahí.
-  const url = "http://localhost:3000/api/socket/dispatch";
-  
-  try {
-    console.log("🔔 (Backend Create) Intentando notificar socket:", payload.title);
-    
-    // Fire-and-forget: Fetch sin await bloqueante
-    fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ notification: payload }),
-    }).catch((err) => console.error("⚠️ Error en dispatch socket (fetch):", err));
-    
-  } catch (error) {
-    console.error("❌ Error general intentando notificar:", error);
-  }
-}
+// ✅ 1. Importamos sistema de notificaciones
+import { sendNotification } from "@/lib/socket-trigger";
+// Asegúrate de que esta ruta sea la correcta (vi que la cambiaste a esta carpeta):
+import { NOTIFICATION_TYPE } from "@/lib/notificationes/notificaciones-types"; 
+
+// ✅ 2. Importamos el Helper de Configuración (Vital para no hardcodear el 5)
+import { obtenerConfiguracionGlobal } from "@/lib/config";
 
 // --- GET: OBTENER PRODUCTOS ---
 export async function GET() {
@@ -50,14 +37,14 @@ export async function POST(req: Request) {
     const auth = await requireAuth();
     if (!auth.ok) return auth.res;
 
-    // Solo administradores pueden crear productos
     if (!requireRole(auth.user, ["ADMIN"])) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
     const body = await req.json().catch(() => null);
     
-    // Validación con Zod
+    // Asegúrate de que tu Zod Schema (createProductoSchema) acepte 
+    // 'stockMinUnits' y 'fechaVencimiento' como opcionales.
     const parsed = createProductoSchema.safeParse(body);
 
     if (!parsed.success) {
@@ -70,10 +57,18 @@ export async function POST(req: Request) {
       );
     }
 
-    // Definir stock inicial (si es nulo o undefined, es 0)
     const stockInicial = parsed.data.stockDisponibleUnits ?? 0;
 
-    // Crear en Base de Datos
+    // ✅ 3. OBTENER CONFIGURACIÓN DINÁMICA
+    const configGlobal = await obtenerConfiguracionGlobal();
+
+    // Calculamos el umbral real:
+    // Si el usuario mandó un mínimo específico (ej: 20), usamos ese.
+    // Si no, usamos el global de la DB (ej: 5).
+    // Nota: Asumo que en Zod agregaste stockMinUnits. Si no, usa configGlobal.minStockGlobal directo.
+    const umbralAlerta = (parsed.data as any).stockMinUnits ?? configGlobal.minStockGlobal;
+
+    // ✅ 4. CREAR EN BASE DE DATOS (Incluyendo campos nuevos)
     const created = await prisma.producto.create({
       data: {
         nombre: parsed.data.nombre,
@@ -82,23 +77,36 @@ export async function POST(req: Request) {
         stockDisponibleUnits: stockInicial,
         stockConsignadoUnits: 0,
         packSizeUnits: parsed.data.packSizeUnits ?? null,
+        
+        // Guardamos el mínimo específico si vino (0 = usa global)
+        stockMinUnits: (parsed.data as any).stockMinUnits ?? 0,
+        
+        // Guardamos fecha de vencimiento si vino
+        fechaVencimiento: (parsed.data as any).fechaVencimiento 
+          ? new Date((parsed.data as any).fechaVencimiento) 
+          : null,
       },
     });
 
-    // --- LÓGICA DE NOTIFICACIÓN SOCKET ---
-    // Si se crea un producto con 0 stock, enviamos la alerta en tiempo real
+    // --- ✅ LÓGICA DE NOTIFICACIÓN ---
+    
+    // CASO 1: Agotado (Stock 0)
     if (stockInicial === 0) {
-      const notificationData = {
-        id: Date.now().toString(),
+      await sendNotification({
+        type: NOTIFICATION_TYPE.OUT_OF_STOCK,
         title: "Nuevo Producto Sin Stock",
-        description: `Se ha creado "${created.nombre}" pero no tiene inventario inicial.`,
-        type: "out_of_stock", 
-        time: new Date().toLocaleTimeString('es-AR', { hour: "2-digit", minute: "2-digit" }),
-        productoId: created.id,
-      };
-
-      // Llamada directa (ya no necesitamos pasarle el host)
-      notificarSocket(notificationData);
+        message: `Se ha creado "${created.nombre}" sin inventario inicial.`,
+        data: { productId: created.id }
+      });
+    } 
+    // CASO 2: Stock Bajo (Usando la variable dinámica 'umbralAlerta')
+    else if (stockInicial <= umbralAlerta) {
+      await sendNotification({
+        type: NOTIFICATION_TYPE.LOW_STOCK,
+        title: "Nuevo Producto con Stock Bajo",
+        message: `"${created.nombre}" inicia con ${stockInicial} u. (El mínimo es ${umbralAlerta}).`,
+        data: { productId: created.id }
+      });
     }
 
     return NextResponse.json({ data: created }, { status: 201 });

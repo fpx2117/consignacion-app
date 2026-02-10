@@ -1,4 +1,7 @@
+
+//src/app/(protected)/ventas/nueva/page.tsx
 "use client";
+
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
@@ -116,7 +119,7 @@ export default function NuevaVentaPage() {
     setProductoId("");
     setUnits(1);
     setOpenCombobox(false);
-    toast.success("Agregado al ticket");
+    
   };
 
   const removeItem = (pid: number) => setCart((prev) => prev.filter((item) => item.producto.id !== pid));
@@ -361,22 +364,40 @@ export default function NuevaVentaPage() {
 
       </div>
 
-      {/* 3. FOOTER FIJO (Pago y Botón) */}
-      <div className="shrink-0 bg-background border-t p-3 pb-safe shadow-[0_-4px_10px_rgba(0,0,0,0.05)] z-20">
-          <div className="max-w-2xl mx-auto space-y-3">
-             <PaymentSelector metodoPago={metodoPago} setMetodoPago={setMetodoPago} isMobile />
-             
-             <Button onClick={handleCobrar} disabled={loading || cart.length === 0} className="w-full h-12 text-lg font-bold shadow-md bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white">
-                {loading ? <Loader2 className="animate-spin" /> : (
-                    <div className="flex justify-between w-full px-2 items-center">
-                        <span className="text-sm font-medium opacity-90">{cart.length} ITEMS</span>
-                        <span className="text-xl">COBRAR {formatCurrency(totalAmount)}</span>
-                    </div>
-                )}
-             </Button>
+   {/* ESPACIADOR (Aumentado un poco para asegurar scroll en móvil) */}
+      <div className="h-48 w-full shrink-0" />
+
+      {/* 3. FOOTER FLOTANTE */}
+      {/* CORRECCIÓN RESPONSIVE:
+          - bottom-24: En móvil sube 6rem (96px) para no chocar con la Bottom Bar.
+          - md:bottom-6: En desktop baja a 1.5rem porque no hay barra abajo.
+          - z-40: Un nivel intermedio (encima del contenido, debajo de modales/navbars superiores).
+      */}
+      <div className="fixed bottom-24 md:bottom-6 left-0 right-0 z-40 px-4 flex justify-center pointer-events-none">
+          
+          <div className="w-full max-w-2xl bg-background/85 backdrop-blur-xl border border-border/50 shadow-2xl rounded-[2rem] p-4 pointer-events-auto transition-all duration-300">
+              <div className="space-y-3">
+                 
+                 {/* Selector de Pago */}
+                 <PaymentSelector metodoPago={metodoPago} setMetodoPago={setMetodoPago} isMobile />
+                 
+                 {/* Botón Principal */}
+                 <Button 
+                    onClick={handleCobrar} 
+                    disabled={loading || cart.length === 0} 
+                    className="w-full h-14 text-lg font-bold shadow-lg shadow-indigo-500/20 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white rounded-2xl active:scale-[0.98] transition-all"
+                 >
+                    {loading ? <Loader2 className="animate-spin" /> : (
+                        <div className="flex justify-between w-full px-4 items-center">
+                            <span className="text-xs font-bold tracking-widest opacity-80 uppercase">{cart.length} ITEMS</span>
+                            <span className="text-xl font-black tracking-tight">COBRAR {formatCurrency(totalAmount)}</span>
+                        </div>
+                    )}
+                 </Button>
+              </div>
           </div>
       </div>
-
+      
       <SuccessDialog open={showSuccessDialog} onOpenChange={setShowSuccessDialog} onConfirm={handleReset} onCancel={handleViewTicket} title="¡Venta Exitosa!" description={<span className="text-center block">Total: <span className="text-primary font-bold">{formatCurrency(totalAmount)}</span></span>} confirmText="Nueva" cancelText="Descargar Ticket" />
       <ErrorDialog open={errorDialog.open} onOpenChange={(isOpen) => setErrorDialog(prev => ({ ...prev, open: isOpen }))} title={errorDialog.title} description={errorDialog.description} />
     </div>

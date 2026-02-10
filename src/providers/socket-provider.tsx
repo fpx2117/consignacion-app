@@ -15,54 +15,51 @@ const SocketContext = createContext<SocketContextType>({
 
 export const useSocket = () => useContext(SocketContext);
 
-function normalizeUrl(raw?: string) {
-  if (!raw) return "";
-  if (raw.startsWith("http://") || raw.startsWith("https://")) return raw;
-  return `https://${raw}`;
-}
-
 export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
   const [socket, setSocket] = useState<Socket | null>(null);
   const [isConnected, setIsConnected] = useState(false);
 
   useEffect(() => {
-    if (socket) return;
+    // 1. Definir la URL correctamente.
+    // En local, window.location.origin suele ser suficiente y maneja http/https automáticamente.
+    const siteUrl = process.env.NEXT_PUBLIC_BASE_URL || (typeof window !== "undefined" ? window.location.origin : "");
 
-    const envUrl = normalizeUrl(process.env.NEXT_PUBLIC_BASE_URL);
-    const fallback = typeof window !== "undefined" ? window.location.origin : "";
-    const siteUrl = envUrl || fallback;
+    console.log("🔌 Intentando conectar Socket.IO a:", siteUrl);
 
-    const socketInstance = (ClientIO as any)(siteUrl, {
+    // 2. Inicializar Socket
+    const socketInstance = ClientIO(siteUrl, {
       path: "/socket.io",
       addTrailingSlash: false,
-      reconnectionAttempts: 10,
-      reconnectionDelay: 1000,
-      autoConnect: true,
-      transports: ["polling", "websocket"],
-      // Si tu auth depende de cookie en otro dominio, esto ayuda:
-      withCredentials: true,
+      reconnection: true, // Habilitar reconexión explícita
+      reconnectionAttempts: 5,
+      transports: ["polling", "websocket"], // Polling primero mejora compatibilidad inicial
     });
 
     socketInstance.on("connect", () => {
-      console.log("🟢 Socket Conectado (ID):", socketInstance.id);
+      console.log("🟢 CLIENTE: Socket Conectado. ID:", socketInstance.id);
       setIsConnected(true);
     });
 
-    socketInstance.on("disconnect", () => {
-      console.log("🔴 Socket Desconectado");
+    socketInstance.on("disconnect", (reason) => {
+      console.log("🔴 CLIENTE: Socket Desconectado. Razón:", reason);
       setIsConnected(false);
     });
 
-    socketInstance.on("connect_error", (err: any) => {
-      console.warn("⚠️ Error socket / reconectando:", err?.message || err);
+    socketInstance.on("connect_error", (err) => {
+      console.error("⚠️ CLIENTE: Error de conexión:", err.message);
     });
 
     setSocket(socketInstance);
 
+    // 3. Cleanup: Importante para no duplicar conexiones en React Strict Mode
     return () => {
-      socketInstance.disconnect();
+      // Solo desconectar si el componente se desmonta realmente
+      if (socketInstance.connected) {
+        console.log("🛑 Limpiando instancia de socket...");
+        socketInstance.disconnect();
+      }
     };
-  }, [socket]);
+  }, []); // Array vacío: Solo se ejecuta UNA VEZ al montar
 
   return (
     <SocketContext.Provider value={{ socket, isConnected }}>

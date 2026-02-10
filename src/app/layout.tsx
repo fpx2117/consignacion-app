@@ -5,6 +5,10 @@ import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import { SocketProvider } from "@/providers/socket-provider";
 
+// ✅ 1. Importamos el componente visual y el lógico
+import { Toaster } from "sonner"; 
+import { SocketToaster } from "../providers/socket-toaster"; // Este es el que creamos para escuchar los eventos del socket y mostrar toasts
+
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
@@ -37,7 +41,18 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <SocketProvider>{children}</SocketProvider>
+          {/* El Provider envuelve todo */}
+          <SocketProvider>
+            
+            {/* ✅ 2. Colocamos el "Escucha" DENTRO del provider para que acceda al socket */}
+            <SocketToaster />
+            
+            {children}
+            
+            {/* ✅ 3. Colocamos el contenedor visual de las alertas */}
+            <Toaster richColors position="top-right" />
+            
+          </SocketProvider>
         </ThemeProvider>
       </body>
     </html>
