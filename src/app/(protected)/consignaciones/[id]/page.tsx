@@ -110,33 +110,36 @@ export default function ConsignacionDetailPage() {
   const handlePdfAction = async (mode: "view" | "whatsapp") => {
   if (!consignacion) return;
 
-  let pdfUrl: string;
   try {
-    pdfUrl = await apiService.getConsignacionPdfUrl(consignacion.id);
+    const pdfUrl = await apiService.getConsignacionPdfUrl(consignacion.id);
+
+    if (mode === "view") {
+      // ✅ mobile-friendly (evita popup bloqueado)
+      window.location.href = pdfUrl;
+      return;
+    }
+
+    const telefono = consignacion.cliente?.telefono;
+    if (!telefono) {
+      toast.error("El cliente no tiene teléfono registrado");
+      return;
+    }
+
+    const phone = telefono.replace(/\D/g, "");
+    const message =
+      `*AllData POS - Remito*\n\n` +
+      `Hola ${consignacion.cliente?.nombre}.\n` +
+      `📄 Remito: ${pdfUrl}\n\n` +
+      `⏳ Válido 7 días • Máx 3 vistas`;
+
+    const waUrl = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
+
+    // ✅ mobile-friendly
+    window.location.href = waUrl;
+
   } catch (e: any) {
     toast.error(e?.message ?? "No se pudo generar el remito");
-    return;
   }
-
-  if (mode === "view") {
-    window.open(pdfUrl, "_blank");
-    return;
-  }
-
-  const telefono = consignacion.cliente?.telefono;
-  if (!telefono) {
-    toast.error("El cliente no tiene teléfono registrado");
-    return;
-  }
-
-  const phone = telefono.replace(/\D/g, "");
-  const message =
-    `*AllData POS - Remito*\n\n` +
-    `Hola ${consignacion.cliente?.nombre}.\n` +
-    `📄 Remito: ${pdfUrl}\n\n` +
-    `⏳ Válido 7 días • Máx 3 vistas`;
-
-  window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, "_blank");
 };
 
   const detalles = consignacion?.detalles ?? [];

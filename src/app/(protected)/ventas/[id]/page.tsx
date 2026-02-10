@@ -95,37 +95,38 @@ export default function VentaDetailPage() {
     if (id) load();
   }, [id, load]);
 
-  // --- Lógica de Documentos (PDF / WhatsApp) ---
-const handlePdfAction = async (mode: "view" | "whatsapp") => {
+  const handlePdfAction = async (mode: "view" | "whatsapp") => {
   if (!venta) return;
 
-  let pdfUrl: string;
   try {
-    pdfUrl = await apiService.getVentaPdfUrl(venta.id);
+    const pdfUrl = await apiService.getVentaPdfUrl(venta.id);
+
+    if (mode === "view") {
+      // ✅ en mobile evita bloqueo de popups
+      window.location.href = pdfUrl;
+      return;
+    }
+
+    const telefono = venta.cliente?.telefono;
+    if (!telefono) {
+      toast.error("El cliente no tiene teléfono registrado o es Consumidor Final");
+      return;
+    }
+
+    const phone = telefono.replace(/\D/g, "");
+    const message =
+      `*AllData POS - Ticket de Compra*\n\n` +
+      `Hola ${venta.cliente?.nombre}, gracias por tu compra.\n` +
+      `📄 Comprobante: ${pdfUrl}\n\n` +
+      `⏳ Válido 7 días • Máx 3 vistas`;
+
+    const waUrl = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
+
+    // ✅ en mobile abre siempre
+    window.location.href = waUrl;
   } catch (e: any) {
     toast.error(e?.message ?? "No se pudo generar el ticket");
-    return;
   }
-
-  if (mode === "view") {
-    window.open(pdfUrl, "_blank");
-    return;
-  }
-
-  const telefono = venta.cliente?.telefono;
-  if (!telefono) {
-    toast.error("El cliente no tiene teléfono registrado o es Consumidor Final");
-    return;
-  }
-
-  const phone = telefono.replace(/\D/g, "");
-  const message =
-    `*AllData POS - Ticket de Compra*\n\n` +
-    `Hola ${venta.cliente?.nombre}, gracias por tu compra.\n` +
-    `📄 Comprobante: ${pdfUrl}\n\n` +
-    `⏳ Válido 7 días • Máx 3 vistas`;
-
-  window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, "_blank");
 };
 
   // --- Anular Venta ---
