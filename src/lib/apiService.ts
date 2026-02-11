@@ -115,6 +115,7 @@ export const API_ROUTES = {
   ESTADO_CUENTA: (id: number) => `/api/estado-cuenta/${id}`,
   INVENTARIO_LINK: "/api/productos/inventario-link",
   HISTORIAL_LINK: (id: number) => `/api/historial/${id}/historial-link`,
+  HISTORIAL_YEARS: "/api/historial/anios",
 
   PRODUCTOS: "/api/productos",
   PRODUCTO_ID: (id: number) => `/api/productos/${id}`,
@@ -277,6 +278,28 @@ async getVentaPdfUrl(id: number): Promise<string> {
 
   return normalizeShareUrl(data.url);
 },
+
+// --- NUEVO MÉTODO AQUÍ ---
+  async getAvailableYears(): Promise<number[]> {
+    try {
+      // Intenta obtener los años del backend
+      // Se asume que el backend devuelve un array: [2023, 2024, 2025]
+      const years = await apiRequest<number[]>(API_ROUTES.HISTORIAL_YEARS, { 
+        method: "GET" 
+      });
+      
+      // Validación extra por seguridad
+      if (Array.isArray(years) && years.length > 0) {
+        return years;
+      }
+      return [new Date().getFullYear()];
+      
+    } catch (error) {
+      console.warn("No se pudieron cargar los años del historial, usando año actual.", error);
+      // Fallback: devuelve el año actual si falla la API
+      return [new Date().getFullYear()];
+    }
+  },
 
 async getHistorialPdfUrl(mes: number, anio: number): Promise<string> {
     if (typeof window === "undefined") {

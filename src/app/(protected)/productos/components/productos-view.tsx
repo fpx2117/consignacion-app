@@ -46,9 +46,7 @@ import {
   Search,
   Calendar,
   Clock,
-  CircleDollarSign,
-  History,
-  ExternalLink 
+  CircleDollarSign
 } from "lucide-react";
 
 // Sub-components
@@ -57,6 +55,8 @@ import { EditProductoDialog } from "./edit-producto-dialog";
 import { AjustarStockDialog } from "./ajustar-stock-dialog";
 import { ProductosFilters } from "./productos-filters";
 import { DownloadInventoryButton } from "@/components/download-inventory-button";
+// 👇 AQUÍ IMPORTAMOS EL DIALOGO DE HISTORIAL
+import  HistoryReportDialog  from "./historial-report-dialog"; 
 import { cn } from "@/lib/utils";
 
 // --- Interfaces ---
@@ -169,6 +169,7 @@ export function ProductosView() {
         <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto items-center">
           <div className="flex gap-2 w-full sm:w-auto">
             <DownloadInventoryButton />
+            {/* 👇 AQUÍ SE USA EL COMPONENTE IMPORTADO */}
             <HistoryReportDialog /> 
           </div>
           <CreateProductoDialog
@@ -255,154 +256,7 @@ export function ProductosView() {
   );
 }
 
-function HistoryReportDialog() {
-  const [isPreparing, setIsPreparing] = React.useState(false);
-  const [selectedMes, setSelectedMes] = React.useState(new Date().getMonth());
-  const [selectedAnio, setSelectedAnio] = React.useState(new Date().getFullYear());
-  
-  // En un entorno real, podrías obtener estos periodos desde un endpoint
-  // como apiService.getPeriodosDisponibles()
-  const availableYears = [2024, 2025, 2026]; 
-  const MESES = [
-    "Ene", "Feb", "Mar", "Abr", "May", "Jun",
-    "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"
-  ];
-
-  const handleGenerate = async () => {
-    setIsPreparing(true);
-    try {
-      const shareUrl = await apiService.getHistorialPdfUrl(selectedMes, selectedAnio);
-      window.open(shareUrl, '_blank');
-      toast.success("Enlace de auditoría generado");
-    } catch (error) {
-      toast.error("Error al generar el reporte");
-    } finally {
-      setIsPreparing(false);
-    }
-  };
-
-  return (
-    <AlertDialog>
-      <AlertDialogTrigger asChild>
-        <Button 
-          variant="outline" 
-          size="lg"
-          className="h-12 rounded-2xl px-5 border-dashed border-indigo-500/30 hover:border-indigo-500 hover:bg-indigo-500/5 text-muted-foreground hover:text-indigo-600 dark:hover:bg-indigo-500/10 transition-all gap-2"
-        >
-          <History className="h-4 w-4" />
-          <span className="hidden sm:inline font-bold text-xs uppercase tracking-tight">Auditoría</span>
-        </Button>
-      </AlertDialogTrigger>
-      
-      <AlertDialogContent className="rounded-[2.5rem] p-0 overflow-hidden max-w-[420px] border-none shadow-2xl dark:bg-zinc-950 bg-white">
-        {/* Header con gradiente sutil */}
-        <div className="bg-indigo-600 dark:bg-indigo-700 p-8 text-white relative overflow-hidden">
-          <div className="absolute top-0 right-0 p-8 opacity-10 rotate-12 scale-150">
-            <Calendar className="h-24 w-24" />
-          </div>
-          <div className="relative z-10">
-            <div className="flex items-center gap-3 mb-2">
-              <div className="p-2 bg-white/20 rounded-xl backdrop-blur-md">
-                <History className="h-6 w-6 text-white stroke-[2.5px]" />
-              </div>
-              <AlertDialogTitle className="font-black uppercase tracking-tighter text-2xl">
-                Auditoría Mensual
-              </AlertDialogTitle>
-            </div>
-            <AlertDialogDescription className="text-indigo-100 text-xs font-bold leading-relaxed opacity-90 uppercase tracking-widest">
-              Seleccioná el periodo fiscal
-            </AlertDialogDescription>
-          </div>
-        </div>
-        
-        <div className="p-8 space-y-8 dark:bg-zinc-950">
-          {/* Selector de Año */}
-          <div className="space-y-3">
-            <span className="text-[10px] font-black uppercase text-indigo-500 ml-1 tracking-[0.2em]">Año</span>
-            <div className="flex gap-2">
-              {availableYears.map(year => (
-                <button
-                  key={year}
-                  onClick={() => setSelectedAnio(year)}
-                  className={cn(
-                    "px-4 py-2 rounded-xl text-xs font-black transition-all border",
-                    selectedAnio === year 
-                      ? "bg-indigo-600 border-indigo-600 text-white shadow-lg shadow-indigo-500/20" 
-                      : "bg-zinc-50 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-400 hover:border-indigo-300"
-                  )}
-                >
-                  {year}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Grid de Meses (Calendario) */}
-          <div className="space-y-3">
-            <span className="text-[10px] font-black uppercase text-indigo-500 ml-1 tracking-[0.2em]">Mes</span>
-            <div className="grid grid-cols-4 gap-2">
-              {MESES.map((name, index) => {
-                const isSelected = selectedMes === index;
-                const isFuture = new Date(selectedAnio, index) > new Date();
-                
-                return (
-                  <button
-                    key={name}
-                    disabled={isFuture}
-                    onClick={() => setSelectedMes(index)}
-                    className={cn(
-                      "py-3 rounded-xl text-[10px] font-black uppercase transition-all border",
-                      isFuture ? "opacity-20 cursor-not-allowed bg-zinc-100 dark:bg-zinc-800 text-zinc-300 border-transparent" :
-                      isSelected 
-                        ? "bg-indigo-100 dark:bg-indigo-900/40 border-indigo-200 dark:border-indigo-800 text-indigo-700 dark:text-indigo-400 scale-105 shadow-sm" 
-                        : "bg-white dark:bg-zinc-900 border-zinc-100 dark:border-zinc-800 text-zinc-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/20"
-                    )}
-                  >
-                    {name}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Info sutil */}
-          <div className="bg-slate-50 dark:bg-zinc-900/50 border border-slate-100 dark:border-zinc-800 rounded-2xl p-4 flex items-start gap-3">
-              <AlertCircle className="h-4 w-4 text-indigo-400 mt-0.5" />
-              <p className="text-[9px] text-slate-500 dark:text-zinc-400 leading-normal font-bold uppercase tracking-tight">
-                  Se generará un link de acceso único con validez de 24 horas para este periodo.
-              </p>
-          </div>
-        </div>
-
-        <AlertDialogFooter className="p-8 bg-slate-50/50 dark:bg-zinc-900/50 border-t border-slate-100 dark:border-zinc-800 flex-col sm:flex-row gap-3">
-          <AlertDialogCancel className="rounded-xl border-none font-black text-[10px] uppercase tracking-widest text-muted-foreground hover:bg-slate-200 dark:hover:bg-zinc-800 transition-colors h-12">
-            Cerrar
-          </AlertDialogCancel>
-          <AlertDialogAction 
-            onClick={(e) => {
-              e.preventDefault();
-              handleGenerate();
-            }}
-            disabled={isPreparing}
-            className="bg-indigo-600 hover:bg-indigo-700 text-white font-black rounded-xl px-8 shadow-xl shadow-indigo-500/20 h-12 min-w-[160px] uppercase text-[10px] tracking-widest transition-all active:scale-95"
-          >
-            {isPreparing ? (
-              <div className="flex items-center gap-2">
-                <Loader2 className="h-4 w-4 animate-spin" />
-                <span>Procesando</span>
-              </div>
-            ) : (
-              <div className="flex items-center gap-2">
-                <ExternalLink className="h-4 w-4" />
-                <span>Generar PDF</span>
-              </div>
-            )}
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
-  );
-}
+// --- SUB COMPONENTES (DesktopRow, MobileCard, StatCard, DeleteButton) ---
 
 function DesktopRow({ p, idx, load, isLow, isOut }: { p: Producto; idx: number; load: () => void; isLow: boolean; isOut: boolean }) {
   const { fechaStr, isExpired, isSoon } = React.useMemo(() => {
@@ -462,13 +316,15 @@ function DesktopRow({ p, idx, load, isLow, isOut }: { p: Producto; idx: number; 
       </TableCell>
 
       <TableCell className="text-center">
-        <div className={cn(
-          "inline-flex items-center px-3 py-1 rounded-full font-black text-[11px] border-2",
-          isOut ? 'bg-red-500/10 text-red-600 border-red-600/30' : 
-          isLow ? 'bg-orange-500/10 text-orange-600 border-orange-500/20' : 
-          'bg-emerald-500/10 text-emerald-600 border-emerald-500/10'
-        )}>
-          {p.stockDisponibleUnits} uds.
+        <div className="inline-flex items-center px-3 py-1 rounded-full font-black text-[11px] border-2">
+          <div className={cn(
+            "flex items-center gap-1",
+            isOut ? 'text-red-600' : 
+            isLow ? 'text-orange-600' : 
+            'text-emerald-600'
+          )}>
+             {p.stockDisponibleUnits} uds.
+          </div>
         </div>
       </TableCell>
       

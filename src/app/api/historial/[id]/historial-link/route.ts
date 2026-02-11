@@ -10,14 +10,24 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   const anio = parseInt(new URL(req.url).searchParams.get("anio") || "2026");
   const targetId = (anio * 100) + mes;
 
-  const existing = await prisma.shareLink.findFirst({
-    where: { 
-        type: "HISTORIAL_INVENTARIO", 
-        targetId, 
-        expiresAt: { gt: new Date() }, 
-        views: { lt: 15 } 
-    }
-  });
+  const periodTargetId = anio * 100 + mes; // Ej: 202602
+
+const existing = await prisma.shareLink.findFirst({
+  where: {
+    type: "HISTORIAL_INVENTARIO", // Coincide con tu Enum ShareLinkType
+    expiresAt: {
+      gt: new Date()
+    },
+    views: {
+      lt: 15 // O el límite que tengas definido
+    },
+    // 👇 ESTO ES LO QUE TE FALTA AGREGAR:
+    targetId: periodTargetId, 
+  },
+  orderBy: {
+    createdAt: "desc"
+  }
+});
 
   if (existing) return NextResponse.json({ url: `/x/${decryptCode(existing.codeEnc)}` });
 
