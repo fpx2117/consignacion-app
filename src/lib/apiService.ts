@@ -114,6 +114,7 @@ export const API_ROUTES = {
   CLIENTE_ID: (id: number) => `/api/clientes/${id}`,
   ESTADO_CUENTA: (id: number) => `/api/estado-cuenta/${id}`,
   INVENTARIO_LINK: "/api/productos/inventario-link",
+  HISTORIAL_LINK: (id: number) => `/api/historial/${id}/historial-link`,
 
   PRODUCTOS: "/api/productos",
   PRODUCTO_ID: (id: number) => `/api/productos/${id}`,
@@ -276,6 +277,28 @@ async getVentaPdfUrl(id: number): Promise<string> {
 
   return normalizeShareUrl(data.url);
 },
+
+async getHistorialPdfUrl(mes: number, anio: number): Promise<string> {
+    if (typeof window === "undefined") {
+      throw new Error("getHistorialPdfUrl debe ejecutarse en el cliente");
+    }
+
+    // Construimos la URL con el mes (id) y el año como query param
+    const url = `${API_ROUTES.HISTORIAL_LINK(mes)}?anio=${anio}`;
+
+    const res = await fetch(url, {
+      cache: "no-store",
+      headers: { Accept: "application/json" },
+    });
+
+    if (!res.ok) throw new Error("No se pudo generar el link del historial");
+
+    const data: { url?: string } = await res.json();
+    if (!data?.url) throw new Error("Respuesta inválida del servidor (historial-link)");
+
+    // normalizeShareUrl convertirá "/x/abc-123" en "https://tusitio.com/x/abc-123"
+    return normalizeShareUrl(data.url);
+  },
 
   getDashboardConsignaciones(limit = 10) {
     return apiRequest<DashboardConsignacionesResponse>(

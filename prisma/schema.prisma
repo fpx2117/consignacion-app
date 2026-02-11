@@ -11,10 +11,28 @@ enum RolUsuario {
   EMPLEADO
 }
 
+enum TipoMovimientoStock {
+  ENTRADA
+  SALIDA
+}
+
+enum MotivoMovimientoStock {
+  COMPRA // Entrada por compra a proveedor
+  DEVOLUCION_CLIENTE // Entrada por devolución
+  AJUSTE_POSITIVO // Entrada manual por corrección
+  ROTURA // Salida por producto dañado
+  VENCIMIENTO // Salida por producto vencido
+  PERDIDA // Salida por pérdida/robo
+  AJUSTE_NEGATIVO // Salida manual por corrección
+  VENTA // Salida automática por venta (opcional)
+  CONSIGNACION // Movimiento por consignación (opcional)
+}
+
 enum ShareLinkType {
   TICKET
   REMITO
   INVENTARIO
+  HISTORIAL_INVENTARIO
 }
 
 enum NotificationType {
@@ -69,6 +87,27 @@ model Cliente {
   consignaciones Consignacion[]
   pagos          Pago[]
   ventas         Venta[]
+}
+
+model MovimientoStock {
+  id         Int      @id @default(autoincrement())
+  productoId Int
+  producto   Producto @relation(fields: [productoId], references: [id], onDelete: Cascade)
+
+  tipo     TipoMovimientoStock
+  motivo   MotivoMovimientoStock
+  cantidad Int
+
+  // Guardamos una foto de cómo estaba el stock antes y después para auditoría
+  stockPrevio    Int
+  stockPosterior Int
+
+  observaciones String? // Nota manual opcional
+
+  createdAt DateTime @default(now())
+
+  @@index([productoId])
+  @@index([createdAt])
 }
 
 model Notification {
@@ -127,6 +166,7 @@ model Producto {
   consignacionDetalles ConsignacionDetalle[]
   ventaDetalles        VentaDetalle[]
   notifications        Notification[]
+  movimientoStocks     MovimientoStock[]
 
   @@index([codigoBarra])
   @@index([categoriaId])

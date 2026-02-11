@@ -46,7 +46,9 @@ import {
   Search,
   Calendar,
   Clock,
-  CircleDollarSign
+  CircleDollarSign,
+  History,
+  ExternalLink 
 } from "lucide-react";
 
 // Sub-components
@@ -55,6 +57,7 @@ import { EditProductoDialog } from "./edit-producto-dialog";
 import { AjustarStockDialog } from "./ajustar-stock-dialog";
 import { ProductosFilters } from "./productos-filters";
 import { DownloadInventoryButton } from "@/components/download-inventory-button";
+import { cn } from "@/lib/utils";
 
 // --- Interfaces ---
 interface StatCardProps {
@@ -95,17 +98,18 @@ export function ProductosView() {
     return p.stockDisponibleUnits <= min && p.stockDisponibleUnits > 0;
   }, []);
 
-  // Extraer categorías únicas para el filtro
+  const isOutOfStock = React.useCallback((p: Producto) => {
+    return p.stockDisponibleUnits <= 0;
+  }, []);
+
   const categories = React.useMemo(() => {
     const cats = new Set(items.map(p => p.categoria?.nombre).filter(Boolean));
     return Array.from(cats) as string[];
   }, [items]);
 
-  // Lógica de Filtrado Completa
   const filtered = React.useMemo(() => {
     return items.filter((p) => {
       const term = q.trim().toLowerCase();
-      
       const matchesQuery = 
         p.nombre.toLowerCase().includes(term) || 
         p.id.toString().includes(term) ||
@@ -115,7 +119,7 @@ export function ProductosView() {
       const matchesStock =
         stockFilter === "all" ? true :
         stockFilter === "low" ? isLowStock(p) :
-        stockFilter === "out" ? p.stockDisponibleUnits === 0 :
+        stockFilter === "out" ? isOutOfStock(p) :
         stockFilter === "available" ? p.stockDisponibleUnits > 0 : true;
 
       const matchesCategory = categoryFilter === "all" || p.categoria?.nombre === categoryFilter;
@@ -128,7 +132,6 @@ export function ProductosView() {
            const venc = new Date(p.fechaVencimiento);
            const hoy = new Date();
            hoy.setHours(0,0,0,0);
-           
            if (expiryFilter === "expired") matchesExpiry = venc < hoy;
            else if (expiryFilter === "soon") {
               const diff = (venc.getTime() - hoy.getTime()) / (1000 * 3600 * 24);
@@ -136,18 +139,17 @@ export function ProductosView() {
            } else if (expiryFilter === "none") matchesExpiry = false;
         }
       }
-
       return matchesQuery && matchesStock && matchesCategory && matchesExpiry;
     });
-  }, [items, q, stockFilter, categoryFilter, expiryFilter, isLowStock]);
+  }, [items, q, stockFilter, categoryFilter, expiryFilter, isLowStock, isOutOfStock]);
 
   const stats = React.useMemo(() => ({
     total: items.length,
     lowStock: items.filter(i => isLowStock(i)).length,
-    outOfStock: items.filter(i => i.stockDisponibleUnits === 0).length,
+    outOfStock: items.filter(i => isOutOfStock(i)).length,
     valorVenta: items.reduce((acc, i) => acc + (Number(i.precioVenta) * i.stockDisponibleUnits), 0),
     utilidad: items.reduce((acc, i) => acc + ((Number(i.precioVenta) - Number(i.precioCosto)) * i.stockDisponibleUnits), 0)
-  }), [items, isLowStock]);
+  }), [items, isLowStock, isOutOfStock]);
 
   return (
     <div className="max-w-7xl mx-auto space-y-6 p-4 md:p-10 text-foreground selection:bg-primary/20">
@@ -164,8 +166,11 @@ export function ProductosView() {
           </h1>
         </div>
 
-        <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
-          <DownloadInventoryButton />
+        <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto items-center">
+          <div className="flex gap-2 w-full sm:w-auto">
+            <DownloadInventoryButton />
+            <HistoryReportDialog /> 
+          </div>
           <CreateProductoDialog
             onCreated={load}
             trigger={
@@ -208,13 +213,12 @@ export function ProductosView() {
             </motion.div>
           ) : (
             <>
-              {/* VISTA ESCRITORIO */}
               <div className="hidden md:block">
                 <Card className="border-none bg-card/40 backdrop-blur-xl shadow-2xl rounded-[2rem] overflow-hidden">
                   <Table>
                     <TableHeader className="bg-muted/50 border-b border-border/50">
                       <TableRow className="hover:bg-transparent border-none text-[10px] uppercase font-black tracking-widest text-muted-foreground">
-                        <TableHead className="py-6 px-8 w-[25%]">Producto</TableHead>
+                        <TableHead className="py-6 px-8 w-[25%] text-left">Producto</TableHead>
                         <TableHead className="text-center">Categoría</TableHead>
                         <TableHead className="text-center">Vencimiento</TableHead>
                         <TableHead className="text-center">Existencias</TableHead>
@@ -224,24 +228,23 @@ export function ProductosView() {
                     </TableHeader>
                     <TableBody>
                       {filtered.map((p, idx) => (
-                        <DesktopRow key={p.id} p={p} idx={idx} load={load} isLow={isLowStock(p)} />
+                        <DesktopRow key={p.id} p={p} idx={idx} load={load} isLow={isLowStock(p)} isOut={isOutOfStock(p)} />
                       ))}
                     </TableBody>
                   </Table>
                 </Card>
               </div>
 
-              {/* VISTA MÓVIL */}
               <div className="grid grid-cols-1 gap-4 md:hidden">
                 {filtered.map((p, idx) => (
-                  <MobileCard key={p.id} p={p} idx={idx} load={load} isLow={isLowStock(p)} />
+                  <MobileCard key={p.id} p={p} idx={idx} load={load} isLow={isLowStock(p)} isOut={isOutOfStock(p)} />
                 ))}
               </div>
               
               {filtered.length === 0 && (
                 <div className="text-center py-20 opacity-50 flex flex-col items-center">
                   <Search className="h-10 w-10 text-muted-foreground mb-4" />
-                  <h3 className="font-bold">Sin resultados</h3>
+                  <h3 className="font-bold text-foreground">Sin resultados</h3>
                 </div>
               )}
             </>
@@ -252,9 +255,156 @@ export function ProductosView() {
   );
 }
 
-// --- SUB-COMPONENTES ---
+function HistoryReportDialog() {
+  const [isPreparing, setIsPreparing] = React.useState(false);
+  const [selectedMes, setSelectedMes] = React.useState(new Date().getMonth());
+  const [selectedAnio, setSelectedAnio] = React.useState(new Date().getFullYear());
+  
+  // En un entorno real, podrías obtener estos periodos desde un endpoint
+  // como apiService.getPeriodosDisponibles()
+  const availableYears = [2024, 2025, 2026]; 
+  const MESES = [
+    "Ene", "Feb", "Mar", "Abr", "May", "Jun",
+    "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"
+  ];
 
-function DesktopRow({ p, idx, load, isLow }: { p: Producto; idx: number; load: () => void; isLow: boolean }) {
+  const handleGenerate = async () => {
+    setIsPreparing(true);
+    try {
+      const shareUrl = await apiService.getHistorialPdfUrl(selectedMes, selectedAnio);
+      window.open(shareUrl, '_blank');
+      toast.success("Enlace de auditoría generado");
+    } catch (error) {
+      toast.error("Error al generar el reporte");
+    } finally {
+      setIsPreparing(false);
+    }
+  };
+
+  return (
+    <AlertDialog>
+      <AlertDialogTrigger asChild>
+        <Button 
+          variant="outline" 
+          size="lg"
+          className="h-12 rounded-2xl px-5 border-dashed border-indigo-500/30 hover:border-indigo-500 hover:bg-indigo-500/5 text-muted-foreground hover:text-indigo-600 dark:hover:bg-indigo-500/10 transition-all gap-2"
+        >
+          <History className="h-4 w-4" />
+          <span className="hidden sm:inline font-bold text-xs uppercase tracking-tight">Auditoría</span>
+        </Button>
+      </AlertDialogTrigger>
+      
+      <AlertDialogContent className="rounded-[2.5rem] p-0 overflow-hidden max-w-[420px] border-none shadow-2xl dark:bg-zinc-950 bg-white">
+        {/* Header con gradiente sutil */}
+        <div className="bg-indigo-600 dark:bg-indigo-700 p-8 text-white relative overflow-hidden">
+          <div className="absolute top-0 right-0 p-8 opacity-10 rotate-12 scale-150">
+            <Calendar className="h-24 w-24" />
+          </div>
+          <div className="relative z-10">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="p-2 bg-white/20 rounded-xl backdrop-blur-md">
+                <History className="h-6 w-6 text-white stroke-[2.5px]" />
+              </div>
+              <AlertDialogTitle className="font-black uppercase tracking-tighter text-2xl">
+                Auditoría Mensual
+              </AlertDialogTitle>
+            </div>
+            <AlertDialogDescription className="text-indigo-100 text-xs font-bold leading-relaxed opacity-90 uppercase tracking-widest">
+              Seleccioná el periodo fiscal
+            </AlertDialogDescription>
+          </div>
+        </div>
+        
+        <div className="p-8 space-y-8 dark:bg-zinc-950">
+          {/* Selector de Año */}
+          <div className="space-y-3">
+            <span className="text-[10px] font-black uppercase text-indigo-500 ml-1 tracking-[0.2em]">Año</span>
+            <div className="flex gap-2">
+              {availableYears.map(year => (
+                <button
+                  key={year}
+                  onClick={() => setSelectedAnio(year)}
+                  className={cn(
+                    "px-4 py-2 rounded-xl text-xs font-black transition-all border",
+                    selectedAnio === year 
+                      ? "bg-indigo-600 border-indigo-600 text-white shadow-lg shadow-indigo-500/20" 
+                      : "bg-zinc-50 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-400 hover:border-indigo-300"
+                  )}
+                >
+                  {year}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Grid de Meses (Calendario) */}
+          <div className="space-y-3">
+            <span className="text-[10px] font-black uppercase text-indigo-500 ml-1 tracking-[0.2em]">Mes</span>
+            <div className="grid grid-cols-4 gap-2">
+              {MESES.map((name, index) => {
+                const isSelected = selectedMes === index;
+                const isFuture = new Date(selectedAnio, index) > new Date();
+                
+                return (
+                  <button
+                    key={name}
+                    disabled={isFuture}
+                    onClick={() => setSelectedMes(index)}
+                    className={cn(
+                      "py-3 rounded-xl text-[10px] font-black uppercase transition-all border",
+                      isFuture ? "opacity-20 cursor-not-allowed bg-zinc-100 dark:bg-zinc-800 text-zinc-300 border-transparent" :
+                      isSelected 
+                        ? "bg-indigo-100 dark:bg-indigo-900/40 border-indigo-200 dark:border-indigo-800 text-indigo-700 dark:text-indigo-400 scale-105 shadow-sm" 
+                        : "bg-white dark:bg-zinc-900 border-zinc-100 dark:border-zinc-800 text-zinc-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/20"
+                    )}
+                  >
+                    {name}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Info sutil */}
+          <div className="bg-slate-50 dark:bg-zinc-900/50 border border-slate-100 dark:border-zinc-800 rounded-2xl p-4 flex items-start gap-3">
+              <AlertCircle className="h-4 w-4 text-indigo-400 mt-0.5" />
+              <p className="text-[9px] text-slate-500 dark:text-zinc-400 leading-normal font-bold uppercase tracking-tight">
+                  Se generará un link de acceso único con validez de 24 horas para este periodo.
+              </p>
+          </div>
+        </div>
+
+        <AlertDialogFooter className="p-8 bg-slate-50/50 dark:bg-zinc-900/50 border-t border-slate-100 dark:border-zinc-800 flex-col sm:flex-row gap-3">
+          <AlertDialogCancel className="rounded-xl border-none font-black text-[10px] uppercase tracking-widest text-muted-foreground hover:bg-slate-200 dark:hover:bg-zinc-800 transition-colors h-12">
+            Cerrar
+          </AlertDialogCancel>
+          <AlertDialogAction 
+            onClick={(e) => {
+              e.preventDefault();
+              handleGenerate();
+            }}
+            disabled={isPreparing}
+            className="bg-indigo-600 hover:bg-indigo-700 text-white font-black rounded-xl px-8 shadow-xl shadow-indigo-500/20 h-12 min-w-[160px] uppercase text-[10px] tracking-widest transition-all active:scale-95"
+          >
+            {isPreparing ? (
+              <div className="flex items-center gap-2">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                <span>Procesando</span>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2">
+                <ExternalLink className="h-4 w-4" />
+                <span>Generar PDF</span>
+              </div>
+            )}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  );
+}
+
+function DesktopRow({ p, idx, load, isLow, isOut }: { p: Producto; idx: number; load: () => void; isLow: boolean; isOut: boolean }) {
   const { fechaStr, isExpired, isSoon } = React.useMemo(() => {
     if (!p.fechaVencimiento) return { fechaStr: null, isExpired: false, isSoon: false };
     const fechaObj = new Date(p.fechaVencimiento);
@@ -299,7 +449,12 @@ function DesktopRow({ p, idx, load, isLow }: { p: Producto; idx: number; load: (
       
       <TableCell className="text-center">
         {fechaStr ? (
-          <div className={`inline-flex flex-col items-center px-2.5 py-1 rounded-xl text-[10px] font-bold border ${isExpired ? 'bg-red-500/10 text-red-600 border-red-500/20' : isSoon ? 'bg-amber-500/10 text-amber-600 border-amber-500/20 animate-pulse' : 'bg-muted/50 text-muted-foreground'}`}>
+          <div className={cn(
+            "inline-flex flex-col items-center px-2.5 py-1 rounded-xl text-[10px] font-bold border",
+            isExpired ? 'bg-red-500/10 text-red-600 border-red-500/20' : 
+            isSoon ? 'bg-amber-500/10 text-amber-600 border-amber-500/20 animate-pulse' : 
+            'bg-muted/50 text-muted-foreground'
+          )}>
             <span className="flex items-center gap-1">{isSoon && !isExpired ? <Clock className="h-3 w-3" /> : <Calendar className="h-3 w-3" />}{fechaStr}</span>
             {isExpired && <span className="text-[7px] uppercase tracking-tighter font-black">Vencido</span>}
           </div>
@@ -307,7 +462,12 @@ function DesktopRow({ p, idx, load, isLow }: { p: Producto; idx: number; load: (
       </TableCell>
 
       <TableCell className="text-center">
-        <div className={`inline-flex items-center px-3 py-1 rounded-full font-black text-[11px] border-2 ${isLow ? 'bg-red-500/10 text-red-600 border-red-500/20' : 'bg-emerald-500/10 text-emerald-600 border-emerald-500/10'}`}>
+        <div className={cn(
+          "inline-flex items-center px-3 py-1 rounded-full font-black text-[11px] border-2",
+          isOut ? 'bg-red-500/10 text-red-600 border-red-600/30' : 
+          isLow ? 'bg-orange-500/10 text-orange-600 border-orange-500/20' : 
+          'bg-emerald-500/10 text-emerald-600 border-emerald-500/10'
+        )}>
           {p.stockDisponibleUnits} uds.
         </div>
       </TableCell>
@@ -315,7 +475,7 @@ function DesktopRow({ p, idx, load, isLow }: { p: Producto; idx: number; load: (
       <TableCell className="text-right">
         <div className="flex flex-col items-end gap-1">
           <span className="text-sm font-black tabular-nums leading-none">{formatMoney(p.precioVenta)}</span>
-          <span className="text-[9px] font-bold text-emerald-600 bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/10">
+          <span className="text-[9px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/10">
             Margen: {formatMoney(Number(p.precioVenta) - Number(p.precioCosto))}
           </span>
         </div>
@@ -334,19 +494,25 @@ function DesktopRow({ p, idx, load, isLow }: { p: Producto; idx: number; load: (
 
 function StatCard({ label, value, icon: Icon, color, highlight }: StatCardProps) {
   const colorMap = {
-    blue: "text-blue-500 border-blue-500/20",
-    orange: "text-orange-500 border-orange-500/20",
-    red: "text-red-500 border-red-500/20",
-    emerald: "text-emerald-500 border-emerald-500/20",
+    blue: "text-blue-500",
+    orange: "text-orange-500",
+    red: "text-red-500",
+    emerald: "text-emerald-500",
   };
   return (
-    <Card className={`p-4 border-border/50 bg-card/50 backdrop-blur-md flex flex-col gap-2 relative overflow-hidden group ${highlight ? 'ring-1 ring-red-500/50 shadow-lg shadow-red-500/10' : ''}`}>
+    <Card className={cn(
+      "p-4 border-border/50 bg-card/50 backdrop-blur-md flex flex-col gap-2 relative overflow-hidden group transition-all",
+      highlight && "ring-2 ring-red-500/50 shadow-lg shadow-red-500/10"
+    )}>
       <div className="flex items-center justify-between relative z-10">
         <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/70">{label}</span>
-        <Icon className={`h-3.5 w-3.5 ${colorMap[color].split(' ')[0]}`} />
+        <Icon className={cn("h-3.5 w-3.5", colorMap[color])} />
       </div>
       <span className="text-base md:text-lg font-black tracking-tight tabular-nums truncate relative z-10">{value}</span>
-      <div className={`absolute left-0 top-0 bottom-0 w-1 ${color === 'blue' ? 'bg-blue-500' : color === 'orange' ? 'bg-orange-500' : color === 'red' ? 'bg-red-500' : 'bg-emerald-500'}`} />
+      <div className={cn(
+        "absolute left-0 top-0 bottom-0 w-1",
+        color === 'blue' ? 'bg-blue-500' : color === 'orange' ? 'bg-orange-500' : color === 'red' ? 'bg-red-500' : 'bg-emerald-500'
+      )} />
     </Card>
   );
 }
@@ -359,7 +525,7 @@ function DeleteButton({ id, nombre, onDeleted }: { id: number; nombre: string; o
       await apiService.deleteProducto(id);
       toast.success("Eliminado");
       onDeleted();
-    } catch { toast.error("Error"); }
+    } catch { toast.error("Error al eliminar"); }
     finally { setDeleting(false); }
   }
   return (
@@ -371,16 +537,17 @@ function DeleteButton({ id, nombre, onDeleted }: { id: number; nombre: string; o
       </AlertDialogTrigger>
       <AlertDialogContent className="rounded-2xl">
         <AlertDialogHeader><AlertDialogTitle>¿Eliminar {nombre}?</AlertDialogTitle></AlertDialogHeader>
+        <AlertDialogDescription>Esta acción no se puede deshacer. El producto dejará de estar disponible en el inventario.</AlertDialogDescription>
         <AlertDialogFooter>
-          <AlertDialogCancel className="rounded-xl">No</AlertDialogCancel>
-          <AlertDialogAction onClick={handleDelete} className="bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl">Sí</AlertDialogAction>
+          <AlertDialogCancel className="rounded-xl">No, cancelar</AlertDialogCancel>
+          <AlertDialogAction onClick={handleDelete} className="bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl">Sí, eliminar</AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
   );
 }
 
-function MobileCard({ p, idx, load, isLow }: { p: Producto; idx: number; load: () => void; isLow: boolean }) {
+function MobileCard({ p, idx, load, isLow, isOut }: { p: Producto; idx: number; load: () => void; isLow: boolean; isOut: boolean }) {
   const fechaTexto = React.useMemo(() => {
     if (!p.fechaVencimiento) return null;
     return new Date(p.fechaVencimiento).toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: '2-digit' });
@@ -389,13 +556,16 @@ function MobileCard({ p, idx, load, isLow }: { p: Producto; idx: number; load: (
   return (
     <motion.div initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: idx * 0.05 }}>
       <Card className="p-4 border-border/50 bg-card/50 backdrop-blur-sm space-y-3 rounded-2xl relative overflow-hidden shadow-sm">
-        <div className={`absolute left-0 top-0 bottom-0 w-1.5 ${p.stockDisponibleUnits === 0 ? 'bg-red-500' : isLow ? 'bg-orange-500' : 'bg-emerald-500'}`} />
+        <div className={cn(
+          "absolute left-0 top-0 bottom-0 w-1.5",
+          isOut ? 'bg-red-500' : isLow ? 'bg-orange-500' : 'bg-emerald-500'
+        )} />
         
         <div className="flex justify-between items-start pl-2">
           <div className="space-y-1 pr-2">
             <h3 className="font-bold text-sm leading-tight text-foreground/90">{p.nombre}</h3>
             <div className="flex items-center gap-2">
-              <Badge variant="secondary" className="text-[8px] h-4 uppercase font-black bg-zinc-100 dark:bg-zinc-800 border-none px-1.5">
+              <Badge variant="secondary" className="text-[8px] h-4 uppercase font-black bg-muted border-none px-1.5">
                 {p.categoria?.nombre || "General"}
               </Badge>
               {p.codigoBarra && <span className="text-[9px] text-muted-foreground font-mono">{p.codigoBarra}</span>}
@@ -409,13 +579,12 @@ function MobileCard({ p, idx, load, isLow }: { p: Producto; idx: number; load: (
         </div>
 
         <div className="flex items-center justify-between pl-2 pr-1 pt-1">
-          <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border ${
-            p.stockDisponibleUnits === 0 
-              ? 'bg-red-500/10 border-red-500/20 text-red-600' 
-              : isLow 
-              ? 'bg-orange-500/10 border-orange-500/20 text-orange-600' 
-              : 'bg-emerald-500/10 border-emerald-500/20 text-emerald-600'
-          }`}>
+          <div className={cn(
+            "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border",
+            isOut ? 'bg-red-500/10 border-red-500/20 text-red-600' : 
+            isLow ? 'bg-orange-500/10 border-orange-500/20 text-orange-600' : 
+            'bg-emerald-500/10 border-emerald-500/20 text-emerald-600'
+          )}>
             <Package className="h-3.5 w-3.5" />
             <span className="text-xs font-black">{p.stockDisponibleUnits} uds.</span>
           </div>

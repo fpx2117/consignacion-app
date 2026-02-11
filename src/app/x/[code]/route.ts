@@ -1,3 +1,5 @@
+
+//src/app/x/[code]/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { hashCode } from "@/lib/share-links";
@@ -73,6 +75,16 @@ export async function GET(
     case "REMITO":
       destPath = `/ver/remito/${link.targetId}`;
       break;
+      case "HISTORIAL_INVENTARIO":
+  const fullId = link.targetId || 0;
+  const targetAnio = Math.floor(fullId / 100);
+  const targetMes = fullId % 100;
+  
+  // ✅ Apuntamos a la carpeta base (donde está el page.tsx con el Loader)
+  destPath = `/ver/historial/${targetMes}`; 
+  const query = `?code=${encodeURIComponent(code)}&anio=${targetAnio}`;
+  
+  return redirectAbs(req, `${destPath}${query}`, { name: cookieName, value: '1' });
     case "INVENTARIO":
       // ✅ IMPORTANTE: Apuntamos a /pdf para no chocar con page.tsx en la carpeta [id]
       destPath = `/ver/inventario/${link.targetId || '0'}/pdf`;

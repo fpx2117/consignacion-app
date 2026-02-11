@@ -14,7 +14,6 @@ type RouteParams = { params: Promise<{ id: string }> };
 
 /**
  * GET: Obtener un producto por ID
- * Incluye la categoría para facilitar la edición en el frontend.
  */
 export async function GET(_: Request, { params }: RouteParams) {
   try {
@@ -41,13 +40,13 @@ export async function GET(_: Request, { params }: RouteParams) {
 }
 
 /**
- * PUT: Actualizar datos del producto
- * Lógica mejorada: incluye fecha de vencimiento en las alertas de stock.
+ * PUT: Actualizar datos del producto + Registro de Movimiento de Stock
  */
 export async function PUT(req: Request, { params }: RouteParams) {
   const auth = await requireAuth();
   if (!auth.ok) return auth.res;
 
+  // Solo ADMIN puede editar productos
   if (!requireRole(auth.user, ["ADMIN"])) {
     return NextResponse.json({ error: "No autorizado" }, { status: 403 });
   }
@@ -57,7 +56,11 @@ export async function PUT(req: Request, { params }: RouteParams) {
   if (isNaN(id)) return NextResponse.json({ error: "ID inválido" }, { status: 400 });
 
   const body = await req.json().catch(() => null);
-  const parsed = updateProductoSchema.safeParse(body);
+  
+  // Extraemos movimientoInfo si viene del AjustarStockDialog
+  const { movimientoInfo, ...restOfBody } = body;
+  
+  const parsed = updateProductoSchema.safeParse(restOfBody);
 
   if (!parsed.success) {
     return NextResponse.json(
@@ -69,13 +72,46 @@ export async function PUT(req: Request, { params }: RouteParams) {
   try {
     const configGlobal = await obtenerConfiguracionGlobal();
 
-    const updated = await prisma.producto.update({
-      where: { id },
-      data: {
-        ...parsed.data,
-        // Convertimos string ISO a objeto Date si la fecha viene en el body
-        fechaVencimiento: parsed.data.fechaVencimiento ? new Date(parsed.data.fechaVencimiento) : undefined,
-      },
+    // --- TRANSACCIÓN PARA ACTUALIZAR Y REGISTRAR MOVIMIENTO ---
+    const updated = await prisma.$transaction(async (tx) => {
+      // 1. Obtener estado actual antes de la actualización
+      const anterior = await tx.producto.findUnique({
+        where: { id },
+        select: { stockDisponibleUnits: true, nombre: true }
+      });
+
+      if (!anterior) throw new Error("Producto no encontrado");
+
+      // 2. Ejecutar la actualización del producto
+      const productoUpdate = await tx.producto.update({
+        where: { id },
+        data: {
+          ...parsed.data,
+          fechaVencimiento: parsed.data.fechaVencimiento ? new Date(parsed.data.fechaVencimiento) : undefined,
+        },
+      });
+
+      // 3. Si hubo cambio de stock y tenemos información del movimiento, registrarlo
+      if (movimientoInfo && parsed.data.stockDisponibleUnits !== undefined) {
+        const stockPrevio = anterior.stockDisponibleUnits;
+        const stockPosterior = productoUpdate.stockDisponibleUnits;
+
+        if (stockPrevio !== stockPosterior) {
+          await tx.movimientoStock.create({
+            data: {
+              productoId: id,
+              tipo: movimientoInfo.tipo, // ENTRADA | SALIDA
+              motivo: movimientoInfo.motivo, // COMPRA, ROTURA, DEVOLUCION_CLIENTE, etc.
+              cantidad: Math.abs(stockPosterior - stockPrevio),
+              stockPrevio: stockPrevio,
+              stockPosterior: stockPosterior,
+              observaciones: movimientoInfo.observaciones || "Ajuste manual de stock",
+            }
+          });
+        }
+      }
+
+      return productoUpdate;
     });
 
     // --- LÓGICA DE NOTIFICACIÓN POR STOCK ---
@@ -85,7 +121,6 @@ export async function PUT(req: Request, { params }: RouteParams) {
         ? updated.stockMinUnits 
         : configGlobal.minStockGlobal;
 
-      // Formatear fecha de vencimiento para el mensaje
       const fechaVencMsg = updated.fechaVencimiento 
         ? ` (Vence el: ${new Date(updated.fechaVencimiento).toLocaleDateString('es-AR')})` 
         : "";
@@ -93,14 +128,14 @@ export async function PUT(req: Request, { params }: RouteParams) {
       if (nuevoStock <= 0) {
         await sendNotification({
           type: NOTIFICATION_TYPE.OUT_OF_STOCK,
-          title: "Stock Agotado",
+          title: "⚠️ Stock Agotado",
           message: `El producto "${updated.nombre}" se quedó sin unidades.${fechaVencMsg}`,
           data: { productId: updated.id }
         });
       } else if (nuevoStock <= umbralAlerta) {
         await sendNotification({
           type: NOTIFICATION_TYPE.LOW_STOCK,
-          title: "Stock Bajo",
+          title: "⚡ Stock Bajo",
           message: `"${updated.nombre}" alcanzó el nivel crítico con ${nuevoStock} u.${fechaVencMsg}`,
           data: { productId: updated.id }
         });
@@ -110,7 +145,6 @@ export async function PUT(req: Request, { params }: RouteParams) {
     return NextResponse.json({ data: updated });
 
   } catch (error: any) {
-    // Captura de duplicados (P2002) para Código de Barras o SKU
     if (error.code === 'P2002') {
       return NextResponse.json(
         { error: "El código de barras o SKU ya está en uso por otro producto." },
@@ -124,19 +158,16 @@ export async function PUT(req: Request, { params }: RouteParams) {
 
 /**
  * DELETE: Desactivación lógica
- * Marca activo: false para preservar la integridad de ventas pasadas.
  */
 export async function DELETE(_: Request, { params }: RouteParams) {
   const auth = await requireAuth();
   if (!auth.ok) return auth.res;
-
   if (!requireRole(auth.user, ["ADMIN"])) return NextResponse.json({ error: "No autorizado" }, { status: 403 });
 
   const { id: rawId } = await params;
   const id = Number(rawId);
 
   try {
-    // No usamos prisma.delete para evitar errores de Foreign Key en cascada
     await prisma.producto.update({
       where: { id },
       data: { activo: false }

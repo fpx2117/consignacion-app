@@ -105,7 +105,7 @@ export function buildInventoryHtml(productos: Producto[]) {
           <div class="bg-slate-900 rounded-2xl p-5 text-white shadow-xl relative overflow-hidden">
             <h3 class="text-[9px] font-black text-white/60 uppercase tracking-widest mb-1 relative z-10">Valuación de Venta</h3>
             <p class="text-2xl font-black money tracking-tighter relative z-10">${formatMoney(valorVentaTotal)}</p>
-          
+            <p class="text-[9px] uppercase font-bold text-white/40 mt-1 relative z-10">Stock actual a PVP</p>
           </div>
 
           <div class="bg-emerald-600 rounded-2xl p-5 text-white shadow-xl relative overflow-hidden">
@@ -182,6 +182,7 @@ export function buildInventoryHtml(productos: Producto[]) {
             </tbody>
           </table>
         </div>
+
       </body>
     </html>
   `;

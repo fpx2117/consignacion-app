@@ -1,0 +1,2 @@
+-- AlterEnum
+ALTER TYPE "ShareLinkType" ADD VALUE 'HISTORIAL_INVENTARIO';

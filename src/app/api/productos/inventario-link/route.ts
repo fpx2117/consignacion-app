@@ -1,3 +1,5 @@
+
+//src/app/api/productos/inventario-link/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { decryptCode, encryptCode, generateShortCode, hashCode } from "@/lib/share-links";

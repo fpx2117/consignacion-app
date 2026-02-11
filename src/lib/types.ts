@@ -19,6 +19,12 @@ export type MetodoPago = "EFECTIVO" | "TRANSFERENCIA" | "TARJETA" | "OTRO";
 // con el resto de tu código que espera este nombre.
 export type Notification = AppNotification;
 
+export enum TipoMovimientoStock {
+  ENTRADA = "ENTRADA",
+  SALIDA = "SALIDA",
+  AJUSTE = "AJUSTE",
+}
+
 // --- ENTIDADES ---
 
 export type Usuario = {
@@ -69,7 +75,32 @@ export type Producto = {
 
   createdAt: ISODateString;
   updatedAt: ISODateString;
+  
+  movimientos?: MovimientoStock[];
 };
+
+export interface MovimientoStock {
+  id: number;
+  productoId: number;
+  tipo: TipoMovimientoStock;
+  motivo: MotivoMovimientoStock;
+  cantidad: number;
+  stockPrevio: number;
+  stockPosterior: number;
+  observaciones?: string | null;
+  createdAt: Date;
+}
+
+export enum MotivoMovimientoStock {
+  COMPRA = "COMPRA",
+  VENTA = "VENTA",
+  DEVOLUCION_CLIENTE = "DEVOLUCION_CLIENTE",
+  DEVOLUCION_PROVEEDOR = "DEVOLUCION_PROVEEDOR",
+  ROTURA = "ROTURA",
+  PERDIDA = "PERDIDA",
+  AJUSTE_INVENTARIO = "AJUSTE_INVENTARIO",
+  INICIAL = "INICIAL",
+}
 
 export type ConsignacionDetalle = {
   id: ID;
@@ -361,5 +392,22 @@ export type CreateLiquidacionInput = {
     unitsDevueltas?: number;
   }>;
 };
+
+export interface MovimientoReporte extends MovimientoStock {
+  nombreProducto: string; // Para no tener que buscar en el objeto producto
+}
+
+export interface MovimientoConProducto extends MovimientoStock {
+  producto: Pick<Producto, "nombre" | "codigoBarra">;
+}
+
+// Interfaz para el resumen estadístico del reporte de movimientos
+export interface ResumenMovimientos {
+  totalEntradas: number;
+  totalSalidas: number;
+  ajustesPositivos: number;
+  ajustesNegativos: number;
+  periodo: string;
+}
 
 export type CreatePagoInput = { monto: Money; metodo: MetodoPago };

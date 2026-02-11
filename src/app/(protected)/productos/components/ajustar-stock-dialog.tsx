@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Producto, UpdateProductoInput } from "@/lib/types"; // Importamos el tipo de input
+import { Producto } from "@/lib/types";
 import { apiService } from "@/lib/apiService";
 import {
   Dialog,
@@ -11,11 +11,28 @@ import {
   DialogTrigger,
   DialogFooter,
 } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ArrowUpCircle, ArrowDownCircle, Loader2 } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea"; // Asegúrate de tener este componente de shadcn
+import { 
+  ArrowUpCircle, 
+  ArrowDownCircle, 
+  Loader2, 
+  AlertTriangle, 
+  PackagePlus, 
+  TrendingDown,
+  ClipboardPen
+} from "lucide-react";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 
 interface Props {
   producto: Producto;
@@ -23,35 +40,56 @@ interface Props {
   trigger: React.ReactNode;
 }
 
+type TipoMovimiento = "entrada" | "salida";
+
 export function AjustarStockDialog({ producto, onUpdated, trigger }: Props) {
   const [open, setOpen] = React.useState(false);
   const [cantidad, setCantidad] = React.useState<number>(0);
   const [loading, setLoading] = React.useState(false);
+  const [tipo, setTipo] = React.useState<TipoMovimiento>("entrada");
+  const [motivo, setMotivo] = React.useState<string>("COMPRA");
+  const [notas, setNotas] = React.useState("");
 
-  // Calculamos la vista previa del stock
-  const previewSuma = producto.stockDisponibleUnits + (cantidad || 0);
-  const previewResta = Math.max(0, producto.stockDisponibleUnits - (cantidad || 0));
+  // Limpiar formulario al cerrar
+  React.useEffect(() => {
+    if (!open) {
+      setCantidad(0);
+      setTipo("entrada");
+      setMotivo("COMPRA");
+      setNotas("");
+    }
+  }, [open]);
 
-  async function handleAjuste(tipo: "suma" | "resta") {
-    if (cantidad <= 0) return;
-    setLoading(true);
+  const stockFinal = tipo === "entrada" 
+    ? producto.stockDisponibleUnits + (cantidad || 0)
+    : Math.max(0, producto.stockDisponibleUnits - (cantidad || 0));
+
+  async function handleAjuste() {
+    if (cantidad <= 0) {
+      toast.error("Ingresa una cantidad válida");
+      return;
+    }
     
-    const nuevaCantidad = tipo === "suma" ? previewSuma : previewResta;
+    setLoading(true);
 
     try {
-      // ✅ CORRECCIÓN: Enviamos solo el campo necesario bajo el tipo UpdateProductoInput
-      const payload: UpdateProductoInput = {
-        stockDisponibleUnits: nuevaCantidad
+      // El payload ahora incluye los datos para el historial (MovimientoStock)
+      const payload = {
+        stockDisponibleUnits: stockFinal,
+        movimientoInfo: {
+          tipo: tipo.toUpperCase(), // ENTRADA o SALIDA
+          motivo: motivo, // Ya viene en Mayúsculas del Select
+          observaciones: notas || `Ajuste manual: ${motivo.toLowerCase().replace('_', ' ')}`
+        }
       };
 
       await apiService.updateProducto(producto.id, payload);
       
-      toast.success(`Stock actualizado: ${nuevaCantidad} unidades`);
+      toast.success(`Stock actualizado: ${producto.stockDisponibleUnits} → ${stockFinal}`);
       onUpdated();
       setOpen(false);
-      setCantidad(0);
     } catch (e) {
-      toast.error("Error al ajustar el stock");
+      toast.error("No se pudo procesar el movimiento");
     } finally {
       setLoading(false);
     }
@@ -60,64 +98,148 @@ export function AjustarStockDialog({ producto, onUpdated, trigger }: Props) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>{trigger}</DialogTrigger>
-      <DialogContent className="sm:max-w-[400px] border-border bg-card">
+      <DialogContent className="sm:max-w-[420px] border-border bg-card shadow-2xl rounded-[1.5rem]">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-2xl font-black">
-            Ajustar Stock
+          <DialogTitle className="flex items-center gap-2 text-2xl font-black italic tracking-tighter">
+            MOVIMIENTO DE STOCK
           </DialogTitle>
           <div className="text-sm text-muted-foreground">
             Producto: <span className="font-bold text-foreground">{producto.nombre}</span>
           </div>
         </DialogHeader>
 
-        <div className="py-6 space-y-6">
-          <div className="flex justify-around items-center bg-muted/30 p-4 rounded-xl border border-border/50">
-            <div className="text-center">
-              <p className="text-[10px] uppercase font-bold text-muted-foreground">Actual</p>
-              <p className="text-3xl font-black">{producto.stockDisponibleUnits}</p>
+        <div className="py-4 space-y-5">
+          {/* SIMULADOR VISUAL */}
+          <div className="flex justify-around items-center bg-muted/30 p-4 rounded-2xl border border-border/50 relative overflow-hidden">
+            <div className="text-center relative z-10">
+              <p className="text-[9px] uppercase font-black text-muted-foreground tracking-widest">Actual</p>
+              <p className="text-2xl font-black tabular-nums">{producto.stockDisponibleUnits}</p>
             </div>
-            <div className="h-8 w-px bg-border" />
-            <div className="text-center">
-              <p className="text-[10px] uppercase font-bold text-muted-foreground">Simulación</p>
-              <p className="text-3xl font-black text-primary">
-                {/* Mostramos la simulación dependiendo de si el usuario está pensando en sumar o restar */}
-                {cantidad > 0 ? "..." : producto.stockDisponibleUnits}
-                {cantidad > 0 && (cantidad > producto.stockDisponibleUnits ? previewSuma : "±" + cantidad)}
+            
+            <div className="flex flex-col items-center gap-1 opacity-40">
+              {tipo === "entrada" ? (
+                <ArrowUpCircle className="h-5 w-5 text-emerald-500" />
+              ) : (
+                <ArrowDownCircle className="h-5 w-5 text-red-500" />
+              )}
+              <span className="text-[10px] font-mono font-bold">
+                {cantidad > 0 ? (tipo === "entrada" ? `+${cantidad}` : `-${cantidad}`) : "---"}
+              </span>
+            </div>
+
+            <div className="text-center relative z-10">
+              <p className="text-[9px] uppercase font-black text-muted-foreground tracking-widest">Final</p>
+              <p className={cn(
+                "text-2xl font-black transition-all tabular-nums",
+                cantidad > 0 ? (tipo === "entrada" ? "text-emerald-500 scale-110" : "text-red-500 scale-110") : "text-primary"
+              )}>
+                {stockFinal}
               </p>
             </div>
           </div>
 
+          <div className="grid grid-cols-2 gap-3">
+            {/* TIPO */}
+            <div className="space-y-2">
+              <Label className="text-[10px] uppercase font-black opacity-60 ml-1">Tipo de Operación</Label>
+              <Select 
+                value={tipo} 
+                onValueChange={(val: TipoMovimiento) => {
+                  setTipo(val);
+                  setMotivo(val === "entrada" ? "COMPRA" : "ROTURA");
+                }}
+              >
+                <SelectTrigger className="h-11 rounded-xl font-bold bg-background border-2 focus:ring-primary/20">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="rounded-xl">
+                  <SelectItem value="entrada" className="text-emerald-600 font-bold focus:bg-emerald-50 focus:text-emerald-700">Entrada (+)</SelectItem>
+                  <SelectItem value="salida" className="text-red-600 font-bold focus:bg-red-50 focus:text-red-700">Salida (-)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* MOTIVO (Mapeado a Enums de Prisma) */}
+            <div className="space-y-2">
+              <Label className="text-[10px] uppercase font-black opacity-60 ml-1">Motivo</Label>
+              <Select value={motivo} onValueChange={setMotivo}>
+                <SelectTrigger className="h-11 rounded-xl font-bold bg-background border-2">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="rounded-xl">
+                  {tipo === "entrada" ? (
+                    <>
+                      <SelectItem value="COMPRA">📦 Compra</SelectItem>
+                      <SelectItem value="DEVOLUCION_CLIENTE">🔄 Devolución</SelectItem>
+                      <SelectItem value="AJUSTE_POSITIVO">⚙️ Ajuste Manual</SelectItem>
+                    </>
+                  ) : (
+                    <>
+                      <SelectItem value="ROTURA">💢 Rotura / Daño</SelectItem>
+                      <SelectItem value="VENCIMIENTO">📅 Vencido</SelectItem>
+                      <SelectItem value="PERDIDA">🔍 Pérdida</SelectItem>
+                      <SelectItem value="AJUSTE_NEGATIVO">⚙️ Ajuste Manual</SelectItem>
+                    </>
+                  )}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          {/* CANTIDAD */}
           <div className="space-y-2">
-            <Label htmlFor="cantidad" className="font-bold">Cantidad de unidades</Label>
+            <div className="flex justify-between items-center ml-1">
+              <Label htmlFor="cantidad" className="text-[10px] uppercase font-black opacity-60">Unidades a mover</Label>
+              {tipo === "salida" && cantidad > producto.stockDisponibleUnits && (
+                 <span className="text-[9px] text-red-500 font-bold flex items-center gap-1 animate-pulse">
+                   <AlertTriangle className="h-3 w-3" /> STOCK INSUFICIENTE
+                 </span>
+              )}
+            </div>
             <Input
               id="cantidad"
               type="number"
-              placeholder="Ej: 10"
+              placeholder="0"
               value={cantidad || ""}
-              onChange={(e) => setCantidad(Math.abs(Number(e.target.value)))} // Evitamos negativos
-              className="text-lg h-12 text-center font-mono"
+              onChange={(e) => setCantidad(Math.abs(Number(e.target.value)))}
+              className="text-2xl h-14 text-center font-black rounded-2xl bg-background border-2 transition-all focus-visible:ring-primary/20"
               min="0"
+            />
+          </div>
+
+          {/* NOTAS OPCIONALES */}
+          <div className="space-y-2">
+            <Label className="text-[10px] uppercase font-black opacity-60 ml-1 flex items-center gap-1">
+              <ClipboardPen className="h-3 w-3" /> Notas u Observaciones
+            </Label>
+            <Textarea 
+              placeholder="Ej: Llegó caja dañada del transporte..."
+              value={notas}
+              onChange={(e) => setNotas(e.target.value)}
+              className="resize-none rounded-xl bg-background/50 border-2 min-h-[80px] text-xs"
             />
           </div>
         </div>
 
-        <DialogFooter className="grid grid-cols-2 gap-2">
-          <Button
-            variant="outline"
-            disabled={loading || cantidad <= 0}
-            onClick={() => handleAjuste("resta")}
-            className="h-12 border-red-500/20 hover:bg-red-500/10 hover:text-red-500 gap-2 font-bold transition-all"
-          >
-            <ArrowDownCircle className="h-5 w-5" />
-            Quitar {cantidad > 0 && `(${previewResta})`}
-          </Button>
+        <DialogFooter className="pt-2">
           <Button
             disabled={loading || cantidad <= 0}
-            onClick={() => handleAjuste("suma")}
-            className="h-12 bg-emerald-600 hover:bg-emerald-700 text-white gap-2 font-bold transition-all"
+            onClick={handleAjuste}
+            className={cn(
+              "w-full h-12 rounded-xl text-white font-black uppercase tracking-widest transition-all shadow-lg active:scale-95",
+              tipo === "entrada" 
+                ? "bg-emerald-600 hover:bg-emerald-700 shadow-emerald-500/20" 
+                : "bg-red-600 hover:bg-red-700 shadow-red-500/20"
+            )}
           >
-            {loading ? <Loader2 className="animate-spin" /> : <ArrowUpCircle className="h-5 w-5" />}
-            Agregar {cantidad > 0 && `(${previewSuma})`}
+            {loading ? (
+              <Loader2 className="h-5 w-5 animate-spin" />
+            ) : (
+              <div className="flex items-center gap-2">
+                {tipo === "entrada" ? <PackagePlus className="h-5 w-5" /> : <TrendingDown className="h-5 w-5" />}
+                Confirmar {tipo === "entrada" ? "Ingreso" : "Egreso"}
+              </div>
+            )}
           </Button>
         </DialogFooter>
       </DialogContent>
