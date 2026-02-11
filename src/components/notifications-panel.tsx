@@ -4,6 +4,8 @@ import React from "react";
 import { cn } from "@/lib/utils";
 import { AnimatedList } from "@/components/ui/animated-list";
 import { useNotifications } from "@/hooks/useNotifications";
+import { NOTIFICATION_TYPE, NOTIFICATION_CONFIG } from "@/lib/notificationes/notificaciones-types";
+import { Button } from "@/components/ui/button"; // <--- CORRECCIÓN: Importación de Button
 import { 
   Bell, 
   PackageX, 
@@ -12,95 +14,64 @@ import {
   Clock, 
   CheckCheck, 
   BellOff,
-  CalendarX, // Icono para vencidos
-  CalendarClock // Icono para por vencer
+  CalendarX,
+  CalendarClock,
+  Trash2,
+  Check,
+  ShoppingBag
 } from "lucide-react";
-import { formatDistanceToNow } from "date-fns"; // Necesitarás: npm i date-fns
+import { formatDistanceToNow } from "date-fns";
 import { es } from "date-fns/locale";
 
-// --- 1. Definimos los tipos coincidentes con el Backend ---
-type NotificationType = 
-  | "LOW_STOCK" 
-  | "OUT_OF_STOCK" 
-  | "EXPIRATION_NEAR" 
-  | "PRODUCT_EXPIRED" 
-  | "SYSTEM";
+const ICON_MAP: Record<string, any> = {
+  [NOTIFICATION_TYPE.LOW_STOCK]: AlertTriangle,
+  [NOTIFICATION_TYPE.OUT_OF_STOCK]: PackageX,
+  [NOTIFICATION_TYPE.EXPIRATION_NEAR]: CalendarClock,
+  [NOTIFICATION_TYPE.PRODUCT_EXPIRED]: CalendarX,
+  [NOTIFICATION_TYPE.SYSTEM]: Info,
+  [NOTIFICATION_TYPE.NEW_ORDER]: ShoppingBag,
+  [NOTIFICATION_TYPE.PAYMENT_RECEIVED]: Check,
+};
 
-// --- Subcomponente: Item de Notificación ---
 function NotificationItem({
   title,
   description,
   type,
   createdAt,
+  read,
 }: {
   title: string;
   description: string;
-  type: string; // Lo dejamos string genérico para evitar crash si llega algo nuevo
+  type: string;
   createdAt: string | Date;
+  read?: boolean; // Opcional por si el backend no lo envía aún
 }) {
-  
-  // Configuración visual expandida
-  const styleConfig: Record<string, any> = {
-    LOW_STOCK: {
-      icon: AlertTriangle,
-      bg: "bg-amber-500/10",
-      text: "text-amber-600 dark:text-amber-500",
-      border: "border-amber-200/50 dark:border-amber-900/50",
-    },
-    OUT_OF_STOCK: {
-      icon: PackageX,
-      bg: "bg-red-500/10",
-      text: "text-red-600 dark:text-red-500",
-      border: "border-red-200/50 dark:border-red-900/50",
-    },
-    EXPIRATION_NEAR: {
-      icon: CalendarClock,
-      bg: "bg-orange-500/10",
-      text: "text-orange-600 dark:text-orange-500",
-      border: "border-orange-200/50",
-    },
-    PRODUCT_EXPIRED: {
-      icon: CalendarX,
-      bg: "bg-rose-900/10",
-      text: "text-rose-700 dark:text-rose-500",
-      border: "border-rose-200/50",
-    },
-    SYSTEM: {
-      icon: Info,
-      bg: "bg-blue-500/10",
-      text: "text-blue-600 dark:text-blue-500",
-      border: "border-border",
-    },
-  };
+  const config = NOTIFICATION_CONFIG[type as NOTIFICATION_TYPE] || NOTIFICATION_CONFIG[NOTIFICATION_TYPE.SYSTEM];
+  const Icon = ICON_MAP[type] || Info;
 
-  // Fallback seguro
-  const config = styleConfig[type] || styleConfig.SYSTEM;
-  const Icon = config.icon;
-
-  // Formato de tiempo relativo (ej: "hace 5 min")
   const timeString = React.useMemo(() => {
     try {
       return formatDistanceToNow(new Date(createdAt), { addSuffix: true, locale: es });
-    } catch (e) {
-      return "Reciente";
-    }
+    } catch (e) { return "Reciente"; }
   }, [createdAt]);
 
+  const severityStyles = {
+    warning: "bg-amber-500/10 text-amber-600 border-amber-200/50 dark:border-amber-900/50",
+    error: "bg-red-500/10 text-red-600 border-red-200/50 dark:border-red-900/50",
+    success: "bg-emerald-500/10 text-emerald-600 border-emerald-200/50 dark:border-emerald-900/50",
+    info: "bg-blue-500/10 text-blue-600 border-blue-200/50 dark:border-blue-900/50",
+  };
+
   return (
-    <div
-      className={cn(
-        "group relative flex w-full cursor-default items-start gap-4 rounded-xl border p-3 md:p-4 transition-all duration-200",
-        "bg-background/50 hover:bg-background hover:shadow-md",
-        config.border
-      )}
-    >
-      <div
-        className={cn(
-          "flex h-9 w-9 shrink-0 items-center justify-center rounded-full ring-1 ring-inset ring-black/5 dark:ring-white/10",
-          config.bg,
-          config.text
-        )}
-      >
+    <div className={cn(
+      "group relative flex w-full items-start gap-4 rounded-xl border p-3 md:p-4 transition-all duration-200",
+      read ? "opacity-50 grayscale-[0.3] bg-muted/20" : "bg-background shadow-sm hover:shadow-md",
+      config.severity ? severityStyles[config.severity] : ""
+    )}>
+      <div className={cn(
+        "flex h-9 w-9 shrink-0 items-center justify-center rounded-full ring-1 ring-inset ring-black/5 dark:ring-white/10",
+        read ? "bg-muted text-muted-foreground" : "bg-current/10"
+      )}>
         <Icon className="h-4 w-4" />
       </div>
 
@@ -122,9 +93,24 @@ function NotificationItem({
   );
 }
 
-// --- Componente Principal ---
 export function NotificationsAnimatedPanel({ className }: { className?: string }) {
+  // CORRECCIÓN: Quitamos markAsRead porque no existe en tu hook
   const { notifications, markAllAsRead, unreadCount, loading } = useNotifications();
+  
+  // Estado local para "limpiar" visualmente las leídas si el backend no lo hace
+  const [showRead, setShowRead] = React.useState(true);
+
+  // Filtrado de notificaciones: mostramos las no leídas arriba
+  const filteredNotifications = React.useMemo(() => {
+    let list = [...notifications];
+    if (!showRead) {
+      list = list.filter(n => !n.read);
+    }
+    return list.sort((a, b) => {
+      if (a.read === b.read) return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+      return a.read ? 1 : -1;
+    });
+  }, [notifications, showRead]);
 
   return (
     <div className={cn("flex h-full w-full flex-col overflow-hidden bg-muted/10", className)}>
@@ -132,83 +118,79 @@ export function NotificationsAnimatedPanel({ className }: { className?: string }
       {/* Header */}
       <div className="flex shrink-0 items-center justify-between border-b bg-background px-6 py-5 shadow-sm z-10">
         <div className="flex items-center gap-3">
-          <div className="relative flex h-10 w-10 items-center justify-center rounded-full bg-indigo-50 dark:bg-indigo-900/20">
-            <Bell className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
+          <div className="relative flex h-10 w-10 items-center justify-center rounded-full bg-primary/5">
+            <Bell className="h-5 w-5 text-primary" />
             {unreadCount > 0 && (
               <span className="absolute right-2 top-2 h-2.5 w-2.5 rounded-full bg-red-500 ring-2 ring-white dark:ring-black animate-pulse" />
             )}
           </div>
           <div className="flex flex-col">
-            <h2 className="text-base font-bold leading-none text-foreground">
-              Actividad
-            </h2>
+            <h2 className="text-base font-bold leading-none text-foreground">Actividad</h2>
             <span className="text-xs text-muted-foreground mt-1">
-              {unreadCount > 0 ? (
-                <span className="text-indigo-600 font-medium">{unreadCount} nuevas</span>
-              ) : (
-                "Todo sincronizado"
-              )}
+              {unreadCount > 0 ? `${unreadCount} pendientes` : "Al día"}
             </span>
           </div>
         </div>
 
-        {/* Botón Marcar Leído */}
-        <button
-          onClick={() => markAllAsRead()} // Aseguramos que llame a la función correcta
-          disabled={unreadCount === 0 || loading}
-          title="Marcar todo como leído"
-          className="group flex h-9 w-9 items-center justify-center rounded-full border border-border bg-background transition-all hover:border-indigo-200 hover:text-indigo-600 disabled:opacity-30 disabled:cursor-not-allowed"
-        >
-          <CheckCheck className="h-4 w-4 text-muted-foreground group-hover:text-indigo-600" />
-        </button>
+        <div className="flex gap-2">
+          {/* Botón para ocultar/mostrar leídas */}
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className="text-[10px] h-8 uppercase font-bold text-muted-foreground"
+            onClick={() => setShowRead(!showRead)}
+          >
+            {showRead ? "Ocultar leídas" : "Mostrar todas"}
+          </Button>
+
+          <Button
+            variant="outline"
+            size="icon"
+            className="h-9 w-9 rounded-full"
+            onClick={() => markAllAsRead()}
+            disabled={unreadCount === 0 || loading}
+            title="Marcar todo como leído"
+          >
+            <CheckCheck className="h-4 w-4" />
+          </Button>
+        </div>
       </div>
 
-      {/* Body con Scroll */}
+      {/* Body */}
       <div className="relative flex-1 overflow-hidden">
         {loading && notifications.length === 0 ? (
-          <div className="flex h-full flex-col items-center justify-center gap-3 text-muted-foreground animate-pulse bg-background/50">
-            <div className="h-12 w-12 rounded-full bg-muted"></div>
-            <div className="h-4 w-32 rounded bg-muted"></div>
+          <div className="flex h-full flex-col items-center justify-center gap-3 animate-pulse">
+            <div className="h-10 w-10 rounded-full bg-muted"></div>
+            <div className="h-3 w-24 rounded bg-muted"></div>
           </div>
-        ) : notifications.length === 0 ? (
-          
-          // Empty State
+        ) : filteredNotifications.length === 0 ? (
           <div className="flex h-full flex-col items-center justify-center p-8 text-center bg-background/50">
-            <div className="mb-6 flex h-24 w-24 items-center justify-center rounded-full bg-gradient-to-b from-muted to-transparent">
-              <div className="flex h-16 w-16 items-center justify-center rounded-full bg-background shadow-sm border border-border/50">
-                  <BellOff className="h-7 w-7 text-muted-foreground/40" />
-              </div>
-            </div>
-            <h3 className="text-lg font-semibold text-foreground">
-              Estás al día
-            </h3>
-            <p className="mt-2 text-sm text-muted-foreground max-w-[240px] leading-relaxed">
-              No hay notificaciones pendientes.
+            <BellOff className="h-10 w-10 text-muted-foreground/20 mb-4" />
+            <h3 className="text-sm font-semibold text-foreground">Sin novedades</h3>
+            <p className="text-xs text-muted-foreground mt-1 max-w-[180px]">
+              No hay alertas que coincidan con tu filtro actual.
             </p>
           </div>
-
         ) : (
-          <div className="h-full overflow-y-auto p-4 scrollbar-thin scrollbar-thumb-muted-foreground/20">
-             <div className="flex flex-col gap-3 pb-8"> 
-              <AnimatedList delay={100}>
-                {notifications.map((n) => (
-  <NotificationItem
-    key={n.id}
-    title={n.title}
-    description={n.description}
-    type={n.type}
-    // Usamos 'createdAt' que sí viene de la base de datos
-    createdAt={n.createdAt} 
-  />
-))}
-              </AnimatedList>
-            </div>
+          <div className="h-full overflow-y-auto p-4 space-y-3 scrollbar-hide">
+            <AnimatedList delay={50}>
+              {filteredNotifications.map((n) => (
+                <NotificationItem
+                  key={n.id}
+                  title={n.title}
+                  description={n.description}
+                  type={n.type}
+                  createdAt={n.createdAt}
+                  read={n.read}
+                />
+              ))}
+            </AnimatedList>
+            <div className="h-16" />
           </div>
         )}
 
-        {/* Sombra de scroll */}
-        {notifications.length > 0 && (
-           <div className="pointer-events-none absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-background via-background/80 to-transparent" />
+        {filteredNotifications.length > 4 && (
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-background to-transparent" />
         )}
       </div>
     </div>

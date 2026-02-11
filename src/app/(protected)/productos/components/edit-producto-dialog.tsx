@@ -15,21 +15,43 @@ import {
   DialogTrigger,
   DialogDescription,
 } from "@/components/ui/dialog";
+// Importamos Select de Shadcn
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { 
   Pencil, 
   DollarSign, 
   Tag, 
   Loader2, 
   TrendingUp, 
-  AlertCircle,
-  Package
+  Package,
+  Barcode,
+  BellRing,
+  Calendar,
+  Trash2,
+  Layers,
+  Plus,
+  PlusCircle
 } from "lucide-react";
+import { toast } from "sonner";
 
 function toNumber(v: string): number | undefined {
   const t = v.replace(",", ".").trim();
   if (!t) return undefined;
   const n = Number(t);
   return Number.isFinite(n) ? n : undefined;
+}
+
+function toInt(v: string): number | undefined {
+  const t = v.trim();
+  if (!t) return undefined;
+  const n = Number(t);
+  return Number.isFinite(n) ? Math.trunc(n) : undefined;
 }
 
 export function EditProductoDialog({
@@ -43,47 +65,101 @@ export function EditProductoDialog({
 }) {
   const [open, setOpen] = React.useState(false);
   const [saving, setSaving] = React.useState(false);
+  const [deleting, setDeleting] = React.useState(false);
 
+  // Estados del formulario
   const [nombre, setNombre] = React.useState(producto.nombre);
+  const [codigoBarra, setCodigoBarra] = React.useState(producto.codigoBarra || "");
   const [precioVenta, setPrecioVenta] = React.useState(String(producto.precioVenta));
   const [precioCosto, setPrecioCosto] = React.useState(String(producto.precioCosto));
+  const [stockMinUnits, setStockMinUnits] = React.useState(String(producto.stockMinUnits || ""));
+  const [fechaVencimiento, setFechaVencimiento] = React.useState(
+    producto.fechaVencimiento ? new Date(producto.fechaVencimiento).toISOString().split('T')[0] : ""
+  );
 
-  // Sincronizar estados cuando cambia el producto o se abre el dialog
+  // --- ESTADOS DE CATEGORÍA ---
+  const [categorias, setCategorias] = React.useState<{id: number | string, nombre: string}[]>([]);
+  const [categoriaId, setCategoriaId] = React.useState<string>(producto.categoriaId?.toString() || "");
+  const [nuevaCategoria, setNuevaCategoria] = React.useState("");
+  const [isCreandoNuevaCat, setIsCreandoNuevaCat] = React.useState(false);
+
+  // Sincronizar y Cargar categorías
   React.useEffect(() => {
     if (open) {
       setNombre(producto.nombre);
+      setCodigoBarra(producto.codigoBarra || "");
       setPrecioVenta(String(producto.precioVenta));
       setPrecioCosto(String(producto.precioCosto));
+      setStockMinUnits(String(producto.stockMinUnits || ""));
+      setFechaVencimiento(producto.fechaVencimiento ? new Date(producto.fechaVencimiento).toISOString().split('T')[0] : "");
+      setCategoriaId(producto.categoriaId?.toString() || "");
+      
+      // Cargar lista de categorías desde API
+      apiService.getCategorias().then(setCategorias).catch(console.error);
     }
   }, [open, producto]);
 
-  // Cálculos en tiempo real
   const pv = toNumber(precioVenta) || 0;
   const pc = toNumber(precioCosto) || 0;
   const gananciaUnitaria = pv - pc;
   const margenPorcentaje = pv > 0 ? (gananciaUnitaria / pv) * 100 : 0;
   const esGananciaNegativa = pv > 0 && pc > 0 && gananciaUnitaria < 0;
 
-  const canSubmit = nombre.trim().length >= 2 && pv > 0 && pc > 0;
+  // Validación: requiere nombre, precios y categoría (existente o nueva)
+  const canSubmit = 
+    nombre.trim().length >= 2 && 
+    pv > 0 && 
+    pc > 0 &&
+    (categoriaId !== "" || (isCreandoNuevaCat && nuevaCategoria.trim().length > 0));
 
   async function save() {
     if (!canSubmit || saving) return;
     setSaving(true);
     try {
+      let finalCategoriaId: number | null = categoriaId ? Number(categoriaId) : null;
+
+      // 1. Si el usuario creó una categoría nueva en la edición
+      if (isCreandoNuevaCat && nuevaCategoria.trim()) {
+        const catCreada = await apiService.createCategoria({ nombre: nuevaCategoria.trim() });
+        finalCategoriaId = Number(catCreada.id);
+      }
+
       const payload: UpdateProductoInput = {
         nombre: nombre.trim(),
+        codigoBarra: codigoBarra.trim() || null,
         precioVenta: pv,
         precioCosto: pc,
-        // Eliminado packSizeUnits por requerimiento de manejo por UNIDAD
+        stockMinUnits: toInt(stockMinUnits) || 0,
+        fechaVencimiento: fechaVencimiento || null,
+        categoriaId: finalCategoriaId,
       };
 
       await apiService.updateProducto(producto.id, payload);
+      toast.success("Producto actualizado correctamente");
+      setOpen(false);
+      setIsCreandoNuevaCat(false);
+      setNuevaCategoria("");
+      onUpdated?.();
+    } catch (err: any) {
+      toast.error(err.message || "Error al actualizar");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleDelete() {
+    if (!window.confirm("¿Estás seguro de que deseas eliminar este producto?")) return;
+    
+    setDeleting(true);
+    try {
+      await apiService.deleteProducto(producto.id);
+      toast.success("Producto eliminado");
       setOpen(false);
       onUpdated?.();
     } catch (err: any) {
-      console.error(err);
+      toast.error("Error al eliminar el producto");
     } finally {
-      setSaving(false);
+      setDeleting(false);
     }
   }
 
@@ -91,114 +167,170 @@ export function EditProductoDialog({
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>{trigger}</DialogTrigger>
 
-      <DialogContent className="sm:max-w-[500px] p-0 overflow-hidden border-none shadow-2xl bg-background text-foreground">
+      <DialogContent className="sm:max-w-[550px] p-0 overflow-hidden border-none shadow-2xl bg-background">
         <DialogHeader className="p-6 pb-2 border-b bg-muted/20">
-          <div className="flex items-center gap-2 text-primary">
-            <Pencil className="h-5 w-5" />
-            <DialogTitle className="text-xl font-bold tracking-tight">Editar Producto</DialogTitle>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2 text-primary">
+              <Pencil className="h-5 w-5" />
+              <DialogTitle className="text-xl font-bold italic tracking-tight">Editar Producto</DialogTitle>
+            </div>
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="text-destructive hover:bg-destructive/10"
+              onClick={handleDelete}
+              disabled={deleting || saving}
+            >
+              {deleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+            </Button>
           </div>
           <DialogDescription>
-            Modifica los detalles del producto ID: <span className="font-mono text-primary font-bold">#{producto.id}</span>
+            ID: <span className="font-mono font-bold text-primary">#{producto.id}</span> • Ajusta la ficha técnica.
           </DialogDescription>
         </DialogHeader>
 
-        <div className="p-6 space-y-5">
-          <div className="space-y-4">
-            {/* Nombre */}
-            <div className="space-y-2">
-              <Label className="text-sm font-semibold opacity-80 text-muted-foreground">Nombre del producto</Label>
+        <div className="p-6 space-y-4 max-h-[80vh] overflow-y-auto">
+          
+          {/* Identificación */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="space-y-2 sm:col-span-2">
+              <Label className="text-xs font-bold uppercase text-muted-foreground">Nombre</Label>
               <div className="relative">
                 <Tag className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  value={nombre}
-                  onChange={(e) => setNombre(e.target.value)}
-                  className="pl-9 h-11 bg-muted/30 focus-visible:ring-primary border-muted"
-                />
+                <Input value={nombre} onChange={(e) => setNombre(e.target.value)} className="pl-9 h-11 bg-muted/30" />
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              {/* Precio Costo */}
-              <div className="space-y-2">
-                <Label className="text-sm font-semibold opacity-80 text-muted-foreground">Costo Unitario</Label>
-                <div className="relative">
-                  <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    value={precioCosto}
-                    onChange={(e) => setPrecioCosto(e.target.value)}
-                    className="pl-9 h-11 bg-muted/30"
-                    inputMode="decimal"
-                  />
+            {/* --- SECCIÓN CATEGORÍA --- */}
+            <div className="space-y-2 sm:col-span-2">
+              <Label className="text-xs font-bold uppercase text-muted-foreground">Categoría</Label>
+              {!isCreandoNuevaCat ? (
+                <div className="flex gap-2">
+                  <div className="relative flex-1">
+                    <Layers className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground z-10" />
+                    <Select value={categoriaId} onValueChange={setCategoriaId}>
+                      <SelectTrigger className="pl-9 h-11 bg-muted/30">
+                        <SelectValue placeholder="Sin categoría" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {categorias.map((cat) => (
+                          <SelectItem key={cat.id} value={cat.id.toString()}>
+                            {cat.nombre}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    className="h-11 px-3 border-dashed border-primary/40 text-primary hover:bg-primary/5"
+                    onClick={() => { setIsCreandoNuevaCat(true); setCategoriaId(""); }}
+                  >
+                    <Plus className="h-4 w-4" />
+                  </Button>
                 </div>
-              </div>
+              ) : (
+                <div className="flex gap-2 animate-in slide-in-from-left-2 duration-200">
+                  <div className="relative flex-1">
+                    <PlusCircle className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-primary" />
+                    <Input 
+                      value={nuevaCategoria} 
+                      onChange={(e) => setNuevaCategoria(e.target.value)} 
+                      placeholder="Nueva categoría..." 
+                      className="pl-9 h-11 border-primary/40 bg-primary/5"
+                      autoFocus
+                    />
+                  </div>
+                  <Button 
+                    type="button" 
+                    variant="ghost" 
+                    className="h-11 text-xs"
+                    onClick={() => { setIsCreandoNuevaCat(false); setNuevaCategoria(""); }}
+                  >
+                    Cancelar
+                  </Button>
+                </div>
+              )}
+            </div>
 
-              {/* Precio Venta */}
-              <div className="space-y-2">
-                <Label className="text-sm font-semibold opacity-80 text-primary">Precio Venta</Label>
-                <div className="relative">
-                  <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-primary" />
-                  <Input
-                    value={precioVenta}
-                    onChange={(e) => setPrecioVenta(e.target.value)}
-                    className="pl-9 h-11 bg-primary/5 border-primary/20 font-bold text-primary"
-                    inputMode="decimal"
-                  />
-                </div>
+            <div className="space-y-2">
+              <Label className="text-xs font-bold uppercase text-muted-foreground">Código de Barras</Label>
+              <div className="relative">
+                <Barcode className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input value={codigoBarra} onChange={(e) => setCodigoBarra(e.target.value)} className="pl-9 h-11 bg-muted/30" />
               </div>
             </div>
 
-            {/* PANEL DE CÁLCULOS (Compatible con Light/Dark) */}
-            {(pv > 0 || pc > 0) && (
-              <div className={`rounded-xl border p-4 space-y-2 transition-all duration-300 ${
-                esGananciaNegativa 
-                ? 'bg-destructive/10 border-destructive/20' 
-                : 'bg-emerald-500/5 border-emerald-500/20 dark:bg-emerald-500/10'
-              }`}>
-                <div className="flex justify-between items-center">
-                  <div className="flex items-center gap-2 text-xs font-bold text-muted-foreground uppercase tracking-wider">
-                    <TrendingUp className={`h-3.5 w-3.5 ${esGananciaNegativa ? 'text-destructive' : 'text-emerald-500'}`} />
-                    Nueva Rentabilidad
-                  </div>
-                  <span className={`text-sm font-black ${esGananciaNegativa ? 'text-destructive' : 'text-emerald-500'}`}>
-                    ${gananciaUnitaria.toLocaleString()} ({margenPorcentaje.toFixed(1)}%)
-                  </span>
-                </div>
-
-                {esGananciaNegativa && (
-                  <div className="flex items-center gap-1.5 text-destructive text-[10px] font-bold uppercase animate-pulse pt-1 border-t border-destructive/20">
-                    <AlertCircle className="h-3 w-3" />
-                    Atención: Margen de pérdida detectado
-                  </div>
-                )}
+            <div className="space-y-2">
+              <Label className="text-xs font-bold uppercase text-muted-foreground">Vencimiento</Label>
+              <div className="relative">
+                <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input type="date" value={fechaVencimiento} onChange={(e) => setFechaVencimiento(e.target.value)} className="pl-9 h-11 bg-muted/30" />
               </div>
-            )}
-
-            {/* Información de Stock (No editable aquí por seguridad, pero visible) */}
-            <div className="flex items-center gap-2 p-3 bg-muted/20 rounded-lg border border-dashed border-muted-foreground/20">
-              <Package className="h-4 w-4 text-muted-foreground" />
-              <span className="text-xs text-muted-foreground italic">
-                Stock actual: <strong className="text-foreground">{producto.stockDisponibleUnits} unidades</strong>
-              </span>
             </div>
           </div>
 
-          <div className="flex gap-3 pt-2">
-            <Button
-              type="button"
-              variant="outline"
-              className="flex-1 h-11"
-              onClick={() => setOpen(false)}
-              disabled={saving}
-            >
+          {/* Precios */}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label className="text-xs font-bold uppercase text-muted-foreground">Costo</Label>
+              <div className="relative">
+                <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input value={precioCosto} onChange={(e) => setPrecioCosto(e.target.value)} className="pl-9 h-11 bg-muted/30" inputMode="decimal" />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-xs font-bold uppercase text-primary">Precio Venta</Label>
+              <div className="relative">
+                <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-primary" />
+                <Input value={precioVenta} onChange={(e) => setPrecioVenta(e.target.value)} className="pl-9 h-11 bg-primary/5 border-primary/20 font-bold" inputMode="decimal" />
+              </div>
+            </div>
+          </div>
+
+          {/* Rentabilidad */}
+          {(pv > 0 || pc > 0) && (
+            <div className={`rounded-xl border p-3 ${esGananciaNegativa ? 'bg-destructive/10 border-destructive/20' : 'bg-emerald-500/5 border-emerald-500/20'}`}>
+              <div className="flex justify-between items-center">
+                <div className="flex items-center gap-2 text-[10px] font-bold text-muted-foreground uppercase">
+                  <TrendingUp className={`h-3 w-3 ${esGananciaNegativa ? 'text-destructive' : 'text-emerald-500'}`} />
+                  Rentabilidad Proyectada
+                </div>
+                <span className={`text-sm font-black ${esGananciaNegativa ? 'text-destructive' : 'text-emerald-500'}`}>
+                  ${gananciaUnitaria.toLocaleString()} ({margenPorcentaje.toFixed(1)}%)
+                </span>
+              </div>
+            </div>
+          )}
+
+          {/* Stock Info & Alerta */}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="flex items-center gap-2 p-3 bg-muted/20 rounded-lg border border-dashed">
+              <Package className="h-4 w-4 text-muted-foreground" />
+              <div className="flex flex-col">
+                <span className="text-[10px] uppercase font-bold text-muted-foreground">Stock Actual</span>
+                <span className="text-sm font-bold">{producto.stockDisponibleUnits} u.</span>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-[10px] font-bold uppercase text-orange-500">Mínimo para Alerta</Label>
+              <div className="relative">
+                <BellRing className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-orange-500" />
+                <Input value={stockMinUnits} onChange={(e) => setStockMinUnits(e.target.value)} className="pl-9 h-11 bg-orange-500/5 border-orange-500/20" placeholder="5" />
+              </div>
+            </div>
+          </div>
+
+          <div className="flex gap-3 pt-4">
+            <Button type="button" variant="outline" className="flex-1 h-11" onClick={() => setOpen(false)} disabled={saving || deleting}>
               Cancelar
             </Button>
-            <Button 
-              onClick={save} 
-              className="flex-1 h-11 font-bold shadow-lg"
-              disabled={!canSubmit || saving || esGananciaNegativa}
-            >
+            <Button onClick={save} className="flex-1 h-11 font-bold shadow-lg" disabled={!canSubmit || saving || deleting || esGananciaNegativa}>
               {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-              Actualizar cambios
+              Guardar Cambios
             </Button>
           </div>
         </div>

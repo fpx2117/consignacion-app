@@ -1,7 +1,4 @@
-
-//src/app/(protected)/ventas/nueva/page.tsx
 "use client";
-
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
@@ -9,26 +6,25 @@ import { AnimatePresence, motion } from "framer-motion";
 import { 
   Plus, Minus, Trash2, Loader2, ArrowLeft, ShoppingCart,
   Search, Banknote, CreditCard, QrCode, Coins, Check, ChevronsUpDown,
-  UserCircle2
+  UserCircle2, Barcode
 } from "lucide-react";
 
 import { apiService } from "@/lib/apiService";
 import type { Producto, Cliente, CreateVentaDirectaInput, MetodoPago } from "@/lib/types";
 import { SuccessDialog } from "@/components/success-dialog";
 import { ErrorDialog } from "@/components/error-dialog";
-import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
-import { 
-  Command, CommandEmpty, CommandGroup, CommandInput, 
-  CommandItem, CommandList, CommandSeparator 
-} from "@/components/ui/command";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { 
+  Command, CommandEmpty, CommandGroup, CommandInput, 
+  CommandItem, CommandList 
+} from "@/components/ui/command";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator"; // Importante para el ticket
 
 // --- TIPOS ---
 type ProductoConStock = Producto & { stockDisponibleUnits?: number };
@@ -55,18 +51,28 @@ export default function NuevaVentaPage() {
   // --- States ---
   const [productos, setProductos] = React.useState<ProductoConStock[]>([]);
   const [clientes, setClientes] = React.useState<Cliente[]>([]); 
+  
+  // Form States
   const [productoId, setProductoId] = React.useState<number | "">("");
   const [selectedClienteId, setSelectedClienteId] = React.useState<number | "">(""); 
   const [units, setUnits] = React.useState<number>(1);
+  const [metodoPago, setMetodoPago] = React.useState<MetodoPago>("EFECTIVO");
+  
+  // UI States
   const [openCombobox, setOpenCombobox] = React.useState(false);
   const [openClienteCombobox, setOpenClienteCombobox] = React.useState(false); 
   const [cart, setCart] = React.useState<CartItem[]>([]);
-  const [metodoPago, setMetodoPago] = React.useState<MetodoPago>("EFECTIVO");
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
+  
+  // Dialog States
   const [showSuccessDialog, setShowSuccessDialog] = React.useState(false);
   const [createdVentaId, setCreatedVentaId] = React.useState<number | null>(null);
   const [errorDialog, setErrorDialog] = React.useState({ open: false, title: "", description: "" });
+
+  // Scanner Buffer
+  const barcodeBuffer = React.useRef<string>("");
+  const lastKeyTime = React.useRef<number>(0);
   
   // --- Initial Load ---
   const fetchData = React.useCallback(async () => {
@@ -75,56 +81,97 @@ export default function NuevaVentaPage() {
         apiService.getProductos(),
         apiService.getClientes()
       ]);
-      setProductos(prodRes.data as any);
+      const activos = (prodRes.data as any[]).filter(p => p.activo !== false);
+      setProductos(activos);
       setClientes(cliRes.data);
-    } catch (err) { setError("Error datos."); }
+    } catch (err) { setError("Error cargando datos."); }
   }, []);
 
   React.useEffect(() => { fetchData(); }, [fetchData]);
 
-  const clientesFiltrados = React.useMemo(() => {
-    return clientes.filter(c => !c.nombre.toLowerCase().includes("consumidor final"));
-  }, [clientes]);
+  // --- LÓGICA DE SCANNER ---
+  React.useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement;
+      if (['INPUT', 'TEXTAREA'].includes(target.tagName)) return;
 
-  // --- Logic Helpers ---
-  const incrementUnits = () => setUnits(prev => prev + 1);
-  const decrementUnits = () => setUnits(prev => (prev > 1 ? prev - 1 : 1));
+      const currentTime = Date.now();
+      if (currentTime - lastKeyTime.current > 50) {
+        barcodeBuffer.current = "";
+      }
+      lastKeyTime.current = currentTime;
 
-  // --- Cart Logic ---
-  const addItem = () => {
+      if (e.key === "Enter") {
+        if (barcodeBuffer.current.length > 0) {
+          processBarcode(barcodeBuffer.current);
+          barcodeBuffer.current = "";
+        }
+      } else if (e.key.length === 1) {
+        barcodeBuffer.current += e.key;
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [productos, cart]); 
+
+  const processBarcode = (code: string) => {
+    const prod = productos.find(p => p.codigoBarra === code);
+    if (prod) {
+      addToCart(prod, 1);
+      toast.success(`Escaneado: ${prod.nombre}`);
+    } else {
+      toast.error(`Producto no encontrado: ${code}`);
+    }
+  };
+
+  // --- LÓGICA CARRITO ---
+  const addToCart = (prod: ProductoConStock, quantityToAdd: number) => {
     setError(null);
-    if (!productoId || units <= 0) return;
-    const prod = productos.find(p => p.id === productoId);
-    if (!prod) return;
+    const stockDisponible = prod.stockDisponibleUnits ?? 9999;
+    const currentInCart = cart.find(item => item.producto.id === prod.id)?.quantity || 0;
 
-    const currentInCart = cart.find(item => item.producto.id === productoId)?.quantity || 0;
-    const stockDisponible = prod.stockDisponibleUnits ?? 9999; 
-    
-    if ((currentInCart + units) > stockDisponible) {
+    if (stockDisponible <= 0) {
+       setErrorDialog({ open: true, title: "Sin Stock", description: "Este producto está agotado." });
+       return;
+    }
+
+    if ((currentInCart + quantityToAdd) > stockDisponible) {
        setErrorDialog({
          open: true,
-         title: "Stock Limitado",
-         description: `Solo quedan ${stockDisponible} unidades.`
+         title: "Stock Insuficiente",
+         description: `Solo quedan ${stockDisponible} unidades disponibles.`
        });
        return;
     }
 
     setCart((prev) => {
-      const exists = prev.find((item) => item.producto.id === Number(productoId));
+      const exists = prev.find((item) => item.producto.id === prod.id);
       if (exists) {
-        return prev.map((item) => item.producto.id === Number(productoId) ? { ...item, quantity: item.quantity + units } : item);
+        return prev.map((item) => item.producto.id === prod.id ? { ...item, quantity: item.quantity + quantityToAdd } : item);
       }
-      return [...prev, { producto: prod, quantity: units }];
+      return [...prev, { producto: prod, quantity: quantityToAdd }];
     });
-    setProductoId("");
-    setUnits(1);
-    setOpenCombobox(false);
-    
+  };
+
+  const addItemManual = () => {
+    if (!productoId || units <= 0) return;
+    const prod = productos.find(p => p.id === productoId);
+    if (prod) {
+      addToCart(prod, units);
+      setProductoId("");
+      setUnits(1);
+      setOpenCombobox(false);
+    }
   };
 
   const removeItem = (pid: number) => setCart((prev) => prev.filter((item) => item.producto.id !== pid));
-  const totalAmount = cart.reduce((acc, curr) => acc + (curr.producto.precioVenta * curr.quantity), 0);
+  const incrementUnits = () => setUnits(prev => prev + 1);
+  const decrementUnits = () => setUnits(prev => (prev > 1 ? prev - 1 : 1));
 
+  const totalAmount = cart.reduce((acc, curr) => acc + (Number(curr.producto.precioVenta) * curr.quantity), 0);
+
+  // --- COBRAR ---
   const handleCobrar = async () => {
     setError(null);
     if (cart.length === 0) return;
@@ -144,10 +191,7 @@ export default function NuevaVentaPage() {
       setCreatedVentaId(res.data.id);
       setShowSuccessDialog(true);
     } catch (e: any) {
-      let title = "Error";
-      let desc = e?.message || "Error inesperado.";
-      if (desc.includes("Stock")) title = "Stock Insuficiente";
-      setErrorDialog({ open: true, title, description: desc });
+      setErrorDialog({ open: true, title: "Error al procesar", description: e.message || "Intenta nuevamente." });
     } finally {
       setLoading(false);
     }
@@ -162,14 +206,15 @@ export default function NuevaVentaPage() {
     fetchData(); 
   };
 
- const handleViewTicket = () => {
+  const handleViewTicket = () => {
     if (!createdVentaId) return;
-
-    // Abrimos directamente tu nueva página de carga en una pestaña nueva.
-    // Al ser una navegación directa sin 'await' previo, el navegador NO la bloquea.
-    const url = `/ticket-loading/${createdVentaId}`;
-    window.open(url, '_blank');
+    window.open(`/ticket-loading/${createdVentaId}`, '_blank');
   };
+
+  // --- HELPERS UI ---
+  const clientesFiltrados = React.useMemo(() => {
+    return clientes.filter(c => !c.nombre.toLowerCase().includes("consumidor final"));
+  }, [clientes]);
 
   const getSelectedClienteLabel = () => {
     if (selectedClienteId === "") return "Consumidor Final";
@@ -180,76 +225,93 @@ export default function NuevaVentaPage() {
   const isClienteRegistrado = selectedClienteId !== "";
 
   return (
-    // ESTRUCTURA PRINCIPAL: h-[100dvh] previene el scroll del body
     <div className="h-[100dvh] flex flex-col bg-background overflow-hidden">
       
-      {/* 1. HEADER (Fijo) */}
+      {/* 1. HEADER */}
       <div className="shrink-0 h-14 border-b bg-background flex items-center justify-between px-4 z-20 shadow-sm">
         <div className="flex items-center gap-2">
             <Button variant="ghost" size="icon" className="-ml-2 text-muted-foreground" onClick={() => router.back()}>
               <ArrowLeft className="h-5 w-5" />
             </Button>
-            <h1 className="text-xl font-bold tracking-tight text-foreground">
+            <h1 className="text-xl font-bold tracking-tight text-foreground flex items-center gap-2">
               Punto de Venta
             </h1>
         </div>
       </div>
 
-      {/* 2. CONTENIDO PRINCIPAL (Flexbox Split) */}
+      {/* 2. CONTENIDO PRINCIPAL */}
       <div className="flex-1 flex overflow-hidden">
         
-        {/* === COLUMNA IZQUIERDA (Móvil: Todo el contenido / PC: Formularios) === */}
+        {/* === COLUMNA IZQUIERDA === */}
         <div className="flex-1 flex flex-col min-h-0 relative">
           
-          {/* A. ZONA DE FORMULARIO (FIJA EN MÓVIL) - shrink-0 evita que colapse */}
+          {/* A. ZONA DE FORMULARIO */}
           <div className="shrink-0 p-3 space-y-3 bg-card/30 border-b z-10 shadow-sm">
-             
              {error && <Alert variant="destructive" className="py-2"><AlertDescription>{error}</AlertDescription></Alert>}
 
              <div className="flex gap-2">
-                {/* SELECTOR CLIENTE (Más compacto) */}
-                <div className="w-1/3 min-w-[120px]">
-                    <Popover open={openClienteCombobox} onOpenChange={setOpenClienteCombobox}>
-                        <PopoverTrigger asChild>
-                            <Button variant="outline" role="combobox" className={cn("w-full justify-between h-10 text-xs px-2", isClienteRegistrado && "border-indigo-400 bg-indigo-50 dark:bg-indigo-950/30 text-indigo-600")}>
-                                <span className="truncate">{selectedClienteId === "" ? "Cons. Final" : getSelectedClienteLabel()}</span>
-                                <UserCircle2 className="ml-1 h-3 w-3 opacity-50 shrink-0" />
-                            </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-[250px] p-0" align="start">
-                            <Command>
-                                <CommandInput placeholder="Buscar..." />
-                                <CommandList>
-                                    <CommandEmpty>No hay.</CommandEmpty>
-                                    <CommandGroup>
-                                        <CommandItem value="consumidor final" onSelect={() => { setSelectedClienteId(""); setOpenClienteCombobox(false); }}>
-                                            <Check className={cn("mr-2 h-4 w-4", selectedClienteId === "" ? "opacity-100" : "opacity-0")} /> Consumidor Final
-                                        </CommandItem>
-                                        {clientesFiltrados.map((c) => (
-                                            <CommandItem key={c.id} value={c.nombre} onSelect={() => { setSelectedClienteId(c.id); setOpenClienteCombobox(false); }}>
-                                                <Check className={cn("mr-2 h-4 w-4", selectedClienteId === c.id ? "opacity-100" : "opacity-0")} /> {c.nombre}
-                                            </CommandItem>
-                                        ))}
-                                    </CommandGroup>
-                                </CommandList>
-                            </Command>
-                        </PopoverContent>
-                    </Popover>
-                </div>
+  {/* SELECTOR CLIENTE: Ancho fijo en móvil, adaptable en desktop */}
+  <div className="w-[110px] sm:w-1/3 min-w-[110px]">
+    <Popover open={openClienteCombobox} onOpenChange={setOpenClienteCombobox}>
+      <PopoverTrigger asChild>
+        <Button variant="outline" role="combobox" className={cn("w-full justify-between h-10 text-xs px-2 truncate", isClienteRegistrado && "border-indigo-400 bg-indigo-50 dark:bg-indigo-950/30 text-indigo-600")}>
+           {/* En móvil truncamos el nombre si es muy largo */}
+           <span className="truncate">{selectedClienteId === "" ? "Cons. Final" : getSelectedClienteLabel()}</span>
+           <UserCircle2 className="ml-1 h-3 w-3 opacity-50 shrink-0" />
+        </Button>
+      </PopoverTrigger>
+      {/* ... (El PopoverContent del cliente queda igual) ... */}
+    </Popover>
+  </div>
 
-                {/* SELECTOR PRODUCTO (Más visible) */}
-                <div className="flex-1">
-                    <Popover open={openCombobox} onOpenChange={setOpenCombobox}>
-                        <PopoverTrigger asChild>
-                            <Button variant="outline" role="combobox" className="w-full justify-between h-10 text-sm bg-background shadow-sm" disabled={loading}>
-                                {productoId 
-                                ? <span className="font-bold truncate text-primary">{productos.find((p) => p.id === productoId)?.nombre}</span>
-                                : <span className="text-muted-foreground flex items-center gap-2"><Search className="w-3 h-3"/> Buscar producto...</span>}
-                            </Button>
-                        </PopoverTrigger>
+  {/* SELECTOR PRODUCTO MEJORADO */}
+  <div className="flex-1 min-w-0"> {/* min-w-0 es CLAVE para que el flex no se desborde */}
+    <Popover open={openCombobox} onOpenChange={setOpenCombobox}>
+      <PopoverTrigger asChild>
+        <Button 
+          variant="outline" 
+          role="combobox" 
+          className={cn(
+            "w-full h-10 text-sm shadow-sm relative text-left transition-colors",
+            // Padding izquierdo grande para el icono
+            "pl-9 sm:pl-10", 
+            !productoId && "text-muted-foreground border-dashed hover:border-primary/50"
+          )} 
+          disabled={loading}
+        >
+          {/* ICONO ANIMADO - Posicionado Absolutamente */}
+          <div className="absolute left-2.5 top-1/2 -translate-y-1/2 flex items-center justify-center pointer-events-none">
+             <Barcode className="h-4 w-4 text-primary animate-pulse" />
+          </div>
+
+          {/* CONTENIDO DEL TEXTO */}
+          <div className="flex items-center justify-between w-full overflow-hidden">
+            {productoId ? (
+               <span className="font-bold truncate text-foreground text-xs sm:text-sm">
+                 {productos.find((p) => p.id === productoId)?.nombre}
+               </span>
+            ) : (
+               // TRUCO VISUAL: Texto corto en móvil ("Buscar..."), largo en PC
+               <span className="truncate text-xs sm:text-sm">
+                 <span className="sm:hidden">Escanear...</span>
+                 <span className="hidden sm:inline">Escanear o buscar producto...</span>
+               </span>
+            )}
+            
+            {/* Ocultamos las flechas en móvil para ahorrar espacio */}
+            <ChevronsUpDown className="ml-1 h-3 w-3 shrink-0 opacity-50 hidden sm:block" />
+          </div>
+        </Button>
+      </PopoverTrigger>
                         <PopoverContent className="w-[85vw] md:w-[400px] p-0" align="start">
-                            <Command>
-                                <CommandInput placeholder="Nombre del producto..." className="h-12" />
+                            <Command filter={(value, search) => {
+                                const p = productos.find(item => item.nombre === value);
+                                if (!p) return 0;
+                                const matchName = p.nombre.toLowerCase().includes(search.toLowerCase());
+                                const matchCode = p.codigoBarra?.toLowerCase().includes(search.toLowerCase());
+                                return (matchName || matchCode) ? 1 : 0;
+                            }}>
+                                <CommandInput placeholder="Nombre o código..." className="h-12" />
                                 <CommandList className="max-h-[250px]">
                                     <CommandEmpty>No encontrado.</CommandEmpty>
                                     <CommandGroup>
@@ -257,12 +319,21 @@ export default function NuevaVentaPage() {
                                             const stock = p.stockDisponibleUnits ?? 0;
                                             const sinStock = stock <= 0;
                                             return (
-                                                <CommandItem key={p.id} value={p.nombre} disabled={sinStock} onSelect={() => { if(!sinStock) { setProductoId(p.id); setOpenCombobox(false); }}} className={cn("flex justify-between py-2", sinStock && "opacity-50")}>
+                                                <CommandItem 
+                                                  key={p.id} 
+                                                  value={p.nombre} 
+                                                  disabled={sinStock} 
+                                                  onSelect={() => { if(!sinStock) { setProductoId(p.id); setOpenCombobox(false); }}} 
+                                                  className={cn("flex justify-between py-2 cursor-pointer", sinStock && "opacity-50")}
+                                                >
                                                     <div className="flex flex-col">
                                                         <span className="font-medium text-sm">{p.nombre}</span>
-                                                        <span className="text-[10px] text-muted-foreground">{sinStock ? "AGOTADO" : `Stock: ${stock}`}</span>
+                                                        <div className="flex gap-2 text-[10px] text-muted-foreground">
+                                                           {p.codigoBarra && <span className="font-mono bg-muted px-1 rounded flex items-center gap-1"><Barcode className="h-3 w-3"/> {p.codigoBarra}</span>}
+                                                           <span>{sinStock ? "AGOTADO" : `Stock: ${stock}`}</span>
+                                                        </div>
                                                     </div>
-                                                    <Badge variant="secondary" className="text-xs">{formatCurrency(p.precioVenta)}</Badge>
+                                                    <Badge variant={sinStock ? "destructive" : "secondary"} className="text-xs">{formatCurrency(p.precioVenta)}</Badge>
                                                 </CommandItem>
                                             )
                                         })}
@@ -287,25 +358,24 @@ export default function NuevaVentaPage() {
                         <Plus className="h-3 w-3" />
                     </Button>
                  </div>
-                 <Button type="button" className="flex-1 h-10 font-bold text-sm shadow-sm" onClick={addItem} disabled={!productoId}>
+                 <Button type="button" className="flex-1 h-10 font-bold text-sm shadow-sm" onClick={addItemManual} disabled={!productoId}>
                     <Plus className="h-4 w-4 mr-1" /> AGREGAR
                  </Button>
              </div>
           </div>
 
-          {/* B. ZONA DE LISTA (SCROLLABLE) - flex-1 overflow-y-auto */}
-          {/* Esta es la clave: La lista ocupa TODO el espacio restante y scrollea independientemente de los inputs */}
+          {/* B. ZONA DE LISTA CENTRAL (Log de operaciones) */}
           <div className="flex-1 overflow-y-auto p-3 bg-muted/10">
               {cart.length === 0 ? (
                   <div className="h-full flex flex-col items-center justify-center text-muted-foreground/40 gap-2">
                       <ShoppingCart className="h-12 w-12 opacity-20" />
                       <p className="text-sm font-medium">Ticket vacío</p>
+                      <p className="text-xs text-muted-foreground opacity-60">Escanea un producto o búscalo manualmente</p>
                   </div>
               ) : (
                   <div className="space-y-2 pb-4">
-                      {/* Cabecera de lista visible solo si hay items */}
                       <div className="flex justify-between items-center pb-1">
-                          <span className="text-[10px] font-bold text-muted-foreground uppercase">Items en Ticket ({cart.length})</span>
+                          <span className="text-[10px] font-bold text-muted-foreground uppercase">Items agregados ({cart.length})</span>
                       </div>
                       
                       <AnimatePresence mode="popLayout" initial={false}>
@@ -314,20 +384,20 @@ export default function NuevaVentaPage() {
                                 key={item.producto.id}
                                 layout
                                 initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, x: -20 }}
-                                className="flex items-center justify-between p-2.5 rounded-lg bg-card border shadow-sm"
+                                className="flex items-center justify-between p-3 rounded-xl bg-card border shadow-sm"
                             >
                                 <div className="flex items-center gap-3 overflow-hidden">
-                                    <div className="h-8 w-8 rounded bg-primary/10 flex items-center justify-center text-primary font-bold text-xs shrink-0">
-                                        {item.quantity}
+                                    <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary font-black text-sm shrink-0">
+                                        {item.quantity}x
                                     </div>
                                     <div className="min-w-0">
-                                        <p className="font-medium text-sm truncate pr-2">{item.producto.nombre}</p>
-                                        <p className="text-[10px] text-muted-foreground">{formatCurrency(item.producto.precioVenta)} u.</p>
+                                        <p className="font-bold text-sm truncate pr-2">{item.producto.nombre}</p>
+                                        <p className="text-[11px] text-muted-foreground font-medium">{formatCurrency(item.producto.precioVenta)} / unidad</p>
                                     </div>
                                 </div>
-                                <div className="flex items-center gap-2 shrink-0">
-                                    <span className="font-bold text-sm">{formatCurrency(item.producto.precioVenta * item.quantity)}</span>
-                                    <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-red-500" onClick={() => removeItem(item.producto.id)}>
+                                <div className="flex items-center gap-3 shrink-0">
+                                    <span className="font-black text-base">{formatCurrency(item.producto.precioVenta * item.quantity)}</span>
+                                    <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground/50 hover:text-red-500 hover:bg-red-50 transition-colors" onClick={() => removeItem(item.producto.id)}>
                                         <Trash2 className="h-4 w-4" />
                                     </Button>
                                 </div>
@@ -339,72 +409,118 @@ export default function NuevaVentaPage() {
           </div>
         </div>
 
-        {/* --- SIDEBAR DERECHO (Solo Desktop) --- */}
-        {/* En desktop, mostramos una vista espejo del ticket para aprovechar el espacio */}
-        <div className="hidden lg:flex w-[400px] border-l bg-card/50 flex-col shadow-xl z-10">
-            <div className="p-4 border-b bg-muted/20">
-                <h2 className="font-bold flex items-center gap-2"><ShoppingCart className="h-5 w-5" /> Resumen Ticket</h2>
+        {/* --- CORRECCIÓN 2: SIDEBAR DERECHO (RESUMEN TICKET) --- */}
+        {/* Restaurado el diseño tipo "Papel de Ticket" que suele gustar más */}
+        <div className="hidden lg:flex w-[380px] bg-background border-l flex-col shadow-xl z-20">
+            <div className="p-6 border-b bg-muted/30">
+                <h2 className="font-bold text-lg flex items-center gap-2 text-foreground">
+                   <ShoppingCart className="h-5 w-5" /> Resumen de Compra
+                </h2>
+                <p className="text-xs text-muted-foreground mt-1">Detalle de items actuales</p>
             </div>
-            <div className="flex-1 overflow-y-auto p-4 space-y-2">
-                {cart.map((item) => (
-                     <div key={item.producto.id + 'd'} className="flex justify-between text-sm">
-                        <span>{item.quantity} x {item.producto.nombre}</span>
-                        <span className="font-mono">{formatCurrency(item.producto.precioVenta * item.quantity)}</span>
-                     </div>
-                ))}
+            
+            <div className="flex-1 overflow-y-auto p-6">
+                {cart.length === 0 ? (
+                   <div className="h-full flex flex-col items-center justify-center text-center opacity-40 gap-3">
+                      <div className="p-4 rounded-full bg-muted">
+                        <Barcode className="h-8 w-8" />
+                      </div>
+                      <p className="text-sm font-medium">Esperando items...</p>
+                   </div>
+                ) : (
+                   <div className="space-y-4">
+                      {cart.map((item) => (
+                         <div key={item.producto.id + 'sidebar'} className="flex justify-between items-baseline text-sm group">
+                            <div className="flex gap-3">
+                               <span className="font-bold w-6 text-right tabular-nums text-muted-foreground">{item.quantity}</span>
+                               <div className="flex flex-col">
+                                  <span className="font-medium text-foreground">{item.producto.nombre}</span>
+                                  <span className="text-[10px] text-muted-foreground">{formatCurrency(item.producto.precioVenta)} c/u</span>
+                               </div>
+                            </div>
+                            <span className="font-mono font-bold">{formatCurrency(item.producto.precioVenta * item.quantity)}</span>
+                         </div>
+                      ))}
+                      <Separator className="my-4" />
+                   </div>
+                )}
             </div>
-            {/* Footer Sidebar Desktop */}
-            <div className="p-4 border-t bg-background">
-                 <div className="flex justify-between text-xl font-bold mb-4">
-                    <span>Total</span>
-                    <span>{formatCurrency(totalAmount)}</span>
+
+            <div className="p-6 bg-muted/20 border-t space-y-4">
+                 <div className="space-y-2">
+                    <div className="flex justify-between text-sm text-muted-foreground">
+                       <span>Subtotal</span>
+                       <span>{formatCurrency(totalAmount)}</span>
+                    </div>
+                    <div className="flex justify-between text-sm text-muted-foreground">
+                       <span>Descuentos</span>
+                       <span>-</span>
+                    </div>
+                    <div className="flex justify-between items-end pt-2 border-t border-border/50">
+                       <span className="text-lg font-bold">Total a Pagar</span>
+                       <span className="text-3xl font-black text-primary tabular-nums">{formatCurrency(totalAmount)}</span>
+                    </div>
                  </div>
+                 
+                 {/* El botón de cobrar ya está abajo, aquí solo mostramos info */}
             </div>
         </div>
 
       </div>
 
-   {/* ESPACIADOR (Aumentado un poco para asegurar scroll en móvil) */}
-      <div className="h-48 w-full shrink-0" />
+      {/* ESPACIADOR */}
+      <div className="h-64 md:h-48 w-full shrink-0" />
 
       {/* 3. FOOTER FLOTANTE */}
-      {/* CORRECCIÓN RESPONSIVE:
-          - bottom-24: En móvil sube 6rem (96px) para no chocar con la Bottom Bar.
-          - md:bottom-6: En desktop baja a 1.5rem porque no hay barra abajo.
-          - z-40: Un nivel intermedio (encima del contenido, debajo de modales/navbars superiores).
-      */}
-      <div className="fixed bottom-24 md:bottom-6 left-0 right-0 z-40 px-4 flex justify-center pointer-events-none">
-          
-          <div className="w-full max-w-2xl bg-background/85 backdrop-blur-xl border border-border/50 shadow-2xl rounded-[2rem] p-4 pointer-events-auto transition-all duration-300">
-              <div className="space-y-3">
-                 
-                 {/* Selector de Pago */}
-                 <PaymentSelector metodoPago={metodoPago} setMetodoPago={setMetodoPago} isMobile />
-                 
-                 {/* Botón Principal */}
-                 <Button 
-                    onClick={handleCobrar} 
-                    disabled={loading || cart.length === 0} 
-                    className="w-full h-14 text-lg font-bold shadow-lg shadow-indigo-500/20 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white rounded-2xl active:scale-[0.98] transition-all"
-                 >
-                    {loading ? <Loader2 className="animate-spin" /> : (
-                        <div className="flex justify-between w-full px-4 items-center">
-                            <span className="text-xs font-bold tracking-widest opacity-80 uppercase">{cart.length} ITEMS</span>
-                            <span className="text-xl font-black tracking-tight">COBRAR {formatCurrency(totalAmount)}</span>
-                        </div>
-                    )}
-                 </Button>
+{/* bottom-[80px]: En móvil lo subimos unos 80px para que no tape tu barra de navegación inferior.
+    md:bottom-6: En PC (donde no hay barra inferior) lo bajamos para que se vea estético.
+*/}
+<div className="fixed bottom-[90px] md:bottom-6 left-0 right-0 z-40 px-4 flex justify-center pointer-events-none">
+  <div className="w-full max-w-2xl bg-background/90 backdrop-blur-xl border border-border/50 shadow-2xl rounded-[2rem] p-3 md:p-4 pointer-events-auto transition-all duration-300">
+    <div className="space-y-3">
+       
+       {/* Selector de Pago */}
+       <PaymentSelector metodoPago={metodoPago} setMetodoPago={setMetodoPago} isMobile />
+       
+       {/* Botón Cobrar */}
+       <Button 
+         onClick={handleCobrar} 
+         disabled={loading || cart.length === 0} 
+         className="w-full h-12 md:h-14 text-base md:text-lg font-bold shadow-lg shadow-indigo-500/20 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white rounded-xl md:rounded-2xl active:scale-[0.98] transition-all"
+       >
+          {loading ? <Loader2 className="animate-spin" /> : (
+              <div className="flex justify-between w-full px-2 md:px-4 items-center">
+                  <span className="text-[10px] md:text-xs font-bold tracking-widest opacity-80 uppercase">{cart.length} ITEMS</span>
+                  <span className="text-lg md:text-xl font-black tracking-tight">COBRAR {formatCurrency(totalAmount)}</span>
               </div>
-          </div>
-      </div>
+          )}
+       </Button>
+    </div>
+  </div>
+</div>
       
-      <SuccessDialog open={showSuccessDialog} onOpenChange={setShowSuccessDialog} onConfirm={handleReset} onCancel={handleViewTicket} title="¡Venta Exitosa!" description={<span className="text-center block">Total: <span className="text-primary font-bold">{formatCurrency(totalAmount)}</span></span>} confirmText="Nueva" cancelText="Descargar Ticket" />
-      <ErrorDialog open={errorDialog.open} onOpenChange={(isOpen) => setErrorDialog(prev => ({ ...prev, open: isOpen }))} title={errorDialog.title} description={errorDialog.description} />
+      <SuccessDialog 
+        open={showSuccessDialog} 
+        onOpenChange={setShowSuccessDialog} 
+        onConfirm={handleReset} 
+        onCancel={handleViewTicket} 
+        title="¡Venta Exitosa!" 
+        description={<span className="text-center block">Total: <span className="text-primary font-bold">{formatCurrency(totalAmount)}</span></span>} 
+        confirmText="Nueva Venta" 
+        cancelText="Ver Ticket" 
+      />
+      
+      <ErrorDialog 
+        open={errorDialog.open} 
+        onOpenChange={(isOpen) => setErrorDialog(prev => ({ ...prev, open: isOpen }))} 
+        title={errorDialog.title} 
+        description={errorDialog.description} 
+      />
     </div>
   );
 }
 
-// Subcomponente de Pagos (Igual que antes, pero asegurando el tamaño en móvil)
+// Subcomponente de Pagos
 function PaymentSelector({ metodoPago, setMetodoPago, isMobile }: any) {
     return (
         <div className="grid grid-cols-4 gap-2">

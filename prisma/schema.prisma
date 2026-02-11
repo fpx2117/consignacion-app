@@ -14,13 +14,14 @@ enum RolUsuario {
 enum ShareLinkType {
   TICKET
   REMITO
+  INVENTARIO
 }
 
 enum NotificationType {
   LOW_STOCK
   OUT_OF_STOCK
-  EXPIRATION_NEAR  
-  PRODUCT_EXPIRED  
+  EXPIRATION_NEAR
+  PRODUCT_EXPIRED
   SYSTEM
 }
 
@@ -38,7 +39,7 @@ enum MetodoPago {
 
 model Configuracion {
   id             Int @id @default(1) // Siempre será ID 1
-  minStockGlobal Int @default(5)     // El admin puede cambiar esto desde el panel
+  minStockGlobal Int @default(5) // El admin puede cambiar esto desde el panel
 }
 
 model Usuario {
@@ -71,55 +72,70 @@ model Cliente {
 }
 
 model Notification {
-  id          Int      @id @default(autoincrement())
+  id Int @id @default(autoincrement())
 
   type        NotificationType
   title       String
   description String
 
   // Relación con Producto (Opcional, por si se borra el producto físico)
-  productoId  Int?
-  producto    Producto? @relation(fields: [productoId], references: [id], onDelete: SetNull)
+  productoId Int?
+  producto   Producto? @relation(fields: [productoId], references: [id], onDelete: SetNull)
 
   // Estado
-  read        Boolean  @default(false)
-  
-  fingerprint String   @unique
+  read Boolean @default(false)
+
+  fingerprint String @unique
 
   // Timestamps
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt     // <--- AGREGADO: Vital para ordenar por "actividad reciente"
-  readAt      DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt // <--- AGREGADO: Vital para ordenar por "actividad reciente"
+  readAt    DateTime?
 
   // Índices optimizados para tus queries del panel
-  @@index([read, updatedAt])          // Para: "Dame las no leídas más recientes"
-  @@index([type, createdAt])          // Para filtros por tipo
-  @@index([productoId])               // Para ver historial de un producto
+  @@index([read, updatedAt]) // Para: "Dame las no leídas más recientes"
+  @@index([type, createdAt]) // Para filtros por tipo
+  @@index([productoId]) // Para ver historial de un producto
 }
 
 model Producto {
-  id     Int    @id @default(autoincrement())
-  nombre String
+  id          Int     @id @default(autoincrement())
+  nombre      String
+  descripcion String? // Opcional, para detalles extra
+  codigoBarra String? @unique
+  sku         String? @unique
+  activo      Boolean @default(true)
 
   precioVenta Decimal @db.Decimal(10, 2)
   precioCosto Decimal @db.Decimal(10, 2)
+  iva         Decimal @default(21.0) @db.Decimal(5, 2)
 
   stockDisponibleUnits Int @default(0)
   stockConsignadoUnits Int @default(0)
+  stockMinUnits        Int @default(0)
 
-  packSizeUnits Int?
-  
+  packSizeUnits    Int? // Ej: 12 si es un pack
   fechaVencimiento DateTime?
 
-  stockMinUnits Int @default(0) 
+  // Relaciones
+  categoriaId Int?
+  categoria   Categoria? @relation(fields: [categoriaId], references: [id])
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   consignacionDetalles ConsignacionDetalle[]
   ventaDetalles        VentaDetalle[]
+  notifications        Notification[]
 
-  notifications Notification[] 
+  @@index([codigoBarra])
+  @@index([categoriaId])
+}
+
+model Categoria {
+  id        Int        @id @default(autoincrement())
+  nombre    String     @unique
+  productos Producto[]
 }
 
 model ShareLink {

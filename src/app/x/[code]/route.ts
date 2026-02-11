@@ -20,7 +20,6 @@ function getPublicOrigin(req: NextRequest): string {
   return `https://${envBase.replace(/\/$/, "")}`;
 }
 
-// Modificamos redirectAbs para aceptar cookies opcionalmente
 function redirectAbs(req: NextRequest, path: string, cookieToSet?: { name: string, value: string }) {
   const url = new URL(path, getPublicOrigin(req));
   const res = NextResponse.redirect(url);
@@ -28,7 +27,7 @@ function redirectAbs(req: NextRequest, path: string, cookieToSet?: { name: strin
   if (cookieToSet) {
     res.cookies.set(cookieToSet.name, cookieToSet.value, { 
       path: '/', 
-      maxAge: 60 * 60 * 24 // 24 horas de validez para la cookie
+      maxAge: 60 * 60 * 24 // 24 horas de validez
     });
   }
   
@@ -44,21 +43,18 @@ export async function GET(
 
   const link = await prisma.shareLink.findUnique({ where: { codeHash } });
 
+  // 1. Validaciones de existencia y expiración
   if (!link) return redirectAbs(req, `/x/status?state=invalid`);
   if (new Date() > link.expiresAt) return redirectAbs(req, `/x/status?state=expired`);
 
-  // --- NUEVA LÓGICA ---
-  
-  // 1. Verificamos si este usuario YA vio este link (tiene la cookie)
-  const cookieName = `v_${codeHash}`; // Nombre corto para la cookie
+  // 2. Lógica de control de vistas por Cookie
+  const cookieName = `v_${codeHash}`;
   const hasViewedCookie = req.cookies.get(cookieName);
 
-  // 2. Solo bloqueamos si NO tiene la cookie Y alcanzó el límite
   if (!hasViewedCookie && link.views >= link.maxViews) {
       return redirectAbs(req, `/x/status?state=limit`);
   }
 
-  // 3. Solo incrementamos el contador si NO tiene la cookie
   if (!hasViewedCookie) {
     await prisma.shareLink.update({
       where: { codeHash },
@@ -66,11 +62,27 @@ export async function GET(
     });
   }
 
-  const dest =
-    link.type === "TICKET"
-      ? `/ver/ticket/${link.targetId}?code=${encodeURIComponent(code)}`
-      : `/ver/remito/${link.targetId}?code=${encodeURIComponent(code)}`;
+  // 3. Mapeo de rutas (Ajustado para evitar conflictos de Next.js)
+  let destPath = "";
+  const queryParams = `?code=${encodeURIComponent(code)}`;
 
-  // 4. Redirigimos Y seteamos la cookie para que la próxima vez pase gratis
-  return redirectAbs(req, dest, { name: cookieName, value: '1' });
+  switch (link.type) {
+    case "TICKET":
+      destPath = `/ver/ticket/${link.targetId}`;
+      break;
+    case "REMITO":
+      destPath = `/ver/remito/${link.targetId}`;
+      break;
+    case "INVENTARIO":
+      // ✅ IMPORTANTE: Apuntamos a /pdf para no chocar con page.tsx en la carpeta [id]
+      destPath = `/ver/inventario/${link.targetId || '0'}/pdf`;
+      break;
+    default:
+      return redirectAbs(req, `/x/status?state=invalid`);
+  }
+
+  const finalUrl = `${destPath}${queryParams}`;
+
+  // 4. Redirección final con seteo de cookie
+  return redirectAbs(req, finalUrl, { name: cookieName, value: '1' });
 }

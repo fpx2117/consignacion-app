@@ -1,8 +1,8 @@
 "use client";
 
 import * as React from "react";
-import { motion } from "framer-motion";
-import { Search, SlidersHorizontal, X, Circle } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { X, FilterX } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { 
@@ -19,106 +19,122 @@ interface FiltersProps {
   setQuery: (val: string) => void;
   stockFilter: string;
   setStockFilter: (val: string) => void;
+  categoryFilter: string;
+  setCategoryFilter: (val: string) => void;
+  expiryFilter: string;
+  setExpiryFilter: (val: string) => void;
+  categories: string[];
 }
 
-export function ProductosFilters({ query, setQuery, stockFilter, setStockFilter }: FiltersProps) {
-  return (
-    <div className="flex flex-col md:flex-row gap-4 items-center p-2">
-      
-      {/* BARRA DE BÚSQUEDA ANIMADA */}
-      <div className="relative w-full flex-1 group">
-        <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-          <Search className={cn(
-            "h-4 w-4 transition-colors duration-300",
-            query ? "text-primary" : "text-muted-foreground/50"
-          )} />
-        </div>
-        
-        <Input
-          placeholder="Buscar por nombre o ID del producto..."
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          className="w-full pl-11 pr-12 h-12 bg-background/50 backdrop-blur-sm border-border/40 rounded-2xl transition-all duration-300 focus-visible:ring-offset-0 focus-visible:ring-2 focus-visible:ring-primary/20 focus-visible:border-primary shadow-inner"
-        />
+export function ProductosFilters({ 
+  query, setQuery, 
+  stockFilter, setStockFilter, 
+  categoryFilter, setCategoryFilter,
+  expiryFilter, setExpiryFilter,
+  categories 
+}: FiltersProps) {
+  
+  const hasActiveFilters = stockFilter !== "all" || categoryFilter !== "all" || expiryFilter !== "all" || query !== "";
 
-        {query && (
-          <motion.div 
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="absolute right-2 top-1/2 -translate-y-1/2"
-          >
+  return (
+    <div className="flex flex-col gap-4 p-2 relative z-30">
+      <div className="flex flex-col md:flex-row gap-3 w-full">
+        <div className="relative w-full flex-1">
+          <Input
+            placeholder="Buscar por nombre, código o ID..."
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            className="w-full pl-5 h-12 bg-zinc-900/40 border-zinc-800 rounded-2xl focus-visible:ring-primary/20 transition-all"
+          />
+          {query && (
             <Button 
               variant="ghost" 
               size="icon" 
               onClick={() => setQuery("")}
-              className="h-8 w-8 rounded-xl hover:bg-destructive/10 hover:text-destructive group/btn"
+              className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 rounded-xl hover:bg-zinc-800"
             >
-              <X className="h-4 w-4 transition-transform group-hover/btn:rotate-90" />
+              <X className="h-4 w-4" />
             </Button>
-          </motion.div>
+          )}
+        </div>
+
+        {hasActiveFilters && (
+          <Button 
+            variant="secondary" 
+            onClick={() => {
+              setQuery("");
+              setStockFilter("all");
+              setCategoryFilter("all");
+              setExpiryFilter("all");
+            }}
+            className="h-12 px-6 rounded-2xl gap-2 font-black uppercase text-[10px] tracking-widest border border-zinc-800"
+          >
+            Limpiar Filtros
+          </Button>
         )}
       </div>
 
-      {/* SELECTOR DE ESTADO CON INDICADORES */}
-      <div className="w-full md:w-auto flex items-center gap-2">
-        <div className="hidden lg:flex items-center gap-1.5 px-3 py-2 text-[10px] font-black uppercase tracking-widest text-muted-foreground/60">
-          <SlidersHorizontal className="h-3.5 w-3.5" />
-          Filtrar
-        </div>
-        
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 w-full">
+        {/* STOCK */}
         <Select value={stockFilter} onValueChange={setStockFilter}>
-          <SelectTrigger className="w-full md:w-[220px] h-12 bg-background/50 backdrop-blur-sm border-border/40 rounded-2xl font-bold transition-all hover:bg-background/80 focus:ring-2 focus:ring-primary/20 shadow-sm">
+          <SelectTrigger className="h-11 bg-zinc-900/40 border-zinc-800 rounded-xl font-bold px-4">
             <div className="flex items-center gap-3">
-              <StockIndicator status={stockFilter} />
-              <SelectValue placeholder="Estado de Stock" />
+              <div className={cn(
+                "h-2 w-2 rounded-full",
+                stockFilter === 'available' ? "bg-emerald-500" :
+                stockFilter === 'low' ? "bg-orange-500" :
+                stockFilter === 'out' ? "bg-red-500" : "bg-zinc-500"
+              )} />
+              <span className="text-[10px] uppercase opacity-40 font-black tracking-tighter">Stock:</span>
+              <SelectValue placeholder="Todos" />
             </div>
           </SelectTrigger>
-          
-          <SelectContent className="rounded-2xl border-border/40 backdrop-blur-xl bg-background/95 p-1 shadow-2xl">
-            <SelectItem value="all" className="rounded-xl py-3 focus:bg-primary/10">
-              <div className="flex items-center gap-2 font-medium text-foreground/80">
-                <Circle className="h-2 w-2 fill-muted-foreground/30 text-transparent" />
-                Todos los productos
-              </div>
-            </SelectItem>
-            <SelectItem value="available" className="rounded-xl py-3 focus:bg-emerald-500/10 focus:text-emerald-600">
-              <div className="flex items-center gap-2 font-medium">
-                <Circle className="h-2 w-2 fill-emerald-500 text-emerald-500" />
-                Stock Disponible
-              </div>
-            </SelectItem>
-            <SelectItem value="low" className="rounded-xl py-3 focus:bg-orange-500/10 focus:text-orange-600">
-              <div className="flex items-center gap-2 font-medium">
-                <Circle className="h-2 w-2 fill-orange-500 text-orange-500" />
-                Stock Crítico
-              </div>
-            </SelectItem>
-            <SelectItem value="out" className="rounded-xl py-3 focus:bg-red-500/10 focus:text-red-600">
-              <div className="flex items-center gap-2 font-medium">
-                <Circle className="h-2 w-2 fill-red-500 text-red-500" />
-                Agotados
-              </div>
-            </SelectItem>
+          <SelectContent className="rounded-xl border-zinc-800 bg-zinc-950 p-1 shadow-2xl z-[100]">
+            <SelectItem value="all">Indiferente</SelectItem>
+            <SelectItem value="available" className="text-emerald-500">Disponible</SelectItem>
+            <SelectItem value="low" className="text-orange-500">Crítico</SelectItem>
+            <SelectItem value="out" className="text-red-500">Agotado</SelectItem>
+          </SelectContent>
+        </Select>
+
+        {/* CATEGORÍA */}
+        <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+          <SelectTrigger className="h-11 bg-zinc-900/40 border-zinc-800 rounded-xl font-bold px-4">
+            <div className="flex items-center gap-3">
+              <div className="h-2 w-2 rounded-full bg-blue-500" />
+              <span className="text-[10px] uppercase opacity-40 font-black tracking-tighter">Cat:</span>
+              <SelectValue placeholder="Todas" />
+            </div>
+          </SelectTrigger>
+          <SelectContent className="rounded-xl border-zinc-800 bg-zinc-950 p-1 shadow-2xl z-[100]">
+            <SelectItem value="all">Todas</SelectItem>
+            {categories.map((cat) => (
+              <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        {/* VENCIMIENTO */}
+        <Select value={expiryFilter} onValueChange={setExpiryFilter}>
+          <SelectTrigger className="h-11 bg-zinc-900/40 border-zinc-800 rounded-xl font-bold px-4">
+            <div className="flex items-center gap-3">
+              <div className={cn(
+                "h-2 w-2 rounded-full",
+                expiryFilter === 'expired' ? "bg-red-500" :
+                expiryFilter === 'soon' ? "bg-amber-500" : "bg-zinc-500"
+              )} />
+              <span className="text-[10px] uppercase opacity-40 font-black tracking-tighter">Vence:</span>
+              <SelectValue placeholder="Fecha" />
+            </div>
+          </SelectTrigger>
+          <SelectContent className="rounded-xl border-zinc-800 bg-zinc-950 p-1 shadow-2xl z-[100]">
+            <SelectItem value="all">Cualquier fecha</SelectItem>
+            <SelectItem value="expired" className="text-red-500">Vencidos</SelectItem>
+            <SelectItem value="soon" className="text-amber-500">Próximos (7 días)</SelectItem>
+            <SelectItem value="none">Sin vencimiento</SelectItem>
           </SelectContent>
         </Select>
       </div>
     </div>
-  );
-}
-
-// Sub-componente para el punto de color en el Trigger
-function StockIndicator({ status }: { status: string }) {
-  const colors: Record<string, string> = {
-    all: "bg-muted-foreground/40",
-    low: "bg-orange-500 shadow-[0_0_8px_rgba(249,115,22,0.5)]",
-    available: "bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]",
-    out: "bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.5)]",
-  };
-
-  return (
-    <div className={cn(
-      "h-2.5 w-2.5 rounded-full transition-all duration-500",
-      colors[status] || colors.all
-    )} />
   );
 }

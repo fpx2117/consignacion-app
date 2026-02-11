@@ -113,6 +113,7 @@ export const API_ROUTES = {
   CLIENTES: "/api/clientes",
   CLIENTE_ID: (id: number) => `/api/clientes/${id}`,
   ESTADO_CUENTA: (id: number) => `/api/estado-cuenta/${id}`,
+  INVENTARIO_LINK: "/api/productos/inventario-link",
 
   PRODUCTOS: "/api/productos",
   PRODUCTO_ID: (id: number) => `/api/productos/${id}`,
@@ -238,6 +239,26 @@ export const apiService = {
   return normalizeShareUrl(data.url);
 },
 
+async getInventarioPdfUrl(): Promise<string> {
+    if (typeof window === "undefined") {
+      throw new Error("getInventarioPdfUrl debe ejecutarse en el cliente");
+    }
+
+    // Llamamos al endpoint que genera el ShareLink de tipo INVENTARIO
+    const res = await fetch(API_ROUTES.INVENTARIO_LINK, {
+      cache: "no-store",
+      headers: { Accept: "application/json" },
+    });
+
+    if (!res.ok) throw new Error("No se pudo generar el link del inventario");
+
+    const data: { url?: string } = await res.json();
+    if (!data?.url) throw new Error("Respuesta inválida del servidor");
+
+    // normalizeShareUrl convertirá "/x/abc-123" en "https://tusitio.com/x/abc-123"
+    return normalizeShareUrl(data.url);
+  },
+
 async getVentaPdfUrl(id: number): Promise<string> {
   if (typeof window === "undefined") {
     throw new Error("getVentaPdfUrl debe ejecutarse en el cliente (window no disponible)");
@@ -326,6 +347,8 @@ async getVentaPdfUrl(id: number): Promise<string> {
     });
   },
 
+  
+
   updateProducto(id: number, payload: UpdateProductoInput) {
     return apiRequest<Producto>(API_ROUTES.PRODUCTO_ID(id), {
       method: "PUT",
@@ -338,6 +361,41 @@ async getVentaPdfUrl(id: number): Promise<string> {
       method: "DELETE",
     });
   },
+
+  /**
+   * Obtiene la lista completa de categorías
+   */
+  async getCategorias() {
+    const res = await fetch("/api/categorias");
+    if (!res.ok) throw new Error("Error al obtener categorías");
+    return res.json();
+  },
+
+  /**
+   * Crea una nueva categoría
+   * @param data Objeto con el nombre de la categoría
+   */
+  async createCategoria(data: { nombre: string }) {
+    const res = await fetch("/api/categorias", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) throw new Error("Error al crear la categoría");
+    return res.json();
+  },
+
+  /**
+   * Elimina una categoría por ID
+   */
+  async deleteCategoria(id: number) {
+    const res = await fetch(`/api/categorias/${id}`, {
+      method: "DELETE",
+    });
+    if (!res.ok) throw new Error("Error al eliminar la categoría");
+    return res.json();
+  },
+
 
   /* ---------- CONSIGNACIONES ---------- */
   getConsignaciones() {

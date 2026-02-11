@@ -1,15 +1,28 @@
 import { z } from "zod";
 
 export const createProductoSchema = z.object({
-  nombre: z.string().min(2, "El nombre debe tener al menos 2 caracteres"),
-  precioVenta: z.coerce.number().nonnegative("El precio no puede ser negativo"),
-  precioCosto: z.coerce.number().nonnegative("El costo no puede ser negativo"),
-  stockDisponibleUnits: z.coerce.number().int().nonnegative().default(0),
-  // CAMBIO AQUÍ: Agregamos .nullable() para aceptar el valor null de la DB/Frontend
-  packSizeUnits: z.coerce.number().int().positive().nullable().optional(),
+  nombre: z.string().min(1, "El nombre es requerido"),
+  descripcion: z.string().nullish(),
+  codigoBarra: z.string().nullish(),
+  sku: z.string().nullish(),
+  precioVenta: z.number().positive(),
+  precioCosto: z.number().min(0),
+  iva: z.number().default(21.0),
+  stockDisponibleUnits: z.number().int().min(0).default(0),
+  stockMinUnits: z.number().int().min(0).default(0),
+  packSizeUnits: z.number().int().positive().nullish(),
+  fechaVencimiento: z.string().nullish(), 
+  categoriaId: z.number().int().nullish(),
 });
 
-export const updateProductoSchema = createProductoSchema.partial().refine(
-  (data) => Object.keys(data).length > 0,
-  "Debe enviar al menos un campo para actualizar."
-);
+// Corregimos el UpdateProductoInput para que acepte NULL explícitamente
+export const updateProductoSchema = createProductoSchema.partial().extend({
+  activo: z.boolean().optional(),
+  // Forzamos la unión con null para evitar el error TS(2322)
+  codigoBarra: z.string().nullable().optional(),
+  sku: z.string().nullable().optional(),
+  fechaVencimiento: z.string().nullable().optional(),
+});
+
+export type CreateProductoInput = z.infer<typeof createProductoSchema>;
+export type UpdateProductoInput = z.infer<typeof updateProductoSchema>;

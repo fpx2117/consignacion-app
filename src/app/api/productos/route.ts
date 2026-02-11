@@ -1,14 +1,11 @@
+// src/app/api/productos/route.ts
+
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth, requireRole } from "@/lib/requireAuth";
 import { createProductoSchema } from "@/lib/validators/producto";
-
-// ✅ 1. Importamos sistema de notificaciones
 import { sendNotification } from "@/lib/socket-trigger";
-// Asegúrate de que esta ruta sea la correcta (vi que la cambiaste a esta carpeta):
 import { NOTIFICATION_TYPE } from "@/lib/notificationes/notificaciones-types"; 
-
-// ✅ 2. Importamos el Helper de Configuración (Vital para no hardcodear el 5)
 import { obtenerConfiguracionGlobal } from "@/lib/config";
 
 // --- GET: OBTENER PRODUCTOS ---
@@ -18,6 +15,8 @@ export async function GET() {
     if (!auth.ok) return auth.res;
 
     const productos = await prisma.producto.findMany({
+      where: { activo: true }, // 👈 Solo traer productos no "eliminados"
+      include: { categoria: true }, // 👈 Incluir el nombre de la categoría
       orderBy: { id: "desc" },
     });
 
@@ -42,9 +41,6 @@ export async function POST(req: Request) {
     }
 
     const body = await req.json().catch(() => null);
-    
-    // Asegúrate de que tu Zod Schema (createProductoSchema) acepte 
-    // 'stockMinUnits' y 'fechaVencimiento' como opcionales.
     const parsed = createProductoSchema.safeParse(body);
 
     if (!parsed.success) {
@@ -57,61 +53,75 @@ export async function POST(req: Request) {
       );
     }
 
-    const stockInicial = parsed.data.stockDisponibleUnits ?? 0;
+    const {
+      nombre,
+      precioVenta,
+      precioCosto,
+      stockDisponibleUnits,
+      stockMinUnits,
+      packSizeUnits,
+      fechaVencimiento,
+      codigoBarra, // 👈 Nuevo
+      sku,         // 👈 Nuevo
+      categoriaId  // 👈 Nuevo
+    } = parsed.data;
 
-    // ✅ 3. OBTENER CONFIGURACIÓN DINÁMICA
+    const stockInicial = stockDisponibleUnits ?? 0;
     const configGlobal = await obtenerConfiguracionGlobal();
+    
+    // Umbral: Prioridad al específico del producto, si no, al global.
+    const umbralAlerta = stockMinUnits && stockMinUnits > 0 
+      ? stockMinUnits 
+      : configGlobal.minStockGlobal;
 
-    // Calculamos el umbral real:
-    // Si el usuario mandó un mínimo específico (ej: 20), usamos ese.
-    // Si no, usamos el global de la DB (ej: 5).
-    // Nota: Asumo que en Zod agregaste stockMinUnits. Si no, usa configGlobal.minStockGlobal directo.
-    const umbralAlerta = (parsed.data as any).stockMinUnits ?? configGlobal.minStockGlobal;
-
-    // ✅ 4. CREAR EN BASE DE DATOS (Incluyendo campos nuevos)
+    // --- CREAR EN BASE DE DATOS ---
     const created = await prisma.producto.create({
       data: {
-        nombre: parsed.data.nombre,
-        precioVenta: parsed.data.precioVenta,
-        precioCosto: parsed.data.precioCosto,
+        nombre,
+        precioVenta,
+        precioCosto,
         stockDisponibleUnits: stockInicial,
         stockConsignadoUnits: 0,
-        packSizeUnits: parsed.data.packSizeUnits ?? null,
-        
-        // Guardamos el mínimo específico si vino (0 = usa global)
-        stockMinUnits: (parsed.data as any).stockMinUnits ?? 0,
-        
-        // Guardamos fecha de vencimiento si vino
-        fechaVencimiento: (parsed.data as any).fechaVencimiento 
-          ? new Date((parsed.data as any).fechaVencimiento) 
-          : null,
+        stockMinUnits: stockMinUnits ?? 0,
+        packSizeUnits: packSizeUnits ?? null,
+        codigoBarra: codigoBarra?.trim() || null, // 👈 Persistir código
+        sku: sku?.trim() || null,                 // 👈 Persistir SKU
+        categoriaId: categoriaId ?? null,         // 👈 Relación
+        fechaVencimiento: fechaVencimiento ? new Date(fechaVencimiento) : null,
       },
+      include: { categoria: true }
     });
 
-    // --- ✅ LÓGICA DE NOTIFICACIÓN ---
-    
-    // CASO 1: Agotado (Stock 0)
+    // --- LÓGICA DE NOTIFICACIÓN ---
     if (stockInicial === 0) {
       await sendNotification({
         type: NOTIFICATION_TYPE.OUT_OF_STOCK,
         title: "Nuevo Producto Sin Stock",
-        message: `Se ha creado "${created.nombre}" sin inventario inicial.`,
+        message: `Se ha creado "${created.nombre}" sin inventario.`,
         data: { productId: created.id }
       });
     } 
-    // CASO 2: Stock Bajo (Usando la variable dinámica 'umbralAlerta')
     else if (stockInicial <= umbralAlerta) {
       await sendNotification({
         type: NOTIFICATION_TYPE.LOW_STOCK,
-        title: "Nuevo Producto con Stock Bajo",
-        message: `"${created.nombre}" inicia con ${stockInicial} u. (El mínimo es ${umbralAlerta}).`,
+        title: "Stock Bajo al Crear",
+        message: `"${created.nombre}" inicia con ${stockInicial} u. (Mínimo: ${umbralAlerta}).`,
         data: { productId: created.id }
       });
     }
 
     return NextResponse.json({ data: created }, { status: 201 });
 
-  } catch (error) {
+  } catch (error: any) {
+    // 👈 Manejo de error de duplicados (P2002 es el código de Prisma para Unique Constraint)
+    if (error.code === 'P2002') {
+      const field = error.meta?.target?.[0];
+      return NextResponse.json(
+        { error: `El ${field} ya está registrado en otro producto.` },
+        { status: 400 }
+      );
+    }
+
     console.error("Error creando producto:", error);
     return NextResponse.json(
       { error: "Error interno al crear el producto" },

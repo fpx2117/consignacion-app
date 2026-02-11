@@ -40,14 +40,33 @@ export type Cliente = {
   createdAt: ISODateString;
 };
 
+export type Categoria = {
+  id: ID;
+  nombre: string;
+};
+
 export type Producto = {
   id: ID;
   nombre: string;
+  descripcion?: string | null; // Agregado
+  codigoBarra?: string | null; // 👈 Agregado para el scanner
+  sku?: string | null;         // 👈 Agregado para control interno
+  activo: boolean;             // 👈 Agregado para borrado lógico
+  
   precioVenta: Money;
   precioCosto: Money;
+  iva: number;                 // Agregado
+
   stockDisponibleUnits: number;
   stockConsignadoUnits: number;
+  stockMinUnits: number;       // 👈 Agregado para alertas de stock bajo
+  
   packSizeUnits?: number | null;
+  fechaVencimiento?: ISODateString | null;
+
+  categoriaId?: ID | null;
+  categoria?: Categoria;       // Relación opcional
+
   createdAt: ISODateString;
   updatedAt: ISODateString;
 };
@@ -294,13 +313,35 @@ export type UpdateClienteInput = Partial<CreateClienteInput> & { activo?: boolea
 
 export type CreateProductoInput = {
   nombre: string;
+  descripcion?: string;
+  codigoBarra?: string;
+  sku?: string;
   precioVenta: Money;
   precioCosto: Money;
+  iva?: number;
   stockDisponibleUnits?: number;
+  stockMinUnits?: number;      // 👈 Para definir el umbral desde el alta
   packSizeUnits?: number | null;
+  fechaVencimiento?: ISODateString | null;
+  categoriaId?: ID | null;
 };
 
-export type UpdateProductoInput = Partial<CreateProductoInput>;
+export type UpdateProductoInput = {
+  nombre?: string;
+  codigoBarra?: string | null;
+  precioVenta?: number;
+  categoriaId?: number | null; 
+  precioCosto?: number;
+  stockDisponibleUnits?: number; 
+  stockMinUnits?: number;
+  fechaVencimiento?: string | null;
+  activo?: boolean;
+};
+
+export type ScanProductoResponse = {
+  producto: Producto;
+  encontrado: boolean;
+};
 
 export type CreateConsignacionInput = {
   clienteId: ID;
