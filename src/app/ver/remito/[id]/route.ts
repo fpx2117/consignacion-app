@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import puppeteer, { Browser } from "puppeteer";
 import { verifyPdfToken } from "@/lib/crypto";
-import { Reports } from "@/lib/reports/resolvers";
 import { prisma } from "@/lib/prisma";
 import { hashCode } from "@/lib/share-links";
+
+import { getBranding } from "@/lib/reports/get-branding";
+import { buildConsignacionHtml } from "@/lib/reports/base/consignacion-report-template";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -76,8 +78,8 @@ export async function GET(
 
     if (!consignacion) return NextResponse.json({ error: "No encontrada" }, { status: 404 });
 
-    // ✅ Resolver: usa template del cliente si existe, si no el base
-    const { buildConsignacionHtml } = await Reports.consignacion();
+    // ✅ Branding desde la DB del environment del cliente
+    const branding = await getBranding();
 
     browser = await puppeteer.launch({
       headless: true,
@@ -85,7 +87,7 @@ export async function GET(
     });
 
     const page = await browser.newPage();
-    await page.setContent(buildConsignacionHtml(consignacion as any), {
+    await page.setContent(buildConsignacionHtml(consignacion as any, branding), {
       waitUntil: "networkidle0",
       timeout: 30000,
     });

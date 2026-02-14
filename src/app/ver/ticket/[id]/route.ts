@@ -1,8 +1,10 @@
+// src/app/ver/ticket/[id]/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import puppeteer, { Browser } from "puppeteer";
 import { verifyPdfToken } from "@/lib/crypto";
 import type { VentaReportDTO } from "@/lib/reports/base/venta-report-template";
-import { Reports } from "@/lib/reports/resolvers";
+import { buildVentaHtml } from "@/lib/reports/base/venta-report-template";
+import { getBranding } from "@/lib/reports/get-branding";
 import { prisma } from "@/lib/prisma";
 import { hashCode } from "@/lib/share-links";
 
@@ -63,7 +65,6 @@ export async function GET(
       if (link.type !== "TICKET" || link.targetId !== id) return redirectStatus(request, "invalid");
       if (new Date() > link.expiresAt) return redirectStatus(request, "expired");
       if (link.views >= link.maxViews) return redirectStatus(request, "limit");
-      // ✅ NO incrementar views acá (ya se hace en /x)
     } else {
       if (!token || !verifyPdfToken(id, token)) {
         return NextResponse.json({ error: "No autorizado" }, { status: 403 });
@@ -81,7 +82,7 @@ export async function GET(
       id: ventaRaw.id,
       fecha: ventaRaw.fecha,
       total: Number(ventaRaw.total),
-      metodoPago: "EFECTIVO",
+      metodoPago: String((ventaRaw as any).metodoPago ?? "EFECTIVO"),
       clienteNombre: ventaRaw.cliente?.nombre || "Consumidor Final",
       clienteTelefono: ventaRaw.cliente?.telefono || "",
       items: ventaRaw.detalles.map((d) => ({
@@ -92,8 +93,11 @@ export async function GET(
       })),
     };
 
-    // ✅ Resolver: usa template del cliente si existe, si no el base
-    const { buildVentaHtml } = await Reports.venta();
+    // ✅ Branding desde la DB del environment del cliente
+    const branding = await getBranding();
+
+    // ✅ Template base + branding
+    const html = buildVentaHtml(reporteData, branding);
 
     browser = await puppeteer.launch({
       headless: true,
@@ -101,10 +105,7 @@ export async function GET(
     });
 
     const page = await browser.newPage();
-    await page.setContent(buildVentaHtml(reporteData), {
-      waitUntil: "networkidle0",
-      timeout: 30000,
-    });
+    await page.setContent(html, { waitUntil: "networkidle0", timeout: 30000 });
 
     const pdfUint8Array = await page.pdf({
       format: "A4",

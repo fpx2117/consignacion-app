@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import puppeteer, { Browser } from "puppeteer";
 import { prisma } from "@/lib/prisma";
-import { Reports } from "@/lib/reports/resolvers";
+
+import { getBranding } from "@/lib/reports/get-branding";
+import { buildHistoryInventoryHtml } from "@/lib/reports/base/history-inventory-report.template";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -15,7 +17,7 @@ export async function GET(
   try {
     const { id } = await params;
 
-    // ✅ Asumimos que el parámetro [id] es el MES en formato 0..11
+    // ✅ [id] = MES 0..11
     const mes = Number.parseInt(id, 10);
 
     const anioParam = new URL(req.url).searchParams.get("anio");
@@ -39,13 +41,14 @@ export async function GET(
 
     const meses = [
       "Enero","Febrero","Marzo","Abril","Mayo","Junio",
-      "Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"
+      "Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre",
     ];
 
-    // ✅ Resolver: usa template del cliente si existe, si no el base
-    const { buildHistoryInventoryHtml } = await Reports.historyInventory();
+    // ✅ Branding desde la DB del environment del cliente
+    const branding = await getBranding();
 
-    const html = buildHistoryInventoryHtml(movimientos as any, meses[mes], anio);
+    // ✅ Template base + branding
+    const html = buildHistoryInventoryHtml(movimientos as any, meses[mes], anio, branding);
 
     browser = await puppeteer.launch({
       headless: true,

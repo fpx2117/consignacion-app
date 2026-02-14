@@ -2,7 +2,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import puppeteer, { Browser } from "puppeteer";
 import { prisma } from "@/lib/prisma";
-import { Reports } from "@/lib/reports/resolvers";
+
+import { getBranding } from "@/lib/reports/get-branding";
+import { buildInventoryHtml } from "@/lib/reports/base/inventory-report-template";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -16,9 +18,11 @@ export async function GET(_req: NextRequest) {
       orderBy: { nombre: "asc" },
     });
 
-    // ✅ Resolver: usa template del cliente si existe, si no el base
-    const { buildInventoryHtml } = await Reports.inventory();
-    const htmlContent = buildInventoryHtml(productos as any);
+    // ✅ Branding desde la DB del environment del cliente
+    const branding = await getBranding();
+
+    // ✅ Template base + branding
+    const htmlContent = buildInventoryHtml(productos as any, branding);
 
     browser = await puppeteer.launch({
       headless: true,
