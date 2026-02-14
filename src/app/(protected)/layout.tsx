@@ -2,11 +2,25 @@ import { redirect } from "next/navigation";
 import { headers } from "next/headers";
 import { SidebarDock } from "@/components/sidebar-dock";
 
+export const dynamic = "force-dynamic";
+
 async function checkAuth() {
-  const cookieHeader = (await headers()).get("cookie") ?? "";
+  const h = await headers();
+
+  const cookieHeader = h.get("cookie") ?? "";
+
+  const host = h.get("x-forwarded-host") ?? h.get("host");
+  const proto = h.get("x-forwarded-proto") ?? "https";
+
+  if (!host) {
+    console.error("Error verificando auth: no se pudo determinar host");
+    return false;
+  }
+
+  const origin = `${proto}://${host}`;
 
   try {
-    const res = await fetch("/api/auth/me", {
+    const res = await fetch(`${origin}/api/auth/me`, {
       method: "GET",
       cache: "no-store",
       headers: { cookie: cookieHeader },
@@ -14,8 +28,9 @@ async function checkAuth() {
 
     if (!res.ok) return false;
 
+    // tu endpoint responde { data: user }
     const json = await res.json();
-    return Boolean(json?.data?.id); // tu endpoint responde { data: user }
+    return Boolean(json?.data?.id);
   } catch (error) {
     console.error("Error verificando auth:", error);
     return false;
