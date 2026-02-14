@@ -1,0 +1,194 @@
+"use client";
+
+import * as React from "react";
+import Link from "next/link";
+import { cn } from "@/lib/utils";
+
+// UI
+import { Card } from "@/components/ui/card";
+
+// Icons
+import {
+  Settings2,
+  Palette,
+  Store,
+  Users,
+  BellRing,
+  MonitorSmartphone,
+  ShieldCheck,
+  ChevronRight,
+  Lock, // Agregado para el candadito de "Próximamente"
+} from "lucide-react";
+
+// Lista de configuraciones adaptada
+const SETTINGS_MODULES = [
+  {
+    title: "Branding y Reportes",
+    description: "Personalizá el logo, colores y el diseño de los tickets de venta.",
+    href: "/settings/branding", 
+    icon: Palette,
+    color: "text-blue-500",
+    bg: "bg-blue-500/10",
+    borderColor: "group-hover:border-blue-500/30",
+    soon: false,
+  },
+  {
+    title: "Sucursales y Depósitos",
+    description: "Administrá los puntos de venta, ubicaciones y rangos de entrega.",
+    href: "/settings/branches",
+    icon: Store,
+    color: "text-emerald-500",
+    bg: "bg-emerald-500/10",
+    borderColor: "group-hover:border-emerald-500/30",
+    soon: true,
+  },
+  {
+    title: "Usuarios y Permisos",
+    description: "Gestioná los accesos de administradores y vendedores del sistema.",
+    href: "/settings/users",
+    icon: Users,
+    color: "text-purple-500",
+    bg: "bg-purple-500/10",
+    borderColor: "group-hover:border-purple-500/30",
+    soon: false,
+  },
+  {
+    title: "Punto de Venta (POS)",
+    description: "Configurá el comportamiento de la caja, cobros y stock en tiempo real.",
+    href: "/settings/pos",
+    icon: MonitorSmartphone,
+    color: "text-orange-500",
+    bg: "bg-orange-500/10",
+    borderColor: "group-hover:border-orange-500/30",
+    soon: true,
+  },
+  {
+    title: "Notificaciones",
+    description: "Ajustá las alertas en vivo (WebSockets) para nuevas ventas o falta de stock.",
+    href: "/settings/notifications",
+    icon: BellRing,
+    color: "text-pink-500",
+    bg: "bg-pink-500/10",
+    borderColor: "group-hover:border-pink-500/30",
+    soon: true,
+  },
+  {
+    title: "Seguridad y Auditoría",
+    description: "Revisá el registro de actividad, sesiones activas y copias de seguridad.",
+    href: "/settings/security",
+    icon: ShieldCheck,
+    color: "text-slate-500",
+    bg: "bg-slate-500/10",
+    borderColor: "group-hover:border-slate-500/30",
+    soon: true,
+  },
+];
+
+export default function SettingsPage() {
+  return (
+    <div className="max-w-7xl mx-auto space-y-8 p-4 md:p-10 text-foreground selection:bg-primary/20">
+      {/* HEADER */}
+      <header className="space-y-3 text-center md:text-left">
+        <div className="flex items-center gap-2 text-primary font-semibold tracking-wider uppercase text-[10px] bg-primary/10 w-fit px-3 py-1 rounded-full border border-primary/20 mx-auto md:mx-0">
+          <Settings2 className="h-3 w-3" />
+          Panel de Control
+        </div>
+        <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight text-foreground">
+          Configuración
+        </h1>
+        <p className="text-sm text-muted-foreground max-w-2xl">
+          Administrá los parámetros generales de la plataforma. Seleccioná un módulo para ajustar sus preferencias.
+        </p>
+      </header>
+
+      {/* GRID DE MÓDULOS */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+        {SETTINGS_MODULES.map((module) => {
+          const Icon = module.icon;
+          const isSoon = module.soon;
+
+          // Contenido de la tarjeta (lo separamos para poder envolverlo en Link o en div)
+          const CardContent = (
+            <Card
+              className={cn(
+                "relative h-full border border-border/50 bg-card/40 backdrop-blur-xl shadow-lg rounded-[2rem] p-6 transition-all duration-300 overflow-hidden",
+                isSoon 
+                  ? "opacity-60 bg-card/20 cursor-default" // Estilos para "Próximamente"
+                  : "hover:shadow-2xl hover:bg-card/60 hover:-translate-y-1 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background cursor-pointer", // Estilos normales
+                !isSoon && module.borderColor
+              )}
+            >
+              {/* Badge de Próximamente */}
+              {isSoon && (
+                <div className="absolute top-5 right-5 z-20 flex items-center gap-1.5 bg-muted/80 backdrop-blur-md border border-border/50 text-muted-foreground text-[9px] font-black px-2.5 py-1 rounded-full uppercase tracking-widest">
+                  <Lock className="h-3 w-3" />
+                  Pronto
+                </div>
+              )}
+
+              {/* Efecto de destello (solo si no es "soon") */}
+              {!isSoon && (
+                <div
+                  className={cn(
+                    "absolute -right-10 -top-10 h-32 w-32 rounded-full blur-3xl opacity-0 group-hover:opacity-20 transition-opacity duration-500",
+                    module.bg
+                  )}
+                />
+              )}
+
+              <div className="relative z-10 flex flex-col h-full gap-4">
+                {/* Icono y Flecha */}
+                <div className="flex items-center justify-between">
+                  <div
+                    className={cn(
+                      "h-12 w-12 rounded-2xl flex items-center justify-center border border-border/50 transition-colors",
+                      isSoon ? "bg-muted text-muted-foreground grayscale" : cn(module.bg, module.color)
+                    )}
+                  >
+                    <Icon className="h-6 w-6 stroke-[1.5px]" />
+                  </div>
+                  
+                  {/* Flecha (solo si no es "soon") */}
+                  {!isSoon && (
+                    <div className="h-8 w-8 rounded-full bg-background/50 flex items-center justify-center opacity-0 -translate-x-4 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300">
+                      <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                    </div>
+                  )}
+                </div>
+
+                {/* Textos */}
+                <div className="space-y-1.5 flex-1">
+                  <h2 className={cn(
+                    "text-lg font-bold tracking-tight transition-colors",
+                    isSoon ? "text-muted-foreground" : "text-foreground group-hover:text-primary"
+                  )}>
+                    {module.title}
+                  </h2>
+                  <p className="text-sm text-muted-foreground/80 leading-relaxed">
+                    {module.description}
+                  </p>
+                </div>
+              </div>
+            </Card>
+          );
+
+          // Si el módulo es "Próximamente", no le ponemos Link para que no se pueda clickear
+          if (isSoon) {
+            return (
+              <div key={module.href} className="block outline-none select-none">
+                {CardContent}
+              </div>
+            );
+          }
+
+          // Si está activo, lo envolvemos en su Link correspondiente
+          return (
+            <Link key={module.href} href={module.href} className="block group outline-none">
+              {CardContent}
+            </Link>
+          );
+        })}
+      </div>
+    </div>
+  );
+}

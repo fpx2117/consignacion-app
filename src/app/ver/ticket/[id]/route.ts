@@ -1,7 +1,10 @@
+// src/app/ver/ticket/[id]/route.ts
 import { NextRequest, NextResponse } from "next/server";
-import puppeteer from "puppeteer";
+import puppeteer, { Browser } from "puppeteer";
 import { verifyPdfToken } from "@/lib/crypto";
-import { buildVentaHtml, VentaReportDTO } from "@/lib/reports/venta-report-template";
+import type { VentaReportDTO } from "@/lib/reports/base/venta-report-template";
+import { buildVentaHtml } from "@/lib/reports/base/venta-report-template";
+import { getBranding } from "@/lib/reports/get-branding";
 import { prisma } from "@/lib/prisma";
 import { hashCode } from "@/lib/share-links";
 
@@ -27,11 +30,20 @@ function redirectStatus(req: NextRequest, state: "invalid" | "expired" | "limit"
   return NextResponse.redirect(new URL(`/x/status?state=${state}`, getPublicOrigin(req)));
 }
 
+function safeFilename(input: string) {
+  return input
+    .normalize("NFKD")
+    .replace(/[^\w\s-]/g, "")
+    .trim()
+    .replace(/\s+/g, "-")
+    .slice(0, 60);
+}
+
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  let browser: any = null;
+  let browser: Browser | null = null;
 
   try {
     const { id: idParam } = await params;
@@ -53,7 +65,6 @@ export async function GET(
       if (link.type !== "TICKET" || link.targetId !== id) return redirectStatus(request, "invalid");
       if (new Date() > link.expiresAt) return redirectStatus(request, "expired");
       if (link.views >= link.maxViews) return redirectStatus(request, "limit");
-      // ✅ NO incrementar views acá (ya se hace en /x)
     } else {
       if (!token || !verifyPdfToken(id, token)) {
         return NextResponse.json({ error: "No autorizado" }, { status: 403 });
@@ -71,7 +82,7 @@ export async function GET(
       id: ventaRaw.id,
       fecha: ventaRaw.fecha,
       total: Number(ventaRaw.total),
-      metodoPago: "EFECTIVO",
+      metodoPago: String((ventaRaw as any).metodoPago ?? "EFECTIVO"),
       clienteNombre: ventaRaw.cliente?.nombre || "Consumidor Final",
       clienteTelefono: ventaRaw.cliente?.telefono || "",
       items: ventaRaw.detalles.map((d) => ({
@@ -82,16 +93,19 @@ export async function GET(
       })),
     };
 
+    // ✅ Branding desde la DB del environment del cliente
+    const branding = await getBranding();
+
+    // ✅ Template base + branding
+    const html = buildVentaHtml(reporteData, branding);
+
     browser = await puppeteer.launch({
       headless: true,
       args: ["--no-sandbox", "--disable-setuid-sandbox"],
     });
 
     const page = await browser.newPage();
-    await page.setContent(buildVentaHtml(reporteData), {
-      waitUntil: "networkidle0",
-      timeout: 30000,
-    });
+    await page.setContent(html, { waitUntil: "networkidle0", timeout: 30000 });
 
     const pdfUint8Array = await page.pdf({
       format: "A4",
@@ -102,8 +116,8 @@ export async function GET(
     await browser.close();
     browser = null;
 
-    const cleanName = reporteData.clienteNombre.replace(/[^a-z0-9]/gi, "-");
-    const fileName = `Ticket-${id}-${cleanName}.pdf`;
+    const cleanName = safeFilename(reporteData.clienteNombre);
+    const fileName = `Ticket-${id}-${cleanName || "Consumidor-Final"}.pdf`;
 
     return new NextResponse(Buffer.from(pdfUint8Array), {
       status: 200,

@@ -250,134 +250,174 @@ export default function NuevaVentaPage() {
              {error && <Alert variant="destructive" className="py-2"><AlertDescription>{error}</AlertDescription></Alert>}
 
              <div className="flex gap-2">
-  {/* SELECTOR CLIENTE: Ancho fijo en móvil, adaptable en desktop */}
-  <div className="w-[110px] sm:w-1/3 min-w-[110px]">
-    <Popover open={openClienteCombobox} onOpenChange={setOpenClienteCombobox}>
-      <PopoverTrigger asChild>
-        <Button variant="outline" role="combobox" className={cn("w-full justify-between h-10 text-xs px-2 truncate", isClienteRegistrado && "border-indigo-400 bg-indigo-50 dark:bg-indigo-950/30 text-indigo-600")}>
-           {/* En móvil truncamos el nombre si es muy largo */}
-           <span className="truncate">{selectedClienteId === "" ? "Cons. Final" : getSelectedClienteLabel()}</span>
-           <UserCircle2 className="ml-1 h-3 w-3 opacity-50 shrink-0" />
-        </Button>
-      </PopoverTrigger>
-      {/* ... (El PopoverContent del cliente queda igual) ... */}
-    </Popover>
-  </div>
+                {/* SELECTOR CLIENTE: Con Buscador */}
+                <div className="w-[115px] sm:w-1/3 min-w-[115px]">
+                  <Popover open={openClienteCombobox} onOpenChange={setOpenClienteCombobox}>
+                    <PopoverTrigger asChild>
+                      <Button 
+                        variant="outline" 
+                        role="combobox" 
+                        className={cn(
+                          "w-full justify-between h-10 text-[11px] sm:text-xs px-2 truncate", 
+                          isClienteRegistrado && "border-indigo-400 bg-indigo-50 dark:bg-indigo-950/30 text-indigo-600"
+                        )}
+                      >
+                         <span className="truncate">{selectedClienteId === "" ? "Cons. Final" : getSelectedClienteLabel()}</span>
+                         <UserCircle2 className="ml-1 h-3.5 w-3.5 opacity-50 shrink-0" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-[85vw] sm:w-[320px] p-0" align="start">
+                      <Command>
+                        <CommandInput placeholder="Buscar cliente..." className="h-10" />
+                        <CommandList className="max-h-[300px]">
+                          <CommandEmpty>No se encontró el cliente.</CommandEmpty>
+                          <CommandGroup heading="Opciones">
+                            <CommandItem
+                              value="consumidor final"
+                              onSelect={() => {
+                                setSelectedClienteId("");
+                                setOpenClienteCombobox(false);
+                              }}
+                              className="cursor-pointer"
+                            >
+                              <UserCircle2 className="mr-2 h-4 w-4 opacity-70" />
+                              <span>Consumidor Final</span>
+                              {selectedClienteId === "" && <Check className="ml-auto h-4 w-4 text-primary" />}
+                            </CommandItem>
+                          </CommandGroup>
+                          <Separator />
+                          <CommandGroup heading="Clientes Registrados">
+                            {clientesFiltrados.map((cliente) => (
+                              <CommandItem
+                                key={cliente.id}
+                                value={cliente.nombre}
+                                onSelect={() => {
+                                  setSelectedClienteId(cliente.id);
+                                  setOpenClienteCombobox(false);
+                                }}
+                                className="cursor-pointer"
+                              >
+                                <div className="flex flex-col overflow-hidden">
+                                  <span className={cn("text-sm truncate", selectedClienteId === cliente.id && "font-bold text-primary")}>
+                                    {cliente.nombre}
+                                  </span>
+                                </div>
+                                {selectedClienteId === cliente.id && <Check className="ml-auto h-4 w-4 text-primary shrink-0" />}
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
+                </div>
 
-  {/* SELECTOR PRODUCTO MEJORADO */}
-  <div className="flex-1 min-w-0"> {/* min-w-0 es CLAVE para que el flex no se desborde */}
-    <Popover open={openCombobox} onOpenChange={setOpenCombobox}>
-      <PopoverTrigger asChild>
-        <Button 
-          variant="outline" 
-          role="combobox" 
-          className={cn(
-            "w-full h-10 text-sm shadow-sm relative text-left transition-colors",
-            // Padding izquierdo grande para el icono
-            "pl-9 sm:pl-10", 
-            !productoId && "text-muted-foreground border-dashed hover:border-primary/50"
-          )} 
-          disabled={loading}
-        >
-          {/* ICONO ANIMADO - Posicionado Absolutamente */}
-          <div className="absolute left-2.5 top-1/2 -translate-y-1/2 flex items-center justify-center pointer-events-none">
-             <Barcode className="h-4 w-4 text-primary animate-pulse" />
-          </div>
-
-          {/* CONTENIDO DEL TEXTO */}
-          <div className="flex items-center justify-between w-full overflow-hidden">
-            {productoId ? (
-               <span className="font-bold truncate text-foreground text-xs sm:text-sm">
-                 {productos.find((p) => p.id === productoId)?.nombre}
-               </span>
-            ) : (
-               // TRUCO VISUAL: Texto corto en móvil ("Buscar..."), largo en PC
-               <span className="truncate text-xs sm:text-sm">
-                 <span className="sm:hidden">Escanear...</span>
-                 <span className="hidden sm:inline">Escanear o buscar producto...</span>
-               </span>
-            )}
-            
-            {/* Ocultamos las flechas en móvil para ahorrar espacio */}
-            <ChevronsUpDown className="ml-1 h-3 w-3 shrink-0 opacity-50 hidden sm:block" />
-          </div>
-        </Button>
-      </PopoverTrigger>
-                        <PopoverContent className="w-[85vw] md:w-[400px] p-0" align="start">
-                            <Command filter={(value, search) => {
-                                const p = productos.find(item => item.nombre === value);
-                                if (!p) return 0;
-                                const matchName = p.nombre.toLowerCase().includes(search.toLowerCase());
-                                const matchCode = p.codigoBarra?.toLowerCase().includes(search.toLowerCase());
-                                return (matchName || matchCode) ? 1 : 0;
-                            }}>
-                                <CommandInput placeholder="Nombre o código..." className="h-12" />
-                                <CommandList className="max-h-[250px]">
-                                    <CommandEmpty>No encontrado.</CommandEmpty>
-                                    <CommandGroup>
-                                        {productos.map((p) => {
-                                            const stock = p.stockDisponibleUnits ?? 0;
-                                            const sinStock = stock <= 0;
-                                            return (
-                                                <CommandItem 
-                                                  key={p.id} 
-                                                  value={p.nombre} 
-                                                  disabled={sinStock} 
-                                                  onSelect={() => { if(!sinStock) { setProductoId(p.id); setOpenCombobox(false); }}} 
-                                                  className={cn("flex justify-between py-2 cursor-pointer", sinStock && "opacity-50")}
-                                                >
-                                                    <div className="flex flex-col">
-                                                        <span className="font-medium text-sm">{p.nombre}</span>
-                                                        <div className="flex gap-2 text-[10px] text-muted-foreground">
-                                                           {p.codigoBarra && <span className="font-mono bg-muted px-1 rounded flex items-center gap-1"><Barcode className="h-3 w-3"/> {p.codigoBarra}</span>}
-                                                           <span>{sinStock ? "AGOTADO" : `Stock: ${stock}`}</span>
-                                                        </div>
-                                                    </div>
-                                                    <Badge variant={sinStock ? "destructive" : "secondary"} className="text-xs">{formatCurrency(p.precioVenta)}</Badge>
-                                                </CommandItem>
-                                            )
-                                        })}
-                                    </CommandGroup>
-                                </CommandList>
-                            </Command>
-                        </PopoverContent>
-                    </Popover>
+                {/* SELECTOR PRODUCTO: Restaurado con Buscador Inteligente */}
+                <div className="flex-1 min-w-0">
+                  <Popover open={openCombobox} onOpenChange={setOpenCombobox}>
+                    <PopoverTrigger asChild>
+                      <Button 
+                        variant="outline" 
+                        role="combobox" 
+                        className={cn(
+                          "w-full h-10 text-sm shadow-sm relative text-left pl-9 sm:pl-10", 
+                          !productoId && "text-muted-foreground border-dashed"
+                        )} 
+                        disabled={loading}
+                      >
+                        <div className="absolute left-2.5 top-1/2 -translate-y-1/2">
+                           <Barcode className="h-4 w-4 text-primary animate-pulse" />
+                        </div>
+                        <div className="flex items-center justify-between w-full overflow-hidden">
+                          <span className="truncate text-xs sm:text-sm">
+                            {productoId 
+                              ? productos.find((p) => p.id === productoId)?.nombre 
+                              : "Escanear o buscar..."}
+                          </span>
+                          <ChevronsUpDown className="ml-1 h-3 w-3 shrink-0 opacity-50 hidden sm:block" />
+                        </div>
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-[85vw] md:w-[400px] p-0" align="start">
+                      {/* Aquí restauramos el filtro original por nombre y código de barras */}
+                      <Command filter={(value, search) => {
+                          const p = productos.find(item => item.nombre === value);
+                          if (!p) return 0;
+                          const matchName = p.nombre.toLowerCase().includes(search.toLowerCase());
+                          const matchCode = p.codigoBarra?.toLowerCase().includes(search.toLowerCase());
+                          return (matchName || matchCode) ? 1 : 0;
+                      }}>
+                        <CommandInput placeholder="Nombre o código..." className="h-12" />
+                        <CommandList className="max-h-[300px]">
+                          <CommandEmpty>No se encontró el producto.</CommandEmpty>
+                          <CommandGroup>
+                            {productos.map((p) => {
+                              const stock = p.stockDisponibleUnits ?? 0;
+                              const sinStock = stock <= 0;
+                              return (
+                                <CommandItem 
+                                  key={p.id} 
+                                  value={p.nombre} 
+                                  disabled={sinStock} 
+                                  onSelect={() => {
+                                    setProductoId(p.id);
+                                    setOpenCombobox(false);
+                                  }}
+                                  className={cn("flex justify-between py-3 cursor-pointer", sinStock && "opacity-50")}
+                                >
+                                  <div className="flex flex-col">
+                                    <span className="font-medium text-sm">{p.nombre}</span>
+                                    <div className="flex gap-2 text-[10px] text-muted-foreground">
+                                      {p.codigoBarra && (
+                                        <span className="font-mono bg-muted px-1 rounded flex items-center gap-1">
+                                          <Barcode className="h-3 w-3"/> {p.codigoBarra}
+                                        </span>
+                                      )}
+                                      <span>{sinStock ? "AGOTADO" : `Stock: ${stock}`}</span>
+                                    </div>
+                                  </div>
+                                  <Badge variant={sinStock ? "destructive" : "secondary"}>
+                                    {formatCurrency(p.precioVenta)}
+                                  </Badge>
+                                </CommandItem>
+                              )
+                            })}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
                 </div>
              </div>
 
-             {/* FILA DE CANTIDAD Y AGREGAR */}
+             {/* CANTIDAD Y AGREGAR */}
              <div className="flex gap-2">
                  <div className="flex items-center h-10 bg-background rounded-md border shadow-sm shrink-0">
-                    <Button type="button" variant="ghost" className="h-full px-2 hover:bg-muted rounded-l-md" onClick={decrementUnits} disabled={units <= 1}>
+                    <Button type="button" variant="ghost" className="h-full px-2" onClick={decrementUnits} disabled={units <= 1}>
                         <Minus className="h-3 w-3" />
                     </Button>
                     <div className="w-10 h-full flex items-center justify-center border-x">
                         <Input type="number" min={1} value={units} onChange={(e) => setUnits(Math.max(1, Number(e.target.value)))} className="h-full border-0 text-center text-lg font-bold bg-transparent focus-visible:ring-0 px-0" />
                     </div>
-                    <Button type="button" variant="ghost" className="h-full px-2 hover:bg-muted rounded-r-md" onClick={incrementUnits}>
+                    <Button type="button" variant="ghost" className="h-full px-2" onClick={incrementUnits}>
                         <Plus className="h-3 w-3" />
                     </Button>
                  </div>
-                 <Button type="button" className="flex-1 h-10 font-bold text-sm shadow-sm" onClick={addItemManual} disabled={!productoId}>
+                 <Button type="button" className="flex-1 h-10 font-bold" onClick={addItemManual} disabled={!productoId}>
                     <Plus className="h-4 w-4 mr-1" /> AGREGAR
                  </Button>
              </div>
           </div>
 
-          {/* B. ZONA DE LISTA CENTRAL (Log de operaciones) */}
+          {/* B. LISTA CENTRAL (CARRITO) */}
           <div className="flex-1 overflow-y-auto p-3 bg-muted/10">
               {cart.length === 0 ? (
                   <div className="h-full flex flex-col items-center justify-center text-muted-foreground/40 gap-2">
-                      <ShoppingCart className="h-12 w-12 opacity-20" />
-                      <p className="text-sm font-medium">Ticket vacío</p>
-                      <p className="text-xs text-muted-foreground opacity-60">Escanea un producto o búscalo manualmente</p>
+                    <ShoppingCart className="h-12 w-12 opacity-20" />
+                    <p className="text-sm font-medium">Ticket vacío</p>
                   </div>
               ) : (
                   <div className="space-y-2 pb-4">
-                      <div className="flex justify-between items-center pb-1">
-                          <span className="text-[10px] font-bold text-muted-foreground uppercase">Items agregados ({cart.length})</span>
-                      </div>
-                      
                       <AnimatePresence mode="popLayout" initial={false}>
                         {cart.map((item) => (
                             <motion.div 
@@ -397,7 +437,7 @@ export default function NuevaVentaPage() {
                                 </div>
                                 <div className="flex items-center gap-3 shrink-0">
                                     <span className="font-black text-base">{formatCurrency(item.producto.precioVenta * item.quantity)}</span>
-                                    <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground/50 hover:text-red-500 hover:bg-red-50 transition-colors" onClick={() => removeItem(item.producto.id)}>
+                                    <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground/50 hover:text-red-500" onClick={() => removeItem(item.producto.id)}>
                                         <Trash2 className="h-4 w-4" />
                                     </Button>
                                 </div>

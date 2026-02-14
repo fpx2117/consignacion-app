@@ -1,37 +1,65 @@
-// src/lib/reports/history-inventory-report.template.ts
+// src/lib/reports/base/history-inventory-report.template.ts
 import { MovimientoConProducto, TipoMovimientoStock } from "@/lib/types";
+import type { BrandingDTO } from "@/lib/reports/get-branding";
 
-const escapeHtml = (value: unknown): string => 
-  String(value ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+const escapeHtml = (value: unknown): string =>
+  String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
 
-const safeStr = (val?: string | null) => 
-  (val === null || val === undefined) ? "-" : escapeHtml(val);
+const escapeAttr = (value: unknown): string => {
+  return escapeHtml(value).replace(/[\r\n]+/g, " ").trim();
+};
 
-export function buildHistoryInventoryHtml(movimientos: MovimientoConProducto[], mesNombre: string, anio: number) {
-  
+const safeStr = (val?: string | null) =>
+  val === null || val === undefined ? "-" : escapeHtml(val);
+
+const brandInitials = (name: string) => {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  const a = parts[0]?.[0] ?? "A";
+  const b = parts[1]?.[0] ?? parts[0]?.[1] ?? "D";
+  return (a + b).toUpperCase();
+};
+
+export function buildHistoryInventoryHtml(
+  movimientos: MovimientoConProducto[],
+  mesNombre: string,
+  anio: number,
+  branding: BrandingDTO
+) {
   // --- 1. CÁLCULOS ---
-  const stats = movimientos.reduce((acc, curr) => {
-    const cant = Math.abs(Number(curr.cantidad) || 0);
-    if (curr.tipo === TipoMovimientoStock.ENTRADA) acc.entradas += cant;
-    else acc.salidas += cant;
-    return acc;
-  }, { entradas: 0, salidas: 0 });
+  const stats = movimientos.reduce(
+    (acc, curr) => {
+      const cant = Math.abs(Number((curr as any).cantidad) || 0);
+      if (curr.tipo === TipoMovimientoStock.ENTRADA) acc.entradas += cant;
+      else acc.salidas += cant;
+      return acc;
+    },
+    { entradas: 0, salidas: 0 }
+  );
 
   const balanceNeto = stats.entradas - stats.salidas;
   const isPositive = balanceNeto >= 0;
 
   // --- 2. TEMAS Y COLORES (Basado en el Balance) ---
-  // Si el balance es positivo, usamos estilo oscuro/azul (como ventas). 
-  // Si es negativo (más salidas), usamos estilo rose/slate.
-  
   const theme = {
     titulo: "AUDITORÍA DE MOVIMIENTOS",
-    colorPrincipal: isPositive ? "bg-slate-800" : "bg-rose-900", // Color de la tarjeta derecha
-    colorBorde: isPositive ? "border-slate-900" : "border-rose-900", // Borde superior de la hoja
+    colorPrincipal: isPositive ? "bg-slate-800" : "bg-rose-900",
+    colorBorde: isPositive ? "border-slate-900" : "border-rose-900",
     labelTotal: "BALANCE NETO",
     montoTotal: balanceNeto,
-    subtituloTotal: isPositive ? "Incremento de Stock" : "Reducción de Stock"
+    subtituloTotal: isPositive ? "Incremento de Stock" : "Reducción de Stock",
   };
+
+  // Branding
+  const brandName = branding.businessName || "Consignación";
+  const badge = brandInitials(brandName);
+  const metaLine = [branding.address, branding.phone]
+    .filter((v): v is string => typeof v === "string" && v.trim().length > 0)
+    .map(escapeHtml)
+    .join(" · ");
+  const footerText = branding.footerText ? escapeHtml(branding.footerText) : "";
 
   return `
     <!DOCTYPE html>
@@ -47,23 +75,34 @@ export function buildHistoryInventoryHtml(movimientos: MovimientoConProducto[], 
           table { border-collapse: separate; border-spacing: 0 0.5rem; }
         </style>
       </head>
+
       <body class="p-12 bg-white text-slate-900 max-w-[210mm] mx-auto border-t-[12px] ${theme.colorBorde} min-h-screen flex flex-col">
         
         <div class="flex justify-between items-start border-b-2 border-slate-100 pb-8 mb-8">
           <div class="flex items-center gap-4">
-            <div class="w-14 h-14 bg-slate-900 text-white flex items-center justify-center rounded-2xl font-black text-2xl shadow-lg">AD</div>
+            
+            ${
+              branding.logoUrl
+                ? `<img src="${escapeAttr(branding.logoUrl)}" class="w-14 h-14 rounded-2xl object-contain bg-white border border-slate-100 shadow-lg" />`
+                : `<div class="w-14 h-14 bg-slate-900 text-white flex items-center justify-center rounded-2xl font-black text-2xl shadow-lg">${escapeHtml(
+                    badge
+                  )}</div>`
+            }
+
             <div>
-              <h1 class="text-2xl font-black tracking-tight text-slate-900">AllData POS</h1>
+              <h1 class="text-2xl font-black tracking-tight text-slate-900">${escapeHtml(brandName)}</h1>
               <p class="text-xs font-bold text-slate-400 uppercase tracking-[0.2em]">
                 ${theme.titulo}
               </p>
+              ${metaLine ? `<p class="text-[10px] font-semibold text-slate-400 mt-1">${metaLine}</p>` : ``}
             </div>
           </div>
+
           <div class="text-right">
             <h2 class="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] mb-1">Período</h2>
             <div class="flex flex-col items-end">
-                <p class="text-4xl font-black text-slate-900 tracking-tighter leading-none uppercase">${mesNombre}</p>
-                <p class="text-xl font-bold text-slate-400 tracking-tight leading-none">${anio}</p>
+              <p class="text-4xl font-black text-slate-900 tracking-tighter leading-none uppercase">${escapeHtml(mesNombre)}</p>
+              <p class="text-xl font-bold text-slate-400 tracking-tight leading-none">${anio}</p>
             </div>
             <p class="text-[10px] font-bold text-slate-500 uppercase mt-3">Registros: ${movimientos.length}</p>
           </div>
@@ -75,24 +114,24 @@ export function buildHistoryInventoryHtml(movimientos: MovimientoConProducto[], 
             <h3 class="text-[10px] font-black text-slate-300 uppercase tracking-widest mb-4">Resumen de Flujo</h3>
             
             <div class="flex justify-between items-center mb-2">
-                <span class="text-xs font-bold text-slate-500 uppercase">Entradas Totales</span>
-                <span class="text-lg font-black text-emerald-600 money">+${stats.entradas}</span>
+              <span class="text-xs font-bold text-slate-500 uppercase">Entradas Totales</span>
+              <span class="text-lg font-black text-emerald-600 money">+${stats.entradas}</span>
             </div>
             <div class="w-full h-px bg-slate-200 mb-2"></div>
             <div class="flex justify-between items-center">
-                <span class="text-xs font-bold text-slate-500 uppercase">Salidas Totales</span>
-                <span class="text-lg font-black text-rose-600 money">-${stats.salidas}</span>
+              <span class="text-xs font-bold text-slate-500 uppercase">Salidas Totales</span>
+              <span class="text-lg font-black text-rose-600 money">-${stats.salidas}</span>
             </div>
 
             <div class="absolute top-4 right-4 bg-white text-slate-400 px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wide border border-slate-100 shadow-sm">
-               Ref: Unidades
+              Ref: Unidades
             </div>
           </div>
 
           <div class="${theme.colorPrincipal} rounded-3xl p-8 text-white flex flex-col justify-center items-end shadow-xl relative overflow-hidden">
             <h3 class="text-[10px] font-black text-white/60 uppercase tracking-widest mb-1 relative z-10">${theme.labelTotal}</h3>
             <p class="text-5xl font-black money tracking-tighter relative z-10">
-                ${balanceNeto > 0 ? '+' : ''}${balanceNeto}
+              ${balanceNeto > 0 ? "+" : ""}${balanceNeto}
             </p>
             <p class="text-[10px] uppercase font-bold text-white/60 mt-2 relative z-10">${theme.subtituloTotal}</p>
             <div class="absolute -bottom-4 -left-4 w-24 h-24 bg-white/10 rounded-full blur-2xl"></div>
@@ -114,36 +153,39 @@ export function buildHistoryInventoryHtml(movimientos: MovimientoConProducto[], 
                 <th class="py-2 text-right pr-4">Balance Stock</th>
               </tr>
             </thead>
-            <tbody class="text-xs">
-              ${movimientos.map((m) => {
-                const isEntrada = m.tipo === TipoMovimientoStock.ENTRADA;
-                const date = new Date(m.createdAt);
-                const day = date.getDate().toString().padStart(2, '0');
-                const month = (date.getMonth() + 1).toString().padStart(2, '0');
-                const time = date.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' });
 
-                return `
+            <tbody class="text-xs">
+              ${movimientos
+                .map((m: any) => {
+                  const isEntrada = m.tipo === TipoMovimientoStock.ENTRADA;
+                  const date = new Date(m.createdAt);
+                  const day = date.getDate().toString().padStart(2, "0");
+                  const month = (date.getMonth() + 1).toString().padStart(2, "0");
+                  const time = date.toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" });
+
+                  return `
                 <tr class="group">
                   <td class="py-4 pl-6 bg-slate-50 rounded-l-2xl border-y border-l border-slate-100 font-bold text-slate-500 text-xs">
                     ${day}/${month} <span class="text-[9px] font-normal text-slate-400 ml-1">${time}</span>
                   </td>
                   
                   <td class="py-4 bg-slate-50 border-y border-slate-100 align-middle">
-                     <div class="font-bold text-slate-800 text-sm">${safeStr(m.producto.nombre)}</div>
-                     <div class="text-[9px] font-bold text-slate-400 uppercase tracking-wide mt-0.5">${safeStr(m.motivo).replace(/_/g, ' ')}</div>
+                    <div class="font-bold text-slate-800 text-sm">${safeStr(m.producto?.nombre)}</div>
+                    <div class="text-[9px] font-bold text-slate-400 uppercase tracking-wide mt-0.5">${safeStr(m.motivo).replace(/_/g, " ")}</div>
                   </td>
 
                   <td class="py-4 text-center bg-slate-50 border-y border-slate-100">
-                      ${isEntrada 
-                        ? `<span class="text-[9px] text-emerald-700 font-bold bg-emerald-100 px-2 py-1 rounded border border-emerald-200 uppercase tracking-wider">Entrada</span>` 
+                    ${
+                      isEntrada
+                        ? `<span class="text-[9px] text-emerald-700 font-bold bg-emerald-100 px-2 py-1 rounded border border-emerald-200 uppercase tracking-wider">Entrada</span>`
                         : `<span class="text-[9px] text-rose-700 font-bold bg-rose-100 px-2 py-1 rounded border border-rose-200 uppercase tracking-wider">Salida</span>`
-                      }
+                    }
                   </td>
 
                   <td class="py-4 text-center bg-slate-50 border-y border-slate-100">
-                     <span class="text-sm font-black money ${isEntrada ? 'text-emerald-600' : 'text-rose-600'}">
-                       ${isEntrada ? '+' : '-'}${m.cantidad}
-                     </span>
+                    <span class="text-sm font-black money ${isEntrada ? "text-emerald-600" : "text-rose-600"}">
+                      ${isEntrada ? "+" : "-"}${m.cantidad}
+                    </span>
                   </td>
 
                   <td class="py-4 text-right pr-6 bg-slate-50 rounded-r-2xl border-y border-r border-slate-100 font-mono text-xs">
@@ -152,7 +194,9 @@ export function buildHistoryInventoryHtml(movimientos: MovimientoConProducto[], 
                     <span class="font-black text-slate-900 money">${m.stockPosterior}</span>
                   </td>
                 </tr>
-              `}).join('')}
+              `;
+                })
+                .join("")}
               
               <tr class="text-[10px] font-bold uppercase text-slate-500">
                 <td class="pt-4 pl-6 text-right" colspan="3">Totales del período:</td>
@@ -163,8 +207,9 @@ export function buildHistoryInventoryHtml(movimientos: MovimientoConProducto[], 
           </table>
         </div>
 
-        <div class="flex justify-end mt-4 pt-4 border-t border-slate-100">
-           <p class="text-[10px] text-slate-400 uppercase font-medium">Fin del reporte de auditoría</p>
+        <div class="flex justify-between items-end mt-4 pt-4 border-t border-slate-100">
+          <p class="text-[10px] text-slate-400 uppercase font-medium">Fin del reporte de auditoría</p>
+          ${footerText ? `<p class="text-[10px] font-semibold text-slate-400">${footerText}</p>` : ``}
         </div>
         
       </body>
