@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useTheme } from "next-themes";
+import { useTheme } from "next-themes"; // <-- Vuelve el Theme
 
 import { cn } from "@/lib/utils";
 import { Separator } from "@/components/ui/separator";
@@ -29,9 +29,10 @@ import {
   Package,
   Handshake,
   Bell,
-  Sun,
-  Moon,
+  Sun, // <-- Vuelve el sol
+  Moon, // <-- Vuelve la luna
   ShoppingCart,
+  Settings
 } from "lucide-react";
 
 import { useNotifications } from "../hooks/useNotifications";
@@ -43,15 +44,24 @@ const NAV = [
   { label: "Productos", href: "/productos", icon: Package },
   { label: "Consignaciones", href: "/consignaciones", icon: Handshake },
   { label: "Venta Casual (POS)", href: "/ventas/nueva", icon: ShoppingCart },
+  { label: "Configuración", href: "/settings", icon: Settings },
 ] as const;
 
 export function SidebarDock() {
   const pathname = usePathname() ?? "";
+  
+  // Lógica del Theme restaurada
   const { setTheme, resolvedTheme } = useTheme();
   const [mounted, setMounted] = React.useState(false);
-
   React.useEffect(() => setMounted(true), []);
   const isDark = mounted && resolvedTheme === "dark";
+
+  const isActive = (href: string) => {
+    if (href === "/dashboard") {
+      return pathname === href;
+    }
+    return pathname.startsWith(href);
+  };
 
   const NotificationItem = () => {
     const { hasUnread } = useNotifications();
@@ -63,12 +73,12 @@ export function SidebarDock() {
             <SheetTrigger asChild>
               <button
                 type="button"
-                className="relative flex h-10 w-10 items-center justify-center rounded-full text-muted-foreground transition-all duration-300 hover:bg-muted hover:text-foreground"
+                className="relative flex h-9 w-9 md:h-10 md:w-10 items-center justify-center rounded-full text-muted-foreground transition-all duration-300 hover:bg-muted hover:text-foreground"
                 aria-label="Notificaciones"
               >
-                <Bell className="size-5" />
+                <Bell className="h-4 w-4 md:h-5 md:w-5" />
                 {hasUnread && (
-                  <span className="absolute right-2.5 top-2.5 flex h-2 w-2 rounded-full bg-destructive ring-2 ring-background animate-pulse" />
+                  <span className="absolute right-2 top-2 md:right-2.5 md:top-2.5 flex h-2 w-2 rounded-full bg-destructive ring-2 ring-background animate-pulse" />
                 )}
               </button>
             </SheetTrigger>
@@ -93,75 +103,66 @@ export function SidebarDock() {
       
       {/* === MOBILE LAYOUT (Horizontal) === */}
       <div className="md:hidden w-full">
-        {/* Cambiamos padding: px-2 en lugar de px-4 para ganar espacio en pantallas de 393px */}
-        <div className="flex w-full items-center justify-center px-2 py-2 pb-[max(env(safe-area-inset-bottom),0.5rem)]">
+        <div className="flex w-full items-center justify-center px-1 py-2 pb-[max(env(safe-area-inset-bottom),0.5rem)]">
           <TooltipProvider delayDuration={0}>
-            {/* Quitamos overflow-hidden estricto si es posible, pero BorderBeam lo necesita.
-                La clave es que el contenido interno NO crezca más allá del contenedor. */}
-            <div className="relative overflow-hidden rounded-2xl p-[1px] max-w-full">
+            <div className="relative overflow-hidden rounded-2xl p-[1px] max-w-[96vw]">
               
-              <Dock
-  orientation="horizontal"
-  direction="middle"
-  
-  // CORRECCIÓN AQUÍ:
-  // Usamos los nombres correctos según tu versión de la librería.
-  // iconMagnification={40}: El tamaño máximo al tocar es 40px (igual al tamaño base).
-  // iconDistance={0}: El radio del efecto es 0.
-  // Esto anula el efecto de lupa para que no se desborde en móvil.
-  iconMagnification={40} 
-  iconDistance={0}
-  
-  className="border bg-card/50 backdrop-blur-xl gap-2 px-3"
->
-                {NAV.map((item) => {
-                  const active = pathname === item.href || (item.href !== "/dashboard" && pathname.startsWith(item.href));
-                  const Icon = item.icon;
+              <div className="overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] flex items-center justify-center w-full">
+                <Dock
+                  orientation="horizontal"
+                  direction="middle"
+                  iconMagnification={40} 
+                  iconDistance={0}
+                  className="border bg-card/50 backdrop-blur-xl gap-1 px-2 min-w-max"
+                >
+                  {NAV.map((item) => {
+                    const active = isActive(item.href);
+                    const Icon = item.icon;
 
-                  return (
-                    <DockIcon key={item.href} className="bg-transparent"> {/* bg-transparent fix */}
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Link
-                            href={item.href}
-                            aria-label={item.label}
-                            className={cn(
-                              // Reducimos ligeramente tamaño base en móvil (h-9 w-9) si es necesario, 
-                              // pero con magnification={40} el h-10 w-10 cabe justo en iPhone 14 Pro.
-                              "flex h-10 w-10 items-center justify-center rounded-full transition-all duration-300",
-                              active
-                                ? "bg-primary text-primary-foreground shadow-md"
-                                : "text-muted-foreground hover:bg-muted"
-                            )}
-                          >
-                            <Icon className="size-5" />
-                          </Link>
-                        </TooltipTrigger>
-                        <TooltipContent side="top" sideOffset={12} className="hidden sm:block">
-                          {/* Ocultamos tooltips en móvil touch para que no estorben */}
-                          <p>{item.label}</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </DockIcon>
-                  );
-                })}
+                    return (
+                      <DockIcon key={item.href} className="bg-transparent">
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Link
+                              href={item.href}
+                              aria-label={item.label}
+                              className={cn(
+                                "flex h-9 w-9 items-center justify-center rounded-full transition-all duration-300",
+                                active
+                                  ? "bg-primary text-primary-foreground shadow-md"
+                                  : "text-muted-foreground hover:bg-muted"
+                              )}
+                            >
+                              <Icon className="h-4 w-4" />
+                            </Link>
+                          </TooltipTrigger>
+                          <TooltipContent side="top" sideOffset={12} className="hidden sm:block">
+                            <p>{item.label}</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </DockIcon>
+                    );
+                  })}
 
-                <Separator orientation="vertical" className="h-6 mx-0.5 opacity-50" />
+                  <Separator orientation="vertical" className="h-5 mx-0.5 opacity-50" />
 
-                <DockIcon className="bg-transparent">
-                  <NotificationItem />
-                </DockIcon>
+                  <DockIcon className="bg-transparent">
+                    <NotificationItem />
+                  </DockIcon>
 
-                <DockIcon className="bg-transparent">
-                  <button
-                    type="button"
-                    onClick={() => setTheme(isDark ? "light" : "dark")}
-                    className="flex h-10 w-10 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted"
-                  >
-                    {mounted ? (isDark ? <Sun className="size-5" /> : <Moon className="size-5" />) : null}
-                  </button>
-                </DockIcon>
-              </Dock>
+                  {/* FIX: Vuelve el botón de Theme en Móvil, ajustado al tamaño h-9 w-9 */}
+                  <DockIcon className="bg-transparent">
+                    <button
+                      type="button"
+                      onClick={() => setTheme(isDark ? "light" : "dark")}
+                      className="flex h-9 w-9 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted"
+                    >
+                      {mounted ? (isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />) : null}
+                    </button>
+                  </DockIcon>
+
+                </Dock>
+              </div>
               
               <BorderBeam size={70} duration={10} borderWidth={1.5} colorFrom="var(--primary)" colorTo="#3b82f6" />
             </div>
@@ -170,7 +171,6 @@ export function SidebarDock() {
       </div>
 
       {/* === DESKTOP LAYOUT (Vertical) === */}
-      {/* Se mantiene con la animación completa (magnification default) porque hay espacio de sobra */}
       <div className="hidden h-full w-full md:flex md:flex-col md:items-center md:py-6">
         <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 mb-6">
           <span className="text-xs font-bold text-primary">APP</span>
@@ -183,10 +183,9 @@ export function SidebarDock() {
                 orientation="vertical"
                 direction="middle"
                 className="border bg-card/50 backdrop-blur-xl md:flex-col"
-                // En Desktop SÍ dejamos la animación por defecto
               >
                 {NAV.map((item) => {
-                  const active = pathname === item.href || (item.href !== "/dashboard" && pathname.startsWith(item.href));
+                  const active = isActive(item.href);
                   const Icon = item.icon;
 
                   return (
@@ -220,6 +219,7 @@ export function SidebarDock() {
                   <NotificationItem />
                 </DockIcon>
 
+                {/* FIX: Vuelve el botón de Theme en Escritorio */}
                 <DockIcon>
                   <button
                     type="button"
@@ -229,6 +229,7 @@ export function SidebarDock() {
                     {mounted ? (isDark ? <Sun className="size-5" /> : <Moon className="size-5" />) : null}
                   </button>
                 </DockIcon>
+
               </Dock>
               <BorderBeam size={70} duration={10} borderWidth={1.5} colorFrom="var(--primary)" colorTo="#3b82f6" />
             </div>

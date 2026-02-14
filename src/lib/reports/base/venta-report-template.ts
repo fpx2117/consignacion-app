@@ -1,4 +1,4 @@
-// src/lib/reports/venta-report-template.ts
+import type { BrandingDTO } from "@/lib/reports/get-branding";
 
 export interface VentaReportDTO {
   id: number;
@@ -17,53 +17,73 @@ export interface VentaReportDTO {
 
 // --- Helpers ---
 const escapeHtml = (value: unknown): string => {
-  return String(value ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+};
+
+const escapeAttr = (value: unknown): string => {
+  return escapeHtml(value).replace(/[\r\n]+/g, " ").trim();
 };
 
 const formatDateAR = (date?: string | Date | null) => {
   if (!date) return "-";
   const d = new Date(date);
-  return isNaN(d.getTime()) ? "-" : d.toLocaleDateString("es-AR", {
-    day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit"
-  });
+  return isNaN(d.getTime())
+    ? "-"
+    : d.toLocaleDateString("es-AR", {
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      });
 };
 
 const formatMoney = (amount: number) => {
   return new Intl.NumberFormat("es-AR", {
     style: "currency",
     currency: "ARS",
-    minimumFractionDigits: 2
+    minimumFractionDigits: 2,
   }).format(amount);
 };
 
 // ✅ NUEVO FORMATO DE TICKET: SERIE + NÚMERO
-// Ejemplo ID 1   -> Serie 1, N° 001
-// Ejemplo ID 100 -> Serie 1, N° 100
-// Ejemplo ID 101 -> Serie 2, N° 001
 const getTicketDetails = (id: number) => {
-    const LIMITE_POR_SERIE = 100;
-    
-    // Matemática para calcular la serie (lote) y el número actual
-    const serie = Math.floor((id - 1) / LIMITE_POR_SERIE) + 1;
-    const numero = ((id - 1) % LIMITE_POR_SERIE) + 1;
+  const LIMITE_POR_SERIE = 100;
+  const serie = Math.floor((id - 1) / LIMITE_POR_SERIE) + 1;
+  const numero = ((id - 1) % LIMITE_POR_SERIE) + 1;
 
-    return {
-        serie: String(serie).padStart(2, '0'),   // Ej: "01"
-        numero: String(numero).padStart(3, '0'), // Ej: "005"
-        full: `${String(serie).padStart(2, '0')}-${String(numero).padStart(3, '0')}` // Ej: "01-005"
-    };
+  return {
+    serie: String(serie).padStart(2, "0"),
+    numero: String(numero).padStart(3, "0"),
+    full: `${String(serie).padStart(2, "0")}-${String(numero).padStart(3, "0")}`,
+  };
 };
 
-export function buildVentaHtml(data: VentaReportDTO) {
-  
-  // Obtenemos los números calculados
+// ✅ Branding → derivamos un “badge” de 2 letras si no hay logo
+const brandInitials = (name: string) => {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  const a = parts[0]?.[0] ?? "A";
+  const b = parts[1]?.[0] ?? parts[0]?.[1] ?? "D";
+  return (a + b).toUpperCase();
+};
+
+export function buildVentaHtml(data: VentaReportDTO, branding: BrandingDTO) {
   const ticket = getTicketDetails(data.id);
 
-  // Colores
+  // Tailwind classes (se mantienen)
   const colorPrincipal = "bg-indigo-600";
   const colorBorde = "border-indigo-900";
   const colorTextoAccent = "text-indigo-700";
   const colorBgAccent = "bg-indigo-50";
+
+  // Branding values (dinámicos)
+  const brandName = branding.businessName || "Consignación";
+  const brandBadge = brandInitials(brandName);
+  const footerText = branding.footerText ? escapeHtml(branding.footerText) : "";
+  const metaLine = [branding.address, branding.phone].filter((v) => typeof v === "string" && v.trim().length > 0);
 
   return `
     <!DOCTYPE html>
@@ -78,28 +98,46 @@ export function buildVentaHtml(data: VentaReportDTO) {
           @page { margin: 0; size: A4; }
         </style>
       </head>
+
       <body class="p-12 bg-white text-slate-900 max-w-[210mm] mx-auto border-t-[12px] ${colorBorde}">
         
         <div class="flex justify-between items-start border-b-2 border-slate-100 pb-8 mb-8">
           <div class="flex items-center gap-4">
-            <div class="w-14 h-14 bg-slate-900 text-white flex items-center justify-center rounded-2xl font-black text-2xl shadow-lg">AD</div>
+            
+            ${
+              branding.logoUrl
+                ? `<img src="${escapeAttr(branding.logoUrl)}" class="w-14 h-14 rounded-2xl object-contain bg-white border border-slate-100 shadow-lg" />`
+                : `<div class="w-14 h-14 bg-slate-900 text-white flex items-center justify-center rounded-2xl font-black text-2xl shadow-lg">${escapeHtml(
+                    brandBadge
+                  )}</div>`
+            }
+
             <div>
-              <h1 class="text-2xl font-black tracking-tight text-slate-900">AllData POS</h1>
+              <h1 class="text-2xl font-black tracking-tight text-slate-900">${escapeHtml(brandName)}</h1>
               <p class="text-xs font-bold text-slate-400 uppercase tracking-[0.2em]">
                 Ticket de Venta
               </p>
+
+              ${
+                metaLine.length
+                  ? `<p class="text-[10px] font-semibold text-slate-400 mt-1">${metaLine
+                      .map((x) => escapeHtml(String(x)))
+                      .join(" · ")}</p>`
+                  : ``
+              }
             </div>
           </div>
+
           <div class="text-right">
             <h2 class="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] mb-1">N° de Ticket</h2>
             
             <div class="flex flex-col items-end">
-                <span class="text-[10px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded mb-1">SERIE ${ticket.serie}</span>
-                <p class="text-5xl font-black text-slate-900 tracking-tighter leading-none">#${ticket.numero}</p>
+              <span class="text-[10px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded mb-1">SERIE ${ticket.serie}</span>
+              <p class="text-5xl font-black text-slate-900 tracking-tighter leading-none">#${ticket.numero}</p>
             </div>
             
             <div class="flex flex-col gap-1 mt-3">
-                <p class="text-[10px] font-bold text-slate-500 uppercase">Fecha: ${formatDateAR(data.fecha)}</p>
+              <p class="text-[10px] font-bold text-slate-500 uppercase">Fecha: ${formatDateAR(data.fecha)}</p>
             </div>
           </div>
         </div>
@@ -110,8 +148,8 @@ export function buildVentaHtml(data: VentaReportDTO) {
             <h3 class="text-[10px] font-black text-slate-300 uppercase tracking-widest mb-2">Cliente</h3>
             <p class="text-xl font-black text-slate-800 tracking-tight mb-1 truncate">${escapeHtml(data.clienteNombre)}</p>
             <div class="flex items-center gap-2">
-                <span class="w-2 h-2 rounded-full bg-indigo-400"></span>
-                <p class="text-xs font-semibold text-slate-500 uppercase">${escapeHtml(data.clienteTelefono)}</p>
+              <span class="w-2 h-2 rounded-full bg-indigo-400"></span>
+              <p class="text-xs font-semibold text-slate-500 uppercase">${escapeHtml(data.clienteTelefono)}</p>
             </div>
           </div>
 
@@ -144,7 +182,9 @@ export function buildVentaHtml(data: VentaReportDTO) {
               </tr>
             </thead>
             <tbody class="text-sm">
-              ${data.items.map((item) => `
+              ${data.items
+                .map(
+                  (item) => `
                 <tr class="group hover:bg-slate-50/50 transition-colors">
                   <td class="py-4 pl-4 font-bold text-slate-700 bg-slate-50 rounded-l-xl border-y border-l border-slate-100">
                     ${escapeHtml(item.producto)}
@@ -161,17 +201,20 @@ export function buildVentaHtml(data: VentaReportDTO) {
                     ${formatMoney(item.subtotal)}
                   </td>
                 </tr>
-              `).join('')}
+              `
+                )
+                .join("")}
             </tbody>
           </table>
         </div>
 
         <div class="mt-auto border-t border-slate-100 pt-6">
-            <div class="flex justify-between items-end">
-               <div>
-                  <p class="text-xs font-bold text-slate-400">Gracias por su compra</p>
-               </div>
+          <div class="flex justify-between items-end">
+            <div>
+              <p class="text-xs font-bold text-slate-400">Gracias por su compra</p>
+              ${footerText ? `<p class="text-[10px] font-semibold text-slate-400 mt-1">${footerText}</p>` : ``}
             </div>
+          </div>
         </div>
       </body>
     </html>

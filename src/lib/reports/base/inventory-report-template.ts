@@ -1,53 +1,67 @@
 import { Producto } from "@/lib/types";
+import type { BrandingDTO } from "@/lib/reports/get-branding";
 
 // --- Helpers ---
 const escapeHtml = (value: unknown): string => {
-  return String(value ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+};
+
+const escapeAttr = (value: unknown): string => {
+  return escapeHtml(value).replace(/[\r\n]+/g, " ").trim();
 };
 
 const formatDateAR = (date?: string | Date | null, includeTime = true) => {
   if (!date) return "-";
   const d = new Date(date);
   if (isNaN(d.getTime())) return "-";
-  
+
   return d.toLocaleDateString("es-AR", {
-    day: "2-digit", 
-    month: "2-digit", 
+    day: "2-digit",
+    month: "2-digit",
     year: "numeric",
-    ...(includeTime && { hour: "2-digit", minute: "2-digit" })
+    ...(includeTime && { hour: "2-digit", minute: "2-digit" }),
   });
 };
 
 const formatMoney = (amount: number) => {
-  // Forzamos que sea un número para evitar el error NaN
   const safeAmount = Math.round(Number(amount) || 0);
   return new Intl.NumberFormat("es-AR", {
     style: "currency",
     currency: "ARS",
-    minimumFractionDigits: 0, // Eliminamos los centavos
-    maximumFractionDigits: 0  // Aseguramos que no haya decimales
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
   }).format(safeAmount);
 };
 
-export function buildInventoryHtml(productos: Producto[]) {
+const brandInitials = (name: string) => {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  const a = parts[0]?.[0] ?? "A";
+  const b = parts[1]?.[0] ?? parts[0]?.[1] ?? "D";
+  return (a + b).toUpperCase();
+};
+
+export function buildInventoryHtml(productos: Producto[], branding: BrandingDTO) {
   // --- 1. PROCESAMIENTO Y CÁLCULOS (Safe Numbers) ---
   const totalItems = productos.length;
-  
+
   let totalStockUnits = 0;
   let valorVentaTotal = 0;
   let valorCostoTotal = 0;
   let stockCritico = 0;
   let agotados = 0;
 
-  const itemsProcesados = productos.map(p => {
-    const stock = Number(p.stockDisponibleUnits) || 0;
-    const precioVenta = Number(p.precioVenta) || 0;
-    const precioCosto = Number(p.precioCosto) || 0;
-    const minStock = Number(p.stockMinUnits) || 5;
+  const itemsProcesados = productos.map((p) => {
+    const stock = Number((p as any).stockDisponibleUnits) || 0;
+    const precioVenta = Number((p as any).precioVenta) || 0;
+    const precioCosto = Number((p as any).precioCosto) || 0;
+    const minStock = Number((p as any).stockMinUnits) || 5;
 
     totalStockUnits += stock;
-    valorVentaTotal += (precioVenta * stock);
-    valorCostoTotal += (precioCosto * stock);
+    valorVentaTotal += precioVenta * stock;
+    valorCostoTotal += precioCosto * stock;
 
     if (stock === 0) agotados++;
     else if (stock <= minStock) stockCritico++;
@@ -59,11 +73,20 @@ export function buildInventoryHtml(productos: Producto[]) {
       precioCosto,
       subtotalVenta: precioVenta * stock,
       isLow: stock > 0 && stock <= minStock,
-      isOut: stock === 0
+      isOut: stock === 0,
     };
   });
 
   const margenEstimadoTotal = valorVentaTotal - valorCostoTotal;
+
+  // Branding values
+  const brandName = branding.businessName || "Consignación";
+  const badge = brandInitials(brandName);
+  const metaLine = [branding.address, branding.phone]
+    .filter((v): v is string => typeof v === "string" && v.trim().length > 0)
+    .map(escapeHtml)
+    .join(" · ");
+  const footerText = branding.footerText ? escapeHtml(branding.footerText) : "";
 
   return `
     <!DOCTYPE html>
@@ -79,16 +102,27 @@ export function buildInventoryHtml(productos: Producto[]) {
           table { border-collapse: separate; border-spacing: 0 0.5rem; }
         </style>
       </head>
+
       <body class="p-10 bg-white text-slate-900 max-w-[210mm] mx-auto border-t-[12px] border-slate-900 min-h-screen flex flex-col">
         
         <div class="flex justify-between items-start border-b-2 border-slate-100 pb-6 mb-8">
           <div class="flex items-center gap-4">
-            <div class="w-12 h-12 bg-slate-900 text-white flex items-center justify-center rounded-xl font-black text-xl shadow-lg">AD</div>
+            
+            ${
+              branding.logoUrl
+                ? `<img src="${escapeAttr(branding.logoUrl)}" class="w-12 h-12 rounded-xl object-contain bg-white border border-slate-100 shadow-lg" />`
+                : `<div class="w-12 h-12 bg-slate-900 text-white flex items-center justify-center rounded-xl font-black text-xl shadow-lg">${escapeHtml(
+                    badge
+                  )}</div>`
+            }
+
             <div>
-              <h1 class="text-xl font-black tracking-tight text-slate-900 uppercase">AllData POS</h1>
+              <h1 class="text-xl font-black tracking-tight text-slate-900 uppercase">${escapeHtml(brandName)}</h1>
               <p class="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em]">Reporte de Inventario</p>
+              ${metaLine ? `<p class="text-[10px] font-semibold text-slate-400 mt-1">${metaLine}</p>` : ``}
             </div>
           </div>
+
           <div class="text-right">
             <h2 class="text-[9px] font-black text-slate-400 uppercase tracking-[0.3em] mb-1">Estado de Existencias</h2>
             <p class="text-xs font-bold text-slate-600 uppercase">${formatDateAR(new Date())}</p>
@@ -116,12 +150,12 @@ export function buildInventoryHtml(productos: Producto[]) {
         </div>
 
         <div class="flex gap-3 mb-6">
-            <div class="px-3 py-1.5 rounded-lg border bg-orange-50 border-orange-200 text-orange-700 text-[10px] font-black uppercase">
-                Stock Crítico: ${stockCritico}
-            </div>
-            <div class="px-3 py-1.5 rounded-lg border bg-red-50 border-red-200 text-red-700 text-[10px] font-black uppercase">
-                Agotados: ${agotados}
-            </div>
+          <div class="px-3 py-1.5 rounded-lg border bg-orange-50 border-orange-200 text-orange-700 text-[10px] font-black uppercase">
+            Stock Crítico: ${stockCritico}
+          </div>
+          <div class="px-3 py-1.5 rounded-lg border bg-red-50 border-red-200 text-red-700 text-[10px] font-black uppercase">
+            Agotados: ${agotados}
+          </div>
         </div>
 
         <div class="flex-grow">
@@ -136,32 +170,46 @@ export function buildInventoryHtml(productos: Producto[]) {
                 <th class="py-2 text-right pr-4">Subtotal</th>
               </tr>
             </thead>
+
             <tbody class="text-[11px]">
-              ${itemsProcesados.map((p) => {
-                const hasExpiry = p.fechaVencimiento != null;
-                const expiryDate = hasExpiry ? new Date(p.fechaVencimiento!) : null;
-                const isExpired = expiryDate && expiryDate < new Date();
-                
-                return `
+              ${itemsProcesados
+                .map((p: any) => {
+                  const hasExpiry = p.fechaVencimiento != null;
+                  const expiryDate = hasExpiry ? new Date(p.fechaVencimiento) : null;
+                  const isExpired = expiryDate && expiryDate < new Date();
+
+                  return `
                 <tr>
                   <td class="py-3 pl-5 bg-slate-50 rounded-l-xl border-y border-l border-slate-100">
                     <div class="font-bold text-slate-800">${escapeHtml(p.nombre)}</div>
-                    <div class="text-[8px] text-slate-400 font-mono mt-0.5 uppercase">${p.codigoBarra ? '• ' + p.codigoBarra : ''}</div>
+                    <div class="text-[8px] text-slate-400 font-mono mt-0.5 uppercase">${
+                      p.codigoBarra ? "• " + escapeHtml(p.codigoBarra) : ""
+                    }</div>
                   </td>
                   
                   <td class="py-3 text-center bg-slate-50 border-y border-slate-100">
-                    ${hasExpiry ? `
+                    ${
+                      hasExpiry
+                        ? `
                       <div class="inline-flex flex-col">
-                        <span class="font-bold ${isExpired ? 'text-red-600' : 'text-slate-600'}">
+                        <span class="font-bold ${isExpired ? "text-red-600" : "text-slate-600"}">
                           ${formatDateAR(p.fechaVencimiento, false)}
                         </span>
-                        ${isExpired ? '<span class="text-[7px] text-red-500 font-black uppercase tracking-tighter">Vencido</span>' : ''}
+                        ${isExpired ? '<span class="text-[7px] text-red-500 font-black uppercase tracking-tighter">Vencido</span>' : ""}
                       </div>
-                    ` : '<span class="text-slate-300 italic text-[9px]">No vence</span>'}
+                    `
+                        : '<span class="text-slate-300 italic text-[9px]">No vence</span>'
+                    }
                   </td>
 
                   <td class="py-3 text-center bg-slate-50 border-y border-slate-100">
-                     <span class="px-2 py-1 rounded-md font-black ${p.isOut ? 'bg-red-100 text-red-600' : p.isLow ? 'bg-orange-100 text-orange-600' : 'bg-emerald-100 text-emerald-700'}">
+                     <span class="px-2 py-1 rounded-md font-black ${
+                       p.isOut
+                         ? "bg-red-100 text-red-600"
+                         : p.isLow
+                         ? "bg-orange-100 text-orange-600"
+                         : "bg-emerald-100 text-emerald-700"
+                     }">
                         ${p.stock}
                      </span>
                   </td>
@@ -178,10 +226,24 @@ export function buildInventoryHtml(productos: Producto[]) {
                     ${formatMoney(p.subtotalVenta)}
                   </td>
                 </tr>
-              `}).join('')}
+              `;
+                })
+                .join("")}
             </tbody>
           </table>
         </div>
+
+        ${
+          footerText
+            ? `
+          <div class="mt-auto border-t border-slate-100 pt-6">
+            <p class="text-[10px] font-semibold text-slate-400">${footerText}</p>
+          </div>
+        `
+            : `
+          <div class="mt-auto border-t border-slate-100 pt-6"></div>
+        `
+        }
 
       </body>
     </html>

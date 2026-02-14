@@ -89,6 +89,18 @@ model Cliente {
   ventas         Venta[]
 }
 
+model Branding {
+  id           Int      @id @default(autoincrement())
+  businessName String
+  logoMime     String?  // "image/png", "image/jpeg", "image/webp"
+  logoData     Bytes?   // BLOB
+  primaryColor String   @default("#111827") // gris oscuro
+  footerText   String?
+  phone        String?
+  address      String?
+  updatedAt    DateTime @updatedAt
+}
+
 model MovimientoStock {
   id         Int      @id @default(autoincrement())
   productoId Int

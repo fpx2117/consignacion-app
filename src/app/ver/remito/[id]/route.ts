@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import puppeteer from "puppeteer";
+import puppeteer, { Browser } from "puppeteer";
 import { verifyPdfToken } from "@/lib/crypto";
-import { buildConsignacionHtml } from "@/lib/reports/consignacion-report-template";
 import { prisma } from "@/lib/prisma";
 import { hashCode } from "@/lib/share-links";
+
+import { getBranding } from "@/lib/reports/get-branding";
+import { buildConsignacionHtml } from "@/lib/reports/base/consignacion-report-template";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -27,11 +29,20 @@ function redirectStatus(req: NextRequest, state: "invalid" | "expired" | "limit"
   return NextResponse.redirect(new URL(`/x/status?state=${state}`, getPublicOrigin(req)));
 }
 
+function safeFilename(input: string) {
+  return input
+    .normalize("NFKD")
+    .replace(/[^\w\s-]/g, "")
+    .trim()
+    .replace(/\s+/g, "-")
+    .slice(0, 60);
+}
+
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  let browser: any = null;
+  let browser: Browser | null = null;
 
   try {
     const { id: idParam } = await params;
@@ -67,13 +78,16 @@ export async function GET(
 
     if (!consignacion) return NextResponse.json({ error: "No encontrada" }, { status: 404 });
 
+    // ✅ Branding desde la DB del environment del cliente
+    const branding = await getBranding();
+
     browser = await puppeteer.launch({
       headless: true,
       args: ["--no-sandbox", "--disable-setuid-sandbox"],
     });
 
     const page = await browser.newPage();
-    await page.setContent(buildConsignacionHtml(consignacion as any), {
+    await page.setContent(buildConsignacionHtml(consignacion as any, branding), {
       waitUntil: "networkidle0",
       timeout: 30000,
     });
@@ -87,12 +101,9 @@ export async function GET(
     await browser.close();
     browser = null;
 
-    const clienteNombre = (consignacion.cliente?.nombre || "Cliente")
-      .replace(/\s+/g, "-")
-      .replace(/[^a-z0-9\-]/gi, "");
-
+    const clienteNombre = safeFilename(consignacion.cliente?.nombre || "Cliente");
     const folioFormateado = String((consignacion as any).numeroFolio ?? consignacion.id).padStart(4, "0");
-    const fileName = `Remito-${clienteNombre}-${folioFormateado}.pdf`;
+    const fileName = `Remito-${clienteNombre || "Cliente"}-${folioFormateado}.pdf`;
 
     return new NextResponse(Buffer.from(pdfUint8Array), {
       status: 200,
