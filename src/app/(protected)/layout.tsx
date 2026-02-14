@@ -1,32 +1,21 @@
 import { redirect } from "next/navigation";
-import { cookies } from "next/headers";
+import { headers } from "next/headers";
 import { SidebarDock } from "@/components/sidebar-dock";
 
-function normalizeBaseUrl(raw?: string) {
-  if (!raw) return "http://localhost:3000";
-  // Si ya tiene protocolo, ok
-  if (raw.startsWith("http://") || raw.startsWith("https://")) return raw;
-  // Si viene sin protocolo (caso Railway), asumimos https
-  return `https://${raw}`;
-}
-
 async function checkAuth() {
-  const cookieStore = await cookies();
-  const cookieHeader = cookieStore
-    .getAll()
-    .map((c) => `${c.name}=${c.value}`)
-    .join("; ");
-
-  const baseUrl = normalizeBaseUrl(process.env.NEXT_PUBLIC_BASE_URL);
+  const cookieHeader = (await headers()).get("cookie") ?? "";
 
   try {
-    const res = await fetch(`${baseUrl}/api/auth/me`, {
+    const res = await fetch("/api/auth/me", {
       method: "GET",
       cache: "no-store",
       headers: { cookie: cookieHeader },
     });
 
-    return res.ok;
+    if (!res.ok) return false;
+
+    const json = await res.json();
+    return Boolean(json?.data?.id); // tu endpoint responde { data: user }
   } catch (error) {
     console.error("Error verificando auth:", error);
     return false;
