@@ -1,32 +1,36 @@
 import { redirect } from "next/navigation";
-import { cookies } from "next/headers";
+import { headers } from "next/headers";
 import { SidebarDock } from "@/components/sidebar-dock";
 
-function normalizeBaseUrl(raw?: string) {
-  if (!raw) return "http://localhost:3000";
-  // Si ya tiene protocolo, ok
-  if (raw.startsWith("http://") || raw.startsWith("https://")) return raw;
-  // Si viene sin protocolo (caso Railway), asumimos https
-  return `https://${raw}`;
-}
+export const dynamic = "force-dynamic";
 
 async function checkAuth() {
-  const cookieStore = await cookies();
-  const cookieHeader = cookieStore
-    .getAll()
-    .map((c) => `${c.name}=${c.value}`)
-    .join("; ");
+  const h = await headers();
 
-  const baseUrl = normalizeBaseUrl(process.env.NEXT_PUBLIC_BASE_URL);
+  const cookieHeader = h.get("cookie") ?? "";
+
+  const host = h.get("x-forwarded-host") ?? h.get("host");
+  const proto = h.get("x-forwarded-proto") ?? "https";
+
+  if (!host) {
+    console.error("Error verificando auth: no se pudo determinar host");
+    return false;
+  }
+
+  const origin = `${proto}://${host}`;
 
   try {
-    const res = await fetch(`${baseUrl}/api/auth/me`, {
+    const res = await fetch(`${origin}/api/auth/me`, {
       method: "GET",
       cache: "no-store",
       headers: { cookie: cookieHeader },
     });
 
-    return res.ok;
+    if (!res.ok) return false;
+
+    // tu endpoint responde { data: user }
+    const json = await res.json();
+    return Boolean(json?.data?.id);
   } catch (error) {
     console.error("Error verificando auth:", error);
     return false;
