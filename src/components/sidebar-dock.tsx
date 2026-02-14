@@ -44,7 +44,7 @@ const NAV = [
   { label: "Productos", href: "/productos", icon: Package },
   { label: "Consignaciones", href: "/consignaciones", icon: Handshake },
   { label: "Venta Casual (POS)", href: "/ventas/nueva", icon: ShoppingCart },
-  { label: "Configuraciones", href: "/settings", icon: Settings },
+  { label: "Configuración", href: "/settings", icon: Settings },
 ] as const;
 
 export function SidebarDock() {
