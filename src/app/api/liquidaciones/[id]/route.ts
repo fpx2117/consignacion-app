@@ -1,19 +1,19 @@
-
-//src/app/api/liquidaciones/[id]/route.ts
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/requireAuth";
 import { createLiquidacionBodySchema } from "@/lib/validators/liquidacion";
-import { notifyStockIfNeeded } from "@/lib/notifyStock";
+import { TipoMovimientoStock, MotivoMovimientoStock } from "@prisma/client";
 
-// Corrección de tipos para Next.js 15+
+// ✅ Imports Centralizados de Config y Notificaciones
+import { obtenerConfiguracionGlobal } from "@/lib/config";
+import { evaluateStockAlert, processNotificationQueue } from "@/lib/stock-alerts";
+
 type RouteParams = {
   params: Promise<{ id: string }>;
 };
 
 /**
  * GET /api/liquidaciones/[id]
- * Obtener una liquidación específica
  */
 export async function GET(_: Request, { params }: RouteParams) {
   const auth = await requireAuth();
@@ -29,11 +29,7 @@ export async function GET(_: Request, { params }: RouteParams) {
   const liq = await prisma.liquidacion.findUnique({
     where: { id: liquidacionId },
     include: {
-      items: {
-        include: {
-          detalle: { include: { producto: true } },
-        },
-      },
+      items: { include: { detalle: { include: { producto: true } } } },
       venta: { include: { detalles: true } },
       consignacion: {
         include: {
@@ -52,13 +48,6 @@ export async function GET(_: Request, { params }: RouteParams) {
 /**
  * PUT /api/liquidaciones/[id]
  * Corregir una liquidación existente (reversa + aplica nuevo)
- *
- * Body esperado:
- * {
- *   items: [{ consignacionDetalleId, unitsVendidas, unitsDevueltas }]
- * }
- *
- * NOTA: consignacionId NO va en el body (sale de la liquidación existente).
  */
 export async function PUT(req: Request, { params }: RouteParams) {
   const auth = await requireAuth();
@@ -81,7 +70,9 @@ export async function PUT(req: Request, { params }: RouteParams) {
     );
   }
 
-  const affectedProductIds = new Set<number>();
+  // ✅ 1. Preparar Configuración y Cola de Notificaciones
+  const configGlobal = await obtenerConfiguracionGlobal();
+  const notificationsQueue: any[] = [];
 
   try {
     const result = await prisma.$transaction(async (tx) => {
@@ -101,7 +92,6 @@ export async function PUT(req: Request, { params }: RouteParams) {
       });
 
       if (!liqExistente) throw new Error("LIQUIDACION_NO_ENCONTRADA");
-
       const consignacionId = liqExistente.consignacionId;
 
       // Reabrir si estaba cerrada
@@ -112,14 +102,10 @@ export async function PUT(req: Request, { params }: RouteParams) {
         });
       }
 
-      // 1) Revertir items anteriores
+      // --- 1) REVERTIR ITEMS ANTERIORES ---
       for (const item of liqExistente.items) {
-        const det = liqExistente.consignacion.detalles.find(
-          (d) => d.id === item.consignacionDetalleId
-        );
+        const det = liqExistente.consignacion.detalles.find((d) => d.id === item.consignacionDetalleId);
         if (!det) continue;
-
-        affectedProductIds.add(det.productoId);
 
         await tx.consignacionDetalle.update({
           where: { id: item.consignacionDetalleId },
@@ -129,15 +115,45 @@ export async function PUT(req: Request, { params }: RouteParams) {
           },
         });
 
-        await tx.producto.update({
+        const productoAntes = await tx.producto.findUnique({ where: { id: det.productoId } });
+
+        const productoDespues = await tx.producto.update({
           where: { id: det.productoId },
           data: {
             stockConsignadoUnits: { increment: item.unitsVendidas + item.unitsDevueltas },
-            ...(item.unitsDevueltas > 0
-              ? { stockDisponibleUnits: { decrement: item.unitsDevueltas } }
-              : {}),
+            ...(item.unitsDevueltas > 0 ? { stockDisponibleUnits: { decrement: item.unitsDevueltas } } : {}),
           },
         });
+
+        // Auditoría Reversa: Lo que se devolvió al almacén, ahora se "des-devuelve" (Sale)
+        if (item.unitsDevueltas > 0) {
+          await tx.movimientoStock.create({
+            data: {
+              productoId: det.productoId,
+              tipo: TipoMovimientoStock.SALIDA,
+              motivo: MotivoMovimientoStock.AJUSTE_NEGATIVO,
+              cantidad: item.unitsDevueltas,
+              stockPrevio: productoAntes!.stockDisponibleUnits,
+              stockPosterior: productoDespues.stockDisponibleUnits,
+              observaciones: `Reverso Devolución Liq #${liquidacionId} (Consignación #${consignacionId})`
+            }
+          });
+        }
+        
+        // Auditoría Reversa: Lo que se había "vendido", ahora "vuelve" virtualmente (Entra a consignado, no a disponible, pero dejamos registro)
+        if (item.unitsVendidas > 0) {
+           await tx.movimientoStock.create({
+            data: {
+              productoId: det.productoId,
+              tipo: TipoMovimientoStock.ENTRADA, // Entra lógicamente al sistema de nuevo
+              motivo: MotivoMovimientoStock.AJUSTE_POSITIVO,
+              cantidad: item.unitsVendidas,
+              stockPrevio: productoAntes!.stockDisponibleUnits, 
+              stockPosterior: productoDespues.stockDisponibleUnits, // No cambia el disponible, pero documentamos
+              observaciones: `Reverso Venta Liq #${liquidacionId} (Consignación #${consignacionId})`
+            }
+          });
+        }
       }
 
       // Revertir venta y saldo
@@ -149,18 +165,14 @@ export async function PUT(req: Request, { params }: RouteParams) {
         await tx.venta.delete({ where: { id: liqExistente.venta.id } });
       }
 
-      // Borrar items viejos de la liquidación
+      // Borrar items viejos
       await tx.liquidacionItem.deleteMany({ where: { liquidacionId } });
 
-      // 2) Preparar nuevos datos
-      const detallesMap = new Map(
-        liqExistente.consignacion.detalles.map((d) => [d.id, d])
-      );
-
+      // --- 2) PREPARAR Y APLICAR NUEVOS DATOS ---
+      const detallesMap = new Map(liqExistente.consignacion.detalles.map((d) => [d.id, d]));
       let nuevoTotalVenta = 0;
       const soldByProduct = new Map<number, { units: number; precioUnitario: number }>();
 
-      // Validar stock pendiente REAL
       for (const it of parsed.data.items) {
         const det = detallesMap.get(it.consignacionDetalleId);
         if (!det) throw new Error("DETALLE_NO_PERTENECE");
@@ -168,21 +180,11 @@ export async function PUT(req: Request, { params }: RouteParams) {
         const vendidas = it.unitsVendidas ?? 0;
         const devueltas = it.unitsDevueltas ?? 0;
 
-        const freshDet = await tx.consignacionDetalle.findUniqueOrThrow({
-          where: { id: det.id },
-        });
+        const freshDet = await tx.consignacionDetalle.findUniqueOrThrow({ where: { id: det.id } });
+        const pendiente = freshDet.unitsEntregadas - freshDet.unitsVendidasAcum - freshDet.unitsDevueltasAcum;
 
-        const pendiente =
-          freshDet.unitsEntregadas - freshDet.unitsVendidasAcum - freshDet.unitsDevueltasAcum;
+        if (vendidas + devueltas > pendiente) throw new Error(`EXCEDE_PENDIENTE:${det.id}`);
 
-        if (vendidas + devueltas > pendiente) {
-          throw new Error(`EXCEDE_PENDIENTE:${det.id}`);
-        }
-
-        affectedProductIds.add(det.productoId);
-
-        // OJO: acá vos venías usando precioVenta del producto.
-        // Si querés usar el precio fijado en consignación, reemplazá por freshDet.precioUnitario si existe.
         const precioUnit = Number(det.producto.precioVenta);
 
         if (vendidas > 0) {
@@ -203,14 +205,50 @@ export async function PUT(req: Request, { params }: RouteParams) {
           },
         });
 
+        const productoAntes = await tx.producto.findUnique({ where: { id: det.productoId } });
+
         // Aplicar nuevo stock
-        await tx.producto.update({
+        const productoDespues = await tx.producto.update({
           where: { id: det.productoId },
           data: {
             stockConsignadoUnits: { decrement: vendidas + devueltas },
             ...(devueltas > 0 ? { stockDisponibleUnits: { increment: devueltas } } : {}),
           },
         });
+
+        // Auditoría Nuevo: Devolución (Entra stock disponible)
+        if (devueltas > 0) {
+          await tx.movimientoStock.create({
+            data: {
+              productoId: det.productoId,
+              tipo: TipoMovimientoStock.ENTRADA,
+              motivo: MotivoMovimientoStock.DEVOLUCION_CLIENTE,
+              cantidad: devueltas,
+              stockPrevio: productoAntes!.stockDisponibleUnits,
+              stockPosterior: productoDespues.stockDisponibleUnits,
+              observaciones: `Devolución Corregida Liq #${liquidacionId}`
+            }
+          });
+        }
+
+        // Auditoría Nuevo: Venta (Sale definitivamente)
+        if (vendidas > 0) {
+          await tx.movimientoStock.create({
+            data: {
+              productoId: det.productoId,
+              tipo: TipoMovimientoStock.SALIDA,
+              motivo: MotivoMovimientoStock.VENTA,
+              cantidad: vendidas,
+              stockPrevio: productoAntes!.stockDisponibleUnits,
+              stockPosterior: productoDespues.stockDisponibleUnits,
+              observaciones: `Venta Corregida Liq #${liquidacionId}`
+            }
+          });
+        }
+
+        // Evaluar alertas por los nuevos movimientos
+        const alerta = evaluateStockAlert(productoDespues, configGlobal);
+        if (alerta) notificationsQueue.push(alerta);
       }
 
       // 3) Recrear items de liquidación
@@ -251,13 +289,8 @@ export async function PUT(req: Request, { params }: RouteParams) {
       }
 
       // 5) Recalcular cierre
-      const detallesFinales = await tx.consignacionDetalle.findMany({
-        where: { consignacionId },
-      });
-
-      const quedaPendiente = detallesFinales.some(
-        (d) => d.unitsEntregadas - d.unitsVendidasAcum - d.unitsDevueltasAcum > 0
-      );
+      const detallesFinales = await tx.consignacionDetalle.findMany({ where: { consignacionId } });
+      const quedaPendiente = detallesFinales.some((d) => d.unitsEntregadas - d.unitsVendidasAcum - d.unitsDevueltasAcum > 0);
 
       if (!quedaPendiente) {
         await tx.consignacion.update({
@@ -266,47 +299,30 @@ export async function PUT(req: Request, { params }: RouteParams) {
         });
       }
 
-      // 6) Retornar liquidación COMPLETA para actualizar UI
-      const updated = await tx.liquidacion.findUnique({
+      // 6) Retornar liquidación COMPLETA
+      return await tx.liquidacion.findUnique({
         where: { id: liquidacionId },
         include: {
           items: { include: { detalle: { include: { producto: true } } } },
           venta: { include: { detalles: true } },
           consignacion: {
-            include: {
-              cliente: true,
-              detalles: { include: { producto: true } },
-            },
+            include: { cliente: true, detalles: { include: { producto: true } } },
           },
         },
       });
-
-      return {
-        liquidacion: updated,
-        venta: nuevaVenta,
-        totalVenta: nuevoTotalVenta,
-        cerrada: !quedaPendiente,
-      };
     });
 
-    for (const pid of affectedProductIds) {
-      await notifyStockIfNeeded(pid);
-    }
+    // ✅ DISPARAR ALERTAS (Centralizado)
+    await processNotificationQueue(notificationsQueue);
 
     return NextResponse.json({ data: result }, { status: 200 });
+
   } catch (e: any) {
     const msg = String(e?.message || "");
-    if (msg === "LIQUIDACION_NO_ENCONTRADA") {
-      return NextResponse.json({ error: "No encontrada" }, { status: 404 });
-    }
-    if (msg === "DETALLE_NO_PERTENECE") {
-      return NextResponse.json({ error: "Detalle inválido" }, { status: 400 });
-    }
+    if (msg === "LIQUIDACION_NO_ENCONTRADA") return NextResponse.json({ error: "No encontrada" }, { status: 404 });
+    if (msg === "DETALLE_NO_PERTENECE") return NextResponse.json({ error: "Detalle inválido" }, { status: 400 });
     if (msg.startsWith("EXCEDE_PENDIENTE:")) {
-      return NextResponse.json(
-        { error: "Excede el pendiente", detalleId: Number(msg.split(":")[1]) },
-        { status: 409 }
-      );
+      return NextResponse.json({ error: "Excede el pendiente", detalleId: Number(msg.split(":")[1]) }, { status: 409 });
     }
     console.error(e);
     return NextResponse.json({ error: "Error inesperado" }, { status: 500 });

@@ -1,4 +1,4 @@
-// src/constants/notification-types.ts
+// src/lib/notificationes/notificaciones-types.ts
 
 // 1. Enum con los tipos (Para usar en el código)
 export enum NOTIFICATION_TYPE {

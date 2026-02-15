@@ -1,17 +1,16 @@
-//src/app/api/consignaciones/[id]/route.ts
-
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/requireAuth";
 import { createLiquidacionSchema } from "@/lib/validators/consignacion";
-import { notifyStockIfNeeded } from "@/lib/notifyStock";
 import { z } from "zod";
+import { TipoMovimientoStock, MotivoMovimientoStock } from "@prisma/client";
+
+// ✅ Imports Centralizados de Config y Notificaciones
+import { obtenerConfiguracionGlobal } from "@/lib/config";
+import { evaluateStockAlert, processNotificationQueue } from "@/lib/stock-alerts";
 
 type RouteParams = { params: Promise<{ id: string }> };
 
-/**
- * Esquema para actualizar la estructura base de la consignación
- */
 const updateConsignacionSchema = z.object({
   items: z.array(
     z.object({
@@ -31,9 +30,7 @@ export async function GET(_: Request, { params }: RouteParams) {
   const { id: rawId } = await params;
   const id = Number(rawId);
 
-  if (!Number.isFinite(id)) {
-    return NextResponse.json({ error: "ID inválido" }, { status: 400 });
-  }
+  if (!Number.isFinite(id)) return NextResponse.json({ error: "ID inválido" }, { status: 400 });
 
   const consignacion = await prisma.consignacion.findUnique({
     where: { id },
@@ -44,9 +41,7 @@ export async function GET(_: Request, { params }: RouteParams) {
         orderBy: { id: "desc" },
         include: {
           items: {
-            include: {
-              detalle: { include: { producto: true } },
-            },
+            include: { detalle: { include: { producto: true } } },
           },
           venta: { include: { detalles: true } },
         },
@@ -54,16 +49,13 @@ export async function GET(_: Request, { params }: RouteParams) {
     },
   });
 
-  if (!consignacion) {
-    return NextResponse.json({ error: "No encontrada" }, { status: 404 });
-  }
+  if (!consignacion) return NextResponse.json({ error: "No encontrada" }, { status: 404 });
 
   return NextResponse.json({ data: consignacion });
 }
 
 /**
- * PUT: Corregir estructura base (Unidades Entregadas)
- * Este método ajusta el stock disponible y consignado sin afectar ventas.
+ * PUT: Corregir estructura base (Ajuste Manual)
  */
 export async function PUT(req: Request, { params }: RouteParams) {
   const auth = await requireAuth();
@@ -72,9 +64,7 @@ export async function PUT(req: Request, { params }: RouteParams) {
   const { id: rawId } = await params;
   const consignacionId = Number(rawId);
 
-  if (!Number.isFinite(consignacionId)) {
-    return NextResponse.json({ error: "ID inválido" }, { status: 400 });
-  }
+  if (!Number.isFinite(consignacionId)) return NextResponse.json({ error: "ID inválido" }, { status: 400 });
 
   const body = await req.json().catch(() => null);
   const parsed = updateConsignacionSchema.safeParse(body);
@@ -83,7 +73,9 @@ export async function PUT(req: Request, { params }: RouteParams) {
     return NextResponse.json({ error: "Validación fallida", details: parsed.error.flatten() }, { status: 400 });
   }
 
-  const affectedProductIds = new Set<number>();
+  // ✅ 1. Cola de Alertas
+  const configGlobal = await obtenerConfiguracionGlobal();
+  const notificationsQueue: any[] = [];
 
   try {
     const updated = await prisma.$transaction(async (tx) => {
@@ -98,12 +90,9 @@ export async function PUT(req: Request, { params }: RouteParams) {
       const oldDetalles = new Map(consignacion.detalles.map(d => [d.productoId, d]));
       const newItems = parsed.data.items;
 
-      // 1. Procesar cada item del payload
+      // 1. Procesar cada item del payload (Ajustes hacia arriba o abajo)
       for (const item of newItems) {
-        affectedProductIds.add(item.productoId);
         const oldDet = oldDetalles.get(item.productoId);
-        
-        // Unidades que ya fueron liquidadas (vendidas + devueltas)
         const yaProcesado = oldDet ? (oldDet.unitsVendidasAcum + oldDet.unitsDevueltasAcum) : 0;
         
         if (item.unitsEntregadas < yaProcesado) {
@@ -112,22 +101,40 @@ export async function PUT(req: Request, { params }: RouteParams) {
 
         const deltaEntregadas = item.unitsEntregadas - (oldDet?.unitsEntregadas ?? 0);
 
-        // Si aumentamos entregadas, verificar stock disponible físico
-        if (deltaEntregadas > 0) {
-          const producto = await tx.producto.findUnique({ where: { id: item.productoId } });
-          if (!producto || producto.stockDisponibleUnits < deltaEntregadas) {
+        if (deltaEntregadas !== 0) {
+          const productoAntes = await tx.producto.findUnique({ where: { id: item.productoId } });
+          if (!productoAntes) throw new Error(`Producto ${item.productoId} no encontrado`);
+
+          if (deltaEntregadas > 0 && productoAntes.stockDisponibleUnits < deltaEntregadas) {
             throw new Error(`Stock insuficiente para producto ${item.productoId}`);
           }
-        }
 
-        // Ajustar Stock Global
-        await tx.producto.update({
-          where: { id: item.productoId },
-          data: {
-            stockDisponibleUnits: { decrement: deltaEntregadas },
-            stockConsignadoUnits: { increment: deltaEntregadas }
-          }
-        });
+          // Ajustar Stock Global
+          const productoDespues = await tx.producto.update({
+            where: { id: item.productoId },
+            data: {
+              stockDisponibleUnits: { decrement: deltaEntregadas },
+              stockConsignadoUnits: { increment: deltaEntregadas }
+            }
+          });
+
+          // ✅ REGISTRO DE AUDITORÍA (AJUSTE)
+          await tx.movimientoStock.create({
+            data: {
+              productoId: item.productoId,
+              tipo: deltaEntregadas > 0 ? TipoMovimientoStock.SALIDA : TipoMovimientoStock.ENTRADA,
+              motivo: deltaEntregadas > 0 ? MotivoMovimientoStock.AJUSTE_NEGATIVO : MotivoMovimientoStock.AJUSTE_POSITIVO,
+              cantidad: Math.abs(deltaEntregadas),
+              stockPrevio: productoAntes.stockDisponibleUnits,
+              stockPosterior: productoDespues.stockDisponibleUnits,
+              observaciones: `Ajuste manual Consignación #${consignacionId}`
+            }
+          });
+
+          // Evaluar alertas
+          const alerta = evaluateStockAlert(productoDespues, configGlobal);
+          if (alerta) notificationsQueue.push(alerta);
+        }
 
         // Crear o Actualizar detalle
         if (oldDet) {
@@ -148,7 +155,7 @@ export async function PUT(req: Request, { params }: RouteParams) {
         }
       }
 
-      // 2. Eliminar productos que ya no están en la lista (si no tienen movimientos)
+      // 2. Eliminar productos que ya no están en la lista
       const newProductIds = new Set(newItems.map(i => i.productoId));
       for (const [prodId, oldDet] of oldDetalles.entries()) {
         if (!newProductIds.has(prodId)) {
@@ -156,8 +163,10 @@ export async function PUT(req: Request, { params }: RouteParams) {
             throw new Error(`No se puede eliminar el producto ${prodId} porque ya tiene liquidaciones`);
           }
 
-          // Devolver stock al eliminar de la consignación
-          await tx.producto.update({
+          const productoAntes = await tx.producto.findUnique({ where: { id: prodId } });
+
+          // Devolver stock al almacén
+          const productoDespues = await tx.producto.update({
             where: { id: prodId },
             data: {
               stockDisponibleUnits: { increment: oldDet.unitsEntregadas },
@@ -165,8 +174,20 @@ export async function PUT(req: Request, { params }: RouteParams) {
             }
           });
 
+          // ✅ AUDITORÍA: REVERSO DE CONSIGNACIÓN
+          await tx.movimientoStock.create({
+            data: {
+              productoId: prodId,
+              tipo: TipoMovimientoStock.ENTRADA,
+              motivo: MotivoMovimientoStock.AJUSTE_POSITIVO,
+              cantidad: oldDet.unitsEntregadas,
+              stockPrevio: productoAntes!.stockDisponibleUnits,
+              stockPosterior: productoDespues.stockDisponibleUnits,
+              observaciones: `Eliminado de Consignación #${consignacionId}`
+            }
+          });
+
           await tx.consignacionDetalle.delete({ where: { id: oldDet.id } });
-          affectedProductIds.add(prodId);
         }
       }
 
@@ -176,8 +197,8 @@ export async function PUT(req: Request, { params }: RouteParams) {
       });
     });
 
-    // Notificar stock fuera de la tx
-    for (const pid of affectedProductIds) await notifyStockIfNeeded(pid);
+    // ✅ DISPARAR ALERTAS
+    await processNotificationQueue(notificationsQueue);
 
     return NextResponse.json({ data: updated });
   } catch (e: any) {
@@ -195,9 +216,7 @@ export async function POST(req: Request, { params }: RouteParams) {
   const { id: rawId } = await params;
   const consignacionId = Number(rawId);
 
-  if (!Number.isFinite(consignacionId)) {
-    return NextResponse.json({ error: "ID inválido" }, { status: 400 });
-  }
+  if (!Number.isFinite(consignacionId)) return NextResponse.json({ error: "ID inválido" }, { status: 400 });
 
   const body = await req.json().catch(() => null);
   const parsed = createLiquidacionSchema.safeParse(body);
@@ -205,6 +224,10 @@ export async function POST(req: Request, { params }: RouteParams) {
   if (!parsed.success) {
     return NextResponse.json({ error: "Validación fallida", details: parsed.error.flatten() }, { status: 400 });
   }
+
+  // ✅ 1. Cola de Alertas
+  const configGlobal = await obtenerConfiguracionGlobal();
+  const notificationsQueue: any[] = [];
 
   try {
     const result = await prisma.$transaction(async (tx) => {
@@ -220,6 +243,7 @@ export async function POST(req: Request, { params }: RouteParams) {
       let totalVenta = 0;
       const soldByProduct = new Map<number, { units: number; precioUnitario: number }>();
 
+      // A) Cálculos previos
       for (const it of parsed.data.items) {
         const det = detallesMap.get(it.consignacionDetalleId);
         if (!det) throw new Error("DETALLE_NO_PERTENECE");
@@ -242,6 +266,7 @@ export async function POST(req: Request, { params }: RouteParams) {
         }
       }
 
+      // B) Crear Liquidación Cabecera
       const liquidacion = await tx.liquidacion.create({
         data: {
           consignacionId,
@@ -259,25 +284,66 @@ export async function POST(req: Request, { params }: RouteParams) {
         },
       });
 
+      // C) Aplicar Liquidación (Stock y Auditoría)
       for (const it of parsed.data.items) {
         const det = detallesMap.get(it.consignacionDetalleId)!;
+        const vendidas = it.unitsVendidas ?? 0;
+        const devueltas = it.unitsDevueltas ?? 0;
+
         await tx.consignacionDetalle.update({
           where: { id: det.id },
           data: {
-            unitsVendidasAcum: { increment: it.unitsVendidas ?? 0 },
-            unitsDevueltasAcum: { increment: it.unitsDevueltas ?? 0 },
+            unitsVendidasAcum: { increment: vendidas },
+            unitsDevueltasAcum: { increment: devueltas },
           },
         });
 
-        await tx.producto.update({
+        const productoAntes = await tx.producto.findUnique({ where: { id: det.productoId } });
+
+        const productoDespues = await tx.producto.update({
           where: { id: det.productoId },
           data: {
-            stockConsignadoUnits: { decrement: (it.unitsVendidas ?? 0) + (it.unitsDevueltas ?? 0) },
-            ...(it.unitsDevueltas && it.unitsDevueltas > 0 ? { stockDisponibleUnits: { increment: it.unitsDevueltas } } : {}),
+            stockConsignadoUnits: { decrement: vendidas + devueltas },
+            ...(devueltas > 0 ? { stockDisponibleUnits: { increment: devueltas } } : {}),
           },
         });
+
+        // ✅ AUDITORÍA: SI DEVOLVIÓ ALGO (Entra al almacén)
+        if (devueltas > 0) {
+          await tx.movimientoStock.create({
+            data: {
+              productoId: det.productoId,
+              tipo: TipoMovimientoStock.ENTRADA,
+              motivo: MotivoMovimientoStock.DEVOLUCION_CLIENTE,
+              cantidad: devueltas,
+              stockPrevio: productoAntes!.stockDisponibleUnits,
+              stockPosterior: productoDespues.stockDisponibleUnits,
+              observaciones: `Devolución s/Consignación #${consignacionId}`
+            }
+          });
+        }
+
+        // ✅ AUDITORÍA: SI VENDIÓ ALGO (Sale definitivamente)
+        if (vendidas > 0) {
+          await tx.movimientoStock.create({
+            data: {
+              productoId: det.productoId,
+              tipo: TipoMovimientoStock.SALIDA,
+              motivo: MotivoMovimientoStock.VENTA,
+              cantidad: vendidas,
+              stockPrevio: productoAntes!.stockDisponibleUnits,
+              stockPosterior: productoDespues.stockDisponibleUnits,
+              observaciones: `Venta Liquidada s/Consignación #${consignacionId}`
+            }
+          });
+        }
+
+        // Evaluar alertas (Aunque el stock devuelto suma, si está muy bajo avisa)
+        const alerta = evaluateStockAlert(productoDespues, configGlobal);
+        if (alerta) notificationsQueue.push(alerta);
       }
 
+      // D) Crear Venta Asociada si hubo ventas
       if (totalVenta > 0) {
         await tx.venta.create({
           data: {
@@ -301,12 +367,16 @@ export async function POST(req: Request, { params }: RouteParams) {
         });
       }
 
+      // E) Cerrar si está terminada
       const detallesFinales = await tx.consignacionDetalle.findMany({ where: { consignacionId } });
       const cerrada = !detallesFinales.some(d => (d.unitsEntregadas - d.unitsVendidasAcum - d.unitsDevueltasAcum) > 0);
       if (cerrada) await tx.consignacion.update({ where: { id: consignacionId }, data: { estado: "CERRADA" } });
 
       return { liquidacion, cerrada };
     });
+
+    // ✅ DISPARAR ALERTAS
+    await processNotificationQueue(notificationsQueue);
 
     return NextResponse.json({ data: result }, { status: 201 });
   } catch (e: any) {
