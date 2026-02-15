@@ -2,7 +2,11 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/requireAuth";
 import { createLiquidacionBodySchema } from "@/lib/validators/liquidacion";
-import { notifyStockIfNeeded } from "@/lib/notifyStock";
+import { TipoMovimientoStock, MotivoMovimientoStock } from "@prisma/client";
+
+// ✅ Imports Centralizados de Config y Notificaciones
+import { obtenerConfiguracionGlobal } from "@/lib/config";
+import { evaluateStockAlert, processNotificationQueue } from "@/lib/stock-alerts";
 
 type RouteParams = {
   params: Promise<{ consignacionId: string }>;
@@ -30,7 +34,10 @@ export async function POST(req: Request, { params }: RouteParams) {
   }
 
   const { items } = parsed.data;
-  const affectedProductIds = new Set<number>();
+
+  // ✅ 1. Cola de Alertas
+  const configGlobal = await obtenerConfiguracionGlobal();
+  const notificationsQueue: any[] = [];
 
   try {
     const result = await prisma.$transaction(async (tx) => {
@@ -67,8 +74,6 @@ export async function POST(req: Request, { params }: RouteParams) {
           throw new Error(`EXCEDE_PENDIENTE:${det.id}`);
         }
 
-        affectedProductIds.add(det.productoId);
-
         // Actualizar acumulados
         await tx.consignacionDetalle.update({
           where: { id: det.id },
@@ -78,14 +83,51 @@ export async function POST(req: Request, { params }: RouteParams) {
           },
         });
 
+        // 🟢 CAPTURAR STOCK PREVIO
+        const productoAntes = await tx.producto.findUnique({ where: { id: det.productoId } });
+
         // Actualizar stock producto
-        await tx.producto.update({
+        const productoDespues = await tx.producto.update({
           where: { id: det.productoId },
           data: {
             stockConsignadoUnits: { decrement: vendidas + devueltas },
             ...(devueltas > 0 ? { stockDisponibleUnits: { increment: devueltas } } : {}),
           },
         });
+
+        // ✅ AUDITORÍA: SI DEVOLVIÓ ALGO (Entra al almacén)
+        if (devueltas > 0) {
+          await tx.movimientoStock.create({
+            data: {
+              productoId: det.productoId,
+              tipo: TipoMovimientoStock.ENTRADA,
+              motivo: MotivoMovimientoStock.DEVOLUCION_CLIENTE,
+              cantidad: devueltas,
+              stockPrevio: productoAntes!.stockDisponibleUnits,
+              stockPosterior: productoDespues.stockDisponibleUnits,
+              observaciones: `Devolución s/Consignación #${consignacionId}`
+            }
+          });
+        }
+
+        // ✅ AUDITORÍA: SI VENDIÓ ALGO (Sale definitivamente)
+        if (vendidas > 0) {
+          await tx.movimientoStock.create({
+            data: {
+              productoId: det.productoId,
+              tipo: TipoMovimientoStock.SALIDA,
+              motivo: MotivoMovimientoStock.VENTA,
+              cantidad: vendidas,
+              stockPrevio: productoAntes!.stockDisponibleUnits,
+              stockPosterior: productoDespues.stockDisponibleUnits,
+              observaciones: `Venta Liquidada s/Consignación #${consignacionId}`
+            }
+          });
+        }
+
+        // Evaluar alertas (Si lo devuelto no es suficiente para salir de zona de peligro)
+        const alerta = evaluateStockAlert(productoDespues, configGlobal);
+        if (alerta) notificationsQueue.push(alerta);
 
         // ✅ Importante: en tu modelo, el precio de consignación está en detalle.precioUnitario
         const precioUnit = Number(det.precioUnitario ?? det.producto.precioVenta);
@@ -158,9 +200,8 @@ export async function POST(req: Request, { params }: RouteParams) {
       return nuevaLiquidacion;
     });
 
-    for (const pid of affectedProductIds) {
-      await notifyStockIfNeeded(pid);
-    }
+    // ✅ DISPARAR ALERTAS (Centralizado)
+    await processNotificationQueue(notificationsQueue);
 
     return NextResponse.json({ data: result }, { status: 201 });
   } catch (e: any) {

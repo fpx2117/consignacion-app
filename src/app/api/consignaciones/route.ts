@@ -1,11 +1,14 @@
-
-//src/app/api/consignaciones/route.ts
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/requireAuth";
 import { createConsignacionSchema } from "@/lib/validators/consignacion";
-import { notifyStockIfNeeded } from "@/lib/notifyStock";
+import { TipoMovimientoStock, MotivoMovimientoStock } from "@prisma/client";
 
+// ✅ Imports Centralizados de Config y Notificaciones
+import { obtenerConfiguracionGlobal } from "@/lib/config";
+import { evaluateStockAlert, processNotificationQueue } from "@/lib/stock-alerts";
+
+// GET: Listar consignaciones
 export async function GET() {
   const auth = await requireAuth();
   if (!auth.ok) return auth.res;
@@ -21,6 +24,7 @@ export async function GET() {
   return NextResponse.json({ data: consignaciones });
 }
 
+// POST: Crear Consignación
 export async function POST(req: Request) {
   const auth = await requireAuth();
   if (!auth.ok) return auth.res;
@@ -35,9 +39,10 @@ export async function POST(req: Request) {
     );
   }
 
-  const affectedProductIds = [...new Set(parsed.data.items.map((i) => i.productoId))];
+  // ✅ 1. Preparar Configuración y Cola de Notificaciones
+  const configGlobal = await obtenerConfiguracionGlobal();
+  const notificationsQueue: any[] = [];
 
-  // 1. OBTENER EL FACTOR DE AUMENTO
   const porcentaje = parsed.data.porcentajeAumento || 0; 
   const factorAumento = 1 + (porcentaje / 100);
 
@@ -49,7 +54,7 @@ export async function POST(req: Request) {
       });
       if (!cliente) throw new Error("CLIENTE_NO_EXISTE");
 
-      // 2. LÓGICA DE FOLIADO
+      // 2. Lógica de Foliado
       const ultimaConsignacion = await tx.consignacion.findFirst({
         where: { clienteId: parsed.data.clienteId },
         orderBy: { numeroFolio: "desc" },
@@ -58,7 +63,7 @@ export async function POST(req: Request) {
 
       const nuevoFolio = ultimaConsignacion ? ultimaConsignacion.numeroFolio + 1 : 1;
 
-      // 3. Validar productos y stock
+      // 3. Validar productos y stock (Mantenemos tu validación rápida en bloque)
       const productIds = parsed.data.items.map((i) => i.productoId);
       const productos = await tx.producto.findMany({
         where: { id: { in: productIds } },
@@ -74,16 +79,15 @@ export async function POST(req: Request) {
         }
       }
 
-      // 4. Crear consignación con el folio y el porcentaje guardado
+      // 4. Crear consignación con folio, % y precios congelados
       const consignacion = await tx.consignacion.create({
         data: {
           clienteId: parsed.data.clienteId,
           numeroFolio: nuevoFolio,
           estado: "ABIERTA",
-          porcentajeAumento: porcentaje, // 👈 Guardamos el % para referencia visual
+          porcentajeAumento: porcentaje,
           detalles: {
             create: parsed.data.items.map((it) => {
-              // 👈 LÓGICA DE PRECIO FIJADO
               const prod = mapProd.get(it.productoId);
               const precioBase = Number(prod?.precioVenta || 0);
               const precioFinal = precioBase * factorAumento;
@@ -91,39 +95,59 @@ export async function POST(req: Request) {
               return {
                 productoId: it.productoId,
                 unitsEntregadas: it.unitsEntregadas,
-                // Guardamos el precio ya calculado. 
-                // Asegúrate que tu schema.prisma tenga 'precioUnitario' en ConsignacionDetalle
                 precioUnitario: precioFinal, 
               };
             }),
           },
         },
-        include: {
-          cliente: true,
-          detalles: { include: { producto: true } },
-        },
       });
 
-      // 5. Actualizar Stock
+      // ✅ 5. Actualizar Stock, Crear Auditoría y Evaluar Alertas
       for (const it of parsed.data.items) {
-        await tx.producto.update({
+        const pAntes = mapProd.get(it.productoId); // Ya lo teníamos del paso 3
+
+        // A) Mover Stock (Sale de Disponible -> Entra a Consignado)
+        const pDespues = await tx.producto.update({
           where: { id: it.productoId },
           data: {
             stockDisponibleUnits: { decrement: it.unitsEntregadas },
             stockConsignadoUnits: { increment: it.unitsEntregadas },
           },
         });
+
+        // B) Registrar en MovimientoStock
+        await tx.movimientoStock.create({
+          data: {
+            productoId: it.productoId,
+            tipo: TipoMovimientoStock.SALIDA,
+            motivo: MotivoMovimientoStock.CONSIGNACION,
+            cantidad: it.unitsEntregadas,
+            stockPrevio: pAntes!.stockDisponibleUnits,
+            stockPosterior: pDespues.stockDisponibleUnits,
+            observaciones: `Entrega de Consignación Folio #${nuevoFolio}`
+          }
+        });
+
+        // C) Llenar la cola de alertas (Por si el depósito quedó en 0 o muy bajo)
+        const alerta = evaluateStockAlert(pDespues, configGlobal);
+        if (alerta) notificationsQueue.push(alerta);
       }
 
-      return consignacion;
+      // Devolver la consignación completa con sus relaciones (opcional, como lo tenías)
+      return await tx.consignacion.findUnique({
+        where: { id: consignacion.id },
+        include: {
+          cliente: true,
+          detalles: { include: { producto: true } },
+        },
+      });
     });
 
-    // Notificaciones
-    for (const pid of affectedProductIds) {
-      await notifyStockIfNeeded(pid);
-    }
+    // ✅ 6. DISPARAR NOTIFICACIONES DE STOCK (Centralizado y fuera de la transacción)
+    await processNotificationQueue(notificationsQueue);
 
     return NextResponse.json({ data: result }, { status: 201 });
+
   } catch (e: any) {
     const msg = String(e?.message || "");
 

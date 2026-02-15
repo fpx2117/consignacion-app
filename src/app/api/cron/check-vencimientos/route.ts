@@ -1,107 +1,133 @@
+// src/app/api/cron/check-vencimientos/route.ts
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { sendNotification } from "@/lib/socket-trigger";
-import { NOTIFICATION_TYPE } from "@/lib/notificationes/notificaciones-types";
+import { NOTIFICATION_TYPE, NOTIFICATION_CONFIG } from "@/lib/notificationes/notificaciones-types";
 
-// Para evitar que cualquiera ejecute esto, podrías validar un Header secreto
-// pero por ahora lo dejamos abierto para que puedas probarlo fácil.
+// Helper para mostrar la fecha en formato Argentino (DD/MM/YYYY)
+const formatearFecha = (fecha: Date | null) => {
+  if (!fecha) return "Fecha desconocida";
+  // Usamos timezone UTC para leer la fecha exacta que guardó Prisma sin desfasajes
+  return fecha.toLocaleDateString("es-AR", { timeZone: "UTC" });
+};
 
-export async function GET() {
+export async function GET(request: Request) {
+  const authHeader = request.headers.get('authorization');
+  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+    return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+  }
+
   try {
-    const hoy = new Date();
+    // 1. OBTENER LA HORA EXACTA EN ARGENTINA (UTC-3)
+    const now = new Date();
+    // Le restamos 3 horas al reloj del servidor (UTC)
+    const utcMinus3 = new Date(now.getTime() - (3 * 60 * 60 * 1000));
     
-    // Configuración: Avisar 7 días antes
-    const diasAnticipacion = 7; 
-    const fechaLimite = new Date();
-    fechaLimite.setDate(hoy.getDate() + diasAnticipacion);
+    // 2. CREAR "HOY" COMO LA MEDIANOCHE EXACTA DE ARGENTINA
+    // Esto evita que a las 21:00hs el servidor crea que ya es mañana
+    const hoy = new Date(Date.UTC(utcMinus3.getUTCFullYear(), utcMinus3.getUTCMonth(), utcMinus3.getUTCDate(), 0, 0, 0, 0));
 
-    // -------------------------------------------------------
-    // 1. BUSCAR PRODUCTOS YA VENCIDOS
-    // -------------------------------------------------------
+    const config = await prisma.configuracion.findUnique({ where: { id: 1 } });
+
+    if (!config?.notificarVencimientos) {
+      return NextResponse.json({ success: true, message: "Avisos de vencimiento desactivados." });
+    }
+
+    const diasAnticipacion = config.diasAnticipacionVencimiento;
+    const fechaLimite = new Date(hoy);
+    fechaLimite.setUTCDate(hoy.getUTCDate() + diasAnticipacion);
+
+    // --- 3. PRODUCTOS VENCIDOS ---
     const vencidos = await prisma.producto.findMany({
-      where: {
-        fechaVencimiento: {
-          lt: hoy, // "Less than" hoy
-          not: null
-        }
+      where: { 
+        fechaVencimiento: { lt: hoy, not: null }, // Estrictamente menor a HOY
+        activo: true,
+        OR: [
+          { stockDisponibleUnits: { gt: 0 } },
+          { stockConsignadoUnits: { gt: 0 } }
+        ]
       }
     });
 
     for (const prod of vencidos) {
-      // Usamos fingerprint para NO spamear la misma notificación 50 veces
-      const fingerprint = `EXPIRED:${prod.id}`;
+      // ✅ Huella mejorada: Incluye la fecha para que si editas el producto, te avise bien
+      const fechaStr = prod.fechaVencimiento!.toISOString().split('T')[0];
+      const fingerprint = `EXPIRED:${prod.id}:${fechaStr}`;
       
       const existe = await prisma.notification.findUnique({ where: { fingerprint } });
 
       if (!existe) {
-        // Guardar en DB
-        await prisma.notification.create({
+        const type = NOTIFICATION_TYPE.PRODUCT_EXPIRED;
+        const fechaLegible = formatearFecha(prod.fechaVencimiento);
+        
+        const savedNotif = await prisma.notification.create({
           data: {
-            type: NOTIFICATION_TYPE.PRODUCT_EXPIRED,
-            title: "Producto Vencido",
-            description: `El producto "${prod.nombre}" venció el ${prod.fechaVencimiento?.toLocaleDateString()}.`,
+            type,
+            title: NOTIFICATION_CONFIG[type].label,
+            description: `El producto "${prod.nombre}" venció el ${fechaLegible}.`,
             productoId: prod.id,
             fingerprint: fingerprint,
           }
         });
 
-        // Enviar Socket
         await sendNotification({
-          type: NOTIFICATION_TYPE.PRODUCT_EXPIRED,
-          title: "🚫 PRODUCTO VENCIDO",
-          message: `Atención: "${prod.nombre}" ha caducado. Retirar de venta.`,
-          data: { productId: prod.id }
+          type,
+          title: `🚫 ${NOTIFICATION_CONFIG[type].label}`,
+          message: `Atención: "${prod.nombre}" caducó el ${fechaLegible}.`,
+          data: { id: savedNotif.id, productId: prod.id, createdAt: savedNotif.createdAt }
         });
       }
     }
 
-    // -------------------------------------------------------
-    // 2. BUSCAR PRODUCTOS PRÓXIMOS A VENCER
-    // -------------------------------------------------------
+    // --- 4. PRÓXIMOS A VENCER ---
     const porVencer = await prisma.producto.findMany({
       where: {
-        fechaVencimiento: {
-          gt: hoy,         // Mayor a hoy
-          lte: fechaLimite, // Menor o igual a 7 días
-          not: null
-        }
+        fechaVencimiento: { gte: hoy, lte: fechaLimite, not: null }, // gte: Mayor o igual a hoy
+        activo: true,
+        OR: [
+          { stockDisponibleUnits: { gt: 0 } },
+          { stockConsignadoUnits: { gt: 0 } }
+        ]
       }
     });
 
     for (const prod of porVencer) {
-      // Fingerprint único por día (para que avise una vez al día, no cada 5 minutos)
-      const fechaSimple = new Date().toISOString().split('T')[0]; // "2023-10-27"
-      const fingerprint = `NEAR_EXP:${prod.id}:${fechaSimple}`;
-
+      // ✅ Huella: Avisa una sola vez por cada fecha de vencimiento configurada
+      const fechaStr = prod.fechaVencimiento!.toISOString().split('T')[0];
+      const fingerprint = `NEAR_EXP:${prod.id}:${fechaStr}`;
+      
       const existe = await prisma.notification.findUnique({ where: { fingerprint } });
 
       if (!existe) {
-        await prisma.notification.create({
+        const type = NOTIFICATION_TYPE.EXPIRATION_NEAR;
+        const fechaLegible = formatearFecha(prod.fechaVencimiento);
+
+        const savedNotif = await prisma.notification.create({
           data: {
-            type: NOTIFICATION_TYPE.EXPIRATION_NEAR,
-            title: "Vencimiento Cercano",
-            description: `"${prod.nombre}" vence pronto (${prod.fechaVencimiento?.toLocaleDateString()}).`,
+            type,
+            title: NOTIFICATION_CONFIG[type].label,
+            description: `"${prod.nombre}" vence pronto (${fechaLegible}).`,
             productoId: prod.id,
             fingerprint: fingerprint,
           }
         });
 
         await sendNotification({
-          type: NOTIFICATION_TYPE.EXPIRATION_NEAR,
-          title: "⚠️ Vencimiento Próximo",
-          message: `Ojo: "${prod.nombre}" vence en menos de ${diasAnticipacion} días.`,
-          data: { productId: prod.id }
+          type,
+          title: `⚠️ ${NOTIFICATION_CONFIG[type].label}`,
+          message: `Ojo: "${prod.nombre}" vence el ${fechaLegible}.`,
+          data: { id: savedNotif.id, productId: prod.id, createdAt: savedNotif.createdAt }
         });
       }
     }
 
     return NextResponse.json({ 
       success: true, 
-      procesados: { vencidos: vencidos.length, porVencer: porVencer.length } 
+      procesados: { vencidos: vencidos.length, porVencer: porVencer.length }
     });
 
   } catch (error) {
-    console.error(error);
-    return NextResponse.json({ error: "Error en cron" }, { status: 500 });
+    console.error("CRON_ERROR:", error);
+    return NextResponse.json({ error: "Error interno" }, { status: 500 });
   }
 }

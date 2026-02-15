@@ -56,8 +56,14 @@ enum MetodoPago {
 }
 
 model Configuracion {
-  id             Int @id @default(1) // Siempre será ID 1
-  minStockGlobal Int @default(5) // El admin puede cambiar esto desde el panel
+  id                          Int @id @default(1) // Siempre será ID 1
+  minStockGlobal              Int @default(5) // El admin puede cambiar esto desde el panel
+  diasAnticipacionVencimiento Int @default(7) // <--- Nuevo campo
+
+  // Interruptores de notificación
+  notificarVencimientos Boolean @default(true)
+  notificarStockBajo    Boolean @default(true)
+  notificarVentas       Boolean @default(true)
 }
 
 model Usuario {
@@ -92,8 +98,8 @@ model Cliente {
 model Branding {
   id           Int      @id @default(autoincrement())
   businessName String
-  logoMime     String?  // "image/png", "image/jpeg", "image/webp"
-  logoData     Bytes?   // BLOB
+  logoMime     String? // "image/png", "image/jpeg", "image/webp"
+  logoData     Bytes? // BLOB
   primaryColor String   @default("#111827") // gris oscuro
   footerText   String?
   phone        String?
