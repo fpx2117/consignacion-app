@@ -1,12 +1,13 @@
-import "dotenv/config";
-import bcrypt from "bcryptjs";
 import { PrismaClient, RolUsuario } from "@prisma/client";
-import { SUBSCRIPTION_PLANS } from "@/constants/subscriptions";
+import { PrismaPg } from "@prisma/adapter-pg";
+import pg from "pg";
+import bcrypt from "bcryptjs";
+import { SUBSCRIPTION_PLANS } from "../src/constants/subscriptions";
 
-// Inicialización estándar de Prisma (El adaptador suele ser necesario solo en Edge Runtime)
-// Para un script de seed, la conexión directa es más estable
-const prisma = new PrismaClient();
-
+const connectionString = process.env.DATABASE_URL;
+const pool = new pg.Pool({ connectionString });
+const adapter = new PrismaPg(pool);
+const prisma = new PrismaClient({ adapter });
 async function seedUsers() {
   console.log("🔐 Sincronizando usuarios...");
 
@@ -20,19 +21,29 @@ async function seedUsers() {
 
   const adminHash = await bcrypt.hash(adminPassword, 10);
 
-  await prisma.usuario.upsert({
+  console.log(`Checking if admin exists: ${adminEmail}...`);
+  const existingAdmin = await prisma.usuario.findUnique({
     where: { email: adminEmail },
-    update: {
-      hash: adminHash, // Actualizamos el hash por si cambió en el .env
-    },
-    create: {
-      nombre: "Administrador",
-      email: adminEmail,
-      hash: adminHash,
-      rol: RolUsuario.ADMIN,
-      activo: true,
-    },
   });
+
+  if (existingAdmin) {
+    console.log(`Admin found. Updating hash...`);
+    await prisma.usuario.update({
+      where: { email: adminEmail },
+      data: { hash: adminHash },
+    });
+  } else {
+    console.log(`Admin not found. Creating...`);
+    await prisma.usuario.create({
+      data: {
+        nombre: "Administrador",
+        email: adminEmail,
+        hash: adminHash,
+        rol: RolUsuario.ADMIN,
+        activo: true,
+      },
+    });
+  }
   console.log("✅ Admin verificado:", adminEmail);
 }
 
@@ -41,6 +52,7 @@ async function seedPlans() {
 
   // Usamos Promise.all para que sea más rápido, o un for...of para seguridad
   for (const plan of SUBSCRIPTION_PLANS) {
+    console.log(`Upserting plan: ${plan.id} (${plan.nombre})...`);
     await prisma.plan.upsert({
       where: { id: plan.id },
       update: {
@@ -78,6 +90,7 @@ async function seedPromoCodes() {
     const planExists = await prisma.plan.findUnique({ where: { id: promo.planId } });
 
     if (planExists) {
+      console.log(`Upserting promo code: ${promo.code}...`);
       await prisma.promoCode.upsert({
         where: { code: promo.code },
         update: {

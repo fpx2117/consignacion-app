@@ -26,6 +26,15 @@ export async function GET() {
         rol: true,
         activo: true,
         createdAt: true,
+        subscription: {
+          include: {
+            plan: {
+              include: {
+                limits: true,
+              },
+            },
+          },
+        },
       },
     });
 

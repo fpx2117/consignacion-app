@@ -86,20 +86,30 @@ export function SidebarDock() {
   // Inicia explícitamente en falso para que NUNCA aparezca por error al inicio.
   const [usarControlDeCaja, setUsarControlDeCaja] = React.useState<boolean>(false);
 
+  // Permisos de suscripción
+  const [allowConsignaciones, setAllowConsignaciones] = React.useState<boolean>(true);
+
   React.useEffect(() => {
     setMounted(true);
 
-    // 0. Obtener rol del usuario autenticado
-    const fetchRole = async () => {
+    // 0. Obtener rol y permisos del usuario autenticado
+    const fetchUserData = async () => {
       try {
         const res = await fetch("/api/auth/me");
         if (res.ok) {
           const json = await res.json();
-          setUserRole(json?.data?.rol ?? "ADMIN");
+          const userData = json?.data;
+          setUserRole(userData?.rol ?? "ADMIN");
+
+          // Extraer límite de consignaciones del plan
+          const limits = userData?.subscription?.plan?.limits;
+          if (limits) {
+            setAllowConsignaciones(limits.allowConsignaciones !== false);
+          }
         }
       } catch { /* silencioso */ }
     };
-    fetchRole();
+    fetchUserData();
 
     // 1. Carga instántanea desde caché (evita flash visual)
     const cachedConfig = localStorage.getItem("usarControlDeCaja");
@@ -135,6 +145,13 @@ export function SidebarDock() {
   const isActive = (href: string) => href === "/dashboard" ? pathname === href : pathname.startsWith(href);
 
   // ✅ FILTRADO DINÁMICO REFINADO
+  const filteredBusiness = React.useMemo(() => {
+    return NAV_BUSINESS.filter(item => {
+      if (item.href === "/consignaciones" && !allowConsignaciones) return false;
+      return true;
+    });
+  }, [allowConsignaciones]);
+
   const filteredOperations = React.useMemo(() => {
     const ops = [{ label: "Venta Casual", href: "/ventas/nueva", icon: ShoppingCart }];
     // Solo agregamos Historial si está estrictamente activo
@@ -145,13 +162,13 @@ export function SidebarDock() {
   }, [usarControlDeCaja]);
 
   const filteredMobileMenu = React.useMemo(() => {
-    const items = [...NAV_BUSINESS];
+    const items = [...filteredBusiness];
     if (usarControlDeCaja) {
       items.push({ label: "Historial de Caja", href: "/caja/historial", icon: History });
     }
     items.push({ label: "Configuración", href: "/settings", icon: Settings });
     return items;
-  }, [usarControlDeCaja]);
+  }, [usarControlDeCaja, filteredBusiness]);
 
   const renderItem = (item: any, isMobile: boolean) => {
     const active = isActive(item.href);
@@ -294,7 +311,7 @@ export function SidebarDock() {
                 <>
                   {NAV_CORE.map(item => renderItem(item, false))}
                   <Separator className="w-8 mx-auto opacity-50" />
-                  {NAV_BUSINESS.map(item => renderItem(item, false))}
+                  {filteredBusiness.map(item => renderItem(item, false))}
                   <Separator className="w-8 mx-auto opacity-50" />
 
                   {/* ANIMACIÓN DE OPERACIONES */}

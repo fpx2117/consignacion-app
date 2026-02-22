@@ -14,7 +14,8 @@ const paymentConfigSchema = z.object({
         clientId: z.string().min(1, "PAYPAL_CLIENT_ID is required"),
         secret: z.string().min(1, "PAYPAL_SECRET is required"),
         webhookId: z.string().min(1, "PAYPAL_WEBHOOK_ID is required"),
-        apiUrl: z.string().url().default("https://api-m.sandbox.paypal.com"),
+        mode: z.enum(["sandbox", "live"]).default("sandbox"),
+        apiUrl: z.string().url().optional(),
     }),
 
     // BUSINESS
@@ -36,7 +37,8 @@ function loadPaymentConfig(): PaymentConfig {
             clientId: process.env.PAYPAL_CLIENT_ID,
             secret: process.env.PAYPAL_SECRET,
             webhookId: process.env.PAYPAL_WEBHOOK_ID,
-            apiUrl: process.env.PAYPAL_API_URL,
+            mode: process.env.PAYPAL_MODE || "sandbox",
+            apiUrl: process.env.PAYPAL_API_URL || (process.env.PAYPAL_MODE === "live" ? "https://api-m.paypal.com" : "https://api-m.sandbox.paypal.com"),
         },
         business: {
             defaultTrialDays: process.env.DEFAULT_TRIAL_DAYS,

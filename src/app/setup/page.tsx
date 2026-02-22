@@ -18,6 +18,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Separator } from "@/components/ui/separator";
 import {
     SUBSCRIPTION_PLANS,
     PLAN_LIMITS_DEFAULTS
@@ -26,9 +27,9 @@ import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 
 const steps = [
-    { id: 1, title: "Cuenta Admin", icon: UserPlus },
+    { id: 1, title: "Usuarios", icon: Users },
     { id: 2, title: "Suscripción", icon: CreditCard },
-    { id: 3, title: "Equipo Inicial", icon: Users },
+    { id: 3, title: "Iniciar Sistema", icon: CheckCircle2 },
 ];
 
 export default function SetupPage() {
@@ -155,10 +156,10 @@ export default function SetupPage() {
                                     <>
                                         <CardTitle className="text-2xl flex items-center gap-2">
                                             <ShieldCheck className="text-primary w-6 h-6" />
-                                            Cuenta Maestro Admin
+                                            Configuración de Usuarios
                                         </CardTitle>
                                         <CardDescription>
-                                            Este será el usuario con acceso total a la configuración y finanzas.
+                                            Crea la cuenta del administrador principal y añade a tu equipo inicial.
                                         </CardDescription>
                                     </>
                                 )}
@@ -166,79 +167,142 @@ export default function SetupPage() {
                                     <>
                                         <CardTitle className="text-2xl flex items-center gap-2">
                                             <Zap className="text-primary w-6 h-6" />
-                                            Elige tu Potencia
+                                            Elección de Plan
                                         </CardTitle>
                                         <CardDescription>
-                                            Selecciona el plan que mejor se adapte a tu volumen de negocio.
+                                            Selecciona el plan que se adapte mejor a tu negocio.
                                         </CardDescription>
                                     </>
                                 )}
                                 {currentStep === 3 && (
                                     <>
                                         <CardTitle className="text-2xl flex items-center gap-2">
-                                            <Users className="text-primary w-6 h-6" />
-                                            Configura tu Equipo
+                                            <CheckCircle2 className="text-primary w-6 h-6" />
+                                            Confirmación Final
                                         </CardTitle>
                                         <CardDescription>
-                                            Añade a tus empleados de confianza para empezar (Opcional).
+                                            Revisa los detalles y lanza tu sistema POS.
                                         </CardDescription>
                                     </>
                                 )}
                             </CardHeader>
                             <CardContent className="space-y-4">
                                 {currentStep === 1 && (
-                                    <div className="grid gap-4 py-2">
-                                        <div className="grid gap-2">
-                                            <Label htmlFor="name">Nombre Completo</Label>
-                                            <Input
-                                                id="name"
-                                                value={adminData.nombre}
-                                                onChange={(e) => setAdminData({ ...adminData, nombre: e.target.value })}
-                                                placeholder="Ej. Juan Pérez"
-                                            />
-                                        </div>
-                                        <div className="grid gap-2">
-                                            <Label htmlFor="email">Email Corporativo</Label>
-                                            <Input
-                                                id="email"
-                                                type="email"
-                                                value={adminData.email}
-                                                onChange={(e) => setAdminData({ ...adminData, email: e.target.value })}
-                                                placeholder="admin@tuempresa.com"
-                                            />
-                                        </div>
-                                        <div className="grid grid-cols-2 gap-4">
-                                            <div className="grid gap-2">
-                                                <Label htmlFor="password">Contraseña</Label>
-                                                <Input
-                                                    id="password"
-                                                    type="password"
-                                                    value={adminData.password}
-                                                    onChange={(e) => setAdminData({ ...adminData, password: e.target.value })}
-                                                />
+                                    <div className="space-y-6 py-2">
+                                        <div className="space-y-4">
+                                            <h3 className="text-lg font-semibold flex items-center gap-2">
+                                                <UserPlus className="w-5 h-5 text-primary" />
+                                                Administrador Principal
+                                            </h3>
+                                            <div className="grid gap-4">
+                                                <div className="grid gap-2">
+                                                    <Label htmlFor="name">Nombre Completo</Label>
+                                                    <Input
+                                                        id="name"
+                                                        value={adminData.nombre}
+                                                        onChange={(e) => setAdminData({ ...adminData, nombre: e.target.value })}
+                                                        placeholder="Ej. Juan Pérez"
+                                                    />
+                                                </div>
+                                                <div className="grid gap-2">
+                                                    <Label htmlFor="email">Email Corporativo</Label>
+                                                    <Input
+                                                        id="email"
+                                                        type="email"
+                                                        value={adminData.email}
+                                                        onChange={(e) => setAdminData({ ...adminData, email: e.target.value })}
+                                                        placeholder="admin@tuempresa.com"
+                                                    />
+                                                </div>
+                                                <div className="grid grid-cols-2 gap-4">
+                                                    <div className="grid gap-2">
+                                                        <Label htmlFor="password">Contraseña</Label>
+                                                        <Input
+                                                            id="password"
+                                                            type="password"
+                                                            value={adminData.password}
+                                                            onChange={(e) => setAdminData({ ...adminData, password: e.target.value })}
+                                                        />
+                                                    </div>
+                                                    <div className="grid gap-2">
+                                                        <Label htmlFor="confirm">Confirmar</Label>
+                                                        <Input
+                                                            id="confirm"
+                                                            type="password"
+                                                            value={adminData.confirmPassword}
+                                                            onChange={(e) => setAdminData({ ...adminData, confirmPassword: e.target.value })}
+                                                        />
+                                                    </div>
+                                                </div>
                                             </div>
-                                            <div className="grid gap-2">
-                                                <Label htmlFor="confirm">Confirmar</Label>
-                                                <Input
-                                                    id="confirm"
-                                                    type="password"
-                                                    value={adminData.confirmPassword}
-                                                    onChange={(e) => setAdminData({ ...adminData, confirmPassword: e.target.value })}
-                                                />
+                                        </div>
+
+                                        <Separator className="my-6" />
+
+                                        <div className="space-y-4">
+                                            <h3 className="text-lg font-semibold flex items-center gap-2">
+                                                <Users className="w-5 h-5 text-primary" />
+                                                Equipo Inicial (Opcional)
+                                            </h3>
+                                            <div className="space-y-4">
+                                                {staff.map((member, index) => (
+                                                    <div key={index} className="flex gap-4 items-end animate-in fade-in slide-in-from-left-4">
+                                                        <div className="grid gap-2 flex-1">
+                                                            <Label>Nombre</Label>
+                                                            <Input
+                                                                value={member.nombre}
+                                                                onChange={(e) => {
+                                                                    const newStaff = [...staff];
+                                                                    newStaff[index].nombre = e.target.value;
+                                                                    setStaff(newStaff);
+                                                                }}
+                                                                placeholder="Nombre Empleado"
+                                                            />
+                                                        </div>
+                                                        <div className="grid gap-2 flex-1">
+                                                            <Label>Email</Label>
+                                                            <Input
+                                                                value={member.email}
+                                                                onChange={(e) => {
+                                                                    const newStaff = [...staff];
+                                                                    newStaff[index].email = e.target.value;
+                                                                    setStaff(newStaff);
+                                                                }}
+                                                                placeholder="email@empleado.com"
+                                                            />
+                                                        </div>
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            className="text-destructive hover:bg-destructive/10"
+                                                            onClick={() => setStaff(staff.filter((_, i) => i !== index))}
+                                                        >
+                                                            &times;
+                                                        </Button>
+                                                    </div>
+                                                ))}
+                                                <Button
+                                                    variant="outline"
+                                                    className="w-full border-dashed"
+                                                    onClick={() => setStaff([...staff, { nombre: "", email: "", rol: "EMPLEADO" }])}
+                                                >
+                                                    <UserPlus className="w-4 h-4 mr-2" />
+                                                    Añadir otro empleado
+                                                </Button>
                                             </div>
                                         </div>
                                     </div>
                                 )}
 
                                 {currentStep === 2 && (
-                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 py-2">
                                         {SUBSCRIPTION_PLANS.map((plan) => (
                                             <div
                                                 key={plan.id}
                                                 onClick={() => setSelectedPlan(plan)}
                                                 className={`relative p-6 rounded-2xl border-2 cursor-pointer transition-all duration-300 hover:scale-105 ${selectedPlan.id === plan.id
-                                                        ? "border-primary bg-primary/5 shadow-inner"
-                                                        : "border-slate-200 dark:border-slate-800 hover:border-primary/50"
+                                                    ? "border-primary bg-primary/5 shadow-inner"
+                                                    : "border-slate-200 dark:border-slate-800 hover:border-primary/50"
                                                     }`}
                                             >
                                                 {plan.popular && (
@@ -265,58 +329,36 @@ export default function SetupPage() {
                                 )}
 
                                 {currentStep === 3 && (
-                                    <div className="space-y-4">
-                                        <div className="bg-amber-50 dark:bg-amber-950/30 p-3 rounded-lg border border-amber-200 dark:border-amber-900/50">
-                                            <p className="text-xs text-amber-800 dark:text-amber-200">
-                                                Tu plan <strong>{selectedPlan.nombre}</strong> permite hasta <strong>{PLAN_LIMITS_DEFAULTS[selectedPlan.id].maxUsuarios - 1}</strong> empleados adicionales.
+                                    <div className="space-y-6 py-2">
+                                        <div className="bg-primary/5 p-6 rounded-2xl border border-primary/20 space-y-4">
+                                            <h3 className="text-xl font-bold flex items-center gap-2">
+                                                <Zap className="w-5 h-5 text-primary" />
+                                                Resumen de Configuración
+                                            </h3>
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                                <div className="space-y-2">
+                                                    <p className="text-sm text-muted-foreground uppercase tracking-wider font-bold">Administrador</p>
+                                                    <p className="font-medium text-lg">{adminData.nombre}</p>
+                                                    <p className="text-sm text-muted-foreground">{adminData.email}</p>
+                                                </div>
+                                                <div className="space-y-2">
+                                                    <p className="text-sm text-muted-foreground uppercase tracking-wider font-bold">Plan Seleccionado</p>
+                                                    <p className="font-medium text-lg text-primary">{selectedPlan.nombre}</p>
+                                                    <p className="text-sm text-muted-foreground">${selectedPlan.precioARS.toLocaleString()} / mes</p>
+                                                </div>
+                                                <div className="space-y-2">
+                                                    <p className="text-sm text-muted-foreground uppercase tracking-wider font-bold">Equipo</p>
+                                                    <p className="font-medium">{staff.filter(s => s.nombre && s.email).length} Empleados iniciales</p>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div className="bg-amber-50 dark:bg-amber-950/30 p-4 rounded-xl border border-amber-200 dark:border-amber-900/50 flex gap-3">
+                                            <ShieldCheck className="w-6 h-6 text-amber-600 shrink-0" />
+                                            <p className="text-sm text-amber-800 dark:text-amber-200">
+                                                Al hacer clic en "Lanzar Sistema", se crearán las cuentas de usuario y se activará un periodo de prueba de 30 días del plan <strong>{selectedPlan.nombre}</strong>.
                                             </p>
                                         </div>
-                                        {staff.map((member, index) => (
-                                            <div key={index} className="flex gap-4 items-end animate-in fade-in slide-in-from-left-4">
-                                                <div className="grid gap-2 flex-1">
-                                                    <Label>Nombre</Label>
-                                                    <Input
-                                                        value={member.nombre}
-                                                        onChange={(e) => {
-                                                            const newStaff = [...staff];
-                                                            newStaff[index].nombre = e.target.value;
-                                                            setStaff(newStaff);
-                                                        }}
-                                                        placeholder="Nombre Empleado"
-                                                    />
-                                                </div>
-                                                <div className="grid gap-2 flex-1">
-                                                    <Label>Email</Label>
-                                                    <Input
-                                                        value={member.email}
-                                                        onChange={(e) => {
-                                                            const newStaff = [...staff];
-                                                            newStaff[index].email = e.target.value;
-                                                            setStaff(newStaff);
-                                                        }}
-                                                        placeholder="email@empleado.com"
-                                                    />
-                                                </div>
-                                                <Button
-                                                    variant="ghost"
-                                                    size="icon"
-                                                    className="text-destructive hover:bg-destructive/10"
-                                                    onClick={() => setStaff(staff.filter((_, i) => i !== index))}
-                                                >
-                                                    &times;
-                                                </Button>
-                                            </div>
-                                        ))}
-                                        {staff.length < PLAN_LIMITS_DEFAULTS[selectedPlan.id].maxUsuarios - 1 && (
-                                            <Button
-                                                variant="outline"
-                                                className="w-full border-dashed"
-                                                onClick={() => setStaff([...staff, { nombre: "", email: "", rol: "EMPLEADO" }])}
-                                            >
-                                                <UserPlus className="w-4 h-4 mr-2" />
-                                                Añadir otro empleado
-                                            </Button>
-                                        )}
                                     </div>
                                 )}
                             </CardContent>
