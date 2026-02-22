@@ -1,34 +1,30 @@
 import "dotenv/config";
 import bcrypt from "bcryptjs";
 import { PrismaClient, RolUsuario } from "@prisma/client";
-import { PrismaPg } from "@prisma/adapter-pg";
 import { SUBSCRIPTION_PLANS } from "../src/constants/subscriptions";
 
-const connectionString = process.env.DATABASE_URL;
-if (!connectionString) {
-  throw new Error("DATABASE_URL no está definido en .env");
-}
-
-const adapter = new PrismaPg({ connectionString });
-const prisma = new PrismaClient({ adapter });
+// Inicialización estándar de Prisma (El adaptador suele ser necesario solo en Edge Runtime)
+// Para un script de seed, la conexión directa es más estable
+const prisma = new PrismaClient();
 
 async function seedUsers() {
   console.log("🔐 Sincronizando usuarios...");
 
   const adminEmail = process.env.ADMIN_EMAIL;
   const adminPassword = process.env.ADMIN_PASSWORD;
-  const agustinEmail = process.env.AGUSTIN_EMAIL;
-  const agustinPassword = process.env.AGUSTIN_PASSWORD;
 
-  if (!adminEmail || !adminPassword || !agustinEmail || !agustinPassword) {
-    console.warn("⚠️ Faltan credenciales en .env, saltando creación de usuarios.");
+  if (!adminEmail || !adminPassword) {
+    console.warn("⚠️ Faltan credenciales ADMIN en .env, saltando.");
     return;
   }
 
   const adminHash = await bcrypt.hash(adminPassword, 10);
-  const admin = await prisma.usuario.upsert({
+
+  await prisma.usuario.upsert({
     where: { email: adminEmail },
-    update: {},
+    update: {
+      hash: adminHash, // Actualizamos el hash por si cambió en el .env
+    },
     create: {
       nombre: "Administrador",
       email: adminEmail,
@@ -37,28 +33,13 @@ async function seedUsers() {
       activo: true,
     },
   });
-  console.log("✅ Admin verificado:", admin.email);
-
-  /*
-  const agustinHash = await bcrypt.hash(agustinPassword, 10);
-  const agustin = await prisma.usuario.upsert({
-    where: { email: agustinEmail },
-    update: {},
-    create: {
-      nombre: "Agustin",
-      email: agustinEmail,
-      hash: agustinHash,
-      rol: RolUsuario.EMPLEADO,
-      activo: true,
-    },
-  });
-  console.log("✅ Usuario Agustin verificado:", agustin.email);
-  */
+  console.log("✅ Admin verificado:", adminEmail);
 }
 
 async function seedPlans() {
   console.log("🌱 Sincronizando planes de suscripción...");
 
+  // Usamos Promise.all para que sea más rápido, o un for...of para seguridad
   for (const plan of SUBSCRIPTION_PLANS) {
     await prisma.plan.upsert({
       where: { id: plan.id },
@@ -88,35 +69,49 @@ async function seedPromoCodes() {
   console.log("🎟️ Sincronizando códigos promocionales...");
 
   const promoCodes = [
-    { code: "WELCOME2026", planId: 2, durationDays: 90, maxUses: 100 },
-    { code: "ENTERPRISE90", planId: 3, durationDays: 90, maxUses: 50 },
+    { code: "IMPORT.VPS", planId: 2, durationDays: 90, maxUses: 1 },
+    { code: "WELCOME.VPS", planId: 3, durationDays: 90, maxUses: 1 },
   ];
 
   for (const promo of promoCodes) {
-    await prisma.promoCode.upsert({
-      where: { code: promo.code },
-      update: {},
-      create: promo,
-    });
+    // Verificamos si el planId existe antes de crear el promo code para evitar errores de FK
+    const planExists = await prisma.plan.findUnique({ where: { id: promo.planId } });
+
+    if (planExists) {
+      await prisma.promoCode.upsert({
+        where: { code: promo.code },
+        update: {
+          planId: promo.planId,
+          durationDays: promo.durationDays,
+          maxUses: promo.maxUses,
+        },
+        create: promo,
+      });
+    } else {
+      console.warn(`⚠️ Saltando promo ${promo.code}: Plan ID ${promo.planId} no encontrado.`);
+    }
   }
   console.log("✅ Códigos promocionales verificados.");
 }
 
 async function main() {
-  console.log("🚀 Iniciando Seed Master...");
+  try {
+    console.log("🚀 Iniciando Seed Master...");
+    // Conectar explícitamente
+    await prisma.$connect();
 
-  await seedUsers();
-  await seedPlans();
-  await seedPromoCodes();
+    await seedUsers();
+    await seedPlans();
+    await seedPromoCodes();
 
-  console.log("✨ Seed completada con éxito.");
+    console.log("✨ Seed completada con éxito.");
+  } catch (error) {
+    console.error("❌ Error durante la ejecución del seed:");
+    console.error(error);
+    process.exit(1);
+  } finally {
+    await prisma.$disconnect();
+  }
 }
 
-main()
-  .catch((e) => {
-    console.error("❌ Error en seed:", e);
-    process.exit(1);
-  })
-  .finally(async () => {
-    await prisma.$disconnect();
-  });
+main();
