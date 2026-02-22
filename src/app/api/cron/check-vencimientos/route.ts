@@ -22,7 +22,7 @@ export async function GET(request: Request) {
     const now = new Date();
     // Le restamos 3 horas al reloj del servidor (UTC)
     const utcMinus3 = new Date(now.getTime() - (3 * 60 * 60 * 1000));
-    
+
     // 2. CREAR "HOY" COMO LA MEDIANOCHE EXACTA DE ARGENTINA
     // Esto evita que a las 21:00hs el servidor crea que ya es mañana
     const hoy = new Date(Date.UTC(utcMinus3.getUTCFullYear(), utcMinus3.getUTCMonth(), utcMinus3.getUTCDate(), 0, 0, 0, 0));
@@ -39,7 +39,7 @@ export async function GET(request: Request) {
 
     // --- 3. PRODUCTOS VENCIDOS ---
     const vencidos = await prisma.producto.findMany({
-      where: { 
+      where: {
         fechaVencimiento: { lt: hoy, not: null }, // Estrictamente menor a HOY
         activo: true,
         OR: [
@@ -53,13 +53,13 @@ export async function GET(request: Request) {
       // ✅ Huella mejorada: Incluye la fecha para que si editas el producto, te avise bien
       const fechaStr = prod.fechaVencimiento!.toISOString().split('T')[0];
       const fingerprint = `EXPIRED:${prod.id}:${fechaStr}`;
-      
+
       const existe = await prisma.notification.findUnique({ where: { fingerprint } });
 
       if (!existe) {
         const type = NOTIFICATION_TYPE.PRODUCT_EXPIRED;
         const fechaLegible = formatearFecha(prod.fechaVencimiento);
-        
+
         const savedNotif = await prisma.notification.create({
           data: {
             type,
@@ -95,7 +95,7 @@ export async function GET(request: Request) {
       // ✅ Huella: Avisa una sola vez por cada fecha de vencimiento configurada
       const fechaStr = prod.fechaVencimiento!.toISOString().split('T')[0];
       const fingerprint = `NEAR_EXP:${prod.id}:${fechaStr}`;
-      
+
       const existe = await prisma.notification.findUnique({ where: { fingerprint } });
 
       if (!existe) {
@@ -121,9 +121,52 @@ export async function GET(request: Request) {
       }
     }
 
-    return NextResponse.json({ 
-      success: true, 
-      procesados: { vencidos: vencidos.length, porVencer: porVencer.length }
+    // --- 5. SUSCRIPCIONES VENCIDAS ---
+    const suscripcionesVencidas = await prisma.subscription.findMany({
+      where: {
+        currentPeriodEnd: { lt: now }, // Usamos currentPeriodEnd según el esquema
+        status: 'ACTIVO'
+      },
+      include: {
+        user: true
+      }
+    });
+
+    for (const sub of suscripcionesVencidas) {
+      // 1. Actualizar estado a VENCIDO
+      await prisma.subscription.update({
+        where: { id: sub.id },
+        data: { status: 'VENCIDO' }
+      });
+
+      // 2. Crear notificación para el usuario/admin
+      const type = NOTIFICATION_TYPE.SYSTEM;
+      const savedNotif = await prisma.notification.create({
+        data: {
+          type,
+          title: "Suscripción Expirada",
+          description: `La suscripción de ${sub.user.nombre} ha expirado el ${formatearFecha(sub.currentPeriodEnd)}.`,
+          userId: sub.userId,
+          fingerprint: `SUB_EXPIRED:${sub.id}`
+        }
+      });
+
+      // 3. Trigger socket
+      await sendNotification({
+        type,
+        title: "🚫 Suscripción Finalizada",
+        message: `La suscripción de ${sub.user.nombre} ha caducado.`,
+        data: { id: savedNotif.id, userId: sub.userId, createdAt: savedNotif.createdAt }
+      });
+    }
+
+    return NextResponse.json({
+      success: true,
+      procesados: {
+        vencidos: vencidos.length,
+        porVencer: porVencer.length,
+        suscripcionesExpiradas: suscripcionesVencidas.length
+      }
     });
 
   } catch (error) {

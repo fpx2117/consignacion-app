@@ -77,6 +77,7 @@ enum EstadoSuscripcion {
   ATRASADO
   CANCELADO
   INCOMPLETO
+  VENCIDO
 }
 
 enum ProveedorSuscripcion {
@@ -122,6 +123,7 @@ model Usuario {
 
   auditLogs    AuditLog[]
   userSessions UserSession[]
+  notifications Notification[] // <--- NUEVO: Relación con sus notificaciones
 
   @@index([rol])
 }
@@ -247,6 +249,10 @@ model Notification {
 
   // Estado
   read Boolean @default(false)
+
+  // Relación con Usuario (Opcional, para notificaciones privadas)
+  userId Int?
+  user   Usuario? @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   fingerprint String @unique
 
