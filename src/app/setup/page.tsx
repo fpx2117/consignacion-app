@@ -45,6 +45,8 @@ export default function SetupPage() {
         confirmPassword: "",
     });
 
+    const [businessName, setBusinessName] = useState("");
+
     const [selectedPlan, setSelectedPlan] = useState(SUBSCRIPTION_PLANS[1]); // Default to Pro
 
     const [staff, setStaff] = useState([
@@ -53,6 +55,10 @@ export default function SetupPage() {
 
     const handleNext = () => {
         if (currentStep === 1) {
+            if (!businessName) {
+                toast.error("Por favor ingresa el nombre de tu negocio");
+                return;
+            }
             if (!adminData.nombre || !adminData.email || !adminData.password) {
                 toast.error("Por favor completa todos los campos del administrador");
                 return;
@@ -76,13 +82,14 @@ export default function SetupPage() {
                 body: JSON.stringify({
                     admin: adminData,
                     planId: selectedPlan.id,
+                    businessName: businessName,
                     staff: staff.filter(s => s.nombre && s.email)
                 }),
             });
 
             if (response.ok) {
                 toast.success("¡Sistema inicializado con éxito!");
-                router.push("/login");
+                router.push("/dashboard");
             } else {
                 const error = await response.json();
                 toast.error(error.message || "Error al inicializar el sistema");
@@ -195,6 +202,23 @@ export default function SetupPage() {
                                                 Administrador Principal
                                             </h3>
                                             <div className="grid gap-4">
+                                                <div className="grid gap-2">
+                                                    <Label htmlFor="businessName">Nombre de tu Negocio / Tienda</Label>
+                                                    <Input
+                                                        id="businessName"
+                                                        value={businessName}
+                                                        onChange={(e) => setBusinessName(e.target.value)}
+                                                        placeholder="Ej. Mi Tienda POS"
+                                                        className="border-primary/20 focus:border-primary"
+                                                    />
+                                                </div>
+
+                                                <Separator className="my-2" />
+
+                                                <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mt-2">
+                                                    Administrador Principal
+                                                </h3>
+
                                                 <div className="grid gap-2">
                                                     <Label htmlFor="name">Nombre Completo</Label>
                                                     <Input
@@ -399,7 +423,7 @@ export default function SetupPage() {
                 {/* Footer Info */}
                 <p className="text-center text-xs text-slate-500">
                     Al completar este proceso, aceptas los términos de servicio y la política de privacidad.
-                    <br />Copyright © 2026 Admin Dashboard SaaS
+                    <br />Copyright © 2026 ALLDATA
                 </p>
             </div>
         </div>

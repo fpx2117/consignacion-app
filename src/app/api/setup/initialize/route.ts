@@ -15,7 +15,7 @@ export async function POST(req: Request) {
             );
         }
 
-        const { admin, planId, staff } = await req.json();
+        const { admin, planId, staff, businessName } = await req.json();
 
         if (!admin.nombre || !admin.email || !admin.password) {
             return NextResponse.json(
@@ -71,7 +71,16 @@ export async function POST(req: Request) {
                 }
             }
 
-            // b. Create Admin User
+            // b. Create Branding (Business Identity)
+            if (businessName) {
+                await tx.branding.upsert({
+                    where: { id: 1 },
+                    update: { businessName },
+                    create: { id: 1, businessName },
+                });
+            }
+
+            // c. Create Admin User
             const adminHash = await bcrypt.hash(admin.password, 10);
             const mainAdmin = await tx.usuario.create({
                 data: {
@@ -83,7 +92,7 @@ export async function POST(req: Request) {
                 },
             });
 
-            // c. Create Subscription for Admin
+            // d. Create Subscription for Admin
             const sub = await tx.subscription.create({
                 data: {
                     userId: mainAdmin.id,
@@ -138,8 +147,18 @@ export async function POST(req: Request) {
                 }
             }
 
-            return { adminId: mainAdmin.id, subId: sub.id };
+            return { adminId: mainAdmin.id, subId: sub.id, user: mainAdmin };
         });
+
+        // 3. Auto-Login: Generate JWT and set Cookie
+        const { signUserJwt, setAuthCookie } = await import("@/lib/auth");
+        const token = await signUserJwt({
+            sub: String(result.adminId),
+            email: result.user.email,
+            nombre: result.user.nombre,
+            rol: result.user.rol,
+        });
+        await setAuthCookie(token);
 
         return NextResponse.json({
             success: true,
