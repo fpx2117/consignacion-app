@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useSocket } from "@/providers/socket-provider"; // Ajusta la ruta a tu provider
 import { toast } from "sonner"; // Opcional, si quieres feedback visual
 
@@ -29,8 +29,15 @@ export function useNotifications({ limit = 50, onlyUnreadOnLoad = false }: UseNo
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(true);
 
-  // --- A. Cargar notificaciones iniciales (Fetch API) ---
+  // --- A. Cargar notificaciones iniciales (Fetch API) con Deduplicación ---
+  const lastFetchRef = useRef<number>(0);
+
   const fetchNotifications = useCallback(async () => {
+    // Evitar múltiples llamadas en menos de 2 segundos (deduplicación básica)
+    const now = Date.now();
+    if (now - lastFetchRef.current < 2000) return;
+    lastFetchRef.current = now;
+
     try {
       setLoading(true);
       const params = new URLSearchParams({
@@ -69,15 +76,15 @@ export function useNotifications({ limit = 50, onlyUnreadOnLoad = false }: UseNo
 
         // Formateamos para que coincida con la interfaz AppNotification
         const formatted: AppNotification = {
-            id: Number(newNotif.id) || Date.now(), // Fallback por si no viene ID
-            type: newNotif.type,
-            title: newNotif.title,
-            description: newNotif.message || newNotif.description, // Adaptar según qué mande tu backend
-            read: false,
-            createdAt: new Date().toISOString(),
-            producto: newNotif.data ? { id: newNotif.data.productId, nombre: "..." } : undefined
+          id: Number(newNotif.id) || Date.now(), // Fallback por si no viene ID
+          type: newNotif.type,
+          title: newNotif.title,
+          description: newNotif.message || newNotif.description, // Adaptar según qué mande tu backend
+          read: false,
+          createdAt: new Date().toISOString(),
+          producto: newNotif.data ? { id: newNotif.data.productId, nombre: "..." } : undefined
         };
-        
+
         return [formatted, ...prev];
       });
 
@@ -103,13 +110,13 @@ export function useNotifications({ limit = 50, onlyUnreadOnLoad = false }: UseNo
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ markAll: true }),
       });
-      
+
       toast.success("Notificaciones marcadas como leídas");
 
     } catch (error) {
       console.error("Error marcando como leídas:", error);
       // Revertir si falla (opcional)
-      fetchNotifications(); 
+      fetchNotifications();
     }
   };
 

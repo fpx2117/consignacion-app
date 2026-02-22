@@ -19,6 +19,19 @@ import {
     Info,
     History,
     Eye,
+    Globe,
+    Monitor,
+    Cpu,
+    Mail,
+    Package,
+    Settings,
+    Shield,
+    Database,
+    LogIn,
+    LogOut,
+    PlusCircle,
+    RefreshCcw,
+    Trash2,
 } from "lucide-react";
 import {
     Dialog,
@@ -30,85 +43,158 @@ import {
 
 function LogDetailFormatter({ log }: { log: any }) {
     const details = log.details;
-    if (!details) return <span className="text-muted-foreground/50">-</span>;
+    if (!details) return <span className="text-muted-foreground/30 italic">Sin datos</span>;
 
     let summary = "";
+    let Icon = Info;
+    let iconColor = "text-primary";
 
-    // Generar resumen amigable según la acción
+    // Enhanced logic for summary and icons
     switch (log.action) {
         case "LOGIN":
-            summary = `Inicio de sesión exitoso (${details.email || "usuario"})`;
+            summary = `Sesión iniciada: ${details.email || "usuario"}`;
+            Icon = LogIn;
+            iconColor = "text-emerald-500";
             break;
         case "LOGOUT":
-            summary = "Cierre de sesión manual";
+            summary = "Sesión cerrada";
+            Icon = LogOut;
+            iconColor = "text-amber-500";
             break;
         case "REVOKE_SESSION":
-            summary = `Sesión revocada para usuario ${details.revokedUserId || "ID: " + details.revokedSessionId}`;
+            summary = "Sesión revocada forzosamente";
+            Icon = Shield;
+            iconColor = "text-red-500";
             break;
         case "STOCK_ADJUSTMENT":
-            summary = `Ajuste de stock: ${details.cantidad > 0 ? "+" : ""}${details.cantidad} unidades`;
+            summary = `Ajuste stock (${details.cantidad > 0 ? "+" : ""}${details.cantidad})`;
+            Icon = RefreshCcw;
+            iconColor = "text-blue-500";
             break;
         case "CREATE_PRODUCT":
-            summary = `Producto creado: ${details.nombre}`;
+            summary = `Producto nuevo: ${details.nombre}`;
+            Icon = PlusCircle;
+            iconColor = "text-emerald-500";
             break;
         case "UPDATE_PRODUCT":
-            summary = `Producto actualizado: ${details.nombre}`;
+            summary = `Edición: ${details.nombre}`;
+            Icon = RefreshCcw;
+            iconColor = "text-sky-500";
+            break;
+        case "DELETE_PRODUCT":
+            summary = `Eliminado: ${details.nombre}`;
+            Icon = Trash2;
+            iconColor = "text-red-500";
             break;
         default:
-            summary = "Ver detalles de la acción";
+            summary = "Ver detalles técnicos";
+            Icon = Database;
     }
+
+    // Simple UA parsing for better display
+    const getDeviceInfo = (ua: string) => {
+        if (!ua) return { os: "Desconocido", browser: "Desconocido" };
+        const osMatch = ua.match(/\(([^)]+)\)/);
+        const os = osMatch ? osMatch[1].split(";")[0] : "Desconocido";
+        let browser = "Navegador";
+        if (ua.includes("Chrome")) browser = "Chrome";
+        else if (ua.includes("Firefox")) browser = "Firefox";
+        else if (ua.includes("Safari") && !ua.includes("Chrome")) browser = "Safari";
+        else if (ua.includes("Edge")) browser = "Edge";
+        return { os, browser };
+    };
+
+    const deviceInfo = getDeviceInfo(log.userAgent);
 
     return (
         <Dialog>
             <DialogTrigger asChild>
-                <button className="flex items-center gap-2 text-xs text-muted-foreground hover:text-primary transition-colors bg-muted/40 px-3 py-1.5 rounded-xl border border-border/50 group/btn">
-                    <Info className="h-3 w-3 shrink-0 text-primary/70" />
-                    <span className="truncate max-w-[150px] font-medium">{summary}</span>
-                    <Eye className="h-3 w-3 opacity-0 group-hover/btn:opacity-100 transition-opacity ml-auto" />
+                <button className="flex items-center gap-2.5 text-[11px] text-muted-foreground hover:text-primary transition-all bg-muted/30 hover:bg-primary/5 px-4 py-2 rounded-2xl border border-border/40 group/btn">
+                    <Icon className={cn("h-3.5 w-3.5 shrink-0 transition-transform group-hover/btn:scale-110", iconColor)} />
+                    <span className="truncate max-w-[160px] font-semibold tracking-tight">{summary}</span>
+                    <Eye className="h-3.5 w-3.5 opacity-0 group-hover/btn:opacity-100 transition-all translate-x-1 group-hover/btn:translate-x-0 ml-auto" />
                 </button>
             </DialogTrigger>
-            <DialogContent className="max-w-md rounded-[2rem] border-none bg-card/95 backdrop-blur-2xl shadow-2xl">
-                <DialogHeader>
-                    <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center mb-2">
-                        <Activity className="h-6 w-6 text-primary" />
-                    </div>
-                    <DialogTitle className="text-2xl font-black tracking-tight">Detalle de Auditoría</DialogTitle>
-                </DialogHeader>
-                <div className="space-y-4 py-4">
-                    <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-1">
-                            <p className="text-[10px] uppercase font-black tracking-widest text-muted-foreground">Acción</p>
-                            <p className="font-bold text-foreground">{log.action}</p>
-                        </div>
-                        <div className="space-y-1">
-                            <p className="text-[10px] uppercase font-black tracking-widest text-muted-foreground">Módulo</p>
-                            <p className="font-bold text-foreground">{log.module}</p>
-                        </div>
-                    </div>
+            <DialogContent className="max-w-md p-0 overflow-hidden rounded-[2.5rem] border-none bg-background/80 backdrop-blur-3xl shadow-3xl">
+                <div className="relative overflow-hidden">
+                    {/* Background decoration */}
+                    <div className={cn("absolute -top-24 -right-24 w-48 h-48 blur-[80px] opacity-20 rounded-full bg-primary", iconColor.replace("text-", "bg-"))} />
 
-                    <div className="space-y-2 p-4 rounded-2xl bg-muted/30 border border-border/50">
-                        <p className="text-[10px] uppercase font-black tracking-widest text-muted-foreground mb-2">Datos de la Operación</p>
-                        <div className="space-y-2">
-                            {Object.entries(details).map(([key, value]: [string, any]) => {
-                                // Filtrar campos sensibles o aburridos
-                                if (key === "hash" || key === "password") return null;
+                    <div className="p-8 pt-10 space-y-8 relative">
+                        <DialogHeader className="space-y-4">
+                            <div className="flex items-center gap-4">
+                                <div className={cn("h-14 w-14 rounded-[1.25rem] flex items-center justify-center shadow-lg border border-white/10", iconColor.replace("text-", "bg-").replace("-500", "-500/20"))}>
+                                    <Icon className={cn("h-7 w-7", iconColor)} />
+                                </div>
+                                <div className="space-y-1 text-left">
+                                    <DialogTitle className="text-2xl font-black tracking-tight leading-none group">
+                                        Detalle de Auditoría
+                                    </DialogTitle>
+                                    <p className="text-xs font-bold uppercase tracking-[0.2em] text-muted-foreground/60">{log.module} • {log.action}</p>
+                                </div>
+                            </div>
+                        </DialogHeader>
 
-                                return (
-                                    <div key={key} className="flex justify-between items-center gap-4 border-b border-border/30 pb-1.5 last:border-0">
-                                        <span className="text-xs font-bold text-muted-foreground capitalize">{key.replace(/([A-Z])/g, ' $1').trim()}</span>
-                                        <span className="text-xs font-mono text-foreground truncate max-w-[200px]">
-                                            {typeof value === 'object' ? JSON.stringify(value) : String(value)}
-                                        </span>
+                        <div className="grid grid-cols-1 gap-6">
+                            {/* DATA SECTION */}
+                            <div className="space-y-4">
+                                <div className="flex items-center gap-2 px-1">
+                                    <Settings className="h-3.5 w-3.5 text-primary/60" />
+                                    <h3 className="text-[10px] uppercase font-black tracking-widest text-muted-foreground/80">Datos de la Operación</h3>
+                                </div>
+                                <div className="grid grid-cols-1 gap-2.5 p-5 rounded-[2rem] bg-muted/30 border border-border/40 backdrop-blur-sm shadow-inner-sm">
+                                    {Object.entries(details).length > 0 ? (
+                                        Object.entries(details).map(([key, value]: [string, any]) => {
+                                            if (key === "hash" || key === "password") return null;
+                                            return (
+                                                <div key={key} className="flex flex-col gap-1 py-1.5 border-b border-border/20 last:border-0 group/field">
+                                                    <span className="text-[9px] font-black text-muted-foreground/40 uppercase tracking-wider group-hover/field:text-primary/50 transition-colors">
+                                                        {key.replace(/([A-Z])/g, ' $1').trim()}
+                                                    </span>
+                                                    <span className="text-sm font-bold text-foreground/90 break-all leading-tight">
+                                                        {typeof value === 'object' ? JSON.stringify(value, null, 2) : String(value)}
+                                                    </span>
+                                                </div>
+                                            );
+                                        })
+                                    ) : (
+                                        <p className="text-xs text-muted-foreground italic py-2">Sin metadatos adicionales</p>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* DEVICE SECTION */}
+                            <div className="space-y-4">
+                                <div className="flex items-center gap-2 px-1">
+                                    <Monitor className="h-3.5 w-3.5 text-primary/60" />
+                                    <h3 className="text-[10px] uppercase font-black tracking-widest text-muted-foreground/80">Origen y Dispositivo</h3>
+                                </div>
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div className="p-4 rounded-2xl bg-muted/20 border border-border/30 flex flex-col gap-2">
+                                        <div className="flex items-center gap-2 text-primary/70">
+                                            <Globe className="h-4 w-4" />
+                                            <span className="text-[9px] font-black uppercase tracking-widest">Dirección IP</span>
+                                        </div>
+                                        <span className="text-sm font-mono font-bold tracking-tight">{log.ipAddress || "Unknown"}</span>
                                     </div>
-                                );
-                            })}
+                                    <div className="p-4 rounded-2xl bg-muted/20 border border-border/30 flex flex-col gap-2 overflow-hidden">
+                                        <div className="flex items-center gap-2 text-primary/70">
+                                            <Cpu className="h-4 w-4" />
+                                            <span className="text-[9px] font-black uppercase tracking-widest">Sistema</span>
+                                        </div>
+                                        <div className="flex flex-col">
+                                            <span className="text-sm font-bold truncate">{deviceInfo.os}</span>
+                                            <span className="text-[10px] text-muted-foreground/70 font-medium">{deviceInfo.browser}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="p-3 rounded-xl bg-muted/10 border border-border/20 opacity-50 group hover:opacity-100 transition-opacity">
+                                    <p className="text-[9px] font-mono leading-relaxed truncate group-hover:whitespace-normal group-hover:break-all italic">
+                                        {log.userAgent || "No user agent provided"}
+                                    </p>
+                                </div>
+                            </div>
                         </div>
-                    </div>
-
-                    <div className="flex items-center gap-4 text-[10px] text-muted-foreground italic px-2">
-                        <span>IP: {log.ipAddress || "Desconocida"}</span>
-                        <span>•</span>
-                        <span className="truncate">UA: {log.userAgent || "No registrado"}</span>
                     </div>
                 </div>
             </DialogContent>

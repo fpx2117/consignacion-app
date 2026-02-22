@@ -65,6 +65,9 @@ export function SidebarDock() {
   const { setTheme, resolvedTheme } = useTheme();
   const [loggingOut, setLoggingOut] = React.useState(false);
 
+  // Hook unificado de notificaciones para evitar múltiples polling
+  const notificationsState = useNotifications({ limit: 50 });
+
   const handleLogout = async () => {
     if (loggingOut) return;
     setLoggingOut(true);
@@ -196,8 +199,14 @@ export function SidebarDock() {
     );
   };
 
-  const NotificationItem = ({ isMobile = false }) => {
-    const { hasUnread } = useNotifications();
+  const NotificationItem = ({
+    isMobile = false,
+    notificationsState
+  }: {
+    isMobile?: boolean;
+    notificationsState: ReturnType<typeof useNotifications>
+  }) => {
+    const { hasUnread } = notificationsState;
     return (
       <Sheet>
         <SheetTrigger asChild>
@@ -208,7 +217,7 @@ export function SidebarDock() {
         </SheetTrigger>
         <SheetContent side="right" className="p-0" showCloseButton={false}>
           <SheetTitle className="sr-only">Notificaciones</SheetTitle>
-          <NotificationsAnimatedPanel />
+          <NotificationsAnimatedPanel notificationsState={notificationsState} />
         </SheetContent>
       </Sheet>
     );
@@ -217,7 +226,7 @@ export function SidebarDock() {
   if (!mounted) return null;
 
   return (
-    <aside className="fixed bottom-0 left-0 z-50 w-full border-t bg-background/80 backdrop-blur-md md:top-0 md:h-screen md:w-[84px] md:border-r md:border-t-0">
+    <aside className="fixed bottom-0 left-0 z-50 w-full border-t bg-background/60 backdrop-blur-2xl md:top-0 md:h-screen md:w-[84px] md:border-r md:border-t-0">
 
       {/* MOBILE */}
       <div className="md:hidden flex justify-center py-2 pb-[max(env(safe-area-inset-bottom),0.5rem)]">
@@ -264,7 +273,7 @@ export function SidebarDock() {
               </>
             )}
             <Separator orientation="vertical" className="h-5 mx-1 opacity-50" />
-            <DockIcon><NotificationItem isMobile /></DockIcon>
+            <DockIcon><NotificationItem isMobile notificationsState={notificationsState} /></DockIcon>
             <DockIcon>
               <button onClick={() => setTheme(isDark ? "light" : "dark")} className="h-9 w-9 flex items-center justify-center rounded-full text-muted-foreground">
                 {isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
@@ -335,7 +344,7 @@ export function SidebarDock() {
               )}
 
               <Separator className="w-8 mx-auto opacity-50" />
-              <DockIcon><NotificationItem /></DockIcon>
+              <DockIcon><NotificationItem notificationsState={notificationsState} /></DockIcon>
               <DockIcon>
                 <button onClick={() => setTheme(isDark ? "light" : "dark")} className="h-10 w-10 flex items-center justify-center rounded-full text-muted-foreground hover:bg-muted transition-colors">
                   {isDark ? <Sun className="size-5" /> : <Moon className="size-5" />}

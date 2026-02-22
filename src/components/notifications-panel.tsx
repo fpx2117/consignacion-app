@@ -217,8 +217,18 @@ function FilterTabs({
 }
 
 /* ─── Main Panel ─── */
-export function NotificationsAnimatedPanel({ className }: { className?: string }) {
-  const { notifications, markAllAsRead, unreadCount, loading } = useNotifications();
+export function NotificationsAnimatedPanel({
+  className,
+  notificationsState: externalNotificationsState
+}: {
+  className?: string;
+  notificationsState?: ReturnType<typeof useNotifications>;
+}) {
+  // Usamos el estado externo si se provee, sino (fallback) usamos el interno
+  const internalNotificationsState = useNotifications();
+  const activeState = externalNotificationsState || internalNotificationsState;
+  const { notifications, markAllAsRead, unreadCount, loading } = activeState;
+
   const [showRead, setShowRead] = React.useState(true);
 
   const filteredNotifications = React.useMemo(() => {
