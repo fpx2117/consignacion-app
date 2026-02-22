@@ -12,7 +12,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { formatMoney } from "@/lib/utils-format";
-import { DashboardTendencia } from "@/lib/types";
+import { DashboardTendencia, DashboardFilter } from "@/lib/types";
 import { TrendingUp, DollarSign, Activity, Calendar, BarChart3 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -29,9 +29,10 @@ interface TendenciaSectionProps {
   trend: DashboardTendencia | null;
   period: string;
   loading: boolean;
+  filter?: DashboardFilter;
 }
 
-export function TendenciaSection({ trend, period, loading }: TendenciaSectionProps) {
+export function TendenciaSection({ trend, period, loading, filter = "all" }: TendenciaSectionProps) {
   // --- 1. HOOKS SIEMPRE AL PRINCIPIO ---
   const [metric, setMetric] = React.useState<"amounts" | "counts">("amounts");
   const [selectedMonth, setSelectedMonth] = React.useState<string>("all");
@@ -40,7 +41,7 @@ export function TendenciaSection({ trend, period, loading }: TendenciaSectionPro
   const chartData = React.useMemo(() => {
     // Si no hay datos o el periodo es "all", devolvemos array vacío pero el hook se ejecuta
     if (!trend || period === "all") return [];
-    
+
     let data = [...trend.series];
 
     if (selectedMonth !== "all") {
@@ -69,7 +70,7 @@ export function TendenciaSection({ trend, period, loading }: TendenciaSectionPro
         month: "short",
       }),
     }));
-  }, [trend, selectedMonth, period]); 
+  }, [trend, selectedMonth, period]);
 
   // --- 2. VALIDACIONES DE RENDERIZADO (DESPUÉS DE LOS HOOKS) ---
 
@@ -115,8 +116,8 @@ export function TendenciaSection({ trend, period, loading }: TendenciaSectionPro
             </SelectContent>
           </Select>
 
-          <Tabs 
-            value={metric} 
+          <Tabs
+            value={metric}
             onValueChange={(v: string) => setMetric(v as "amounts" | "counts")}
           >
             <TabsList className="h-8">
@@ -153,16 +154,20 @@ export function TendenciaSection({ trend, period, loading }: TendenciaSectionPro
                       <stop offset="5%" stopColor="#10b981" stopOpacity={0.3} />
                       <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
                     </linearGradient>
+                    <linearGradient id="colorBlue" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3} />
+                      <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
+                    </linearGradient>
                   </defs>
-                  
+
                   <CartesianGrid vertical={false} strokeDasharray="3 3" className="stroke-muted/30" />
 
-                  <XAxis 
-                    dataKey="formattedDate" 
-                    axisLine={false} 
-                    tickLine={false} 
+                  <XAxis
+                    dataKey="formattedDate"
+                    axisLine={false}
+                    tickLine={false}
                     tick={{ fontSize: 10, fill: "currentColor" }}
-                    className="fill-muted-foreground" 
+                    className="fill-muted-foreground"
                     minTickGap={25}
                   />
 
@@ -173,20 +178,32 @@ export function TendenciaSection({ trend, period, loading }: TendenciaSectionPro
                       if (!active || !payload?.length) return null;
                       const data = payload[0].payload;
                       return (
-                        <div className="rounded-xl border bg-background p-3 shadow-xl backdrop-blur-sm">
-                          <p className="text-[10px] font-bold uppercase text-muted-foreground mb-2">
-                            {new Date(data.date).toLocaleDateString("es-AR", { dateStyle: 'medium' })}
+                        <div className="rounded-xl border border-white/20 bg-black/60 p-4 shadow-2xl backdrop-blur-xl ring-1 ring-white/10">
+                          <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/80 mb-3">
+                            {new Date(data.date).toLocaleDateString("es-AR", { dateStyle: 'long' })}
                           </p>
                           <div className="space-y-2">
                             {metric === "amounts" ? (
                               <>
-                                <MetricRow label="Ventas" value={formatMoney(data.ventasTotal)} color="bg-primary" />
-                                <MetricRow label="Pagos" value={formatMoney(data.pagosTotal)} color="bg-emerald-500" highlight />
+                                {(filter === "all" || filter === "pos") && (
+                                  <MetricRow label="Ventas" value={formatMoney(data.ventasTotal)} color="bg-primary" />
+                                )}
+                                {(filter === "all" || filter === "pos") && (
+                                  <MetricRow label="Pagos" value={formatMoney(data.pagosTotal)} color="bg-emerald-500" highlight />
+                                )}
+                                {/* Si filtran por consignación, tal vez mostrar liquidaciones en montos? No tenemos monto de liquidación en tendencia point por ahora, solo count liquidaciones */}
                               </>
                             ) : (
                               <>
-                                <MetricRow label="Consignaciones" value={data.consignaciones} color="bg-primary" />
-                                <MetricRow label="Liquidaciones" value={data.liquidaciones} color="bg-emerald-500" />
+                                {(filter === "all" || filter === "consignacion") && (
+                                  <MetricRow label="Consignaciones" value={data.consignaciones} color="bg-primary" />
+                                )}
+                                {(filter === "all" || filter === "consignacion") && (
+                                  <MetricRow label="Liquidaciones" value={data.liquidaciones} color="bg-emerald-500" />
+                                )}
+                                {(filter === "all" || filter === "pos") && (
+                                  <MetricRow label="Ventas (Q)" value={data.ventasCount} color="bg-blue-500" />
+                                )}
                               </>
                             )}
                           </div>
@@ -195,22 +212,65 @@ export function TendenciaSection({ trend, period, loading }: TendenciaSectionPro
                     }}
                   />
 
-                  <Area
-                    type="monotone"
-                    dataKey={metric === "amounts" ? "ventasTotal" : "consignaciones"}
-                    stroke="hsl(var(--primary))"
-                    strokeWidth={2}
-                    fill="url(#colorPrimary)"
-                    animationDuration={1500}
-                  />
-                  <Area
-                    type="monotone"
-                    dataKey={metric === "amounts" ? "pagosTotal" : "liquidaciones"}
-                    stroke="#10b981"
-                    strokeWidth={2}
-                    fill="url(#colorSuccess)"
-                    animationDuration={1500}
-                  />
+                  {/* AREAS DEPENDIENDO DEL METRIC Y FILTER */}
+                  {metric === "amounts" ? (
+                    <>
+                      {(filter === "all" || filter === "pos") && (
+                        <Area
+                          type="monotone"
+                          dataKey="ventasTotal"
+                          stroke="hsl(var(--primary))"
+                          strokeWidth={2}
+                          fill="url(#colorPrimary)"
+                          animationDuration={1500}
+                        />
+                      )}
+                      {(filter === "all" || filter === "pos") && (
+                        <Area
+                          type="monotone"
+                          dataKey="pagosTotal"
+                          stroke="#10b981"
+                          strokeWidth={2}
+                          fill="url(#colorSuccess)"
+                          animationDuration={1500}
+                        />
+                      )}
+                    </>
+                  ) : (
+                    <>
+                      {/* COUNTS */}
+                      {(filter === "all" || filter === "consignacion") && (
+                        <Area
+                          type="monotone"
+                          dataKey="consignaciones"
+                          stroke="hsl(var(--primary))"
+                          strokeWidth={2}
+                          fill="url(#colorPrimary)"
+                          animationDuration={1500}
+                        />
+                      )}
+                      {(filter === "all" || filter === "consignacion") && (
+                        <Area
+                          type="monotone"
+                          dataKey="liquidaciones"
+                          stroke="#10b981"
+                          strokeWidth={2}
+                          fill="url(#colorSuccess)"
+                          animationDuration={1500}
+                        />
+                      )}
+                      {(filter === "all" || filter === "pos") && filter !== "all" && (
+                        <Area // Si solo es POS, mostramos count ventas
+                          type="monotone"
+                          dataKey="ventasCount"
+                          stroke="#3b82f6"
+                          strokeWidth={2}
+                          fill="url(#colorBlue)"
+                          animationDuration={1500}
+                        />
+                      )}
+                    </>
+                  )}
                 </AreaChart>
               </ResponsiveContainer>
             </div>

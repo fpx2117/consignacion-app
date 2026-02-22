@@ -3,8 +3,8 @@
 
 import * as React from "react";
 import { useParams, useRouter } from "next/navigation";
-import { 
-  Loader2, ArrowLeft, Receipt, Undo2, ShoppingCart, 
+import {
+  Loader2, ArrowLeft, Receipt, Undo2, ShoppingCart,
   TrendingUp, Package, User, ChevronRight, BadgePercent, CheckCircle2
 } from "lucide-react";
 
@@ -50,40 +50,37 @@ export default function LiquidarConsignacionPage() {
   const [saving, setSaving] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [showSuccessDialog, setShowSuccessDialog] = React.useState(false);
-  
 
-  // --- CARGA DE DATOS ---
+
   const load = React.useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const res = await apiService.getConsignacion(consignacionId);
-      const c = res.data;
+      // ✅ AHORA getConsignacion devuelve Consignacion directo
+      const c = await apiService.getConsignacion(consignacionId);
       setConsignacion(c);
 
       const porcentaje = c.porcentajeAumento || 0;
 
       const mapped: Row[] = (c.detalles ?? []).map((d) => {
-        // Calculamos cuánto queda pendiente real
         const pend = Math.max(0, d.unitsEntregadas - d.unitsVendidasAcum - d.unitsDevueltasAcum);
-        
+
         const precioBase = Number(d.producto?.precioVenta ?? 0);
-        
-        // Precio final con aumento si no estaba fijado
-        let precioFinal = Number(d.precioVentaAplicado);
+
+        // ⚠️ si no existe el campo en el type, usá (d as any).precioVentaAplicado o eliminá esta parte
+        let precioFinal = Number((d as any).precioVentaAplicado);
         if (!precioFinal || precioFinal === 0) {
-            precioFinal = precioBase * (1 + porcentaje / 100);
+          precioFinal = precioBase * (1 + porcentaje / 100);
         }
 
         return {
           consignacionDetalleId: d.id,
           productoNombre: d.producto?.nombre ?? `Producto #${d.productoId}`,
-          precioBase: precioBase,
-          precioFinal: precioFinal,
+          precioBase,
+          precioFinal,
           maxPendiente: pend,
-          // INICIALIZACIÓN: 0 Vendidas, Todo se asume Devuelto al principio (o pendiente de acción)
           unitsVendidas: 0,
-          unitsDevueltas: pend, 
+          unitsDevueltas: pend,
         };
       });
 
@@ -118,10 +115,10 @@ export default function LiquidarConsignacionPage() {
       const vendidas = val;
       const devueltas = r.maxPendiente - val;
 
-      return { 
-        ...r, 
-        unitsVendidas: vendidas, 
-        unitsDevueltas: devueltas 
+      return {
+        ...r,
+        unitsVendidas: vendidas,
+        unitsDevueltas: devueltas
       };
     }));
   };
@@ -135,17 +132,17 @@ export default function LiquidarConsignacionPage() {
   // --- VALIDACIÓN AL GUARDAR ---
   const validate = () => {
     if (actionableRows.length === 0) return "No hay pendientes para liquidar.";
-    
+
     // Verificamos coherencia (aunque la UI ya lo fuerza)
     for (const r of actionableRows) {
-       if (r.unitsVendidas + r.unitsDevueltas !== r.maxPendiente) {
-           return `Error en ${r.productoNombre}: La suma de vendidas y devueltas debe ser igual al stock (${r.maxPendiente})`;
-       }
+      if (r.unitsVendidas + r.unitsDevueltas !== r.maxPendiente) {
+        return `Error en ${r.productoNombre}: La suma de vendidas y devueltas debe ser igual al stock (${r.maxPendiente})`;
+      }
     }
 
     // Al menos un movimiento debe haber (opcional, depende de tu negocio)
     // if (totalVendidoUnits + totalDevueltoUnits === 0) return "No hay movimientos registrados.";
-    
+
     return null;
   };
 
@@ -176,27 +173,27 @@ export default function LiquidarConsignacionPage() {
     }
   };
 
- const handleDownload = () => {
-  if (!consignacionId || Number.isNaN(consignacionId)) return;
+  const handleDownload = () => {
+    if (!consignacionId || Number.isNaN(consignacionId)) return;
 
-  // 1. Abrimos la página de carga INMEDIATAMENTE.
-  // Al no haber 'await', el navegador detecta que es una acción directa del usuario y la permite.
-  const loadingUrl = `/consignacion-loading/${consignacionId}?mode=view`;
-  window.open(loadingUrl, "_blank");
+    // 1. Abrimos la página de carga INMEDIATAMENTE.
+    // Al no haber 'await', el navegador detecta que es una acción directa del usuario y la permite.
+    const loadingUrl = `/consignacion-loading/${consignacionId}?mode=view`;
+    window.open(loadingUrl, "_blank");
 
-  // 2. Redirigimos la página actual al detalle
-  router.push(`/consignaciones/${consignacionId}`);
-};
+    // 2. Redirigimos la página actual al detalle
+    router.push(`/consignaciones/${consignacionId}`);
+  };
 
-const handleClose = () => {
-  if (consignacionId) router.push(`/consignaciones/${consignacionId}`);
-};
+  const handleClose = () => {
+    if (consignacionId) router.push(`/consignaciones/${consignacionId}`);
+  };
 
   const porcentajeAumento = consignacion?.porcentajeAumento || 0;
 
   return (
     <div className="max-w-6xl mx-auto space-y-8 pb-10 px-4 sm:px-0">
-      
+
       {/* HEADER */}
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div className="space-y-1">
@@ -211,12 +208,12 @@ const handleClose = () => {
             <Badge className={cn("uppercase text-[10px]", consignacion?.estado === "ABIERTA" ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20" : "")}>
               {consignacion?.estado || "ESTADO"}
             </Badge>
-            
+
             {porcentajeAumento > 0 && (
-                <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200 hover:bg-emerald-100 gap-1">
-                    <BadgePercent className="h-3 w-3" />
-                    +{porcentajeAumento}% Aplicado
-                </Badge>
+              <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200 hover:bg-emerald-100 gap-1">
+                <BadgePercent className="h-3 w-3" />
+                +{porcentajeAumento}% Aplicado
+              </Badge>
             )}
           </div>
         </div>
@@ -225,7 +222,7 @@ const handleClose = () => {
       {error && (
         <Alert variant="destructive" className="shadow-lg border-destructive/20">
           <AlertTitle className="text-sm font-bold flex items-center gap-2">
-              Corregir errores
+            Corregir errores
           </AlertTitle>
           <AlertDescription>{error}</AlertDescription>
         </Alert>
@@ -265,7 +262,7 @@ const handleClose = () => {
 
                     return (
                       <div key={r.consignacionDetalleId} className="rounded-xl border hover:border-primary/30 bg-card shadow-sm transition-all p-5">
-                        
+
                         {/* INFO SUPERIOR DEL ITEM */}
                         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
                           <div className="space-y-1 flex-1">
@@ -280,44 +277,44 @@ const handleClose = () => {
                               </span>
                             </div>
                           </div>
-                          
+
                           {/* PROGRESO VISUAL */}
                           <div className="flex flex-col items-end gap-1.5 min-w-[100px]">
-                             <span className="text-sm font-black tracking-tighter text-primary">
-                               {r.unitsVendidas} VEND / {r.unitsDevueltas} DEV
-                             </span>
-                             <Progress value={100} className="h-2 w-28 bg-amber-200 [&>div]:bg-emerald-500" /> 
-                             {/* La barra de progreso aquí es conceptual: Verde es venta, el fondo (amber) es devolución */}
+                            <span className="text-sm font-black tracking-tighter text-primary">
+                              {r.unitsVendidas} VEND / {r.unitsDevueltas} DEV
+                            </span>
+                            <Progress value={100} className="h-2 w-28 bg-amber-200 [&>div]:bg-emerald-500" />
+                            {/* La barra de progreso aquí es conceptual: Verde es venta, el fondo (amber) es devolución */}
                           </div>
                         </div>
 
                         {/* INPUTS DE CARGA */}
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                          
+
                           {/* COLUMNA 1: VENDIDAS (EDITABLE) */}
                           <div className="space-y-2">
                             <div className="flex justify-between items-end">
-                                <Label className="text-[10px] uppercase font-black text-muted-foreground flex items-center gap-1.5">
-                                    <TrendingUp className="h-3 w-3 text-emerald-500" /> Vendidas
-                                </Label>
-                                {r.unitsVendidas > 0 && (
-                                    <span className="text-[10px] font-bold text-emerald-600 animate-in fade-in">
-                                        Subt: {formatCurrency(r.unitsVendidas * r.precioFinal)}
-                                    </span>
-                                )}
+                              <Label className="text-[10px] uppercase font-black text-muted-foreground flex items-center gap-1.5">
+                                <TrendingUp className="h-3 w-3 text-emerald-500" /> Vendidas
+                              </Label>
+                              {r.unitsVendidas > 0 && (
+                                <span className="text-[10px] font-bold text-emerald-600 animate-in fade-in">
+                                  Subt: {formatCurrency(r.unitsVendidas * r.precioFinal)}
+                                </span>
+                              )}
                             </div>
-                            
+
                             <Input
-                                type="number"
-                                className="h-12 text-lg font-bold bg-emerald-500/10 border-emerald-500/20 focus-visible:ring-emerald-500 text-emerald-700 placeholder:text-emerald-700/30"
-                                placeholder="0"
-                                min={0}
-                                max={r.maxPendiente}
-                                value={String(r.unitsVendidas)}
-                                onChange={(e) => updateRow(r.consignacionDetalleId, e.target.value)}
-                                disabled={saving}
-                                // Evita escribir caracteres no numéricos
-                                onKeyDown={(e) => ["e", "E", "+", "-"].includes(e.key) && e.preventDefault()}
+                              type="number"
+                              className="h-12 text-lg font-bold bg-emerald-500/10 border-emerald-500/20 focus-visible:ring-emerald-500 text-emerald-700 placeholder:text-emerald-700/30"
+                              placeholder="0"
+                              min={0}
+                              max={r.maxPendiente}
+                              value={String(r.unitsVendidas)}
+                              onChange={(e) => updateRow(r.consignacionDetalleId, e.target.value)}
+                              disabled={saving}
+                              // Evita escribir caracteres no numéricos
+                              onKeyDown={(e) => ["e", "E", "+", "-"].includes(e.key) && e.preventDefault()}
                             />
                           </div>
 
@@ -334,7 +331,7 @@ const handleClose = () => {
                               tabIndex={-1} // Saltamos este input con TAB para ir directo a la siguiente venta
                             />
                             <p className="text-[9px] text-right text-muted-foreground/60 uppercase font-medium">
-                                Se calcula automáticamente
+                              Se calcula automáticamente
                             </p>
                           </div>
                         </div>
@@ -378,16 +375,16 @@ const handleClose = () => {
                   {formatCurrency(totalDinero)}
                 </p>
                 {porcentajeAumento > 0 && (
-                    <p className="text-[10px] text-emerald-600 font-bold leading-tight pt-2 flex items-center gap-1">
-                        <TrendingUp className="h-3 w-3" /> Incluye +{porcentajeAumento}% de aumento
-                    </p>
+                  <p className="text-[10px] text-emerald-600 font-bold leading-tight pt-2 flex items-center gap-1">
+                    <TrendingUp className="h-3 w-3" /> Incluye +{porcentajeAumento}% de aumento
+                  </p>
                 )}
               </div>
 
               <div className="space-y-3 pt-2">
-                <Button 
-                  onClick={submit} 
-                  disabled={saving || actionableRows.length === 0} 
+                <Button
+                  onClick={submit}
+                  disabled={saving || actionableRows.length === 0}
                   className="w-full h-14 text-lg font-extrabold shadow-lg shadow-primary/20 group relative overflow-hidden"
                 >
                   {saving ? (
@@ -399,10 +396,10 @@ const handleClose = () => {
                     </div>
                   )}
                 </Button>
-                
-                <Button 
-                  variant="ghost" 
-                  className="w-full text-xs h-10 text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors" 
+
+                <Button
+                  variant="ghost"
+                  className="w-full text-xs h-10 text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors"
                   onClick={() => router.back()}
                   disabled={saving}
                 >
@@ -414,15 +411,15 @@ const handleClose = () => {
         </div>
       </div>
 
-      <SuccessDialog 
-        open={showSuccessDialog} 
+      <SuccessDialog
+        open={showSuccessDialog}
         onOpenChange={setShowSuccessDialog}
         onConfirm={handleDownload}
         onCancel={handleClose}
         title="¡Liquidación Exitosa!"
         description={
           <span>
-            Se han procesado las ventas y devoluciones.<br/>
+            Se han procesado las ventas y devoluciones.<br />
             El stock y saldo del cliente han sido actualizados.
           </span>
         }

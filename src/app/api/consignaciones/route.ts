@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/requireAuth";
 import { createConsignacionSchema } from "@/lib/validators/consignacion";
 import { TipoMovimientoStock, MotivoMovimientoStock } from "@prisma/client";
+import { checkFeature } from "@/lib/requireSubscription";
 
 // ✅ Imports Centralizados de Config y Notificaciones
 import { obtenerConfiguracionGlobal } from "@/lib/config";
@@ -29,6 +30,12 @@ export async function POST(req: Request) {
   const auth = await requireAuth();
   if (!auth.ok) return auth.res;
 
+  // Guard: Verificar que el plan permite consignaciones
+  const featureCheck = await checkFeature("consignaciones");
+  if (!featureCheck.allowed) {
+    return NextResponse.json({ error: featureCheck.message, limitReached: true }, { status: 403 });
+  }
+
   const body = await req.json().catch(() => null);
   const parsed = createConsignacionSchema.safeParse(body);
 
@@ -43,7 +50,7 @@ export async function POST(req: Request) {
   const configGlobal = await obtenerConfiguracionGlobal();
   const notificationsQueue: any[] = [];
 
-  const porcentaje = parsed.data.porcentajeAumento || 0; 
+  const porcentaje = parsed.data.porcentajeAumento || 0;
   const factorAumento = 1 + (porcentaje / 100);
 
   try {
@@ -95,7 +102,7 @@ export async function POST(req: Request) {
               return {
                 productoId: it.productoId,
                 unitsEntregadas: it.unitsEntregadas,
-                precioUnitario: precioFinal, 
+                precioUnitario: precioFinal,
               };
             }),
           },

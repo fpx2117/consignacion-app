@@ -5,8 +5,9 @@ import { prisma } from "@/lib/prisma";
 import { requireAuth, requireRole } from "@/lib/requireAuth";
 import { createProductoSchema } from "@/lib/validators/producto";
 import { sendNotification } from "@/lib/socket-trigger";
-import { NOTIFICATION_TYPE } from "@/lib/notificationes/notificaciones-types"; 
+import { NOTIFICATION_TYPE } from "@/lib/notificationes/notificaciones-types";
 import { obtenerConfiguracionGlobal } from "@/lib/config";
+import { checkProductLimit } from "@/lib/requireSubscription";
 
 /**
  * GET: OBTENER PRODUCTOS
@@ -46,14 +47,20 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "No tienes permisos (Admin requerido)" }, { status: 403 });
     }
 
+    // Guard: Verificar límite de productos del plan
+    const productCheck = await checkProductLimit();
+    if (!productCheck.allowed) {
+      return NextResponse.json({ error: productCheck.message, limitReached: true }, { status: 403 });
+    }
+
     const body = await req.json().catch(() => null);
     const parsed = createProductoSchema.safeParse(body);
 
     if (!parsed.success) {
       return NextResponse.json(
-        { 
-          error: "Validación fallida", 
-          details: parsed.error.flatten().fieldErrors 
+        {
+          error: "Validación fallida",
+          details: parsed.error.flatten().fieldErrors
         },
         { status: 400 }
       );
@@ -65,7 +72,7 @@ export async function POST(req: Request) {
     // --- TRANSACCIÓN ATÓMICA ---
     // Usamos $transaction para asegurar que el producto y su historial se creen juntos
     const created = await prisma.$transaction(async (tx) => {
-      
+
       // 1. Crear el producto
       const nuevoProducto = await tx.producto.create({
         data: {
@@ -105,8 +112,8 @@ export async function POST(req: Request) {
 
     // --- LÓGICA DE NOTIFICACIONES ---
     const configGlobal = await obtenerConfiguracionGlobal();
-    const umbralAlerta = created.stockMinUnits > 0 
-      ? created.stockMinUnits 
+    const umbralAlerta = created.stockMinUnits > 0
+      ? created.stockMinUnits
       : configGlobal.minStockGlobal;
 
     if (stockInicial === 0) {

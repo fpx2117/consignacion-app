@@ -16,18 +16,21 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
 
 // Iconos
-import { 
-  Pencil, 
-  User, 
-  Phone, 
-  MapPin, 
-  Loader2, 
-  Power, 
-  CheckCircle2, 
-  XCircle 
+import {
+  Pencil,
+  User,
+  Phone,
+  MapPin,
+  Loader2,
+  Power,
+  CheckCircle2,
+  XCircle,
+  Building2,
+  Save,
+  Trash2
 } from "lucide-react";
 
 export function EditClienteDialog({
@@ -63,7 +66,7 @@ export function EditClienteDialog({
   async function save(e: React.FormEvent) {
     e.preventDefault();
     if (!canSubmit || saving) return;
-    
+
     setSaving(true);
     try {
       const payload: UpdateClienteInput = {
@@ -72,9 +75,9 @@ export function EditClienteDialog({
         direccion: direccion.trim() || null,
         activo,
       };
-      
+
       await apiService.updateCliente(cliente.id, payload);
-      
+
       setOpen(false);
       onUpdated?.();
     } catch (err: any) {
@@ -89,85 +92,94 @@ export function EditClienteDialog({
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>{trigger}</DialogTrigger>
 
-      <DialogContent className="sm:max-w-[500px] p-0 overflow-hidden gap-0">
-        {/* Header con estilo */}
-        <div className="p-6 pb-4 border-b bg-muted/10">
-          <DialogHeader>
-            <DialogTitle className="text-xl flex items-center gap-2">
-              <div className="p-2 bg-secondary rounded-lg text-secondary-foreground">
-                <Pencil className="h-5 w-5" />
-              </div>
+      <DialogContent className="sm:max-w-[500px] border-border/50 bg-background/95 backdrop-blur-xl p-0 gap-0 shadow-2xl rounded-[2rem] overflow-hidden">
+        {/* Header Visual */}
+        <div className="bg-muted/30 p-6 pb-8 border-b border-border/50 relative overflow-hidden">
+          <div className="absolute top-0 right-0 p-4 opacity-5">
+            <Pencil className="w-24 h-24 rotate-12" />
+          </div>
+          <DialogHeader className="relative z-10">
+            <div className="w-12 h-12 rounded-2xl bg-secondary flex items-center justify-center mb-4 text-secondary-foreground shadow-inner">
+              <Pencil className="h-6 w-6" />
+            </div>
+            <DialogTitle className="text-2xl font-black tracking-tight flex items-center gap-2">
               Editar Cliente
             </DialogTitle>
-            <DialogDescription>
-              Modificá los datos personales o cambiá el estado del cliente.
+            <DialogDescription className="text-base font-medium text-muted-foreground/80">
+              Modificá los datos personales o cambiá el estado.
             </DialogDescription>
           </DialogHeader>
         </div>
 
-        <form onSubmit={save}>
-          <div className="p-6 space-y-6">
-            
+        <form onSubmit={save} className="flex flex-col">
+          <div className="p-6 space-y-5">
+
             {/* Sección Datos */}
             <div className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="edit-nombre" className="text-xs font-bold uppercase text-muted-foreground tracking-wider">
+              <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-muted-foreground/70">
+                <User className="w-3 h-3" /> Información Personal
+              </div>
+
+              <div className="space-y-2 group">
+                <Label htmlFor="edit-nombre" className="text-xs font-medium ml-1 group-focus-within:text-primary transition-colors">
                   Nombre Completo <span className="text-destructive">*</span>
                 </Label>
                 <div className="relative">
-                  <User className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-                  <Input 
+                  <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
+                  <Input
                     id="edit-nombre"
-                    value={nombre} 
-                    onChange={(e) => setNombre(e.target.value)} 
-                    className="pl-9 bg-background"
+                    value={nombre}
+                    onChange={(e) => setNombre(e.target.value)}
+                    className="pl-10 h-11 bg-muted/40 border-border/50 hover:bg-muted/70 focus:bg-background transition-all rounded-xl focus-visible:ring-primary/20 focus-visible:border-primary/50"
                   />
                 </div>
               </div>
 
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="edit-telefono" className="text-xs font-bold uppercase text-muted-foreground tracking-wider">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2 group">
+                  <Label htmlFor="edit-telefono" className="text-xs font-medium ml-1 group-focus-within:text-primary transition-colors">
                     Teléfono
                   </Label>
                   <div className="relative">
-                    <Phone className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-                    <Input 
+                    <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
+                    <Input
                       id="edit-telefono"
-                      value={telefono} 
-                      onChange={(e) => setTelefono(e.target.value)} 
-                      className="pl-9 bg-background"
+                      value={telefono}
+                      onChange={(e) => setTelefono(e.target.value)}
+                      className="pl-10 h-11 bg-muted/40 border-border/50 hover:bg-muted/70 focus:bg-background transition-all rounded-xl focus-visible:ring-primary/20 focus-visible:border-primary/50"
                     />
                   </div>
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="edit-direccion" className="text-xs font-bold uppercase text-muted-foreground tracking-wider">
+                <div className="space-y-2 group">
+                  <Label htmlFor="edit-direccion" className="text-xs font-medium ml-1 group-focus-within:text-primary transition-colors">
                     Dirección
                   </Label>
                   <div className="relative">
-                    <MapPin className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-                    <Input 
+                    <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
+                    <Input
                       id="edit-direccion"
-                      value={direccion} 
-                      onChange={(e) => setDireccion(e.target.value)} 
-                      className="pl-9 bg-background"
+                      value={direccion}
+                      onChange={(e) => setDireccion(e.target.value)}
+                      className="pl-10 h-11 bg-muted/40 border-border/50 hover:bg-muted/70 focus:bg-background transition-all rounded-xl focus-visible:ring-primary/20 focus-visible:border-primary/50"
                     />
                   </div>
                 </div>
               </div>
             </div>
 
+            <Separator className="bg-border/40" />
+
             {/* Sección Estado */}
-            <div className="rounded-xl border bg-card p-4 shadow-sm">
+            <div className="rounded-xl border border-border/50 bg-card/50 p-4 shadow-sm">
               <div className="flex items-center justify-between">
                 <div className="space-y-1">
                   <div className="flex items-center gap-2">
-                    <Power className="h-4 w-4 text-muted-foreground" />
-                    <span className="font-semibold text-sm">Estado del Sistema</span>
+                    <Power className={`h-4 w-4 ${activo ? "text-emerald-500" : "text-muted-foreground"}`} />
+                    <span className="font-semibold text-sm">Estado del Cliente</span>
                   </div>
                   <p className="text-xs text-muted-foreground max-w-[250px]">
-                    Desactivar impide crear nuevas operaciones para este cliente.
+                    {activo ? "El cliente puede realizar operaciones." : "Cliente inactivo. No podrá operar."}
                   </p>
                 </div>
 
@@ -175,15 +187,16 @@ export function EditClienteDialog({
                   type="button"
                   variant={activo ? "outline" : "destructive"}
                   onClick={() => setActivo(!activo)}
-                  className={`min-w-[110px] gap-2 ${activo ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20" : ""}`}
+                  size="sm"
+                  className={`min-w-[100px] h-9 gap-2 transition-all ${activo ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20 hover:text-emerald-700" : "bg-destructive/10 text-destructive hover:bg-destructive/20 border-destructive/20"}`}
                 >
                   {activo ? (
                     <>
-                      <CheckCircle2 className="h-4 w-4" /> Activo
+                      <CheckCircle2 className="h-3.5 w-3.5" /> Activo
                     </>
                   ) : (
                     <>
-                      <XCircle className="h-4 w-4" /> Inactivo
+                      <XCircle className="h-3.5 w-3.5" /> Inactivo
                     </>
                   )}
                 </Button>
@@ -191,31 +204,33 @@ export function EditClienteDialog({
             </div>
           </div>
 
-          <DialogFooter className="p-6 pt-2 bg-muted/5 flex-col-reverse sm:flex-row gap-2">
-             <Button
-                type="button"
-                variant="outline"
-                onClick={() => setOpen(false)}
-                disabled={saving}
-                className="w-full sm:w-auto"
-              >
-                Cancelar
-              </Button>
+          <DialogFooter className="p-6 pt-2 bg-muted/10 flex-col-reverse sm:flex-row gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setOpen(false)}
+              disabled={saving}
+              className="rounded-xl h-11 border-border/50 hover:bg-muted/50 font-medium w-full sm:w-auto"
+            >
+              Cancelar
+            </Button>
 
-              <Button 
-                type="submit" 
-                disabled={!canSubmit || saving}
-                className="w-full sm:w-auto min-w-[120px]"
-              >
-                {saving ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Guardando...
-                  </>
-                ) : (
-                  "Guardar Cambios"
-                )}
-              </Button>
+            <Button
+              type="submit"
+              disabled={!canSubmit || saving}
+              className="rounded-xl h-11 px-6 bg-primary text-primary-foreground font-bold shadow-lg shadow-primary/20 hover:scale-[1.02] transition-all active:scale-[0.98] w-full sm:w-auto min-w-[140px]"
+            >
+              {saving ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Guardando...
+                </>
+              ) : (
+                <>
+                  <Save className="mr-2 h-4 w-4" /> Guardar Cambios
+                </>
+              )}
+            </Button>
           </DialogFooter>
         </form>
       </DialogContent>

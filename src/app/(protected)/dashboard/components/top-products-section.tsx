@@ -3,11 +3,14 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatNumber, formatMoney } from "@/lib/utils-format";
-import { motion } from "framer-motion"; 
+import { motion } from "framer-motion";
 import { TrendingUp, Package, ChevronRight } from "lucide-react";
+import { cn } from "@/lib/utils";
 
-export function TopProductsSection({ top, loading }: { top: any; loading: boolean }) {
-  
+import { DashboardFilter } from "@/lib/types";
+
+export function TopProductsSection({ top, loading, filter = "all" }: { top: any; loading: boolean; filter?: DashboardFilter }) {
+
   // Se cambió Link por div y se eliminaron las clases de hover relacionadas con interactividad
   const ProductRow = ({ rank, name, detailMain, detailSub, index }: any) => (
     <motion.div
@@ -15,114 +18,129 @@ export function TopProductsSection({ top, loading }: { top: any; loading: boolea
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.05 }}
     >
-      <div 
-        className="group flex items-center gap-4 p-3 rounded-xl bg-transparent transition-all duration-300 ease-out"
+      <div
+        className="group flex items-center gap-4 p-3 pr-4 rounded-2xl bg-card/40 border border-border/50 hover:bg-card/60 transition-all duration-300 ease-out backdrop-blur-md"
       >
         {/* Ranking */}
-        <div className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-border/50 bg-background text-sm font-medium text-muted-foreground transition-colors">
+        <div className={cn(
+          "relative flex h-12 w-12 shrink-0 items-center justify-center rounded-xl text-lg font-black transition-colors shadow-inner",
+          index === 0 ? "bg-amber-100 text-amber-600 dark:bg-amber-900/20 dark:text-amber-400 ring-1 ring-amber-500/20" :
+            index === 1 ? "bg-slate-200 text-slate-600 dark:bg-slate-800 dark:text-slate-400" :
+              index === 2 ? "bg-orange-100 text-orange-700 dark:bg-orange-900/20 dark:text-orange-400" :
+                "bg-slate-50 text-slate-400 dark:bg-slate-900 dark:text-slate-600"
+        )}>
           {rank}
         </div>
-        
+
         <div className="flex-1 min-w-0">
-          <p className="truncate text-sm font-semibold tracking-tight text-foreground">
+          <p className="truncate text-sm font-bold text-foreground/90 group-hover:text-primary transition-colors">
             {name}
           </p>
-          <p className="text-[11px] uppercase tracking-wider font-medium text-muted-foreground/70 mt-0.5">
-            {detailSub}
-          </p>
+          <div className="flex items-center gap-2 mt-0.5">
+            <span className="text-[10px] uppercase tracking-wider font-bold text-muted-foreground/60 bg-muted/50 px-1.5 rounded-sm">
+              Producto
+            </span>
+          </div>
         </div>
-        
+
         <div className="flex items-center gap-2 text-right">
           <div className="flex flex-col items-end">
-            <p className="text-sm font-bold tabular-nums tracking-tight">{detailMain}</p>
+            <p className="text-base font-black tabular-nums tracking-tight">{detailMain}</p>
+            <p className="text-[10px] font-medium text-muted-foreground">{detailSub}</p>
           </div>
-          {/* Opcional: Se eliminó el icono ChevronRight para evitar confusión de que es un link */}
         </div>
       </div>
     </motion.div>
   );
 
-  return (
-    <div className="grid gap-8 xl:grid-cols-2">
-      {/* SECCIÓN VENTAS */}
-      <section className="space-y-4">
-        <div className="flex items-center gap-2 px-1">
-          <div className="p-2 rounded-lg bg-orange-500/10">
-            <TrendingUp className="h-4 w-4 text-orange-600" />
-          </div>
-          <div>
-            <h3 className="text-sm font-bold">Top Vendidos</h3>
-            <p className="text-[12px] text-muted-foreground">Por volumen de facturación</p>
-          </div>
-        </div>
+  const showVentas = filter === "all" || filter === "pos";
+  const showConsignados = filter === "all" || filter === "consignacion";
 
-        <Card className="border-none shadow-[0_8px_30px_rgb(0,0,0,0.04)] bg-card/50 backdrop-blur-sm">
-          <CardContent className="p-2 space-y-1">
-            {loading ? (
-               Array.from({ length: 5 }).map((_, i) => (
-                 <div key={i} className="flex items-center gap-4 p-3">
-                   <Skeleton className="h-10 w-10 rounded-full" />
-                   <div className="space-y-2 flex-1"><Skeleton className="h-4 w-[60%]" /><Skeleton className="h-3 w-[40%]" /></div>
-                   <Skeleton className="h-4 w-12" />
-                 </div>
-               ))
-            ) : (top?.topVendidos ?? []).length === 0 ? (
-               <EmptyState message="Sin ventas en este período" />
-            ) : (
-              (top?.topVendidos ?? []).map((p: any, index: number) => (
-                <ProductRow 
-                  key={p.productoId}
-                  index={index}
-                  rank={index + 1}
-                  name={p.nombre}
-                  detailMain={formatMoney(p.total)}
-                  detailSub={`${formatNumber(p.units)} unidades`}
-                />
-              ))
-            )}
-          </CardContent>
-        </Card>
-      </section>
+  return (
+    <div className={`grid gap-8 ${showVentas && showConsignados ? "xl:grid-cols-2" : "grid-cols-1"}`}>
+      {/* SECCIÓN VENTAS */}
+      {showVentas && (
+        <section className="space-y-4">
+          <div className="flex items-center gap-2 px-1">
+            <div className="p-2 rounded-lg bg-orange-500/10">
+              <TrendingUp className="h-4 w-4 text-orange-600" />
+            </div>
+            <div>
+              <h3 className="text-sm font-bold">Top Vendidos</h3>
+              <p className="text-[12px] text-muted-foreground">Por volumen de facturación</p>
+            </div>
+          </div>
+
+          <Card className="border-none shadow-[0_8px_30px_rgb(0,0,0,0.04)] bg-card/50 backdrop-blur-sm">
+            <CardContent className="p-2 space-y-1">
+              {loading ? (
+                Array.from({ length: 5 }).map((_, i) => (
+                  <div key={i} className="flex items-center gap-4 p-3">
+                    <Skeleton className="h-10 w-10 rounded-full" />
+                    <div className="space-y-2 flex-1"><Skeleton className="h-4 w-[60%]" /><Skeleton className="h-3 w-[40%]" /></div>
+                    <Skeleton className="h-4 w-12" />
+                  </div>
+                ))
+              ) : (top?.topVendidos ?? []).length === 0 ? (
+                <EmptyState message="Sin ventas en este período" />
+              ) : (
+                (top?.topVendidos ?? []).map((p: any, index: number) => (
+                  <ProductRow
+                    key={p.productoId}
+                    index={index}
+                    rank={index + 1}
+                    name={p.nombre}
+                    detailMain={formatMoney(p.total)}
+                    detailSub={`${formatNumber(p.units)} unidades`}
+                  />
+                ))
+              )}
+            </CardContent>
+          </Card>
+        </section>
+      )}
 
       {/* SECCIÓN CONSIGNADOS */}
-      <section className="space-y-4">
-        <div className="flex items-center gap-2 px-1">
-          <div className="p-2 rounded-lg bg-blue-500/10">
-            <Package className="h-4 w-4 text-blue-600" />
+      {showConsignados && (
+        <section className="space-y-4">
+          <div className="flex items-center gap-2 px-1">
+            <div className="p-2 rounded-lg bg-blue-500/10">
+              <Package className="h-4 w-4 text-blue-600" />
+            </div>
+            <div>
+              <h3 className="text-sm font-bold">Más Consignados</h3>
+              <p className="text-[12px] text-muted-foreground">Flujo de salida de inventario</p>
+            </div>
           </div>
-          <div>
-            <h3 className="text-sm font-bold">Más Consignados</h3>
-            <p className="text-[12px] text-muted-foreground">Flujo de salida de inventario</p>
-          </div>
-        </div>
 
-        <Card className="border-none shadow-[0_8px_30px_rgb(0,0,0,0.04)] bg-card/50 backdrop-blur-sm">
-          <CardContent className="p-2 space-y-1">
-            {loading ? (
-               Array.from({ length: 5 }).map((_, i) => (
-                <div key={i} className="flex items-center gap-4 p-3">
-                  <Skeleton className="h-10 w-10 rounded-full" />
-                  <div className="space-y-2 flex-1"><Skeleton className="h-4 w-[60%]" /><Skeleton className="h-3 w-[40%]" /></div>
-                  <Skeleton className="h-4 w-12" />
-                </div>
-              ))
-            ) : (top?.topConsignados ?? []).length === 0 ? (
-               <EmptyState message="Sin movimientos registrados" />
-            ) : (
-              (top?.topConsignados ?? []).map((p: any, index: number) => (
-                <ProductRow 
-                  key={p.productoId}
-                  index={index}
-                  rank={index + 1}
-                  name={p.nombre}
-                  detailMain={formatNumber(p.unitsEntregadas)}
-                  detailSub="Unidades entregadas"
-                />
-              ))
-            )}
-          </CardContent>
-        </Card>
-      </section>
+          <Card className="border-none shadow-[0_8px_30px_rgb(0,0,0,0.04)] bg-card/50 backdrop-blur-sm">
+            <CardContent className="p-2 space-y-1">
+              {loading ? (
+                Array.from({ length: 5 }).map((_, i) => (
+                  <div key={i} className="flex items-center gap-4 p-3">
+                    <Skeleton className="h-10 w-10 rounded-full" />
+                    <div className="space-y-2 flex-1"><Skeleton className="h-4 w-[60%]" /><Skeleton className="h-3 w-[40%]" /></div>
+                    <Skeleton className="h-4 w-12" />
+                  </div>
+                ))
+              ) : (top?.topConsignados ?? []).length === 0 ? (
+                <EmptyState message="Sin movimientos registrados" />
+              ) : (
+                (top?.topConsignados ?? []).map((p: any, index: number) => (
+                  <ProductRow
+                    key={p.productoId}
+                    index={index}
+                    rank={index + 1}
+                    name={p.nombre}
+                    detailMain={formatNumber(p.unitsEntregadas)}
+                    detailSub="Unidades entregadas"
+                  />
+                ))
+              )}
+            </CardContent>
+          </Card>
+        </section>
+      )}
     </div>
   );
 }

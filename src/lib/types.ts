@@ -1,22 +1,38 @@
 // src/lib/types.ts
 
-// 1. Importamos el tipo compartido de notificaciones
 import { AppNotification } from "@/types/notification";
 
-// 2. Definiciones básicas
+/* =========================
+    DEFINICIONES BÁSICAS
+========================= */
 export type ID = number;
 export type ISODateString = string;
 export type Money = number;
 
-export type ApiResponse<T> = { data: T };
+/**
+ * SOBRE GLOBAL DE RESPUESTAS (CORREGIDO)
+ * Al agregar horarioConfigurado aquí, cualquier llamada que lo devuelva
+ * será reconocida automáticamente por TypeScript.
+ */
+export type ApiResponse<T> = {
+  data: T;
+  error?: string;
+  message?: string;
+  horarioConfigurado?: HorarioLaboralConfig | null; // ✅ Fix para el error en page.tsx
+};
 
 export type RolUsuario = "ADMIN" | "EMPLEADO";
 export type EstadoConsignacion = "ABIERTA" | "CERRADA";
 export type MetodoPago = "EFECTIVO" | "TRANSFERENCIA" | "TARJETA" | "OTRO";
 
-// --- NOTIFICACIONES ---
-// Re-exportamos el tipo con el nombre 'Notification' para mantener compatibilidad
-// con el resto de tu código que espera este nombre.
+export type EstadoSesionCaja = "ABIERTA" | "CERRADA";
+export type TipoMovimientoCaja = "INGRESO" | "EGRESO";
+
+export enum TipoVenta {
+  CASUAL = "CASUAL",
+  LIQUIDACION = "LIQUIDACION",
+}
+
 export type Notification = AppNotification;
 
 export enum TipoMovimientoStock {
@@ -25,7 +41,28 @@ export enum TipoMovimientoStock {
   AJUSTE = "AJUSTE",
 }
 
-// --- ENTIDADES ---
+export enum ShareLinkType {
+  TICKET = "TICKET",
+  REMITO = "REMITO",
+  INVENTARIO = "INVENTARIO",
+  HISTORIAL_INVENTARIO = "HISTORIAL_INVENTARIO",
+}
+
+export enum MotivoMovimientoStock {
+  COMPRA = "COMPRA",
+  VENTA = "VENTA",
+  DEVOLUCION_CLIENTE = "DEVOLUCION_CLIENTE",
+  DEVOLUCION_PROVEEDOR = "DEVOLUCION_PROVEEDOR",
+  ROTURA = "ROTURA",
+  PERDIDA = "PERDIDA",
+  AJUSTE_INVENTARIO = "AJUSTE_INVENTARIO",
+  INICIAL = "INICIAL",
+  CONSIGNACION = "CONSIGNACION",
+}
+
+/* =========================
+    ENTIDADES (MODELS)
+========================= */
 
 export type Usuario = {
   id: ID;
@@ -34,6 +71,81 @@ export type Usuario = {
   rol: RolUsuario;
   activo: boolean;
   createdAt: ISODateString;
+  horarios?: HorarioLaboral[];
+};
+
+export type Configuracion = {
+  id: ID;
+  minStockGlobal: number;
+  diasAnticipacionVencimiento: number;
+  notificarVencimientos: boolean;
+  notificarStockBajo: boolean;
+  notificarVentas: boolean;
+  usarControlDeCaja: boolean;
+};
+
+export type Branding = {
+  id: ID;
+  businessName: string;
+  logoMime?: string | null;
+  logoData?: any | null; // Bytes in Prisma, usually Buffer or check implementation
+  primaryColor: string;
+  footerText?: string | null;
+  phone?: string | null;
+  address?: string | null;
+  updatedAt: ISODateString;
+};
+
+export type HorarioLaboral = {
+  id: ID;
+  usuarioId: ID;
+  diaSemana: number;
+  horaInicio: string;
+  horaFin: string;
+  activo: boolean;
+};
+
+// Interfaz para la configuración que viene del backend en el login/verificación
+export interface HorarioLaboralConfig {
+  horaInicio: string;
+  horaFin: string;
+  activo: boolean;
+}
+
+export type Caja = {
+  id: ID;
+  nombre: string;
+  activa: boolean;
+};
+
+export type MovimientoCaja = {
+  id: ID;
+  sesionCajaId: ID;
+  tipo: TipoMovimientoCaja;
+  monto: Money;
+  motivo: string;
+  fecha: ISODateString;
+};
+
+export type SesionCaja = {
+  id: ID;
+  cajaId: ID;
+  usuarioId: ID;
+  estado: EstadoSesionCaja;
+  fechaApertura: ISODateString;
+  fechaCierre?: ISODateString | null;
+
+  montoInicial: Money;
+  montoFinalEsperado?: Money | null;
+  montoFinalReal?: Money | null;
+  diferencia?: Money | null;
+  observaciones?: string | null;
+
+  caja?: Caja;
+  usuario?: Usuario;
+  movimientos?: MovimientoCaja[];
+  ventas?: Venta[];
+  pagos?: Pago[];
 };
 
 export type Cliente = {
@@ -49,101 +161,73 @@ export type Cliente = {
 export type Categoria = {
   id: ID;
   nombre: string;
+  color?: string;
 };
 
 export type Producto = {
   id: ID;
   nombre: string;
-  descripcion?: string | null; // Agregado
-  codigoBarra?: string | null; // 👈 Agregado para el scanner
-  sku?: string | null;         // 👈 Agregado para control interno
-  activo: boolean;             // 👈 Agregado para borrado lógico
-  
+  descripcion?: string | null;
+  codigoBarra?: string | null;
+  sku?: string | null;
+  activo: boolean;
   precioVenta: Money;
   precioCosto: Money;
-  iva: number;                 // Agregado
-
+  iva: number;
   stockDisponibleUnits: number;
   stockConsignadoUnits: number;
-  stockMinUnits: number;       // 👈 Agregado para alertas de stock bajo
-  
+  stockMinUnits: number;
   packSizeUnits?: number | null;
   fechaVencimiento?: ISODateString | null;
-
   categoriaId?: ID | null;
-  categoria?: Categoria;       // Relación opcional
-
+  categoria?: Categoria;
   createdAt: ISODateString;
   updatedAt: ISODateString;
-  
-  movimientos?: MovimientoStock[];
+  movimientoStocks?: MovimientoStock[];
+  notifications?: Notification[];
 };
 
-export interface MovimientoStock {
-  id: number;
-  productoId: number;
+export type MovimientoStock = {
+  id: ID;
+  productoId: ID;
   tipo: TipoMovimientoStock;
   motivo: MotivoMovimientoStock;
   cantidad: number;
   stockPrevio: number;
   stockPosterior: number;
   observaciones?: string | null;
-  createdAt: Date;
-}
-
-export enum MotivoMovimientoStock {
-  COMPRA = "COMPRA",
-  VENTA = "VENTA",
-  DEVOLUCION_CLIENTE = "DEVOLUCION_CLIENTE",
-  DEVOLUCION_PROVEEDOR = "DEVOLUCION_PROVEEDOR",
-  ROTURA = "ROTURA",
-  PERDIDA = "PERDIDA",
-  AJUSTE_INVENTARIO = "AJUSTE_INVENTARIO",
-  INICIAL = "INICIAL",
-}
-
-export type ConsignacionDetalle = {
-  id: ID;
-  consignacionId?: ID;
-  productoId: ID;
-  numeroFolio: number;
-  unitsEntregadas: number;
-  unitsVendidasAcum: number;
-  unitsDevueltasAcum: number;
-  precioVentaAplicado: Money; // 👈 Sugerido: Precio original + aumento en ese momento
+  createdAt: ISODateString;
   producto?: Producto;
 };
 
-export type CreateVentaDirectaInput = {
-  // Opcional: si tu backend lo permite, enviamos null o un ID de "Consumidor Final"
-  clienteId?: number | null; 
-  items: Array<{
-    productoId: number;
-    units: number;
-    precioUnitario?: number; // Opcional si el backend usa el precio actual
-  }>;
-  metodoPago: MetodoPago;
+export type MovimientoConProducto = MovimientoStock & {
+  producto: Producto;
 };
 
-export type Consignacion = {
+export type ShareLink = {
   id: ID;
-  clienteId: ID;
+  codeHash: string;
+  codeEnc: string;
+  type: ShareLinkType;
+  targetId: ID;
+  expiresAt: ISODateString;
+  maxViews: number;
+  views: number;
+  createdAt: ISODateString;
+  lastViewedAt?: ISODateString | null;
+};
+
+export type Venta = {
+  id: ID;
+  tipo: TipoVenta;
+  clienteId: ID | null;
   fecha: ISODateString;
-  estado: EstadoConsignacion;
-  porcentajeAumento: number; // 👈 Agregado: para persistir el valor aplicado
+  metodoPago: MetodoPago;
+  total: Money;
+  sesionCajaId?: ID | null;
   cliente?: Cliente;
-  detalles?: ConsignacionDetalle[];
-  liquidaciones?: Liquidacion[];
-};
-
-export type LiquidacionItem = {
-  id: ID;
-  liquidacionId: ID;
-  consignacionDetalleId: ID;
-  unitsVendidas: number;
-  unitsDevueltas: number;
-  precioUnitario: Money;
-  detalle?: ConsignacionDetalle;
+  detalles?: VentaDetalle[];
+  liquidacionId?: ID | null;
 };
 
 export type VentaDetalle = {
@@ -156,14 +240,30 @@ export type VentaDetalle = {
   producto?: Producto;
 };
 
-export type Venta = {
+export type Consignacion = {
   id: ID;
+  numeroFolio: number;
   clienteId: ID;
   fecha: ISODateString;
-  total: Money;
+  estado: EstadoConsignacion;
+  porcentajeAumento: number;
   cliente?: Cliente;
-  detalles?: VentaDetalle[];
-  liquidacionId?: ID | null;
+  detalles?: ConsignacionDetalle[];
+  liquidaciones?: Liquidacion[];
+};
+
+export type ConsignacionDetalle = {
+  id: ID;
+  consignacionId?: ID;
+  productoId: ID;
+  unitsEntregadas: number;
+  unitsVendidasAcum: number;
+  unitsDevueltasAcum: number;
+  precioUnitario: Money;
+  producto?: Producto;
+
+  // ✅ agregar esto
+  precioVentaAplicado?: number | string | null;
 };
 
 export type Liquidacion = {
@@ -175,16 +275,117 @@ export type Liquidacion = {
   consignacion?: Consignacion;
 };
 
+export type LiquidacionItem = {
+  id: ID;
+  liquidacionId: ID;
+  consignacionDetalleId: ID;
+  unitsVendidas: number;
+  unitsDevueltas: number;
+  precioUnitario: Money;
+  detalle?: ConsignacionDetalle;
+};
+
 export type Pago = {
   id: ID;
   clienteId: ID;
   fecha: ISODateString;
   monto: Money;
   metodo: MetodoPago;
+  sesionCajaId?: ID | null;
   cliente?: Cliente;
 };
 
-// --- RESPUESTAS ESPECIALES API ---
+/* =========================
+    INPUTS (API PAYLOADS)
+========================= */
+
+export type AbrirCajaInput = {
+  cajaId: number;
+  montoInicial: number;
+};
+
+export type CerrarCajaInput = {
+  sesionId: number;
+  montoReal: number;
+  observaciones?: string;
+};
+
+export type CrearMovimientoCajaInput = {
+  tipo: TipoMovimientoCaja;
+  monto: number;
+  motivo: string;
+};
+
+export type LoginInput = {
+  email: string;
+  password: string
+};
+
+export type CreateClienteInput = {
+  nombre: string;
+  telefono?: string | null;
+  direccion?: string | null;
+};
+
+export type UpdateClienteInput = Partial<CreateClienteInput> & {
+  activo?: boolean
+};
+
+export type CreateProductoInput = {
+  nombre: string;
+  descripcion?: string;
+  codigoBarra?: string;
+  sku?: string;
+  precioVenta: Money;
+  precioCosto: Money;
+  iva?: number;
+  stockDisponibleUnits?: number;
+  stockMinUnits?: number;
+  packSizeUnits?: number | null;
+  fechaVencimiento?: ISODateString | null;
+  categoriaId?: ID | null;
+};
+
+export type UpdateProductoInput = Partial<CreateProductoInput> & {
+  activo?: boolean
+};
+
+export type CreateVentaDirectaInput = {
+  clienteId?: number | null;
+  items: Array<{
+    productoId: number;
+    units: number;
+    precioUnitario?: number;
+  }>;
+  metodoPago: MetodoPago;
+};
+
+export type CreateConsignacionInput = {
+  clienteId: ID;
+  porcentajeAumento: number;
+  items: Array<{
+    productoId: ID;
+    unitsEntregadas: number;
+    precioVentaHistorico?: Money;
+  }>;
+};
+
+export type CreateLiquidacionInput = {
+  items: Array<{
+    consignacionDetalleId: ID;
+    unitsVendidas?: number;
+    unitsDevueltas?: number;
+  }>;
+};
+
+export type CreatePagoInput = {
+  monto: Money;
+  metodo: MetodoPago
+};
+
+/* =========================
+    RESPUESTAS ESPECIALES
+========================= */
 
 export type EstadoCuentaResponse = {
   id: ID;
@@ -207,11 +408,14 @@ export type CrearLiquidacionResponse = {
 };
 
 
+
+
 /* =========================
    DASHBOARD
 ========================= */
 
 export type DashboardPeriod = "today" | "week" | "month" | "all";
+export type DashboardFilter = "all" | "consignacion" | "pos";
 
 /** /api/dashboard/kpis */
 export type DashboardKpis = {
@@ -246,7 +450,7 @@ export type DashboardKpis = {
       cantidad: number;
       total: number;
     };
-   ganancia: {
+    ganancia: {
       total: number;
       porConsignacion: number;
       porVentaDirecta: number;
@@ -327,87 +531,3 @@ export type DashboardTendencia = {
   series: DashboardTendenciaPoint[];
 };
 
-
-/* =========================
-   INPUTS (Formularios)
-========================= */
-
-export type LoginInput = { email: string; password: string };
-
-export type CreateClienteInput = {
-  nombre: string;
-  telefono?: string | null;
-  direccion?: string | null;
-};
-
-export type UpdateClienteInput = Partial<CreateClienteInput> & { activo?: boolean };
-
-export type CreateProductoInput = {
-  nombre: string;
-  descripcion?: string;
-  codigoBarra?: string;
-  sku?: string;
-  precioVenta: Money;
-  precioCosto: Money;
-  iva?: number;
-  stockDisponibleUnits?: number;
-  stockMinUnits?: number;      // 👈 Para definir el umbral desde el alta
-  packSizeUnits?: number | null;
-  fechaVencimiento?: ISODateString | null;
-  categoriaId?: ID | null;
-};
-
-export type UpdateProductoInput = {
-  nombre?: string;
-  codigoBarra?: string | null;
-  precioVenta?: number;
-  categoriaId?: number | null; 
-  precioCosto?: number;
-  stockDisponibleUnits?: number; 
-  stockMinUnits?: number;
-  fechaVencimiento?: string | null;
-  activo?: boolean;
-};
-
-export type ScanProductoResponse = {
-  producto: Producto;
-  encontrado: boolean;
-};
-
-export type CreateConsignacionInput = {
-  clienteId: ID;
-  porcentajeAumento: number; // 👈 Agregado: el usuario lo enviará desde el form
-  items: Array<{ 
-    productoId: ID; 
-    unitsEntregadas: number;
-    // Opcional: si tu backend prefiere recibir el precio ya calculado
-    precioVentaHistorico?: Money; 
-  }>;
-};
-
-export type CreateLiquidacionInput = {
-  items: Array<{
-    consignacionDetalleId: ID;
-    unitsVendidas?: number;
-    unitsDevueltas?: number;
-  }>;
-};
-
-export interface MovimientoReporte extends MovimientoStock {
-  nombreProducto: string; // Para no tener que buscar en el objeto producto
-}
-
-export interface MovimientoConProducto extends MovimientoStock {
-  producto: Pick<Producto, "nombre" | "codigoBarra">;
-}
-
-// Interfaz para el resumen estadístico del reporte de movimientos
-export interface ResumenMovimientos {
-  totalEntradas: number;
-  totalSalidas: number;
-  ajustesPositivos: number;
-  ajustesNegativos: number;
-  periodo: string;
-}
-
-export type CreatePagoInput = { monto: Money; metodo: MetodoPago };

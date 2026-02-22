@@ -3,6 +3,8 @@
 import * as React from "react";
 import type { Producto, UpdateProductoInput } from "@/lib/types";
 import { apiService } from "@/lib/apiService";
+import { CATEGORY_PALETTE, getCategoryColorByKey, type CategoryColorKey } from "@/lib/category-colors";
+import { cn } from "@/lib/utils";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,12 +25,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { 
-  Pencil, 
-  DollarSign, 
-  Tag, 
-  Loader2, 
-  TrendingUp, 
+import {
+  Pencil,
+  DollarSign,
+  Tag,
+  Loader2,
+  TrendingUp,
   Package,
   Barcode,
   BellRing,
@@ -36,7 +38,8 @@ import {
   Trash2,
   Layers,
   Plus,
-  PlusCircle
+  PlusCircle,
+  Check
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -78,10 +81,18 @@ export function EditProductoDialog({
   );
 
   // --- ESTADOS DE CATEGORÍA ---
-  const [categorias, setCategorias] = React.useState<{id: number | string, nombre: string}[]>([]);
+  const [categorias, setCategorias] = React.useState<{ id: number | string, nombre: string, color?: string }[]>([]);
   const [categoriaId, setCategoriaId] = React.useState<string>(producto.categoriaId?.toString() || "");
   const [nuevaCategoria, setNuevaCategoria] = React.useState("");
+  const [nuevaCatColor, setNuevaCatColor] = React.useState<CategoryColorKey>("sky");
   const [isCreandoNuevaCat, setIsCreandoNuevaCat] = React.useState(false);
+
+  // --- ESTADOS DE EDICIÓN DE CATEGORÍA ---
+  const [isEditandoCat, setIsEditandoCat] = React.useState(false);
+  const [editCatId, setEditCatId] = React.useState<number | string | null>(null);
+  const [editCatNombre, setEditCatNombre] = React.useState("");
+  const [editCatColor, setEditCatColor] = React.useState<CategoryColorKey>("sky");
+  const [savingCatEdit, setSavingCatEdit] = React.useState(false);
 
   // Sincronizar y Cargar categorías
   React.useEffect(() => {
@@ -93,9 +104,17 @@ export function EditProductoDialog({
       setStockMinUnits(String(producto.stockMinUnits || ""));
       setFechaVencimiento(producto.fechaVencimiento ? new Date(producto.fechaVencimiento).toISOString().split('T')[0] : "");
       setCategoriaId(producto.categoriaId?.toString() || "");
-      
+
       // Cargar lista de categorías desde API
-      apiService.getCategorias().then(setCategorias).catch(console.error);
+      apiService.getCategorias()
+        .then((data) => {
+          console.log("Categorías cargadas (edit):", data);
+          setCategorias(Array.isArray(data) ? data : []);
+        })
+        .catch((err) => {
+          console.error(err);
+          setCategorias([]);
+        });
     }
   }, [open, producto]);
 
@@ -106,9 +125,9 @@ export function EditProductoDialog({
   const esGananciaNegativa = pv > 0 && pc > 0 && gananciaUnitaria < 0;
 
   // Validación: requiere nombre, precios y categoría (existente o nueva)
-  const canSubmit = 
-    nombre.trim().length >= 2 && 
-    pv > 0 && 
+  const canSubmit =
+    nombre.trim().length >= 2 &&
+    pv > 0 &&
     pc > 0 &&
     (categoriaId !== "" || (isCreandoNuevaCat && nuevaCategoria.trim().length > 0));
 
@@ -120,13 +139,13 @@ export function EditProductoDialog({
 
       // 1. Si el usuario creó una categoría nueva en la edición
       if (isCreandoNuevaCat && nuevaCategoria.trim()) {
-        const catCreada = await apiService.createCategoria({ nombre: nuevaCategoria.trim() });
+        const catCreada = await apiService.createCategoria({ nombre: nuevaCategoria.trim(), color: nuevaCatColor });
         finalCategoriaId = Number(catCreada.id);
       }
 
       const payload: UpdateProductoInput = {
         nombre: nombre.trim(),
-        codigoBarra: codigoBarra.trim() || null,
+        codigoBarra: codigoBarra.trim() || undefined,
         precioVenta: pv,
         precioCosto: pc,
         stockMinUnits: toInt(stockMinUnits) || 0,
@@ -149,7 +168,7 @@ export function EditProductoDialog({
 
   async function handleDelete() {
     if (!window.confirm("¿Estás seguro de que deseas eliminar este producto?")) return;
-    
+
     setDeleting(true);
     try {
       await apiService.deleteProducto(producto.id);
@@ -174,23 +193,14 @@ export function EditProductoDialog({
               <Pencil className="h-5 w-5" />
               <DialogTitle className="text-xl font-bold italic tracking-tight">Editar Producto</DialogTitle>
             </div>
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              className="text-destructive hover:bg-destructive/10"
-              onClick={handleDelete}
-              disabled={deleting || saving}
-            >
-              {deleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
-            </Button>
           </div>
           <DialogDescription>
-            ID: <span className="font-mono font-bold text-primary">#{producto.id}</span> • Ajusta la ficha técnica.
+            Ajusta la ficha técnica y comercial del producto.
           </DialogDescription>
         </DialogHeader>
 
         <div className="p-6 space-y-4 max-h-[80vh] overflow-y-auto">
-          
+
           {/* Identificación */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-2 sm:col-span-2">
@@ -204,7 +214,7 @@ export function EditProductoDialog({
             {/* --- SECCIÓN CATEGORÍA --- */}
             <div className="space-y-2 sm:col-span-2">
               <Label className="text-xs font-bold uppercase text-muted-foreground">Categoría</Label>
-              {!isCreandoNuevaCat ? (
+              {!isCreandoNuevaCat && !isEditandoCat ? (
                 <div className="flex gap-2">
                   <div className="relative flex-1">
                     <Layers className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground z-10" />
@@ -213,43 +223,167 @@ export function EditProductoDialog({
                         <SelectValue placeholder="Sin categoría" />
                       </SelectTrigger>
                       <SelectContent>
-                        {categorias.map((cat) => (
-                          <SelectItem key={cat.id} value={cat.id.toString()}>
-                            {cat.nombre}
-                          </SelectItem>
-                        ))}
+                        {categorias.map((cat) => {
+                          const catColor = getCategoryColorByKey(cat.color);
+                          return (
+                            <SelectItem key={cat.id} value={cat.id.toString()}>
+                              <span className="flex items-center gap-2">
+                                <span className={cn("h-2 w-2 rounded-full shrink-0", catColor.dot)} />
+                                {cat.nombre}
+                              </span>
+                            </SelectItem>
+                          );
+                        })}
                       </SelectContent>
                     </Select>
                   </div>
-                  <Button 
-                    type="button" 
-                    variant="outline" 
+                  {categoriaId && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      title="Editar categoría seleccionada"
+                      className="h-11 px-3 border-border/60 text-muted-foreground hover:text-primary hover:border-primary/40 hover:bg-primary/5"
+                      onClick={() => {
+                        const cat = categorias.find(c => c.id.toString() === categoriaId);
+                        if (cat) {
+                          setEditCatId(cat.id);
+                          setEditCatNombre(cat.nombre);
+                          setEditCatColor((cat.color || "sky") as CategoryColorKey);
+                          setIsEditandoCat(true);
+                        }
+                      }}
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                  )}
+                  <Button
+                    type="button"
+                    variant="outline"
                     className="h-11 px-3 border-dashed border-primary/40 text-primary hover:bg-primary/5"
-                    onClick={() => { setIsCreandoNuevaCat(true); setCategoriaId(""); }}
+                    onClick={() => { setIsCreandoNuevaCat(true); setCategoriaId(""); setNuevaCatColor("sky"); }}
                   >
                     <Plus className="h-4 w-4" />
                   </Button>
                 </div>
-              ) : (
-                <div className="flex gap-2 animate-in slide-in-from-left-2 duration-200">
-                  <div className="relative flex-1">
-                    <PlusCircle className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-primary" />
-                    <Input 
-                      value={nuevaCategoria} 
-                      onChange={(e) => setNuevaCategoria(e.target.value)} 
-                      placeholder="Nueva categoría..." 
-                      className="pl-9 h-11 border-primary/40 bg-primary/5"
-                      autoFocus
-                    />
+              ) : isEditandoCat ? (
+                /* --- EDIT EXISTING CATEGORY MODE --- */
+                <div className="space-y-3 animate-in slide-in-from-left-2 duration-200">
+                  <div className="flex gap-2">
+                    <div className="relative flex-1">
+                      <Pencil className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-amber-500" />
+                      <Input
+                        value={editCatNombre}
+                        onChange={(e) => setEditCatNombre(e.target.value)}
+                        placeholder="Nombre de la categoría"
+                        className="pl-9 h-11 border-amber-500/40 bg-amber-500/5"
+                        autoFocus
+                      />
+                    </div>
+                    <Button
+                      type="button"
+                      variant="default"
+                      className="h-11 px-4 text-xs font-bold"
+                      disabled={savingCatEdit || !editCatNombre.trim()}
+                      onClick={async () => {
+                        if (!editCatId) return;
+                        setSavingCatEdit(true);
+                        try {
+                          await apiService.updateCategoria(Number(editCatId), {
+                            nombre: editCatNombre.trim(),
+                            color: editCatColor,
+                          });
+                          const updated = await apiService.getCategorias();
+                          setCategorias(updated);
+                          setIsEditandoCat(false);
+                          setEditCatId(null);
+                          toast.success("Categoría actualizada");
+                        } catch {
+                          toast.error("Error al actualizar");
+                        } finally {
+                          setSavingCatEdit(false);
+                        }
+                      }}
+                    >
+                      {savingCatEdit ? <Loader2 className="h-4 w-4 animate-spin" /> : "Guardar"}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      className="h-11 text-xs hover:bg-destructive/10 hover:text-destructive"
+                      onClick={() => { setIsEditandoCat(false); setEditCatId(null); }}
+                    >
+                      Cancelar
+                    </Button>
                   </div>
-                  <Button 
-                    type="button" 
-                    variant="ghost" 
-                    className="h-11 text-xs"
-                    onClick={() => { setIsCreandoNuevaCat(false); setNuevaCategoria(""); }}
-                  >
-                    Cancelar
-                  </Button>
+                  {/* Edit Color Palette */}
+                  <div className="flex flex-wrap gap-1.5 p-2 rounded-xl bg-amber-500/5 border border-amber-500/20">
+                    {CATEGORY_PALETTE.map((color) => (
+                      <button
+                        key={color.key}
+                        type="button"
+                        onClick={() => setEditCatColor(color.key as CategoryColorKey)}
+                        className={cn(
+                          "h-7 w-7 rounded-lg transition-all duration-150 flex items-center justify-center",
+                          "hover:scale-110 active:scale-95",
+                          editCatColor === color.key
+                            ? "ring-2 ring-primary ring-offset-1 ring-offset-background scale-110"
+                            : "opacity-60 hover:opacity-100"
+                        )}
+                        style={{ backgroundColor: color.hex }}
+                        title={color.label}
+                      >
+                        {editCatColor === color.key && (
+                          <Check className="h-3.5 w-3.5 text-white drop-shadow-md" />
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-3 animate-in slide-in-from-left-2 duration-200">
+                  <div className="flex gap-2">
+                    <div className="relative flex-1">
+                      <PlusCircle className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-primary" />
+                      <Input
+                        value={nuevaCategoria}
+                        onChange={(e) => setNuevaCategoria(e.target.value)}
+                        placeholder="Nueva categoría..."
+                        className="pl-9 h-11 border-primary/40 bg-primary/5"
+                        autoFocus
+                      />
+                    </div>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      className="h-11 text-xs"
+                      onClick={() => { setIsCreandoNuevaCat(false); setNuevaCategoria(""); setNuevaCatColor("sky"); }}
+                    >
+                      Cancelar
+                    </Button>
+                  </div>
+                  {/* Inline Color Palette */}
+                  <div className="flex flex-wrap gap-1.5 p-2 rounded-xl bg-muted/30 border border-border/50">
+                    {CATEGORY_PALETTE.map((color) => (
+                      <button
+                        key={color.key}
+                        type="button"
+                        onClick={() => setNuevaCatColor(color.key as CategoryColorKey)}
+                        className={cn(
+                          "h-7 w-7 rounded-lg transition-all duration-150 flex items-center justify-center",
+                          "hover:scale-110 active:scale-95",
+                          nuevaCatColor === color.key
+                            ? "ring-2 ring-primary ring-offset-1 ring-offset-background scale-110"
+                            : "opacity-60 hover:opacity-100"
+                        )}
+                        style={{ backgroundColor: color.hex }}
+                        title={color.label}
+                      >
+                        {nuevaCatColor === color.key && (
+                          <Check className="h-3.5 w-3.5 text-white drop-shadow-md" />
+                        )}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               )}
             </div>

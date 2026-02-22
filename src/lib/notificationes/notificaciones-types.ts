@@ -7,7 +7,12 @@ export enum NOTIFICATION_TYPE {
   OUT_OF_STOCK = "OUT_OF_STOCK",
   EXPIRATION_NEAR = "EXPIRATION_NEAR",
   PRODUCT_EXPIRED = "PRODUCT_EXPIRED",
-  
+
+  // 💳 Suscripciones
+  SUBSCRIPTION_EXPIRING = "SUBSCRIPTION_EXPIRING", // Suscripción por vencer
+  TRIAL_ENDING = "TRIAL_ENDING",                 // Trial por vencer
+  SUBSCRIPTION_ACTIVE = "SUBSCRIPTION_ACTIVE",     // Suscripción activada
+
   // ⚙️ Sistema
   SYSTEM = "SYSTEM",
 
@@ -41,6 +46,18 @@ export const NOTIFICATION_CONFIG: Record<NOTIFICATION_TYPE, { label: string; sev
   [NOTIFICATION_TYPE.SYSTEM]: {
     label: "Sistema",
     severity: "info", // Azul
+  },
+  [NOTIFICATION_TYPE.SUBSCRIPTION_EXPIRING]: {
+    label: "Suscripción por Vencer",
+    severity: "warning",
+  },
+  [NOTIFICATION_TYPE.TRIAL_ENDING]: {
+    label: "Trial por Vencer",
+    severity: "warning",
+  },
+  [NOTIFICATION_TYPE.SUBSCRIPTION_ACTIVE]: {
+    label: "Suscripción Activa",
+    severity: "success",
   },
   [NOTIFICATION_TYPE.NEW_ORDER]: {
     label: "Nueva Venta",

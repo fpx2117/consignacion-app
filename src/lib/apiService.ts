@@ -1,5 +1,4 @@
-
-//src/lib/apiService.ts
+// src/lib/apiService.ts
 import type {
   ApiResponse,
   Usuario,
@@ -25,21 +24,22 @@ import type {
   CreateVentaDirectaInput,
   CrearPagoResponse,
   CrearLiquidacionResponse,
+  Caja,
+  SesionCaja,
+  AbrirCajaInput,
+  CerrarCajaInput,
+  CrearMovimientoCajaInput,
+  Categoria,
+  HorarioLaboralConfig,
 } from "./types";
 
-// Importamos el tipo compartido para asegurar consistencia con el Socket
-import { AppNotification } from "@/types/notification";
-
 /* =========================
-   Fetch wrapper (Helper)
+    FETCH WRAPPER (HELPER)
 ========================= */
-async function apiRequest<T>(
-  path: string,
-  init?: RequestInit
-): Promise<ApiResponse<T>> {
+async function apiRequest<T>(path: string, init?: RequestInit): Promise<ApiResponse<T>> {
   let url = path;
 
-  // Si estamos en el servidor (SSR) y la ruta es relativa, necesitamos la URL completa
+  // SSR: si estamos en server y la ruta es relativa, convertimos a absoluta
   if (typeof window === "undefined" && path.startsWith("/")) {
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
     url = `${baseUrl}${path}`;
@@ -51,22 +51,44 @@ async function apiRequest<T>(
       "Content-Type": "application/json",
       ...(init?.headers ?? {}),
     },
-    // En Next.js App Router, 'no-store' evita que se cacheen datos que cambian rápido
     cache: init?.cache || "no-store",
   });
 
   if (!res.ok) {
+    if (res.status === 401 || res.status === 403) {
+      if (typeof window !== "undefined") {
+        window.location.href = "/login";
+      }
+    }
+
     let msg = `Error (${res.status})`;
     try {
       const j = await res.json();
       msg = j?.error ?? j?.message ?? msg;
-    } catch {}
+    } catch { }
     throw new Error(msg);
   }
 
   return (await res.json()) as ApiResponse<T>;
 }
 
+/**
+ * ✅ Helper recomendado: devuelve SOLO el `data` del ApiResponse<T>
+ * Esto hace que el apiService sea limpio y fácil de usar en UI.
+ */
+async function apiData<T>(path: string, init?: RequestInit): Promise<T> {
+  const res = await apiRequest<any>(path, init);
+  // Si la respuesta tiene una propiedad 'data', la extraemos. 
+  // Caso contrario, devolvemos el objeto raíz (por si es un array directo).
+  if (res && typeof res === "object" && "data" in res) {
+    return res.data as T;
+  }
+  return res as T;
+}
+
+/* =========================
+    HELPERS DE URL
+========================= */
 function getPublicBaseUrl(): string {
   const raw =
     process.env.NEXT_PUBLIC_BASE_URL?.trim() ||
@@ -74,28 +96,20 @@ function getPublicBaseUrl(): string {
     (typeof window !== "undefined" ? window.location.origin : "http://localhost:3000");
 
   let base = raw.replace(/\/$/, "");
-
-  // ✅ si viene sin http/https, lo forzamos
-  if (!/^https?:\/\//i.test(base)) {
-    base = `https://${base}`;
-  }
-
+  if (!/^https?:\/\//i.test(base)) base = `https://${base}`;
   return base;
 }
 
 function normalizeShareUrl(raw: string): string {
   const u = (raw ?? "").trim();
   if (!u) throw new Error("URL vacía");
-
   if (u.startsWith("http://") || u.startsWith("https://")) return u;
-  if (/^[a-z0-9.-]+\.[a-z]{2,}\//i.test(u)) return `https://${u}`;
-
   const path = u.startsWith("/") ? u : `/${u}`;
   return `${getPublicBaseUrl()}${path}`;
 }
 
 /* =========================
-   Definición de Rutas
+    DEFINICIÓN DE RUTAS
 ========================= */
 export const API_ROUTES = {
   AUTH: {
@@ -110,433 +124,391 @@ export const API_ROUTES = {
     TOP_PRODUCTOS: "/api/dashboard/top-productos",
     TENDENCIA: "/api/dashboard/tendencia",
   },
+
   CLIENTES: "/api/clientes",
   CLIENTE_ID: (id: number) => `/api/clientes/${id}`,
   ESTADO_CUENTA: (id: number) => `/api/estado-cuenta/${id}`,
-  INVENTARIO_LINK: "/api/productos/inventario-link",
-  HISTORIAL_LINK: (id: number) => `/api/historial/${id}/historial-link`,
-  HISTORIAL_YEARS: "/api/historial/anios",
 
   PRODUCTOS: "/api/productos",
   PRODUCTO_ID: (id: number) => `/api/productos/${id}`,
+  CATEGORIAS: "/api/categorias",
+  CATEGORIA_ID: (id: number) => `/api/categorias/${id}`,
+  INVENTARIO_LINK: "/api/productos/inventario-link",
 
   CONSIGNACIONES: "/api/consignaciones",
   CONSIGNACION_ID: (id: number) => `/api/consignaciones/${id}`,
+  REMITO_LINK: (id: number) => `/api/consignaciones/${id}/remito-link`,
 
-LIQUIDACIONES: {
-  BY_ID: (liquidacionId: number) => `/api/liquidaciones/${liquidacionId}`,
-  CREATE_FOR_CONSIGNACION: (consignacionId: number) =>
-    `/api/liquidaciones/consignacion/${consignacionId}`,
-},
+  LIQUIDACIONES: {
+    BY_ID: (id: number) => `/api/liquidaciones/${id}`,
+    CREATE_FOR_CONSIGNACION: (id: number) => `/api/liquidaciones/consignacion/${id}`,
+  },
+
+  HISTORIAL: {
+    YEARS: "/api/historial/anios",
+    LINK: (mes: number) => `/api/historial/${mes}/historial-link`,
+  },
 
   PAGOS: "/api/pagos",
   PAGO_CLIENTE: (clienteId: number) => `/api/pagos/${clienteId}`,
 
   VENTAS: "/api/ventas",
   VENTA_ID: (id: number) => `/api/ventas/${id}`,
+  TICKET_LINK: (id: number) => `/api/ventas/${id}/ticket-link`,
 
-  // Ruta para historial de notificaciones (Opcional por ahora)
- NOTIFICACIONES: {
+  NOTIFICACIONES: {
     LIST: "/api/notificaciones",
     READ_ONE: (id: number) => `/api/notificaciones/${id}/read`,
     READ_ALL: "/api/notificaciones/read-all",
     CREATE: "/api/notificaciones/create",
   },
+
+  CAJAS: {
+    LIST: "/api/settings/pos/cajas",
+    SESION: "/api/settings/pos/cajas/turno",
+    HISTORIAL: "/api/settings/pos/cajas/historial",
+    MOVIMIENTO: "/api/settings/pos/cajas/movimiento",
+  },
+
+  SETTINGS: {
+    HORARIOS: "/api/settings/pos/horarios",
+    GENERAL: "/api/settings/general",
+    SECURITY: {
+      ACTIVITY: "/api/security/activity",
+      SESSIONS: "/api/security/sessions",
+    },
+  },
 } as const;
 
 /* =========================
-   API SERVICE
+    API SERVICE (MÉTODOS)
 ========================= */
 export const apiService = {
   routes: API_ROUTES,
 
-  /* ---------- NOTIFICACIONES ---------- */
-
-  // Listar notificaciones (por defecto trae las últimas 50)
-  getNotificaciones(params?: { onlyUnread?: boolean; limit?: number }) {
-    const onlyUnread = params?.onlyUnread ?? false;
-    const limit = params?.limit ?? 50;
-
-    const qs = new URLSearchParams();
-    qs.set("onlyUnread", String(onlyUnread));
-    qs.set("limit", String(limit));
-
-    return apiRequest<any[]>(
-      `${API_ROUTES.NOTIFICACIONES.LIST}?${qs.toString()}`,
-      { method: "GET" }
-    );
+  /* ---------- CAJA ---------- */
+  getCajasDisponibles() {
+    return apiData<Caja[]>(API_ROUTES.CAJAS.LIST);
   },
 
-  // Marcar una como leída (id DB: number)
-  marcarNotificacionLeida(id: number) {
-    return apiRequest<{ success: boolean }>(API_ROUTES.NOTIFICACIONES.READ_ONE(id), {
+  verificarCajaAbierta() {
+    return apiRequest<SesionCaja | null>(API_ROUTES.CAJAS.SESION);
+  },
+
+  extenderTurno(minutos: number) {
+    return apiData<SesionCaja>(API_ROUTES.CAJAS.SESION, {
       method: "PATCH",
+      body: JSON.stringify({ minutos }),
     });
   },
 
-  // Marcar todas como leídas
-  marcarTodasNotificacionesLeidas() {
-    return apiRequest<{ success: boolean }>(API_ROUTES.NOTIFICACIONES.READ_ALL, {
-      method: "PATCH",
-    });
-  },
-
-  // Crear manual (opcional: para testing / admin)
-  crearNotificacion(payload: {
-    type: "LOW_STOCK" | "OUT_OF_STOCK" | "SYSTEM";
-    title: string;
-    description: string;
-    productoId?: number | null;
-    fingerprint: string;
-  }) {
-    return apiRequest<any>(API_ROUTES.NOTIFICACIONES.CREATE, {
+  abrirCaja(payload: AbrirCajaInput) {
+    return apiData<SesionCaja>(API_ROUTES.CAJAS.SESION, {
       method: "POST",
       body: JSON.stringify(payload),
     });
   },
 
-  /* ---------- AUTH ---------- */
-  setupAdmin() {
-    return apiRequest<Usuario>(API_ROUTES.AUTH.SETUP, { method: "POST" });
-  },
-
-  login(payload: LoginInput) {
-    return apiRequest<void>(API_ROUTES.AUTH.LOGIN, {
+  registrarMovimientoCaja(payload: CrearMovimientoCajaInput) {
+    return apiData<any>(API_ROUTES.CAJAS.MOVIMIENTO, {
       method: "POST",
       body: JSON.stringify(payload),
     });
   },
 
-  logout() {
-    return apiRequest<void>(API_ROUTES.AUTH.LOGOUT, { method: "POST" });
-  },
-
-  me() {
-    return apiRequest<Usuario>(API_ROUTES.AUTH.ME, { method: "GET" });
-  },
-
-  /* ---------- DASHBOARD ---------- */
-  getDashboardKpis(period: DashboardPeriod = "month") {
-    return apiRequest<DashboardKpis>(
-      `${API_ROUTES.DASHBOARD.KPIS}?period=${period}`,
-      { method: "GET" }
-    );
-  },
-
- async getConsignacionPdfUrl(id: number): Promise<string> {
-  if (typeof window === "undefined") {
-    throw new Error("getConsignacionPdfUrl debe ejecutarse en el cliente (window no disponible)");
-  }
-
-  const res = await fetch(`/api/consignaciones/${id}/remito-link`, {
-    cache: "no-store",
-    headers: { Accept: "application/json" },
-  });
-
-  if (!res.ok) throw new Error("No se pudo generar el link del remito");
-
-  const data: { url?: string } = await res.json();
-  if (!data?.url) throw new Error("Respuesta inválida del servidor (remito-link)");
-
-  return normalizeShareUrl(data.url);
-},
-
-async getInventarioPdfUrl(): Promise<string> {
-    if (typeof window === "undefined") {
-      throw new Error("getInventarioPdfUrl debe ejecutarse en el cliente");
-    }
-
-    // Llamamos al endpoint que genera el ShareLink de tipo INVENTARIO
-    const res = await fetch(API_ROUTES.INVENTARIO_LINK, {
-      cache: "no-store",
-      headers: { Accept: "application/json" },
+  cerrarCaja(payload: CerrarCajaInput) {
+    // Si tu backend devuelve { message, data }, acá usamos apiRequest y devolvemos el objeto completo:
+    return apiRequest<{ message: string; data: SesionCaja }>(API_ROUTES.CAJAS.SESION, {
+      method: "PUT",
+      body: JSON.stringify(payload),
     });
-
-    if (!res.ok) throw new Error("No se pudo generar el link del inventario");
-
-    const data: { url?: string } = await res.json();
-    if (!data?.url) throw new Error("Respuesta inválida del servidor");
-
-    // normalizeShareUrl convertirá "/x/abc-123" en "https://tusitio.com/x/abc-123"
-    return normalizeShareUrl(data.url);
   },
 
-async getVentaPdfUrl(id: number): Promise<string> {
-  if (typeof window === "undefined") {
-    throw new Error("getVentaPdfUrl debe ejecutarse en el cliente (window no disponible)");
-  }
-
-  const res = await fetch(`/api/ventas/${id}/ticket-link`, {
-    cache: "no-store",
-    headers: { Accept: "application/json" },
-  });
-
-  if (!res.ok) throw new Error("No se pudo generar el link del ticket");
-
-  const data: { url?: string } = await res.json();
-  if (!data?.url) throw new Error("Respuesta inválida del servidor (ticket-link)");
-
-  return normalizeShareUrl(data.url);
-},
-
-// --- NUEVO MÉTODO AQUÍ ---
-  async getAvailableYears(): Promise<number[]> {
-    try {
-      // Intenta obtener los años del backend
-      // Se asume que el backend devuelve un array: [2023, 2024, 2025]
-      const years = await apiRequest<number[]>(API_ROUTES.HISTORIAL_YEARS, { 
-        method: "GET" 
-      });
-      
-      // Validación extra por seguridad
-      if (Array.isArray(years) && years.length > 0) {
-        return years;
-      }
-      return [new Date().getFullYear()];
-      
-    } catch (error) {
-      console.warn("No se pudieron cargar los años del historial, usando año actual.", error);
-      // Fallback: devuelve el año actual si falla la API
-      return [new Date().getFullYear()];
-    }
+  getHistorialCajas() {
+    return apiData<SesionCaja[]>(API_ROUTES.CAJAS.HISTORIAL);
   },
 
-async getHistorialPdfUrl(mes: number, anio: number): Promise<string> {
-    if (typeof window === "undefined") {
-      throw new Error("getHistorialPdfUrl debe ejecutarse en el cliente");
-    }
-
-    // Construimos la URL con el mes (id) y el año como query param
-    const url = `${API_ROUTES.HISTORIAL_LINK(mes)}?anio=${anio}`;
-
-    const res = await fetch(url, {
-      cache: "no-store",
-      headers: { Accept: "application/json" },
+  crearCajaFisica(nombre: string) {
+    return apiData<Caja>(API_ROUTES.CAJAS.LIST, {
+      method: "POST",
+      body: JSON.stringify({ nombre }),
     });
-
-    if (!res.ok) throw new Error("No se pudo generar el link del historial");
-
-    const data: { url?: string } = await res.json();
-    if (!data?.url) throw new Error("Respuesta inválida del servidor (historial-link)");
-
-    // normalizeShareUrl convertirá "/x/abc-123" en "https://tusitio.com/x/abc-123"
-    return normalizeShareUrl(data.url);
   },
 
-  getDashboardConsignaciones(limit = 10) {
-    return apiRequest<DashboardConsignacionesResponse>(
-      `${API_ROUTES.DASHBOARD.CONSIGNACIONES}?limit=${limit}`,
-      { method: "GET" }
-    );
+  /* ---------- CONFIGURACIÓN GENERAL ---------- */
+  getConfiguracionGeneral() {
+    return apiData<any>(API_ROUTES.SETTINGS.GENERAL);
   },
 
-  getDashboardTopProductos(period: DashboardPeriod = "month", limit = 10) {
-    return apiRequest<DashboardTopProductos>(
-      `${API_ROUTES.DASHBOARD.TOP_PRODUCTOS}?period=${period}&limit=${limit}`,
-      { method: "GET" }
-    );
+  actualizarConfiguracionGeneral(data: any) {
+    // backend parece devolver { message, data }
+    return apiRequest<{ message: string; data: any }>(API_ROUTES.SETTINGS.GENERAL, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    });
   },
 
-  getDashboardTendencia(period: Exclude<DashboardPeriod, "all"> = "month") {
-    return apiRequest<DashboardTendencia>(
-      `${API_ROUTES.DASHBOARD.TENDENCIA}?period=${period}`,
-      { method: "GET" }
-    );
+  /* ---------- STAFF & SETTINGS ---------- */
+  getUsuariosConHorarios() {
+    return apiData<Usuario[]>(API_ROUTES.SETTINGS.HORARIOS);
+  },
+
+  guardarHorariosStaff(usuarioId: number, horarios: any[]) {
+    return apiRequest<{ message: string }>(API_ROUTES.SETTINGS.HORARIOS, {
+      method: "POST",
+      body: JSON.stringify({ usuarioId, horarios }),
+    });
   },
 
   /* ---------- CLIENTES ---------- */
   getClientes() {
-    return apiRequest<Cliente[]>(API_ROUTES.CLIENTES);
+    return apiData<Cliente[]>(API_ROUTES.CLIENTES);
   },
 
   getCliente(id: number) {
-    return apiRequest<Cliente>(API_ROUTES.CLIENTE_ID(id));
+    return apiData<Cliente>(API_ROUTES.CLIENTE_ID(id));
   },
 
   createCliente(payload: CreateClienteInput) {
-    return apiRequest<Cliente>(API_ROUTES.CLIENTES, {
+    return apiData<Cliente>(API_ROUTES.CLIENTES, {
       method: "POST",
       body: JSON.stringify(payload),
     });
   },
 
   updateCliente(id: number, payload: UpdateClienteInput) {
-    return apiRequest<Cliente>(API_ROUTES.CLIENTE_ID(id), {
+    return apiData<Cliente>(API_ROUTES.CLIENTE_ID(id), {
       method: "PUT",
       body: JSON.stringify(payload),
     });
   },
 
   deleteCliente(id: number) {
-    return apiRequest<{ success: boolean }>(API_ROUTES.CLIENTE_ID(id), {
-      method: "DELETE",
-    });
+    return apiData<{ success: boolean }>(API_ROUTES.CLIENTE_ID(id), { method: "DELETE" });
   },
 
   getEstadoCuenta(clienteId: number) {
-    return apiRequest<EstadoCuentaResponse>(API_ROUTES.ESTADO_CUENTA(clienteId));
+    return apiData<EstadoCuentaResponse>(API_ROUTES.ESTADO_CUENTA(clienteId));
   },
 
-  /* ---------- PRODUCTOS ---------- */
+  /* ---------- PRODUCTOS & CATEGORÍAS ---------- */
   getProductos() {
-    return apiRequest<Producto[]>(API_ROUTES.PRODUCTOS);
+    return apiData<Producto[]>(API_ROUTES.PRODUCTOS);
   },
 
   getProducto(id: number) {
-    return apiRequest<Producto>(API_ROUTES.PRODUCTO_ID(id));
+    return apiData<Producto>(API_ROUTES.PRODUCTO_ID(id));
   },
 
   createProducto(payload: CreateProductoInput) {
-    return apiRequest<Producto>(API_ROUTES.PRODUCTOS, {
+    return apiData<Producto>(API_ROUTES.PRODUCTOS, {
       method: "POST",
       body: JSON.stringify(payload),
     });
   },
 
-  
-
   updateProducto(id: number, payload: UpdateProductoInput) {
-    return apiRequest<Producto>(API_ROUTES.PRODUCTO_ID(id), {
+    return apiData<Producto>(API_ROUTES.PRODUCTO_ID(id), {
       method: "PUT",
       body: JSON.stringify(payload),
     });
   },
 
   deleteProducto(id: number) {
-    return apiRequest<{ ok: true }>(API_ROUTES.PRODUCTO_ID(id), {
-      method: "DELETE",
-    });
+    return apiData<{ ok: true }>(API_ROUTES.PRODUCTO_ID(id), { method: "DELETE" });
   },
 
-  /**
-   * Obtiene la lista completa de categorías
-   */
-  async getCategorias() {
-    const res = await fetch("/api/categorias");
-    if (!res.ok) throw new Error("Error al obtener categorías");
-    return res.json();
+  getCategorias() {
+    return apiData<Categoria[]>(API_ROUTES.CATEGORIAS);
   },
 
-  /**
-   * Crea una nueva categoría
-   * @param data Objeto con el nombre de la categoría
-   */
-  async createCategoria(data: { nombre: string }) {
-    const res = await fetch("/api/categorias", {
+  createCategoria(data: { nombre: string; color?: string }) {
+    return apiData<Categoria>(API_ROUTES.CATEGORIAS, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
     });
-    if (!res.ok) throw new Error("Error al crear la categoría");
-    return res.json();
   },
 
-  /**
-   * Elimina una categoría por ID
-   */
-  async deleteCategoria(id: number) {
-    const res = await fetch(`/api/categorias/${id}`, {
-      method: "DELETE",
+  deleteCategoria(id: number) {
+    return apiData<{ ok: true }>(API_ROUTES.CATEGORIA_ID(id), { method: "DELETE" });
+  },
+
+  updateCategoria(id: number, data: { nombre?: string; color?: string }) {
+    return apiData<Categoria>(API_ROUTES.CATEGORIA_ID(id), {
+      method: "PATCH",
+      body: JSON.stringify(data),
     });
-    if (!res.ok) throw new Error("Error al eliminar la categoría");
-    return res.json();
   },
-
 
   /* ---------- CONSIGNACIONES ---------- */
   getConsignaciones() {
-    return apiRequest<Consignacion[]>(API_ROUTES.CONSIGNACIONES);
+    return apiData<Consignacion[]>(API_ROUTES.CONSIGNACIONES);
   },
 
   getConsignacion(id: number) {
-    return apiRequest<Consignacion>(API_ROUTES.CONSIGNACION_ID(id));
+    return apiData<Consignacion>(API_ROUTES.CONSIGNACION_ID(id));
   },
-
- updateConsignacion(
-  id: number,
-  payload: { 
-    items: { productoId: number; unitsEntregadas: number }[];
-    porcentajeAumento?: number; // 👈 Agregamos esto para permitir ediciones
-  }
-) {
-  return apiRequest<Consignacion>(API_ROUTES.CONSIGNACION_ID(id), {
-    method: "PUT",
-    body: JSON.stringify(payload),
-  });
-},
 
   createConsignacion(payload: CreateConsignacionInput) {
-    return apiRequest<Consignacion>(API_ROUTES.CONSIGNACIONES, {
+    return apiData<Consignacion>(API_ROUTES.CONSIGNACIONES, {
       method: "POST",
       body: JSON.stringify(payload),
     });
   },
 
- /* ---------- LIQUIDACIONES ---------- */
-
-// Crear (por consignación)
-createLiquidacion(consignacionId: number, payload: CreateLiquidacionInput) {
-  return apiRequest<CrearLiquidacionResponse>(
-    API_ROUTES.LIQUIDACIONES.CREATE_FOR_CONSIGNACION(consignacionId),
-    {
-      method: "POST",
-      body: JSON.stringify(payload),
-    }
-  );
-},
-
-// Obtener (por liquidacionId)
-getLiquidacion(liquidacionId: number) {
-  return apiRequest<any>(
-    API_ROUTES.LIQUIDACIONES.BY_ID(liquidacionId),
-    { method: "GET" }
-  );
-},
-
-// Corregir (por liquidacionId)
-updateLiquidacion(liquidacionId: number, payload: CreateLiquidacionInput) {
-  return apiRequest<any>(
-    API_ROUTES.LIQUIDACIONES.BY_ID(liquidacionId),
-    {
+  updateConsignacion(id: number, payload: any) {
+    return apiData<Consignacion>(API_ROUTES.CONSIGNACION_ID(id), {
       method: "PUT",
       body: JSON.stringify(payload),
-    }
-  );
-},
-
-  /* ---------- PAGOS ---------- */
-  getPagos() {
-    return apiRequest<Pago[]>(API_ROUTES.PAGOS);
+    });
   },
 
-  createPago(clienteId: number, payload: CreatePagoInput) {
-    return apiRequest<CrearPagoResponse>(API_ROUTES.PAGO_CLIENTE(clienteId), {
+  /* ---------- LIQUIDACIONES ---------- */
+  createLiquidacion(consignacionId: number, payload: CreateLiquidacionInput) {
+    return apiData<CrearLiquidacionResponse>(API_ROUTES.LIQUIDACIONES.CREATE_FOR_CONSIGNACION(consignacionId), {
       method: "POST",
       body: JSON.stringify(payload),
     });
+  },
+
+  getLiquidacion(id: number) {
+    return apiData<any>(API_ROUTES.LIQUIDACIONES.BY_ID(id));
+  },
+
+  updateLiquidacion(liquidacionId: number, payload: any) {
+    return apiData<any>(API_ROUTES.LIQUIDACIONES.BY_ID(liquidacionId), {
+      method: "PUT",
+      body: JSON.stringify(payload),
+    });
+  },
+
+  /* ---------- HISTORIAL ---------- */
+  async getAvailableYears() {
+    const years = await apiData<number[]>(API_ROUTES.HISTORIAL.YEARS);
+    return years?.length ? years : [new Date().getFullYear()];
+  },
+
+  async getHistorialPdfUrl(mes: number, anio: number): Promise<string> {
+    const res = await fetch(`${API_ROUTES.HISTORIAL.LINK(mes)}?anio=${anio}`);
+    const data = await res.json();
+    return normalizeShareUrl(data.url);
   },
 
   /* ---------- VENTAS ---------- */
   getVentas() {
-    return apiRequest<Venta[]>(API_ROUTES.VENTAS);
+    return apiData<Venta[]>(API_ROUTES.VENTAS);
   },
 
   getVenta(id: number) {
-    return apiRequest<Venta>(API_ROUTES.VENTA_ID(id));
+    return apiData<Venta>(API_ROUTES.VENTA_ID(id));
   },
 
-// En apiService.ts -> ventas
-  deleteVenta(id: number) {
-   return apiRequest<{ success: true }>(API_ROUTES.VENTA_ID(id), {
-    method: "DELETE",
-  });
-},
-  
-  // NUEVO METODO
   createVentaDirecta(payload: CreateVentaDirectaInput) {
-    return apiRequest<Venta>(API_ROUTES.VENTAS, { // Asumiendo que POST /api/ventas crea la venta
+    return apiData<Venta>(API_ROUTES.VENTAS, {
       method: "POST",
       body: JSON.stringify(payload),
+    });
+  },
+
+  deleteVenta(id: number) {
+    return apiData<{ success: true }>(API_ROUTES.VENTA_ID(id), { method: "DELETE" });
+  },
+
+  /* ---------- PAGOS ---------- */
+  getPagos() {
+    return apiData<Pago[]>(API_ROUTES.PAGOS);
+  },
+
+  createPago(clienteId: number, payload: CreatePagoInput) {
+    return apiData<CrearPagoResponse>(API_ROUTES.PAGO_CLIENTE(clienteId), {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+  },
+
+  /* ---------- DASHBOARD ---------- */
+  getDashboardKpis(period: DashboardPeriod = "month") {
+    return apiData<DashboardKpis>(`${API_ROUTES.DASHBOARD.KPIS}?period=${period}`);
+  },
+
+  getDashboardConsignaciones(limit = 10) {
+    return apiData<DashboardConsignacionesResponse>(`${API_ROUTES.DASHBOARD.CONSIGNACIONES}?limit=${limit}`);
+  },
+
+  getDashboardTopProductos(period: DashboardPeriod = "month", limit = 10) {
+    return apiData<DashboardTopProductos>(`${API_ROUTES.DASHBOARD.TOP_PRODUCTOS}?period=${period}&limit=${limit}`);
+  },
+
+  getDashboardTendencia(period: Exclude<DashboardPeriod, "all"> = "month") {
+    return apiData<DashboardTendencia>(`${API_ROUTES.DASHBOARD.TENDENCIA}?period=${period}`);
+  },
+
+  /* ---------- NOTIFICACIONES ---------- */
+  getNotificaciones(params?: { onlyUnread?: boolean; limit?: number }) {
+    const qs = new URLSearchParams({
+      onlyUnread: String(params?.onlyUnread ?? false),
+      limit: String(params?.limit ?? 50),
+    });
+    return apiData<any[]>(`${API_ROUTES.NOTIFICACIONES.LIST}?${qs.toString()}`);
+  },
+
+  marcarNotificacionLeida(id: number) {
+    return apiData<{ success: boolean }>(API_ROUTES.NOTIFICACIONES.READ_ONE(id), { method: "PATCH" });
+  },
+
+  marcarTodasNotificacionesLeidas() {
+    return apiData<{ success: boolean }>(API_ROUTES.NOTIFICACIONES.READ_ALL, { method: "PATCH" });
+  },
+
+  /* ---------- AUTH ---------- */
+  login(payload: LoginInput) {
+    // si backend devuelve {data: null} esto funciona igual
+    return apiData<void>(API_ROUTES.AUTH.LOGIN, { method: "POST", body: JSON.stringify(payload) });
+  },
+
+  me() {
+    return apiData<Usuario>(API_ROUTES.AUTH.ME);
+  },
+
+  logout() {
+    return apiData<void>(API_ROUTES.AUTH.LOGOUT, { method: "POST" });
+  },
+
+  /* ---------- LINKS PDF (CLIENT-SIDE) ---------- */
+  async getConsignacionPdfUrl(id: number): Promise<string> {
+    const res = await fetch(API_ROUTES.REMITO_LINK(id));
+    const data = await res.json();
+    return normalizeShareUrl(data.url);
+  },
+
+  async getVentaPdfUrl(id: number): Promise<string> {
+    const res = await fetch(API_ROUTES.TICKET_LINK(id));
+    const data = await res.json();
+    return normalizeShareUrl(data.url);
+  },
+
+  async getInventarioPdfUrl(): Promise<string> {
+    const res = await fetch(API_ROUTES.INVENTARIO_LINK);
+    const data = await res.json();
+    return normalizeShareUrl(data.url);
+  },
+
+  /* ---------- SEGURIDAD ---------- */
+  getAuditLogs(params?: { module?: string; userId?: number; limit?: number }) {
+    const qs = new URLSearchParams();
+    if (params?.module) qs.append("module", params.module);
+    if (params?.userId) qs.append("userId", String(params.userId));
+    if (params?.limit) qs.append("limit", String(params.limit));
+    return apiData<any[]>(`${API_ROUTES.SETTINGS.SECURITY.ACTIVITY}?${qs.toString()}`);
+  },
+
+  getActiveSessions() {
+    return apiData<any[]>(API_ROUTES.SETTINGS.SECURITY.SESSIONS);
+  },
+
+  revokeSession(sessionId: string) {
+    return apiData<{ ok: boolean }>(`${API_ROUTES.SETTINGS.SECURITY.SESSIONS}?id=${sessionId}`, {
+      method: "DELETE",
     });
   },
 };

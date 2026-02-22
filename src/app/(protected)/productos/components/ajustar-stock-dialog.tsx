@@ -22,12 +22,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea"; // Asegúrate de tener este componente de shadcn
-import { 
-  ArrowUpCircle, 
-  ArrowDownCircle, 
-  Loader2, 
-  AlertTriangle, 
-  PackagePlus, 
+import {
+  ArrowUpCircle,
+  ArrowDownCircle,
+  Loader2,
+  AlertTriangle,
+  PackagePlus,
   TrendingDown,
   ClipboardPen
 } from "lucide-react";
@@ -60,7 +60,7 @@ export function AjustarStockDialog({ producto, onUpdated, trigger }: Props) {
     }
   }, [open]);
 
-  const stockFinal = tipo === "entrada" 
+  const stockFinal = tipo === "entrada"
     ? producto.stockDisponibleUnits + (cantidad || 0)
     : Math.max(0, producto.stockDisponibleUnits - (cantidad || 0));
 
@@ -69,7 +69,7 @@ export function AjustarStockDialog({ producto, onUpdated, trigger }: Props) {
       toast.error("Ingresa una cantidad válida");
       return;
     }
-    
+
     setLoading(true);
 
     try {
@@ -84,7 +84,7 @@ export function AjustarStockDialog({ producto, onUpdated, trigger }: Props) {
       };
 
       await apiService.updateProducto(producto.id, payload);
-      
+
       toast.success(`Stock actualizado: ${producto.stockDisponibleUnits} → ${stockFinal}`);
       onUpdated();
       setOpen(false);
@@ -98,10 +98,10 @@ export function AjustarStockDialog({ producto, onUpdated, trigger }: Props) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>{trigger}</DialogTrigger>
-      <DialogContent className="sm:max-w-[420px] border-border bg-card shadow-2xl rounded-[1.5rem]">
+      <DialogContent className="sm:max-w-[420px] bg-background shadow-2xl rounded-2xl border-none">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-2xl font-black italic tracking-tighter">
-            MOVIMIENTO DE STOCK
+          <DialogTitle className="flex items-center gap-2 text-xl font-bold italic tracking-tight text-primary">
+            Ajuste de Stock
           </DialogTitle>
           <div className="text-sm text-muted-foreground">
             Producto: <span className="font-bold text-foreground">{producto.nombre}</span>
@@ -110,13 +110,13 @@ export function AjustarStockDialog({ producto, onUpdated, trigger }: Props) {
 
         <div className="py-4 space-y-5">
           {/* SIMULADOR VISUAL */}
-          <div className="flex justify-around items-center bg-muted/30 p-4 rounded-2xl border border-border/50 relative overflow-hidden">
+          <div className="flex justify-around items-center bg-muted/20 p-4 rounded-xl border border-border/50 relative overflow-hidden">
             <div className="text-center relative z-10">
-              <p className="text-[9px] uppercase font-black text-muted-foreground tracking-widest">Actual</p>
+              <p className="text-[9px] uppercase font-bold text-muted-foreground tracking-widest">Actual</p>
               <p className="text-2xl font-black tabular-nums">{producto.stockDisponibleUnits}</p>
             </div>
-            
-            <div className="flex flex-col items-center gap-1 opacity-40">
+
+            <div className="flex flex-col items-center gap-1 opacity-60">
               {tipo === "entrada" ? (
                 <ArrowUpCircle className="h-5 w-5 text-emerald-500" />
               ) : (
@@ -128,7 +128,7 @@ export function AjustarStockDialog({ producto, onUpdated, trigger }: Props) {
             </div>
 
             <div className="text-center relative z-10">
-              <p className="text-[9px] uppercase font-black text-muted-foreground tracking-widest">Final</p>
+              <p className="text-[9px] uppercase font-bold text-muted-foreground tracking-widest">Final</p>
               <p className={cn(
                 "text-2xl font-black transition-all tabular-nums",
                 cantidad > 0 ? (tipo === "entrada" ? "text-emerald-500 scale-110" : "text-red-500 scale-110") : "text-primary"
@@ -141,15 +141,15 @@ export function AjustarStockDialog({ producto, onUpdated, trigger }: Props) {
           <div className="grid grid-cols-2 gap-3">
             {/* TIPO */}
             <div className="space-y-2">
-              <Label className="text-[10px] uppercase font-black opacity-60 ml-1">Tipo de Operación</Label>
-              <Select 
-                value={tipo} 
+              <Label className="text-[10px] uppercase font-bold opacity-70 ml-1">Operación</Label>
+              <Select
+                value={tipo}
                 onValueChange={(val: TipoMovimiento) => {
                   setTipo(val);
                   setMotivo(val === "entrada" ? "COMPRA" : "ROTURA");
                 }}
               >
-                <SelectTrigger className="h-11 rounded-xl font-bold bg-background border-2 focus:ring-primary/20">
+                <SelectTrigger className="h-11 rounded-xl bg-muted/30 border-transparent focus:ring-primary/20 font-medium">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent className="rounded-xl">
@@ -161,9 +161,9 @@ export function AjustarStockDialog({ producto, onUpdated, trigger }: Props) {
 
             {/* MOTIVO (Mapeado a Enums de Prisma) */}
             <div className="space-y-2">
-              <Label className="text-[10px] uppercase font-black opacity-60 ml-1">Motivo</Label>
+              <Label className="text-[10px] uppercase font-bold opacity-70 ml-1">Motivo</Label>
               <Select value={motivo} onValueChange={setMotivo}>
-                <SelectTrigger className="h-11 rounded-xl font-bold bg-background border-2">
+                <SelectTrigger className="h-11 rounded-xl bg-muted/30 border-transparent font-medium">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent className="rounded-xl">
@@ -189,11 +189,11 @@ export function AjustarStockDialog({ producto, onUpdated, trigger }: Props) {
           {/* CANTIDAD */}
           <div className="space-y-2">
             <div className="flex justify-between items-center ml-1">
-              <Label htmlFor="cantidad" className="text-[10px] uppercase font-black opacity-60">Unidades a mover</Label>
+              <Label htmlFor="cantidad" className="text-[10px] uppercase font-bold opacity-70">Unidades</Label>
               {tipo === "salida" && cantidad > producto.stockDisponibleUnits && (
-                 <span className="text-[9px] text-red-500 font-bold flex items-center gap-1 animate-pulse">
-                   <AlertTriangle className="h-3 w-3" /> STOCK INSUFICIENTE
-                 </span>
+                <span className="text-[9px] text-red-500 font-bold flex items-center gap-1 animate-pulse">
+                  <AlertTriangle className="h-3 w-3" /> STOCK INSUFICIENTE
+                </span>
               )}
             </div>
             <Input
@@ -202,21 +202,21 @@ export function AjustarStockDialog({ producto, onUpdated, trigger }: Props) {
               placeholder="0"
               value={cantidad || ""}
               onChange={(e) => setCantidad(Math.abs(Number(e.target.value)))}
-              className="text-2xl h-14 text-center font-black rounded-2xl bg-background border-2 transition-all focus-visible:ring-primary/20"
+              className="text-2xl h-14 text-center font-black rounded-xl bg-muted/30 border-transparent transition-all focus:bg-background focus:border-primary/20"
               min="0"
             />
           </div>
 
           {/* NOTAS OPCIONALES */}
           <div className="space-y-2">
-            <Label className="text-[10px] uppercase font-black opacity-60 ml-1 flex items-center gap-1">
-              <ClipboardPen className="h-3 w-3" /> Notas u Observaciones
+            <Label className="text-[10px] uppercase font-bold opacity-70 ml-1 flex items-center gap-1">
+              <ClipboardPen className="h-3 w-3" /> Observaciones
             </Label>
-            <Textarea 
+            <Textarea
               placeholder="Ej: Llegó caja dañada del transporte..."
               value={notas}
               onChange={(e) => setNotas(e.target.value)}
-              className="resize-none rounded-xl bg-background/50 border-2 min-h-[80px] text-xs"
+              className="resize-none rounded-xl bg-muted/30 border-transparent min-h-[80px] text-sm focus:bg-background focus:border-primary/20"
             />
           </div>
         </div>
@@ -226,19 +226,19 @@ export function AjustarStockDialog({ producto, onUpdated, trigger }: Props) {
             disabled={loading || cantidad <= 0}
             onClick={handleAjuste}
             className={cn(
-              "w-full h-12 rounded-xl text-white font-black uppercase tracking-widest transition-all shadow-lg active:scale-95",
-              tipo === "entrada" 
-                ? "bg-emerald-600 hover:bg-emerald-700 shadow-emerald-500/20" 
+              "w-full h-12 rounded-xl text-white font-bold uppercase tracking-wider transition-all shadow-lg active:scale-95",
+              tipo === "entrada"
+                ? "bg-emerald-600 hover:bg-emerald-700 shadow-emerald-500/20"
                 : "bg-red-600 hover:bg-red-700 shadow-red-500/20"
             )}
           >
             {loading ? (
               <Loader2 className="h-5 w-5 animate-spin" />
             ) : (
-              <div className="flex items-center gap-2">
+              <span className="flex items-center gap-2">
                 {tipo === "entrada" ? <PackagePlus className="h-5 w-5" /> : <TrendingDown className="h-5 w-5" />}
                 Confirmar {tipo === "entrada" ? "Ingreso" : "Egreso"}
-              </div>
+              </span>
             )}
           </Button>
         </DialogFooter>

@@ -30,106 +30,84 @@ export function KpiCard({
   const isWarning = variant === "warning";
   const isDefault = !isDestructive && !isSuccess && !isWarning;
 
+  const getGradient = () => {
+    if (isWarning) return "from-amber-500/10 via-amber-500/5 to-transparent border-amber-200/20 dark:border-amber-800/20";
+    return "from-card/60 via-card/40 to-transparent border-border/50";
+  };
+
+  const getIconBg = () => {
+    if (isDestructive) return "bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400";
+    if (isSuccess) return "bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400";
+    if (isWarning) return "bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400";
+    return "bg-secondary text-secondary-foreground";
+  };
+
   return (
     <motion.div
-      whileHover={{ y: -4 }}
+      whileHover={{ y: -4, scale: 1.01 }}
       transition={{ type: "spring", stiffness: 300, damping: 20 }}
       className="h-full w-full"
     >
       <Card
         className={cn(
-          "group relative flex flex-col justify-between overflow-hidden transition-all duration-500",
-          "h-full min-h-[140px] sm:min-h-[160px]", // Aumentamos min-h ligeramente para evitar colapsos
-          "border-none shadow-sm",
-          emphasis && "shadow-xl ring-1 ring-inset ring-black/10 dark:ring-white/10 z-10",
-          isDestructive && "bg-destructive/5 dark:bg-destructive/10 border-l-4 border-destructive/50",
-          isSuccess && "bg-emerald-500/5 dark:bg-emerald-500/10 border-l-4 border-emerald-500/50",
-          isWarning && "bg-amber-500/5 dark:bg-amber-500/10 border-l-4 border-amber-500/50",
-          isDefault && "bg-card/60 backdrop-blur-md border-l-4 border-transparent hover:border-primary/30"
+          "relative flex h-full min-h-[160px] flex-col justify-between overflow-hidden transition-all duration-300",
+          "border backdrop-blur-xl shadow-lg",
+          emphasis ? "shadow-xl ring-1 ring-black/5 dark:ring-white/10" : "shadow-sm",
+          "bg-gradient-to-br",
+          getGradient()
         )}
       >
-        {/* Glow Effects */}
+        {/* Glow Effect */}
         <div className={cn(
-          "absolute -left-6 -top-6 h-24 w-24 blur-3xl opacity-20 transition-opacity group-hover:opacity-40",
-          isDestructive && "bg-destructive",
+          "absolute -right-10 -top-10 h-32 w-32 rounded-full blur-3xl opacity-20",
+          isDestructive && "bg-red-500",
           isSuccess && "bg-emerald-500",
           isWarning && "bg-amber-500",
-          isDefault && "bg-primary"
+          isDefault && "bg-blue-500"
         )} />
 
-        <div className="relative z-10 flex h-full flex-col justify-between p-3 sm:p-5">
-          
-          <div className="flex flex-col gap-2 sm:gap-4">
-            
-            {/* ENCABEZADO: Responsivo (Column en muy pequeños, Row en el resto) */}
-            <div className="flex flex-col xs:flex-row items-start xs:items-center gap-2 xs:gap-3 w-full">
-              <div
-                className={cn(
-                  "shrink-0 rounded-lg p-2 transition-all duration-300 ring-1 ring-inset",
-                  isDestructive && "bg-destructive/10 text-destructive ring-destructive/20",
-                  isSuccess && "bg-emerald-500/10 text-emerald-600 ring-emerald-500/20 dark:text-emerald-400",
-                  isWarning && "bg-amber-500/10 text-amber-600 ring-amber-500/20 dark:text-amber-400",
-                  isDefault && "bg-primary/10 text-primary ring-primary/20"
-                )}
-              >
-                <Icon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-              </div>
-
-              <p className="text-[9px] sm:text-[10px] font-black uppercase tracking-wider text-muted-foreground/80 leading-tight text-balance overflow-hidden">
-                {title}
-              </p>
+        <div className="relative z-10 flex h-full flex-col p-5">
+          {/* Header */}
+          <div className="flex items-start justify-between mb-4">
+            <div className={cn("rounded-xl p-2.5 shadow-sm transition-colors", getIconBg())}>
+              <Icon className="h-5 w-5" />
             </div>
+          </div>
 
-            {/* VALOR: Ajuste de tamaño dinámico */}
+          {/* Content */}
+          <div className="flex flex-col gap-1 mt-auto">
+            <p className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground/80">
+              {title}
+            </p>
+
             {loading ? (
-              <Skeleton className="h-7 w-[60%] rounded-lg mt-1" />
+              <Skeleton className="h-8 w-3/4 rounded-lg my-1" />
             ) : (
               <motion.div
-                initial={{ opacity: 0, y: 5 }}
+                initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 className={cn(
-                  "font-black tabular-nums tracking-tighter leading-none transition-colors",
-                  "text-xl xs:text-2xl sm:text-3xl lg:text-4xl", // Escala fluida
-                  "break-all hyphens-auto", // Para números excesivamente largos o divisas
-                  isDestructive && "text-destructive",
+                  "text-3xl font-black tracking-tight tabular-nums",
                   isSuccess && "text-emerald-600 dark:text-emerald-400",
                   isWarning && "text-amber-600 dark:text-amber-400",
-                  isDefault && "text-foreground"
+                  isDefault && "text-card-foreground"
                 )}
               >
                 {value}
               </motion.div>
             )}
-          </div>
 
-          {/* FOOTER: Ajuste de padding y tamaño */}
-          <div className="mt-3 flex items-center gap-2 border-t border-foreground/5 pt-2 sm:pt-3">
-            <div
-              className={cn(
-                "shrink-0 h-1.5 w-1.5 rounded-full animate-pulse",
-                isDestructive && "bg-destructive",
-                isSuccess && "bg-emerald-500",
-                isWarning && "bg-amber-500",
-                isDefault && "bg-primary"
-              )}
-            />
-            <p className="text-[10px] sm:text-[11px] font-medium text-muted-foreground/70 italic line-clamp-1 group-hover:line-clamp-none transition-all">
+            <p className="text-xs font-medium text-muted-foreground/70 tracking-wide mt-1">
               {subtitle}
             </p>
           </div>
         </div>
 
-        {/* ICONO DE FONDO: Ajustado para no molestar visualmente en móvil */}
-        <Icon
-          className={cn(
-            "absolute -right-4 -bottom-4 h-20 w-20 sm:h-32 sm:w-32 transition-all duration-700 pointer-events-none z-0",
-            "-rotate-12 group-hover:rotate-0 group-hover:scale-110 opacity-[0.05]",
-            isDestructive && "text-destructive",
-            isSuccess && "text-emerald-500",
-            isWarning && "text-amber-500",
-            isDefault && "text-primary"
-          )}
-        />
+        {/* Decorative Watermark Icon (Subtle) */}
+        <Icon className={cn(
+          "absolute -bottom-4 -right-4 h-24 w-24 opacity-[0.03] rotate-12 pointer-events-none",
+          isDefault && "opacity-[0.05]"
+        )} />
       </Card>
     </motion.div>
   );

@@ -44,32 +44,44 @@ export function OperationsSection({ consig, loading }: { consig: any; loading: b
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: index * 0.05 }}
                 >
-                  <Link 
+                  <Link
                     href={`/consignaciones/${c.id}`}
-                    className="group flex items-center justify-between p-4 rounded-xl hover:bg-red-500/[0.03] transition-all duration-300"
+                    className="group flex items-center justify-between p-4 rounded-2xl bg-card/40 border border-border/50 hover:bg-card/60 shadow-sm hover:shadow-md transition-all duration-300 backdrop-blur-md"
                   >
                     <div className="flex items-center gap-4 min-w-0">
-                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-red-500/10 text-[10px] font-bold text-red-600 border border-red-500/20">
-                        #{c.id}
+                      <div className="relative flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-red-500/10 to-red-600/5 text-red-600 ring-1 ring-red-500/20 shadow-inner">
+                        <span className="text-xs font-black">#{c.id}</span>
+                        {index === 0 && (
+                          <span className="absolute -top-1 -right-1 flex h-3 w-3">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                            <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
+                          </span>
+                        )}
                       </div>
-                      <div className="flex flex-col min-w-0">
-                        <span className="truncate text-sm font-semibold group-hover:text-red-600 transition-colors">
+                      <div className="flex flex-col min-w-0 gap-0.5">
+                        <span className="truncate text-sm font-bold text-foreground/90 group-hover:text-red-600 transition-colors">
                           {c.cliente?.nombre ?? "Cliente Desconocido"}
                         </span>
-                        <span className="text-[11px] text-muted-foreground/70 font-medium">
-                          {new Date(c.fecha).toLocaleDateString("es-AR", { day: 'numeric', month: 'short' })} • {c.detalles?.length ?? 0} categorías
-                        </span>
+                        <div className="flex items-center gap-2 text-[10px] font-medium text-muted-foreground/70">
+                          <span className="bg-red-100 dark:bg-red-900/20 text-red-700 dark:text-red-400 px-1.5 py-0.5 rounded-md leading-none">
+                            {new Date(c.fecha).toLocaleDateString("es-AR", { day: 'numeric', month: 'short' })}
+                          </span>
+                          <span>•</span>
+                          <span>{c.detalles?.length ?? 0} categorías</span>
+                        </div>
                       </div>
                     </div>
 
                     <div className="flex items-center gap-4">
                       <div className="text-right">
-                        <p className="text-xs font-bold text-red-600 tabular-nums">
+                        <p className="text-sm font-black text-red-600 tabular-nums">
                           {formatNumber(c.unitsPendientes)}
                         </p>
-                        <p className="text-[10px] uppercase tracking-tighter font-bold text-muted-foreground/50">Pendientes</p>
+                        <p className="text-[9px] uppercase tracking-wider font-bold text-muted-foreground/50">Pendientes</p>
                       </div>
-                      <ChevronRight className="h-4 w-4 text-muted-foreground/30 group-hover:text-red-500 group-hover:translate-x-1 transition-all" />
+                      <div className="h-8 w-8 rounded-full flex items-center justify-center bg-transparent group-hover:bg-red-500/10 transition-colors">
+                        <ChevronRight className="h-4 w-4 text-muted-foreground/30 group-hover:text-red-500 transition-colors" />
+                      </div>
                     </div>
                   </Link>
                 </motion.div>
@@ -115,31 +127,37 @@ export function OperationsSection({ consig, loading }: { consig: any; loading: b
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: index * 0.05 }}
                   >
-                    <Link 
+                    <Link
                       href={`/consignaciones/${l.consignacionId}`}
-                      className="group flex items-center justify-between p-4 rounded-xl hover:bg-emerald-500/[0.03] transition-all duration-300"
+                      className="group flex items-center justify-between p-4 rounded-2xl bg-card/40 border border-border/50 hover:bg-card/60 shadow-sm hover:shadow-md transition-all duration-300 backdrop-blur-md"
                     >
                       <div className="flex items-center gap-4 min-w-0">
-                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-500/10 text-[10px] font-bold text-emerald-600 border border-emerald-500/20">
-                          L#{l.id}
+                        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-500/10 to-emerald-600/5 text-emerald-600 ring-1 ring-emerald-500/20 shadow-inner">
+                          <span className="text-xs font-black">L#{l.id}</span>
                         </div>
-                        <div className="flex flex-col min-w-0">
-                          <span className="truncate text-sm font-semibold group-hover:text-emerald-600 transition-colors">
+                        <div className="flex flex-col min-w-0 gap-0.5">
+                          <span className="truncate text-sm font-bold text-foreground/90 group-hover:text-emerald-600 transition-colors">
                             {l.consignacion?.cliente?.nombre ?? "Cliente"}
                           </span>
-                          <div className="flex items-center gap-2">
-                            <span className="text-[11px] text-emerald-600/80 font-bold">
-                              +{formatNumber(vendidas)} vendidas
-                            </span>
-                            <span className="h-1 w-1 rounded-full bg-muted-foreground/30" />
-                            <span className="text-[10px] text-muted-foreground/60 font-medium">
+                          <div className="flex items-center gap-2 text-[10px] font-medium text-muted-foreground/70">
+                            <span className="bg-emerald-100 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 px-1.5 py-0.5 rounded-md leading-none">
                               {new Date(l.fecha).toLocaleDateString("es-AR")}
                             </span>
                           </div>
                         </div>
                       </div>
 
-                      <ChevronRight className="h-4 w-4 text-muted-foreground/30 group-hover:text-emerald-500 group-hover:translate-x-1 transition-all" />
+                      <div className="flex items-center gap-4">
+                        <div className="text-right">
+                          <span className="text-sm font-black text-emerald-600 tabular-nums">
+                            +{formatNumber(vendidas)}
+                          </span>
+                          <p className="text-[9px] uppercase tracking-wider font-bold text-muted-foreground/50">Vendidas</p>
+                        </div>
+                        <div className="h-8 w-8 rounded-full flex items-center justify-center bg-transparent group-hover:bg-emerald-500/10 transition-colors">
+                          <ChevronRight className="h-4 w-4 text-muted-foreground/30 group-hover:text-emerald-500 transition-colors" />
+                        </div>
+                      </div>
                     </Link>
                   </motion.div>
                 );

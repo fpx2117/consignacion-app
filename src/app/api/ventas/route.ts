@@ -1,14 +1,13 @@
+// src/app/api/ventas/route.ts
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/requireAuth";
-import { TipoMovimientoStock, MotivoMovimientoStock } from "@prisma/client";
+import { TipoMovimientoStock, MotivoMovimientoStock, TipoVenta } from "@prisma/client";
 
-// ✅ Imports Centralizados de Config y Notificaciones
 import { sendNotification } from "@/lib/socket-trigger";
 import { obtenerConfiguracionGlobal } from "@/lib/config";
 import { evaluateStockAlert, processNotificationQueue } from "@/lib/stock-alerts";
 
-// GET: Listar ventas
 export async function GET() {
   const auth = await requireAuth();
   if (!auth.ok) return auth.res;
@@ -22,14 +21,24 @@ export async function GET() {
   return NextResponse.json({ data: ventas });
 }
 
-// POST: Crear Venta Directa
 export async function POST(req: Request) {
   const auth = await requireAuth();
   if (!auth.ok) return auth.res;
 
+  const payload = auth.user as any;
+  const rawId = payload.id || payload.userId || payload.usuarioId || payload.sub;
+  const usuarioId = Number(rawId);
+
+  if (!rawId || isNaN(usuarioId)) {
+    return NextResponse.json(
+      { error: "Identificación de usuario fallida. Reingresa al sistema." },
+      { status: 401 }
+    );
+  }
+
   try {
     const body = await req.json();
-    const { clienteId, items, metodoPago } = body; 
+    const { clienteId, items, metodoPago } = body;
 
     if (!items || !Array.isArray(items) || items.length === 0) {
       return NextResponse.json(
@@ -38,59 +47,62 @@ export async function POST(req: Request) {
       );
     }
 
-    // ✅ 1. Preparar Configuración y Cola de Notificaciones
+    // ✅ 1. TRAER CONFIGURACIÓN PRIMERO
     const configGlobal = await obtenerConfiguracionGlobal();
+    // Asumimos que si no existe el campo en DB aún, por defecto es estricto (true)
+    const usaCaja = configGlobal.usarControlDeCaja ?? true;
+
+    // ✅ 2. VERIFICAR SESIÓN DE CAJA (Condicional)
+    const sesionActiva = await prisma.sesionCaja.findFirst({
+      where: {
+        usuarioId: usuarioId,
+        estado: "ABIERTA",
+      },
+    });
+
+    // Si el sistema exige caja Y no hay caja abierta, bloqueamos.
+    if (usaCaja && !sesionActiva) {
+      return NextResponse.json(
+        { error: "Operación bloqueada: Debes abrir un turno de caja para realizar ventas casuales." },
+        { status: 403 }
+      );
+    }
+
     const notificationsQueue: any[] = [];
 
-    // --- Lógica de Cliente (Consumidor Final) ---
+    // Lógica de Cliente
     let finalClienteId = clienteId;
     if (!finalClienteId) {
       const consumidor = await prisma.cliente.findFirst({
         where: { nombre: "Consumidor Final" },
       });
-      if (consumidor) {
-        finalClienteId = consumidor.id;
-      } else {
-        const nuevoConsumidor = await prisma.cliente.create({
-          data: {
-            nombre: "Consumidor Final",
-            direccion: "Venta Mostrador",
-            saldoCuenta: 0,
-            activo: true,
-          },
-        });
-        finalClienteId = nuevoConsumidor.id;
-      }
+      finalClienteId = consumidor ? consumidor.id : (await prisma.cliente.create({
+        data: { nombre: "Consumidor Final", direccion: "Venta Mostrador", activo: true },
+      })).id;
     }
 
-    // ✅ 2. Transacción de Venta
+    // ✅ 3. TRANSACCIÓN DE VENTA ADAPTADA
     const result = await prisma.$transaction(async (tx) => {
       let totalVenta = 0;
       const detallesData = [];
 
       for (const item of items) {
-        // A) Verificar existencia y guardar estado PREVIO para auditoría
         const productoAntes = await tx.producto.findUnique({
           where: { id: item.productoId },
         });
 
-        if (!productoAntes) throw new Error(`Producto ID ${item.productoId} no encontrado.`);
+        if (!productoAntes) throw new Error(`Producto #${item.productoId} no existe.`);
 
         if (productoAntes.stockDisponibleUnits < item.units) {
-          throw new Error(
-            `Stock insuficiente para "${productoAntes.nombre}". Disponibles: ${productoAntes.stockDisponibleUnits}`
-          );
+          throw new Error(`Stock insuficiente para "${productoAntes.nombre}". Disponibles: ${productoAntes.stockDisponibleUnits}`);
         }
 
-        // B) Restar stock y CAPTURAR el estado POSTERIOR
         const productoDespues = await tx.producto.update({
           where: { id: item.productoId },
-          data: {
-            stockDisponibleUnits: { decrement: item.units },
-          },
+          data: { stockDisponibleUnits: { decrement: item.units } },
         });
 
-        // ✅ C) REGISTRAR AUDITORÍA DE STOCK
+        // Auditoría adaptada al estado de la caja
         await tx.movimientoStock.create({
           data: {
             productoId: item.productoId,
@@ -99,15 +111,15 @@ export async function POST(req: Request) {
             cantidad: item.units,
             stockPrevio: productoAntes.stockDisponibleUnits,
             stockPosterior: productoDespues.stockDisponibleUnits,
-            observaciones: "Venta directa en mostrador"
+            observaciones: sesionActiva
+              ? `Venta POS - Sesión #${sesionActiva.id}`
+              : `Venta POS - Rápida (Sin Caja)`
           }
         });
 
-        // ✅ D) EVALUAR ALERTAS CENTRALIZADAS
         const alerta = evaluateStockAlert(productoDespues, configGlobal);
         if (alerta) notificationsQueue.push(alerta);
 
-        // E) Cálculos de Venta
         const subtotal = Number(productoAntes.precioVenta) * item.units;
         totalVenta += subtotal;
 
@@ -119,10 +131,12 @@ export async function POST(req: Request) {
         });
       }
 
-      // F) Crear Venta
+      // Crear Venta asignando null si no hay sesión
       const nuevaVenta = await tx.venta.create({
         data: {
+          tipo: TipoVenta.CASUAL,
           clienteId: finalClienteId,
+          sesionCajaId: sesionActiva?.id || null, // <--- Aquí es clave el ?.
           fecha: new Date(),
           total: totalVenta,
           detalles: { create: detallesData },
@@ -130,10 +144,11 @@ export async function POST(req: Request) {
         include: { detalles: true, cliente: true },
       });
 
-      // G) Pago
+      // Registrar el pago asignando null si no hay sesión
       const nuevoPago = await tx.pago.create({
         data: {
           clienteId: finalClienteId,
+          sesionCajaId: sesionActiva?.id || null, // <--- Aquí también
           fecha: new Date(),
           monto: totalVenta,
           metodo: metodoPago || "EFECTIVO",
@@ -143,22 +158,23 @@ export async function POST(req: Request) {
       return { venta: nuevaVenta, pago: nuevoPago };
     });
 
-    // ✅ 3. DISPARAR NOTIFICACIONES DE STOCK (Centralizado)
+    // Post-Procesamiento
     await processNotificationQueue(notificationsQueue);
 
-    // ✅ 4. Notificar nueva venta (Sin guardar en DB, solo ruido de caja para UI)
+    // Mensaje de notificación adaptado
+    const cajaInfo = sesionActiva ? `(Caja: ${sesionActiva.cajaId})` : `(Modo Sin Caja)`;
     sendNotification({
-      type: "SYSTEM", 
-      title: "Nueva Venta",
-      message: `Venta #${result.venta.id} completada por $${result.venta.total}`,
+      type: "SYSTEM",
+      title: "Venta Exitosa",
+      message: `Venta #${result.venta.id} por $${result.venta.total} ${cajaInfo}`,
     }).catch(() => null);
 
     return NextResponse.json({ data: result.venta, pago: result.pago });
 
   } catch (error: any) {
-    console.error("Error creando venta:", error);
+    console.error("Error POS:", error);
     return NextResponse.json(
-      { error: error.message || "Error interno." },
+      { error: error.message || "Error al procesar la venta." },
       { status: 500 }
     );
   }

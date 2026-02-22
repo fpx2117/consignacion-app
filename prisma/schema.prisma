@@ -11,6 +11,21 @@ enum RolUsuario {
   EMPLEADO
 }
 
+enum EstadoSesionCaja {
+  ABIERTA
+  CERRADA
+}
+
+enum TipoMovimientoCaja {
+  INGRESO
+  EGRESO
+}
+
+enum TipoVenta {
+  CASUAL // Venta directa por mostrador (POS)
+  LIQUIDACION // Venta generada al cerrar una consignación
+}
+
 enum TipoMovimientoStock {
   ENTRADA
   SALIDA
@@ -40,12 +55,34 @@ enum NotificationType {
   OUT_OF_STOCK
   EXPIRATION_NEAR
   PRODUCT_EXPIRED
+  SUBSCRIPTION_EXPIRING
+  TRIAL_ENDING
+  SUBSCRIPTION_ACTIVE
   SYSTEM
+  NEW_ORDER
+  PAYMENT_RECEIVED
+  PAYMENT_FAILED
+  EXPORT_READY
+  CLIENT_REGISTERED
 }
 
 enum EstadoConsignacion {
   ABIERTA
   CERRADA
+}
+
+enum EstadoSuscripcion {
+  PRUEBA
+  ACTIVO
+  ATRASADO
+  CANCELADO
+  INCOMPLETO
+}
+
+enum ProveedorSuscripcion {
+  MERCADOPAGO
+  PAYPAL
+  PROMO
 }
 
 enum MetodoPago {
@@ -64,6 +101,9 @@ model Configuracion {
   notificarVencimientos Boolean @default(true)
   notificarStockBajo    Boolean @default(true)
   notificarVentas       Boolean @default(true)
+
+  // NUEVO: Interruptor global para forzar o ignorar el uso de turnos/cajas
+  usarControlDeCaja Boolean @default(true)
 }
 
 model Usuario {
@@ -74,8 +114,74 @@ model Usuario {
   rol       RolUsuario @default(EMPLEADO)
   activo    Boolean    @default(true)
   createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  sesionesCaja SesionCaja[] // <--- NUEVO: Relación con sus turnos
+  horarios     HorarioLaboral[]
+  subscription Subscription? // <--- NUEVO: Relación con su suscripción
+
+  auditLogs    AuditLog[]
+  userSessions UserSession[]
 
   @@index([rol])
+}
+
+model UserSession {
+  id     String  @id @default(cuid())
+  userId Int
+  user   Usuario @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  token     String  @unique // Hashed token or session ID
+  userAgent String?
+  ipAddress String?
+
+  // ✅ Datos de dispositivo y ubicación (Real)
+  browser String?
+  os      String?
+  device  String?
+  city    String?
+  country String?
+
+  isActive  Boolean  @default(true)
+  expiresAt DateTime
+
+  lastActivity DateTime @default(now())
+  createdAt    DateTime @default(now())
+
+  @@index([userId])
+  @@index([isActive])
+}
+
+model AuditLog {
+  id     Int      @id @default(autoincrement())
+  userId Int?
+  user   Usuario? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  action  String // Ej: "LOGIN", "UPDATE_PRODUCT", "DELETE_SALE"
+  module  String // Ej: "AUTH", "INVENTORY", "SALES"
+  details Json? // Información extra del cambio
+
+  ipAddress String?
+  userAgent String?
+
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([action])
+  @@index([module])
+  @@index([createdAt])
+}
+
+model HorarioLaboral {
+  id         Int     @id @default(autoincrement())
+  usuarioId  Int
+  diaSemana  Int // 0 (Domingo) a 6 (Sábado)
+  horaInicio String // "09:00"
+  horaFin    String // "18:00"
+  activo     Boolean @default(true)
+  usuario    Usuario @relation(fields: [usuarioId], references: [id])
+
+  @@unique([usuarioId, diaSemana]) // Un horario por día por usuario
 }
 
 model Cliente {
@@ -190,9 +296,61 @@ model Producto {
   @@index([categoriaId])
 }
 
+model Caja {
+  id       Int          @id @default(autoincrement())
+  nombre   String       @unique // Ej: "Caja Principal"
+  activa   Boolean      @default(true)
+  sesiones SesionCaja[]
+}
+
+model SesionCaja {
+  id Int @id @default(autoincrement())
+
+  cajaId Int
+  caja   Caja @relation(fields: [cajaId], references: [id], onDelete: Restrict)
+
+  usuarioId Int
+  usuario   Usuario @relation(fields: [usuarioId], references: [id], onDelete: Restrict)
+
+  estado EstadoSesionCaja @default(ABIERTA)
+
+  fechaApertura DateTime  @default(now())
+  fechaCierre   DateTime?
+
+  montoInicial       Decimal  @db.Decimal(10, 2)
+  montoFinalEsperado Decimal? @db.Decimal(10, 2)
+  montoFinalReal     Decimal? @db.Decimal(10, 2)
+  diferencia         Decimal? @db.Decimal(10, 2)
+
+  observaciones String?
+
+  movimientos MovimientoCaja[]
+  ventas      Venta[]
+  pagos       Pago[]
+
+  @@index([cajaId, estado])
+  @@index([usuarioId, fechaApertura])
+}
+
+model MovimientoCaja {
+  id Int @id @default(autoincrement())
+
+  sesionCajaId Int
+  sesionCaja   SesionCaja @relation(fields: [sesionCajaId], references: [id], onDelete: Cascade)
+
+  tipo   TipoMovimientoCaja
+  monto  Decimal            @db.Decimal(10, 2)
+  motivo String
+
+  fecha DateTime @default(now())
+
+  @@index([sesionCajaId])
+}
+
 model Categoria {
   id        Int        @id @default(autoincrement())
   nombre    String     @unique
+  color     String     @default("sky")
   productos Producto[]
 }
 
@@ -294,20 +452,27 @@ model LiquidacionItem {
 }
 
 model Venta {
-  id        Int     @id @default(autoincrement())
+  id         Int        @id @default(autoincrement())
+  tipo       TipoVenta  @default(CASUAL)
+  metodoPago MetodoPago @default(EFECTIVO)
+
   clienteId Int
   cliente   Cliente @relation(fields: [clienteId], references: [id], onDelete: Restrict)
 
-  /// 1 venta opcional asociada a 1 liquidación
+  // Campos de origen (uno u otro estará presente según el tipo)
   liquidacionId Int?         @unique
   liquidacion   Liquidacion? @relation(fields: [liquidacionId], references: [id], onDelete: SetNull)
 
-  fecha DateTime @default(now())
-  total Decimal  @db.Decimal(10, 2)
+  sesionCajaId Int?
+  sesionCaja   SesionCaja? @relation(fields: [sesionCajaId], references: [id], onDelete: Restrict)
 
+  fecha    DateTime       @default(now())
+  total    Decimal        @db.Decimal(10, 2)
   detalles VentaDetalle[]
 
   @@index([clienteId, fecha])
+  @@index([sesionCajaId])
+  @@index([tipo]) // Para filtrar rápido en el Dashboard
 }
 
 model VentaDetalle {
@@ -329,13 +494,74 @@ model VentaDetalle {
 }
 
 model Pago {
-  id        Int     @id @default(autoincrement())
-  clienteId Int
-  cliente   Cliente @relation(fields: [clienteId], references: [id], onDelete: Restrict)
+  id           Int         @id @default(autoincrement())
+  clienteId    Int
+  cliente      Cliente     @relation(fields: [clienteId], references: [id], onDelete: Restrict)
+  sesionCajaId Int?
+  sesionCaja   SesionCaja? @relation(fields: [sesionCajaId], references: [id], onDelete: Restrict)
 
   fecha  DateTime   @default(now())
   monto  Decimal    @db.Decimal(10, 2)
   metodo MetodoPago
 
   @@index([clienteId, fecha])
+  @@index([sesionCajaId])
+}
+
+model Plan {
+  id            Int     @id @default(autoincrement())
+  nombre        String // Basic, Pro, Enterprise
+  descripcion   String?
+  precioARS     Decimal @db.Decimal(10, 2)
+  precioUSD     Decimal @db.Decimal(10, 2)
+  mercadopagoId String? // ID en MP
+  paypalId      String? // ID en PayPal
+  activo        Boolean @default(true)
+
+  subscriptions Subscription[]
+  limits        PlanLimit?
+  promoCodes    PromoCode[]
+}
+
+model Subscription {
+  id                String               @id @default(cuid())
+  userId            Int                  @unique
+  user              Usuario              @relation(fields: [userId], references: [id])
+  planId            Int
+  plan              Plan                 @relation(fields: [planId], references: [id])
+  status            EstadoSuscripcion    @default(PRUEBA)
+  provider          ProveedorSuscripcion
+  externalId        String               @unique // ID de MP o PayPal
+  trialEndsAt       DateTime?
+  currentPeriodEnd  DateTime?
+  cancelAtPeriodEnd Boolean              @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model PlanLimit {
+  id     Int  @id @default(autoincrement())
+  planId Int  @unique
+  plan   Plan @relation(fields: [planId], references: [id])
+
+  maxProductos        Int     @default(-1) // -1 = ilimitado
+  maxUsuarios         Int     @default(5)
+  allowConsignaciones Boolean @default(false)
+  allowSucursales     Boolean @default(false)
+
+  updatedAt DateTime @updatedAt
+}
+
+model PromoCode {
+  id           Int       @id @default(autoincrement())
+  code         String    @unique
+  planId       Int
+  plan         Plan      @relation(fields: [planId], references: [id])
+  durationDays Int // ej: 90 = 3 meses gratis
+  maxUses      Int       @default(1)
+  usedCount    Int       @default(0)
+  expiresAt    DateTime?
+  activo       Boolean   @default(true)
+  createdAt    DateTime  @default(now())
 }

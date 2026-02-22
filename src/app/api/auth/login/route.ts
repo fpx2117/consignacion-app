@@ -37,6 +37,41 @@ export async function POST(req: Request) {
   // ✅ IMPORTANTÍSIMO
   await setAuthCookie(token);
 
+  // --- NUEVO: Seguimiento de Sesión y Auditoría ---
+  try {
+    const { getRealClientData } = await import("@/lib/clientData");
+    const { getSessionHash } = await import("@/lib/sessionHash");
+    const clientData = await getRealClientData();
+    const sessionToken = getSessionHash(token);
+
+    // Crear sesión en DB
+    await prisma.userSession.create({
+      data: {
+        userId: user.id,
+        token: sessionToken,
+        userAgent: clientData.userAgent,
+        ipAddress: clientData.ip,
+        browser: clientData.browser,
+        os: clientData.os,
+        device: clientData.device,
+        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 días
+      },
+    });
+
+    // Registrar en auditoría
+    const { recordAuditLog } = await import("@/lib/audit");
+    await recordAuditLog({
+      userId: user.id,
+      action: "LOGIN",
+      module: "AUTH",
+      details: { email: user.email },
+      ipAddress: clientData.ip,
+      userAgent: clientData.userAgent,
+    });
+  } catch (e: any) {
+    console.error("Error logging session:", e.message);
+  }
+
   return NextResponse.json({
     data: { id: user.id, nombre: user.nombre, email: user.email, rol: user.rol },
   });
