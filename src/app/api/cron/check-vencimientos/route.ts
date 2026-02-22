@@ -121,10 +121,81 @@ export async function GET(request: Request) {
       }
     }
 
-    // --- 5. SUSCRIPCIONES VENCIDAS ---
+    // --- 5. ALERTAS DE SUSCRIPCIÓN (PRÓXIMAS A VENCER) ---
+    const in3Days = new Date(now.getTime() + (3 * 24 * 60 * 60 * 1000));
+
+    // A. Trials que terminan pronto
+    const trialsEndingSoon = await prisma.subscription.findMany({
+      where: {
+        status: "PRUEBA",
+        trialEndsAt: { gt: now, lte: in3Days }
+      },
+      include: { user: true }
+    });
+
+    for (const sub of trialsEndingSoon) {
+      const fingerprint = `TRIAL_END:${sub.id}:${sub.trialEndsAt?.toISOString().split('T')[0]}`;
+      const existe = await prisma.notification.findUnique({ where: { fingerprint } });
+
+      if (!existe) {
+        const type = NOTIFICATION_TYPE.TRIAL_ENDING;
+        const savedNotif = await prisma.notification.create({
+          data: {
+            type,
+            title: NOTIFICATION_CONFIG[type].label,
+            description: `Tu período de prueba termina pronto (${formatearFecha(sub.trialEndsAt)}).`,
+            userId: sub.userId,
+            fingerprint,
+          }
+        });
+
+        await sendNotification({
+          type,
+          title: `🎁 ${NOTIFICATION_CONFIG[type].label}`,
+          message: `Atención ${sub.user.nombre}: Tu prueba gratuita termina el ${formatearFecha(sub.trialEndsAt)}.`,
+          data: { id: savedNotif.id, userId: sub.userId, createdAt: savedNotif.createdAt }
+        });
+      }
+    }
+
+    // B. Suscripciones ACTIVA que vencen pronto
+    const expiringSoon = await prisma.subscription.findMany({
+      where: {
+        status: "ACTIVO",
+        currentPeriodEnd: { gt: now, lte: in3Days }
+      },
+      include: { user: true }
+    });
+
+    for (const sub of expiringSoon) {
+      const fingerprint = `SUB_EXPIRING:${sub.id}:${sub.currentPeriodEnd?.toISOString().split('T')[0]}`;
+      const existe = await prisma.notification.findUnique({ where: { fingerprint } });
+
+      if (!existe) {
+        const type = NOTIFICATION_TYPE.SUBSCRIPTION_EXPIRING;
+        const savedNotif = await prisma.notification.create({
+          data: {
+            type,
+            title: NOTIFICATION_CONFIG[type].label,
+            description: `Tu suscripción se renovará pronto (${formatearFecha(sub.currentPeriodEnd)}).`,
+            userId: sub.userId,
+            fingerprint,
+          }
+        });
+
+        await sendNotification({
+          type,
+          title: `💳 ${NOTIFICATION_CONFIG[type].label}`,
+          message: `Hola ${sub.user.nombre}, recordá que tu suscripción vence el ${formatearFecha(sub.currentPeriodEnd)}.`,
+          data: { id: savedNotif.id, userId: sub.userId, createdAt: savedNotif.createdAt }
+        });
+      }
+    }
+
+    // --- 6. SUSCRIPCIONES VENCIDAS (EJECUCIÓN) ---
     const suscripcionesVencidas = await prisma.subscription.findMany({
       where: {
-        currentPeriodEnd: { lt: now }, // Usamos currentPeriodEnd según el esquema
+        currentPeriodEnd: { lt: now },
         status: 'ACTIVO'
       },
       include: {
@@ -133,13 +204,11 @@ export async function GET(request: Request) {
     });
 
     for (const sub of suscripcionesVencidas) {
-      // 1. Actualizar estado a VENCIDO
       await prisma.subscription.update({
         where: { id: sub.id },
         data: { status: 'VENCIDO' }
       });
 
-      // 2. Crear notificación para el usuario/admin
       const type = NOTIFICATION_TYPE.SYSTEM;
       const savedNotif = await prisma.notification.create({
         data: {
@@ -151,7 +220,6 @@ export async function GET(request: Request) {
         }
       });
 
-      // 3. Trigger socket
       await sendNotification({
         type,
         title: "🚫 Suscripción Finalizada",
@@ -165,6 +233,7 @@ export async function GET(request: Request) {
       procesados: {
         vencidos: vencidos.length,
         porVencer: porVencer.length,
+        alertasSuscripcion: trialsEndingSoon.length + expiringSoon.length,
         suscripcionesExpiradas: suscripcionesVencidas.length
       }
     });
