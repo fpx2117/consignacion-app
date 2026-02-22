@@ -1,8 +1,9 @@
+// src/app/api/liquidaciones/consignacion/[consignacionId]/route.ts
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/requireAuth";
 import { createLiquidacionBodySchema } from "@/lib/validators/liquidacion";
-import { TipoMovimientoStock, MotivoMovimientoStock } from "@prisma/client";
+import { TipoMovimientoStock, MotivoMovimientoStock, TipoVenta } from "@prisma/client";
 
 // ✅ Imports Centralizados de Config y Notificaciones
 import { obtenerConfiguracionGlobal } from "@/lib/config";
@@ -16,8 +17,17 @@ export async function POST(req: Request, { params }: RouteParams) {
   const auth = await requireAuth();
   if (!auth.ok) return auth.res;
 
-  const { consignacionId: rawId } = await params;
-  const consignacionId = Number(rawId);
+  // 1. 👇 EXTRACCIÓN SEGURA DEL ID (Evita errores de sesión o tipos) 👇
+  const payload = auth.user as any;
+  const rawId = payload.id || payload.userId || payload.usuarioId || payload.sub;
+  const usuarioId = Number(rawId);
+
+  if (!rawId || isNaN(usuarioId)) {
+    return NextResponse.json({ error: "Usuario no identificado." }, { status: 401 });
+  }
+
+  const { consignacionId: rawIdParam } = await params;
+  const consignacionId = Number(rawIdParam);
 
   if (!Number.isFinite(consignacionId)) {
     return NextResponse.json({ error: "consignacionId inválido" }, { status: 400 });
@@ -35,7 +45,7 @@ export async function POST(req: Request, { params }: RouteParams) {
 
   const { items } = parsed.data;
 
-  // ✅ 1. Cola de Alertas
+  // ✅ 2. Preparar Alertas y Config
   const configGlobal = await obtenerConfiguracionGlobal();
   const notificationsQueue: any[] = [];
 
@@ -61,7 +71,7 @@ export async function POST(req: Request, { params }: RouteParams) {
         precioUnitario: any;
       }[] = [];
 
-      // 2) Procesar items y validar pendiente
+      // 2) Procesar cada item enviado en la liquidación
       for (const item of items) {
         const det = detallesMap.get(item.consignacionDetalleId);
         if (!det) throw new Error(`DETALLE_NO_PERTENECE:${item.consignacionDetalleId}`);
@@ -69,12 +79,13 @@ export async function POST(req: Request, { params }: RouteParams) {
         const vendidas = item.unitsVendidas ?? 0;
         const devueltas = item.unitsDevueltas ?? 0;
 
+        // Validar que no se liquide más de lo pendiente
         const pendiente = det.unitsEntregadas - det.unitsVendidasAcum - det.unitsDevueltasAcum;
         if (vendidas + devueltas > pendiente) {
           throw new Error(`EXCEDE_PENDIENTE:${det.id}`);
         }
 
-        // Actualizar acumulados
+        // Actualizar acumulados de la consignación
         await tx.consignacionDetalle.update({
           where: { id: det.id },
           data: {
@@ -83,10 +94,11 @@ export async function POST(req: Request, { params }: RouteParams) {
           },
         });
 
-        // 🟢 CAPTURAR STOCK PREVIO
+        // Capturar estado previo para auditoría
         const productoAntes = await tx.producto.findUnique({ where: { id: det.productoId } });
+        if (!productoAntes) throw new Error(`PRODUCTO_NO_ENCONTRADO:${det.productoId}`);
 
-        // Actualizar stock producto
+        // Actualizar Stocks del producto
         const productoDespues = await tx.producto.update({
           where: { id: det.productoId },
           data: {
@@ -95,7 +107,7 @@ export async function POST(req: Request, { params }: RouteParams) {
           },
         });
 
-        // ✅ AUDITORÍA: SI DEVOLVIÓ ALGO (Entra al almacén)
+        // ✅ Auditoría de Stock: Devolución (Vuelve al almacén disponible)
         if (devueltas > 0) {
           await tx.movimientoStock.create({
             data: {
@@ -103,14 +115,14 @@ export async function POST(req: Request, { params }: RouteParams) {
               tipo: TipoMovimientoStock.ENTRADA,
               motivo: MotivoMovimientoStock.DEVOLUCION_CLIENTE,
               cantidad: devueltas,
-              stockPrevio: productoAntes!.stockDisponibleUnits,
+              stockPrevio: productoAntes.stockDisponibleUnits,
               stockPosterior: productoDespues.stockDisponibleUnits,
               observaciones: `Devolución s/Consignación #${consignacionId}`
             }
           });
         }
 
-        // ✅ AUDITORÍA: SI VENDIÓ ALGO (Sale definitivamente)
+        // ✅ Auditoría de Stock: Venta (Sale de stock consignado definitivamente)
         if (vendidas > 0) {
           await tx.movimientoStock.create({
             data: {
@@ -118,18 +130,19 @@ export async function POST(req: Request, { params }: RouteParams) {
               tipo: TipoMovimientoStock.SALIDA,
               motivo: MotivoMovimientoStock.VENTA,
               cantidad: vendidas,
-              stockPrevio: productoAntes!.stockDisponibleUnits,
+              // Nota: Aquí el stock disponible no cambia, cambia el consignado, 
+              // pero registramos el disponible para consistencia de auditoría.
+              stockPrevio: productoAntes.stockDisponibleUnits,
               stockPosterior: productoDespues.stockDisponibleUnits,
               observaciones: `Venta Liquidada s/Consignación #${consignacionId}`
             }
           });
         }
 
-        // Evaluar alertas (Si lo devuelto no es suficiente para salir de zona de peligro)
+        // Evaluar si el nuevo stock disponible requiere alerta
         const alerta = evaluateStockAlert(productoDespues, configGlobal);
         if (alerta) notificationsQueue.push(alerta);
 
-        // ✅ Importante: en tu modelo, el precio de consignación está en detalle.precioUnitario
         const precioUnit = Number(det.precioUnitario ?? det.producto.precioVenta);
 
         liquidacionItemsData.push({
@@ -149,7 +162,7 @@ export async function POST(req: Request, { params }: RouteParams) {
         }
       }
 
-      // 3) Crear liquidación
+      // 3) Crear la liquidación (cabecera)
       const nuevaLiquidacion = await tx.liquidacion.create({
         data: {
           consignacionId,
@@ -157,16 +170,18 @@ export async function POST(req: Request, { params }: RouteParams) {
         },
       });
 
-      // 4) Crear venta + saldo si hubo ventas
+      // 4) Crear venta asociada (Administrativa, sin sesión de caja obligatoria)
       if (totalVenta > 0) {
         await tx.venta.create({
           data: {
+            tipo: TipoVenta.LIQUIDACION, // 👈 Clasificamos la venta
             clienteId: consignacion.clienteId,
             liquidacionId: nuevaLiquidacion.id,
             total: totalVenta,
+            // sesionCajaId: null, (No se envía porque es opcional en el Schema)
             detalles: {
-              create: Array.from(soldByProduct.entries()).map(([productoId, info]) => ({
-                productoId,
+              create: Array.from(soldByProduct.entries()).map(([prodId, info]) => ({
+                productoId: Number(prodId),
                 units: info.units,
                 precioUnitario: info.precioUnitario,
                 subtotal: info.units * info.precioUnitario,
@@ -175,13 +190,14 @@ export async function POST(req: Request, { params }: RouteParams) {
           },
         });
 
+        // Actualizar el saldo de la cuenta corriente del cliente (Saldo positivo = Debe)
         await tx.cliente.update({
           where: { id: consignacion.clienteId },
           data: { saldoCuenta: { increment: totalVenta } },
         });
       }
 
-      // 5) Cerrar consignación si ya no queda pendiente
+      // 5) Verificar si cerramos la consignación automáticamente
       const detallesActualizados = await tx.consignacionDetalle.findMany({
         where: { consignacionId },
       });
@@ -200,30 +216,19 @@ export async function POST(req: Request, { params }: RouteParams) {
       return nuevaLiquidacion;
     });
 
-    // ✅ DISPARAR ALERTAS (Centralizado)
+    // ✅ Disparar notificaciones fuera de la transacción para no bloquear
     await processNotificationQueue(notificationsQueue);
 
     return NextResponse.json({ data: result }, { status: 201 });
+
   } catch (e: any) {
+    console.error("Error en liquidación:", e);
     const msg = String(e?.message || "");
 
-    if (msg === "CONSIGNACION_NO_ENCONTRADA") {
-      return NextResponse.json({ error: "Consignación no encontrada" }, { status: 404 });
-    }
-    if (msg === "CONSIGNACION_CERRADA") {
-      return NextResponse.json({ error: "La consignación ya está cerrada" }, { status: 409 });
-    }
-    if (msg.startsWith("DETALLE_NO_PERTENECE:")) {
-      return NextResponse.json({ error: "Detalle inválido" }, { status: 400 });
-    }
-    if (msg.startsWith("EXCEDE_PENDIENTE:")) {
-      return NextResponse.json(
-        { error: "Excede stock pendiente", detalleId: Number(msg.split(":")[1]) },
-        { status: 409 }
-      );
-    }
+    if (msg === "CONSIGNACION_NO_ENCONTRADA") return NextResponse.json({ error: "Consignación no encontrada" }, { status: 404 });
+    if (msg === "CONSIGNACION_CERRADA") return NextResponse.json({ error: "La consignación ya está cerrada" }, { status: 409 });
+    if (msg.startsWith("EXCEDE_PENDIENTE:")) return NextResponse.json({ error: "Stock insuficiente en consignación" }, { status: 409 });
 
-    console.error(e);
-    return NextResponse.json({ error: "Error procesando liquidación" }, { status: 500 });
+    return NextResponse.json({ error: "Error interno al procesar liquidación" }, { status: 500 });
   }
 }

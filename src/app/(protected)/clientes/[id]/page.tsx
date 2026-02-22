@@ -19,9 +19,9 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { 
-  ArrowLeft, FolderOpen, ChevronRight, 
-  Search, Package, 
+import {
+  ArrowLeft, FolderOpen, ChevronRight,
+  Search, Package,
   ArrowUpRight, ChevronLeft, Calendar as CalendarIcon, X,
   ShoppingCart, ReceiptText
 } from "lucide-react";
@@ -49,7 +49,7 @@ export default function ClienteDetailPage() {
   const [loading, setLoading] = React.useState(true);
   const [cliente, setCliente] = React.useState<Cliente | null>(null);
   const [operaciones, setOperaciones] = React.useState<OperacionDisplay[]>([]);
-  
+
   const [q, setQ] = React.useState("");
   const [date, setDate] = React.useState<Date | undefined>(undefined);
   const [currentPage, setCurrentPage] = React.useState(1);
@@ -67,40 +67,40 @@ export default function ClienteDetailPage() {
           apiService.getConsignaciones(),
           apiService.getVentas()
         ]);
-        
+
         if (!isMounted) return;
-        setCliente(cRes.data || cRes);
+        setCliente(cRes);
 
         const listaOperaciones: OperacionDisplay[] = [];
         // Lógica de mapeo igual a la original...
-        if (consRes.data) {
-          const consignaciones = (consRes.data as any[]).filter((c) => c.clienteId === id);
+        if (consRes) {
+          const consignaciones = consRes.filter((c) => c.clienteId === id);
           consignaciones.forEach(c => {
-             listaOperaciones.push({
-                id: c.id,
-                tipo: "CONSIGNACION",
-                fecha: c.fecha,
-                referencia: `Remito #${String(c.numeroFolio || c.id).padStart(4, '0')}`,
-                itemsCount: c.detalles?.length || 0,
-                estado: c.estado
-             });
+            listaOperaciones.push({
+              id: c.id,
+              tipo: "CONSIGNACION",
+              fecha: c.fecha,
+              referencia: `Remito #${String(c.numeroFolio || c.id).padStart(4, '0')}`,
+              itemsCount: c.detalles?.length || 0,
+              estado: c.estado
+            });
           });
         }
-        if (ventasRes.data) {
-           const ventasDirectas = (ventasRes.data as Venta[])
-             .filter((v) => v.clienteId === id)
-             .filter((v) => !v.liquidacionId);
-           ventasDirectas.forEach(v => {
-             const ticketId = String(v.id).padStart(3, '0');
-             listaOperaciones.push({
-                 id: v.id,
-                 tipo: "VENTA_DIRECTA",
-                 fecha: v.fecha,
-                 referencia: `Ticket #${ticketId}`,
-                 total: v.total,
-                 itemsCount: v.detalles?.length || 0
-              });
-           });
+        if (ventasRes) {
+          const ventasDirectas = ventasRes
+            .filter((v) => v.clienteId === id)
+            .filter((v) => !v.liquidacionId);
+          ventasDirectas.forEach(v => {
+            const ticketId = String(v.id).padStart(3, '0');
+            listaOperaciones.push({
+              id: v.id,
+              tipo: "VENTA_DIRECTA",
+              fecha: v.fecha,
+              referencia: `Ticket #${ticketId}`,
+              total: v.total,
+              itemsCount: v.detalles?.length || 0
+            });
+          });
         }
         listaOperaciones.sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime());
         setOperaciones(listaOperaciones);
@@ -146,7 +146,7 @@ export default function ClienteDetailPage() {
         max-w-4xl mantiene el contenido centrado en pantallas grandes.
       */}
       <div className="mx-auto w-full max-w-4xl p-4 md:p-8 lg:p-12 space-y-6 md:space-y-10">
-        
+
         {/* NAV */}
         <nav className="flex items-center gap-4">
           <Button variant="outline" size="icon" asChild className="rounded-full shadow-sm bg-card border-border shrink-0">
@@ -163,33 +163,33 @@ export default function ClienteDetailPage() {
           <Card className="bg-card/50 backdrop-blur-xl border-border rounded-[2rem] md:rounded-[2.5rem] p-6 md:p-10 shadow-xl overflow-hidden">
             {/* Flex-col en móvil, Row en desktop */}
             <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 md:gap-8">
-              
+
               <div className="flex items-center gap-4 md:gap-6 w-full md:w-auto">
                 {/* Icono más pequeño en móvil (h-16 vs h-20) */}
                 <div className="h-16 w-16 md:h-20 md:w-20 bg-gradient-to-br from-primary/10 to-primary/5 rounded-[1.2rem] md:rounded-[1.8rem] flex items-center justify-center border border-primary/10 shrink-0">
                   <FolderOpen className="h-7 w-7 md:h-9 md:w-9 text-primary" />
                 </div>
-                
+
                 <div className="space-y-1 min-w-0 flex-1">
                   {/* Título dinámico: text-2xl en móvil, text-5xl en desktop. break-words para nombres largos */}
                   <h1 className="text-2xl sm:text-3xl md:text-5xl font-black tracking-tighter italic uppercase leading-none break-words text-foreground">
                     {cliente.nombre}
                   </h1>
-                  
+
                   <div className="flex flex-wrap gap-2 mt-2">
-                    <Badge className={cn("border-none text-[9px] font-black px-3 rounded-full", 
+                    <Badge className={cn("border-none text-[9px] font-black px-3 rounded-full",
                       cliente.activo ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400" : "bg-muted text-muted-foreground")}>
                       {cliente.activo ? "ACTIVO" : "INACTIVO"}
                     </Badge>
                     {(cliente.nombre.toLowerCase().includes("consumidor") || cliente.nombre.toLowerCase().includes("final")) && (
-                        <Badge variant="outline" className="text-[9px] font-bold border-indigo-200 text-indigo-500 whitespace-nowrap">
-                            VENTA CASUAL
-                        </Badge>
+                      <Badge variant="outline" className="text-[9px] font-bold border-indigo-200 text-indigo-500 whitespace-nowrap">
+                        VENTA CASUAL
+                      </Badge>
                     )}
                   </div>
                 </div>
               </div>
-              
+
               {/* Stats a la derecha en desktop, ancho completo o alineado en móvil */}
               <div className="flex flex-row md:flex-col items-center md:items-end justify-between w-full md:w-auto gap-2 text-right border-t md:border-t-0 border-border/50 pt-4 md:pt-0 mt-2 md:mt-0">
                 <span className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Movimientos</span>
@@ -203,10 +203,10 @@ export default function ClienteDetailPage() {
             <div className="mt-8 md:mt-12 flex flex-col sm:flex-row gap-3">
               <div className="relative flex-1 w-full">
                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input 
+                <Input
                   value={q}
                   onChange={(e) => { setQ(e.target.value); setCurrentPage(1); }}
-                  placeholder="BUSCAR TICKET..." 
+                  placeholder="BUSCAR TICKET..."
                   className="h-12 md:h-14 bg-muted/30 border-border rounded-xl md:rounded-2xl pl-12 text-[10px] md:text-[11px] font-bold tracking-widest uppercase focus-visible:ring-primary/50 w-full"
                 />
               </div>
@@ -265,19 +265,19 @@ export default function ClienteDetailPage() {
                   >
                     {/* Contenedor Izquierdo: Fecha + Info (ocupa todo el espacio disponible menos la flecha) */}
                     <div className="flex items-center gap-3 md:gap-6 min-w-0 flex-1">
-                      
+
                       {/* FECHA CARD - Fija, no se encoge */}
                       <div className={cn(
-                          "flex flex-col items-center justify-center h-12 w-12 md:h-14 md:w-14 rounded-xl md:rounded-2xl border transition-colors shrink-0",
-                          isPOS 
-                            ? "bg-indigo-50 border-indigo-100 dark:bg-indigo-900/20 dark:border-indigo-800" 
-                            : "bg-orange-50 border-orange-100 dark:bg-orange-900/20 dark:border-orange-800"
+                        "flex flex-col items-center justify-center h-12 w-12 md:h-14 md:w-14 rounded-xl md:rounded-2xl border transition-colors shrink-0",
+                        isPOS
+                          ? "bg-indigo-50 border-indigo-100 dark:bg-indigo-900/20 dark:border-indigo-800"
+                          : "bg-orange-50 border-orange-100 dark:bg-orange-900/20 dark:border-orange-800"
                       )}>
                         <span className="text-[7px] md:text-[8px] font-black text-muted-foreground uppercase leading-none">
                           {dateObj.toLocaleString('es-AR', { month: 'short' }).toUpperCase()}
                         </span>
-                        <span className={cn("text-base md:text-xl font-black leading-none mt-0.5 md:mt-1", 
-                            isPOS ? "text-indigo-600 dark:text-indigo-400" : "text-orange-600 dark:text-orange-400"
+                        <span className={cn("text-base md:text-xl font-black leading-none mt-0.5 md:mt-1",
+                          isPOS ? "text-indigo-600 dark:text-indigo-400" : "text-orange-600 dark:text-orange-400"
                         )}>
                           {dateObj.getDate()}
                         </span>
@@ -286,36 +286,36 @@ export default function ClienteDetailPage() {
                       {/* DETALLE PRINCIPAL - Se encoge si es necesario */}
                       <div className="space-y-0.5 md:space-y-1 min-w-0 flex-1">
                         <div className="flex items-center gap-2 flex-wrap">
-                            <Badge variant="outline" className={cn(
-                              "text-[8px] md:text-[9px] font-black border-none px-2 py-0.5 whitespace-nowrap",
-                              isPOS 
-                                ? "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300" 
-                                : "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300"
-                            )}>
-                                {isPOS ? "VENTA POS" : "CONSIGNACIÓN"}
-                            </Badge>
-                            
-                            {!isPOS && op.estado === "ABIERTA" && (
-                                <Badge className="text-[8px] h-4 bg-emerald-500/10 text-emerald-600 border-none px-1.5">ABIERTA</Badge>
-                            )}
+                          <Badge variant="outline" className={cn(
+                            "text-[8px] md:text-[9px] font-black border-none px-2 py-0.5 whitespace-nowrap",
+                            isPOS
+                              ? "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300"
+                              : "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300"
+                          )}>
+                            {isPOS ? "VENTA POS" : "CONSIGNACIÓN"}
+                          </Badge>
+
+                          {!isPOS && op.estado === "ABIERTA" && (
+                            <Badge className="text-[8px] h-4 bg-emerald-500/10 text-emerald-600 border-none px-1.5">ABIERTA</Badge>
+                          )}
                         </div>
 
                         {/* TRUNCATE: Vital para responsive. Corta el texto con '...' si es muy largo */}
                         <span className="text-sm md:text-lg font-black tracking-tighter text-foreground group-hover:text-primary transition-colors uppercase block truncate">
                           {op.referencia}
                         </span>
-                        
+
                         <div className="flex items-center gap-3 md:gap-4 text-muted-foreground/60">
                           <div className="flex items-center gap-1.5 text-[9px] md:text-[10px] font-bold uppercase tracking-tight shrink-0">
                             {isPOS ? <ReceiptText className="h-3 w-3 opacity-50" /> : <Package className="h-3 w-3 opacity-50" />}
                             <span>{op.itemsCount} Items</span>
                           </div>
-                          
+
                           {isPOS && op.total !== undefined && (
-                             <div className="flex items-center gap-1.5 text-[9px] md:text-[10px] font-bold uppercase tracking-tight text-indigo-600 dark:text-indigo-400 shrink-0">
-                                <ShoppingCart className="h-3 w-3 opacity-50" />
-                                <span>$ {op.total.toLocaleString("es-AR")}</span>
-                             </div>
+                            <div className="flex items-center gap-1.5 text-[9px] md:text-[10px] font-bold uppercase tracking-tight text-indigo-600 dark:text-indigo-400 shrink-0">
+                              <ShoppingCart className="h-3 w-3 opacity-50" />
+                              <span>$ {op.total.toLocaleString("es-AR")}</span>
+                            </div>
                           )}
                         </div>
                       </div>
@@ -346,7 +346,7 @@ export default function ClienteDetailPage() {
         <footer className="pt-6 md:pt-10 flex flex-col items-center gap-4 opacity-40 pb-6">
           <div className="h-px w-20 bg-border" />
           <p className="text-[8px] font-black text-muted-foreground uppercase tracking-[0.5em] text-center">
-              Expediente Digital • 2026
+            Expediente Digital • 2026
           </p>
         </footer>
       </div>

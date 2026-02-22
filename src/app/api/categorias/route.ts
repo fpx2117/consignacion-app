@@ -20,7 +20,7 @@ export async function GET() {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { nombre } = body;
+    const { nombre, color } = body;
 
     if (!nombre) {
       return NextResponse.json(
@@ -30,8 +30,9 @@ export async function POST(req: NextRequest) {
     }
 
     const nuevaCategoria = await prisma.categoria.create({
-      data: { 
+      data: {
         nombre: nombre.trim(),
+        ...(color && { color }),
       },
     });
 

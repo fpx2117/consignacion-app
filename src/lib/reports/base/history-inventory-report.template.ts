@@ -81,13 +81,12 @@ export function buildHistoryInventoryHtml(
         <div class="flex justify-between items-start border-b-2 border-slate-100 pb-8 mb-8">
           <div class="flex items-center gap-4">
             
-            ${
-              branding.logoUrl
-                ? `<img src="${escapeAttr(branding.logoUrl)}" class="w-14 h-14 rounded-2xl object-contain bg-white border border-slate-100 shadow-lg" />`
-                : `<div class="w-14 h-14 bg-slate-900 text-white flex items-center justify-center rounded-2xl font-black text-2xl shadow-lg">${escapeHtml(
-                    badge
-                  )}</div>`
-            }
+            ${branding.logoUrl
+      ? `<img src="${escapeAttr(branding.logoUrl)}" class="w-14 h-14 rounded-2xl object-contain bg-white border border-slate-100 shadow-lg" />`
+      : `<div class="w-14 h-14 bg-slate-900 text-white flex items-center justify-center rounded-2xl font-black text-2xl shadow-lg">${escapeHtml(
+        badge
+      )}</div>`
+    }
 
             <div>
               <h1 class="text-2xl font-black tracking-tight text-slate-900">${escapeHtml(brandName)}</h1>
@@ -156,14 +155,14 @@ export function buildHistoryInventoryHtml(
 
             <tbody class="text-xs">
               ${movimientos
-                .map((m: any) => {
-                  const isEntrada = m.tipo === TipoMovimientoStock.ENTRADA;
-                  const date = new Date(m.createdAt);
-                  const day = date.getDate().toString().padStart(2, "0");
-                  const month = (date.getMonth() + 1).toString().padStart(2, "0");
-                  const time = date.toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" });
+      .map((m: any) => {
+        const isEntrada = m.tipo === TipoMovimientoStock.ENTRADA;
+        const date = new Date(m.createdAt);
+        const day = date.getDate().toString().padStart(2, "0");
+        const month = (date.getMonth() + 1).toString().padStart(2, "0");
+        const time = date.toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" });
 
-                  return `
+        return `
                 <tr class="group">
                   <td class="py-4 pl-6 bg-slate-50 rounded-l-2xl border-y border-l border-slate-100 font-bold text-slate-500 text-xs">
                     ${day}/${month} <span class="text-[9px] font-normal text-slate-400 ml-1">${time}</span>
@@ -175,11 +174,10 @@ export function buildHistoryInventoryHtml(
                   </td>
 
                   <td class="py-4 text-center bg-slate-50 border-y border-slate-100">
-                    ${
-                      isEntrada
-                        ? `<span class="text-[9px] text-emerald-700 font-bold bg-emerald-100 px-2 py-1 rounded border border-emerald-200 uppercase tracking-wider">Entrada</span>`
-                        : `<span class="text-[9px] text-rose-700 font-bold bg-rose-100 px-2 py-1 rounded border border-rose-200 uppercase tracking-wider">Salida</span>`
-                    }
+                    ${isEntrada
+            ? `<span class="text-[9px] text-emerald-700 font-bold bg-emerald-100 px-2 py-1 rounded border border-emerald-200 uppercase tracking-wider">Entrada</span>`
+            : `<span class="text-[9px] text-rose-700 font-bold bg-rose-100 px-2 py-1 rounded border border-rose-200 uppercase tracking-wider">Salida</span>`
+          }
                   </td>
 
                   <td class="py-4 text-center bg-slate-50 border-y border-slate-100">
@@ -195,8 +193,8 @@ export function buildHistoryInventoryHtml(
                   </td>
                 </tr>
               `;
-                })
-                .join("")}
+      })
+      .join("")}
               
               <tr class="text-[10px] font-bold uppercase text-slate-500">
                 <td class="pt-4 pl-6 text-right" colspan="3">Totales del período:</td>

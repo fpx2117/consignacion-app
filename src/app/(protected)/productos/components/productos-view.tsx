@@ -3,9 +3,12 @@
 import * as React from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
-import type { Producto } from "@/lib/types";
+import type { Producto, Categoria } from "@/lib/types";
 import { apiService } from "@/lib/apiService";
 import { formatMoney } from "@/lib/utils-format";
+import { cn } from "@/lib/utils";
+import { formatDateSafe, isExpired as dateExpired, isExpiringSoon } from "@/lib/utils-date";
+import { getCategoryColorByKey, getCategoryColorByName } from "@/lib/category-colors";
 
 // UI Components
 import { Card } from "@/components/ui/card";
@@ -20,16 +23,12 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 // Icons
 import {
@@ -46,7 +45,10 @@ import {
   Search,
   Calendar,
   Clock,
-  CircleDollarSign
+  CircleDollarSign,
+  ChevronLeft,
+  ChevronRight,
+  ArrowUpDown,
 } from "lucide-react";
 
 // Sub-components
@@ -55,37 +57,58 @@ import { EditProductoDialog } from "./edit-producto-dialog";
 import { AjustarStockDialog } from "./ajustar-stock-dialog";
 import { ProductosFilters } from "./productos-filters";
 import { DownloadInventoryButton } from "@/components/download-inventory-button";
-// 👇 AQUÍ IMPORTAMOS EL DIALOGO DE HISTORIAL
-import  HistoryReportDialog  from "./historial-report-dialog"; 
-import { cn } from "@/lib/utils";
+import HistoryReportDialog from "./historial-report-dialog";
 
 // --- Interfaces ---
 interface StatCardProps {
   label: string;
   value: string | number;
   icon: React.ElementType;
-  color: 'blue' | 'orange' | 'red' | 'emerald';
-  highlight?: boolean;
+  trend?: string;
+  trendUp?: boolean;
+  color?: "default" | "blue" | "emerald" | "orange" | "red";
+}
+
+type SortKey = "nombre" | "precioVenta" | "stockDisponibleUnits" | "categoria";
+type SortDirection = "asc" | "desc";
+
+interface SortConfig {
+  key: SortKey;
+  direction: SortDirection;
 }
 
 export function ProductosView() {
   const [items, setItems] = React.useState<Producto[]>([]);
+  const [allCategories, setAllCategories] = React.useState<Categoria[]>([]);
   const [loading, setLoading] = React.useState(true);
-  
+
   // Estados para Filtros
   const [q, setQ] = React.useState("");
   const [stockFilter, setStockFilter] = React.useState("all");
   const [categoryFilter, setCategoryFilter] = React.useState("all");
   const [expiryFilter, setExpiryFilter] = React.useState("all");
 
+  // Paginación y Ordenamiento
+  const [currentPage, setCurrentPage] = React.useState(1);
+  const [itemsPerPage, setItemsPerPage] = React.useState(10);
+  const [sortConfig, setSortConfig] = React.useState<SortConfig>({ key: "nombre", direction: "asc" });
+
   const load = React.useCallback(async () => {
     setLoading(true);
     try {
-      const res = await apiService.getProductos();
-      const activos = res.data?.filter((p: Producto) => p.activo !== false) ?? [];
+      const [resProductos, resCategorias] = await Promise.all([
+        apiService.getProductos(),
+        apiService.getCategorias()
+      ]);
+
+      const activos = Array.isArray(resProductos) ? resProductos.filter((p: Producto) => p.activo !== false) : [];
       setItems(activos);
+      setAllCategories(Array.isArray(resCategorias) ? resCategorias : []);
     } catch (e) {
-      toast.error("Error al sincronizar el inventario");
+      console.error("Error loading data:", e);
+      toast.error("Error al sincronizar datos");
+      setItems([]);
+      setAllCategories([]);
     } finally {
       setLoading(false);
     }
@@ -93,8 +116,9 @@ export function ProductosView() {
 
   React.useEffect(() => { load(); }, [load]);
 
+  // --- Lógica de Negocio ---
   const isLowStock = React.useCallback((p: Producto) => {
-    const min = p.stockMinUnits > 0 ? p.stockMinUnits : 5; 
+    const min = p.stockMinUnits > 0 ? p.stockMinUnits : 5;
     return p.stockDisponibleUnits <= min && p.stockDisponibleUnits > 0;
   }, []);
 
@@ -102,25 +126,22 @@ export function ProductosView() {
     return p.stockDisponibleUnits <= 0;
   }, []);
 
-  const categories = React.useMemo(() => {
-    const cats = new Set(items.map(p => p.categoria?.nombre).filter(Boolean));
-    return Array.from(cats) as string[];
-  }, [items]);
-
+  // Filtrado
   const filtered = React.useMemo(() => {
+    if (!items) return []; // Guard
     return items.filter((p) => {
       const term = q.trim().toLowerCase();
-      const matchesQuery = 
-        p.nombre.toLowerCase().includes(term) || 
+      const matchesQuery =
+        p.nombre.toLowerCase().includes(term) ||
         p.id.toString().includes(term) ||
         p.categoria?.nombre.toLowerCase().includes(term) ||
         (p.codigoBarra && p.codigoBarra.toLowerCase().includes(term));
 
       const matchesStock =
         stockFilter === "all" ? true :
-        stockFilter === "low" ? isLowStock(p) :
-        stockFilter === "out" ? isOutOfStock(p) :
-        stockFilter === "available" ? p.stockDisponibleUnits > 0 : true;
+          stockFilter === "low" ? isLowStock(p) :
+            stockFilter === "out" ? isOutOfStock(p) :
+              stockFilter === "available" ? p.stockDisponibleUnits > 0 : true;
 
       const matchesCategory = categoryFilter === "all" || p.categoria?.nombre === categoryFilter;
 
@@ -129,54 +150,94 @@ export function ProductosView() {
         if (!p.fechaVencimiento && expiryFilter === "none") matchesExpiry = true;
         else if (!p.fechaVencimiento) matchesExpiry = false;
         else {
-           const venc = new Date(p.fechaVencimiento);
-           const hoy = new Date();
-           hoy.setHours(0,0,0,0);
-           if (expiryFilter === "expired") matchesExpiry = venc < hoy;
-           else if (expiryFilter === "soon") {
-              const diff = (venc.getTime() - hoy.getTime()) / (1000 * 3600 * 24);
-              matchesExpiry = diff >= 0 && diff <= 7;
-           } else if (expiryFilter === "none") matchesExpiry = false;
+          const venc = new Date(p.fechaVencimiento);
+          const hoy = new Date();
+          hoy.setHours(0, 0, 0, 0);
+          if (expiryFilter === "expired") matchesExpiry = venc < hoy;
+          else if (expiryFilter === "soon") {
+            const diff = (venc.getTime() - hoy.getTime()) / (1000 * 3600 * 24);
+            matchesExpiry = diff >= 0 && diff <= 7;
+          } else if (expiryFilter === "none") matchesExpiry = false;
         }
       }
       return matchesQuery && matchesStock && matchesCategory && matchesExpiry;
     });
   }, [items, q, stockFilter, categoryFilter, expiryFilter, isLowStock, isOutOfStock]);
 
+  // Ordenamiento
+  const sorted = React.useMemo(() => {
+    const sortableItems = [...filtered];
+    if (sortConfig.key) {
+      sortableItems.sort((a, b) => {
+        let aValue: any = a[sortConfig.key as keyof Producto];
+        let bValue: any = b[sortConfig.key as keyof Producto];
+
+        if (sortConfig.key === "categoria") {
+          aValue = a.categoria?.nombre || "";
+          bValue = b.categoria?.nombre || "";
+        }
+
+        if (aValue < bValue) return sortConfig.direction === "asc" ? -1 : 1;
+        if (aValue > bValue) return sortConfig.direction === "asc" ? 1 : -1;
+        return 0;
+      });
+    }
+    return sortableItems;
+  }, [filtered, sortConfig]);
+
+  // Paginación
+  const totalPages = Math.ceil(sorted.length / itemsPerPage);
+  const paginatedItems = React.useMemo(() => {
+    const start = (currentPage - 1) * itemsPerPage;
+    return sorted.slice(start, start + itemsPerPage);
+  }, [sorted, currentPage, itemsPerPage]);
+
+  // Reseteo de página al filtrar
+  React.useEffect(() => {
+    setCurrentPage(1);
+  }, [q, stockFilter, categoryFilter, expiryFilter, itemsPerPage]);
+
+  const handleSort = (key: SortKey) => {
+    setSortConfig((current) => ({
+      key,
+      direction: current.key === key && current.direction === "asc" ? "desc" : "asc",
+    }));
+  };
+
   const stats = React.useMemo(() => ({
-    total: items.length,
-    lowStock: items.filter(i => isLowStock(i)).length,
-    outOfStock: items.filter(i => isOutOfStock(i)).length,
-    valorVenta: items.reduce((acc, i) => acc + (Number(i.precioVenta) * i.stockDisponibleUnits), 0),
-    utilidad: items.reduce((acc, i) => acc + ((Number(i.precioVenta) - Number(i.precioCosto)) * i.stockDisponibleUnits), 0)
+    total: items?.length || 0,
+    lowStock: items?.filter(i => isLowStock(i)).length || 0,
+    outOfStock: items?.filter(i => isOutOfStock(i)).length || 0,
+    valorVenta: items?.reduce((acc, i) => acc + (Number(i.precioVenta) * i.stockDisponibleUnits), 0) || 0,
+    utilidad: items?.reduce((acc, i) => acc + ((Number(i.precioVenta) - Number(i.precioCosto)) * i.stockDisponibleUnits), 0) || 0
   }), [items, isLowStock, isOutOfStock]);
 
   return (
-    <div className="max-w-7xl mx-auto space-y-6 p-4 md:p-10 text-foreground selection:bg-primary/20">
-      
+    <div className="max-w-[1600px] mx-auto space-y-8 p-6 md:p-10 pb-20 text-foreground selection:bg-primary/20 font-sans">
+
       {/* HEADER */}
-      <header className="flex flex-col md:flex-row md:items-end justify-between gap-6">
-        <div className="space-y-2 text-center md:text-left">
-          <div className="flex items-center gap-2 text-primary font-semibold tracking-wider uppercase text-[10px] bg-primary/10 w-fit px-3 py-1 rounded-full border border-primary/20 mx-auto md:mx-0">
-            <Package className="h-3 w-3" />
-            Catálogo Maestro
+      <header className="flex flex-col lg:flex-row lg:items-end justify-between gap-6 pb-6 border-b border-border/40">
+        <div className="space-y-2">
+          <div className="flex items-center gap-2 text-muted-foreground font-medium text-sm">
+
           </div>
-          <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight bg-gradient-to-br from-foreground to-foreground/60 bg-clip-text text-transparent">
+          <h1 className="text-4xl font-black tracking-tight text-foreground flex items-center gap-3">
+            <Package className="h-10 w-10 text-primary" />
             Inventario
           </h1>
+          <p className="text-muted-foreground text-lg max-w-2xl">
+            Gestiona tu catálogo, controla existencias y supervisa la rentabilidad de tu negocio en tiempo real.
+          </p>
         </div>
 
-        <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto items-center">
-          <div className="flex gap-2 w-full sm:w-auto">
-            <DownloadInventoryButton />
-            {/* 👇 AQUÍ SE USA EL COMPONENTE IMPORTADO */}
-            <HistoryReportDialog /> 
-          </div>
+        <div className="flex flex-wrap gap-3 items-center">
+          <HistoryReportDialog />
+          <DownloadInventoryButton />
           <CreateProductoDialog
             onCreated={load}
             trigger={
-              <Button size="lg" className="w-full sm:w-auto rounded-2xl shadow-lg shadow-primary/25 hover:shadow-primary/40 transition-all duration-300 font-bold gap-3 px-8 h-12 text-base">
-                <Plus className="h-5 w-5 stroke-[3px]" />
+              <Button size="lg" className="h-12 px-6 rounded-xl font-bold text-base shadow-xl shadow-primary/20 hover:shadow-primary/40 transition-all hover:scale-[1.02]">
+                <Plus className="h-5 w-5 mr-2 stroke-[3px]" />
                 Nuevo Producto
               </Button>
             }
@@ -184,282 +245,499 @@ export function ProductosView() {
         </div>
       </header>
 
-      {/* STATS CARDS */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 md:gap-4">
-        <StatCard label="Items" value={stats.total} icon={LayoutGrid} color="blue" />
-        <StatCard label="Stock Bajo" value={stats.lowStock} icon={AlertCircle} color="orange" highlight={stats.lowStock > 0} />
-        <StatCard label="Agotados" value={stats.outOfStock} icon={Package} color="red" highlight={stats.outOfStock > 0} />
-        <StatCard label="Valuación" value={formatMoney(stats.valorVenta)} icon={TrendingUp} color="emerald" />
+      {/* STATS */}
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
+        <StatCard label="Total Items" value={stats.total} icon={LayoutGrid} color="default" />
+        <StatCard label="Stock Bajo" value={stats.lowStock} icon={AlertCircle} color="orange" trend={stats.lowStock > 0 ? "Atención requerida" : "Todo en orden"} trendUp={stats.lowStock === 0} />
+        <StatCard label="Agotados" value={stats.outOfStock} icon={Package} color="red" trend={stats.outOfStock > 0 ? "Reponer urgente" : "Stock saludable"} trendUp={stats.outOfStock === 0} />
+        <StatCard label="Valuación Total" value={formatMoney(stats.valorVenta)} icon={TrendingUp} color="emerald" />
         <StatCard label="Utilidad Est." value={formatMoney(stats.utilidad)} icon={CircleDollarSign} color="blue" />
       </div>
 
-      {/* FILTROS */}
-      <section className="bg-card/30 p-2 rounded-3xl border border-border/50 backdrop-blur-sm relative z-20">
-        <ProductosFilters
-          query={q} setQuery={setQ}
-          stockFilter={stockFilter} setStockFilter={setStockFilter}
-          categoryFilter={categoryFilter} setCategoryFilter={setCategoryFilter}
-          expiryFilter={expiryFilter} setExpiryFilter={setExpiryFilter}
-          categories={categories}
-        />
-      </section>
+      <div className="space-y-4">
+        {/* FILTROS & CONTROLES */}
+        <Card className="p-1 bg-card/50 backdrop-blur-sm border-border/60 shadow-sm rounded-2xl">
+          <ProductosFilters
+            query={q} setQuery={setQ}
+            stockFilter={stockFilter} setStockFilter={setStockFilter}
+            categoryFilter={categoryFilter} setCategoryFilter={setCategoryFilter}
+            expiryFilter={expiryFilter} setExpiryFilter={setExpiryFilter}
+            categories={allCategories}
+          />
+        </Card>
 
-      {/* TABLA PRINCIPAL */}
-      <div className="relative min-h-[400px]">
-        <AnimatePresence mode="wait">
-          {loading ? (
-            <motion.div key="loader" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="h-[400px] flex flex-col items-center justify-center gap-6">
-              <Loader2 className="h-16 w-16 animate-spin text-primary opacity-40" />
-              <p className="text-sm font-bold tracking-widest uppercase text-muted-foreground animate-pulse">Sincronizando...</p>
-            </motion.div>
-          ) : (
-            <>
-              <div className="hidden md:block">
-                <Card className="border-none bg-card/40 backdrop-blur-xl shadow-2xl rounded-[2rem] overflow-hidden">
-                  <Table>
-                    <TableHeader className="bg-muted/50 border-b border-border/50">
-                      <TableRow className="hover:bg-transparent border-none text-[10px] uppercase font-black tracking-widest text-muted-foreground">
-                        <TableHead className="py-6 px-8 w-[25%] text-left">Producto</TableHead>
-                        <TableHead className="text-center">Categoría</TableHead>
-                        <TableHead className="text-center">Vencimiento</TableHead>
-                        <TableHead className="text-center">Existencias</TableHead>
-                        <TableHead className="text-right">Precio & Margen</TableHead>
-                        <TableHead className="text-right px-8">Acciones</TableHead>
+        {/* LOADING STATE */}
+        {loading && (
+          <div className="h-[400px] flex flex-col items-center justify-center gap-4 bg-card/30 rounded-2xl border border-border/50">
+            <Loader2 className="h-12 w-12 animate-spin text-primary opacity-50" />
+            <span className="text-sm font-medium text-muted-foreground animate-pulse">Cargando inventario...</span>
+          </div>
+        )}
+
+        {/* CONTENIDO PRINCIPAL (Desktop TABLE + Mobile CARDS) */}
+        {!loading && (
+          <>
+            {/* --- VISTA DESKTOP (TABLA) --- */}
+            <div className="hidden md:block">
+              <Card className="border-border/60 bg-card/40 backdrop-blur-xl shadow-sm rounded-2xl overflow-hidden">
+                <Table>
+                  <TableHeader className="bg-muted/30">
+                    <TableRow className="hover:bg-transparent border-b border-border/60">
+                      <SortableHead label="Producto" sortKey="nombre" currentSort={sortConfig} onSort={handleSort} className="pl-6 w-[30%]" />
+                      <SortableHead label="Categoría" sortKey="categoria" currentSort={sortConfig} onSort={handleSort} />
+                      <TableHead className="text-center font-bold text-xs uppercase tracking-wider text-muted-foreground/70">Estado</TableHead>
+                      <SortableHead label="Stock" sortKey="stockDisponibleUnits" currentSort={sortConfig} onSort={handleSort} className="text-center" />
+                      <TableHead className="text-center font-bold text-xs uppercase tracking-wider text-muted-foreground/70">Vencimiento</TableHead>
+                      <SortableHead label="Precio" sortKey="precioVenta" currentSort={sortConfig} onSort={handleSort} className="text-right pr-6" />
+                      <TableHead className="w-[180px] text-right pr-6 font-bold text-xs uppercase tracking-wider text-muted-foreground/70">Acciones</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {paginatedItems.map((p, idx) => (
+                      <ProductoRow key={p.id} p={p} idx={idx} load={load} isLow={isLowStock(p)} isOut={isOutOfStock(p)} />
+                    ))}
+                    {paginatedItems.length === 0 && (
+                      <TableRow>
+                        <TableCell colSpan={7} className="h-[300px] text-center">
+                          <div className="flex flex-col items-center justify-center gap-3 text-muted-foreground opacity-60">
+                            <Search className="h-12 w-12 stroke-[1.5]" />
+                            <p className="text-lg font-medium">No se encontraron productos</p>
+                            <Button variant="link" onClick={() => { setQ(""); setStockFilter("all"); setCategoryFilter("all"); setExpiryFilter("all"); }}>
+                              Limpiar filtros
+                            </Button>
+                          </div>
+                        </TableCell>
                       </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {filtered.map((p, idx) => (
-                        <DesktopRow key={p.id} p={p} idx={idx} load={load} isLow={isLowStock(p)} isOut={isOutOfStock(p)} />
-                      ))}
-                    </TableBody>
-                  </Table>
-                </Card>
-              </div>
+                    )}
+                  </TableBody>
+                </Table>
 
-              <div className="grid grid-cols-1 gap-4 md:hidden">
-                {filtered.map((p, idx) => (
-                  <MobileCard key={p.id} p={p} idx={idx} load={load} isLow={isLowStock(p)} isOut={isOutOfStock(p)} />
-                ))}
-              </div>
-              
-              {filtered.length === 0 && (
-                <div className="text-center py-20 opacity-50 flex flex-col items-center">
-                  <Search className="h-10 w-10 text-muted-foreground mb-4" />
-                  <h3 className="font-bold text-foreground">Sin resultados</h3>
+                {/* PAGINACIÓN (Desktop) */}
+                {filtered.length > 0 && (
+                  <PaginationControls
+                    currentPage={currentPage}
+                    totalPages={totalPages}
+                    itemsPerPage={itemsPerPage}
+                    setItemsPerPage={setItemsPerPage}
+                    setCurrentPage={setCurrentPage}
+                    totalItems={filtered.length}
+                    currentItems={paginatedItems.length}
+                  />
+                )}
+              </Card>
+            </div>
+
+            {/* --- VISTA MOBILE (CARDS) --- */}
+            <div className="md:hidden space-y-4">
+              {paginatedItems.map((p, idx) => (
+                <MobileProductCard key={p.id} p={p} idx={idx} load={load} isLow={isLowStock(p)} isOut={isOutOfStock(p)} />
+              ))}
+
+              {paginatedItems.length === 0 && (
+                <div className="flex flex-col items-center justify-center gap-3 text-muted-foreground opacity-60 py-20 text-center">
+                  <Search className="h-12 w-12 stroke-[1.5]" />
+                  <p className="text-lg font-medium">No se encontraron productos</p>
+                  <Button variant="link" onClick={() => { setQ(""); setStockFilter("all"); setCategoryFilter("all"); setExpiryFilter("all"); }}>
+                    Limpiar filtros
+                  </Button>
                 </div>
               )}
-            </>
-          )}
-        </AnimatePresence>
+
+              {/* PAGINACIÓN (Mobile) */}
+              {filtered.length > 0 && (
+                <PaginationControls
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  itemsPerPage={itemsPerPage}
+                  setItemsPerPage={setItemsPerPage}
+                  setCurrentPage={setCurrentPage}
+                  totalItems={filtered.length}
+                  currentItems={paginatedItems.length}
+                  isMobile
+                />
+              )}
+            </div>
+          </>
+        )}
       </div>
     </div>
   );
 }
 
-// --- SUB COMPONENTES (DesktopRow, MobileCard, StatCard, DeleteButton) ---
+// --- SUB COMPONENTS ---
 
-function DesktopRow({ p, idx, load, isLow, isOut }: { p: Producto; idx: number; load: () => void; isLow: boolean; isOut: boolean }) {
-  const { fechaStr, isExpired, isSoon } = React.useMemo(() => {
-    if (!p.fechaVencimiento) return { fechaStr: null, isExpired: false, isSoon: false };
-    const fechaObj = new Date(p.fechaVencimiento);
-    const hoy = new Date();
-    hoy.setHours(0, 0, 0, 0);
-    const diferenciaDias = Math.ceil((fechaObj.getTime() - hoy.getTime()) / (1000 * 60 * 60 * 24));
-    return {
-      fechaStr: fechaObj.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: '2-digit' }),
-      isExpired: fechaObj < hoy,
-      isSoon: diferenciaDias <= 7 && diferenciaDias >= 0
-    };
-  }, [p.fechaVencimiento]);
+function PaginationControls({
+  currentPage, totalPages, itemsPerPage, setItemsPerPage, setCurrentPage, totalItems, currentItems, isMobile = false
+}: {
+  currentPage: number, totalPages: number, itemsPerPage: number, setItemsPerPage: (v: number) => void, setCurrentPage: React.Dispatch<React.SetStateAction<number>>, totalItems: number, currentItems: number, isMobile?: boolean
+}) {
+  return (
+    <div className={cn("flex items-center justify-between gap-4 p-4 border-t border-border/60 bg-muted/20", isMobile && "flex-col border rounded-xl bg-card")}>
+      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+        <span>Mostrando {currentItems} de <span className="font-bold text-foreground">{totalItems}</span></span>
+      </div>
 
+      <div className={cn("flex items-center gap-4", isMobile && "w-full justify-between")}>
+        {!isMobile && (
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-muted-foreground">Filas:</span>
+            <Select value={itemsPerPage.toString()} onValueChange={(v) => setItemsPerPage(Number(v))}>
+              <SelectTrigger className="h-8 w-[70px] text-xs font-bold">
+                <SelectValue placeholder="10" />
+              </SelectTrigger>
+              <SelectContent side="top">
+                <SelectItem value="5">5</SelectItem>
+                <SelectItem value="10">10</SelectItem>
+                <SelectItem value="20">20</SelectItem>
+                <SelectItem value="50">50</SelectItem>
+                <SelectItem value="100">100</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        )}
+
+        <div className="flex items-center gap-1">
+          <Button variant="outline" size="icon" className="h-8 w-8 rounded-lg" onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1}>
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+          <div className="flex items-center gap-1 px-2">
+            <span className="text-sm font-bold">{currentPage}</span>
+            <span className="text-sm text-muted-foreground">/</span>
+            <span className="text-sm text-muted-foreground">{totalPages}</span>
+          </div>
+          <Button variant="outline" size="icon" className="h-8 w-8 rounded-lg" onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages}>
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function SortableHead({ label, sortKey, currentSort, onSort, className }: { label: string, sortKey: SortKey, currentSort: SortConfig, onSort: (k: SortKey) => void, className?: string }) {
+  const isActive = currentSort.key === sortKey;
+  return (
+    <TableHead className={cn("py-4 transition-colors cursor-pointer select-none hover:bg-muted/50 hover:text-foreground", className)} onClick={() => onSort(sortKey)}>
+      <div className={cn("flex items-center gap-2", className?.includes("text-right") && "justify-end", className?.includes("text-center") && "justify-center")}>
+        <span className={cn("font-bold text-xs uppercase tracking-wider", isActive ? "text-primary" : "text-muted-foreground/70")}>{label}</span>
+        <ArrowUpDown className={cn("h-3 w-3 transition-opacity", isActive ? "text-primary opacity-100" : "opacity-0")} />
+      </div>
+    </TableHead>
+  );
+}
+
+function ProductoRow({ p, idx, load, isLow, isOut }: { p: Producto; idx: number; load: () => void; isLow: boolean; isOut: boolean }) {
   return (
     <motion.tr
-      initial={{ opacity: 0, y: 10 }}
+      initial={{ opacity: 0, y: 5 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: Math.min(idx * 0.015, 0.4) }}
-      className="group border-b border-border/40 hover:bg-primary/[0.03] transition-all"
+      transition={{ delay: idx * 0.03 }}
+      className="group border-b border-border/40 hover:bg-muted/30 transition-colors"
     >
-      <TableCell className="px-8 py-5">
-        <div className="flex flex-col gap-1.5">
-          <span className="font-bold text-sm group-hover:text-primary transition-colors leading-none">{p.nombre}</span>
-          <div className="flex items-center gap-2">
-            <span className="text-[9px] bg-muted px-1.5 py-0.5 rounded text-muted-foreground font-mono font-medium">ID-{p.id}</span>
-            {p.codigoBarra && (
-              <span className="text-[9px] font-mono text-primary/70 bg-primary/5 px-2 py-0.5 rounded border border-primary/10 flex items-center gap-1">
-                <Barcode className="h-3 w-3" /> {p.codigoBarra}
-              </span>
+      <TableCell className="pl-6 py-4">
+        <div className="flex flex-col gap-1">
+          <span className="font-bold text-foreground text-sm leading-none group-hover:text-primary transition-colors">{p.nombre}</span>
+          <div className="flex items-center gap-2 pt-1">
+            {p.codigoBarra ? (
+              <Badge variant="outline" className="text-[10px] h-5 px-1.5 font-mono text-muted-foreground border-border/60 bg-background/50 gap-1 rounded-md">
+                <Barcode className="h-3 w-3 opacity-50" /> {p.codigoBarra}
+              </Badge>
+            ) : (
+              <span className="text-[10px] text-muted-foreground/40 italic">Sin código</span>
             )}
           </div>
         </div>
       </TableCell>
 
-      <TableCell className="text-center">
-        <div className="inline-flex items-center justify-center px-2.5 py-1 rounded-full bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700">
-           <span className="text-[10px] font-black uppercase tracking-widest text-zinc-600 dark:text-zinc-400">
-             {p.categoria?.nombre || "General"}
-           </span>
-        </div>
-      </TableCell>
-      
-      <TableCell className="text-center">
-        {fechaStr ? (
-          <div className={cn(
-            "inline-flex flex-col items-center px-2.5 py-1 rounded-xl text-[10px] font-bold border",
-            isExpired ? 'bg-red-500/10 text-red-600 border-red-500/20' : 
-            isSoon ? 'bg-amber-500/10 text-amber-600 border-amber-500/20 animate-pulse' : 
-            'bg-muted/50 text-muted-foreground'
-          )}>
-            <span className="flex items-center gap-1">{isSoon && !isExpired ? <Clock className="h-3 w-3" /> : <Calendar className="h-3 w-3" />}{fechaStr}</span>
-            {isExpired && <span className="text-[7px] uppercase tracking-tighter font-black">Vencido</span>}
-          </div>
-        ) : <span className="text-muted-foreground/30 text-[9px] italic font-medium tracking-tight">No vence</span>}
+      <TableCell className="text-left">
+        {(() => {
+          const catName = p.categoria?.nombre || "General";
+          const color = p.categoria?.color ? getCategoryColorByKey(p.categoria.color) : getCategoryColorByName(catName);
+          return (
+            <Badge variant="secondary" className={cn("px-2.5 py-0.5 rounded-lg font-bold text-[10px] border uppercase tracking-tight gap-1.5", color.bg, color.text, color.border)}>
+              <div className={cn("h-1.5 w-1.5 rounded-full", color.dot)} />
+              {catName}
+            </Badge>
+          );
+        })()}
       </TableCell>
 
       <TableCell className="text-center">
-        <div className="inline-flex items-center px-3 py-1 rounded-full font-black text-[11px] border-2">
-          <div className={cn(
-            "flex items-center gap-1",
-            isOut ? 'text-red-600' : 
-            isLow ? 'text-orange-600' : 
-            'text-emerald-600'
-          )}>
-             {p.stockDisponibleUnits} uds.
+        {isOut ? (
+          <Badge variant="destructive" className="rounded-full px-2 py-0 text-[10px] font-black uppercase">Agotado</Badge>
+        ) : isLow ? (
+          <Badge className="bg-orange-500 hover:bg-orange-600 rounded-full px-2 py-0 text-[10px] font-black uppercase">Bajo Stock</Badge>
+        ) : (
+          <div className="flex items-center justify-center gap-1.5 text-emerald-600 dark:text-emerald-400">
+            <div className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+            <span className="text-[10px] font-bold uppercase tracking-tight">Disponible</span>
           </div>
-        </div>
+        )}
       </TableCell>
-      
-      <TableCell className="text-right">
-        <div className="flex flex-col items-end gap-1">
-          <span className="text-sm font-black tabular-nums leading-none">{formatMoney(p.precioVenta)}</span>
-          <span className="text-[9px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/10">
+
+      <TableCell className="text-center">
+        <span className={cn(
+          "text-sm font-bold tabular-nums",
+          isOut ? "text-destructive" : isLow ? "text-orange-500" : "text-foreground"
+        )}>
+          {p.stockDisponibleUnits}
+        </span>
+      </TableCell>
+
+      <TableCell className="text-center">
+        {(() => {
+          if (!p.fechaVencimiento) return <span className="text-[10px] text-muted-foreground/40 italic">Sin venc.</span>;
+          const expired = dateExpired(p.fechaVencimiento);
+          const soon = isExpiringSoon(p.fechaVencimiento);
+          return (
+            <div className="flex flex-col items-center gap-0.5">
+              <span className={cn(
+                "text-xs font-bold tabular-nums flex items-center gap-1",
+                expired ? "text-red-600" : soon ? "text-orange-500" : "text-muted-foreground"
+              )}>
+                <Calendar className="h-3 w-3" />
+                {formatDateSafe(p.fechaVencimiento)}
+              </span>
+              {expired && <span className="text-[9px] font-black text-red-600 uppercase">Vencido</span>}
+              {soon && <span className="text-[9px] font-black text-orange-500 uppercase">Pronto</span>}
+            </div>
+          );
+        })()}
+      </TableCell>
+
+      <TableCell className="text-right pr-6">
+        <div className="flex flex-col items-end gap-0.5">
+          <span className="font-black text-foreground text-sm tabular-nums">{formatMoney(p.precioVenta)}</span>
+          <span className="text-[10px] font-medium text-emerald-600 dark:text-emerald-500 bg-emerald-500/10 px-1.5 rounded-md tabular-nums">
             Margen: {formatMoney(Number(p.precioVenta) - Number(p.precioCosto))}
           </span>
         </div>
       </TableCell>
-      
-      <TableCell className="text-right px-8">
-        <div className="flex justify-end items-center gap-2">
-          <AjustarStockDialog producto={p} onUpdated={load} trigger={<Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg hover:bg-amber-500 hover:text-white transition-all text-amber-600 bg-amber-500/5"><ArrowRightLeft className="h-4 w-4" /></Button>} />
-          <EditProductoDialog producto={p} onUpdated={load} trigger={<Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg hover:bg-primary hover:text-white transition-all text-primary bg-primary/5"><Pencil className="h-4 w-4" /></Button>} />
-          <DeleteButton id={p.id} nombre={p.nombre} onDeleted={load} />
+
+      <TableCell className="text-right pr-6">
+        {/* ACCIONES INLINE (SIN DROPDOWN) */}
+        <div className="flex items-center justify-end gap-1 opacity-80 group-hover:opacity-100 transition-opacity">
+          <AjustarStockDialog
+            producto={p}
+            onUpdated={load}
+            trigger={
+              <Button variant="ghost" size="icon" className="h-8 w-8 text-amber-600 hover:bg-amber-100 dark:hover:bg-amber-900/30 rounded-lg" title="Ajustar Stock">
+                <ArrowRightLeft className="h-4 w-4" />
+              </Button>
+            }
+          />
+          <EditProductoDialog
+            producto={p}
+            onUpdated={load}
+            trigger={
+              <Button variant="ghost" size="icon" className="h-8 w-8 text-blue-600 hover:bg-blue-100 dark:hover:bg-blue-900/30 rounded-lg" title="Editar">
+                <Pencil className="h-4 w-4" />
+              </Button>
+            }
+          />
+          <DeleteButton
+            id={p.id}
+            nombre={p.nombre}
+            onDeleted={load}
+            trigger={
+              <Button variant="ghost" size="icon" className="h-8 w-8 text-red-600 hover:bg-red-100 dark:hover:bg-red-900/30 rounded-lg" title="Eliminar">
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            }
+          />
         </div>
       </TableCell>
     </motion.tr>
   );
 }
 
-function StatCard({ label, value, icon: Icon, color, highlight }: StatCardProps) {
-  const colorMap = {
-    blue: "text-blue-500",
-    orange: "text-orange-500",
-    red: "text-red-500",
-    emerald: "text-emerald-500",
-  };
+function MobileProductCard({ p, idx, load, isLow, isOut }: { p: Producto; idx: number; load: () => void; isLow: boolean; isOut: boolean }) {
   return (
-    <Card className={cn(
-      "p-4 border-border/50 bg-card/50 backdrop-blur-md flex flex-col gap-2 relative overflow-hidden group transition-all",
-      highlight && "ring-2 ring-red-500/50 shadow-lg shadow-red-500/10"
-    )}>
-      <div className="flex items-center justify-between relative z-10">
-        <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/70">{label}</span>
-        <Icon className={cn("h-3.5 w-3.5", colorMap[color])} />
+    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: idx * 0.05 }}>
+      <Card className="p-4 bg-card border-border/50 shadow-sm rounded-2xl relative overflow-hidden space-y-3">
+        <div className={cn("absolute left-0 top-0 bottom-0 w-1.5", isOut ? "bg-red-500" : isLow ? "bg-orange-500" : "bg-emerald-500")} />
+
+        <div className="flex justify-between items-start pl-3">
+          <div className="space-y-1">
+            <h3 className="font-bold text-foreground text-sm leading-tight">{p.nombre}</h3>
+            <div className="flex items-center gap-2">
+              {(() => {
+                const catName = p.categoria?.nombre || "General";
+                const color = p.categoria?.color ? getCategoryColorByKey(p.categoria.color) : getCategoryColorByName(catName);
+                return (
+                  <Badge variant="outline" className={cn("text-[10px] h-5 px-1.5 font-bold border rounded-md gap-1", color.bg, color.text, color.border)}>
+                    <div className={cn("h-1.5 w-1.5 rounded-full", color.dot)} />
+                    {catName}
+                  </Badge>
+                );
+              })()}
+              {p.codigoBarra && (
+                <span className="text-[10px] font-mono text-muted-foreground/60">{p.codigoBarra}</span>
+              )}
+            </div>
+          </div>
+          <div className="text-right">
+            <span className="block font-black text-lg text-primary tabular-nums">{formatMoney(p.precioVenta)}</span>
+          </div>
+        </div>
+
+        {p.fechaVencimiento && (() => {
+          const expired = dateExpired(p.fechaVencimiento);
+          const soon = isExpiringSoon(p.fechaVencimiento);
+          return (
+            <div className={cn(
+              "flex items-center gap-1.5 pl-3 text-[11px] font-bold",
+              expired ? "text-red-600" : soon ? "text-orange-500" : "text-muted-foreground"
+            )}>
+              <Calendar className="h-3 w-3" />
+              Vence: {formatDateSafe(p.fechaVencimiento)}
+              {expired && <Badge variant="destructive" className="text-[9px] h-4 px-1 rounded-md ml-1">Vencido</Badge>}
+              {soon && <Badge className="bg-orange-500 text-[9px] h-4 px-1 rounded-md ml-1">Pronto</Badge>}
+            </div>
+          );
+        })()}
+
+        <div className="flex items-center justify-between pl-3 pr-1 pt-2 border-t border-dashed border-border/50 mt-2">
+          <div className="flex items-center gap-2">
+            <span className={cn(
+              "text-xs font-bold px-2 py-1 rounded-md flex items-center gap-1",
+              isOut ? "bg-red-500/10 text-red-600" : isLow ? "bg-orange-500/10 text-orange-600" : "bg-emerald-500/10 text-emerald-600"
+            )}>
+              <Package className="h-3.5 w-3.5" />
+              {p.stockDisponibleUnits} uds.
+            </span>
+          </div>
+
+          <div className="flex items-center gap-1">
+            <AjustarStockDialog
+              producto={p}
+              onUpdated={load}
+              trigger={
+                <Button variant="ghost" size="icon" className="h-8 w-8 text-amber-600 bg-amber-500/10 rounded-lg">
+                  <ArrowRightLeft className="h-4 w-4" />
+                </Button>
+              }
+            />
+            <EditProductoDialog
+              producto={p}
+              onUpdated={load}
+              trigger={
+                <Button variant="ghost" size="icon" className="h-8 w-8 text-blue-600 bg-blue-500/10 rounded-lg">
+                  <Pencil className="h-4 w-4" />
+                </Button>
+              }
+            />
+            <DeleteButton
+              id={p.id}
+              nombre={p.nombre}
+              onDeleted={load}
+              trigger={
+                <Button variant="ghost" size="icon" className="h-8 w-8 text-red-600 bg-red-500/10 rounded-lg">
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              }
+            />
+          </div>
+        </div>
+      </Card>
+    </motion.div>
+  );
+}
+
+function StatCard({ label, value, icon: Icon, color = "default", trend, trendUp }: StatCardProps) {
+  const colors = {
+    default: "bg-primary/5 text-primary",
+    blue: "bg-blue-500/10 text-blue-600",
+    emerald: "bg-emerald-500/10 text-emerald-600",
+    orange: "bg-orange-500/10 text-orange-600",
+    red: "bg-red-500/10 text-red-600",
+  };
+
+  return (
+    <Card className="p-5 border-border/50 shadow-sm bg-card/50 backdrop-blur-sm relative overflow-hidden group hover:bg-card/80 transition-all">
+      <div className="absolute right-0 top-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+        <Icon className={cn("h-16 w-16", colors[color].split(" ")[1])} />
       </div>
-      <span className="text-base md:text-lg font-black tracking-tight tabular-nums truncate relative z-10">{value}</span>
-      <div className={cn(
-        "absolute left-0 top-0 bottom-0 w-1",
-        color === 'blue' ? 'bg-blue-500' : color === 'orange' ? 'bg-orange-500' : color === 'red' ? 'bg-red-500' : 'bg-emerald-500'
-      )} />
+      <div className="flex flex-col gap-4 relative z-10">
+        <div className="flex items-center gap-3">
+          <div className={cn("p-2.5 rounded-xl", colors[color])}>
+            <Icon className="h-5 w-5" />
+          </div>
+        </div>
+        <div className="space-y-1">
+          <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground/80">{label}</p>
+          <div className="flex items-end gap-2">
+            <h3 className="text-2xl font-black tracking-tight text-foreground">{value}</h3>
+          </div>
+          {trend && (
+            <p className={cn("text-[10px] font-bold flex items-center gap-1", trendUp ? "text-emerald-600" : "text-red-500")}>
+              {trendUp ? <TrendingUp className="h-3 w-3" /> : <AlertCircle className="h-3 w-3" />}
+              {trend}
+            </p>
+          )}
+        </div>
+      </div>
     </Card>
   );
 }
 
-function DeleteButton({ id, nombre, onDeleted }: { id: number; nombre: string; onDeleted: () => void }) {
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+
+function DeleteButton({ id, nombre, onDeleted, trigger }: { id: number; nombre: string; onDeleted: () => void, trigger: React.ReactNode }) {
   const [deleting, setDeleting] = React.useState(false);
+  const [open, setOpen] = React.useState(false);
+
   async function handleDelete() {
     setDeleting(true);
     try {
       await apiService.deleteProducto(id);
-      toast.success("Eliminado");
+      toast.success("Eliminado correctamente");
       onDeleted();
     } catch { toast.error("Error al eliminar"); }
-    finally { setDeleting(false); }
+    finally { setDeleting(false); setOpen(false); }
   }
-  return (
-    <AlertDialog>
-      <AlertDialogTrigger asChild>
-        <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg text-muted-foreground/60 hover:text-red-600 hover:bg-red-500/10">
-          {deleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
-        </Button>
-      </AlertDialogTrigger>
-      <AlertDialogContent className="rounded-2xl">
-        <AlertDialogHeader><AlertDialogTitle>¿Eliminar {nombre}?</AlertDialogTitle></AlertDialogHeader>
-        <AlertDialogDescription>Esta acción no se puede deshacer. El producto dejará de estar disponible en el inventario.</AlertDialogDescription>
-        <AlertDialogFooter>
-          <AlertDialogCancel className="rounded-xl">No, cancelar</AlertDialogCancel>
-          <AlertDialogAction onClick={handleDelete} className="bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl">Sí, eliminar</AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
-  );
-}
-
-function MobileCard({ p, idx, load, isLow, isOut }: { p: Producto; idx: number; load: () => void; isLow: boolean; isOut: boolean }) {
-  const fechaTexto = React.useMemo(() => {
-    if (!p.fechaVencimiento) return null;
-    return new Date(p.fechaVencimiento).toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: '2-digit' });
-  }, [p.fechaVencimiento]);
 
   return (
-    <motion.div initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: idx * 0.05 }}>
-      <Card className="p-4 border-border/50 bg-card/50 backdrop-blur-sm space-y-3 rounded-2xl relative overflow-hidden shadow-sm">
-        <div className={cn(
-          "absolute left-0 top-0 bottom-0 w-1.5",
-          isOut ? 'bg-red-500' : isLow ? 'bg-orange-500' : 'bg-emerald-500'
-        )} />
-        
-        <div className="flex justify-between items-start pl-2">
-          <div className="space-y-1 pr-2">
-            <h3 className="font-bold text-sm leading-tight text-foreground/90">{p.nombre}</h3>
-            <div className="flex items-center gap-2">
-              <Badge variant="secondary" className="text-[8px] h-4 uppercase font-black bg-muted border-none px-1.5">
-                {p.categoria?.nombre || "General"}
-              </Badge>
-              {p.codigoBarra && <span className="text-[9px] text-muted-foreground font-mono">{p.codigoBarra}</span>}
+    <>
+      <div onClick={(e) => { e.preventDefault(); e.stopPropagation(); setOpen(true); }}>
+        {trigger}
+      </div>
+
+      <AlertDialog open={open} onOpenChange={setOpen}>
+        <AlertDialogContent className="rounded-2xl border-none shadow-2xl">
+          <AlertDialogHeader>
+            <div className="mx-auto bg-red-100 dark:bg-red-900/30 p-3 rounded-full w-fit mb-2">
+              <AlertCircle className="h-8 w-8 text-red-600" />
             </div>
-          </div>
-          <div className="text-right">
-            <div className="font-black text-primary text-lg tabular-nums leading-none">
-              {formatMoney(p.precioVenta)}
-            </div>
-          </div>
-        </div>
-
-        <div className="flex items-center justify-between pl-2 pr-1 pt-1">
-          <div className={cn(
-            "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border",
-            isOut ? 'bg-red-500/10 border-red-500/20 text-red-600' : 
-            isLow ? 'bg-orange-500/10 border-orange-500/20 text-orange-600' : 
-            'bg-emerald-500/10 border-emerald-500/20 text-emerald-600'
-          )}>
-            <Package className="h-3.5 w-3.5" />
-            <span className="text-xs font-black">{p.stockDisponibleUnits} uds.</span>
-          </div>
-
-          {fechaTexto ? (
-             <div className="flex items-center gap-1 text-[10px] text-muted-foreground font-medium bg-muted/50 px-2 py-1 rounded-md">
-               <Calendar className="h-3 w-3 opacity-70" />
-               <span>{fechaTexto}</span>
-             </div>
-          ) : (
-             <span className="text-[10px] text-muted-foreground/30 italic pr-1">No vence</span>
-          )}
-        </div>
-
-        <div className="grid grid-cols-2 gap-2 pt-1 pl-2">
-          <AjustarStockDialog producto={p} onUpdated={load} trigger={<Button variant="secondary" className="h-9 text-xs rounded-xl font-bold bg-muted/80 hover:bg-muted">Ajustar Stock</Button>} />
-          <EditProductoDialog producto={p} onUpdated={load} trigger={<Button variant="outline" className="h-9 text-xs rounded-xl font-bold border-primary/20 text-primary hover:bg-primary/5">Editar</Button>} />
-        </div>
-      </Card>
-    </motion.div>
+            <AlertDialogTitle className="text-xl font-bold text-center">¿Eliminar producto?</AlertDialogTitle>
+            <AlertDialogDescription className="text-center text-muted-foreground">
+              Estás a punto de eliminar <span className="font-bold text-foreground">"{nombre}"</span>. Esta acción es irreversible y afectará los reportes de inventario.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="grid grid-cols-2 gap-3 sm:flex-row sm:justify-center pt-2">
+            <AlertDialogCancel className="h-11 rounded-xl mt-0" onClick={() => setOpen(false)}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              className="h-11 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold"
+              onClick={(e) => {
+                e.preventDefault();
+                handleDelete();
+              }}
+              disabled={deleting}
+            >
+              {deleting ? <Loader2 className="h-4 w-4 animate-spin" /> : "Sí, eliminar"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }

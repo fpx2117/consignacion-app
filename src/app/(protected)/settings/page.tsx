@@ -17,7 +17,8 @@ import {
   MonitorSmartphone,
   ShieldCheck,
   ChevronRight,
-  Lock, // Agregado para el candadito de "Próximamente"
+  Lock,
+  CreditCard,
 } from "lucide-react";
 
 // Lista de configuraciones adaptada
@@ -25,7 +26,7 @@ const SETTINGS_MODULES = [
   {
     title: "Branding y Reportes",
     description: "Personalizá el logo, colores y el diseño de los tickets de venta.",
-    href: "/settings/branding", 
+    href: "/settings/branding",
     icon: Palette,
     color: "text-blue-500",
     bg: "bg-blue-500/10",
@@ -42,16 +43,7 @@ const SETTINGS_MODULES = [
     borderColor: "group-hover:border-emerald-500/30",
     soon: true,
   },
-  {
-    title: "Usuarios y Permisos",
-    description: "Gestioná los accesos de administradores y vendedores del sistema.",
-    href: "/settings/users",
-    icon: Users,
-    color: "text-purple-500",
-    bg: "bg-purple-500/10",
-    borderColor: "group-hover:border-purple-500/30",
-    soon: false,
-  },
+
   {
     title: "Punto de Venta (POS)",
     description: "Configurá el comportamiento de la caja, cobros y stock en tiempo real.",
@@ -60,7 +52,7 @@ const SETTINGS_MODULES = [
     color: "text-orange-500",
     bg: "bg-orange-500/10",
     borderColor: "group-hover:border-orange-500/30",
-    soon: true,
+    soon: false,
   },
   {
     title: "Notificaciones",
@@ -74,13 +66,23 @@ const SETTINGS_MODULES = [
   },
   {
     title: "Seguridad y Auditoría",
-    description: "Revisá el registro de actividad, sesiones activas y copias de seguridad.",
+    description: "Revisá el registro de actividad, sesiones activas y gestión del equipo.",
     href: "/settings/security",
     icon: ShieldCheck,
     color: "text-slate-500",
     bg: "bg-slate-500/10",
     borderColor: "group-hover:border-slate-500/30",
-    soon: true,
+    soon: false,
+  },
+  {
+    title: "Plan y Facturación",
+    description: "Gestioná tu suscripción, revisá vencimientos y actualizá tus medios de pago.",
+    href: "/settings/subscriptions",
+    icon: CreditCard,
+    color: "text-amber-500",
+    bg: "bg-amber-500/10",
+    borderColor: "group-hover:border-amber-500/30",
+    soon: false,
   },
 ];
 
@@ -112,7 +114,7 @@ export default function SettingsPage() {
             <Card
               className={cn(
                 "relative h-full border border-border/50 bg-card/40 backdrop-blur-xl shadow-lg rounded-[2rem] p-6 transition-all duration-300 overflow-hidden",
-                isSoon 
+                isSoon
                   ? "opacity-60 bg-card/20 cursor-default" // Estilos para "Próximamente"
                   : "hover:shadow-2xl hover:bg-card/60 hover:-translate-y-1 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background cursor-pointer", // Estilos normales
                 !isSoon && module.borderColor
@@ -147,7 +149,7 @@ export default function SettingsPage() {
                   >
                     <Icon className="h-6 w-6 stroke-[1.5px]" />
                   </div>
-                  
+
                   {/* Flecha (solo si no es "soon") */}
                   {!isSoon && (
                     <div className="h-8 w-8 rounded-full bg-background/50 flex items-center justify-center opacity-0 -translate-x-4 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300">

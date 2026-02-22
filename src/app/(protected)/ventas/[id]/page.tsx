@@ -79,7 +79,7 @@ export default function VentaDetailPage() {
     setLoading(true);
     try {
       const res = await apiService.getVenta(id);
-      setVenta(res.data);
+      setVenta(res);
     } catch (e: any) {
       toast.error(e?.message ?? "Error cargando datos de la venta");
     } finally {
@@ -91,7 +91,7 @@ export default function VentaDetailPage() {
     if (id) load();
   }, [id, load]);
 
- // --- Acción solo para TICKET (Ver/Descargar) ---
+  // --- Acción solo para TICKET (Ver/Descargar) ---
   const handleDownloadPdf = () => {
     if (!venta) return;
 
@@ -108,7 +108,7 @@ export default function VentaDetailPage() {
     try {
       await fetch(`/api/ventas/${venta.id}`, { method: "DELETE" });
       toast.success("Venta anulada y stock restaurado");
-      router.push("/ventas/nueva"); 
+      router.push("/ventas/nueva");
     } catch (error) {
       console.error("Error al anular:", error);
       toast.error("No se pudo anular la venta.");
@@ -127,7 +127,7 @@ export default function VentaDetailPage() {
 
   return (
     <div className="max-w-6xl mx-auto space-y-8 pb-10 px-4 sm:px-0 animate-in fade-in duration-500">
-      
+
       {/* Action Bar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <Button
@@ -140,7 +140,7 @@ export default function VentaDetailPage() {
         </Button>
 
         <div className="flex flex-wrap gap-2">
-          
+
           {/* BOTÓN ANULAR (PELIGRO) */}
           <AlertDialog>
             <AlertDialogTrigger asChild>
@@ -187,7 +187,7 @@ export default function VentaDetailPage() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 bg-card border rounded-2xl p-6 shadow-sm relative overflow-hidden">
         {/* Decoración de fondo */}
         <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/5 rounded-full blur-3xl -mr-10 -mt-10" />
-        
+
         <div className="flex items-center gap-4 relative z-10">
           <div className="bg-indigo-500/10 p-4 rounded-2xl hidden sm:block font-bold">
             <ShoppingCart className="h-8 w-8 text-indigo-600 dark:text-indigo-400" />
@@ -213,45 +213,45 @@ export default function VentaDetailPage() {
 
         {/* Total Gigante en el Header */}
         <div className="text-right relative z-10">
-    <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest mb-1">Total Abonado</p>
-    
-    {/* ✅ CAMBIO: Usamos <div> aquí porque adentro puede haber un Skeleton (que es otro div) */}
-    <div className="text-4xl md:text-5xl font-black tracking-tighter text-foreground">
-        {loading ? (
-            <Skeleton className="h-12 w-32 ml-auto" /> 
-        ) : (
-            formatCurrency(Number(venta?.total || 0))
-        )}
-    </div>
-</div>
-</div>
+          <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest mb-1">Total Abonado</p>
+
+          {/* ✅ CAMBIO: Usamos <div> aquí porque adentro puede haber un Skeleton (que es otro div) */}
+          <div className="text-4xl md:text-5xl font-black tracking-tighter text-foreground">
+            {loading ? (
+              <Skeleton className="h-12 w-32 ml-auto" />
+            ) : (
+              formatCurrency(Number(venta?.total || 0))
+            )}
+          </div>
+        </div>
+      </div>
 
       {/* KPI Section */}
       <div className="grid gap-4 grid-cols-2 md:grid-cols-3 animate-in fade-in slide-in-from-bottom-4 duration-700">
-        <KpiCard 
-            icon={<Package className="text-indigo-500" />} 
-            title="Total Productos" 
-            value={`${totalItems} u.`} 
-            loading={loading} 
+        <KpiCard
+          icon={<Package className="text-indigo-500" />}
+          title="Total Productos"
+          value={`${totalItems} u.`}
+          loading={loading}
         />
-        <KpiCard 
-            icon={<CreditCard className="text-emerald-500" />} 
-            title="Método de Pago" 
-            value={metodoPago} 
-            loading={loading} 
-            textTransform="uppercase"
+        <KpiCard
+          icon={<CreditCard className="text-emerald-500" />}
+          title="Método de Pago"
+          value={metodoPago}
+          loading={loading}
+          textTransform="uppercase"
         />
-        <KpiCard 
-            icon={<User className="text-amber-500" />} 
-            title="Tipo de Cliente" 
-            value={venta?.cliente ? "Registrado" : "Casual"} 
-            loading={loading} 
+        <KpiCard
+          icon={<User className="text-amber-500" />}
+          title="Tipo de Cliente"
+          value={venta?.cliente ? "Registrado" : "Casual"}
+          loading={loading}
         />
       </div>
 
       {/* Main Content Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-        
+
         {/* Columna Izquierda (8): Detalle de Venta */}
         <div className="lg:col-span-8 space-y-4">
           <Card className="shadow-lg border-border bg-card/40 backdrop-blur">
@@ -294,7 +294,7 @@ export default function VentaDetailPage() {
                 <Download className="h-4 w-4 mr-3 text-indigo-500" />
                 Descargar Ticket PDF
               </Button>
-              
+
               {/* [NOTA]: Se eliminó el botón de WhatsApp porque esta vista corresponde a TICKET POS.
                  Solo debe mostrarse en la vista de REMITO / CONSIGNACION.
               */}
@@ -348,7 +348,7 @@ function ProductRowVenta({ d }: { d: any }) {
   return (
     <div className="group rounded-xl border border-border p-4 bg-background transition-all hover:bg-indigo-50/50 hover:border-indigo-200 dark:hover:bg-indigo-900/10 dark:hover:border-indigo-800">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        
+
         {/* Info Producto */}
         <div className="space-y-1">
           <p className="font-bold text-foreground text-lg tracking-tight italic group-hover:text-indigo-600 transition-colors">
@@ -363,17 +363,17 @@ function ProductRowVenta({ d }: { d: any }) {
 
         {/* Info Cantidad y Total */}
         <div className="text-right flex items-center gap-6 sm:gap-10">
-            <div className="flex flex-col items-end">
-                <span className="text-[9px] font-black text-muted-foreground uppercase mb-0.5">Cantidad</span>
-                <span className="text-xl font-black text-foreground">{d.units}</span>
-            </div>
-            
-            <div className="h-8 w-px bg-border" />
+          <div className="flex flex-col items-end">
+            <span className="text-[9px] font-black text-muted-foreground uppercase mb-0.5">Cantidad</span>
+            <span className="text-xl font-black text-foreground">{d.units}</span>
+          </div>
 
-            <div className="flex flex-col items-end min-w-[80px]">
-                <span className="text-[9px] font-black text-indigo-500 uppercase mb-0.5">Subtotal</span>
-                <span className="text-xl font-black text-foreground">{formatCurrency(subtotal)}</span>
-            </div>
+          <div className="h-8 w-px bg-border" />
+
+          <div className="flex flex-col items-end min-w-[80px]">
+            <span className="text-[9px] font-black text-indigo-500 uppercase mb-0.5">Subtotal</span>
+            <span className="text-xl font-black text-foreground">{formatCurrency(subtotal)}</span>
+          </div>
         </div>
       </div>
     </div>

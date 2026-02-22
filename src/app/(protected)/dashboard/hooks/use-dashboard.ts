@@ -1,8 +1,8 @@
 import * as React from "react";
 import { apiService } from "@/lib/apiService";
-import type { 
-  DashboardPeriod, DashboardKpis, DashboardConsignacionesResponse, 
-  DashboardTopProductos, DashboardTendencia 
+import type {
+  DashboardPeriod, DashboardKpis, DashboardConsignacionesResponse,
+  DashboardTopProductos, DashboardTendencia
 } from "@/lib/types";
 
 export function useDashboard(period: DashboardPeriod) {
@@ -28,10 +28,10 @@ export function useDashboard(period: DashboardPeriod) {
       let trData = null;
       if (period !== "all") {
         const tr = await apiService.getDashboardTendencia(period);
-        trData = tr.data;
+        trData = tr;
       }
 
-      setData({ kpis: k.data, consig: c.data, top: t.data, trend: trData });
+      setData({ kpis: k, consig: c, top: t, trend: trData });
     } catch (e: any) {
       setError(e?.message ?? "Error cargando dashboard");
     } finally {

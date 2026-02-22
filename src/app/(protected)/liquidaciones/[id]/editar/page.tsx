@@ -58,7 +58,7 @@ export default function EditarLiquidacionPage() {
   const [saving, setSaving] = React.useState(false);
   const [items, setItems] = React.useState<EditableLiquidacionItem[]>([]);
   const [consignacionId, setConsignacionId] = React.useState<number>();
-  
+
   // 1. ESTADO PARA EL PORCENTAJE
   const [porcentajeAumento, setPorcentajeAumento] = React.useState<number>(0);
 
@@ -72,22 +72,21 @@ export default function EditarLiquidacionPage() {
   const loadData = React.useCallback(async () => {
     if (!liquidacionId) return;
     setLoading(true);
+
     try {
-      const res = await apiService.getLiquidacion(liquidacionId);
-      const liq = res.data;
+      // ✅ ahora devuelve data plano
+      const liq: any = await apiService.getLiquidacion(liquidacionId);
 
       if (!liq) throw new Error("No se encontró la liquidación");
 
       setConsignacionId(liq.consignacionId);
 
-      // 2. BUSCAMOS LA CONSIGNACIÓN PARA OBTENER EL PORCENTAJE
-      // (Asumiendo que getLiquidacion no trae toda la info de la consignación, hacemos un fetch extra o usamos lo que venga)
+      // ✅ porcentaje aumento
       if (liq.consignacion) {
-         setPorcentajeAumento(liq.consignacion.porcentajeAumento || 0);
+        setPorcentajeAumento(liq.consignacion.porcentajeAumento || 0);
       } else {
-         // Si no vino anidada, la buscamos
-         const consRes = await apiService.getConsignacion(liq.consignacionId);
-         setPorcentajeAumento(consRes.data.porcentajeAumento || 0);
+        const cons = await apiService.getConsignacion(liq.consignacionId);
+        setPorcentajeAumento(cons.porcentajeAumento || 0);
       }
 
       const mappedItems: EditableLiquidacionItem[] = (liq.items || []).map((item: any) => {
@@ -103,7 +102,7 @@ export default function EditarLiquidacionPage() {
         return {
           consignacionDetalleId: item.consignacionDetalleId,
           productoNombre: det.producto?.nombre || "Producto",
-          precioUnitario: Number(det.producto?.precioVenta ?? item.precioUnitario ?? 0), // Aseguramos tomar el precio base
+          precioUnitario: Number(det.producto?.precioVenta ?? item.precioUnitario ?? 0),
           unitsVendidas: vend,
           unitsDevueltas: dev,
           maxDisponibleParaEstaEdicion: Math.max(0, maxUnidades),
@@ -115,7 +114,7 @@ export default function EditarLiquidacionPage() {
       setErrorDialog({
         open: true,
         title: "Error de carga",
-        description: e.message || "No se pudo cargar la liquidación.",
+        description: e?.message || "No se pudo cargar la liquidación.",
       });
     } finally {
       setLoading(false);
@@ -192,7 +191,7 @@ export default function EditarLiquidacionPage() {
 
   // 3. CÁLCULO DE TOTALES APLICANDO EL AUMENTO
   const calcularPrecioConAumento = (precioBase: number) => {
-      return precioBase * (1 + porcentajeAumento / 100);
+    return precioBase * (1 + porcentajeAumento / 100);
   };
 
   const totalVenta = items.reduce(
@@ -217,17 +216,17 @@ export default function EditarLiquidacionPage() {
         </Button>
 
         <div className="flex items-center gap-3">
-            <h1 className="text-3xl font-black">Corregir Liquidación</h1>
-            <Badge variant="outline" className="border-amber-500/30 text-amber-600">
-                #{liquidacionId}
+          <h1 className="text-3xl font-black">Corregir Liquidación</h1>
+          <Badge variant="outline" className="border-amber-500/30 text-amber-600">
+            #{liquidacionId}
+          </Badge>
+          {/* BADGE DE AUMENTO */}
+          {porcentajeAumento > 0 && (
+            <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200 hover:bg-emerald-100 gap-1">
+              <BadgePercent className="h-3 w-3" />
+              +{porcentajeAumento}% Aumento
             </Badge>
-            {/* BADGE DE AUMENTO */}
-            {porcentajeAumento > 0 && (
-                <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200 hover:bg-emerald-100 gap-1">
-                    <BadgePercent className="h-3 w-3" />
-                    +{porcentajeAumento}% Aumento
-                </Badge>
-            )}
+          )}
         </div>
       </header>
 
@@ -237,69 +236,70 @@ export default function EditarLiquidacionPage() {
             const precioFinal = calcularPrecioConAumento(item.precioUnitario);
 
             return (
-            <Card key={item.consignacionDetalleId}>
-              <CardContent className="p-6">
-                <div className="flex justify-between items-start mb-4">
+              <Card key={item.consignacionDetalleId}>
+                <CardContent className="p-6">
+                  <div className="flex justify-between items-start mb-4">
                     <h3 className="font-bold text-lg">{item.productoNombre}</h3>
-                    
+
                     {/* VISUALIZACIÓN DE PRECIOS */}
                     <div className="text-right">
-                        <div className="text-[10px] text-muted-foreground line-through">
-                            Base: {formatMoney(item.precioUnitario)}
-                        </div>
-                        <div className="text-sm font-bold text-emerald-600">
-                            {formatMoney(precioFinal)} <span className="text-[10px] text-emerald-400 font-normal">/u</span>
-                        </div>
+                      <div className="text-[10px] text-muted-foreground line-through">
+                        Base: {formatMoney(item.precioUnitario)}
+                      </div>
+                      <div className="text-sm font-bold text-emerald-600">
+                        {formatMoney(precioFinal)} <span className="text-[10px] text-emerald-400 font-normal">/u</span>
+                      </div>
                     </div>
-                </div>
+                  </div>
 
-                <div className="grid grid-cols-2 gap-6">
-                  <div className="space-y-2">
-                    <Label className="text-xs font-bold text-emerald-600 uppercase flex items-center gap-2">
-                      <TrendingUp className="h-4 w-4" /> Vendidas
-                    </Label>
-                    <div className="relative">
+                  <div className="grid grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                      <Label className="text-xs font-bold text-emerald-600 uppercase flex items-center gap-2">
+                        <TrendingUp className="h-4 w-4" /> Vendidas
+                      </Label>
+                      <div className="relative">
                         <Input
-                        type="number"
-                        min={0}
-                        value={item.unitsVendidas}
-                        onChange={(e) =>
+                          type="number"
+                          min={0}
+                          value={item.unitsVendidas}
+                          onChange={(e) =>
                             handleUpdate(item.consignacionDetalleId, "unitsVendidas", Number(e.target.value))
-                        }
-                        className="h-12 text-lg font-bold bg-emerald-500/5 border-emerald-200"
+                          }
+                          className="h-12 text-lg font-bold bg-emerald-500/5 border-emerald-200"
                         />
                         <div className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-medium text-emerald-700">
-                            {formatMoney(item.unitsVendidas * precioFinal)}
+                          {formatMoney(item.unitsVendidas * precioFinal)}
                         </div>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label className="text-xs font-bold text-amber-600 uppercase flex items-center gap-2">
+                        <Undo2 className="h-4 w-4" /> Devueltas
+                      </Label>
+                      <Input
+                        type="number"
+                        min={0}
+                        value={item.unitsDevueltas}
+                        onChange={(e) =>
+                          handleUpdate(item.consignacionDetalleId, "unitsDevueltas", Number(e.target.value))
+                        }
+                        className="h-12 text-lg font-bold bg-amber-500/5 border-amber-200"
+                      />
                     </div>
                   </div>
 
-                  <div className="space-y-2">
-                    <Label className="text-xs font-bold text-amber-600 uppercase flex items-center gap-2">
-                      <Undo2 className="h-4 w-4" /> Devueltas
-                    </Label>
-                    <Input
-                      type="number"
-                      min={0}
-                      value={item.unitsDevueltas}
-                      onChange={(e) =>
-                        handleUpdate(item.consignacionDetalleId, "unitsDevueltas", Number(e.target.value))
-                      }
-                      className="h-12 text-lg font-bold bg-amber-500/5 border-amber-200"
-                    />
+                  <div className="mt-4 flex items-center gap-2 text-[11px] text-muted-foreground bg-muted/40 p-2 rounded">
+                    <Info className="h-3.5 w-3.5" />
+                    Máx. editable: {item.maxDisponibleParaEstaEdicion} u.
+                    <span className="ml-auto font-mono">
+                      (Total: {item.unitsVendidas + item.unitsDevueltas})
+                    </span>
                   </div>
-                </div>
-
-                <div className="mt-4 flex items-center gap-2 text-[11px] text-muted-foreground bg-muted/40 p-2 rounded">
-                  <Info className="h-3.5 w-3.5" />
-                  Máx. editable: {item.maxDisponibleParaEstaEdicion} u.
-                  <span className="ml-auto font-mono">
-                    (Total: {item.unitsVendidas + item.unitsDevueltas})
-                  </span>
-                </div>
-              </CardContent>
-            </Card>
-          )})}
+                </CardContent>
+              </Card>
+            )
+          })}
         </div>
 
         <div className="space-y-6">
@@ -310,8 +310,8 @@ export default function EditarLiquidacionPage() {
             <CardContent className="pt-6 space-y-6">
               <div className="flex justify-between items-center">
                 <div className="flex flex-col">
-                    <span className="text-sm text-muted-foreground">Nuevo Total</span>
-                    {porcentajeAumento > 0 && <span className="text-[10px] text-emerald-500 font-bold">Incluye +{porcentajeAumento}%</span>}
+                  <span className="text-sm text-muted-foreground">Nuevo Total</span>
+                  {porcentajeAumento > 0 && <span className="text-[10px] text-emerald-500 font-bold">Incluye +{porcentajeAumento}%</span>}
                 </div>
                 <span className="text-3xl font-black">{formatMoney(totalVenta)}</span>
               </div>

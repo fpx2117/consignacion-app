@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { headers } from "next/headers";
 import { SidebarDock } from "@/components/sidebar-dock";
+import { SubscriptionGuard } from "@/components/SubscriptionGuard";
 
 export const dynamic = "force-dynamic";
 
@@ -47,11 +48,13 @@ export default async function ProtectedLayout({
   if (!ok) redirect("/login");
 
   return (
-    <div className="min-h-screen bg-background">
-      <SidebarDock />
-      <main className="min-h-screen p-4 pb-24 md:p-6 md:pb-6 md:ml-[84px]">
-        {children}
-      </main>
+    <div className="min-h-screen bg-background text-foreground transition-colors duration-300">
+      <SubscriptionGuard>
+        <SidebarDock />
+        <main className="min-h-screen p-4 pb-24 md:p-6 md:pb-6 md:ml-[84px] relative z-0">
+          {children}
+        </main>
+      </SubscriptionGuard>
     </div>
   );
 }

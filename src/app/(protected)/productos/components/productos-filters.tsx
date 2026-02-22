@@ -1,17 +1,20 @@
 "use client";
 
 import * as React from "react";
-import { X } from "lucide-react";
+import { X, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
+import { Separator } from "@/components/ui/separator";
+import { getCategoryColorByKey, getCategoryColorByName } from "@/lib/category-colors";
+import type { Categoria } from "@/lib/types";
 
 interface FiltersProps {
   query: string;
@@ -22,122 +25,112 @@ interface FiltersProps {
   setCategoryFilter: (val: string) => void;
   expiryFilter: string;
   setExpiryFilter: (val: string) => void;
-  categories: string[];
+  categories: Categoria[];
 }
 
-export function ProductosFilters({ 
-  query, setQuery, 
-  stockFilter, setStockFilter, 
+export function ProductosFilters({
+  query, setQuery,
+  stockFilter, setStockFilter,
   categoryFilter, setCategoryFilter,
   expiryFilter, setExpiryFilter,
-  categories 
+  categories
 }: FiltersProps) {
-  
+
   const hasActiveFilters = stockFilter !== "all" || categoryFilter !== "all" || expiryFilter !== "all" || query !== "";
 
   return (
-    <div className="flex flex-col gap-4 p-2 relative z-30">
-      {/* Search Bar & Clear Button */}
-      <div className="flex flex-col md:flex-row gap-3 w-full">
-        <div className="relative w-full flex-1">
+    <div className="p-4 space-y-4">
+      <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between">
+
+        <div className="relative w-full md:max-w-md">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/50" />
           <Input
-            placeholder="Buscar por nombre, código o ID..."
+            placeholder="Buscar producto, código, categoría..."
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            // bg-background se adapta a blanco en light y oscuro en dark
-            className="w-full pl-5 h-12 bg-background border-input rounded-2xl focus-visible:ring-primary/20 transition-all"
+            className="pl-9 h-11 bg-background/50 border-input/60 focus:bg-background transition-all rounded-xl shadow-sm"
           />
           {query && (
-            <Button 
-              variant="ghost" 
-              size="icon" 
+            <button
               onClick={() => setQuery("")}
-              className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 rounded-xl hover:bg-muted"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground p-1"
             >
-              <X className="h-4 w-4 text-muted-foreground" />
-            </Button>
+              <X className="h-3 w-3" />
+            </button>
           )}
         </div>
 
-        {hasActiveFilters && (
-          <Button 
-            variant="outline" 
-            onClick={() => {
-              setQuery("");
-              setStockFilter("all");
-              setCategoryFilter("all");
-              setExpiryFilter("all");
-            }}
-            className="h-12 px-6 rounded-2xl gap-2 font-black uppercase text-[10px] tracking-widest border-dashed border-2"
-          >
-            Limpiar Filtros
-          </Button>
-        )}
-      </div>
+        <div className="flex items-center gap-2 w-full md:w-auto overflow-x-auto pb-1 md:pb-0">
+          <div className="flex items-center gap-2 p-1 bg-muted/20 rounded-xl border border-border/40">
+            <Select value={stockFilter} onValueChange={setStockFilter}>
+              <SelectTrigger className="h-9 border-none bg-transparent gap-2 px-3 text-xs font-medium focus:ring-0 w-[140px]">
+                <span className="text-muted-foreground">Stock:</span>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos</SelectItem>
+                <SelectItem value="available">Disponible</SelectItem>
+                <SelectItem value="low">Bajo</SelectItem>
+                <SelectItem value="out">Agotado</SelectItem>
+              </SelectContent>
+            </Select>
 
-      {/* Selectors Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 w-full">
-        
-        {/* STOCK */}
-        <Select value={stockFilter} onValueChange={setStockFilter}>
-          <SelectTrigger className="h-11 bg-background border-input rounded-xl font-bold px-4 focus:ring-1 focus:ring-primary">
-            <div className="flex items-center gap-3">
-              <div className={cn(
-                "h-2 w-2 rounded-full shrink-0",
-                stockFilter === 'available' ? "bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]" :
-                stockFilter === 'low' ? "bg-orange-500 shadow-[0_0_8px_rgba(249,115,22,0.5)]" :
-                stockFilter === 'out' ? "bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.5)]" : 
-                "bg-slate-400"
-              )} />
-              <span className="text-[10px] uppercase text-muted-foreground font-black tracking-tighter">Stock:</span>
-              <SelectValue placeholder="Todos" />
-            </div>
-          </SelectTrigger>
-          <SelectContent className="rounded-xl border-border bg-popover p-1 shadow-xl">
-            <SelectItem value="all">Indiferente</SelectItem>
-            <SelectItem value="available" className="text-emerald-600 dark:text-emerald-400">Disponible</SelectItem>
-            <SelectItem value="low" className="text-orange-600 dark:text-orange-400">Crítico</SelectItem>
-            <SelectItem value="out" className="text-red-600 dark:text-red-400">Agotado</SelectItem>
-          </SelectContent>
-        </Select>
+            <Separator orientation="vertical" className="h-5" />
 
-        {/* CATEGORÍA */}
-        <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-          <SelectTrigger className="h-11 bg-background border-input rounded-xl font-bold px-4 focus:ring-1 focus:ring-primary">
-            <div className="flex items-center gap-3">
-              <div className="h-2 w-2 rounded-full bg-blue-500 shrink-0" />
-              <span className="text-[10px] uppercase text-muted-foreground font-black tracking-tighter">Cat:</span>
-              <SelectValue placeholder="Todas" />
-            </div>
-          </SelectTrigger>
-          <SelectContent className="rounded-xl border-border bg-popover p-1 shadow-xl">
-            <SelectItem value="all">Todas las categorías</SelectItem>
-            {categories.map((cat) => (
-              <SelectItem key={cat} value={cat}>{cat}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+            <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+              <SelectTrigger className="h-9 border-none bg-transparent gap-2 px-3 text-xs font-medium focus:ring-0 w-[150px]">
+                <span className="text-muted-foreground">Categoría:</span>
+                <SelectValue placeholder="Todas" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas</SelectItem>
+                {categories.map((cat) => {
+                  const color = cat.color ? getCategoryColorByKey(cat.color) : getCategoryColorByName(cat.nombre);
+                  return (
+                    <SelectItem key={cat.id} value={cat.nombre}>
+                      <span className="flex items-center gap-2">
+                        <span className={cn("h-2 w-2 rounded-full shrink-0", color.dot)} />
+                        {cat.nombre}
+                      </span>
+                    </SelectItem>
+                  );
+                })}
+              </SelectContent>
+            </Select>
 
-        {/* VENCIMIENTO */}
-        <Select value={expiryFilter} onValueChange={setExpiryFilter}>
-          <SelectTrigger className="h-11 bg-background border-input rounded-xl font-bold px-4 focus:ring-1 focus:ring-primary">
-            <div className="flex items-center gap-3">
-              <div className={cn(
-                "h-2 w-2 rounded-full shrink-0",
-                expiryFilter === 'expired' ? "bg-red-500" :
-                expiryFilter === 'soon' ? "bg-amber-500" : "bg-slate-400"
-              )} />
-              <span className="text-[10px] uppercase text-muted-foreground font-black tracking-tighter">Vence:</span>
-              <SelectValue placeholder="Fecha" />
-            </div>
-          </SelectTrigger>
-          <SelectContent className="rounded-xl border-border bg-popover p-1 shadow-xl">
-            <SelectItem value="all">Cualquier fecha</SelectItem>
-            <SelectItem value="expired" className="text-red-600 dark:text-red-400">Vencidos</SelectItem>
-            <SelectItem value="soon" className="text-amber-600 dark:text-amber-400">Próximos (7 días)</SelectItem>
-            <SelectItem value="none">Sin vencimiento</SelectItem>
-          </SelectContent>
-        </Select>
+            <Separator orientation="vertical" className="h-5" />
+
+            <Select value={expiryFilter} onValueChange={setExpiryFilter}>
+              <SelectTrigger className="h-9 border-none bg-transparent gap-2 px-3 text-xs font-medium focus:ring-0 w-[140px]">
+                <span className="text-muted-foreground">Vencimiento:</span>
+                <SelectValue placeholder="Todos" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos</SelectItem>
+                <SelectItem value="expired">Vencidos</SelectItem>
+                <SelectItem value="soon">Próximos (7 días)</SelectItem>
+                <SelectItem value="none">Sin vencimiento</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {hasActiveFilters && (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => {
+                setQuery("");
+                setStockFilter("all");
+                setCategoryFilter("all");
+                setExpiryFilter("all");
+              }}
+              className="h-9 w-9 rounded-xl text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+              title="Limpiar filtros"
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          )}
+        </div>
       </div>
     </div>
   );

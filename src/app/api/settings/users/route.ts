@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
+import { checkUserLimit } from "@/lib/requireSubscription";
 
 // --- GET: Listar usuarios ---
 export async function GET() {
@@ -31,6 +32,12 @@ export async function POST(req: Request) {
 
     if (!nombre || !email || !password || !rol) {
       return NextResponse.json({ ok: false, error: "Faltan campos obligatorios" }, { status: 400 });
+    }
+
+    // Guard: Verificar límite de usuarios del plan
+    const userCheck = await checkUserLimit();
+    if (!userCheck.allowed) {
+      return NextResponse.json({ ok: false, error: userCheck.message, limitReached: true }, { status: 403 });
     }
 
     const existe = await prisma.usuario.findUnique({ where: { email } });

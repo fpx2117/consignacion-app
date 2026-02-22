@@ -20,8 +20,9 @@ import {
   MessageCircle,
   Pencil,
   History,
-  BadgePercent, // Nuevo icono
-  TrendingUp,   // Nuevo icono
+  BadgePercent,
+  TrendingUp,
+  DollarSign,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -70,7 +71,7 @@ export default function ConsignacionDetailPage() {
     setLoading(true);
     try {
       const res = await apiService.getConsignacion(id);
-      setConsignacion(res.data);
+      setConsignacion(res);
     } catch (e: any) {
       toast.error(e?.message ?? "Error cargando datos");
     } finally {
@@ -107,7 +108,7 @@ export default function ConsignacionDetailPage() {
     router.push(`/consignaciones/${id}/liquidaciones`);
   }, [router, id]);
 
- const handlePdfAction = (mode: "view" | "whatsapp") => {
+  const handlePdfAction = (mode: "view" | "whatsapp") => {
     if (!consignacion) return;
 
     let url = `/consignacion-loading/${consignacion.id}?mode=${mode}`;
@@ -115,20 +116,20 @@ export default function ConsignacionDetailPage() {
     // Si es WhatsApp, necesitamos pasarle los datos del cliente a la página de carga
     // para que ella pueda armar el mensaje.
     if (mode === "whatsapp") {
-        const telefono = consignacion.cliente?.telefono;
-        if (!telefono) {
-            toast.error("El cliente no tiene teléfono registrado");
-            return;
-        }
-        const nombre = consignacion.cliente?.nombre || "";
-        
-        // Agregamos params a la URL
-        url += `&phone=${encodeURIComponent(telefono)}&name=${encodeURIComponent(nombre)}`;
+      const telefono = consignacion.cliente?.telefono;
+      if (!telefono) {
+        toast.error("El cliente no tiene teléfono registrado");
+        return;
+      }
+      const nombre = consignacion.cliente?.nombre || "";
+
+      // Agregamos params a la URL
+      url += `&phone=${encodeURIComponent(telefono)}&name=${encodeURIComponent(nombre)}`;
     }
 
     // Abrimos inmediatamente (sin bloqueos)
     window.open(url, '_blank');
-};
+  };
 
   const detalles = consignacion?.detalles ?? [];
   const entregadas = detalles.reduce((a, d: any) => a + (d.unitsEntregadas ?? 0), 0);
@@ -138,13 +139,40 @@ export default function ConsignacionDetailPage() {
 
   const estado: EstadoConsignacion = consignacion?.estado ?? "ABIERTA";
   const puedeNuevaLiquidacion = !loading && estado === "ABIERTA";
-  
+
   // OBTENER EL PORCENTAJE DEL OBJETO CONSIGNACIÓN
   const porcentajeAumento = consignacion?.porcentajeAumento || 0;
 
+  // PRECIO FINAL DE LA CONSIGNACIÓN
+  const precioFinalConsignacion = React.useMemo(() => {
+    if (!consignacion) return 0;
+
+    if (tieneLiquidaciones) {
+      // Ya liquidada: sumar totales de las ventas generadas por cada liquidación
+      return liquidaciones.reduce((total: number, liq: any) => {
+        if (liq.venta?.total) return total + Number(liq.venta.total);
+        // Fallback: calcular desde los items de la liquidación
+        const itemsTotal = (liq.items ?? []).reduce((sum: number, item: any) => {
+          return sum + (Number(item.unitsVendidas ?? 0) * Number(item.precioUnitario ?? 0));
+        }, 0);
+        return total + itemsTotal;
+      }, 0);
+    }
+
+    // No liquidada: total de productos consignados (entregadas × precio unitario)
+    return detalles.reduce((total: number, d: any) => {
+      let precio = Number(d.precioUnitario);
+      if (!precio || precio === 0) {
+        const precioBase = Number(d.producto?.precioVenta || 0);
+        precio = precioBase * (1 + porcentajeAumento / 100);
+      }
+      return total + (Number(d.unitsEntregadas ?? 0) * precio);
+    }, 0);
+  }, [consignacion, tieneLiquidaciones, liquidaciones, detalles, porcentajeAumento]);
+
   return (
     <div className="max-w-6xl mx-auto space-y-8 pb-10 px-4 sm:px-0 animate-in fade-in duration-500">
-      
+
       {/* Action Bar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <Button variant="ghost" size="sm" onClick={() => router.push("/consignaciones")} className="gap-2 text-muted-foreground hover:text-foreground w-fit">
@@ -167,11 +195,11 @@ export default function ConsignacionDetailPage() {
             {tieneLiquidaciones ? "Corregir Liquidación" : "Editar Consignación"}
           </Button>
 
-          
+
 
           <div className="h-8 w-px bg-border mx-1 hidden sm:block" />
 
-          
+
 
           <Button variant="outline" size="sm" onClick={load} disabled={loading} className="border-border">
             <RefreshCcw className={cn("h-4 w-4", loading && "animate-spin")} />
@@ -181,12 +209,12 @@ export default function ConsignacionDetailPage() {
 
       {/* Header Profile */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 bg-card border rounded-2xl p-6 shadow-sm relative overflow-hidden">
-        
+
         {/* FONDO DECORATIVO SI HAY AUMENTO */}
         {porcentajeAumento > 0 && (
-           <div className="absolute top-0 right-0 p-4 opacity-5 pointer-events-none">
-              <TrendingUp className="w-32 h-32 text-emerald-500" />
-           </div>
+          <div className="absolute top-0 right-0 p-4 opacity-5 pointer-events-none">
+            <TrendingUp className="w-32 h-32 text-emerald-500" />
+          </div>
         )}
 
         <div className="flex items-center gap-4 relative z-10">
@@ -195,16 +223,13 @@ export default function ConsignacionDetailPage() {
           </div>
           <div>
             <div className="flex items-center gap-2 mb-1">
-              <Badge variant="outline" className="font-mono text-[10px] border-primary/30 text-primary">
-                ID #{id}
-              </Badge>
               <EstadoBadge estado={estado} />
-              
+
               {/* 👈 BADGE DE AUMENTO */}
               {porcentajeAumento > 0 && (
                 <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200 hover:bg-emerald-100 gap-1 text-[10px] px-2">
-                    <BadgePercent className="h-3 w-3" />
-                    +{porcentajeAumento}% Aplicado
+                  <BadgePercent className="h-3 w-3" />
+                  +{porcentajeAumento}% Aplicado
                 </Badge>
               )}
             </div>
@@ -227,6 +252,53 @@ export default function ConsignacionDetailPage() {
         </Button>
       </div>
 
+      {/* Precio Final - Card destacada */}
+      <Card className={cn(
+        "shadow-lg border-border overflow-hidden animate-in fade-in slide-in-from-bottom-2 duration-500",
+        tieneLiquidaciones
+          ? "bg-emerald-50/50 border-emerald-200 dark:bg-emerald-950/20 dark:border-emerald-500/20"
+          : "bg-card"
+      )}>
+        <CardContent className="flex flex-col sm:flex-row items-center justify-between gap-4 py-5 px-6">
+          <div className="flex items-center gap-4">
+            <div className={cn(
+              "h-12 w-12 rounded-xl flex items-center justify-center shrink-0",
+              tieneLiquidaciones
+                ? "bg-emerald-100 dark:bg-emerald-500/20"
+                : "bg-primary/10"
+            )}>
+              <DollarSign className={cn(
+                "h-6 w-6",
+                tieneLiquidaciones ? "text-emerald-600 dark:text-emerald-400" : "text-primary"
+              )} />
+            </div>
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+                {tieneLiquidaciones ? "Total Liquidado" : "Valor Total Consignado"}
+              </p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                {tieneLiquidaciones
+                  ? `Suma de ${liquidaciones.length} liquidación${liquidaciones.length > 1 ? "es" : ""} realizada${liquidaciones.length > 1 ? "s" : ""}`
+                  : "Precio total de los productos entregados"
+                }
+              </p>
+            </div>
+          </div>
+          {loading ? (
+            <Skeleton className="h-10 w-40" />
+          ) : (
+            <p className={cn(
+              "text-4xl font-black tracking-tight",
+              tieneLiquidaciones
+                ? "text-emerald-600 dark:text-emerald-400"
+                : "text-foreground"
+            )}>
+              {formatMoney(precioFinalConsignacion)}
+            </p>
+          )}
+        </CardContent>
+      </Card>
+
       {/* KPI Section */}
       <div className="grid gap-4 grid-cols-2 md:grid-cols-4 animate-in fade-in slide-in-from-bottom-4 duration-700">
         <KpiCard icon={<Package className="text-blue-500" />} title="Entregadas" value={entregadas} loading={loading} />
@@ -243,7 +315,7 @@ export default function ConsignacionDetailPage() {
 
       {/* Main Content Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-        
+
         {/* Columna Izquierda (8): Inventario */}
         <div className="lg:col-span-8 space-y-4">
           <Card className="shadow-lg border-border bg-card/40 backdrop-blur">
@@ -260,7 +332,7 @@ export default function ConsignacionDetailPage() {
                 </div>
               ) : (
                 detalles.map((d: any) => (
-                    <ProductRow key={d.id} d={d} porcentajeAumento={porcentajeAumento} />
+                  <ProductRow key={d.id} d={d} porcentajeAumento={porcentajeAumento} />
                 ))
               )}
             </CardContent>
@@ -337,22 +409,22 @@ function ProductRow({ d, porcentajeAumento }: { d: any; porcentajeAumento: numbe
   // 1. Intentamos usar el precio guardado en el detalle (si tu backend ya lo soporta)
   // 2. Si es 0 o null, calculamos al vuelo usando el producto actual y el porcentaje
   let precioFinal = Number(d.precioUnitario);
-  
+
   if (!precioFinal || precioFinal === 0) {
-     const precioBase = Number(d.producto?.precioVenta || 0);
-     precioFinal = precioBase * (1 + porcentajeAumento / 100);
+    const precioBase = Number(d.producto?.precioVenta || 0);
+    precioFinal = precioBase * (1 + porcentajeAumento / 100);
   }
 
   return (
     <div className="group rounded-xl border border-border p-4 bg-background transition-all hover:bg-muted/10 hover:border-primary/30">
       <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-4">
-        
+
         {/* INFO PRODUCTO */}
         <div className="space-y-1">
           <p className="font-bold text-foreground text-lg tracking-tight italic group-hover:text-primary transition-colors">
             {d.producto?.nombre ?? `Producto #${d.productoId}`}
           </p>
-          
+
           <div className="flex items-center gap-3 flex-wrap">
             <Badge variant="secondary" className="text-[10px] font-mono bg-muted border-border text-foreground/80">
               {d.unitsEntregadas} entregadas
@@ -366,17 +438,17 @@ function ProductRow({ d, porcentajeAumento }: { d: any; porcentajeAumento: numbe
 
           {/* PRECIOS */}
           <div className="pt-2 flex flex-col gap-0.5">
-             <div className="text-[10px] text-muted-foreground">Precio Unitario</div>
-             <div className="flex items-baseline gap-2">
-                <span className="text-lg font-black text-emerald-600 dark:text-emerald-400">
-                    {formatMoney(precioFinal)}
+            <div className="text-[10px] text-muted-foreground">Precio Unitario</div>
+            <div className="flex items-baseline gap-2">
+              <span className="text-lg font-black text-emerald-600 dark:text-emerald-400">
+                {formatMoney(precioFinal)}
+              </span>
+              {porcentajeAumento > 0 && (
+                <span className="text-xs text-muted-foreground line-through decoration-destructive/50">
+                  {d.producto?.precioVenta ? formatMoney(d.producto.precioVenta) : ""}
                 </span>
-                {porcentajeAumento > 0 && (
-                    <span className="text-xs text-muted-foreground line-through decoration-destructive/50">
-                        {d.producto?.precioVenta ? formatMoney(d.producto.precioVenta) : ""}
-                    </span>
-                )}
-             </div>
+              )}
+            </div>
           </div>
         </div>
 
@@ -386,10 +458,10 @@ function ProductRow({ d, porcentajeAumento }: { d: any; porcentajeAumento: numbe
             {Math.round(percentVendido)}% Liquidado
           </span>
           <Progress value={percentVendido} className="h-2 w-28 bg-muted [&>div]:bg-emerald-500 shadow-sm" />
-          
+
           <div className="mt-2 text-xs text-muted-foreground text-right">
-             <span className="block font-bold text-foreground">Total Pendiente:</span>
-             {formatMoney(pend * precioFinal)}
+            <span className="block font-bold text-foreground">Total Pendiente:</span>
+            {formatMoney(pend * precioFinal)}
           </div>
         </div>
       </div>
