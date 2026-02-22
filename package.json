@@ -10,7 +10,7 @@
     "seed": "prisma db seed"
   },
   "prisma": {
-    "seed": "ts-node -r tsconfig-paths/register prisma/seed.ts"
+    "seed": "tsx prisma/seed.ts"
   },
   "dependencies": {
     "@mercadopago/sdk-react": "^1.0.7",

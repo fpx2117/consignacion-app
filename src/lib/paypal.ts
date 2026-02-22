@@ -11,24 +11,36 @@ export async function getPayPalAccessToken() {
         `${paymentConfig.paypal.clientId}:${paymentConfig.paypal.secret}`
     ).toString("base64");
 
-    const response = await fetch(`${base}/v1/oauth2/token`, {
-        method: "POST",
-        body: "grant_type=client_credentials",
-        headers: {
-            Authorization: `Basic ${auth}`,
-            "Content-Type": "application/x-www-form-urlencoded",
-        },
-    });
+    try {
+        const response = await fetch(`${base}/v1/oauth2/token`, {
+            method: "POST",
+            body: "grant_type=client_credentials",
+            headers: {
+                Authorization: `Basic ${auth}`,
+                "Content-Type": "application/x-www-form-urlencoded",
+            },
+        });
 
-    if (!response.ok) {
-        const errorData = await response.json();
-        console.error("PayPal Auth Error Details:", errorData);
-        throw new Error(`PayPal Auth Failed: ${response.status} ${response.statusText}`);
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            console.error("❌ PayPal Auth Error:", {
+                status: response.status,
+                statusText: response.statusText,
+                details: errorData,
+                mode: paymentConfig.paypal.mode,
+                apiUrl: base,
+                clientIdPrefix: paymentConfig.paypal.clientId.substring(0, 5) + "..."
+            });
+            throw new Error(`PayPal Auth Failed: ${response.status} ${response.statusText}. Check server logs for details.`);
+        }
+
+        const data = await response.json();
+        console.log("✅ PayPal Access Token retrieved successfully [Mode: %s]", paymentConfig.paypal.mode);
+        return data.access_token;
+    } catch (error: any) {
+        console.error("❌ PayPal request failed:", error.message);
+        throw error;
     }
-
-    const data = await response.json();
-    console.log("PayPal Access Token retrieved successfully");
-    return data.access_token;
 }
 
 /**
