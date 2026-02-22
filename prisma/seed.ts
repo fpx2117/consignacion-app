@@ -1,7 +1,7 @@
 import "dotenv/config";
 import bcrypt from "bcryptjs";
 import { PrismaClient, RolUsuario } from "@prisma/client";
-import { SUBSCRIPTION_PLANS } from "../src/constants/subscriptions";
+import { SUBSCRIPTION_PLANS } from "@/constants/subscriptions";
 
 // Inicialización estándar de Prisma (El adaptador suele ser necesario solo en Edge Runtime)
 // Para un script de seed, la conexión directa es más estable
