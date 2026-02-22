@@ -55,7 +55,8 @@ async function apiRequest<T>(path: string, init?: RequestInit): Promise<ApiRespo
   });
 
   if (!res.ok) {
-    if (res.status === 401 || res.status === 403) {
+    // Si es 401/403 y NO es el endpoint de login, redirigimos al login
+    if ((res.status === 401 || res.status === 403) && !url.includes("/api/auth/login")) {
       if (typeof window !== "undefined") {
         window.location.href = "/login";
       }
