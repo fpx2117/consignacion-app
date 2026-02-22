@@ -66,29 +66,50 @@
 }
 
 @keyframes gradient {
-  to { background-position: var(--bg-size, 300%) 0; }
+  to {
+    background-position: var(--bg-size, 300%) 0;
+  }
 }
 
 @keyframes marquee {
-  from { transform: translateX(0); }
-  to { transform: translateX(calc(-100% - var(--gap))); }
+  from {
+    transform: translateX(0);
+  }
+
+  to {
+    transform: translateX(calc(-100% - var(--gap)));
+  }
 }
 
 @keyframes marquee-vertical {
-  from { transform: translateY(0); }
-  to { transform: translateY(calc(-100% - var(--gap))); }
+  from {
+    transform: translateY(0);
+  }
+
+  to {
+    transform: translateY(calc(-100% - var(--gap)));
+  }
 }
 
 @keyframes rippling {
-  0% { opacity: 1; }
-  100% { transform: scale(2); opacity: 0; }
+  0% {
+    opacity: 1;
+  }
+
+  100% {
+    transform: scale(2);
+    opacity: 0;
+  }
 }
 
 /* =========================
    Theme values (LIGHT)
    ========================= */
+/* =========================
+   Theme values (LIGHT)
+   ========================= */
 :root {
-  --radius: 0.625rem;
+  --radius: 0.75rem;
 
   /* Neutrals - OKLCH con fallbacks sutiles */
   --background: oklch(0.99 0.005 280);
@@ -135,17 +156,19 @@
    Theme values (DARK)
    ========================= */
 .dark {
-  --background: oklch(0.14 0.01 280);
+  /* Unified Obsidian Violet - Ensuring Hue 280 is consistent across all layers */
+  --background: oklch(0.12 0.015 280);
   --foreground: oklch(0.98 0 0);
 
-  --card: oklch(0.18 0.01 280);
+  /* Card is just a slightly lighter layer of the same base hue */
+  --card: oklch(0.16 0.015 280);
   --card-foreground: oklch(0.98 0 0);
 
-  --popover: oklch(0.18 0.01 280);
+  --popover: oklch(0.16 0.015 280);
   --popover-foreground: oklch(0.98 0 0);
 
   --primary: oklch(0.74 0.20 295);
-  --primary-foreground: oklch(0.14 0.01 280);
+  --primary-foreground: oklch(0.12 0.01 280);
 
   --secondary: oklch(0.22 0.01 280);
   --secondary-foreground: oklch(0.98 0 0);
@@ -159,9 +182,9 @@
   --destructive: oklch(0.70 0.19 25);
   --destructive-foreground: oklch(0.14 0.01 280);
 
-  /* Bordes más definidos en modo oscuro para separadores */
-  --border: oklch(1 0 0 / 15%);
-  --input: oklch(1 0 0 / 20%);
+  /* Pure dark borders without secondary hue contamination */
+  --border: oklch(1 0 0 / 12%);
+  --input: oklch(1 0 0 / 15%);
   --ring: oklch(0.74 0.20 295);
 
   --success: oklch(0.72 0.17 145);

@@ -48,7 +48,10 @@ export default async function ProtectedLayout({
   if (!ok) redirect("/login");
 
   return (
-    <div className="min-h-screen bg-background text-foreground transition-colors duration-300">
+    <div className="min-h-screen bg-background text-foreground transition-colors duration-300 relative overflow-hidden">
+      {/* Global Obsidian/Violet Glow Background */}
+      <div className="fixed inset-0 -z-10 h-full w-full bg-white dark:bg-transparent [background:radial-gradient(125%_125%_at_50%_10%,#fff_40%,#63e_100%)] dark:[background:radial-gradient(125%_125%_at_50%_10%,#000_40%,#63e_100%)] opacity-[0.15] pointer-events-none" />
+
       <SubscriptionGuard>
         <SidebarDock />
         <main className="min-h-screen p-4 pb-24 md:p-6 md:pb-6 md:ml-[84px] relative z-0">

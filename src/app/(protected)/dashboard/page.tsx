@@ -176,10 +176,7 @@ export default function DashboardPage() {
     );
 
   return (
-    <div className="relative min-h-screen w-full bg-slate-50/50 dark:bg-background">
-      {/* Background Gradients - Revertido a original sutil */}
-      <div className="fixed inset-0 -z-10 h-full w-full bg-white dark:bg-transparent [background:radial-gradient(125%_125%_at_50%_10%,#fff_40%,#63e_100%)] dark:[background:radial-gradient(125%_125%_at_50%_10%,#000_40%,#63e_100%)] opacity-20" />
-
+    <div className="relative min-h-screen w-full">
       <div className="mx-auto max-w-[1800px] space-y-8 p-4 pb-32 sm:p-6 md:p-8 lg:p-10">
 
         <DashboardHeader

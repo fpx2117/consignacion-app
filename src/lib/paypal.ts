@@ -61,7 +61,7 @@ export async function createPayPalSubscription(planId: string) {
             plan_id: planId,
             application_context: {
                 brand_name: "Consignaciones POS",
-                locale: "es-AR",
+                locale: "es-ES", // es-AR isn't always supported for billing
                 shipping_preference: "NO_SHIPPING",
                 user_action: "SUBSCRIBE_NOW",
                 return_url: `${process.env.NEXT_PUBLIC_APP_URL}/settings/subscriptions?status=success`,
@@ -71,9 +71,12 @@ export async function createPayPalSubscription(planId: string) {
     });
 
     if (!response.ok) {
-        const error = await response.json();
-        console.error("PayPal Subscription Error:", error);
-        throw new Error(error.message || "Error creating PayPal subscription");
+        const errorData = await response.json().catch(() => ({}));
+        console.error("❌ PayPal Subscription Error Details:", JSON.stringify(errorData, null, 2));
+
+        // Extraer mensaje detallado si existe
+        const detailedMessage = errorData.details?.[0]?.description || errorData.message || "Error desconocido";
+        throw new Error(`PayPal API Error: ${detailedMessage}`);
     }
 
     return await response.json();
