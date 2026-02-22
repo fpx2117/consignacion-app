@@ -20,7 +20,14 @@ export async function getPayPalAccessToken() {
         },
     });
 
+    if (!response.ok) {
+        const errorData = await response.json();
+        console.error("PayPal Auth Error Details:", errorData);
+        throw new Error(`PayPal Auth Failed: ${response.status} ${response.statusText}`);
+    }
+
     const data = await response.json();
+    console.log("PayPal Access Token retrieved successfully");
     return data.access_token;
 }
 
