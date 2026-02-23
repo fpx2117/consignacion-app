@@ -35,6 +35,7 @@ export async function POST(req: Request) {
         let verificationExternalId = `SETUP-UNVERIFIED-${Date.now()}`;
         let verificationStatus = EstadoSuscripcion.ACTIVO;
         let trialDays = 30;
+        let finalPlanId = planId; // Default to selected plan
 
         if (promoCode) {
             const promo = await (prisma as any).promoCode.findUnique({
@@ -43,12 +44,13 @@ export async function POST(req: Request) {
             });
 
             if (!promo || !promo.activo || promo.usedCount >= promo.maxUses) {
-                return NextResponse.json({ message: "Código promocional inválido o agotado" }, { status: 400 });
+                return NextResponse.json({ message: "La licencia es inválida o ya fue utilizada" }, { status: 400 });
             }
 
             verificationProvider = ProveedorSuscripcion.PROMO;
             verificationExternalId = `PROMO-${promoCode}-${Date.now()}`;
             trialDays = promo.durationDays || 30;
+            finalPlanId = promo.planId; // OVERRIDE with license plan
 
             // Increment promo use
             await (prisma as any).promoCode.update({
@@ -68,6 +70,7 @@ export async function POST(req: Request) {
                 verificationProvider = ProveedorSuscripcion.MERCADOPAGO;
                 verificationExternalId = String(paymentId);
                 trialDays = 30; // Paid plans still get a formal start date
+                // finalPlanId = planId; // Keep selected plan for paid flow
             } catch (err) {
                 console.error("MP Verification Error:", err);
                 return NextResponse.json({ message: "No se pudo verificar el pago con Mercado Pago" }, { status: 400 });
@@ -149,7 +152,7 @@ export async function POST(req: Request) {
             const sub = await tx.subscription.create({
                 data: {
                     userId: mainAdmin.id,
-                    planId: planId,
+                    planId: finalPlanId, // Use the verified plan ID
                     provider: verificationProvider,
                     externalId: verificationExternalId,
                     status: verificationStatus,

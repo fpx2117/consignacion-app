@@ -19,7 +19,7 @@ interface PaymentStepProps {
 export function PaymentStep({ plan, onPaymentSuccess, loading }: PaymentStepProps) {
     const [promoCode, setPromoCode] = useState("");
     const [isValidatingPromo, setIsValidatingPromo] = useState(false);
-    const [promoApplied, setPromoApplied] = useState<{ valid: boolean, discountPercentage: number } | null>(null);
+    const [promoApplied, setPromoApplied] = useState<{ valid: boolean, discountPercentage: number, planId?: string, planName?: string } | null>(null);
     const [isRedirecting, setIsRedirecting] = useState(false);
 
     const handleApplyPromo = async () => {
@@ -33,15 +33,20 @@ export function PaymentStep({ plan, onPaymentSuccess, loading }: PaymentStepProp
             });
             const data = await res.json();
             if (res.ok && data.valid) {
-                setPromoApplied({ valid: true, discountPercentage: data.discountPercentage });
-                toast.success("¡Código aplicado con éxito!");
+                setPromoApplied({
+                    valid: true,
+                    discountPercentage: data.discountPercentage,
+                    planId: data.planId,
+                    planName: data.planName
+                });
+                toast.success(`¡Licencia de ${data.planName} activada!`);
             } else {
                 setPromoApplied({ valid: false, discountPercentage: 0 });
-                toast.error(data.error || "Código inválido");
+                toast.error(data.error || "Licencia inválida");
             }
         } catch (error) {
             console.error("Promo validation error:", error);
-            toast.error("Error al validar código");
+            toast.error("Error al validar licencia");
         } finally {
             setIsValidatingPromo(false);
         }
@@ -71,6 +76,7 @@ export function PaymentStep({ plan, onPaymentSuccess, loading }: PaymentStepProp
     };
 
     const finalPrice = promoApplied?.discountPercentage === 100 ? 0 : plan.precioARS;
+    const activePlanName = promoApplied?.planName || plan.nombre;
 
     return (
         <motion.div
@@ -80,9 +86,11 @@ export function PaymentStep({ plan, onPaymentSuccess, loading }: PaymentStepProp
         >
             <div className="text-center space-y-2">
                 <h2 className="text-3xl font-black tracking-tight text-foreground">
-                    Resumen de Compra
+                    {promoApplied?.valid ? "Licencia Activada" : "Resumen de Activación"}
                 </h2>
-                <p className="text-muted-foreground font-medium">Estás a un paso de activar tu ecosistema.</p>
+                <p className="text-muted-foreground font-medium">
+                    {promoApplied?.valid ? "Tu licencia ha sido validada con éxito." : "Estás a un paso de activar tu ecosistema."}
+                </p>
             </div>
 
             <div className="p-8 rounded-[2.5rem] bg-card/40 backdrop-blur-xl border border-border/50 shadow-2xl relative overflow-hidden">
@@ -90,13 +98,22 @@ export function PaymentStep({ plan, onPaymentSuccess, loading }: PaymentStepProp
 
                 <div className="flex items-center justify-between mb-8 relative z-10">
                     <div>
-                        <p className="text-xs font-bold uppercase tracking-widest text-violet-600 mb-1">Plan Seleccionado</p>
-                        <h3 className="text-2xl font-black">{plan.nombre}</h3>
+                        <p className="text-xs font-bold uppercase tracking-widest text-violet-600 mb-1">
+                            {promoApplied?.valid ? "Plan Licenciado" : "Plan Seleccionado"}
+                        </p>
+                        <div className="flex items-center gap-2">
+                            <h3 className="text-2xl font-black">{activePlanName}</h3>
+                            {promoApplied?.valid && (
+                                <span className="px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 text-[10px] font-bold uppercase tracking-tighter">
+                                    Licencia OK
+                                </span>
+                            )}
+                        </div>
                     </div>
                     <div className="text-right">
-                        <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-1">Mensual</p>
-                        <p className={`text-2xl font-black ${promoApplied?.valid && promoApplied.discountPercentage === 100 ? "line-through text-muted-foreground opacity-50" : "text-foreground"}`}>
-                            ${plan.precioARS.toLocaleString()}
+                        <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-1">Costo</p>
+                        <p className={`text-2xl font-black ${promoApplied?.valid ? "text-emerald-500" : "text-foreground"}`}>
+                            {promoApplied?.valid ? "Bonificado" : `$${plan.precioARS.toLocaleString()}`}
                         </p>
                     </div>
                 </div>
@@ -105,14 +122,14 @@ export function PaymentStep({ plan, onPaymentSuccess, loading }: PaymentStepProp
 
                 <div className="space-y-4 relative z-10">
                     <Label htmlFor="promo" className="text-xs font-bold uppercase tracking-widest text-foreground/80 flex items-center gap-2">
-                        <Tag className="w-4 h-4" /> Código Promocional
+                        <Tag className="w-4 h-4" /> Código de Licencia
                     </Label>
                     <div className="flex gap-2">
                         <Input
                             id="promo"
                             value={promoCode}
                             onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
-                            placeholder="Ej: LANZAMIENTO2026"
+                            placeholder="TU-CODIGO-AQUI"
                             className="h-12 rounded-xl bg-background/50 border-border/50 focus:border-violet-500/50 uppercase font-bold tracking-widest"
                             disabled={promoApplied?.valid || isValidatingPromo || loading || isRedirecting}
                         />
@@ -122,23 +139,18 @@ export function PaymentStep({ plan, onPaymentSuccess, loading }: PaymentStepProp
                             onClick={promoApplied?.valid ? () => setPromoApplied(null) : handleApplyPromo}
                             disabled={!promoCode || isValidatingPromo || loading || isRedirecting}
                         >
-                            {isValidatingPromo ? <Loader2 className="w-5 h-5 animate-spin" /> : (promoApplied?.valid ? "Quitar" : "Aplicar")}
+                            {isValidatingPromo ? <Loader2 className="w-5 h-5 animate-spin" /> : (promoApplied?.valid ? "Quitar" : "Validar")}
                         </Button>
                     </div>
                     {promoApplied?.valid === false && (
-                        <p className="text-xs font-bold text-destructive">Código inválido o expirado.</p>
-                    )}
-                    {promoApplied?.valid === true && (
-                        <p className="text-xs font-bold text-emerald-500 flex items-center gap-1">
-                            <CheckCircle2 className="w-4 h-4" /> ¡Código aplicado con éxito!
-                        </p>
+                        <p className="text-xs font-bold text-destructive">Código inválido o ya utilizado.</p>
                     )}
                 </div>
 
                 <Separator className="my-8 bg-border/50" />
 
                 <div className="flex items-center justify-between mb-8 relative z-10">
-                    <span className="text-lg font-black uppercase tracking-widest">Total a Pagar</span>
+                    <span className="text-lg font-black uppercase tracking-widest">A pagar hoy</span>
                     <span className="text-4xl font-black text-violet-600">
                         ${finalPrice.toLocaleString()}
                     </span>
@@ -147,7 +159,7 @@ export function PaymentStep({ plan, onPaymentSuccess, loading }: PaymentStepProp
                 <div className="relative z-10">
                     {finalPrice === 0 ? (
                         <Button
-                            className="w-full h-16 rounded-2xl bg-foreground text-background hover:bg-foreground/90 font-black text-sm uppercase tracking-[0.2em] transition-all shadow-xl hover:shadow-2xl hover:-translate-y-1"
+                            className="w-full h-16 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-sm uppercase tracking-[0.2em] transition-all shadow-xl hover:shadow-2xl hover:-translate-y-1"
                             onClick={() => onPaymentSuccess(promoCode)}
                             disabled={loading || isRedirecting}
                         >
@@ -156,7 +168,7 @@ export function PaymentStep({ plan, onPaymentSuccess, loading }: PaymentStepProp
                             ) : (
                                 <CheckCircle2 className="w-5 h-5 mr-3" />
                             )}
-                            Crear Instancia Gratis
+                            Activar con Licencia
                         </Button>
                     ) : (
                         <div className="flex flex-col gap-4">
