@@ -3,6 +3,12 @@ import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import { SUBSCRIPTION_PLANS, PLAN_LIMITS_DEFAULTS } from "@/constants/subscriptions";
 import { RolUsuario, ProveedorSuscripcion, EstadoSuscripcion } from "@prisma/client";
+import { MercadoPagoConfig, Payment } from "mercadopago";
+import { paymentConfig } from "@/lib/paymentConfig";
+
+const mpClient = new MercadoPagoConfig({
+    accessToken: paymentConfig.mp.accessToken
+});
 
 export async function POST(req: Request) {
     try {
@@ -15,7 +21,7 @@ export async function POST(req: Request) {
             );
         }
 
-        const { admin, planId, staff, businessName, promoCode } = await req.json();
+        const { admin, planId, staff, businessName, promoCode, paymentId } = await req.json();
 
         if (!admin.nombre || !admin.email || !admin.password) {
             return NextResponse.json(
@@ -24,11 +30,59 @@ export async function POST(req: Request) {
             );
         }
 
+        // --- VERIFICATION LOGIC ---
+        let verificationProvider: ProveedorSuscripcion = ProveedorSuscripcion.PROMO;
+        let verificationExternalId = `SETUP-UNVERIFIED-${Date.now()}`;
+        let verificationStatus = EstadoSuscripcion.ACTIVO;
+        let trialDays = 30;
+
+        if (promoCode) {
+            const promo = await (prisma as any).promoCode.findUnique({
+                where: { code: promoCode.toUpperCase() },
+                include: { plan: true }
+            });
+
+            if (!promo || !promo.activo || promo.usedCount >= promo.maxUses) {
+                return NextResponse.json({ message: "Código promocional inválido o agotado" }, { status: 400 });
+            }
+
+            verificationProvider = ProveedorSuscripcion.PROMO;
+            verificationExternalId = `PROMO-${promoCode}-${Date.now()}`;
+            trialDays = promo.durationDays || 30;
+
+            // Increment promo use
+            await (prisma as any).promoCode.update({
+                where: { id: promo.id },
+                data: { usedCount: { increment: 1 } }
+            });
+        } else if (paymentId) {
+            try {
+                // Verify with Mercado Pago
+                const payment = new Payment(mpClient);
+                const paymentData = await payment.get({ id: paymentId });
+
+                if (paymentData.status !== "approved") {
+                    return NextResponse.json({ message: "El pago no está aprobado" }, { status: 400 });
+                }
+
+                verificationProvider = ProveedorSuscripcion.MERCADOPAGO;
+                verificationExternalId = String(paymentId);
+                trialDays = 30; // Paid plans still get a formal start date
+            } catch (err) {
+                console.error("MP Verification Error:", err);
+                return NextResponse.json({ message: "No se pudo verificar el pago con Mercado Pago" }, { status: 400 });
+            }
+        } else {
+            // No promo, no payment -> NO ENTRY
+            return NextResponse.json({ message: "Se requiere un pago o código promocional para activar el sistema" }, { status: 402 });
+        }
+        // --- END VERIFICATION ---
+
         // 2. Start Transaction
         const result = await prisma.$transaction(async (tx) => {
-            // a. Sync Plans and Limits (ensure they exist in DB)
+            // a. Sync Plans and Limits
             for (const p of SUBSCRIPTION_PLANS) {
-                const dbPlan = await tx.plan.upsert({
+                await tx.plan.upsert({
                     where: { id: p.id },
                     update: {
                         nombre: p.nombre,
@@ -49,7 +103,6 @@ export async function POST(req: Request) {
                     },
                 });
 
-                // Sync limits for each plan
                 const limits = PLAN_LIMITS_DEFAULTS[p.id];
                 if (limits) {
                     await tx.planLimit.upsert({
@@ -71,7 +124,7 @@ export async function POST(req: Request) {
                 }
             }
 
-            // b. Create Branding (Business Identity)
+            // b. Create Branding
             if (businessName) {
                 await tx.branding.upsert({
                     where: { id: 1 },
@@ -92,19 +145,19 @@ export async function POST(req: Request) {
                 },
             });
 
-            // d. Create Subscription for Admin
+            // d. Create Subscription for Admin (Verified)
             const sub = await tx.subscription.create({
                 data: {
                     userId: mainAdmin.id,
                     planId: planId,
-                    provider: promoCode ? ProveedorSuscripcion.PROMO : ProveedorSuscripcion.PROMO,
-                    externalId: promoCode ? `PROMO-${promoCode}-${Date.now()}` : `SETUP-TRIAL-${Date.now()}`,
-                    status: EstadoSuscripcion.ACTIVO,
-                    trialEndsAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days trial
+                    provider: verificationProvider,
+                    externalId: verificationExternalId,
+                    status: verificationStatus,
+                    trialEndsAt: new Date(Date.now() + trialDays * 24 * 60 * 60 * 1000),
                 },
             });
 
-            // e. Create Default Configuration (ID 1)
+            // e. Create Default Configuration
             await tx.configuracion.upsert({
                 where: { id: 1 },
                 update: {},
@@ -129,11 +182,11 @@ export async function POST(req: Request) {
                 },
             });
 
-            // g. Create Initial Staff (if any)
+            // g. Create Initial Staff
             if (staff && Array.isArray(staff) && staff.length > 0) {
                 for (const member of staff) {
                     if (member.email && member.nombre) {
-                        const staffHash = await bcrypt.hash("123456", 10); // Default password for initial staff
+                        const staffHash = await bcrypt.hash("123456", 10);
                         await tx.usuario.create({
                             data: {
                                 nombre: member.nombre,
@@ -150,7 +203,6 @@ export async function POST(req: Request) {
             return { adminId: mainAdmin.id, subId: sub.id, user: mainAdmin };
         });
 
-        // 3. Auto-Login: Generate JWT and set Cookie
         const { signUserJwt, setAuthCookie } = await import("@/lib/auth");
         const token = await signUserJwt({
             sub: String(result.adminId),

@@ -1,6 +1,6 @@
 "use client";
 
-import { PricingTable } from "@/app/(protected)/settings/subscriptions/components/PricingTable";
+import { PricingTable } from "@/app/(system-guard)/(protected)/settings/subscriptions/components/PricingTable";
 import { SubscriptionPlan } from "@/constants/subscriptions";
 import { motion } from "framer-motion";
 
