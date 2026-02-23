@@ -20,7 +20,7 @@ try {
 
 // Nota: Para escuchar en Docker/Railway/Render, a veces se requiere 0.0.0.0 explícito
 // aunque el hostname de Next.js sea el dominio.
-const listenHost = "0.0.0.0"; 
+const listenHost = "0.0.0.0";
 
 const app = next({ dev, hostname, port });
 const handle = app.getRequestHandler();
@@ -44,7 +44,7 @@ app.prepare().then(() => {
         for await (const chunk of req) {
           buffers.push(chunk);
         }
-        
+
         try {
           const data = Buffer.concat(buffers).toString();
           if (!data) throw new Error("Body vacío");
@@ -53,13 +53,14 @@ app.prepare().then(() => {
           const { notification } = json;
 
           if (io && notification) {
-            console.log("⚡ Emitiendo a clientes:", notification.title);
+            console.log("⚡ [Server] Despachando notificación:", notification.type, notification.title);
             io.emit("new-notification", notification);
-            
+
             res.statusCode = 200;
             res.setHeader("Content-Type", "application/json");
-            res.end(JSON.stringify({ success: true }));
+            res.end(JSON.stringify({ success: true, emitted: true }));
           } else {
+            console.warn("⚠️ [Server] Fallo en dispatch: io o notification ausente", { hasIo: !!io, hasNotif: !!notification });
             throw new Error("IO no inicializado o faltan datos");
           }
         } catch (e: any) {
@@ -89,12 +90,12 @@ app.prepare().then(() => {
       methods: ["GET", "POST"],
       credentials: true
     },
-    transports: ["polling", "websocket"], 
+    transports: ["polling", "websocket"],
   });
 
   io.on("connection", (socket) => {
     console.log(`🟢 Socket conectado: ${socket.id}`);
-    
+
     socket.on("disconnect", (reason) => {
       console.log(`🔴 Socket desconectado (${socket.id}): ${reason}`);
     });

@@ -16,11 +16,7 @@ export const SocketToaster = () => {
 
     // Escuchar el evento genérico
     socket.on("new-notification", (data: any) => {
-      // 1. Si estamos en la página de nueva venta, evitamos el toast duplicado
-      // ya que esa página tiene su propio SuccessDialog.
-      if (pathname === "/ventas/nueva" && data.type === NOTIFICATION_TYPE.NEW_ORDER) {
-        return;
-      }
+      console.log("🔔 CLIENTE: Notificación recibida:", data.type, data.title);
 
       // Reproducir sonido
       const audio = new Audio("/sounds/notification.mp3");
