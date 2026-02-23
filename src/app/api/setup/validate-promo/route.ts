@@ -36,8 +36,10 @@ export async function POST(req: Request) {
 
         return NextResponse.json({
             valid: true,
-            discountPercentage: 100, // For now, setup promos are 100% off
-            planName: promo.plan.nombre
+            discountPercentage: 100,
+            planId: promo.planId,
+            planName: promo.plan.nombre,
+            durationDays: promo.durationDays
         });
 
     } catch (error: any) {
