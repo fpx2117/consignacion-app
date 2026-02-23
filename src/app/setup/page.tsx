@@ -76,10 +76,13 @@ export default function SetupPage() {
         const status = searchParams.get("status");
         const paymentId = searchParams.get("payment_id"); // MP classic param
         const preferenceId = searchParams.get("preference_id");
+        const subscriptionId = searchParams.get("subscription_id"); // PayPal standard
 
-        if (status === "success" && (paymentId || preferenceId)) {
+        const activePaymentId = paymentId || preferenceId || subscriptionId;
+
+        if (status === "success" && activePaymentId) {
             // Auto-trigger initialization with payment verification
-            handlePaymentSuccess(undefined, paymentId || preferenceId || undefined);
+            handlePaymentSuccess(undefined, activePaymentId);
         } else if (status === "failure") {
             toast.error("El pago no pudo ser procesado. Reintenta.");
             setCurrentStep(3);

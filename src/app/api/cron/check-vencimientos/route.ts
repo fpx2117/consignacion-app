@@ -158,11 +158,19 @@ export async function GET(request: Request) {
       }
     }
 
-    // B. Suscripciones ACTIVA que vencen pronto
+    // B. Suscripciones que vencen pronto (Tanto ACTIVO como PRUEBA)
     const expiringSoon = await prisma.subscription.findMany({
       where: {
-        status: "ACTIVO",
-        currentPeriodEnd: { gt: now, lte: in3Days }
+        status: { in: ["ACTIVO", "PRUEBA"] },
+        OR: [
+          { currentPeriodEnd: { gt: now, lte: in3Days } },
+          {
+            AND: [
+              { currentPeriodEnd: null },
+              { trialEndsAt: { gt: now, lte: in3Days } }
+            ]
+          }
+        ]
       },
       include: { user: true }
     });
@@ -193,10 +201,19 @@ export async function GET(request: Request) {
     }
 
     // --- 6. SUSCRIPCIONES VENCIDAS (EJECUCIÓN) ---
+    // Atrapamos tanto ACTIVO como PRUEBA que hayan pasado su fecha límite
     const suscripcionesVencidas = await prisma.subscription.findMany({
       where: {
-        currentPeriodEnd: { lt: now },
-        status: 'ACTIVO'
+        status: { in: ['ACTIVO', 'PRUEBA'] },
+        OR: [
+          { currentPeriodEnd: { lt: now } },
+          {
+            AND: [
+              { currentPeriodEnd: null },
+              { trialEndsAt: { lt: now } }
+            ]
+          }
+        ]
       },
       include: {
         user: true
@@ -210,13 +227,16 @@ export async function GET(request: Request) {
       });
 
       const type = NOTIFICATION_TYPE.SYSTEM;
+      const vencimiento = sub.currentPeriodEnd || sub.trialEndsAt;
+      const description = `La suscripción de ${sub.user.nombre} ha expirado el ${formatearFecha(vencimiento)}.`;
+
       const savedNotif = await prisma.notification.create({
         data: {
           type,
           title: "Suscripción Expirada",
-          description: `La suscripción de ${sub.user.nombre} ha expirado el ${formatearFecha(sub.currentPeriodEnd)}.`,
+          description,
           userId: sub.userId,
-          fingerprint: `SUB_EXPIRED:${sub.id}`
+          fingerprint: `SUB_EXPIRED:${sub.id}:${vencimiento?.toISOString().split('T')[0]}`
         }
       });
 

@@ -46,7 +46,7 @@ export async function getPayPalAccessToken() {
 /**
  * Creates a subscription manually via PayPal REST API.
  */
-export async function createPayPalSubscription(planId: string) {
+export async function createPayPalSubscription(planId: string, returnUrl?: string, cancelUrl?: string) {
     const accessToken = await getPayPalAccessToken();
 
     const response = await fetch(`${base}/v1/billing/subscriptions`, {
@@ -64,8 +64,8 @@ export async function createPayPalSubscription(planId: string) {
                 locale: "es-ES", // es-AR isn't always supported for billing
                 shipping_preference: "NO_SHIPPING",
                 user_action: "SUBSCRIBE_NOW",
-                return_url: `${process.env.NEXT_PUBLIC_APP_URL}/settings/subscriptions?status=success`,
-                cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/settings/subscriptions?status=cancel`,
+                return_url: returnUrl || `${process.env.NEXT_PUBLIC_APP_URL}/settings/subscriptions?status=success`,
+                cancel_url: cancelUrl || `${process.env.NEXT_PUBLIC_APP_URL}/settings/subscriptions?status=cancel`,
             },
         }),
     });

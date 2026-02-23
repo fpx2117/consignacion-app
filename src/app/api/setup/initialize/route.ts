@@ -58,22 +58,57 @@ export async function POST(req: Request) {
                 data: { usedCount: { increment: 1 } }
             });
         } else if (paymentId) {
-            try {
-                // Verify with Mercado Pago
-                const payment = new Payment(mpClient);
-                const paymentData = await payment.get({ id: paymentId });
+            // Determine provider (default to MP, but check for PayPal if needed or passed)
+            // For now, let's look at the shape or just try both if not specified.
+            // Better: Let's assume if it starts with 'S-' it's PayPal (standard for Subscriptions)
+            const isPayPal = paymentId.startsWith("S-");
 
-                if (paymentData.status !== "approved") {
-                    return NextResponse.json({ message: "El pago no está aprobado" }, { status: 400 });
+            if (isPayPal) {
+                try {
+                    const { getPayPalAccessToken } = await import("@/lib/paypal");
+                    const accessToken = await getPayPalAccessToken();
+                    const base = paymentConfig.paypal.apiUrl;
+
+                    const response = await fetch(`${base}/v1/billing/subscriptions/${paymentId}`, {
+                        headers: {
+                            Authorization: `Bearer ${accessToken}`,
+                            "Content-Type": "application/json",
+                        },
+                    });
+
+                    if (!response.ok) {
+                        return NextResponse.json({ message: "No se pudo verificar la suscripción de PayPal" }, { status: 400 });
+                    }
+
+                    const subData = await response.json();
+                    if (subData.status !== "ACTIVE") {
+                        return NextResponse.json({ message: `La suscripción de PayPal no está activa (Estado: ${subData.status})` }, { status: 400 });
+                    }
+
+                    verificationProvider = ProveedorSuscripcion.PAYPAL;
+                    verificationExternalId = paymentId;
+                    trialDays = 30;
+                } catch (err) {
+                    console.error("PayPal Verification Error:", err);
+                    return NextResponse.json({ message: "Error verificando con PayPal" }, { status: 400 });
                 }
+            } else {
+                try {
+                    // Verify with Mercado Pago
+                    const payment = new Payment(mpClient);
+                    const paymentData = await payment.get({ id: paymentId });
 
-                verificationProvider = ProveedorSuscripcion.MERCADOPAGO;
-                verificationExternalId = String(paymentId);
-                trialDays = 30; // Paid plans still get a formal start date
-                // finalPlanId = planId; // Keep selected plan for paid flow
-            } catch (err) {
-                console.error("MP Verification Error:", err);
-                return NextResponse.json({ message: "No se pudo verificar el pago con Mercado Pago" }, { status: 400 });
+                    if (paymentData.status !== "approved") {
+                        return NextResponse.json({ message: "El pago no está aprobado" }, { status: 400 });
+                    }
+
+                    verificationProvider = ProveedorSuscripcion.MERCADOPAGO;
+                    verificationExternalId = String(paymentId);
+                    trialDays = 30;
+                } catch (err) {
+                    console.error("MP Verification Error:", err);
+                    return NextResponse.json({ message: "No se pudo verificar el pago con Mercado Pago" }, { status: 400 });
+                }
             }
         } else {
             // No promo, no payment -> NO ENTRY
