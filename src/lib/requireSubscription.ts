@@ -17,8 +17,20 @@ export interface PlanLimits {
  */
 export async function getActivePlanLimits(): Promise<PlanLimits | null> {
     // Suscripción es a nivel programa: buscamos cualquiera activa
+    const now = new Date();
     const subscription = await prisma.subscription.findFirst({
-        where: { status: { in: ["ACTIVO", "PRUEBA"] } },
+        where: {
+            OR: [
+                { status: { in: ["ACTIVO", "PRUEBA"] } },
+                {
+                    status: "CANCELADO",
+                    OR: [
+                        { currentPeriodEnd: { gt: now } },
+                        { trialEndsAt: { gt: now } }
+                    ]
+                }
+            ]
+        },
         orderBy: { createdAt: "desc" },
         include: { plan: true },
     });
