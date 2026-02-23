@@ -7,6 +7,7 @@ import { Calendar, CreditCard, RefreshCw, Star, Zap, XCircle, Loader2 } from "lu
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { CancelSubscriptionModal } from "./CancelSubscriptionModal";
 
 interface SubscriptionInfo {
     hasSubscription: boolean;
@@ -27,6 +28,7 @@ export function SubscriptionStatusCard({ onUpgrade }: { onUpgrade: () => void })
     const [data, setData] = useState<SubscriptionInfo | null>(null);
     const [loading, setLoading] = useState(true);
     const [cancelling, setCancelling] = useState(false);
+    const [showCancelModal, setShowCancelModal] = useState(false);
 
     const fetchSubscription = () => {
         setLoading(true);
@@ -44,10 +46,6 @@ export function SubscriptionStatusCard({ onUpgrade }: { onUpgrade: () => void })
     }, []);
 
     const handleCancel = async () => {
-        if (!confirm("¿Estás seguro de que deseas cancelar tu suscripción? Perderás el acceso a las funciones premium al finalizar el periodo actual.")) {
-            return;
-        }
-
         setCancelling(true);
         try {
             const res = await fetch("/api/subscriptions/cancel", { method: "POST" });
@@ -55,6 +53,7 @@ export function SubscriptionStatusCard({ onUpgrade }: { onUpgrade: () => void })
 
             if (res.ok) {
                 toast.success("Suscripción cancelada exitosamente");
+                setShowCancelModal(false);
                 fetchSubscription(); // Recargar datos
             } else {
                 toast.error(result.error || "No se pudo cancelar la suscripción");
@@ -169,11 +168,11 @@ export function SubscriptionStatusCard({ onUpgrade }: { onUpgrade: () => void })
                         {sub?.status === "ACTIVO" && (
                             <div className="flex justify-end pt-4 border-t border-border/10">
                                 <button
-                                    onClick={handleCancel}
+                                    onClick={() => setShowCancelModal(true)}
                                     disabled={cancelling}
                                     className="text-xs text-muted-foreground hover:text-destructive transition-colors font-medium flex items-center gap-2 px-4 py-2 rounded-xl hover:bg-destructive/5"
                                 >
-                                    {cancelling ? <Loader2 className="h-3 w-3 animate-spin" /> : <XCircle className="h-3 w-3" />}
+                                    <XCircle className="h-3 w-3" />
                                     Cancelar Suscripción
                                 </button>
                             </div>
@@ -189,6 +188,13 @@ export function SubscriptionStatusCard({ onUpgrade }: { onUpgrade: () => void })
                     </div>
                 )}
             </div>
+
+            <CancelSubscriptionModal
+                isOpen={showCancelModal}
+                onClose={() => setShowCancelModal(false)}
+                onConfirm={handleCancel}
+                loading={cancelling}
+            />
 
             {/* Premium Decorative elements */}
             <div className="absolute top-0 right-0 w-64 h-64 bg-primary/10 rounded-full blur-[100px] -translate-y-1/2 translate-x-1/2 opacity-50 group-hover:opacity-80 transition-opacity duration-700" />
