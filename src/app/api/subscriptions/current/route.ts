@@ -21,12 +21,17 @@ export async function GET() {
             });
         }
 
-        // Calcula días restantes
+        // Calcula días restantes usando la fecha más lejana disponible
         const targetDate = subscription.currentPeriodEnd || subscription.trialEndsAt;
         let daysRemaining = 0;
+
         if (targetDate) {
             const now = new Date();
-            const diffTime = targetDate.getTime() - now.getTime();
+            // Normalizar a medianoche para evitar que a las 23:59 falten "0 días" pero el usuario aún tenga acceso
+            const start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+            const end = new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate());
+
+            const diffTime = end.getTime() - start.getTime();
             daysRemaining = Math.max(0, Math.ceil(diffTime / (1000 * 60 * 60 * 24)));
         }
 
