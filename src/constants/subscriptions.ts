@@ -11,7 +11,8 @@ export interface SubscriptionPlan {
     descripcion: string;
     precioARS: number;
     precioUSD: number;
-    mercadopagoId: string;
+    mercadopagoId: string; // ID para pagos únicos (opcional)
+    mercadopagoPlanId: string; // ID del Plan de Suscripción en MP
     paypalId: string;
     features: string[];
     popular?: boolean;
@@ -25,6 +26,7 @@ export const SUBSCRIPTION_PLANS: SubscriptionPlan[] = [
         precioARS: Number(process.env.NEXT_PUBLIC_PLAN_1_PRICE_ARS || 60000),
         precioUSD: Number(process.env.NEXT_PUBLIC_PLAN_1_PRICE_USD || 45),
         mercadopagoId: process.env.NEXT_PUBLIC_MP_PLAN_BASICO || "PLAN_MP_BASICO",
+        mercadopagoPlanId: process.env.NEXT_PUBLIC_MP_PLAN_RECURRENTE_BASICO || "PLAN_MP_RECURRENTE_BASICO",
         paypalId: process.env.NEXT_PUBLIC_PAYPAL_PLAN_BASICO || "PLAN_PAYPAL_BASICO",
         features: [
             `Hasta ${process.env.NEXT_PUBLIC_PLAN_1_MAX_PRODUCTOS || 60} productos`,
@@ -40,6 +42,7 @@ export const SUBSCRIPTION_PLANS: SubscriptionPlan[] = [
         precioARS: Number(process.env.NEXT_PUBLIC_PLAN_2_PRICE_ARS || 80000),
         precioUSD: Number(process.env.NEXT_PUBLIC_PLAN_2_PRICE_USD || 55),
         mercadopagoId: process.env.NEXT_PUBLIC_MP_PLAN_PRO || "PLAN_MP_PRO",
+        mercadopagoPlanId: process.env.NEXT_PUBLIC_MP_PLAN_RECURRENTE_PRO || "PLAN_MP_RECURRENTE_PRO",
         paypalId: process.env.NEXT_PUBLIC_PAYPAL_PLAN_PRO || "PLAN_PAYPAL_PRO",
         popular: true,
         features: [
@@ -57,6 +60,7 @@ export const SUBSCRIPTION_PLANS: SubscriptionPlan[] = [
         precioARS: Number(process.env.NEXT_PUBLIC_PLAN_3_PRICE_ARS || 150000),
         precioUSD: Number(process.env.NEXT_PUBLIC_PLAN_3_PRICE_USD || 105),
         mercadopagoId: process.env.NEXT_PUBLIC_MP_PLAN_ENTERPRISE || "PLAN_MP_ENTERPRISE",
+        mercadopagoPlanId: process.env.NEXT_PUBLIC_MP_PLAN_RECURRENTE_ENTERPRISE || "PLAN_MP_RECURRENTE_ENTERPRISE",
         paypalId: process.env.NEXT_PUBLIC_PAYPAL_PLAN_ENTERPRISE || "PLAN_PAYPAL_ENTERPRISE",
         features: [
             "Todo lo de Pro",
@@ -69,7 +73,7 @@ export const SUBSCRIPTION_PLANS: SubscriptionPlan[] = [
 
 export const getPlanById = (id: number) => SUBSCRIPTION_PLANS.find(p => p.id === id);
 export const getPlanByExternalId = (extId: string) =>
-    SUBSCRIPTION_PLANS.find(p => p.mercadopagoId === extId || p.paypalId === extId);
+    SUBSCRIPTION_PLANS.find(p => p.mercadopagoId === extId || p.mercadopagoPlanId === extId || p.paypalId === extId);
 
 // Límites por defecto para cada plan (se usan al crear PlanLimit en DB)
 export const PLAN_LIMITS_DEFAULTS: Record<number, {

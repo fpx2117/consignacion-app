@@ -9,11 +9,15 @@ import { ArrowLeft, CheckCircle2, XCircle, Gift, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { DowngradeModal } from "./components/DowngradeModal";
 
 export default function SubscriptionsPage() {
     const [showPricing, setShowPricing] = useState(false);
     const [selectedPlan, setSelectedPlan] = useState<any>(null);
     const [currency, setCurrency] = useState<"ARS" | "USD">("ARS");
+    const [currentSub, setCurrentSub] = useState<any>(null);
+    const [showDowngradeWarning, setShowDowngradeWarning] = useState(false);
+    const [pendingPlan, setPendingPlan] = useState<any>(null);
 
     // Promo code state
     const [showPromo, setShowPromo] = useState(false);
@@ -22,6 +26,20 @@ export default function SubscriptionsPage() {
 
     const searchParams = useSearchParams();
     const router = useRouter();
+
+    const fetchCurrentSub = async () => {
+        try {
+            const res = await fetch("/api/subscriptions/current");
+            const json = await res.json();
+            setCurrentSub(json.subscription);
+        } catch (error) {
+            console.error("Error fetching sub:", error);
+        }
+    };
+
+    useEffect(() => {
+        fetchCurrentSub();
+    }, []);
 
     useEffect(() => {
         const status = searchParams.get("status");
@@ -40,9 +58,24 @@ export default function SubscriptionsPage() {
         }
     }, [searchParams, router]);
 
-    const handleSelectPlan = (plan: any, currency: "ARS" | "USD") => {
-        setSelectedPlan(plan);
-        setCurrency(currency);
+    const handleSelectPlan = (plan: any, curr: "ARS" | "USD") => {
+        // Detectar si es un downgrade
+        // Asumimos que IDs más bajos son planes más bajos (1: Básico, 2: Pro, 3: Enterprise)
+        if (currentSub && plan.id < currentSub.planId) {
+            setPendingPlan({ plan, currency: curr });
+            setShowDowngradeWarning(true);
+        } else {
+            setSelectedPlan(plan);
+            setCurrency(curr);
+        }
+    };
+
+    const confirmDowngrade = () => {
+        if (pendingPlan) {
+            setSelectedPlan(pendingPlan.plan);
+            setCurrency(pendingPlan.currency);
+        }
+        setShowDowngradeWarning(false);
     };
 
     const handleRedeemPromo = async () => {
@@ -175,7 +208,10 @@ export default function SubscriptionsPage() {
                             </button>
                         </div>
                         {/* PricingTable already has its own huge header, so we let it shine alone */}
-                        <PricingTable onSelectPlan={(plan, curr) => handleSelectPlan(plan, curr)} />
+                        <PricingTable
+                            onSelectPlan={(plan, curr) => handleSelectPlan(plan, curr)}
+                            currentPlanId={currentSub?.planId}
+                        />
                     </motion.div>
                 )}
             </AnimatePresence>
@@ -183,13 +219,20 @@ export default function SubscriptionsPage() {
             <AnimatePresence>
                 {selectedPlan && (
                     <SubscriptionCheckout
-                        planId={currency === "ARS" ? selectedPlan.mercadopagoId : selectedPlan.paypalId}
+                        planId={currency === "ARS" ? selectedPlan.mercadopagoPlanId : selectedPlan.paypalId}
                         amount={currency === "ARS" ? selectedPlan.precioARS : selectedPlan.precioUSD}
                         currency={currency}
                         onClose={() => setSelectedPlan(null)}
                     />
                 )}
             </AnimatePresence>
+
+            <DowngradeModal
+                isOpen={showDowngradeWarning}
+                onClose={() => setShowDowngradeWarning(false)}
+                onConfirm={confirmDowngrade}
+                newPlanName={pendingPlan?.plan.nombre}
+            />
         </div>
     );
 }

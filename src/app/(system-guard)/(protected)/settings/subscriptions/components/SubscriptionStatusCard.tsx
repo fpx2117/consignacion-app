@@ -2,15 +2,11 @@
 
 import { useEffect, useState } from "react";
 import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge"; // Asuminedo que existe shadcn Badge
-import { Calendar, CreditCard, RefreshCw, Star, Zap } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Calendar, CreditCard, RefreshCw, Star, Zap, XCircle, Loader2 } from "lucide-react";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
-
-const ARSFormatter = new Intl.NumberFormat("es-AR", {
-    style: "decimal",
-    useGrouping: true,
-});
+import { toast } from "sonner";
 
 interface SubscriptionInfo {
     hasSubscription: boolean;
@@ -30,8 +26,10 @@ interface SubscriptionInfo {
 export function SubscriptionStatusCard({ onUpgrade }: { onUpgrade: () => void }) {
     const [data, setData] = useState<SubscriptionInfo | null>(null);
     const [loading, setLoading] = useState(true);
+    const [cancelling, setCancelling] = useState(false);
 
-    useEffect(() => {
+    const fetchSubscription = () => {
+        setLoading(true);
         fetch("/api/subscriptions/current")
             .then((res) => res.json())
             .then((json) => {
@@ -39,7 +37,35 @@ export function SubscriptionStatusCard({ onUpgrade }: { onUpgrade: () => void })
                 setLoading(false);
             })
             .catch(() => setLoading(false));
+    };
+
+    useEffect(() => {
+        fetchSubscription();
     }, []);
+
+    const handleCancel = async () => {
+        if (!confirm("¿Estás seguro de que deseas cancelar tu suscripción? Perderás el acceso a las funciones premium al finalizar el periodo actual.")) {
+            return;
+        }
+
+        setCancelling(true);
+        try {
+            const res = await fetch("/api/subscriptions/cancel", { method: "POST" });
+            const result = await res.json();
+
+            if (res.ok) {
+                toast.success("Suscripción cancelada exitosamente");
+                fetchSubscription(); // Recargar datos
+            } else {
+                toast.error(result.error || "No se pudo cancelar la suscripción");
+            }
+        } catch (error) {
+            console.error("Cancel error:", error);
+            toast.error("Error de conexión al cancelar");
+        } finally {
+            setCancelling(false);
+        }
+    };
 
     if (loading) {
         return (
@@ -76,6 +102,11 @@ export function SubscriptionStatusCard({ onUpgrade }: { onUpgrade: () => void })
                                     Premium Active
                                 </Badge>
                             )}
+                            {sub?.status === "CANCELADO" && (
+                                <Badge className="bg-destructive/10 text-destructive border-destructive/20 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">
+                                    Cancelada
+                                </Badge>
+                            )}
                         </div>
                         <p className="text-sm text-muted-foreground font-medium opacity-70">
                             {sub?.plan.nombre === "Básico"
@@ -99,39 +130,54 @@ export function SubscriptionStatusCard({ onUpgrade }: { onUpgrade: () => void })
                 </div>
 
                 {data?.hasSubscription ? (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-6 pt-8 border-t border-border/10">
-                        <div className="group/item flex items-center gap-4 p-5 md:p-6 bg-secondary/30 hover:bg-secondary/50 rounded-3xl border border-border/50 transition-all duration-300">
-                            <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center group-hover/item:rotate-12 transition-transform duration-500">
-                                <Calendar className="h-6 w-6 text-primary" />
+                    <div className="space-y-6">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-6 pt-8 border-t border-border/10">
+                            <div className="group/item flex items-center gap-4 p-5 md:p-6 bg-secondary/30 hover:bg-secondary/50 rounded-3xl border border-border/50 transition-all duration-300">
+                                <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center group-hover/item:rotate-12 transition-transform duration-500">
+                                    <Calendar className="h-6 w-6 text-primary" />
+                                </div>
+                                <div>
+                                    <p className="text-[9px] uppercase font-black text-muted-foreground tracking-[0.15em] mb-0.5">Próximo Vencimiento</p>
+                                    <p className="text-lg font-bold tracking-tight">
+                                        {sub?.currentPeriodEnd
+                                            ? new Date(sub.currentPeriodEnd).toLocaleDateString(undefined, { day: 'numeric', month: 'long' })
+                                            : sub?.trialEndsAt
+                                                ? new Date(sub.trialEndsAt).toLocaleDateString(undefined, { day: 'numeric', month: 'long' })
+                                                : "No programado"}
+                                    </p>
+                                </div>
                             </div>
-                            <div>
-                                <p className="text-[9px] uppercase font-black text-muted-foreground tracking-[0.15em] mb-0.5">Próximo Vencimiento</p>
-                                <p className="text-lg font-bold tracking-tight">
-                                    {sub?.currentPeriodEnd
-                                        ? new Date(sub.currentPeriodEnd).toLocaleDateString(undefined, { day: 'numeric', month: 'long' })
-                                        : sub?.trialEndsAt
-                                            ? new Date(sub.trialEndsAt).toLocaleDateString(undefined, { day: 'numeric', month: 'long' })
-                                            : "No programado"}
-                                </p>
+
+                            <div className="group/item flex items-center gap-4 p-5 md:p-6 bg-secondary/30 hover:bg-secondary/50 rounded-3xl border border-border/50 transition-all duration-300">
+                                <div className="h-12 w-12 rounded-2xl bg-orange-500/10 flex items-center justify-center group-hover/item:-rotate-12 transition-transform duration-500">
+                                    <RefreshCw className="h-6 w-6 text-orange-500" />
+                                </div>
+                                <div>
+                                    <p className="text-[9px] uppercase font-black text-muted-foreground tracking-[0.15em] mb-0.5">Vigencia Restante</p>
+                                    <p className="text-lg font-bold tracking-tight">
+                                        <span className={cn(
+                                            sub?.daysRemaining && sub.daysRemaining <= 3 ? "text-orange-500" : "text-foreground"
+                                        )}>
+                                            {sub?.daysRemaining}
+                                        </span>
+                                        <span className="text-sm font-medium ml-1">días</span>
+                                    </p>
+                                </div>
                             </div>
                         </div>
 
-                        <div className="group/item flex items-center gap-4 p-5 md:p-6 bg-secondary/30 hover:bg-secondary/50 rounded-3xl border border-border/50 transition-all duration-300">
-                            <div className="h-12 w-12 rounded-2xl bg-orange-500/10 flex items-center justify-center group-hover/item:-rotate-12 transition-transform duration-500">
-                                <RefreshCw className="h-6 w-6 text-orange-500" />
+                        {sub?.status === "ACTIVO" && (
+                            <div className="flex justify-end pt-4 border-t border-border/10">
+                                <button
+                                    onClick={handleCancel}
+                                    disabled={cancelling}
+                                    className="text-xs text-muted-foreground hover:text-destructive transition-colors font-medium flex items-center gap-2 px-4 py-2 rounded-xl hover:bg-destructive/5"
+                                >
+                                    {cancelling ? <Loader2 className="h-3 w-3 animate-spin" /> : <XCircle className="h-3 w-3" />}
+                                    Cancelar Suscripción
+                                </button>
                             </div>
-                            <div>
-                                <p className="text-[9px] uppercase font-black text-muted-foreground tracking-[0.15em] mb-0.5">Vigencia Restante</p>
-                                <p className="text-lg font-bold tracking-tight">
-                                    <span className={cn(
-                                        sub?.daysRemaining && sub.daysRemaining <= 3 ? "text-orange-500" : "text-foreground"
-                                    )}>
-                                        {sub?.daysRemaining}
-                                    </span>
-                                    <span className="text-sm font-medium ml-1">días</span>
-                                </p>
-                            </div>
-                        </div>
+                        )}
                     </div>
                 ) : (
                     <div className="p-8 bg-primary/5 rounded-[2rem] border border-primary/10 flex items-center gap-4">

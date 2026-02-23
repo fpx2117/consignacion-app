@@ -94,20 +94,36 @@ export async function POST(req: Request) {
                 }
             } else {
                 try {
-                    // Verify with Mercado Pago
+                    // Primero intentamos como Pago Único (Backward Compatibility)
                     const payment = new Payment(mpClient);
-                    const paymentData = await payment.get({ id: paymentId });
+                    try {
+                        const paymentData = await payment.get({ id: paymentId });
+                        if (paymentData.status === "approved") {
+                            verificationProvider = ProveedorSuscripcion.MERCADOPAGO;
+                            verificationExternalId = String(paymentId);
+                            trialDays = 30;
+                        }
+                    } catch (e) {
+                        // Si falla como pago, intentamos como Suscripción (PreApproval)
+                        const { PreApproval } = await import("mercadopago");
+                        const preApproval = new PreApproval(mpClient);
+                        const subData = await preApproval.get({ id: paymentId });
 
-                    if (paymentData.status !== "approved") {
-                        return NextResponse.json({ message: "El pago no está aprobado" }, { status: 400 });
+                        if (subData.status !== "authorized") {
+                            return NextResponse.json({ message: `La suscripción de Mercado Pago no está autorizada (Estado: ${subData.status})` }, { status: 400 });
+                        }
+
+                        verificationProvider = ProveedorSuscripcion.MERCADOPAGO;
+                        verificationExternalId = String(paymentId);
+                        trialDays = 30;
                     }
 
-                    verificationProvider = ProveedorSuscripcion.MERCADOPAGO;
-                    verificationExternalId = String(paymentId);
-                    trialDays = 30;
+                    if (!verificationExternalId.includes(String(paymentId))) {
+                        return NextResponse.json({ message: "El pago o suscripción no está aprobado" }, { status: 400 });
+                    }
                 } catch (err) {
                     console.error("MP Verification Error:", err);
-                    return NextResponse.json({ message: "No se pudo verificar el pago con Mercado Pago" }, { status: 400 });
+                    return NextResponse.json({ message: "No se pudo verificar con Mercado Pago" }, { status: 400 });
                 }
             }
         } else {

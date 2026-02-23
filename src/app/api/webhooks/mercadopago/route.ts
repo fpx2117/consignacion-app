@@ -50,38 +50,40 @@ export async function POST(request: Request) {
     console.log(`[MercadoPago Webhook] Action: ${action}`, eventData);
 
     try {
-        // 2. Handle Subscription Related Actions
-        if (action === "subscription.created" || action === "subscription.updated") {
+        // 2. Handle Subscription Related Actions (PreApproval)
+        if (action === "subscription_preapproval.created" || action === "subscription_preapproval.updated") {
             const externalId = eventData.id;
-
-            // We need to fetch details from MP API to get the userId and status
-            // For now, we assume we have a way to link it (externalId)
-            // and we update the database.
 
             const subscription = await prisma.subscription.findUnique({
                 where: { externalId },
-                include: { user: true }
+                include: { user: true, plan: true }
             });
 
             if (subscription) {
-                // En un caso real, haríamos un fetch a MP para obtener el estado actual
-                // Ejemplo simplificado: si es actualizado, asumimos que está ACTIVO hasta que se pruebe lo contrario
+                // En un flujo real, consultaríamos a MP para ver el plan_id actual
+                // Si el planId cambió (downgrade/upgrade), actualizamos
+                // Por ahora, asumimos que si el webhook dispara, es para activar/extender
+
                 await prisma.subscription.update({
                     where: { externalId },
                     data: {
-                        status: "ACTIVO", // Mapeo a EstadoSuscripcion
+                        status: "ACTIVO",
                         updatedAt: new Date(),
                     }
                 });
 
                 await sendNotification({
                     type: NOTIFICATION_TYPE.SUBSCRIPTION_ACTIVE,
-                    title: "Suscripción Actualizada",
-                    message: `El plan de ${subscription.user.nombre} ahora está activo.`,
+                    title: "Suscripción Mercado Pago",
+                    message: `La suscripción de ${subscription.user.nombre} está activa.`,
                     data: { userId: subscription.userId }
                 });
 
-                // Auto-seed de límites del plan
+                // Si es un downgrade, manejarlo
+                // (Nota: En MP PreApproval el planId suele estar en el external_reference o metadata)
+                // Por simplicidad en este MVP, si recibimos un cambio de plan, llamamos a:
+                // await handlePlanDowngrade(newPlanId);
+
                 await seedPlanLimits(subscription.planId);
             }
         }
