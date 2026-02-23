@@ -22,7 +22,7 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
   useEffect(() => {
     // 1. Definir la URL correctamente.
     // En local, window.location.origin suele ser suficiente y maneja http/https automáticamente.
-    const siteUrl = process.env.NEXT_PUBLIC_BASE_URL || (typeof window !== "undefined" ? window.location.origin : "");
+    const siteUrl = process.env.NEXT_PUBLIC_BASE_URL || process.env.NEXT_PUBLIC_APP_URL || (typeof window !== "undefined" ? window.location.origin : "");
 
     console.log("🔌 Intentando conectar Socket.IO a:", siteUrl);
 
