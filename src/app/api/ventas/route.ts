@@ -161,13 +161,15 @@ export async function POST(req: Request) {
     // Post-Procesamiento
     await processNotificationQueue(notificationsQueue);
 
-    // Mensaje de notificación adaptado
-    const cajaInfo = sesionActiva ? `(Caja: ${sesionActiva.cajaId})` : `(Modo Sin Caja)`;
-    sendNotification({
-      type: "SYSTEM",
-      title: "Venta Exitosa",
-      message: `Venta #${result.venta.id} por $${result.venta.total} ${cajaInfo}`,
-    }).catch(() => null);
+    // Mensaje de notificación adaptado (Solo si la configuración lo permite)
+    if (configGlobal.notificarVentas !== false) {
+      const cajaInfo = sesionActiva ? `(Caja: ${sesionActiva.cajaId})` : `(Modo Sin Caja)`;
+      sendNotification({
+        type: "SYSTEM",
+        title: "Venta Exitosa",
+        message: `Venta #${result.venta.id} por $${result.venta.total} ${cajaInfo}`,
+      }).catch(() => null);
+    }
 
     return NextResponse.json({ data: result.venta, pago: result.pago });
 

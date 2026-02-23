@@ -62,7 +62,7 @@ const SETTINGS_MODULES = [
     color: "text-pink-500",
     bg: "bg-pink-500/10",
     borderColor: "group-hover:border-pink-500/30",
-    soon: true,
+    soon: false,
   },
   {
     title: "Seguridad y Auditoría",
