@@ -4,10 +4,9 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import { useSocket } from "@/providers/socket-provider"; // Ajusta la ruta a tu provider
 import { toast } from "sonner"; // Opcional, si quieres feedback visual
 
-// 1. Definimos el tipo exacto que viene de Prisma/API
 export interface AppNotification {
   id: number;
-  type: "LOW_STOCK" | "OUT_OF_STOCK" | "EXPIRATION_NEAR" | "PRODUCT_EXPIRED" | "SYSTEM";
+  type: string;
   title: string;
   description: string;
   read: boolean;
@@ -16,6 +15,7 @@ export interface AppNotification {
     id: number;
     nombre: string;
   };
+  ventaId?: number; // Para acciones como "Ver Ticket"
 }
 
 interface UseNotificationsProps {
@@ -49,7 +49,15 @@ export function useNotifications({ limit = 50, onlyUnreadOnLoad = false }: UseNo
       const data = await res.json();
 
       if (data.data) {
-        setNotifications(data.data);
+        // Parse fingerprint for historical sales
+        const mappedData = data.data.map((n: any) => {
+          let ventaId;
+          if (n.fingerprint && n.fingerprint.startsWith("SALE_")) {
+            ventaId = parseInt(n.fingerprint.replace("SALE_", ""), 10);
+          }
+          return { ...n, ventaId };
+        });
+        setNotifications(mappedData);
         setUnreadCount(data.unreadCount || 0);
       }
     } catch (error) {
@@ -82,7 +90,8 @@ export function useNotifications({ limit = 50, onlyUnreadOnLoad = false }: UseNo
           description: newNotif.message || newNotif.description, // Adaptar según qué mande tu backend
           read: false,
           createdAt: new Date().toISOString(),
-          producto: newNotif.data ? { id: newNotif.data.productId, nombre: "..." } : undefined
+          producto: newNotif.data ? { id: newNotif.data.productId, nombre: "..." } : undefined,
+          ventaId: newNotif.data?.ventaId,
         };
 
         return [formatted, ...prev];
