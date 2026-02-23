@@ -163,11 +163,11 @@ export async function POST(req: Request) {
 
     // Mensaje de notificación adaptado (Solo si la configuración lo permite)
     if (configGlobal.notificarVentas !== false) {
-      const cajaInfo = sesionActiva ? `(Caja: ${sesionActiva.cajaId})` : `(Modo Sin Caja)`;
       sendNotification({
-        type: "SYSTEM",
+        type: "NEW_ORDER",
         title: "Venta Exitosa",
-        message: `Venta #${result.venta.id} por $${result.venta.total} ${cajaInfo}`,
+        message: `Venta #${result.venta.id} por $${result.venta.total}`,
+        data: { ventaId: result.venta.id }
       }).catch(() => null);
     }
 
