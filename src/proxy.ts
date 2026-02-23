@@ -10,9 +10,10 @@ const cookieName = process.env.JWT_COOKIE_NAME || "access_token";
    ============================ */
 
 const EMPLEADO_ALLOWED = [
-    "/ventas/nueva",  // POS
-    "/caja/abrir",    // Abrir turno (necesario para vender)
+    "/ventas",        // POS y listado de ventas (historial de ventas)
+    "/caja/abrir",    // Abrir turno
     "/caja/cerrar",   // Cerrar turno
+    "/caja/historial",// Historial de caja
 ];
 
 function isAllowedForEmpleado(pathname: string): boolean {
