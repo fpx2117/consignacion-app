@@ -14,9 +14,10 @@ const ARSFormatter = new Intl.NumberFormat("es-AR", {
 
 interface PricingTableProps {
     onSelectPlan: (plan: SubscriptionPlan, currency: "ARS" | "USD") => void;
+    currentPlanId?: number;
 }
 
-export function PricingTable({ onSelectPlan }: PricingTableProps) {
+export function PricingTable({ onSelectPlan, currentPlanId }: PricingTableProps) {
     const [currency, setCurrency] = useState<"ARS" | "USD">("ARS");
 
     return (
@@ -141,15 +142,18 @@ export function PricingTable({ onSelectPlan }: PricingTableProps) {
 
                         <button
                             onClick={() => onSelectPlan(plan, currency)}
+                            disabled={plan.id === currentPlanId}
                             className={cn(
                                 "w-full py-4 px-6 rounded-2xl font-black text-xs uppercase tracking-[0.2em] transition-all duration-300 flex items-center justify-center gap-3 active:scale-[0.95]",
-                                plan.popular
-                                    ? "bg-white text-primary hover:bg-opacity-90 shadow-xl"
-                                    : "bg-primary text-primary-foreground hover:shadow-[0_10px_20px_-10px_rgba(var(--primary),0.5)]"
+                                plan.id === currentPlanId
+                                    ? "bg-secondary text-muted-foreground border border-border cursor-default"
+                                    : plan.popular
+                                        ? "bg-white text-primary hover:bg-opacity-90 shadow-xl"
+                                        : "bg-primary text-primary-foreground hover:shadow-[0_10px_20px_-10px_rgba(var(--primary),0.5)]"
                             )}
                         >
-                            {plan.id === 3 ? <Star className="h-4 w-4" /> : <Zap className="h-4 w-4" />}
-                            Suscribirme
+                            {plan.id === currentPlanId ? <Check className="h-4 w-4" /> : plan.id === 3 ? <Star className="h-4 w-4" /> : <Zap className="h-4 w-4" />}
+                            {plan.id === currentPlanId ? "Tu Plan Actual" : "Suscribirme"}
                         </button>
                     </motion.div>
                 ))}

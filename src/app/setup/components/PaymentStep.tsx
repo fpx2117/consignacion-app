@@ -78,21 +78,21 @@ export function PaymentStep({ plan, onPaymentSuccess, loading }: PaymentStepProp
     const handleMercadoPagoPayment = async () => {
         setIsRedirecting(true);
         try {
-            const res = await fetch("/api/setup/create-preference", {
+            const res = await fetch("/api/setup/create-mp-subscription", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ planId: plan.id }),
             });
             const data = await res.json();
             if (res.ok && data.initPoint) {
-                // Redirect to MP
+                // Redirect to MP (Recurrent Subscription)
                 window.location.href = data.initPoint;
             } else {
-                toast.error(data.error || "Error al iniciar pago");
+                toast.error(data.error || "Error al iniciar suscripción de Mercado Pago");
                 setIsRedirecting(false);
             }
         } catch (error) {
-            console.error("MP redirect error:", error);
+            console.error("MP subscription redirect error:", error);
             toast.error("Error de conexión");
             setIsRedirecting(false);
         }
