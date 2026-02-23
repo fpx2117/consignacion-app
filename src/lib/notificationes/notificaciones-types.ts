@@ -21,7 +21,8 @@ export enum NOTIFICATION_TYPE {
   PAYMENT_RECEIVED = "PAYMENT_RECEIVED", // Pago confirmado
   PAYMENT_FAILED = "PAYMENT_FAILED",     // Error en pago
   EXPORT_READY = "EXPORT_READY",     // "Tu reporte PDF está listo"
-  CLIENT_REGISTERED = "CLIENT_REGISTERED" // Nuevo cliente
+  CLIENT_REGISTERED = "CLIENT_REGISTERED", // Nuevo cliente
+  CONSIGNMENT_ALERT = "CONSIGNMENT_ALERT" // Alerta de tiempo en consignación
 }
 
 // 2. Configuración visual (Opcional, pero muy útil para el Frontend)
@@ -78,5 +79,9 @@ export const NOTIFICATION_CONFIG: Record<NOTIFICATION_TYPE, { label: string; sev
   [NOTIFICATION_TYPE.CLIENT_REGISTERED]: {
     label: "Nuevo Cliente",
     severity: "info",
+  },
+  [NOTIFICATION_TYPE.CONSIGNMENT_ALERT]: {
+    label: "Atención",
+    severity: "warning",
   },
 };

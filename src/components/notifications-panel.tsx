@@ -34,6 +34,7 @@ const ICON_MAP: Record<string, LucideIcon> = {
   [NOTIFICATION_TYPE.SYSTEM]: Info,
   [NOTIFICATION_TYPE.NEW_ORDER]: ShoppingBag,
   [NOTIFICATION_TYPE.PAYMENT_RECEIVED]: Check,
+  [NOTIFICATION_TYPE.CONSIGNMENT_ALERT]: Clock,
 };
 
 const SEVERITY_STYLES = {
@@ -70,6 +71,7 @@ function NotificationItem({
   createdAt,
   read,
   ventaId,
+  consignacionId,
 }: {
   title: string;
   description: string;
@@ -77,6 +79,7 @@ function NotificationItem({
   createdAt: string | Date;
   read?: boolean;
   ventaId?: number;
+  consignacionId?: number;
 }) {
   const config = NOTIFICATION_CONFIG[type as NOTIFICATION_TYPE] || NOTIFICATION_CONFIG[NOTIFICATION_TYPE.SYSTEM];
   const Icon = ICON_MAP[type] || Info;
@@ -159,6 +162,19 @@ function NotificationItem({
               onClick={() => window.open(`/ticket-loading/${ventaId}`, '_blank')}
             >
               Ver Ticket
+            </Button>
+          </div>
+        )}
+
+        {consignacionId && type === NOTIFICATION_TYPE.CONSIGNMENT_ALERT && (
+          <div className="mt-1 flex justify-start">
+            <Button
+              variant="secondary"
+              size="sm"
+              className="h-7 text-[10px] px-3 font-semibold rounded-md bg-indigo-500/10 text-indigo-600 hover:bg-indigo-500/20 dark:text-indigo-400 dark:hover:bg-indigo-500/30 transition-colors"
+              onClick={() => window.open(`/dashboard/consignaciones/${consignacionId}`, '_blank')}
+            >
+              Ver Consignación
             </Button>
           </div>
         )}
@@ -353,6 +369,7 @@ export function NotificationsAnimatedPanel({
                   createdAt={n.createdAt}
                   read={n.read}
                   ventaId={n.ventaId}
+                  consignacionId={n.consignacionId}
                 />
               ))}
             </AnimatedList>

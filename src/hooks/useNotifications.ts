@@ -16,6 +16,7 @@ export interface AppNotification {
     nombre: string;
   };
   ventaId?: number; // Para acciones como "Ver Ticket"
+  consignacionId?: number; // Para acciones como "Ver Consignación"
 }
 
 interface UseNotificationsProps {
@@ -52,14 +53,24 @@ export function useNotifications({ limit = 50, onlyUnreadOnLoad = false }: UseNo
         // Parse fingerprint for historical sales
         const mappedData = data.data.map((n: any) => {
           let ventaId;
-          if (n.fingerprint && n.fingerprint.startsWith("SALE_")) {
-            ventaId = parseInt(n.fingerprint.replace("SALE_", ""), 10);
+          let consignacionId;
+          if (n.fingerprint) {
+            if (n.fingerprint.startsWith("SALE_")) {
+              ventaId = parseInt(n.fingerprint.replace("SALE_", ""), 10);
+            } else if (n.fingerprint.startsWith("CONSIGNMENT_ALERT_")) {
+              consignacionId = parseInt(n.fingerprint.split("_")[2], 10);
+            }
           }
-          return { ...n, ventaId };
+          return { ...n, ventaId, consignacionId };
         });
         setNotifications(mappedData);
         setUnreadCount(data.unreadCount || 0);
       }
+
+      // ✅ Disparamos el chequeo silencioso de consignaciones activas
+      // (Para simular un cron job sin servicios externos)
+      fetch("/api/cron/consignaciones").catch(() => null);
+
     } catch (error) {
       console.error("Error cargando notificaciones:", error);
     } finally {
@@ -83,6 +94,15 @@ export function useNotifications({ limit = 50, onlyUnreadOnLoad = false }: UseNo
         if (exists) return prev;
 
         // Formateamos para que coincida con la interfaz AppNotification
+        let ventaId;
+        let consignacionId;
+        if (newNotif.data?.ventaId) {
+          ventaId = newNotif.data.ventaId;
+        }
+        if (newNotif.data?.consignacionId) {
+          consignacionId = newNotif.data.consignacionId;
+        }
+
         const formatted: AppNotification = {
           id: Number(newNotif.id) || Date.now(), // Fallback por si no viene ID
           type: newNotif.type,
@@ -91,7 +111,8 @@ export function useNotifications({ limit = 50, onlyUnreadOnLoad = false }: UseNo
           read: false,
           createdAt: new Date().toISOString(),
           producto: newNotif.data ? { id: newNotif.data.productId, nombre: "..." } : undefined,
-          ventaId: newNotif.data?.ventaId,
+          ventaId,
+          consignacionId,
         };
 
         return [formatted, ...prev];
