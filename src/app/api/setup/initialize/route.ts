@@ -15,7 +15,7 @@ export async function POST(req: Request) {
             );
         }
 
-        const { admin, planId, staff, businessName } = await req.json();
+        const { admin, planId, staff, businessName, promoCode } = await req.json();
 
         if (!admin.nombre || !admin.email || !admin.password) {
             return NextResponse.json(
@@ -97,8 +97,8 @@ export async function POST(req: Request) {
                 data: {
                     userId: mainAdmin.id,
                     planId: planId,
-                    provider: ProveedorSuscripcion.PROMO, // Setup initialization defaults to PROMO/Trial
-                    externalId: `SETUP-${Date.now()}-${mainAdmin.id}`,
+                    provider: promoCode ? ProveedorSuscripcion.PROMO : ProveedorSuscripcion.PROMO,
+                    externalId: promoCode ? `PROMO-${promoCode}-${Date.now()}` : `SETUP-TRIAL-${Date.now()}`,
                     status: EstadoSuscripcion.ACTIVO,
                     trialEndsAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days trial
                 },
