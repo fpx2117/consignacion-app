@@ -163,11 +163,27 @@ export async function POST(req: Request) {
 
     // Mensaje de notificación adaptado (Solo si la configuración lo permite)
     if (configGlobal.notificarVentas !== false) {
+      // 1. Persistencia en base de datos para el historial
+      const dbNotif = await prisma.notification.create({
+        data: {
+          type: "NEW_ORDER",
+          title: "Venta Exitosa",
+          description: `Venta #${result.venta.id} por $${result.venta.total}`,
+          fingerprint: `SALE_${result.venta.id}`,
+          read: false,
+        }
+      }).catch(() => null);
+
+      // 2. Emisión en tiempo real (Socket)
       sendNotification({
+        id: dbNotif?.id, // Pasamos el ID real para que useNotifications lo indexe bien
         type: "NEW_ORDER",
         title: "Venta Exitosa",
         message: `Venta #${result.venta.id} por $${result.venta.total}`,
-        data: { ventaId: result.venta.id }
+        data: {
+          ventaId: result.venta.id,
+          notificationId: dbNotif?.id
+        }
       }).catch(() => null);
     }
 

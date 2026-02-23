@@ -18,6 +18,13 @@ export const SocketToaster = () => {
     socket.on("new-notification", (data: any) => {
       console.log("🔔 CLIENTE: Notificación recibida:", data.type, data.title);
 
+      // 1. Si es una venta (NEW_ORDER), NO mostramos toast.
+      // El usuario ya tiene el SuccessDialog en el POS y prefiere
+      // que estas notificaciones solo lleguen al historial.
+      if (data.type === NOTIFICATION_TYPE.NEW_ORDER) {
+        return;
+      }
+
       // Reproducir sonido
       const audio = new Audio("/sounds/notification.mp3");
       audio.play().catch(() => null);
