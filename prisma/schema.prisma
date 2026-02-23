@@ -64,6 +64,7 @@ enum NotificationType {
   PAYMENT_FAILED
   EXPORT_READY
   CLIENT_REGISTERED
+  CONSIGNMENT_ALERT
 }
 
 enum EstadoConsignacion {
@@ -102,6 +103,11 @@ model Configuracion {
   notificarVencimientos Boolean @default(true)
   notificarStockBajo    Boolean @default(true)
   notificarVentas       Boolean @default(true)
+  notificarLiquidaciones Boolean @default(true)
+  notificarConsignacionesActivas Boolean @default(true)
+
+  diasAvisoConsignacion Int @default(15) // Días que debe llevar en la calle para notificar
+
 
   // NUEVO: Interruptor global para forzar o ignorar el uso de turnos/cajas
   usarControlDeCaja Boolean @default(true)
@@ -570,4 +576,14 @@ model PromoCode {
   expiresAt    DateTime?
   activo       Boolean   @default(true)
   createdAt    DateTime  @default(now())
+}
+
+model ResetPasswordToken {
+  id        String   @id @default(cuid())
+  email     String
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([email])
 }

@@ -35,6 +35,9 @@ export async function PUT(req: Request) {
             notificarVencimientos,
             notificarStockBajo,
             notificarVentas,
+            notificarLiquidaciones,
+            notificarConsignacionesActivas,
+            diasAvisoConsignacion,
             usarControlDeCaja // <--- Nuestro nuevo campo estrella
         } = body;
 
@@ -47,6 +50,9 @@ export async function PUT(req: Request) {
                 ...(notificarVencimientos !== undefined && { notificarVencimientos }),
                 ...(notificarStockBajo !== undefined && { notificarStockBajo }),
                 ...(notificarVentas !== undefined && { notificarVentas }),
+                ...(notificarLiquidaciones !== undefined && { notificarLiquidaciones }),
+                ...(notificarConsignacionesActivas !== undefined && { notificarConsignacionesActivas }),
+                ...(diasAvisoConsignacion !== undefined && { diasAvisoConsignacion }),
                 ...(usarControlDeCaja !== undefined && { usarControlDeCaja }),
             },
             create: {
@@ -56,6 +62,9 @@ export async function PUT(req: Request) {
                 notificarVencimientos: notificarVencimientos ?? true,
                 notificarStockBajo: notificarStockBajo ?? true,
                 notificarVentas: notificarVentas ?? true,
+                notificarLiquidaciones: notificarLiquidaciones ?? true,
+                notificarConsignacionesActivas: notificarConsignacionesActivas ?? true,
+                diasAvisoConsignacion: diasAvisoConsignacion ?? 15,
                 usarControlDeCaja: usarControlDeCaja ?? true,
             }
         });

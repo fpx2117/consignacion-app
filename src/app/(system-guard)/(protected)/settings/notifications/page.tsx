@@ -32,6 +32,9 @@ export default function NotificationSettingsPage() {
         notificarVencimientos: true,
         notificarStockBajo: true,
         notificarVentas: true,
+        notificarLiquidaciones: true,
+        notificarConsignacionesActivas: true,
+        diasAvisoConsignacion: 15,
     });
 
     const fetchConfig = React.useCallback(async () => {
@@ -46,6 +49,9 @@ export default function NotificationSettingsPage() {
                     notificarVencimientos: data.notificarVencimientos ?? true,
                     notificarStockBajo: data.notificarStockBajo ?? true,
                     notificarVentas: data.notificarVentas ?? true,
+                    notificarLiquidaciones: data.notificarLiquidaciones ?? true,
+                    notificarConsignacionesActivas: data.notificarConsignacionesActivas ?? true,
+                    diasAvisoConsignacion: data.diasAvisoConsignacion ?? 15,
                 });
             }
         } catch (error: any) {
@@ -250,6 +256,72 @@ export default function NotificationSettingsPage() {
                                         onCheckedChange={handleToggle("notificarVentas")}
                                         className="scale-90 md:scale-100 data-[state=checked]:bg-primary"
                                     />
+                                </div>
+                            </div>
+
+                            <div className="p-4 md:p-6 md:px-8 flex flex-col sm:flex-row sm:items-center justify-between gap-3 md:gap-4 hover:bg-muted/20 transition-colors">
+                                <div className="flex-1">
+                                    <h3 className="font-medium text-sm md:text-base text-foreground">Liquidaciones de Consignación</h3>
+                                    <p className="text-xs md:text-sm text-muted-foreground mt-0.5 md:mt-1 leading-relaxed">
+                                        Alertas al liquidar consignaciones cerradas.
+                                    </p>
+                                </div>
+                                <div className="shrink-0 flex justify-end">
+                                    <Switch
+                                        checked={config.notificarLiquidaciones}
+                                        onCheckedChange={handleToggle("notificarLiquidaciones")}
+                                        className="scale-90 md:scale-100 data-[state=checked]:bg-primary"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+                    </Card>
+
+                    {/* BLOQUE: CONSIGNACIONES */}
+                    <Card className="rounded-[20px] md:rounded-[24px] border-border/40 shadow-sm bg-card overflow-hidden">
+                        <div className="p-4 md:p-6 md:px-8 border-b border-border/40 flex items-center gap-3 bg-muted/5">
+                            <div className="p-2 bg-indigo-500/5 rounded-lg md:rounded-xl border border-indigo-500/10">
+                                <PackageSearch className="w-5 h-5 text-indigo-500" />
+                            </div>
+                            <div>
+                                <h2 className="font-semibold text-base md:text-lg tracking-tight">Consignaciones Activas</h2>
+                                <p className="text-xs md:text-sm text-muted-foreground">Alertas por tiempo en la calle.</p>
+                            </div>
+                        </div>
+
+                        <div className="divide-y divide-border/40">
+                            <div className="p-4 md:p-6 md:px-8 flex flex-col sm:flex-row sm:items-center justify-between gap-3 md:gap-4 hover:bg-muted/20 transition-colors">
+                                <div className="flex-1">
+                                    <h3 className="font-medium text-sm md:text-base text-foreground">Alertas de Tiempo</h3>
+                                    <p className="text-xs md:text-sm text-muted-foreground mt-0.5 md:mt-1 leading-relaxed">
+                                        Aviso cuando una consignación lleva mucho tiempo activa.
+                                    </p>
+                                </div>
+                                <div className="shrink-0 flex justify-end">
+                                    <Switch
+                                        checked={config.notificarConsignacionesActivas}
+                                        onCheckedChange={handleToggle("notificarConsignacionesActivas")}
+                                        className="scale-90 md:scale-100 data-[state=checked]:bg-primary"
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="p-4 md:p-6 md:px-8 flex flex-col sm:flex-row sm:items-center justify-between gap-3 md:gap-4 hover:bg-muted/20 transition-colors">
+                                <div className="flex-1">
+                                    <h3 className="font-medium text-sm md:text-base text-foreground">Tiempo Máximo en Calle</h3>
+                                    <p className="text-xs md:text-sm text-muted-foreground mt-0.5 md:mt-1 leading-relaxed">
+                                        Número de días antes de enviar la alerta.
+                                    </p>
+                                </div>
+                                <div className="shrink-0 w-full sm:w-32 flex items-center gap-3">
+                                    <Input
+                                        type="number"
+                                        value={config.diasAvisoConsignacion}
+                                        onChange={handleInputChange("diasAvisoConsignacion")}
+                                        className="h-10 flex-1 rounded-xl bg-background border-border/50 text-center font-bold"
+                                        min={1}
+                                    />
+                                    <span className="text-[10px] md:text-xs font-semibold text-muted-foreground uppercase tracking-wider">Días</span>
                                 </div>
                             </div>
                         </div>

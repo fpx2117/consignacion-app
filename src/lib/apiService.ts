@@ -118,6 +118,8 @@ export const API_ROUTES = {
     LOGIN: "/api/auth/login",
     LOGOUT: "/api/auth/logout",
     ME: "/api/auth/me",
+    FORGOT_PASSWORD: "/api/auth/forgot-password",
+    RESET_PASSWORD: "/api/auth/reset-password",
   },
   DASHBOARD: {
     KPIS: "/api/dashboard/kpi",
@@ -473,6 +475,20 @@ export const apiService = {
 
   logout() {
     return apiData<void>(API_ROUTES.AUTH.LOGOUT, { method: "POST" });
+  },
+
+  requestPasswordReset(email: string) {
+    return apiData<{ message: string }>(API_ROUTES.AUTH.FORGOT_PASSWORD, {
+      method: "POST",
+      body: JSON.stringify({ email }),
+    });
+  },
+
+  resetPassword(payload: { token: string; password: string }) {
+    return apiData<{ message: string }>(API_ROUTES.AUTH.RESET_PASSWORD, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
   },
 
   /* ---------- LINKS PDF (CLIENT-SIDE) ---------- */
