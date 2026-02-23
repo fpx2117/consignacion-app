@@ -63,7 +63,8 @@ export async function GET(request: Request) {
         });
 
         for (const sub of expiringSoon) {
-            const fingerprint = `SUB_EXPIRING:${sub.id}:${sub.currentPeriodEnd?.toISOString().split('T')[0]}`;
+            const fechaStr = sub.currentPeriodEnd?.toISOString().split('T')[0] || 'unknown';
+            const fingerprint = `SUB_EXPIRING:${sub.id}:${fechaStr}`;
             const exists = await prisma.notification.findUnique({ where: { fingerprint } });
 
             if (!exists) {

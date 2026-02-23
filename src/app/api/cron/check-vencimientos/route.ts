@@ -176,7 +176,9 @@ export async function GET(request: Request) {
     });
 
     for (const sub of expiringSoon) {
-      const fingerprint = `SUB_EXPIRING:${sub.id}:${sub.currentPeriodEnd?.toISOString().split('T')[0]}`;
+      const vencimiento = sub.currentPeriodEnd || sub.trialEndsAt;
+      const fechaStr = vencimiento?.toISOString().split('T')[0] || 'unknown';
+      const fingerprint = `SUB_EXPIRING:${sub.id}:${fechaStr}`;
       const existe = await prisma.notification.findUnique({ where: { fingerprint } });
 
       if (!existe) {
@@ -185,7 +187,7 @@ export async function GET(request: Request) {
           data: {
             type,
             title: NOTIFICATION_CONFIG[type].label,
-            description: `Tu suscripción se renovará pronto (${formatearFecha(sub.currentPeriodEnd)}).`,
+            description: `Tu suscripción se renovará pronto (${formatearFecha(vencimiento)}).`,
             userId: sub.userId,
             fingerprint,
           }
@@ -194,7 +196,7 @@ export async function GET(request: Request) {
         await sendNotification({
           type,
           title: `💳 ${NOTIFICATION_CONFIG[type].label}`,
-          message: `Hola ${sub.user.nombre}, recordá que tu suscripción vence el ${formatearFecha(sub.currentPeriodEnd)}.`,
+          message: `Hola ${sub.user.nombre}, recordá que tu suscripción vence el ${formatearFecha(vencimiento)}.`,
           data: { id: savedNotif.id, userId: sub.userId, createdAt: savedNotif.createdAt }
         });
       }
@@ -228,6 +230,7 @@ export async function GET(request: Request) {
 
       const type = NOTIFICATION_TYPE.SYSTEM;
       const vencimiento = sub.currentPeriodEnd || sub.trialEndsAt;
+      const fechaStr = vencimiento?.toISOString().split('T')[0] || 'unknown';
       const description = `La suscripción de ${sub.user.nombre} ha expirado el ${formatearFecha(vencimiento)}.`;
 
       const savedNotif = await prisma.notification.create({
@@ -236,7 +239,7 @@ export async function GET(request: Request) {
           title: "Suscripción Expirada",
           description,
           userId: sub.userId,
-          fingerprint: `SUB_EXPIRED:${sub.id}:${vencimiento?.toISOString().split('T')[0]}`
+          fingerprint: `SUB_EXPIRED:${sub.id}:${fechaStr}`
         }
       });
 
