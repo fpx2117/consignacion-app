@@ -1,10 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { CheckCircle2, ArrowRight, ArrowLeft, Loader2, Play } from "lucide-react";
 import { toast } from "sonner";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 
 // Sub-components
 import { BusinessAdminStep } from "./components/BusinessAdminStep";
@@ -24,6 +24,7 @@ export default function SetupPage() {
     const [currentStep, setCurrentStep] = useState(1);
     const [loading, setLoading] = useState(false);
     const router = useRouter();
+    const searchParams = useSearchParams();
 
     // Form States
     const [businessName, setBusinessName] = useState("");
@@ -37,6 +38,53 @@ export default function SetupPage() {
         { nombre: "", email: "", rol: "EMPLEADO" }
     ]);
     const [selectedPlan, setSelectedPlan] = useState<SubscriptionPlan | null>(null);
+
+    // Persistence: Load from sessionStorage on mount
+    useEffect(() => {
+        const savedData = sessionStorage.getItem("setup_data");
+        if (savedData) {
+            try {
+                const data = JSON.parse(savedData);
+                setBusinessName(data.businessName || "");
+                setAdminData(data.adminData || { nombre: "", email: "", password: "", confirmPassword: "" });
+                setStaff(data.staff || [{ nombre: "", email: "", rol: "EMPLEADO" }]);
+                if (data.selectedPlanId) {
+                    const plan = SUBSCRIPTION_PLANS.find(p => p.id === data.selectedPlanId);
+                    if (plan) setSelectedPlan(plan);
+                }
+                if (data.currentStep) setCurrentStep(data.currentStep);
+            } catch (e) {
+                console.error("Error loading persisted setup data", e);
+            }
+        }
+    }, []);
+
+    // Persistence: Save to sessionStorage on change
+    useEffect(() => {
+        const data = {
+            businessName,
+            adminData,
+            staff,
+            selectedPlanId: selectedPlan?.id,
+            currentStep
+        };
+        sessionStorage.setItem("setup_data", JSON.stringify(data));
+    }, [businessName, adminData, staff, selectedPlan, currentStep]);
+
+    // Handle payment redirect success
+    useEffect(() => {
+        const status = searchParams.get("status");
+        const paymentId = searchParams.get("payment_id"); // MP classic param
+        const preferenceId = searchParams.get("preference_id");
+
+        if (status === "success" && (paymentId || preferenceId)) {
+            // Auto-trigger initialization with payment verification
+            handlePaymentSuccess(undefined, paymentId || preferenceId || undefined);
+        } else if (status === "failure") {
+            toast.error("El pago no pudo ser procesado. Reintenta.");
+            setCurrentStep(3);
+        }
+    }, [searchParams]);
 
     const handleNext = () => {
         if (currentStep === 1) {
@@ -54,8 +102,6 @@ export default function SetupPage() {
             }
             setCurrentStep(2);
         } else if (currentStep === 2) {
-            // Usually Plan is selected directly from card click in SubscriptionStep
-            // But if we had a manual next button, we'd validate here.
             if (!selectedPlan) {
                 toast.error("Debes seleccionar un plan");
                 return;
@@ -68,22 +114,21 @@ export default function SetupPage() {
 
     const handlePlanSelected = (plan: SubscriptionPlan) => {
         setSelectedPlan(plan);
-        setCurrentStep(3); // Auto-advance to payment step
+        setCurrentStep(3);
     };
 
-    const handlePaymentSuccess = async (promoCode?: string) => {
+    const handlePaymentSuccess = async (promoCode?: string, paymentId?: string) => {
         if (!selectedPlan) return;
 
         setLoading(true);
         try {
-            // Note: In a real flow, if it's a paid plan, MP/PayPal will return a success callback
-            // For now, we simulate that success or valid promo code triggers initialization directly.
             const payload = {
                 admin: adminData,
                 planId: selectedPlan.id,
                 businessName: businessName,
                 staff: staff.filter(s => s.nombre && s.email),
-                promoCode: promoCode // Pass the promo code to the backend
+                promoCode: promoCode,
+                paymentId: paymentId
             };
 
             const response = await fetch("/api/setup/initialize", {
@@ -94,8 +139,7 @@ export default function SetupPage() {
 
             if (response.ok) {
                 toast.success("¡Ecosistema creado con éxito!");
-
-                // Show a brief success animation before redirect
+                sessionStorage.removeItem("setup_data"); // Clear on success
                 setTimeout(() => {
                     router.push("/dashboard");
                 }, 1500);
@@ -113,11 +157,9 @@ export default function SetupPage() {
 
     return (
         <div className="min-h-screen bg-[#0A0A0B] text-foreground flex flex-col relative overflow-hidden font-sans">
-            {/* Ambient Backgrounds */}
             <div className="fixed top-[-20%] left-[-10%] w-[50%] h-[50%] bg-violet-600/10 blur-[120px] rounded-full pointer-events-none" />
             <div className="fixed bottom-[-20%] right-[-10%] w-[50%] h-[50%] bg-violet-900/10 blur-[120px] rounded-full pointer-events-none" />
 
-            {/* Header (Stepper) */}
             <div className="w-full pt-12 pb-8 px-6 relative z-10 flex flex-col items-center border-b border-border/10 bg-background/50 backdrop-blur-md">
                 <motion.div
                     initial={{ opacity: 0, y: -20 }}
@@ -161,7 +203,6 @@ export default function SetupPage() {
                 </div>
             </div>
 
-            {/* Main Content Area */}
             <div className="flex-1 flex flex-col items-center justify-center p-6 sm:p-8 md:p-12 relative z-10 w-full max-w-5xl mx-auto min-h-[500px]">
                 <AnimatePresence mode="wait" custom={currentStep}>
                     {currentStep === 1 && (
@@ -213,7 +254,6 @@ export default function SetupPage() {
                 </AnimatePresence>
             </div>
 
-            {/* Bottom Nav Controls */}
             <div className="fixed bottom-0 left-0 w-full p-6 sm:p-8 flex justify-center pointer-events-none z-20">
                 <div className="flex gap-4 w-full max-w-5xl justify-between px-4 sm:px-0">
                     <div className="pointer-events-auto">
@@ -243,7 +283,6 @@ export default function SetupPage() {
                 </div>
             </div>
 
-            {/* Loading Overlay */}
             <AnimatePresence>
                 {loading && (
                     <motion.div
