@@ -56,7 +56,7 @@ const SETTINGS_MODULES = [
   },
   {
     title: "Notificaciones",
-    description: "Ajustá las alertas en vivo (WebSockets) para nuevas ventas o falta de stock.",
+    description: "Ajustá las alertas en vivo para nuevas ventas o falta de stock.",
     href: "/settings/notifications",
     icon: BellRing,
     color: "text-pink-500",

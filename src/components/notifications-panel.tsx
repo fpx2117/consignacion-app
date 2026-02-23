@@ -69,12 +69,14 @@ function NotificationItem({
   type,
   createdAt,
   read,
+  ventaId,
 }: {
   title: string;
   description: string;
   type: string;
   createdAt: string | Date;
   read?: boolean;
+  ventaId?: number;
 }) {
   const config = NOTIFICATION_CONFIG[type as NOTIFICATION_TYPE] || NOTIFICATION_CONFIG[NOTIFICATION_TYPE.SYSTEM];
   const Icon = ICON_MAP[type] || Info;
@@ -146,6 +148,20 @@ function NotificationItem({
           <Clock className="h-2.5 w-2.5" />
           {timeString}
         </span>
+
+        {/* Acciones adicionales */}
+        {ventaId && type === NOTIFICATION_TYPE.NEW_ORDER && (
+          <div className="mt-1 flex justify-start">
+            <Button
+              variant="secondary"
+              size="sm"
+              className="h-7 text-[10px] px-3 font-semibold rounded-md bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20 dark:text-emerald-400 dark:hover:bg-emerald-500/30 transition-colors"
+              onClick={() => window.open(`/ticket-loading/${ventaId}`, '_blank')}
+            >
+              Ver Ticket
+            </Button>
+          </div>
+        )}
       </div>
 
       {/* Unread dot */}
@@ -336,6 +352,7 @@ export function NotificationsAnimatedPanel({
                   type={n.type}
                   createdAt={n.createdAt}
                   read={n.read}
+                  ventaId={n.ventaId}
                 />
               ))}
             </AnimatedList>

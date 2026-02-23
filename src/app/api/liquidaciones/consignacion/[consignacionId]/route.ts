@@ -8,6 +8,7 @@ import { TipoMovimientoStock, MotivoMovimientoStock, TipoVenta } from "@prisma/c
 // ✅ Imports Centralizados de Config y Notificaciones
 import { obtenerConfiguracionGlobal } from "@/lib/config";
 import { evaluateStockAlert, processNotificationQueue } from "@/lib/stock-alerts";
+import { sendNotification } from "@/lib/socket-trigger";
 
 type RouteParams = {
   params: Promise<{ consignacionId: string }>;
@@ -51,10 +52,12 @@ export async function POST(req: Request, { params }: RouteParams) {
 
   try {
     const result = await prisma.$transaction(async (tx) => {
-      // 1) Verificar consignación
       const consignacion = await tx.consignacion.findUnique({
         where: { id: consignacionId },
-        include: { detalles: { include: { producto: true } } },
+        include: {
+          detalles: { include: { producto: true } },
+          cliente: true // Necesario para la notificación
+        },
       });
 
       if (!consignacion) throw new Error("CONSIGNACION_NO_ENCONTRADA");
@@ -171,8 +174,9 @@ export async function POST(req: Request, { params }: RouteParams) {
       });
 
       // 4) Crear venta asociada (Administrativa, sin sesión de caja obligatoria)
+      let nuevaVenta = null;
       if (totalVenta > 0) {
-        await tx.venta.create({
+        nuevaVenta = await tx.venta.create({
           data: {
             tipo: TipoVenta.LIQUIDACION, // 👈 Clasificamos la venta
             clienteId: consignacion.clienteId,
@@ -213,13 +217,41 @@ export async function POST(req: Request, { params }: RouteParams) {
         });
       }
 
-      return nuevaLiquidacion;
+      return { liquidacion: nuevaLiquidacion, venta: nuevaVenta, consignacion };
     });
 
     // ✅ Disparar notificaciones fuera de la transacción para no bloquear
     await processNotificationQueue(notificationsQueue);
 
-    return NextResponse.json({ data: result }, { status: 201 });
+    // ✅ Disparar notificación de Venta si corresponde
+    if (result.venta && configGlobal.notificarVentas !== false) {
+      const clientName = result.consignacion.cliente?.nombre || "Consumidor Final";
+      const clientId = result.consignacion.clienteId;
+
+      const dbNotif = await prisma.notification.create({
+        data: {
+          type: "NEW_ORDER",
+          title: "Venta Exitosa (Liquidación)",
+          description: `Venta #${result.venta.id} para [${clientId}] ${clientName} por $${result.venta.total} ARS`,
+          fingerprint: `SALE_${result.venta.id}`,
+          read: false,
+        }
+      }).catch(() => null);
+
+      sendNotification({
+        id: dbNotif?.id,
+        type: "NEW_ORDER",
+        title: "Venta Exitosa (Liquidación)",
+        message: `Venta #${result.venta.id} por $${result.venta.total}`,
+        data: {
+          ventaId: result.venta.id,
+          notificationId: dbNotif?.id
+        }
+      }).catch(() => null);
+    }
+
+    // Devolvemos solo la liquidación para no romper la respuesta esperada en el frontend
+    return NextResponse.json({ data: result.liquidacion }, { status: 201 });
 
   } catch (e: any) {
     console.error("Error en liquidación:", e);

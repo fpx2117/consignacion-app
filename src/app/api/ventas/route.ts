@@ -164,11 +164,14 @@ export async function POST(req: Request) {
     // Mensaje de notificación adaptado (Solo si la configuración lo permite)
     if (configGlobal.notificarVentas !== false) {
       // 1. Persistencia en base de datos para el historial
+      const clientName = result.venta.cliente?.nombre || "Consumidor Final";
+      const clientId = result.venta.clienteId;
+
       const dbNotif = await prisma.notification.create({
         data: {
           type: "NEW_ORDER",
           title: "Venta Exitosa",
-          description: `Venta #${result.venta.id} por $${result.venta.total}`,
+          description: `Venta #${result.venta.id} para [${clientId}] ${clientName} por $${result.venta.total} ARS`,
           fingerprint: `SALE_${result.venta.id}`,
           read: false,
         }
