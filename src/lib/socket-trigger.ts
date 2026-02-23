@@ -1,16 +1,14 @@
 import { NOTIFICATION_TYPE } from "@/lib/notificationes/notificaciones-types"; // O tu ruta actual
 
 interface NotificationPayload {
-  // ✅ CAMBIO CLAVE: Permitimos el Enum estricto O un string cualquiera.
-  // Esto hace que el tipo de Prisma ('NotificationType') sea aceptado porque es compatible con string.
+  id?: number; // ✅ Opcional: Para vincular con la DB en el cliente
   type: NOTIFICATION_TYPE | string;
-
   title?: string;
   message: string;
   data?: any;
 }
 
-export async function sendNotification({ type, title, message, data }: NotificationPayload) {
+export async function sendNotification({ id, type, title, message, data }: NotificationPayload) {
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 
   try {
@@ -20,6 +18,7 @@ export async function sendNotification({ type, title, message, data }: Notificat
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         notification: {
+          id,
           type,
           title,
           message,
