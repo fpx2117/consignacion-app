@@ -21,15 +21,15 @@ export interface SubscriptionPlan {
 export const SUBSCRIPTION_PLANS: SubscriptionPlan[] = [
     {
         id: 1,
-        nombre: process.env.NEXT_PUBLIC_PLAN_1_NOMBRE || "Básico",
+        nombre: "Básico",
         descripcion: "Ideal para pequeños negocios empezando su gestión.",
-        precioARS: Number(process.env.NEXT_PUBLIC_PLAN_1_PRICE_ARS || 60000),
-        precioUSD: Number(process.env.NEXT_PUBLIC_PLAN_1_PRICE_USD || 45),
-        mercadopagoId: process.env.NEXT_PUBLIC_MP_PLAN_BASICO || "PLAN_MP_BASICO",
-        mercadopagoPlanId: process.env.NEXT_PUBLIC_MP_PLAN_RECURRENTE_BASICO || "PLAN_MP_RECURRENTE_BASICO",
-        paypalId: process.env.NEXT_PUBLIC_PAYPAL_PLAN_BASICO || "PLAN_PAYPAL_BASICO",
+        precioARS: 60000,
+        precioUSD: 42,
+        mercadopagoId: "PLAN_MP_BASICO",
+        mercadopagoPlanId: "PLAN_MP_RECURRENTE_BASICO",
+        paypalId: "P-3TM41802V62105043NGNYG6Q",
         features: [
-            `Hasta ${process.env.NEXT_PUBLIC_PLAN_1_MAX_PRODUCTOS || 60} productos`,
+            `Hasta 60 productos`,
             "Ventas ilimitadas",
             "Reportes básicos",
             "Soporte vía email",
@@ -37,13 +37,13 @@ export const SUBSCRIPTION_PLANS: SubscriptionPlan[] = [
     },
     {
         id: 2,
-        nombre: process.env.NEXT_PUBLIC_PLAN_2_NOMBRE || "Pro",
+        nombre: "Pro",
         descripcion: "Para negocios en crecimiento con múltiples consignaciones.",
-        precioARS: Number(process.env.NEXT_PUBLIC_PLAN_2_PRICE_ARS || 80000),
-        precioUSD: Number(process.env.NEXT_PUBLIC_PLAN_2_PRICE_USD || 55),
-        mercadopagoId: process.env.NEXT_PUBLIC_MP_PLAN_PRO || "PLAN_MP_PRO",
-        mercadopagoPlanId: process.env.NEXT_PUBLIC_MP_PLAN_RECURRENTE_PRO || "PLAN_MP_RECURRENTE_PRO",
-        paypalId: process.env.NEXT_PUBLIC_PAYPAL_PLAN_PRO || "PLAN_PAYPAL_PRO",
+        precioARS: 80000,
+        precioUSD: 60,
+        mercadopagoId: "PLAN_MP_PRO",
+        mercadopagoPlanId: "PLAN_MP_RECURRENTE_PRO",
+        paypalId: "P-5LK73578H31864518NGNYHEQ",
         popular: true,
         features: [
             "Productos ilimitados",
@@ -55,13 +55,13 @@ export const SUBSCRIPTION_PLANS: SubscriptionPlan[] = [
     },
     {
         id: 3,
-        nombre: process.env.NEXT_PUBLIC_PLAN_3_NOMBRE || "Enterprise",
+        nombre: "Enterprise",
         descripcion: "Solución completa con soporte prioritario y análisis avanzado.",
-        precioARS: Number(process.env.NEXT_PUBLIC_PLAN_3_PRICE_ARS || 150000),
-        precioUSD: Number(process.env.NEXT_PUBLIC_PLAN_3_PRICE_USD || 105),
-        mercadopagoId: process.env.NEXT_PUBLIC_MP_PLAN_ENTERPRISE || "PLAN_MP_ENTERPRISE",
-        mercadopagoPlanId: process.env.NEXT_PUBLIC_MP_PLAN_RECURRENTE_ENTERPRISE || "PLAN_MP_RECURRENTE_ENTERPRISE",
-        paypalId: process.env.NEXT_PUBLIC_PAYPAL_PLAN_ENTERPRISE || "PLAN_PAYPAL_ENTERPRISE",
+        precioARS: 150000,
+        precioUSD: 115,
+        mercadopagoId: "PLAN_MP_ENTERPRISE",
+        mercadopagoPlanId: "PLAN_MP_RECURRENTE_ENTERPRISE",
+        paypalId: "P-2HR79781N0698231MNGNYHJQ",
         features: [
             "Todo lo de Pro",
             "Múltiples sucursales",
@@ -75,7 +75,6 @@ export const getPlanById = (id: number) => SUBSCRIPTION_PLANS.find(p => p.id ===
 export const getPlanByExternalId = (extId: string) =>
     SUBSCRIPTION_PLANS.find(p => p.mercadopagoId === extId || p.mercadopagoPlanId === extId || p.paypalId === extId);
 
-// Límites por defecto para cada plan (se usan al crear PlanLimit en DB)
 export const PLAN_LIMITS_DEFAULTS: Record<number, {
     maxProductos: number;
     maxUsuarios: number;
@@ -83,21 +82,21 @@ export const PLAN_LIMITS_DEFAULTS: Record<number, {
     allowSucursales: boolean;
 }> = {
     1: {
-        maxProductos: Number(process.env.PLAN_1_MAX_PRODUCTOS ?? 60),
-        maxUsuarios: Number(process.env.PLAN_1_MAX_USUARIOS ?? 5),
-        allowConsignaciones: process.env.PLAN_1_ALLOW_CONSIGNACIONES === "true",
-        allowSucursales: process.env.PLAN_1_ALLOW_SUCURSALES === "true",
+        maxProductos: 60,
+        maxUsuarios: 5,
+        allowConsignaciones: false,
+        allowSucursales: false,
     },
     2: {
-        maxProductos: Number(process.env.PLAN_2_MAX_PRODUCTOS ?? -1),
-        maxUsuarios: Number(process.env.PLAN_2_MAX_USUARIOS ?? 10),
-        allowConsignaciones: process.env.PLAN_2_ALLOW_CONSIGNACIONES !== "false", // default true
-        allowSucursales: process.env.PLAN_2_ALLOW_SUCURSALES === "true",
+        maxProductos: -1, // Ilimitado
+        maxUsuarios: 15,
+        allowConsignaciones: true,
+        allowSucursales: false,
     },
     3: {
-        maxProductos: Number(process.env.PLAN_3_MAX_PRODUCTOS ?? -1),
-        maxUsuarios: Number(process.env.PLAN_3_MAX_USUARIOS ?? 100),
-        allowConsignaciones: process.env.PLAN_3_ALLOW_CONSIGNACIONES !== "false", // default true
-        allowSucursales: process.env.PLAN_3_ALLOW_SUCURSALES !== "false", // default true
+        maxProductos: -1, // Ilimitado
+        maxUsuarios: 100,
+        allowConsignaciones: true,
+        allowSucursales: true,
     },
 };
