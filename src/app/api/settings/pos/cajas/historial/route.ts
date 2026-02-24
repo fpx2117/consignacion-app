@@ -14,6 +14,7 @@ export async function GET() {
 
     try {
         const historial = await prisma.sesionCaja.findMany({
+            where: { caja: { sucursalId: auth.activeSucursalId } },
             orderBy: { fechaApertura: "desc" },
             include: {
                 usuario: { select: { nombre: true } },

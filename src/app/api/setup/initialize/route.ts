@@ -263,6 +263,7 @@ export async function POST(req: Request) {
             email: result.user.email,
             nombre: result.user.nombre,
             rol: result.user.rol,
+            sucursalId: result.user.sucursalId,
         });
         await setAuthCookie(token);
 

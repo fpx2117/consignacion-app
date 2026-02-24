@@ -70,6 +70,7 @@ export type Usuario = {
   email: string;
   rol: RolUsuario;
   activo: boolean;
+  sucursalId?: ID | null;
   createdAt: ISODateString;
   horarios?: HorarioLaboral[];
 };

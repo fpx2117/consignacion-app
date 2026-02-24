@@ -7,7 +7,10 @@ export async function GET() {
   const auth = await requireAuth();
   if (!auth.ok) return auth.res;
 
-  const clientes = await prisma.cliente.findMany({ orderBy: { id: "desc" } });
+  const clientes = await prisma.cliente.findMany({
+    where: { sucursalId: auth.activeSucursalId },
+    orderBy: { id: "desc" }
+  });
   return NextResponse.json({ data: clientes });
 }
 
@@ -31,6 +34,7 @@ export async function POST(req: Request) {
       telefono: parsed.data.telefono ?? null,
       direccion: parsed.data.direccion ?? null,
       saldoCuenta: 0,
+      sucursalId: auth.activeSucursalId,
     },
   });
 

@@ -23,6 +23,14 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+
+import { useSucursalStore } from "@/store/useSucursalStore";
 
 import {
   LayoutDashboard,
@@ -36,6 +44,7 @@ import {
   Settings,
   History,
   LayoutGrid,
+  Store,
   LogOut
 } from "lucide-react";
 
@@ -79,6 +88,9 @@ export function SidebarDock() {
     }
   };
 
+  const { availableSucursales, activeSucursalId, setActiveSucursalId, setAvailableSucursales } = useSucursalStore();
+
+
   // Flag de hidratación: Vital para evitar fallos Next.js
   const [mounted, setMounted] = React.useState(false);
 
@@ -103,6 +115,11 @@ export function SidebarDock() {
           const json = await res.json();
           const userData = json?.data;
           setUserRole(userData?.rol ?? "ADMIN");
+
+          // Sincronizar sucursales
+          if (userData?.sucursalesPermitidas && Array.isArray(userData.sucursalesPermitidas)) {
+            setAvailableSucursales(userData.sucursalesPermitidas);
+          }
 
           // Extraer límite de consignaciones del plan
           const limits = userData?.subscription?.plan?.limits;
@@ -307,7 +324,12 @@ export function SidebarDock() {
 
       {/* DESKTOP */}
       <div className="hidden h-full w-full md:flex md:flex-col md:items-center md:py-6">
-        <div className="h-10 w-10 flex items-center justify-center rounded-xl bg-primary text-primary-foreground font-black text-xs mb-8 shadow-lg">POS</div>
+
+        {/* LOGO POS PRINCIPAL */}
+        <div className="h-10 w-10 flex shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground font-black text-xs mb-8 shadow-lg">
+          POS
+        </div>
+
         <div className="flex-1 flex flex-col items-center justify-center w-full">
           <div className="relative overflow-hidden rounded-3xl p-[1px]">
             <Dock orientation="vertical" className="border bg-card/50 backdrop-blur-xl md:flex-col gap-1 p-1.5">

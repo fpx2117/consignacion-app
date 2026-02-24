@@ -47,10 +47,23 @@ export async function requireAuth() {
       };
     }
 
+    // Resolviendo la sucursal activa
+    const { headers } = await import("next/headers");
+    const h = await headers();
+    const reqHeader = h.get("x-sucursal-id");
+    let activeSucursalId = 1;
+
+    if (user.rol === "ADMIN") {
+      activeSucursalId = reqHeader ? parseInt(reqHeader, 10) : (user.sucursalId || 1);
+    } else {
+      activeSucursalId = user.sucursalId || 1;
+    }
+
     return {
       ok: true as const,
       user,
       token,
+      activeSucursalId
     };
   } catch {
     return {

@@ -115,6 +115,7 @@ export async function POST(req: Request, { params }: RouteParams) {
           await tx.movimientoStock.create({
             data: {
               productoId: det.productoId,
+              sucursalId: auth.activeSucursalId,
               tipo: TipoMovimientoStock.ENTRADA,
               motivo: MotivoMovimientoStock.DEVOLUCION_CLIENTE,
               cantidad: devueltas,
@@ -130,6 +131,7 @@ export async function POST(req: Request, { params }: RouteParams) {
           await tx.movimientoStock.create({
             data: {
               productoId: det.productoId,
+              sucursalId: auth.activeSucursalId,
               tipo: TipoMovimientoStock.SALIDA,
               motivo: MotivoMovimientoStock.VENTA,
               cantidad: vendidas,
@@ -180,6 +182,7 @@ export async function POST(req: Request, { params }: RouteParams) {
           data: {
             tipo: TipoVenta.LIQUIDACION, // 👈 Clasificamos la venta
             clienteId: consignacion.clienteId,
+            sucursalId: auth.activeSucursalId,
             liquidacionId: nuevaLiquidacion.id,
             total: totalVenta,
             // sesionCajaId: null, (No se envía porque es opcional en el Schema)

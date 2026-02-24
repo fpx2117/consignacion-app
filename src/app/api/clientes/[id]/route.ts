@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { requireAuth } from "@/lib/requireAuth";
 
 type RouteContext = {
   params: Promise<{ id: string }>;
@@ -10,6 +11,9 @@ type RouteContext = {
 // ----------------------------------------------------------------------
 export async function GET(request: Request, { params }: RouteContext) {
   try {
+    const auth = await requireAuth();
+    if (!auth.ok) return auth.res;
+
     const { id: idString } = await params;
     const id = Number(idString);
 
@@ -21,7 +25,7 @@ export async function GET(request: Request, { params }: RouteContext) {
       where: { id },
     });
 
-    if (!cliente) {
+    if (!cliente || cliente.sucursalId !== auth.activeSucursalId) {
       return NextResponse.json({ error: "Cliente no encontrado" }, { status: 404 });
     }
 
@@ -39,11 +43,19 @@ export async function GET(request: Request, { params }: RouteContext) {
 // ----------------------------------------------------------------------
 export async function PUT(request: Request, { params }: RouteContext) {
   try {
+    const auth = await requireAuth();
+    if (!auth.ok) return auth.res;
+
     const { id: idString } = await params;
     const id = Number(idString);
 
     if (isNaN(id)) {
       return NextResponse.json({ error: "ID inválido" }, { status: 400 });
+    }
+
+    const existing = await prisma.cliente.findUnique({ where: { id } });
+    if (!existing || existing.sucursalId !== auth.activeSucursalId) {
+      return NextResponse.json({ error: "Cliente no encontrado" }, { status: 404 });
     }
 
     const body = await request.json();
@@ -74,11 +86,19 @@ export async function PUT(request: Request, { params }: RouteContext) {
 // ----------------------------------------------------------------------
 export async function DELETE(request: Request, { params }: RouteContext) {
   try {
+    const auth = await requireAuth();
+    if (!auth.ok) return auth.res;
+
     const { id: idString } = await params;
     const id = Number(idString);
 
     if (isNaN(id)) {
       return NextResponse.json({ error: "ID inválido" }, { status: 400 });
+    }
+
+    const existing = await prisma.cliente.findUnique({ where: { id } });
+    if (!existing || existing.sucursalId !== auth.activeSucursalId) {
+      return NextResponse.json({ error: "Cliente no encontrado" }, { status: 404 });
     }
 
     // Eliminación lógica (recomendada)
@@ -88,9 +108,9 @@ export async function DELETE(request: Request, { params }: RouteContext) {
     });
 
     // ✅ Envolvemos en 'data'
-    return NextResponse.json({ 
+    return NextResponse.json({
       data: clienteDesactivado,
-      message: "Cliente desactivado correctamente" 
+      message: "Cliente desactivado correctamente"
     });
 
   } catch (error) {

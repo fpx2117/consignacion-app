@@ -13,6 +13,7 @@ export async function GET() {
   if (!auth.ok) return auth.res;
 
   const ventas = await prisma.venta.findMany({
+    where: { sucursalId: auth.activeSucursalId },
     orderBy: { id: "desc" },
     include: { cliente: true, detalles: { include: { producto: true } } },
     take: 200,
@@ -106,6 +107,7 @@ export async function POST(req: Request) {
         await tx.movimientoStock.create({
           data: {
             productoId: item.productoId,
+            sucursalId: auth.activeSucursalId,
             tipo: TipoMovimientoStock.SALIDA,
             motivo: MotivoMovimientoStock.VENTA,
             cantidad: item.units,
@@ -136,6 +138,7 @@ export async function POST(req: Request) {
         data: {
           tipo: TipoVenta.CASUAL,
           clienteId: finalClienteId,
+          sucursalId: auth.activeSucursalId,
           sesionCajaId: sesionActiva?.id || null, // <--- Aquí es clave el ?.
           fecha: new Date(),
           total: totalVenta,
@@ -144,7 +147,7 @@ export async function POST(req: Request) {
         include: { detalles: true, cliente: true },
       });
 
-      // Registrar el pago asignando null si no hay sesión
+      // Registrar el pago
       const nuevoPago = await tx.pago.create({
         data: {
           clienteId: finalClienteId,

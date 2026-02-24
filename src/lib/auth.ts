@@ -9,6 +9,7 @@ export type JwtPayloadUser = {
   email: string;
   rol: "ADMIN" | "EMPLEADO";
   nombre: string;
+  sucursalId: number | null;
 };
 
 /* =========================

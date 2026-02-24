@@ -71,7 +71,7 @@ export async function GET() {
         const usuarioId = getUsuarioIdFuerte(auth.user);
 
         const sesionAbierta = await prisma.sesionCaja.findFirst({
-            where: { usuarioId, estado: "ABIERTA" },
+            where: { usuarioId, estado: "ABIERTA", caja: { sucursalId: auth.activeSucursalId } },
             include: {
                 caja: true,
                 ventas: { where: { tipo: "CASUAL" } },
@@ -133,7 +133,15 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: verificacion.error }, { status: 403 });
         }
 
-        const activa = await prisma.sesionCaja.findFirst({ where: { usuarioId, estado: "ABIERTA" } });
+        // Validar que la caja pertenezca a la sucursal activa
+        const cajaSelect = await prisma.caja.findUnique({ where: { id: Number(cajaId) } });
+        if (!cajaSelect || cajaSelect.sucursalId !== auth.activeSucursalId) {
+            return NextResponse.json({ error: "Caja no válida para esta sucursal." }, { status: 403 });
+        }
+
+        const activa = await prisma.sesionCaja.findFirst({
+            where: { usuarioId, estado: "ABIERTA" } // Mantenemos global para evitar dobles turnos del mismo user
+        });
         if (activa) return NextResponse.json({ error: "Ya tienes una sesión abierta." }, { status: 403 });
 
         const nueva = await prisma.sesionCaja.create({
@@ -163,7 +171,7 @@ export async function PATCH(req: Request) {
         const usuarioId = getUsuarioIdFuerte(auth.user);
 
         const sesion = await prisma.sesionCaja.findFirst({
-            where: { usuarioId, estado: "ABIERTA" }
+            where: { usuarioId, estado: "ABIERTA", caja: { sucursalId: auth.activeSucursalId } }
         });
 
         if (!sesion) return NextResponse.json({ error: "No hay sesión para extender." }, { status: 404 });
@@ -198,7 +206,7 @@ export async function PUT(req: Request) {
         const { montoReal, observaciones } = await req.json();
 
         const sesion = await prisma.sesionCaja.findFirst({
-            where: { usuarioId, estado: "ABIERTA" },
+            where: { usuarioId, estado: "ABIERTA", caja: { sucursalId: auth.activeSucursalId } },
             include: {
                 ventas: { where: { tipo: "CASUAL" } },
                 pagos: true,
