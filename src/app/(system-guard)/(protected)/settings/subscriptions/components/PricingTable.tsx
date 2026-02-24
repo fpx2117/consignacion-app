@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Check, CreditCard, DollarSign, Zap, Star } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -21,7 +21,37 @@ import { useDolarBlue } from "@/hooks/useDolarBlue";
 
 export function PricingTable({ onSelectPlan, currentPlanId }: PricingTableProps) {
     const [currency, setCurrency] = useState<"ARS" | "USD">("ARS");
+    const [plans, setPlans] = useState<SubscriptionPlan[]>(SUBSCRIPTION_PLANS);
     const { rate, isLoading } = useDolarBlue();
+
+    // Cargar precios reales desde la Base de Datos
+    useEffect(() => {
+        const fetchPlans = async () => {
+            try {
+                const res = await fetch('/api/subscriptions/plans');
+                if (res.ok) {
+                    const data = await res.json();
+                    // Mezcla la info de la BD (precioUSD, precioARS) con las variables estaticas (features) 
+                    const mergedPlans = SUBSCRIPTION_PLANS.map(basePlan => {
+                        const dbPlan = data.plans.find((p: any) => p.id === basePlan.id);
+                        if (dbPlan) {
+                            return {
+                                ...basePlan,
+                                precioUSD: dbPlan.precioUSD ? Number(dbPlan.precioUSD) : basePlan.precioUSD,
+                                precioARS: dbPlan.precioARS ? Number(dbPlan.precioARS) : basePlan.precioARS,
+                                nombre: dbPlan.nombre || basePlan.nombre
+                            };
+                        }
+                        return basePlan;
+                    });
+                    setPlans(mergedPlans);
+                }
+            } catch (error) {
+                console.error("Failed to load plans from DB, using defaults", error);
+            }
+        };
+        fetchPlans();
+    }, []);
 
     return (
         <div className="py-20 px-4 sm:px-6 lg:px-8 relative overflow-hidden">
@@ -77,7 +107,7 @@ export function PricingTable({ onSelectPlan, currentPlanId }: PricingTableProps)
             </div>
 
             <div className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3 max-w-7xl mx-auto items-stretch">
-                {SUBSCRIPTION_PLANS.map((plan) => (
+                {plans.map((plan) => (
                     <motion.div
                         key={plan.id}
                         initial={{ opacity: 0, y: 20 }}
