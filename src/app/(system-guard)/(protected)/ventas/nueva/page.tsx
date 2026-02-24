@@ -258,6 +258,16 @@ export default function NuevaVentaPage() {
     window.open(`/ticket-loading/${createdVentaId}`, '_blank');
   };
 
+  const handleWhatsApp = () => {
+    if (!createdVentaId) return;
+    const cliente = clientes.find(c => c.id === Number(selectedClienteId));
+    const phone = cliente?.telefono || "";
+    const name = cliente?.nombre || "Cliente";
+
+    const url = `/ticket-loading/${createdVentaId}?mode=whatsapp&phone=${encodeURIComponent(phone)}&name=${encodeURIComponent(name)}`;
+    window.open(url, '_blank');
+  };
+
   // --- HELPERS UI ---
   const clientesFiltrados = React.useMemo(() => {
     return clientes.filter(c => !c.nombre.toLowerCase().includes("consumidor final"));
@@ -634,6 +644,7 @@ export default function NuevaVentaPage() {
         onOpenChange={setShowSuccessDialog}
         onConfirm={handleReset}
         onCancel={handleViewTicket}
+        onWhatsApp={handleWhatsApp}
         title="¡Venta Exitosa!"
         description={<span className="text-center block text-muted-foreground mt-2 font-medium">Total: <span className="text-primary font-black text-xl ml-1">{formatCurrency(totalAmount)}</span></span>}
         confirmText="Nueva Venta"

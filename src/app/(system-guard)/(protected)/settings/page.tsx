@@ -19,6 +19,7 @@ import {
   ChevronRight,
   Lock,
   CreditCard,
+  MessageCircle,
 } from "lucide-react";
 
 // Lista de configuraciones adaptada
@@ -35,6 +36,17 @@ const SETTINGS_MODULES = [
     soon: false,
   },
   {
+    id: "whatsapp",
+    title: "Mensajería (WhatsApp)",
+    description: "Personalizá la plantilla de los mensajes que envías a tus clientes.",
+    href: "/settings/whatsapp",
+    icon: MessageCircle,
+    color: "text-emerald-600",
+    bg: "bg-emerald-500/10",
+    borderColor: "group-hover:border-emerald-500/30",
+    soon: false,
+  },
+  {
     id: "branches",
     title: "Sucursales y Depósitos",
     description: "Administrá los puntos de venta, ubicaciones y rangos de entrega.",
@@ -48,7 +60,7 @@ const SETTINGS_MODULES = [
 
   {
     id: "pos",
-    title: "Punto de Venta (POS)",
+    title: "Punto de Venta",
     description: "Configurá el comportamiento de la caja, cobros y stock en tiempo real.",
     href: "/settings/pos",
     icon: MonitorSmartphone,
@@ -58,20 +70,9 @@ const SETTINGS_MODULES = [
     soon: false,
   },
   {
-    id: "notifications",
-    title: "Notificaciones",
-    description: "Ajustá las alertas en vivo para nuevas ventas o falta de stock.",
-    href: "/settings/notifications",
-    icon: BellRing,
-    color: "text-pink-500",
-    bg: "bg-pink-500/10",
-    borderColor: "group-hover:border-pink-500/30",
-    soon: false,
-  },
-  {
     id: "security",
-    title: "Seguridad y Auditoría",
-    description: "Revisá el registro de actividad, sesiones activas y gestión del equipo.",
+    title: "Seguridad y Alertas",
+    description: "Administrá accesos, revisá auditorías y configurá alertas de stock o ventas.",
     href: "/settings/security",
     icon: ShieldCheck,
     color: "text-slate-500",
@@ -93,18 +94,35 @@ const SETTINGS_MODULES = [
 ];
 
 export default function SettingsPage() {
-  const [allowSucursales, setAllowSucursales] = React.useState<boolean>(true);
+  const [allowSucursales, setAllowSucursales] = React.useState<boolean>(false); // Pessimistic default
   const [loading, setLoading] = React.useState(true);
 
   React.useEffect(() => {
+    // 1. Carga inmediata desde caché para evitar flicker
+    const cachedLimits = localStorage.getItem("subscription_limits");
+    if (cachedLimits) {
+      try {
+        const limits = JSON.parse(cachedLimits);
+        if (limits.allowSucursales !== undefined) {
+          setAllowSucursales(limits.allowSucursales);
+        }
+      } catch (e) {
+        console.error("Error parsing cached limits", e);
+      }
+    }
+
     const fetchUserData = async () => {
       try {
         const res = await fetch("/api/auth/me");
         if (res.ok) {
           const json = await res.json();
           const limits = json?.data?.subscription?.plan?.limits;
-          if (limits && limits.allowSucursales === false) {
-            setAllowSucursales(false);
+
+          if (limits) {
+            const allow = limits.allowSucursales !== false;
+            setAllowSucursales(allow);
+            // 2. Guardar en caché para la próxima visita
+            localStorage.setItem("subscription_limits", JSON.stringify({ allowSucursales: allow }));
           }
         }
       } catch {
