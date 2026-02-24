@@ -69,6 +69,7 @@ export async function POST(request: Request) {
                     data: {
                         status: "ACTIVO",
                         updatedAt: new Date(),
+                        mpPreapprovalId: externalId
                     }
                 });
 

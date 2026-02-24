@@ -193,11 +193,11 @@ model Producto {
   ventaDetalles        VentaDetalle[]
   sucursal             Sucursal?             @relation(fields: [sucursalId], references: [id])
 
+  @@unique([codigoBarra, sucursalId])
+  @@unique([sku, sucursalId])
   @@index([codigoBarra])
   @@index([categoriaId])
   @@index([sucursalId])
-  @@unique([codigoBarra, sucursalId])
-  @@unique([sku, sucursalId])
 }
 
 model Caja {
@@ -403,6 +403,7 @@ model Subscription {
   status            EstadoSuscripcion    @default(PRUEBA)
   provider          ProveedorSuscripcion
   externalId        String               @unique
+  mpPreapprovalId   String?
   trialEndsAt       DateTime?
   currentPeriodEnd  DateTime?
   cancelAtPeriodEnd Boolean              @default(false)
