@@ -23,13 +23,17 @@ export async function POST(req: Request) {
 
         // Note: For SETUP, we don't have a userId yet. 
         // We'll use a placeholder or specific flag in external_reference.
+        const { fetchDolarBlue } = await import("@/lib/dolarBlue");
+        const exchangeRate = await fetchDolarBlue();
+        const precioARS = plan.precioUSD * exchangeRate;
+
         const response = await preference.create({
             body: {
                 items: [
                     {
                         id: String(plan.id),
                         title: `Activación Ecosistema: ${plan.nombre}`,
-                        unit_price: plan.precioARS,
+                        unit_price: precioARS,
                         quantity: 1,
                         currency_id: "ARS",
                     }

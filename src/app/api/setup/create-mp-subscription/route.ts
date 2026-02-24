@@ -24,6 +24,10 @@ export async function POST(req: Request) {
 
         const preApproval = new PreApproval(client);
 
+        const { fetchDolarBlue } = await import("@/lib/dolarBlue");
+        const exchangeRate = await fetchDolarBlue();
+        const precioARS = plan.precioUSD * exchangeRate;
+
         // Creamos la suscripción basada en el PlanId de MP (o con esquema propio si no hay PlanId)
         // Usamos el esquema de "Plan" de MP si está disponible, o definimos la recurrencia aquí.
         const response = await preApproval.create({
@@ -32,7 +36,7 @@ export async function POST(req: Request) {
                 auto_recurring: {
                     frequency: 1,
                     frequency_type: "months",
-                    transaction_amount: plan.precioARS,
+                    transaction_amount: precioARS,
                     currency_id: "ARS",
                 },
                 back_url: `${process.env.NEXT_PUBLIC_APP_URL}/setup?status=success`,

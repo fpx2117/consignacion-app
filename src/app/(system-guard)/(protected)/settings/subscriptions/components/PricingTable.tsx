@@ -17,8 +17,11 @@ interface PricingTableProps {
     currentPlanId?: number;
 }
 
+import { useDolarBlue } from "@/hooks/useDolarBlue";
+
 export function PricingTable({ onSelectPlan, currentPlanId }: PricingTableProps) {
     const [currency, setCurrency] = useState<"ARS" | "USD">("ARS");
+    const { rate, isLoading } = useDolarBlue();
 
     return (
         <div className="py-20 px-4 sm:px-6 lg:px-8 relative overflow-hidden">
@@ -114,7 +117,11 @@ export function PricingTable({ onSelectPlan, currentPlanId }: PricingTableProps)
                                     plan.popular ? "text-white" : "text-foreground"
                                 )}>
                                     {currency === "ARS" ? "$" : "U$D"}
-                                    {currency === "ARS" ? ARSFormatter.format(plan.precioARS) : plan.precioUSD}
+                                    {currency === "ARS" ?
+                                        isLoading ? (
+                                            <span className="inline-block w-24 h-10 bg-muted/50 rounded-md animate-pulse align-middle" />
+                                        ) : ARSFormatter.format(plan.precioUSD * (rate || 1000))
+                                        : plan.precioUSD}
                                 </span>
                                 <span className={cn(
                                     "text-sm font-bold uppercase tracking-widest",
@@ -142,7 +149,7 @@ export function PricingTable({ onSelectPlan, currentPlanId }: PricingTableProps)
 
                         <button
                             onClick={() => onSelectPlan(plan, currency)}
-                            disabled={plan.id === currentPlanId}
+                            disabled={plan.id === currentPlanId || (currency === 'ARS' && isLoading)}
                             className={cn(
                                 "w-full py-4 px-6 rounded-2xl font-black text-xs uppercase tracking-[0.2em] transition-all duration-300 flex items-center justify-center gap-3 active:scale-[0.95]",
                                 plan.id === currentPlanId
@@ -158,6 +165,18 @@ export function PricingTable({ onSelectPlan, currentPlanId }: PricingTableProps)
                     </motion.div>
                 ))}
             </div>
+
+            {currency === "ARS" && (
+                <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className="text-center mt-12"
+                >
+                    <p className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-muted/50 text-xs font-semibold text-muted-foreground/80 border border-border/50">
+                        * Los precios en ARS son calculados en base a la cotización del dólar blue y están sujetos a variaciones del mercado.
+                    </p>
+                </motion.div>
+            )}
         </div>
     );
 }
