@@ -221,6 +221,7 @@ export default function SubscriptionsPage() {
                     <SubscriptionCheckout
                         planId={currency === "ARS" ? selectedPlan.mercadopagoPlanId : selectedPlan.paypalId}
                         amount={currency === "ARS" ? selectedPlan.precioARS : selectedPlan.precioUSD}
+                        basePriceUSD={selectedPlan.precioUSD}
                         currency={currency}
                         onClose={() => setSelectedPlan(null)}
                     />
