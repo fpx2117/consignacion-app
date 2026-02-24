@@ -11,6 +11,7 @@ import {
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { BrandLogo } from "@/components/brand-logo";
 
 export function TopBar() {
     const { availableSucursales, activeSucursalId, setActiveSucursalId } = useSucursalStore();
@@ -30,13 +31,11 @@ export function TopBar() {
 
     return (
         <div className="fixed top-0 left-0 right-0 h-20 z-40 bg-background/80 backdrop-blur-md border-b flex items-center justify-between px-6 md:pr-10 md:pl-[110px] transition-all">
-            <div className="flex items-center gap-2">
-                <h1 className="text-sm font-semibold tracking-tight text-foreground/80 md:hidden">
-                    POS App
-                </h1>
+            <div className="flex items-center gap-2 md:hidden">
+                <BrandLogo size="sm" showText />
             </div>
 
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-4 ml-auto">
                 {availableSucursales.length > 1 ? (
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
