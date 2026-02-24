@@ -174,20 +174,21 @@ export default function BranchesClient() {
                         </div>
 
                         <div className="relative z-10 mt-auto pt-4 flex gap-2">
-                            <Button variant="outline" size="sm" className="w-full rounded-xl" onClick={() => openEditModal(branch)}>
-                                <Pencil className="h-4 w-4 mr-2" />
+                            <button
+                                onClick={() => openEditModal(branch)}
+                                className="flex-1 inline-flex items-center justify-center gap-2 h-10 rounded-xl border border-border/50 bg-background/50 hover:bg-muted text-sm font-medium transition-colors"
+                            >
+                                <Pencil className="h-4 w-4" />
                                 Editar
-                            </Button>
+                            </button>
                             {!branch.esPrincipal && (
-                                <Button
-                                    variant="outline"
-                                    size="sm"
-                                    className="w-full rounded-xl text-destructive hover:bg-destructive/10 border-destructive/20"
+                                <button
                                     onClick={() => confirmDelete(branch)}
+                                    className="flex-1 inline-flex items-center justify-center gap-2 h-10 rounded-xl border border-destructive/20 bg-background/50 hover:bg-destructive/10 text-destructive text-sm font-medium transition-colors"
                                 >
-                                    <Trash2 className="h-4 w-4 mr-2" />
+                                    <Trash2 className="h-4 w-4" />
                                     Eliminar
-                                </Button>
+                                </button>
                             )}
                         </div>
                     </Card>

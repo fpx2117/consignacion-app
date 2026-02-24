@@ -34,6 +34,8 @@ export async function PUT(req: Request) {
             notificarLiquidaciones,
             notificarConsignacionesActivas,
             diasAvisoConsignacion,
+            mensajeWhatsappConsignacion,
+            mensajeWhatsappVenta,
             usarControlDeCaja
         } = body;
 
@@ -48,6 +50,8 @@ export async function PUT(req: Request) {
                 ...(notificarLiquidaciones !== undefined && { notificarLiquidaciones }),
                 ...(notificarConsignacionesActivas !== undefined && { notificarConsignacionesActivas }),
                 ...(diasAvisoConsignacion !== undefined && { diasAvisoConsignacion }),
+                ...(mensajeWhatsappConsignacion !== undefined && { mensajeWhatsappConsignacion }),
+                ...(mensajeWhatsappVenta !== undefined && { mensajeWhatsappVenta }),
                 ...(usarControlDeCaja !== undefined && { usarControlDeCaja }),
             },
             create: {
@@ -60,6 +64,8 @@ export async function PUT(req: Request) {
                 notificarLiquidaciones: notificarLiquidaciones ?? true,
                 notificarConsignacionesActivas: notificarConsignacionesActivas ?? true,
                 diasAvisoConsignacion: diasAvisoConsignacion ?? 15,
+                mensajeWhatsappConsignacion: mensajeWhatsappConsignacion ?? null,
+                mensajeWhatsappVenta: mensajeWhatsappVenta ?? null,
                 usarControlDeCaja: usarControlDeCaja ?? true,
             }
         });

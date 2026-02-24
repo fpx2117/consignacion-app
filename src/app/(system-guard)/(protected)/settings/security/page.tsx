@@ -15,6 +15,7 @@ import {
     Activity,
     Users,
     Fingerprint,
+    BellRing,
 } from "lucide-react";
 
 const SECURITY_MODULES = [
@@ -41,6 +42,14 @@ const SECURITY_MODULES = [
         icon: Fingerprint,
         color: "text-emerald-500",
         bg: "bg-emerald-500/10",
+    },
+    {
+        title: "Alertas del Sistema",
+        description: "Configurá avisos de stock bajo, vencimientos y actividad de ventas.",
+        href: "/settings/notifications",
+        icon: BellRing,
+        color: "text-pink-500",
+        bg: "bg-pink-500/10",
     },
 ];
 

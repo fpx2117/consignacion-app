@@ -17,6 +17,8 @@ model Configuracion {
   diasAvisoConsignacion          Int      @default(15)
   notificarConsignacionesActivas Boolean  @default(true)
   notificarLiquidaciones         Boolean  @default(true)
+  mensajeWhatsappConsignacion    String?
+  mensajeWhatsappVenta           String?
   sucursalId                     Int      @unique @default(1)
   sucursal                       Sucursal @relation(fields: [sucursalId], references: [id])
 }

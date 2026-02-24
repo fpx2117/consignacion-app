@@ -16,7 +16,8 @@ import {
   CheckCircle2,
   User,
   AlertTriangle,
-  Printer
+  Printer,
+  MessageCircle
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -295,9 +296,19 @@ export default function VentaDetailPage() {
                 Descargar Ticket PDF
               </Button>
 
-              {/* [NOTA]: Se eliminó el botón de WhatsApp porque esta vista corresponde a TICKET POS.
-                 Solo debe mostrarse en la vista de REMITO / CONSIGNACION.
-              */}
+              <Button
+                onClick={() => {
+                  const phone = venta?.cliente?.telefono || "";
+                  const name = venta?.cliente?.nombre || "Cliente";
+                  window.open(`/ticket-loading/${venta?.id}?mode=whatsapp&phone=${encodeURIComponent(phone)}&name=${encodeURIComponent(name)}`, '_blank');
+                }}
+                variant="outline"
+                className="w-full justify-start bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/20 shadow-sm h-12"
+                disabled={loading}
+              >
+                <MessageCircle className="h-4 w-4 mr-3 text-emerald-500" />
+                Compartir por WhatsApp
+              </Button>
 
             </CardContent>
           </Card>
