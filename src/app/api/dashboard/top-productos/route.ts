@@ -31,12 +31,18 @@ export async function GET(req: Request) {
   const period = (searchParams.get("period") as Period) ?? "month";
   const limit = Math.min(Number(searchParams.get("limit") ?? 10) || 10, 50);
   const start = getPeriodStart(period);
+  const sucursalId = auth.activeSucursalId;
 
-  const liquidacionWhere = start ? { fecha: { gte: start } } : undefined;
+  const liquidacionWhere = start ? { fecha: { gte: start } } : {};
 
   // 1) Top vendidos (LiquidacionItem -> detalle -> producto)
   const items = await prisma.liquidacionItem.findMany({
-    where: liquidacionWhere ? { liquidacion: liquidacionWhere } : undefined,
+    where: {
+      liquidacion: {
+        ...liquidacionWhere,
+        consignacion: { sucursalId }
+      }
+    },
     select: {
       unitsVendidas: true,
       precioUnitario: true,
@@ -73,7 +79,12 @@ export async function GET(req: Request) {
       producto: { select: { nombre: true } },
       consignacion: { select: { fecha: true } },
     },
-    where: start ? { consignacion: { fecha: { gte: start } } } : undefined,
+    where: {
+      consignacion: {
+        ...(start ? { fecha: { gte: start } } : {}),
+        sucursalId
+      }
+    },
   });
 
   const mapConsignados = new Map<number, { productoId: number; nombre: string; unitsEntregadas: number }>();

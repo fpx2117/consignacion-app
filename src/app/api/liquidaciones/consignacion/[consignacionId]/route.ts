@@ -47,7 +47,7 @@ export async function POST(req: Request, { params }: RouteParams) {
   const { items } = parsed.data;
 
   // ✅ 2. Preparar Alertas y Config
-  const configGlobal = await obtenerConfiguracionGlobal();
+  const configGlobal = await obtenerConfiguracionGlobal(auth.activeSucursalId);
   const notificationsQueue: any[] = [];
 
   try {

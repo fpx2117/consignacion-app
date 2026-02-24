@@ -94,7 +94,7 @@ export async function PUT(req: Request, { params }: RouteParams) {
       for (const item of newItems) {
         const oldDet = oldDetalles.get(item.productoId);
         const yaProcesado = oldDet ? (oldDet.unitsVendidasAcum + oldDet.unitsDevueltasAcum) : 0;
-        
+
         if (item.unitsEntregadas < yaProcesado) {
           throw new Error(`Las unidades entregadas del producto ${item.productoId} no pueden ser menores a lo ya liquidado (${yaProcesado})`);
         }
@@ -102,14 +102,30 @@ export async function PUT(req: Request, { params }: RouteParams) {
         const deltaEntregadas = item.unitsEntregadas - (oldDet?.unitsEntregadas ?? 0);
 
         if (deltaEntregadas !== 0) {
-          const productoAntes = await tx.producto.findUnique({ where: { id: item.productoId } });
-          if (!productoAntes) throw new Error(`Producto ${item.productoId} no encontrado`);
+          const sucursalId = consignacion.sucursalId; // Usamos la sucursal de la consignación
 
-          if (deltaEntregadas > 0 && productoAntes.stockDisponibleUnits < deltaEntregadas) {
-            throw new Error(`Stock insuficiente para producto ${item.productoId}`);
+          // 1. Obtener stock de la sucursal
+          const sAntes = await tx.stockSucursal.findUnique({
+            where: { productoId_sucursalId: { productoId: item.productoId, sucursalId } },
+            include: { producto: true }
+          });
+
+          if (!sAntes) throw new Error(`El producto ${item.productoId} no está asignado a la sucursal de la consignación.`);
+
+          if (deltaEntregadas > 0 && sAntes.stockDisponibleUnits < deltaEntregadas) {
+            throw new Error(`Stock insuficiente para producto ${sAntes.producto.nombre} en esta sucursal.`);
           }
 
-          // Ajustar Stock Global
+          // 2. Ajustar Stock en Sucursal
+          const sDespues = await tx.stockSucursal.update({
+            where: { id: sAntes.id },
+            data: {
+              stockDisponibleUnits: { decrement: deltaEntregadas },
+              stockConsignadoUnits: { increment: deltaEntregadas }
+            }
+          });
+
+          // 3. Sincronizar Stock Global
           const productoDespues = await tx.producto.update({
             where: { id: item.productoId },
             data: {
@@ -122,11 +138,12 @@ export async function PUT(req: Request, { params }: RouteParams) {
           await tx.movimientoStock.create({
             data: {
               productoId: item.productoId,
+              sucursalId,
               tipo: deltaEntregadas > 0 ? TipoMovimientoStock.SALIDA : TipoMovimientoStock.ENTRADA,
               motivo: deltaEntregadas > 0 ? MotivoMovimientoStock.AJUSTE_NEGATIVO : MotivoMovimientoStock.AJUSTE_POSITIVO,
               cantidad: Math.abs(deltaEntregadas),
-              stockPrevio: productoAntes.stockDisponibleUnits,
-              stockPosterior: productoDespues.stockDisponibleUnits,
+              stockPrevio: sAntes.stockDisponibleUnits,
+              stockPosterior: sDespues.stockDisponibleUnits,
               observaciones: `Ajuste manual Consignación #${consignacionId}`
             }
           });
@@ -163,9 +180,23 @@ export async function PUT(req: Request, { params }: RouteParams) {
             throw new Error(`No se puede eliminar el producto ${prodId} porque ya tiene liquidaciones`);
           }
 
-          const productoAntes = await tx.producto.findUnique({ where: { id: prodId } });
+          const sucursalId = consignacion.sucursalId;
 
-          // Devolver stock al almacén
+          // 1. Obtener stock de la sucursal
+          const sAntes = await tx.stockSucursal.findUnique({
+            where: { productoId_sucursalId: { productoId: prodId, sucursalId } }
+          });
+
+          // 2. Devolver stock al almacén de la sucursal
+          const sDespues = await tx.stockSucursal.update({
+            where: { id: sAntes!.id },
+            data: {
+              stockDisponibleUnits: { increment: oldDet.unitsEntregadas },
+              stockConsignadoUnits: { decrement: oldDet.unitsEntregadas }
+            }
+          });
+
+          // 3. Sincronizar stock global
           const productoDespues = await tx.producto.update({
             where: { id: prodId },
             data: {
@@ -178,11 +209,12 @@ export async function PUT(req: Request, { params }: RouteParams) {
           await tx.movimientoStock.create({
             data: {
               productoId: prodId,
+              sucursalId,
               tipo: TipoMovimientoStock.ENTRADA,
               motivo: MotivoMovimientoStock.AJUSTE_POSITIVO,
               cantidad: oldDet.unitsEntregadas,
-              stockPrevio: productoAntes!.stockDisponibleUnits,
-              stockPosterior: productoDespues.stockDisponibleUnits,
+              stockPrevio: sAntes!.stockDisponibleUnits,
+              stockPosterior: sDespues.stockDisponibleUnits,
               observaciones: `Eliminado de Consignación #${consignacionId}`
             }
           });
@@ -259,9 +291,9 @@ export async function POST(req: Request, { params }: RouteParams) {
         if (vendidas > 0) {
           totalVenta += vendidas * precioUnit;
           const prev = soldByProduct.get(det.productoId);
-          soldByProduct.set(det.productoId, { 
-            units: (prev?.units ?? 0) + vendidas, 
-            precioUnitario: precioUnit 
+          soldByProduct.set(det.productoId, {
+            units: (prev?.units ?? 0) + vendidas,
+            precioUnitario: precioUnit
           });
         }
       }
@@ -298,8 +330,23 @@ export async function POST(req: Request, { params }: RouteParams) {
           },
         });
 
-        const productoAntes = await tx.producto.findUnique({ where: { id: det.productoId } });
+        const sucursalId = consignacion.sucursalId;
 
+        // 1. Obtener stock de la sucursal
+        const sAntes = await tx.stockSucursal.findUnique({
+          where: { productoId_sucursalId: { productoId: det.productoId, sucursalId } }
+        });
+
+        // 2. Actualizar Stock en Sucursal
+        const sDespues = await tx.stockSucursal.update({
+          where: { id: sAntes!.id },
+          data: {
+            stockConsignadoUnits: { decrement: vendidas + devueltas },
+            ...(devueltas > 0 ? { stockDisponibleUnits: { increment: devueltas } } : {}),
+          },
+        });
+
+        // 3. Sincronizar Stock Global
         const productoDespues = await tx.producto.update({
           where: { id: det.productoId },
           data: {
@@ -308,31 +355,33 @@ export async function POST(req: Request, { params }: RouteParams) {
           },
         });
 
-        // ✅ AUDITORÍA: SI DEVOLVIÓ ALGO (Entra al almacén)
+        // ✅ AUDITORÍA: SI DEVOLVIÓ ALGO (Entra al almacén de la sucursal)
         if (devueltas > 0) {
           await tx.movimientoStock.create({
             data: {
               productoId: det.productoId,
+              sucursalId,
               tipo: TipoMovimientoStock.ENTRADA,
               motivo: MotivoMovimientoStock.DEVOLUCION_CLIENTE,
               cantidad: devueltas,
-              stockPrevio: productoAntes!.stockDisponibleUnits,
-              stockPosterior: productoDespues.stockDisponibleUnits,
+              stockPrevio: sAntes!.stockDisponibleUnits,
+              stockPosterior: sDespues.stockDisponibleUnits,
               observaciones: `Devolución s/Consignación #${consignacionId}`
             }
           });
         }
 
-        // ✅ AUDITORÍA: SI VENDIÓ ALGO (Sale definitivamente)
+        // ✅ AUDITORÍA: SI VENDIÓ ALGO (Sale definitivamente de la sucursal)
         if (vendidas > 0) {
           await tx.movimientoStock.create({
             data: {
               productoId: det.productoId,
+              sucursalId,
               tipo: TipoMovimientoStock.SALIDA,
               motivo: MotivoMovimientoStock.VENTA,
               cantidad: vendidas,
-              stockPrevio: productoAntes!.stockDisponibleUnits,
-              stockPosterior: productoDespues.stockDisponibleUnits,
+              stockPrevio: sAntes!.stockDisponibleUnits,
+              stockPosterior: sDespues.stockDisponibleUnits,
               observaciones: `Venta Liquidada s/Consignación #${consignacionId}`
             }
           });

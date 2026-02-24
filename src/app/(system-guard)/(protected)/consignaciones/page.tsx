@@ -21,6 +21,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 
 import { apiService } from "@/lib/apiService";
+import { useSucursalStore } from "@/store/useSucursalStore";
 import type { Consignacion, Cliente } from "@/lib/types";
 
 import { Button } from "@/components/ui/button";
@@ -86,6 +87,7 @@ export default function ConsignacionesPage() {
   const [loading, setLoading] = React.useState(true);
   const [q, setQ] = React.useState("");
   const [activeTab, setActiveTab] = React.useState<string>("TODAS");
+  const activeSucursalId = useSucursalStore((s) => s.activeSucursalId);
   const [currentPage, setCurrentPage] = React.useState(1);
 
   const load = React.useCallback(async () => {
@@ -100,7 +102,7 @@ export default function ConsignacionesPage() {
     }
   }, []);
 
-  React.useEffect(() => { load(); }, [load]);
+  React.useEffect(() => { load(); }, [load, activeSucursalId]);
 
   const groupedData = React.useMemo(() => {
     const filtered = data.filter((c) => {

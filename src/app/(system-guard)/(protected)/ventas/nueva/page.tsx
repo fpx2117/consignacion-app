@@ -27,6 +27,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { ShiftEndAlert } from "@/components/shift-end-alert";
+import { useSucursalStore } from "@/store/useSucursalStore";
 
 // --- TIPOS ---
 type ProductoConStock = Producto & { stockDisponibleUnits?: number };
@@ -49,6 +50,7 @@ const METODOS_PAGO: { value: MetodoPago; label: string; icon: any }[] = [
 
 export default function NuevaVentaPage() {
   const router = useRouter();
+  const { activeSucursalId } = useSucursalStore();
 
   // --- States ---
   const [productos, setProductos] = React.useState<ProductoConStock[]>([]);
@@ -122,9 +124,15 @@ export default function NuevaVentaPage() {
     } finally {
       setVerificandoCaja(false);
     }
-  }, []);
+  }, [activeSucursalId]);
 
   React.useEffect(() => { fetchData(); }, [fetchData]);
+
+  // Clean cart when sucursal changes
+  React.useEffect(() => {
+    setCart([]);
+    setProductoId("");
+  }, [activeSucursalId]);
 
   // --- LÓGICA DE SCANNER ---
   React.useEffect(() => {

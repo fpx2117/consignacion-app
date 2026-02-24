@@ -35,7 +35,7 @@ import type {
 
 /* =========================
     FETCH WRAPPER (HELPER)
-========================= */
+ ========================= */
 async function apiRequest<T>(path: string, init?: RequestInit): Promise<ApiResponse<T>> {
   let url = path;
 
@@ -105,7 +105,7 @@ async function apiData<T>(path: string, init?: RequestInit): Promise<T> {
 
 /* =========================
     HELPERS DE URL
-========================= */
+ ========================= */
 function getPublicBaseUrl(): string {
   const raw =
     process.env.NEXT_PUBLIC_BASE_URL?.trim() ||
@@ -127,7 +127,7 @@ function normalizeShareUrl(raw: string): string {
 
 /* =========================
     DEFINICIÓN DE RUTAS
-========================= */
+ ========================= */
 export const API_ROUTES = {
   AUTH: {
     SETUP: "/api/auth/setup-auth",
@@ -201,7 +201,7 @@ export const API_ROUTES = {
 
 /* =========================
     API SERVICE (MÉTODOS)
-========================= */
+ ========================= */
 export const apiService = {
   routes: API_ROUTES,
 
@@ -559,6 +559,11 @@ export const apiService = {
     return apiData<any>(`/api/settings/sucursales/${id}`, {
       method: "PUT",
       body: JSON.stringify(payload),
+    });
+  },
+  deleteSucursal(id: number) {
+    return apiData<any>(`/api/settings/sucursales/${id}`, {
+      method: "DELETE",
     });
   },
 };

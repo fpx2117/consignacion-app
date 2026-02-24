@@ -1,14 +1,14 @@
 import { prisma } from "@/lib/prisma";
 
 /**
- * Obtiene la configuración global del sistema (Singleton ID: 1).
+ * Obtiene la configuración de una sucursal específica.
  * Si no existe, la crea con valores por defecto.
  */
-export async function obtenerConfiguracionGlobal() {
+export async function obtenerConfiguracionGlobal(sucursalId: number = 1) {
   try {
-    // Intentamos buscar la configuración
+    // Intentamos buscar la configuración por sucursal
     const config = await prisma.configuracion.findUnique({
-      where: { id: 1 },
+      where: { sucursalId },
     });
 
     // Si ya existe, la devolvemos
@@ -16,27 +16,30 @@ export async function obtenerConfiguracionGlobal() {
       return config;
     }
 
-    // Si es el primer arranque del sistema, creamos la default
-    // Prisma rellenará el resto de campos con los @default del schema
+    // Si no existe, creamos la default para esa sucursal
     const nuevaConfig = await prisma.configuracion.create({
       data: {
-        id: 1,
+        sucursalId,
       },
     });
 
     return nuevaConfig;
   } catch (error) {
-    console.error("⚠️ Error obteniendo configuración global:", error);
+    console.error(`⚠️ Error obteniendo configuración para sucursal ${sucursalId}:`, error);
 
-    // 🔥 SOLUCIÓN: El fallback ahora tiene la estructura completa del modelo
+    // Fallback compatible con el modelo
     return {
-      id: 1,
+      id: 0,
+      sucursalId,
       minStockGlobal: 5,
       diasAnticipacionVencimiento: 7,
       notificarVencimientos: true,
       notificarStockBajo: true,
       notificarVentas: true,
-      usarControlDeCaja: true // <--- Aquí está el campo que faltaba
+      notificarLiquidaciones: true,
+      notificarConsignacionesActivas: true,
+      diasAvisoConsignacion: 15,
+      usarControlDeCaja: true
     };
   }
 }

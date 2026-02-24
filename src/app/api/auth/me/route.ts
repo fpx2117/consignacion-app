@@ -48,20 +48,12 @@ export async function GET() {
     const allowSucursales = user.subscription?.plan?.limits?.allowSucursales;
 
     if (user.rol === "ADMIN") {
-      if (allowSucursales) {
-        // ADMIN con plan Enterprise -> ve todas las activas (o todas para gestionarlas)
-        sucursalesPermitidas = await prisma.sucursal.findMany({
-          where: { activa: true },
-          select: { id: true, nombre: true, esPrincipal: true, activa: true },
-          orderBy: { id: "asc" }
-        });
-      } else {
-        // ADMIN con plan menor -> solo ve la principal
-        sucursalesPermitidas = await prisma.sucursal.findMany({
-          where: { esPrincipal: true },
-          select: { id: true, nombre: true, esPrincipal: true, activa: true }
-        });
-      }
+      // ADMIN siempre puede ver todas las sucursales activas para visualizarlas
+      sucursalesPermitidas = await prisma.sucursal.findMany({
+        where: { activa: true },
+        select: { id: true, nombre: true, esPrincipal: true, activa: true },
+        orderBy: { id: "asc" }
+      });
     } else {
       // EMPLEADO -> solo ve su sucursal asignada (o la principal si no tiene)
       const empSucursalId = user.sucursalId || 1;

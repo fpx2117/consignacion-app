@@ -49,7 +49,7 @@ export async function POST(req: Request) {
     }
 
     // ✅ 1. TRAER CONFIGURACIÓN PRIMERO
-    const configGlobal = await obtenerConfiguracionGlobal();
+    const configGlobal = await obtenerConfiguracionGlobal(auth.activeSucursalId);
     // Asumimos que si no existe el campo en DB aún, por defecto es estricto (true)
     const usaCaja = configGlobal.usarControlDeCaja ?? true;
 
@@ -88,16 +88,29 @@ export async function POST(req: Request) {
       const detallesData = [];
 
       for (const item of items) {
-        const productoAntes = await tx.producto.findUnique({
-          where: { id: item.productoId },
+        const sucursalId = auth.activeSucursalId;
+
+        // 1. Obtener stock de la sucursal específica
+        const stockSucursalAntes = await tx.stockSucursal.findUnique({
+          where: { productoId_sucursalId: { productoId: item.productoId, sucursalId } },
+          include: { producto: true }
         });
 
-        if (!productoAntes) throw new Error(`Producto #${item.productoId} no existe.`);
-
-        if (productoAntes.stockDisponibleUnits < item.units) {
-          throw new Error(`Stock insuficiente para "${productoAntes.nombre}". Disponibles: ${productoAntes.stockDisponibleUnits}`);
+        if (!stockSucursalAntes) {
+          throw new Error(`El producto #${item.productoId} no está asignado a esta sucursal.`);
         }
 
+        if (stockSucursalAntes.stockDisponibleUnits < item.units) {
+          throw new Error(`Stock insuficiente para "${stockSucursalAntes.producto.nombre}". Disponibles: ${stockSucursalAntes.stockDisponibleUnits}`);
+        }
+
+        // 2. Decrementar stock en la sucursal
+        const stockSucursalDespues = await tx.stockSucursal.update({
+          where: { id: stockSucursalAntes.id },
+          data: { stockDisponibleUnits: { decrement: item.units } },
+        });
+
+        // 3. Sincronizar stock global (opcional pero recomendado para consistencia legacy)
         const productoDespues = await tx.producto.update({
           where: { id: item.productoId },
           data: { stockDisponibleUnits: { decrement: item.units } },
@@ -107,12 +120,12 @@ export async function POST(req: Request) {
         await tx.movimientoStock.create({
           data: {
             productoId: item.productoId,
-            sucursalId: auth.activeSucursalId,
+            sucursalId,
             tipo: TipoMovimientoStock.SALIDA,
             motivo: MotivoMovimientoStock.VENTA,
             cantidad: item.units,
-            stockPrevio: productoAntes.stockDisponibleUnits,
-            stockPosterior: productoDespues.stockDisponibleUnits,
+            stockPrevio: stockSucursalAntes.stockDisponibleUnits,
+            stockPosterior: stockSucursalDespues.stockDisponibleUnits,
             observaciones: sesionActiva
               ? `Venta POS - Sesión #${sesionActiva.id}`
               : `Venta POS - Rápida (Sin Caja)`
@@ -122,13 +135,14 @@ export async function POST(req: Request) {
         const alerta = evaluateStockAlert(productoDespues, configGlobal);
         if (alerta) notificationsQueue.push(alerta);
 
-        const subtotal = Number(productoAntes.precioVenta) * item.units;
+        const precioVenta = Number(stockSucursalAntes.precioVentaOverride ?? stockSucursalAntes.producto.precioVenta);
+        const subtotal = precioVenta * item.units;
         totalVenta += subtotal;
 
         detallesData.push({
           productoId: item.productoId,
           units: item.units,
-          precioUnitario: productoAntes.precioVenta,
+          precioUnitario: precioVenta,
           subtotal: subtotal,
         });
       }

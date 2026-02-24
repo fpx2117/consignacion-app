@@ -9,7 +9,7 @@ export async function GET() {
 
     try {
         const config = await prisma.configuracion.findUnique({
-            where: { id: 1 },
+            where: { sucursalId: auth.activeSucursalId },
         });
         return NextResponse.json({ data: config });
     } catch (error: any) {
@@ -22,13 +22,9 @@ export async function PUT(req: Request) {
     const auth = await requireAuth();
     if (!auth.ok) return auth.res;
 
-    // Opcional: Validar que el usuario sea ADMIN si lo deseas
-    // if (auth.user.rol !== "ADMIN") return NextResponse.json({ error: "No autorizado" }, { status: 403 });
-
     try {
         const body = await req.json();
 
-        // Extraemos todos los campos posibles de la configuración
         const {
             minStockGlobal,
             diasAnticipacionVencimiento,
@@ -38,12 +34,11 @@ export async function PUT(req: Request) {
             notificarLiquidaciones,
             notificarConsignacionesActivas,
             diasAvisoConsignacion,
-            usarControlDeCaja // <--- Nuestro nuevo campo estrella
+            usarControlDeCaja
         } = body;
 
-        // Actualizamos el registro único (id: 1)
         const configActualizada = await prisma.configuracion.upsert({
-            where: { id: 1 },
+            where: { sucursalId: auth.activeSucursalId },
             update: {
                 ...(minStockGlobal !== undefined && { minStockGlobal }),
                 ...(diasAnticipacionVencimiento !== undefined && { diasAnticipacionVencimiento }),
@@ -56,7 +51,7 @@ export async function PUT(req: Request) {
                 ...(usarControlDeCaja !== undefined && { usarControlDeCaja }),
             },
             create: {
-                id: 1,
+                sucursalId: auth.activeSucursalId,
                 minStockGlobal: minStockGlobal ?? 5,
                 diasAnticipacionVencimiento: diasAnticipacionVencimiento ?? 7,
                 notificarVencimientos: notificarVencimientos ?? true,

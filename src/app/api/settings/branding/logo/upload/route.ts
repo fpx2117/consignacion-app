@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { requireAuth } from "@/lib/requireAuth";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -41,17 +42,17 @@ export async function POST(req: NextRequest) {
 
     const updated = current
       ? await prisma.branding.update({
-          where: { id: current.id },
-          data: { logoData: bytes, logoMime: file.type },
-        })
+        where: { id: current.id },
+        data: { logoData: bytes, logoMime: file.type },
+      })
       : await prisma.branding.create({
-          data: {
-            businessName: "",
-            primaryColor: "#111827",
-            logoData: bytes,
-            logoMime: file.type,
-          },
-        });
+        data: {
+          businessName: "",
+          primaryColor: "#111827",
+          logoData: bytes,
+          logoMime: file.type,
+        },
+      });
 
     return NextResponse.json({ ok: true, brandingId: updated.id });
   } catch (e) {

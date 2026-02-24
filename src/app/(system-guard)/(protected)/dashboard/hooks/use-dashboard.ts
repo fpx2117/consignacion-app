@@ -4,8 +4,10 @@ import type {
   DashboardPeriod, DashboardKpis, DashboardConsignacionesResponse,
   DashboardTopProductos, DashboardTendencia
 } from "@/lib/types";
+import { useSucursalStore } from "@/store/useSucursalStore";
 
 export function useDashboard(period: DashboardPeriod) {
+  const activeSucursalId = useSucursalStore((s) => s.activeSucursalId);
   const [data, setData] = React.useState({
     kpis: null as DashboardKpis | null,
     consig: null as DashboardConsignacionesResponse | null,
@@ -41,7 +43,7 @@ export function useDashboard(period: DashboardPeriod) {
 
   React.useEffect(() => {
     loadAll();
-  }, [loadAll]);
+  }, [loadAll, activeSucursalId]);
 
   return { ...data, loading, error, refresh: loadAll };
 }

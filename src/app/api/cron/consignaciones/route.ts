@@ -2,79 +2,83 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { sendNotification } from "@/lib/socket-trigger";
 import { NOTIFICATION_TYPE } from "@/lib/notificationes/notificaciones-types";
+import { obtenerConfiguracionGlobal } from "@/lib/config";
 
 // Permite ser llamado sin auth explícita para que un cron service pueda pegarle
 export async function GET() {
     try {
-        const config = await prisma.configuracion.findUnique({
-            where: { id: 1 },
+        const sucursales = await prisma.sucursal.findMany({
+            where: { activa: true },
+            include: { configuracion: true }
         });
 
-        if (!config || !config.notificarConsignacionesActivas) {
-            return NextResponse.json({ message: "Alertas de consignaciones desactivadas" });
-        }
+        let totalEvaluadas = 0;
+        let totalNotificacionesEnviadas = 0;
+        const hoy = new Date().toISOString().split("T")[0];
 
-        const { diasAvisoConsignacion } = config;
+        for (const sucursal of sucursales) {
+            const config = sucursal.configuracion || await obtenerConfiguracionGlobal(sucursal.id);
 
-        // Calculamos la fecha límite (Consignaciones creadas ANTES de esta fecha están atrasadas)
-        const limiteDate = new Date();
-        limiteDate.setDate(limiteDate.getDate() - diasAvisoConsignacion);
+            if (!config.notificarConsignacionesActivas) continue;
 
-        const consignacionesAtrasadas = await prisma.consignacion.findMany({
-            where: {
-                estado: "ABIERTA",
-                fecha: { lte: limiteDate },
-            },
-            include: {
-                cliente: true
-            }
-        });
+            const { diasAvisoConsignacion } = config;
+            const limiteDate = new Date();
+            limiteDate.setDate(limiteDate.getDate() - diasAvisoConsignacion);
 
-        let notificacionesEnviadas = 0;
-        const hoy = new Date().toISOString().split("T")[0]; // YYYY-MM-DD para evitar spam el mismo día
-
-        for (const cons of consignacionesAtrasadas) {
-            const fingerprint = `CONSIGNMENT_ALERT_${cons.id}_${hoy}`;
-
-            // Verificamos si ya notificamos HOY sobre esta consignación
-            const existing = await prisma.notification.findUnique({
-                where: { fingerprint }
+            const consignacionesAtrasadas = await prisma.consignacion.findMany({
+                where: {
+                    sucursalId: sucursal.id,
+                    estado: "ABIERTA",
+                    fecha: { lte: limiteDate },
+                },
+                include: {
+                    cliente: true
+                }
             });
 
-            if (!existing) {
-                // Cuántos días exactos lleva?
-                const diffTime = Math.abs(new Date().getTime() - cons.fecha.getTime());
-                const diasReales = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            totalEvaluadas += consignacionesAtrasadas.length;
 
-                const title = `Consignación Pendiente`;
-                const desc = `La consignación #${cons.numeroFolio} de ${cons.cliente.nombre} lleva ${diasReales} días en la calle.`;
+            for (const cons of consignacionesAtrasadas) {
+                const fingerprint = `CONSIGNMENT_ALERT_${cons.id}_${hoy}`;
+                const existing = await prisma.notification.findUnique({
+                    where: { fingerprint }
+                });
 
-                const dbNotif = await prisma.notification.create({
-                    data: {
-                        type: "CONSIGNMENT_ALERT",
+                if (!existing) {
+                    const diffTime = Math.abs(new Date().getTime() - cons.fecha.getTime());
+                    const diasReales = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+                    const title = `Consignación Pendiente`;
+                    const desc = `[${sucursal.nombre}] La consignación #${cons.numeroFolio} de ${cons.cliente.nombre} lleva ${diasReales} días en la calle.`;
+
+                    const dbNotif = await prisma.notification.create({
+                        data: {
+                            type: "CONSIGNMENT_ALERT",
+                            title,
+                            description: desc,
+                            fingerprint,
+                            read: false,
+                        }
+                    });
+
+                    await sendNotification({
+                        id: dbNotif.id,
+                        type: NOTIFICATION_TYPE.CONSIGNMENT_ALERT,
                         title,
-                        description: desc,
-                        fingerprint,
-                        read: false,
-                    }
-                });
+                        message: desc,
+                        branch: sucursal.nombre,
+                        data: { consignacionId: cons.id }
+                    });
 
-                await sendNotification({
-                    id: dbNotif.id,
-                    type: NOTIFICATION_TYPE.CONSIGNMENT_ALERT,
-                    title,
-                    message: desc,
-                    data: { consignacionId: cons.id }
-                });
-
-                notificacionesEnviadas++;
+                    totalNotificacionesEnviadas++;
+                }
             }
         }
 
         return NextResponse.json({
             success: true,
-            evaluadas: consignacionesAtrasadas.length,
-            nuevasNotificaciones: notificacionesEnviadas
+            evaluadas: totalEvaluadas,
+            nuevasNotificaciones: totalNotificacionesEnviadas
         });
 
     } catch (error) {
