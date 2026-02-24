@@ -7,16 +7,18 @@ datasource db {
 }
 
 model Configuracion {
-  id                             Int     @id @default(1)
-  minStockGlobal                 Int     @default(5)
-  diasAnticipacionVencimiento    Int     @default(7)
-  notificarStockBajo             Boolean @default(true)
-  notificarVencimientos          Boolean @default(true)
-  notificarVentas                Boolean @default(true)
-  usarControlDeCaja              Boolean @default(true)
-  diasAvisoConsignacion          Int     @default(15)
-  notificarConsignacionesActivas Boolean @default(true)
-  notificarLiquidaciones         Boolean @default(true)
+  id                             Int      @id @default(autoincrement())
+  minStockGlobal                 Int      @default(5)
+  diasAnticipacionVencimiento    Int      @default(7)
+  notificarStockBajo             Boolean  @default(true)
+  notificarVencimientos          Boolean  @default(true)
+  notificarVentas                Boolean  @default(true)
+  usarControlDeCaja              Boolean  @default(true)
+  diasAvisoConsignacion          Int      @default(15)
+  notificarConsignacionesActivas Boolean  @default(true)
+  notificarLiquidaciones         Boolean  @default(true)
+  sucursalId                     Int      @unique @default(1)
+  sucursal                       Sucursal @relation(fields: [sucursalId], references: [id])
 }
 
 model Usuario {
@@ -119,6 +121,8 @@ model Branding {
   updatedAt    DateTime @updatedAt
   logoData     Bytes?
   logoMime     String?
+  sucursalId   Int      @unique @default(1)
+  sucursal     Sucursal @relation(fields: [sucursalId], references: [id])
 }
 
 model MovimientoStock {
@@ -174,19 +178,24 @@ model Producto {
   fechaVencimiento     DateTime?
   activo               Boolean               @default(true)
   categoriaId          Int?
-  codigoBarra          String?               @unique
+  codigoBarra          String?
   descripcion          String?
   iva                  Decimal               @default(21.0) @db.Decimal(5, 2)
-  sku                  String?               @unique
+  sku                  String?
+  sucursalId           Int?                  @default(1)
   consignacionDetalles ConsignacionDetalle[]
   movimientoStocks     MovimientoStock[]
   notifications        Notification[]
   categoria            Categoria?            @relation(fields: [categoriaId], references: [id])
   stockSucursals       StockSucursal[]
   ventaDetalles        VentaDetalle[]
+  sucursal             Sucursal?             @relation(fields: [sucursalId], references: [id])
 
   @@index([codigoBarra])
   @@index([categoriaId])
+  @@index([sucursalId])
+  @@unique([codigoBarra, sucursalId])
+  @@unique([sku, sucursalId])
 }
 
 model Caja {
@@ -449,6 +458,9 @@ model Sucursal {
   stockProductos StockSucursal[]
   usuarios       Usuario[]
   ventas         Venta[]
+  productos      Producto[]
+  configuracion  Configuracion?
+  branding       Branding?
 }
 
 model StockSucursal {

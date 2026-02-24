@@ -5,10 +5,11 @@ interface NotificationPayload {
   type: NOTIFICATION_TYPE | string;
   title?: string;
   message: string;
+  branch?: string; // ✅ Opcional: Para mostrar la sucursal en el toast
   data?: any;
 }
 
-export async function sendNotification({ id, type, title, message, data }: NotificationPayload) {
+export async function sendNotification({ id, type, title, message, branch, data }: NotificationPayload) {
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 
   try {
@@ -22,6 +23,7 @@ export async function sendNotification({ id, type, title, message, data }: Notif
           type,
           title,
           message,
+          branch,
           data,
           timestamp: new Date().toISOString(),
         },

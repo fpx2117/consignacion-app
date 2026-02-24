@@ -18,13 +18,34 @@ export async function GET() {
     const auth = await requireAuth();
     if (!auth.ok) return auth.res;
 
+    const sucursalId = auth.activeSucursalId;
+
     const productos = await prisma.producto.findMany({
-      where: { activo: true },
-      include: { categoria: true },
+      where: {
+        activo: true,
+        sucursalId
+      },
+      include: {
+        categoria: true,
+        stockSucursals: {
+          where: { sucursalId }
+        }
+      },
       orderBy: { id: "desc" },
     });
 
-    return NextResponse.json({ data: productos });
+    // Mapeamos para que el frontend reciba el stock de la sucursal activa
+    const mapped = productos.map(p => {
+      const branchStock = p.stockSucursals[0];
+      return {
+        ...p,
+        stockDisponibleUnits: branchStock?.stockDisponibleUnits ?? 0,
+        stockConsignadoUnits: branchStock?.stockConsignadoUnits ?? 0,
+        stockMinUnits: branchStock?.stockMinUnits ?? p.stockMinUnits,
+      };
+    });
+
+    return NextResponse.json({ data: mapped });
   } catch (error) {
     console.error("Error obteniendo productos:", error);
     return NextResponse.json(
@@ -36,7 +57,7 @@ export async function GET() {
 
 /**
  * POST: CREAR PRODUCTO
- * Crea el producto y registra el movimiento inicial en el historial.
+ * Crea el producto, el registro de stock para la sucursal actual y registra el movimiento inicial.
  */
 export async function POST(req: Request) {
   try {
@@ -46,6 +67,8 @@ export async function POST(req: Request) {
     if (!requireRole(auth.user, ["ADMIN"])) {
       return NextResponse.json({ error: "No tienes permisos (Admin requerido)" }, { status: 403 });
     }
+
+    const sucursalId = auth.activeSucursalId;
 
     // Guard: Verificar límite de productos del plan
     const productCheck = await checkProductLimit();
@@ -70,7 +93,6 @@ export async function POST(req: Request) {
     const stockInicial = data.stockDisponibleUnits ?? 0;
 
     // --- TRANSACCIÓN ATÓMICA ---
-    // Usamos $transaction para asegurar que el producto y su historial se creen juntos
     const created = await prisma.$transaction(async (tx) => {
 
       // 1. Crear el producto
@@ -80,7 +102,7 @@ export async function POST(req: Request) {
           descripcion: data.descripcion,
           precioVenta: data.precioVenta,
           precioCosto: data.precioCosto,
-          stockDisponibleUnits: stockInicial,
+          stockDisponibleUnits: stockInicial, // Global (legacy/sync)
           stockConsignadoUnits: 0,
           stockMinUnits: data.stockMinUnits ?? 0,
           packSizeUnits: data.packSizeUnits ?? null,
@@ -88,17 +110,30 @@ export async function POST(req: Request) {
           sku: data.sku?.trim() || null,
           categoriaId: data.categoriaId ?? null,
           fechaVencimiento: data.fechaVencimiento ? new Date(data.fechaVencimiento) : null,
+          sucursalId,
         },
         include: { categoria: true }
       });
 
-      // 2. Registrar el movimiento inicial si el stock es mayor a 0
+      // 2. Crear el registro de StockSucursal para la sucursal activa
+      await tx.stockSucursal.create({
+        data: {
+          productoId: nuevoProducto.id,
+          sucursalId,
+          stockDisponibleUnits: stockInicial,
+          stockConsignadoUnits: 0,
+          stockMinUnits: data.stockMinUnits ?? 0,
+        }
+      });
+
+      // 3. Registrar el movimiento inicial
       if (stockInicial > 0) {
         await tx.movimientoStock.create({
           data: {
             productoId: nuevoProducto.id,
+            sucursalId,
             tipo: "ENTRADA",
-            motivo: "COMPRA", // Se asume compra como motivo inicial por defecto
+            motivo: "COMPRA",
             cantidad: stockInicial,
             stockPrevio: 0,
             stockPosterior: stockInicial,
@@ -111,7 +146,7 @@ export async function POST(req: Request) {
     });
 
     // --- LÓGICA DE NOTIFICACIONES ---
-    const configGlobal = await obtenerConfiguracionGlobal();
+    const configGlobal = await obtenerConfiguracionGlobal(auth.activeSucursalId);
     const umbralAlerta = created.stockMinUnits > 0
       ? created.stockMinUnits
       : configGlobal.minStockGlobal;

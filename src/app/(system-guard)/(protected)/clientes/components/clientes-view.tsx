@@ -4,6 +4,7 @@ import * as React from "react";
 import Link from "next/link";
 import type { Cliente } from "@/lib/types";
 import { apiService } from "@/lib/apiService";
+import { useSucursalStore } from "@/store/useSucursalStore";
 import { motion, AnimatePresence } from "motion/react";
 
 import { Card, CardContent } from "@/components/ui/card";
@@ -53,6 +54,7 @@ const getInitials = (name: string) =>
     .toUpperCase();
 
 export function ClientesView() {
+  const activeSucursalId = useSucursalStore((s) => s.activeSucursalId);
   const [items, setItems] = React.useState<Cliente[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [q, setQ] = React.useState("");
@@ -70,6 +72,10 @@ export function ClientesView() {
       setLoading(false);
     }
   }
+
+  React.useEffect(() => {
+    load();
+  }, [activeSucursalId]);
 
   const toggleStatus = async (cliente: Cliente) => {
     try {

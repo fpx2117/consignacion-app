@@ -22,6 +22,7 @@ export async function GET(req: Request) {
 
   const { searchParams } = new URL(req.url);
   const period = (searchParams.get("period") as Period) ?? "month";
+  const sucursalId = auth.activeSucursalId;
 
   const days = getDays(period);
   const end = startOfDay(new Date());
@@ -30,10 +31,28 @@ export async function GET(req: Request) {
 
   // Traemos todo y agregamos por día en JS (simple y confiable para Postgres)
   const [consig, liq, ventas, pagos] = await Promise.all([
-    prisma.consignacion.findMany({ where: { fecha: { gte: start } }, select: { fecha: true } }),
-    prisma.liquidacion.findMany({ where: { fecha: { gte: start } }, select: { fecha: true } }),
-    prisma.venta.findMany({ where: { fecha: { gte: start } }, select: { fecha: true, total: true } }),
-    prisma.pago.findMany({ where: { fecha: { gte: start } }, select: { fecha: true, monto: true } }),
+    prisma.consignacion.findMany({
+      where: { fecha: { gte: start }, sucursalId },
+      select: { fecha: true }
+    }),
+    prisma.liquidacion.findMany({
+      where: {
+        fecha: { gte: start },
+        consignacion: { sucursalId }
+      },
+      select: { fecha: true }
+    }),
+    prisma.venta.findMany({
+      where: { fecha: { gte: start }, sucursalId },
+      select: { fecha: true, total: true }
+    }),
+    prisma.pago.findMany({
+      where: {
+        fecha: { gte: start },
+        cliente: { sucursalId }
+      },
+      select: { fecha: true, monto: true }
+    }),
   ]);
 
   const key = (d: Date) => startOfDay(d).toISOString().slice(0, 10);

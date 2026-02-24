@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Plus, Store, Navigation, BriefcaseBusiness, Check, X, Pencil } from "lucide-react";
+import { Plus, Store, Navigation, BriefcaseBusiness, Check, X, Pencil, Trash2 } from "lucide-react";
 
 import { apiService } from "@/lib/apiService";
 import { Button } from "@/components/ui/button";
@@ -39,6 +39,11 @@ export default function BranchesClient() {
     const [nombre, setNombre] = useState("");
     const [activa, setActiva] = useState(true);
     const [submitting, setSubmitting] = useState(false);
+
+    // Delete State
+    const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+    const [branchToDelete, setBranchToDelete] = useState<Sucursal | null>(null);
+    const [deleting, setDeleting] = useState(false);
 
     const fetchBranches = async () => {
         try {
@@ -87,6 +92,27 @@ export default function BranchesClient() {
             toast.error(e.message || "Error al guardar");
         } finally {
             setSubmitting(false);
+        }
+    };
+
+    const confirmDelete = (branch: Sucursal) => {
+        setBranchToDelete(branch);
+        setIsDeleteModalOpen(true);
+    };
+
+    const handleDelete = async () => {
+        if (!branchToDelete) return;
+        try {
+            setDeleting(true);
+            await apiService.deleteSucursal(branchToDelete.id);
+            toast.success("Sucursal eliminada correctamente.");
+            setIsDeleteModalOpen(false);
+            fetchBranches();
+        } catch (e: any) {
+            toast.error(e.message || "Error al eliminar");
+        } finally {
+            setDeleting(false);
+            setBranchToDelete(null);
         }
     };
 
@@ -152,6 +178,17 @@ export default function BranchesClient() {
                                 <Pencil className="h-4 w-4 mr-2" />
                                 Editar
                             </Button>
+                            {!branch.esPrincipal && (
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="w-full rounded-xl text-destructive hover:bg-destructive/10 border-destructive/20"
+                                    onClick={() => confirmDelete(branch)}
+                                >
+                                    <Trash2 className="h-4 w-4 mr-2" />
+                                    Eliminar
+                                </Button>
+                            )}
                         </div>
                     </Card>
                 ))}
@@ -216,6 +253,29 @@ export default function BranchesClient() {
                         </Button>
                         <Button disabled={!nombre.trim() || submitting} onClick={handleSave} className="rounded-xl shadow-md">
                             {submitting ? "Guardando..." : "Guardar Cambios"}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* MODAL (ELIMINAR) */}
+            <Dialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
+                <DialogContent className="sm:max-w-[425px] rounded-[2rem] p-6 border border-border/50 shadow-2xl">
+                    <DialogHeader className="mb-4">
+                        <DialogTitle className="text-2xl font-bold tracking-tight text-destructive">
+                            ¿Eliminar Sucursal?
+                        </DialogTitle>
+                        <DialogDescription className="text-muted-foreground/80">
+                            Esta acción intentará eliminar la sucursal <strong>{branchToDelete?.nombre}</strong> del sistema. Solo podrá completarse si no hay registros vinculados (ventas, stock, etc).
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <DialogFooter className="mt-4 gap-2 sm:gap-0">
+                        <Button variant="ghost" onClick={() => setIsDeleteModalOpen(false)} className="rounded-xl">
+                            Cancelar
+                        </Button>
+                        <Button variant="destructive" disabled={deleting} onClick={handleDelete} className="rounded-xl shadow-md">
+                            {deleting ? "Eliminando..." : "Confirmar Eliminación"}
                         </Button>
                     </DialogFooter>
                 </DialogContent>

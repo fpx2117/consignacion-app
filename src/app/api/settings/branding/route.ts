@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { requireAuth } from "@/lib/requireAuth";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -14,16 +15,21 @@ const DEFAULT_BRANDING = {
 };
 
 export async function GET() {
+  const auth = await requireAuth();
+  if (!auth.ok) return auth.res;
+
   try {
-    // Traemos el más reciente (si existe)
-    const branding = await prisma.branding.findFirst({
-      orderBy: { updatedAt: "desc" },
+    const branding = await prisma.branding.findUnique({
+      where: { sucursalId: auth.activeSucursalId },
+      select: { logoData: true, logoMime: true },
     });
 
-    // Si no existe, lo creamos una vez (singleton)
     if (!branding) {
       const created = await prisma.branding.create({
-        data: DEFAULT_BRANDING,
+        data: {
+          ...DEFAULT_BRANDING,
+          sucursalId: auth.activeSucursalId,
+        },
       });
 
       return NextResponse.json({ ok: true, branding: created });
@@ -40,13 +46,11 @@ export async function GET() {
 }
 
 export async function PUT(req: NextRequest) {
+  const auth = await requireAuth();
+  if (!auth.ok) return auth.res;
+
   try {
     const body = await req.json();
-
-    // Tomamos el registro actual (singleton por “último updated”)
-    const current = await prisma.branding.findFirst({
-      orderBy: { updatedAt: "desc" },
-    });
 
     const data = {
       businessName: typeof body.businessName === "string" ? body.businessName : undefined,
@@ -57,19 +61,17 @@ export async function PUT(req: NextRequest) {
       address: body.address === null || typeof body.address === "string" ? body.address : undefined,
     };
 
-    const updated = current
-      ? await prisma.branding.update({
-          where: { id: current.id },
-          data,
-        })
-      : await prisma.branding.create({
-          data: {
-            ...DEFAULT_BRANDING,
-            ...data,
-            businessName: data.businessName ?? DEFAULT_BRANDING.businessName,
-            primaryColor: data.primaryColor ?? DEFAULT_BRANDING.primaryColor,
-          },
-        });
+    const updated = await prisma.branding.upsert({
+      where: { sucursalId: auth.activeSucursalId },
+      update: data,
+      create: {
+        ...DEFAULT_BRANDING,
+        ...data,
+        sucursalId: auth.activeSucursalId,
+        businessName: data.businessName ?? DEFAULT_BRANDING.businessName,
+        primaryColor: data.primaryColor ?? DEFAULT_BRANDING.primaryColor,
+      },
+    });
 
     return NextResponse.json({ ok: true, branding: updated });
   } catch (error) {

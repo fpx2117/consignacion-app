@@ -1,6 +1,7 @@
 import { PrismaClient } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import pg from "pg";
+// Reload triggered by Antigravity to refresh generated client
 
 /**
  * 1. Setup the Connection String
@@ -35,13 +36,15 @@ const createPrismaClient = () => {
 
 /**
  * 4. Export the Singleton
- * If globalThis.prisma exists, use it. Otherwise, create it.
+ * In dev, we recreate the client to avoid stale generated code cache
  */
-export const prisma = globalForPrisma.prisma ?? createPrismaClient();
+export const prisma = process.env.NODE_ENV === "development"
+  ? createPrismaClient()
+  : (globalForPrisma.prisma ?? createPrismaClient());
 
 /**
- * 5. Store in Global (Only in Dev)
+ * 5. Store in Global (Only in Prod or if we want to stick to one instance)
  */
-if (process.env.NODE_ENV !== "production") {
+if (process.env.NODE_ENV !== "development") {
   globalForPrisma.prisma = prisma;
 }

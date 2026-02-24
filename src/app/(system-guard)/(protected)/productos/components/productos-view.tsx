@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import type { Producto, Categoria } from "@/lib/types";
 import { apiService } from "@/lib/apiService";
+import { useSucursalStore } from "@/store/useSucursalStore";
 import { formatMoney } from "@/lib/utils-format";
 import { cn } from "@/lib/utils";
 import { formatDateSafe, isExpired as dateExpired, isExpiringSoon } from "@/lib/utils-date";
@@ -78,6 +79,7 @@ interface SortConfig {
 }
 
 export function ProductosView() {
+  const activeSucursalId = useSucursalStore((s) => s.activeSucursalId);
   const [items, setItems] = React.useState<Producto[]>([]);
   const [allCategories, setAllCategories] = React.useState<Categoria[]>([]);
   const [loading, setLoading] = React.useState(true);
@@ -114,7 +116,7 @@ export function ProductosView() {
     }
   }, []);
 
-  React.useEffect(() => { load(); }, [load]);
+  React.useEffect(() => { load(); }, [load, activeSucursalId]);
 
   // --- Lógica de Negocio ---
   const isLowStock = React.useCallback((p: Producto) => {

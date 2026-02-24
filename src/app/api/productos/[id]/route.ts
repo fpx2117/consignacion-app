@@ -22,17 +22,32 @@ export async function GET(_: Request, { params }: RouteParams) {
 
     const { id: rawId } = await params;
     const id = Number(rawId);
+    const sucursalId = auth.activeSucursalId;
 
     if (isNaN(id)) return NextResponse.json({ error: "ID inválido" }, { status: 400 });
 
-    const producto = await prisma.producto.findUnique({ 
-      where: { id },
-      include: { categoria: true } 
+    const producto = await prisma.producto.findUnique({
+      where: { id, sucursalId },
+      include: {
+        categoria: true,
+        stockSucursals: {
+          where: { sucursalId }
+        }
+      }
     });
 
     if (!producto) return NextResponse.json({ error: "Producto no encontrado" }, { status: 404 });
 
-    return NextResponse.json({ data: producto });
+    // Mapeamos para devolver el stock de la sucursal activa
+    const branchStock = producto.stockSucursals[0];
+    const data = {
+      ...producto,
+      stockDisponibleUnits: branchStock?.stockDisponibleUnits ?? 0,
+      stockConsignadoUnits: branchStock?.stockConsignadoUnits ?? 0,
+      stockMinUnits: branchStock?.stockMinUnits ?? producto.stockMinUnits,
+    };
+
+    return NextResponse.json({ data });
   } catch (error) {
     console.error("Error al obtener producto:", error);
     return NextResponse.json({ error: "Error interno" }, { status: 500 });
@@ -53,13 +68,15 @@ export async function PUT(req: Request, { params }: RouteParams) {
 
   const { id: rawId } = await params;
   const id = Number(rawId);
+  const sucursalId = auth.activeSucursalId;
+
   if (isNaN(id)) return NextResponse.json({ error: "ID inválido" }, { status: 400 });
 
   const body = await req.json().catch(() => null);
-  
+
   // Extraemos movimientoInfo si viene del AjustarStockDialog
   const { movimientoInfo, ...restOfBody } = body;
-  
+
   const parsed = updateProductoSchema.safeParse(restOfBody);
 
   if (!parsed.success) {
@@ -74,34 +91,53 @@ export async function PUT(req: Request, { params }: RouteParams) {
 
     // --- TRANSACCIÓN PARA ACTUALIZAR Y REGISTRAR MOVIMIENTO ---
     const updated = await prisma.$transaction(async (tx) => {
-      // 1. Obtener estado actual antes de la actualización
-      const anterior = await tx.producto.findUnique({
-        where: { id },
-        select: { stockDisponibleUnits: true, nombre: true }
+      // 1. Obtener estado actual de la sucursal antes de la actualización
+      // Verificamos que el producto pertenezca a la sucursal
+      const anterior = await tx.stockSucursal.findUnique({
+        where: { productoId_sucursalId: { productoId: id, sucursalId } },
       });
 
-      if (!anterior) throw new Error("Producto no encontrado");
-
-      // 2. Ejecutar la actualización del producto
+      // 2. Ejecutar la actualización del producto (datos base)
       const productoUpdate = await tx.producto.update({
-        where: { id },
+        where: { id, sucursalId },
         data: {
           ...parsed.data,
           fechaVencimiento: parsed.data.fechaVencimiento ? new Date(parsed.data.fechaVencimiento) : undefined,
+          // Evitamos pisar el stock global directamente si el frontend lo mandara, 
+          // pero el schema suele tenerlo. Mantenemos sync por ahora.
         },
       });
 
-      // 3. Si hubo cambio de stock y tenemos información del movimiento, registrarlo
-      if (movimientoInfo && parsed.data.stockDisponibleUnits !== undefined) {
-        const stockPrevio = anterior.stockDisponibleUnits;
-        const stockPosterior = productoUpdate.stockDisponibleUnits;
+      // 3. Actualizar o crear registro en StockSucursal
+      const nuevoStock = parsed.data.stockDisponibleUnits;
+      const stockMin = parsed.data.stockMinUnits;
+
+      const stockSucursalUpdate = await tx.stockSucursal.upsert({
+        where: { productoId_sucursalId: { productoId: id, sucursalId } },
+        create: {
+          productoId: id,
+          sucursalId,
+          stockDisponibleUnits: nuevoStock !== undefined ? nuevoStock : 0,
+          stockMinUnits: stockMin !== undefined ? stockMin : (parsed.data.stockMinUnits ?? 0),
+        },
+        update: {
+          stockDisponibleUnits: nuevoStock !== undefined ? nuevoStock : undefined,
+          stockMinUnits: stockMin !== undefined ? stockMin : undefined,
+        }
+      });
+
+      // 4. Si hubo cambio de stock y tenemos información del movimiento, registrarlo
+      if (movimientoInfo && nuevoStock !== undefined) {
+        const stockPrevio = anterior?.stockDisponibleUnits ?? 0;
+        const stockPosterior = nuevoStock;
 
         if (stockPrevio !== stockPosterior) {
           await tx.movimientoStock.create({
             data: {
               productoId: id,
-              tipo: movimientoInfo.tipo, // ENTRADA | SALIDA
-              motivo: movimientoInfo.motivo, // COMPRA, ROTURA, DEVOLUCION_CLIENTE, etc.
+              sucursalId,
+              tipo: movimientoInfo.tipo,
+              motivo: movimientoInfo.motivo,
               cantidad: Math.abs(stockPosterior - stockPrevio),
               stockPrevio: stockPrevio,
               stockPosterior: stockPosterior,
@@ -111,32 +147,38 @@ export async function PUT(req: Request, { params }: RouteParams) {
         }
       }
 
-      return productoUpdate;
+      // Devolvemos el producto con el stock de la sucursal mezclado
+      return {
+        ...productoUpdate,
+        stockDisponibleUnits: stockSucursalUpdate.stockDisponibleUnits,
+        stockConsignadoUnits: stockSucursalUpdate.stockConsignadoUnits,
+        stockMinUnits: stockSucursalUpdate.stockMinUnits,
+      };
     });
 
     // --- LÓGICA DE NOTIFICACIÓN POR STOCK ---
     if (parsed.data.stockDisponibleUnits !== undefined) {
       const nuevoStock = updated.stockDisponibleUnits;
-      const umbralAlerta = updated.stockMinUnits > 0 
-        ? updated.stockMinUnits 
+      const umbralAlerta = updated.stockMinUnits > 0
+        ? updated.stockMinUnits
         : configGlobal.minStockGlobal;
 
-      const fechaVencMsg = updated.fechaVencimiento 
-        ? ` (Vence el: ${new Date(updated.fechaVencimiento).toLocaleDateString('es-AR')})` 
+      const fechaVencMsg = updated.fechaVencimiento
+        ? ` (Vence el: ${new Date(updated.fechaVencimiento).toLocaleDateString('es-AR')})`
         : "";
 
       if (nuevoStock <= 0) {
         await sendNotification({
           type: NOTIFICATION_TYPE.OUT_OF_STOCK,
           title: "⚠️ Stock Agotado",
-          message: `El producto "${updated.nombre}" se quedó sin unidades.${fechaVencMsg}`,
+          message: `El producto "${updated.nombre}" se quedó sin unidades en esta sucursal.${fechaVencMsg}`,
           data: { productId: updated.id }
         });
       } else if (nuevoStock <= umbralAlerta) {
         await sendNotification({
           type: NOTIFICATION_TYPE.LOW_STOCK,
           title: "⚡ Stock Bajo",
-          message: `"${updated.nombre}" alcanzó el nivel crítico con ${nuevoStock} u.${fechaVencMsg}`,
+          message: `"${updated.nombre}" alcanzó el nivel crítico con ${nuevoStock} u. en esta sucursal.${fechaVencMsg}`,
           data: { productId: updated.id }
         });
       }
@@ -169,7 +211,7 @@ export async function DELETE(_: Request, { params }: RouteParams) {
 
   try {
     await prisma.producto.update({
-      where: { id },
+      where: { id, sucursalId: auth.activeSucursalId },
       data: { activo: false }
     });
     return NextResponse.json({ data: { success: true, message: "Producto desactivado" } });

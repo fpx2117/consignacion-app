@@ -27,82 +27,95 @@ export async function GET(req: Request) {
 
   const { searchParams } = new URL(req.url);
   const period = (searchParams.get("period") as Period) ?? "month";
-  
+
   const start = getPeriodStart(period);
   const dateWhere = start ? { gte: start } : undefined;
+  const sucursalId = auth.activeSucursalId;
 
   // Ejecutamos consultas en paralelo para velocidad
   const [
-    totalConsig, 
-    abiertasConsig, 
-    cerradasConsig, 
+    totalConsig,
+    abiertasConsig,
+    cerradasConsig,
     stockAgg,
-    consignacionesPeriodo, 
+    consignacionesPeriodo,
     detallesAbiertas,
-    ventasAgg, 
-    pagosAgg, 
+    ventasAgg,
+    pagosAgg,
     saldoClientesAgg,
-    
+
     // CONSULTAS PARA CÁLCULO DE GANANCIA
     itemsLiquidados,
     itemsVentaDirecta
 
   ] = await Promise.all([
     // 1. Conteos
-    prisma.consignacion.count(),
-    prisma.consignacion.count({ where: { estado: "ABIERTA" } }),
-    prisma.consignacion.count({ where: { estado: "CERRADA" } }),
+    prisma.consignacion.count({ where: { sucursalId } }),
+    prisma.consignacion.count({ where: { estado: "ABIERTA", sucursalId } }),
+    prisma.consignacion.count({ where: { estado: "CERRADA", sucursalId } }),
 
-    // 2. Stock
-    prisma.producto.aggregate({
+    // 2. Stock (Agregamos desde StockSucursal para la sucursal activa)
+    prisma.stockSucursal.aggregate({
+      where: { sucursalId },
       _sum: { stockDisponibleUnits: true, stockConsignadoUnits: true },
     }),
 
     // 3. Actividad
-    prisma.consignacion.count({ where: { fecha: dateWhere } }),
+    prisma.consignacion.count({ where: { fecha: dateWhere, sucursalId } }),
 
     // 4. Pendientes
     prisma.consignacionDetalle.findMany({
-      where: { consignacion: { estado: "ABIERTA" } },
+      where: {
+        consignacion: {
+          estado: "ABIERTA",
+          sucursalId
+        }
+      },
       select: { unitsEntregadas: true, unitsVendidasAcum: true, unitsDevueltasAcum: true },
     }),
 
     // 5. Finanzas Macro
     prisma.venta.aggregate({
-      where: { fecha: dateWhere },
+      where: { fecha: dateWhere, sucursalId },
       _sum: { total: true },
       _count: { _all: true },
     }),
     prisma.pago.aggregate({
-      where: { fecha: dateWhere },
+      where: {
+        fecha: dateWhere,
+        cliente: { sucursalId }
+      },
       _sum: { monto: true },
       _count: { _all: true },
     }),
     prisma.cliente.aggregate({
+      where: { sucursalId },
       _sum: { saldoCuenta: true },
       _count: { _all: true },
     }),
 
     // 6. DATOS PARA GANANCIA CONSIGNACIÓN (CON AUMENTO)
-    // Traemos el precio base del producto Y el porcentaje de la consignación
     prisma.liquidacionItem.findMany({
       where: {
-        liquidacion: { fecha: dateWhere }
+        liquidacion: {
+          fecha: dateWhere,
+          consignacion: { sucursalId }
+        }
       },
       select: {
         unitsVendidas: true,
         detalle: {
           select: {
-            producto: { 
-                select: { 
-                    precioVenta: true, // Precio Base de Lista
-                    precioCosto: true 
-                } 
+            producto: {
+              select: {
+                precioVenta: true,
+                precioCosto: true
+              }
             },
             consignacion: {
-                select: {
-                    porcentajeAumento: true // El % extra que definiste
-                }
+              select: {
+                porcentajeAumento: true
+              }
             }
           }
         }
@@ -112,13 +125,14 @@ export async function GET(req: Request) {
     // 7. DATOS PARA GANANCIA POS (VENTA DIRECTA)
     prisma.ventaDetalle.findMany({
       where: {
-        venta: { 
+        venta: {
           fecha: dateWhere,
-          liquidacionId: null // Solo ventas directas
+          sucursalId,
+          liquidacionId: null
         }
       },
       select: {
-        precioUnitario: true, // Precio al que se vendió
+        precioUnitario: true,
         units: true,
         producto: { select: { precioCosto: true } }
       }
@@ -134,7 +148,7 @@ export async function GET(req: Request) {
 
   // A. CÁLCULO DE GANANCIA POR CONSIGNACIÓN (AQUÍ ESTÁ LA CORRECCIÓN)
   let gananciaConsignacion = 0;
-  
+
   for (const item of itemsLiquidados) {
     const precioBase = Number(item.detalle?.producto?.precioVenta || 0);
     const porcentaje = Number(item.detalle?.consignacion?.porcentajeAumento || 0);
@@ -144,7 +158,7 @@ export async function GET(req: Request) {
     // 1. Calculamos el precio real cobrado con el aumento
     // Ejemplo: Base $1000 + 10% = $1100
     const precioCobradoReal = precioBase * (1 + porcentaje / 100);
-    
+
     // 2. Restamos el costo para sacar la ganancia neta de este ítem
     // Ejemplo: $1100 - Costo $600 = Ganancia $500
     const gananciaItem = (precioCobradoReal - costo) * cantidad;
@@ -158,7 +172,7 @@ export async function GET(req: Request) {
     const precioVenta = Number(item.precioUnitario);
     const costo = Number(item.producto?.precioCosto || 0);
     const cantidad = item.units;
-    
+
     gananciaDirecta += (precioVenta - costo) * cantidad;
   }
 
@@ -166,8 +180,8 @@ export async function GET(req: Request) {
   const gananciaTotal = gananciaConsignacion + gananciaDirecta;
 
   // --- RESPUESTA ---
-  const stockDisponible = stockAgg._sum.stockDisponibleUnits ?? 0;
-  const stockConsignado = stockAgg._sum.stockConsignadoUnits ?? 0;
+  const stockDisponible = stockAgg._sum?.stockDisponibleUnits ?? 0;
+  const stockConsignado = stockAgg._sum?.stockConsignadoUnits ?? 0;
 
   return NextResponse.json({
     data: {
@@ -176,7 +190,7 @@ export async function GET(req: Request) {
         total: totalConsig,
         abiertas: abiertasConsig,
         cerradas: cerradasConsig,
-        creadasEnPeriodo: consignacionesPeriodo, // Esto faltaba declarar arriba si no se usa, ojo con el index del Promise.all
+        creadasEnPeriodo: consignacionesPeriodo,
       },
       consignacionUnits: {
         pendientes: unitsPendientes,
@@ -188,12 +202,12 @@ export async function GET(req: Request) {
       },
       finanzas: {
         ventas: {
-          cantidad: ventasAgg._count._all,
-          total: Number(ventasAgg._sum.total ?? 0),
+          cantidad: ventasAgg._count?._all ?? 0,
+          total: Number(ventasAgg._sum?.total ?? 0),
         },
         pagos: {
-          cantidad: pagosAgg._count._all,
-          total: Number(pagosAgg._sum.monto ?? 0),
+          cantidad: pagosAgg._count?._all ?? 0,
+          total: Number(pagosAgg._sum?.monto ?? 0),
         },
         // 👇 OBJETO GANANCIA CALCULADO CORRECTAMENTE
         ganancia: {
@@ -201,8 +215,8 @@ export async function GET(req: Request) {
           porConsignacion: gananciaConsignacion,
           porVentaDirecta: gananciaDirecta,
         },
-        saldoClientesTotal: Number(saldoClientesAgg._sum.saldoCuenta ?? 0),
-        clientes: saldoClientesAgg._count._all,
+        saldoClientesTotal: Number(saldoClientesAgg._sum?.saldoCuenta ?? 0),
+        clientes: saldoClientesAgg._count?._all ?? 0,
       },
     },
   });

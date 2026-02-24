@@ -71,34 +71,42 @@ export async function POST(req: Request) {
 
       const nuevoFolio = ultimaConsignacion ? ultimaConsignacion.numeroFolio + 1 : 1;
 
-      // 3. Validar productos y stock (Mantenemos tu validación rápida en bloque)
+      // 3. Validar productos y stock en la sucursal activa
+      const sucursalId = auth.activeSucursalId;
       const productIds = parsed.data.items.map((i) => i.productoId);
-      const productos = await tx.producto.findMany({
-        where: { id: { in: productIds } },
+
+      const stocksSucursal = await tx.stockSucursal.findMany({
+        where: {
+          productoId: { in: productIds },
+          sucursalId
+        },
+        include: { producto: true }
       });
 
-      const mapProd = new Map(productos.map((p) => [p.id, p]));
+      const mapStock = new Map(stocksSucursal.map((s) => [s.productoId, s]));
 
       for (const it of parsed.data.items) {
-        const p = mapProd.get(it.productoId);
-        if (!p) throw new Error(`PRODUCTO_NO_EXISTE:${it.productoId}`);
-        if (p.stockDisponibleUnits < it.unitsEntregadas) {
+        const s = mapStock.get(it.productoId);
+        if (!s) {
+          throw new Error(`PRODUCTO_NO_ASIGNADO_SUCURSAL:${it.productoId}`);
+        }
+        if (s.stockDisponibleUnits < it.unitsEntregadas) {
           throw new Error(`STOCK_INSUF:${it.productoId}`);
         }
       }
 
-      // 4. Crear consignación con folio, % y precios congelados
+      // 4. Crear consignación
       const consignacion = await tx.consignacion.create({
         data: {
           clienteId: parsed.data.clienteId,
-          sucursalId: auth.activeSucursalId,
+          sucursalId,
           numeroFolio: nuevoFolio,
           estado: "ABIERTA",
           porcentajeAumento: porcentaje,
           detalles: {
             create: parsed.data.items.map((it) => {
-              const prod = mapProd.get(it.productoId);
-              const precioBase = Number(prod?.precioVenta || 0);
+              const s = mapStock.get(it.productoId);
+              const precioBase = Number(s?.producto.precioVenta || 0);
               const precioFinal = precioBase * factorAumento;
 
               return {
@@ -111,11 +119,20 @@ export async function POST(req: Request) {
         },
       });
 
-      // ✅ 5. Actualizar Stock, Crear Auditoría y Evaluar Alertas
+      // ✅ 5. Actualizar Stock en Sucursal, Auditoría y Alertas
       for (const it of parsed.data.items) {
-        const pAntes = mapProd.get(it.productoId);
+        const sAntes = mapStock.get(it.productoId)!;
 
-        // A) Mover Stock (Sale de Disponible -> Entra a Consignado)
+        // A) Mover Stock en la Sucursal (Disponible -> Consignado)
+        const sDespues = await tx.stockSucursal.update({
+          where: { id: sAntes.id },
+          data: {
+            stockDisponibleUnits: { decrement: it.unitsEntregadas },
+            stockConsignadoUnits: { increment: it.unitsEntregadas },
+          },
+        });
+
+        // B) Sincronizar Stock Global (legacy support)
         const pDespues = await tx.producto.update({
           where: { id: it.productoId },
           data: {
@@ -124,21 +141,20 @@ export async function POST(req: Request) {
           },
         });
 
-        // B) Registrar en MovimientoStock
+        // C) Registro de MovimientoStock
         await tx.movimientoStock.create({
           data: {
             productoId: it.productoId,
-            sucursalId: auth.activeSucursalId,
+            sucursalId,
             tipo: TipoMovimientoStock.SALIDA,
             motivo: MotivoMovimientoStock.CONSIGNACION,
             cantidad: it.unitsEntregadas,
-            stockPrevio: pAntes!.stockDisponibleUnits,
-            stockPosterior: pDespues.stockDisponibleUnits,
+            stockPrevio: sAntes.stockDisponibleUnits,
+            stockPosterior: sDespues.stockDisponibleUnits,
             observaciones: `Entrega de Consignación Folio #${nuevoFolio}`
           }
         });
 
-        // C) Llenar la cola de alertas (Por si el depósito quedó en 0 o muy bajo)
         const alerta = evaluateStockAlert(pDespues, configGlobal);
         if (alerta) notificationsQueue.push(alerta);
       }

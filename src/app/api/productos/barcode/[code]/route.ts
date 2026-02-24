@@ -18,6 +18,7 @@ export async function GET(_: Request, { params }: RouteParams) {
     const producto = await prisma.producto.findFirst({
       where: {
         codigoBarra: code,
+        sucursalId: auth.activeSucursalId,
         activo: true, // Solo productos vigentes
       },
       include: {
