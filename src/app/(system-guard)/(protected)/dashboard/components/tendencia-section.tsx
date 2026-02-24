@@ -151,12 +151,12 @@ export function TendenciaSection({ trend, period, loading, filter = "all" }: Ten
                       <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0} />
                     </linearGradient>
                     <linearGradient id="colorSuccess" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#10b981" stopOpacity={0.3} />
-                      <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
+                      <stop offset="5%" stopColor="hsl(var(--success))" stopOpacity={0.3} />
+                      <stop offset="95%" stopColor="hsl(var(--success))" stopOpacity={0} />
                     </linearGradient>
                     <linearGradient id="colorBlue" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3} />
-                      <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
+                      <stop offset="5%" stopColor="hsl(var(--chart-3))" stopOpacity={0.3} />
+                      <stop offset="95%" stopColor="hsl(var(--chart-3))" stopOpacity={0} />
                     </linearGradient>
                   </defs>
 
@@ -178,7 +178,7 @@ export function TendenciaSection({ trend, period, loading, filter = "all" }: Ten
                       if (!active || !payload?.length) return null;
                       const data = payload[0].payload;
                       return (
-                        <div className="rounded-xl border border-white/20 bg-black/60 p-4 shadow-2xl backdrop-blur-xl ring-1 ring-white/10">
+                        <div className="rounded-xl border border-border bg-card/95 p-4 shadow-2xl backdrop-blur-xl ring-1 ring-border/50">
                           <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/80 mb-3">
                             {new Date(data.date).toLocaleDateString("es-AR", { dateStyle: 'long' })}
                           </p>
@@ -189,7 +189,7 @@ export function TendenciaSection({ trend, period, loading, filter = "all" }: Ten
                                   <MetricRow label="Ventas" value={formatMoney(data.ventasTotal)} color="bg-primary" />
                                 )}
                                 {(filter === "all" || filter === "pos") && (
-                                  <MetricRow label="Pagos" value={formatMoney(data.pagosTotal)} color="bg-emerald-500" highlight />
+                                  <MetricRow label="Pagos" value={formatMoney(data.pagosTotal)} color="bg-success" highlight />
                                 )}
                                 {/* Si filtran por consignación, tal vez mostrar liquidaciones en montos? No tenemos monto de liquidación en tendencia point por ahora, solo count liquidaciones */}
                               </>
@@ -199,10 +199,10 @@ export function TendenciaSection({ trend, period, loading, filter = "all" }: Ten
                                   <MetricRow label="Consignaciones" value={data.consignaciones} color="bg-primary" />
                                 )}
                                 {(filter === "all" || filter === "consignacion") && (
-                                  <MetricRow label="Liquidaciones" value={data.liquidaciones} color="bg-emerald-500" />
+                                  <MetricRow label="Liquidaciones" value={data.liquidaciones} color="bg-success" />
                                 )}
                                 {(filter === "all" || filter === "pos") && (
-                                  <MetricRow label="Ventas (Q)" value={data.ventasCount} color="bg-blue-500" />
+                                  <MetricRow label="Ventas (Q)" value={data.ventasCount} color="bg-chart-3" />
                                 )}
                               </>
                             )}
@@ -229,7 +229,7 @@ export function TendenciaSection({ trend, period, loading, filter = "all" }: Ten
                         <Area
                           type="monotone"
                           dataKey="pagosTotal"
-                          stroke="#10b981"
+                          stroke="hsl(var(--success))"
                           strokeWidth={2}
                           fill="url(#colorSuccess)"
                           animationDuration={1500}
@@ -253,7 +253,7 @@ export function TendenciaSection({ trend, period, loading, filter = "all" }: Ten
                         <Area
                           type="monotone"
                           dataKey="liquidaciones"
-                          stroke="#10b981"
+                          stroke="hsl(var(--success))"
                           strokeWidth={2}
                           fill="url(#colorSuccess)"
                           animationDuration={1500}
@@ -263,7 +263,7 @@ export function TendenciaSection({ trend, period, loading, filter = "all" }: Ten
                         <Area // Si solo es POS, mostramos count ventas
                           type="monotone"
                           dataKey="ventasCount"
-                          stroke="#3b82f6"
+                          stroke="hsl(var(--chart-3))"
                           strokeWidth={2}
                           fill="url(#colorBlue)"
                           animationDuration={1500}
@@ -288,7 +288,7 @@ function MetricRow({ label, value, color, highlight }: { label: string, value: s
         <div className={cn("h-1.5 w-1.5 rounded-full", color)} />
         <span className="text-[11px] text-muted-foreground">{label}</span>
       </div>
-      <span className={cn("text-xs font-bold", highlight && "text-emerald-600 dark:text-emerald-400")}>
+      <span className={cn("text-xs font-bold", highlight && "text-success")}>
         {value}
       </span>
     </div>
