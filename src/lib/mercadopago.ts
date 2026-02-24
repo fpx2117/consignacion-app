@@ -2,6 +2,7 @@
 import { MercadoPagoConfig, Preference } from "mercadopago";
 import { paymentConfig } from "./paymentConfig";
 import { getPlanByExternalId } from "@/constants/subscriptions";
+import { prisma } from "./prisma";
 
 // Initialize Mercado Pago client
 const client = new MercadoPagoConfig({
@@ -10,10 +11,18 @@ const client = new MercadoPagoConfig({
 });
 
 export async function createMercadoPagoPreference(planId: string, userId: string) {
-    const plan = getPlanByExternalId(planId);
+    const basePlan = getPlanByExternalId(planId);
 
-    if (!plan) {
-        throw new Error(`Plan with ID ${planId} not found`);
+    if (!basePlan) {
+        throw new Error(`Plan local no encontrado para: ${planId}`);
+    }
+
+    const plan = await prisma.plan.findUnique({
+        where: { id: basePlan.id }
+    });
+
+    if (!plan || !plan.precioARS) {
+        throw new Error(`Plan con ID ${planId} no encontrado en la base de datos o sin precio ARS`);
     }
 
     const preference = new Preference(client);
@@ -23,9 +32,9 @@ export async function createMercadoPagoPreference(planId: string, userId: string
             body: {
                 items: [
                     {
-                        id: plan.mercadopagoId,
-                        title: `Suscripción ${plan.nombre}`,
-                        unit_price: plan.precioARS,
+                        id: basePlan.mercadopagoId,
+                        title: `Suscripción ${plan.nombre || basePlan.nombre}`,
+                        unit_price: Number(plan.precioARS),
                         quantity: 1,
                         currency_id: "ARS",
                     }
