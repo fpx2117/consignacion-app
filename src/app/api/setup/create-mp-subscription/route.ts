@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { SUBSCRIPTION_PLANS } from "@/constants/subscriptions";
 import { MercadoPagoConfig, PreApproval } from "mercadopago";
 import { paymentConfig } from "@/lib/paymentConfig";
+import { prisma } from "@/lib/prisma";
 
 const client = new MercadoPagoConfig({
     accessToken: paymentConfig.mp.accessToken,
@@ -13,20 +14,28 @@ export async function POST(req: Request) {
     try {
         const { planId } = await req.json();
 
-        const plan = SUBSCRIPTION_PLANS.find(p => p.id === planId);
-        if (!plan) {
-            return NextResponse.json({ error: "Plan no encontrado" }, { status: 404 });
+        const basePlan = SUBSCRIPTION_PLANS.find(p => p.id === planId);
+        if (!basePlan) {
+            return NextResponse.json({ error: "Plan base no encontrado" }, { status: 404 });
         }
 
-        if (!plan.mercadopagoPlanId) {
+        if (!basePlan.mercadopagoPlanId) {
             return NextResponse.json({ error: "El plan seleccionado no soporta suscripción recurrente en Mercado Pago" }, { status: 400 });
+        }
+
+        const plan = await prisma.plan.findUnique({
+            where: { id: planId }
+        });
+
+        if (!plan) {
+            return NextResponse.json({ error: "Plan en BD no encontrado" }, { status: 404 });
         }
 
         const preApproval = new PreApproval(client);
 
         const { fetchDolarBlue } = await import("@/lib/dolarBlue");
         const exchangeRate = await fetchDolarBlue();
-        const precioARS = plan.precioUSD * exchangeRate;
+        const precioARS = Number(plan.precioUSD) * exchangeRate;
 
         // Creamos la suscripción basada en el PlanId de MP (o con esquema propio si no hay PlanId)
         // Usamos el esquema de "Plan" de MP si está disponible, o definimos la recurrencia aquí.
