@@ -1,7 +1,7 @@
 // src/lib/mercadopago.ts
 import { MercadoPagoConfig, Preference } from "mercadopago";
 import { paymentConfig } from "./paymentConfig";
-import { SUBSCRIPTION_PLANS } from "@/constants/subscriptions";
+import { getPlanByExternalId } from "@/constants/subscriptions";
 
 // Initialize Mercado Pago client
 const client = new MercadoPagoConfig({
@@ -10,7 +10,7 @@ const client = new MercadoPagoConfig({
 });
 
 export async function createMercadoPagoPreference(planId: string, userId: string) {
-    const plan = SUBSCRIPTION_PLANS.find(p => p.mercadopagoId === planId);
+    const plan = getPlanByExternalId(planId);
 
     if (!plan) {
         throw new Error(`Plan with ID ${planId} not found`);
