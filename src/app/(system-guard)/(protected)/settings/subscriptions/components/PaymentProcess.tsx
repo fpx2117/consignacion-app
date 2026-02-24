@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Loader2, ExternalLink, ShieldCheck, Zap, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Portal } from "@/components/ui/portal";
+import { useDolarBlue } from "@/hooks/useDolarBlue";
 
 const ARSFormatter = new Intl.NumberFormat("es-AR", {
     style: "decimal",
@@ -17,11 +18,13 @@ interface PaymentProcessProps {
     amount: number;
     currency: "ARS" | "USD";
     onClose: () => void;
+    basePriceUSD?: number;
 }
 
-export function SubscriptionCheckout({ planId, amount, currency, onClose }: PaymentProcessProps) {
+export function SubscriptionCheckout({ planId, amount, currency, onClose, basePriceUSD }: PaymentProcessProps) {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const { rate, isLoading: rateLoading } = useDolarBlue();
 
     useEffect(() => {
         // Initialize MP with Public Key
@@ -117,7 +120,11 @@ export function SubscriptionCheckout({ planId, amount, currency, onClose }: Paym
                                 <div className="bg-secondary/40 px-6 py-3 rounded-2xl border border-border/30 shadow-inner">
                                     <div className="flex items-baseline gap-1">
                                         <span className="text-2xl md:text-3xl font-black text-foreground">
-                                            {currency === "ARS" ? "$" : "U$D"} {currency === "ARS" ? ARSFormatter.format(amount) : amount}
+                                            {currency === "ARS" ? "$" : "U$D"} {currency === "ARS" ? (
+                                                rateLoading ? (
+                                                    <span className="inline-block w-20 h-8 bg-muted/50 rounded-md animate-pulse align-middle" />
+                                                ) : ARSFormatter.format(basePriceUSD ? basePriceUSD * (rate || 1000) : amount)
+                                            ) : amount}
                                         </span>
                                         <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">/ mes</span>
                                     </div>
