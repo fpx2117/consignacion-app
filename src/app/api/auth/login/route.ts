@@ -32,6 +32,7 @@ export async function POST(req: Request) {
     email: user.email,
     rol: user.rol,
     nombre: user.nombre,
+    sucursalId: user.sucursalId,
   });
 
   // ✅ IMPORTANTÍSIMO

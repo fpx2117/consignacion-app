@@ -26,6 +26,7 @@ export async function GET() {
         rol: true,
         activo: true,
         createdAt: true,
+        sucursalId: true,
         subscription: {
           include: {
             plan: {
@@ -42,7 +43,40 @@ export async function GET() {
       return NextResponse.json({ error: "No autorizado" }, { status: 401 });
     }
 
-    return NextResponse.json({ data: user }, { status: 200 });
+    // Lógica de Sucursales permitidas
+    let sucursalesPermitidas: { id: number; nombre: string; esPrincipal: boolean; activa: boolean }[] = [];
+    const allowSucursales = user.subscription?.plan?.limits?.allowSucursales;
+
+    if (user.rol === "ADMIN") {
+      if (allowSucursales) {
+        // ADMIN con plan Enterprise -> ve todas las activas (o todas para gestionarlas)
+        sucursalesPermitidas = await prisma.sucursal.findMany({
+          where: { activa: true },
+          select: { id: true, nombre: true, esPrincipal: true, activa: true },
+          orderBy: { id: "asc" }
+        });
+      } else {
+        // ADMIN con plan menor -> solo ve la principal
+        sucursalesPermitidas = await prisma.sucursal.findMany({
+          where: { esPrincipal: true },
+          select: { id: true, nombre: true, esPrincipal: true, activa: true }
+        });
+      }
+    } else {
+      // EMPLEADO -> solo ve su sucursal asignada (o la principal si no tiene)
+      const empSucursalId = user.sucursalId || 1;
+      sucursalesPermitidas = await prisma.sucursal.findMany({
+        where: { id: empSucursalId },
+        select: { id: true, nombre: true, esPrincipal: true, activa: true }
+      });
+    }
+
+    return NextResponse.json({
+      data: {
+        ...user,
+        sucursalesPermitidas
+      }
+    }, { status: 200 });
   } catch {
     return NextResponse.json({ error: "Token inválido" }, { status: 401 });
   }

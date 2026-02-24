@@ -45,12 +45,28 @@ async function apiRequest<T>(path: string, init?: RequestInit): Promise<ApiRespo
     url = `${baseUrl}${path}`;
   }
 
+  let sucursalHeader = "";
+  if (typeof window !== "undefined") {
+    try {
+      // Lazy import para evitar errores SSR
+      const { useSucursalStore } = require("@/store/useSucursalStore");
+      const sid = useSucursalStore.getState().activeSucursalId;
+      if (sid) sucursalHeader = String(sid);
+    } catch { /* silently ignore store errors */ }
+  }
+
+  const headers: RequestInit["headers"] = {
+    "Content-Type": "application/json",
+    ...(init?.headers ?? {}),
+  };
+
+  if (sucursalHeader) {
+    (headers as any)["x-sucursal-id"] = sucursalHeader;
+  }
+
   const res = await fetch(url, {
     ...init,
-    headers: {
-      "Content-Type": "application/json",
-      ...(init?.headers ?? {}),
-    },
+    headers,
     cache: init?.cache || "no-store",
   });
 
@@ -526,6 +542,23 @@ export const apiService = {
   revokeSession(sessionId: string) {
     return apiData<{ ok: boolean }>(`${API_ROUTES.SETTINGS.SECURITY.SESSIONS}?id=${sessionId}`, {
       method: "DELETE",
+    });
+  },
+
+  /* ---------- SUCURSALES ---------- */
+  getSucursales() {
+    return apiData<any[]>("/api/settings/sucursales");
+  },
+  createSucursal(payload: { nombre: string; activa?: boolean }) {
+    return apiData<any>("/api/settings/sucursales", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+  },
+  updateSucursal(id: number, payload: { nombre?: string; activa?: boolean }) {
+    return apiData<any>(`/api/settings/sucursales/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(payload),
     });
   },
 };

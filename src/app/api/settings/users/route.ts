@@ -13,6 +13,7 @@ export async function GET() {
         email: true,
         rol: true,
         activo: true,
+        sucursalId: true,
         createdAt: true,
       },
       orderBy: { createdAt: "desc" },
@@ -28,7 +29,7 @@ export async function GET() {
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { nombre, email, password, rol } = body;
+    const { nombre, email, password, rol, sucursalId } = body;
 
     if (!nombre || !email || !password || !rol) {
       return NextResponse.json({ ok: false, error: "Faltan campos obligatorios" }, { status: 400 });
@@ -49,8 +50,15 @@ export async function POST(req: Request) {
     const hash = await bcrypt.hash(password, salt);
 
     const nuevoUsuario = await prisma.usuario.create({
-      data: { nombre, email, hash, rol, activo: true },
-      select: { id: true, nombre: true, email: true, rol: true, activo: true, createdAt: true },
+      data: {
+        nombre,
+        email,
+        hash,
+        rol,
+        sucursalId: sucursalId ? Number(sucursalId) : 1,
+        activo: true
+      },
+      select: { id: true, nombre: true, email: true, rol: true, sucursalId: true, activo: true, createdAt: true },
     });
 
     return NextResponse.json({ ok: true, data: nuevoUsuario });
@@ -64,7 +72,7 @@ export async function PUT(req: Request) {
   try {
     const body = await req.json();
     // Agregamos "rol" a la desestructuración
-    const { id, nombre, email, password, rol } = body;
+    const { id, nombre, email, password, rol, sucursalId } = body;
 
     if (!id || !nombre || !email || !rol) {
       return NextResponse.json({ ok: false, error: "Faltan campos obligatorios" }, { status: 400 });
@@ -76,7 +84,12 @@ export async function PUT(req: Request) {
     }
 
     // Incluimos el rol en la data a actualizar
-    const dataToUpdate: any = { nombre, email, rol };
+    const dataToUpdate: any = {
+      nombre,
+      email,
+      rol,
+      sucursalId: sucursalId ? Number(sucursalId) : null
+    };
 
     if (password && password.trim() !== "") {
       const salt = await bcrypt.genSalt(10);
@@ -86,7 +99,7 @@ export async function PUT(req: Request) {
     const usuarioActualizado = await prisma.usuario.update({
       where: { id },
       data: dataToUpdate,
-      select: { id: true, nombre: true, email: true, rol: true, activo: true, createdAt: true },
+      select: { id: true, nombre: true, email: true, rol: true, sucursalId: true, activo: true, createdAt: true },
     });
 
     return NextResponse.json({ ok: true, data: usuarioActualizado });

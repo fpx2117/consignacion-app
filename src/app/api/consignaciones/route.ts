@@ -15,6 +15,7 @@ export async function GET() {
   if (!auth.ok) return auth.res;
 
   const consignaciones = await prisma.consignacion.findMany({
+    where: { sucursalId: auth.activeSucursalId },
     orderBy: { id: "desc" },
     include: {
       cliente: true,
@@ -90,6 +91,7 @@ export async function POST(req: Request) {
       const consignacion = await tx.consignacion.create({
         data: {
           clienteId: parsed.data.clienteId,
+          sucursalId: auth.activeSucursalId,
           numeroFolio: nuevoFolio,
           estado: "ABIERTA",
           porcentajeAumento: porcentaje,
@@ -111,7 +113,7 @@ export async function POST(req: Request) {
 
       // ✅ 5. Actualizar Stock, Crear Auditoría y Evaluar Alertas
       for (const it of parsed.data.items) {
-        const pAntes = mapProd.get(it.productoId); // Ya lo teníamos del paso 3
+        const pAntes = mapProd.get(it.productoId);
 
         // A) Mover Stock (Sale de Disponible -> Entra a Consignado)
         const pDespues = await tx.producto.update({
@@ -126,6 +128,7 @@ export async function POST(req: Request) {
         await tx.movimientoStock.create({
           data: {
             productoId: it.productoId,
+            sucursalId: auth.activeSucursalId,
             tipo: TipoMovimientoStock.SALIDA,
             motivo: MotivoMovimientoStock.CONSIGNACION,
             cantidad: it.unitsEntregadas,

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import type { Usuario, RolUsuario } from "@/lib/types";
+import { useSucursalStore, type Sucursal } from "@/store/useSucursalStore";
 
 // UI
 import { Card } from "@/components/ui/card";
@@ -45,6 +46,7 @@ type DialogMode = "create" | "edit";
 export default function EmployeesSettingsPage() {
     const [usuarios, setUsuarios] = React.useState<Usuario[]>([]);
     const [loading, setLoading] = React.useState(true);
+    const { availableSucursales } = useSucursalStore();
 
     // Estados para Crear/Editar
     const [isDialogOpen, setIsDialogOpen] = React.useState(false);
@@ -62,6 +64,7 @@ export default function EmployeesSettingsPage() {
         email: "",
         password: "",
         rol: "ADMIN" as RolUsuario,
+        sucursalId: "1", // Por defecto Sede Principal
     });
 
     const loadUsers = React.useCallback(async () => {
@@ -85,14 +88,15 @@ export default function EmployeesSettingsPage() {
     const openCreateMode = () => {
         setDialogMode("create");
         setSelectedUserId(null);
-        setForm({ nombre: "", email: "", password: "", rol: "ADMIN" });
+        setForm({ nombre: "", email: "", password: "", rol: "ADMIN", sucursalId: "1" });
         setIsDialogOpen(true);
     };
 
     const openEditMode = (user: Usuario) => {
         setDialogMode("edit");
         setSelectedUserId(user.id);
-        setForm({ nombre: user.nombre, email: user.email, password: "", rol: user.rol });
+        const userSucursal = user.sucursalId ? String(user.sucursalId) : "1";
+        setForm({ nombre: user.nombre, email: user.email, password: "", rol: user.rol, sucursalId: userSucursal });
         setIsDialogOpen(true);
     };
 
@@ -103,7 +107,9 @@ export default function EmployeesSettingsPage() {
 
         const isEdit = dialogMode === "edit";
         const method = isEdit ? "PUT" : "POST";
-        const payload = isEdit ? { id: selectedUserId, ...form } : { ...form };
+        const payload = isEdit
+            ? { id: selectedUserId, ...form, sucursalId: Number(form.sucursalId) }
+            : { ...form, sucursalId: Number(form.sucursalId) };
 
         try {
             const res = await fetch("/api/settings/users", {
@@ -387,6 +393,26 @@ export default function EmployeesSettingsPage() {
                                     <option value="EMPLEADO">
                                         Empleado (POS & Notificaciones)
                                     </option>
+                                </select>
+                            </Field>
+
+                            <Field label="Sucursal Asignada">
+                                <select
+                                    required
+                                    className="w-full rounded-xl border border-border/50 bg-background/50 px-3 py-2.5 text-sm text-foreground outline-none focus:ring-2 focus:ring-primary/20 appearance-none cursor-pointer"
+                                    value={form.sucursalId}
+                                    onChange={(e) => setForm({ ...form, sucursalId: e.target.value })}
+                                    disabled={availableSucursales.length === 0}
+                                >
+                                    {availableSucursales.length > 0 ? (
+                                        availableSucursales.map(s => (
+                                            <option key={s.id} value={String(s.id)}>
+                                                {s.nombre} {s.esPrincipal ? "(Principal)" : ""}
+                                            </option>
+                                        ))
+                                    ) : (
+                                        <option value="1">Sede Principal</option>
+                                    )}
                                 </select>
                             </Field>
 

@@ -100,14 +100,13 @@ model Configuracion {
   diasAnticipacionVencimiento Int @default(7) // <--- Nuevo campo
 
   // Interruptores de notificación
-  notificarVencimientos Boolean @default(true)
-  notificarStockBajo    Boolean @default(true)
-  notificarVentas       Boolean @default(true)
-  notificarLiquidaciones Boolean @default(true)
+  notificarVencimientos          Boolean @default(true)
+  notificarStockBajo             Boolean @default(true)
+  notificarVentas                Boolean @default(true)
+  notificarLiquidaciones         Boolean @default(true)
   notificarConsignacionesActivas Boolean @default(true)
 
   diasAvisoConsignacion Int @default(15) // Días que debe llevar en la calle para notificar
-
 
   // NUEVO: Interruptor global para forzar o ignorar el uso de turnos/cajas
   usarControlDeCaja Boolean @default(true)
@@ -127,11 +126,15 @@ model Usuario {
   horarios     HorarioLaboral[]
   subscription Subscription? // <--- NUEVO: Relación con su suscripción
 
-  auditLogs    AuditLog[]
-  userSessions UserSession[]
+  auditLogs     AuditLog[]
+  userSessions  UserSession[]
   notifications Notification[] // <--- NUEVO: Relación con sus notificaciones
 
+  sucursalId Int?
+  sucursal   Sucursal? @relation(fields: [sucursalId], references: [id], onDelete: SetNull)
+
   @@index([rol])
+  @@index([sucursalId])
 }
 
 model UserSession {
@@ -204,9 +207,14 @@ model Cliente {
 
   createdAt DateTime @default(now())
 
+  sucursalId Int      @default(1)
+  sucursal   Sucursal @relation(fields: [sucursalId], references: [id], onDelete: Restrict)
+
   consignaciones Consignacion[]
   pagos          Pago[]
   ventas         Venta[]
+
+  @@index([sucursalId])
 }
 
 model Branding {
@@ -236,10 +244,14 @@ model MovimientoStock {
 
   observaciones String? // Nota manual opcional
 
+  sucursalId Int      @default(1)
+  sucursal   Sucursal @relation(fields: [sucursalId], references: [id], onDelete: Restrict)
+
   createdAt DateTime @default(now())
 
   @@index([productoId])
   @@index([createdAt])
+  @@index([sucursalId])
 }
 
 model Notification {
@@ -303,16 +315,23 @@ model Producto {
   ventaDetalles        VentaDetalle[]
   notifications        Notification[]
   movimientoStocks     MovimientoStock[]
+  stockSucursals       StockSucursal[]
 
   @@index([codigoBarra])
   @@index([categoriaId])
 }
 
 model Caja {
-  id       Int          @id @default(autoincrement())
-  nombre   String       @unique // Ej: "Caja Principal"
-  activa   Boolean      @default(true)
+  id     Int     @id @default(autoincrement())
+  nombre String  @unique // Ej: "Caja Principal"
+  activa Boolean @default(true)
+
+  sucursalId Int      @default(1)
+  sucursal   Sucursal @relation(fields: [sucursalId], references: [id], onDelete: Restrict)
+
   sesiones SesionCaja[]
+
+  @@index([sucursalId])
 }
 
 model SesionCaja {
@@ -401,6 +420,9 @@ model Consignacion {
   fecha  DateTime           @default(now())
   estado EstadoConsignacion @default(ABIERTA)
 
+  sucursalId Int      @default(1)
+  sucursal   Sucursal @relation(fields: [sucursalId], references: [id], onDelete: Restrict)
+
   detalles      ConsignacionDetalle[]
   liquidaciones Liquidacion[]
 
@@ -408,6 +430,7 @@ model Consignacion {
   @@index([estado, fecha])
   // Indexamos el folio para búsquedas rápidas si fuera necesario
   @@index([clienteId, numeroFolio])
+  @@index([sucursalId])
 }
 
 model ConsignacionDetalle {
@@ -482,9 +505,13 @@ model Venta {
   total    Decimal        @db.Decimal(10, 2)
   detalles VentaDetalle[]
 
+  sucursalId Int      @default(1)
+  sucursal   Sucursal @relation(fields: [sucursalId], references: [id], onDelete: Restrict)
+
   @@index([clienteId, fecha])
   @@index([sesionCajaId])
   @@index([tipo]) // Para filtrar rápido en el Dashboard
+  @@index([sucursalId])
 }
 
 model VentaDetalle {
@@ -586,4 +613,40 @@ model ResetPasswordToken {
   createdAt DateTime @default(now())
 
   @@index([email])
+}
+
+model Sucursal {
+  id          Int      @id @default(autoincrement())
+  nombre      String
+  esPrincipal Boolean  @default(false)
+  activa      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  usuarios       Usuario[]
+  clientes       Cliente[]
+  cajas          Caja[]
+  consignaciones Consignacion[]
+  ventas         Venta[]
+  movimientos    MovimientoStock[]
+  stockProductos StockSucursal[]
+}
+
+model StockSucursal {
+  id         Int @id @default(autoincrement())
+  productoId Int
+  sucursalId Int
+
+  stockDisponibleUnits Int @default(0)
+  stockConsignadoUnits Int @default(0)
+  stockMinUnits        Int @default(0)
+
+  // Si estos campos son NULL, se utiliza el precio maestro de "Producto"
+  precioVentaOverride Decimal? @db.Decimal(10, 2)
+  precioCostoOverride Decimal? @db.Decimal(10, 2)
+
+  producto Producto @relation(fields: [productoId], references: [id], onDelete: Cascade)
+  sucursal Sucursal @relation(fields: [sucursalId], references: [id], onDelete: Cascade)
+
+  @@unique([productoId, sucursalId])
 }

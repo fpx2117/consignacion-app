@@ -24,6 +24,7 @@ import {
 // Lista de configuraciones adaptada
 const SETTINGS_MODULES = [
   {
+    id: "branding",
     title: "Branding y Reportes",
     description: "Personalizá el logo, colores y el diseño de los tickets de venta.",
     href: "/settings/branding",
@@ -34,6 +35,7 @@ const SETTINGS_MODULES = [
     soon: false,
   },
   {
+    id: "branches",
     title: "Sucursales y Depósitos",
     description: "Administrá los puntos de venta, ubicaciones y rangos de entrega.",
     href: "/settings/branches",
@@ -41,10 +43,11 @@ const SETTINGS_MODULES = [
     color: "text-emerald-500",
     bg: "bg-emerald-500/10",
     borderColor: "group-hover:border-emerald-500/30",
-    soon: true,
+    soon: false,
   },
 
   {
+    id: "pos",
     title: "Punto de Venta (POS)",
     description: "Configurá el comportamiento de la caja, cobros y stock en tiempo real.",
     href: "/settings/pos",
@@ -55,6 +58,7 @@ const SETTINGS_MODULES = [
     soon: false,
   },
   {
+    id: "notifications",
     title: "Notificaciones",
     description: "Ajustá las alertas en vivo para nuevas ventas o falta de stock.",
     href: "/settings/notifications",
@@ -65,6 +69,7 @@ const SETTINGS_MODULES = [
     soon: false,
   },
   {
+    id: "security",
     title: "Seguridad y Auditoría",
     description: "Revisá el registro de actividad, sesiones activas y gestión del equipo.",
     href: "/settings/security",
@@ -75,6 +80,7 @@ const SETTINGS_MODULES = [
     soon: false,
   },
   {
+    id: "plan",
     title: "Plan y Facturación",
     description: "Gestioná tu suscripción, revisá vencimientos y actualizá tus medios de pago.",
     href: "/settings/subscriptions",
@@ -87,6 +93,28 @@ const SETTINGS_MODULES = [
 ];
 
 export default function SettingsPage() {
+  const [allowSucursales, setAllowSucursales] = React.useState<boolean>(true);
+  const [loading, setLoading] = React.useState(true);
+
+  React.useEffect(() => {
+    const fetchUserData = async () => {
+      try {
+        const res = await fetch("/api/auth/me");
+        if (res.ok) {
+          const json = await res.json();
+          const limits = json?.data?.subscription?.plan?.limits;
+          if (limits && limits.allowSucursales === false) {
+            setAllowSucursales(false);
+          }
+        }
+      } catch {
+        // silently ignore
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchUserData();
+  }, []);
   return (
     <div className="max-w-7xl mx-auto space-y-8 p-4 md:p-10 text-foreground selection:bg-primary/20">
       {/* HEADER */}
@@ -107,7 +135,9 @@ export default function SettingsPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
         {SETTINGS_MODULES.map((module) => {
           const Icon = module.icon;
-          const isSoon = module.soon;
+          // Si el módulo es el de sucursales y no tiene el plan, lo bloqueamos
+          const isLocked = module.id === "branches" && !allowSucursales && !loading;
+          const isSoon = module.soon || isLocked;
 
           // Contenido de la tarjeta (lo separamos para poder envolverlo en Link o en div)
           const CardContent = (
@@ -120,11 +150,11 @@ export default function SettingsPage() {
                 !isSoon && module.borderColor
               )}
             >
-              {/* Badge de Próximamente */}
+              {/* Badge de Próximamente / Bloqueado */}
               {isSoon && (
                 <div className="absolute top-5 right-5 z-20 flex items-center gap-1.5 bg-muted/80 backdrop-blur-md border border-border/50 text-muted-foreground text-[9px] font-black px-2.5 py-1 rounded-full uppercase tracking-widest">
                   <Lock className="h-3 w-3" />
-                  Pronto
+                  {isLocked ? "Plan Enterprise" : "Pronto"}
                 </div>
               )}
 

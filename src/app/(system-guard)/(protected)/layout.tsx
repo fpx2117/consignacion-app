@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { headers } from "next/headers";
 import { SidebarDock } from "@/components/sidebar-dock";
 import { SubscriptionGuard } from "@/components/SubscriptionGuard";
+import { TopBar } from "@/components/top-bar";
 
 export const dynamic = "force-dynamic";
 
@@ -54,7 +55,9 @@ export default async function ProtectedLayout({
 
       <SubscriptionGuard>
         <SidebarDock />
-        <main className="min-h-screen p-4 pb-24 md:p-6 md:pb-6 md:ml-[84px] relative z-0">
+        <TopBar />
+        {/* Agregamos pt-28 y md:pt-28 para que el main no quede oculto detrás del TopBar (h-20) */}
+        <main className="min-h-screen pt-28 p-4 pb-24 md:p-8 md:pt-28 md:pb-6 md:ml-[84px] relative z-0">
           {children}
         </main>
       </SubscriptionGuard>
