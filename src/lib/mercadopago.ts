@@ -47,3 +47,32 @@ export async function createMercadoPagoPreference(planId: string, userId: string
         throw new Error(error.message || "Error al crear la preferencia de Mercado Pago");
     }
 }
+
+export async function updateMercadoPagoSubscriptionPrice(preapprovalId: string, newPriceARS: number) {
+    try {
+        const response = await fetch(`https://api.mercadopago.com/preapproval/${preapprovalId}`, {
+            method: 'PUT',
+            headers: {
+                'Authorization': `Bearer ${paymentConfig.mp.accessToken}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                auto_recurring: {
+                    transaction_amount: newPriceARS
+                }
+            })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            console.error("MP Update Preapproval Error Response:", data);
+            throw new Error(data.message || "Error al actualizar la suscripción en Mercado Pago");
+        }
+
+        return data;
+    } catch (error: any) {
+        console.error("Mercado Pago Subscription Update Error:", error);
+        throw new Error(error.message || "Error de red al actualizar la suscripción");
+    }
+}
