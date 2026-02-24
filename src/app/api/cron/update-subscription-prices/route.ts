@@ -18,7 +18,23 @@ export async function GET(request: Request) {
             return NextResponse.json({ error: "No se pudo obtener la cotización del dólar" }, { status: 500 });
         }
 
-        // 2. Fetch all active subscriptions with MP Preapproval IDs
+        // 2. Fetch all Plans and update their ARS price based on USD price
+        const plans = await prisma.plan.findMany();
+        let planUpdates = 0;
+        for (const plan of plans) {
+            if (plan.precioUSD && Number(plan.precioUSD) > 0) {
+                const newPlanPriceARS = Number((Number(plan.precioUSD) * exchangeRate).toFixed(2));
+                if (Number(plan.precioARS) !== newPlanPriceARS) {
+                    await prisma.plan.update({
+                        where: { id: plan.id },
+                        data: { precioARS: newPlanPriceARS }
+                    });
+                    planUpdates++;
+                }
+            }
+        }
+
+        // 3. Fetch all active subscriptions with MP Preapproval IDs
         const activeSubscribers = await prisma.subscription.findMany({
             where: {
                 status: "ACTIVO",
@@ -55,6 +71,7 @@ export async function GET(request: Request) {
         return NextResponse.json({
             success: true,
             dollarRateUsed: exchangeRate,
+            plansUpdated: planUpdates,
             processed: activeSubscribers.length,
             updated: updatedCount,
             errors: errors.length > 0 ? errors : undefined
