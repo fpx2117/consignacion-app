@@ -133,15 +133,20 @@ export async function POST(req: Request) {
         // --- END VERIFICATION ---
 
         // 2. Start Transaction
+        const { fetchDolarBlue } = await import("@/lib/dolarBlue");
+        const exchangeRate = await fetchDolarBlue();
+
         const result = await prisma.$transaction(async (tx) => {
             // a. Sync Plans and Limits
             for (const p of SUBSCRIPTION_PLANS) {
+                const calculatedPrecioARS = p.precioUSD * exchangeRate;
+
                 await tx.plan.upsert({
                     where: { id: p.id },
                     update: {
                         nombre: p.nombre,
                         descripcion: p.descripcion,
-                        precioARS: p.precioARS,
+                        precioARS: calculatedPrecioARS,
                         precioUSD: p.precioUSD,
                         mercadopagoId: p.mercadopagoId,
                         paypalId: p.paypalId,
@@ -150,7 +155,7 @@ export async function POST(req: Request) {
                         id: p.id,
                         nombre: p.nombre,
                         descripcion: p.descripcion,
-                        precioARS: p.precioARS,
+                        precioARS: calculatedPrecioARS,
                         precioUSD: p.precioUSD,
                         mercadopagoId: p.mercadopagoId,
                         paypalId: p.paypalId,
