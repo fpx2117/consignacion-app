@@ -1,20 +1,8 @@
--- Safely add 'VENCIDO' to "EstadoSuscripcion" if it doesn't exist
-DO $$
-BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_type t JOIN pg_enum e ON t.oid = e.enumtypid WHERE t.typname = 'EstadoSuscripcion' AND e.enumlabel = 'VENCIDO') THEN
-    ALTER TYPE "EstadoSuscripcion" ADD VALUE 'VENCIDO';
-  END IF;
-END
-$$;
+-- Add 'VENCIDO' to "EstadoSuscripcion"
+ALTER TYPE "EstadoSuscripcion" ADD VALUE IF NOT EXISTS 'VENCIDO';
 
--- Safely add 'CONSIGNMENT_ALERT' to "NotificationType" if it doesn't exist
-DO $$
-BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_type t JOIN pg_enum e ON t.oid = e.enumtypid WHERE t.typname = 'NotificationType' AND e.enumlabel = 'CONSIGNMENT_ALERT') THEN
-    ALTER TYPE "NotificationType" ADD VALUE 'CONSIGNMENT_ALERT';
-  END IF;
-END
-$$;
+-- Add 'CONSIGNMENT_ALERT' to "NotificationType"
+ALTER TYPE "NotificationType" ADD VALUE IF NOT EXISTS 'CONSIGNMENT_ALERT';
 
 
 -- CreateTable
