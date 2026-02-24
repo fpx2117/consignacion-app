@@ -6,6 +6,466 @@ datasource db {
   provider = "postgresql"
 }
 
+model Configuracion {
+  id                             Int     @id @default(1)
+  minStockGlobal                 Int     @default(5)
+  diasAnticipacionVencimiento    Int     @default(7)
+  notificarStockBajo             Boolean @default(true)
+  notificarVencimientos          Boolean @default(true)
+  notificarVentas                Boolean @default(true)
+  usarControlDeCaja              Boolean @default(true)
+  diasAvisoConsignacion          Int     @default(15)
+  notificarConsignacionesActivas Boolean @default(true)
+  notificarLiquidaciones         Boolean @default(true)
+}
+
+model Usuario {
+  id            Int              @id @default(autoincrement())
+  nombre        String
+  email         String           @unique
+  hash          String
+  rol           RolUsuario       @default(EMPLEADO)
+  activo        Boolean          @default(true)
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+  sucursalId    Int?
+  auditLogs     AuditLog[]
+  horarios      HorarioLaboral[]
+  notifications Notification[]
+  sesionesCaja  SesionCaja[]
+  subscription  Subscription?
+  userSessions  UserSession[]
+  sucursal      Sucursal?        @relation(fields: [sucursalId], references: [id])
+
+  @@index([rol])
+  @@index([sucursalId])
+}
+
+model UserSession {
+  id           String   @id @default(cuid())
+  userId       Int
+  token        String   @unique
+  userAgent    String?
+  ipAddress    String?
+  browser      String?
+  os           String?
+  device       String?
+  city         String?
+  country      String?
+  isActive     Boolean  @default(true)
+  expiresAt    DateTime
+  lastActivity DateTime @default(now())
+  createdAt    DateTime @default(now())
+  user         Usuario  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([isActive])
+}
+
+model AuditLog {
+  id        Int      @id @default(autoincrement())
+  userId    Int?
+  action    String
+  module    String
+  details   Json?
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime @default(now())
+  user      Usuario? @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([action])
+  @@index([module])
+  @@index([createdAt])
+}
+
+model HorarioLaboral {
+  id         Int     @id @default(autoincrement())
+  usuarioId  Int
+  diaSemana  Int
+  horaInicio String
+  horaFin    String
+  activo     Boolean @default(true)
+  usuario    Usuario @relation(fields: [usuarioId], references: [id])
+
+  @@unique([usuarioId, diaSemana])
+}
+
+model Cliente {
+  id             Int            @id @default(autoincrement())
+  nombre         String
+  telefono       String?
+  direccion      String?
+  activo         Boolean        @default(true)
+  /// saldo positivo = debe
+  saldoCuenta    Decimal        @default(0) @db.Decimal(10, 2)
+  createdAt      DateTime       @default(now())
+  sucursalId     Int            @default(1)
+  sucursal       Sucursal       @relation(fields: [sucursalId], references: [id])
+  consignaciones Consignacion[]
+  pagos          Pago[]
+  ventas         Venta[]
+
+  @@index([sucursalId])
+}
+
+model Branding {
+  id           Int      @id @default(autoincrement())
+  businessName String
+  primaryColor String   @default("#111827")
+  footerText   String?
+  phone        String?
+  address      String?
+  updatedAt    DateTime @updatedAt
+  logoData     Bytes?
+  logoMime     String?
+}
+
+model MovimientoStock {
+  id             Int                   @id @default(autoincrement())
+  productoId     Int
+  tipo           TipoMovimientoStock
+  motivo         MotivoMovimientoStock
+  cantidad       Int
+  stockPrevio    Int
+  stockPosterior Int
+  observaciones  String?
+  createdAt      DateTime              @default(now())
+  sucursalId     Int                   @default(1)
+  producto       Producto              @relation(fields: [productoId], references: [id], onDelete: Cascade)
+  sucursal       Sucursal              @relation(fields: [sucursalId], references: [id])
+
+  @@index([productoId])
+  @@index([createdAt])
+  @@index([sucursalId])
+}
+
+model Notification {
+  id          Int              @id @default(autoincrement())
+  type        NotificationType
+  title       String
+  description String
+  productoId  Int?
+  read        Boolean          @default(false)
+  fingerprint String           @unique
+  createdAt   DateTime         @default(now())
+  readAt      DateTime?
+  updatedAt   DateTime         @updatedAt
+  userId      Int?
+  producto    Producto?        @relation(fields: [productoId], references: [id])
+  user        Usuario?         @relation(fields: [userId], references: [id])
+
+  @@index([read, updatedAt])
+  @@index([type, createdAt])
+  @@index([productoId])
+}
+
+model Producto {
+  id                   Int                   @id @default(autoincrement())
+  nombre               String
+  precioVenta          Decimal               @db.Decimal(10, 2)
+  precioCosto          Decimal               @db.Decimal(10, 2)
+  stockDisponibleUnits Int                   @default(0)
+  stockConsignadoUnits Int                   @default(0)
+  packSizeUnits        Int?
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
+  stockMinUnits        Int                   @default(0)
+  fechaVencimiento     DateTime?
+  activo               Boolean               @default(true)
+  categoriaId          Int?
+  codigoBarra          String?               @unique
+  descripcion          String?
+  iva                  Decimal               @default(21.0) @db.Decimal(5, 2)
+  sku                  String?               @unique
+  consignacionDetalles ConsignacionDetalle[]
+  movimientoStocks     MovimientoStock[]
+  notifications        Notification[]
+  categoria            Categoria?            @relation(fields: [categoriaId], references: [id])
+  stockSucursals       StockSucursal[]
+  ventaDetalles        VentaDetalle[]
+
+  @@index([codigoBarra])
+  @@index([categoriaId])
+}
+
+model Caja {
+  id         Int          @id @default(autoincrement())
+  nombre     String       @unique
+  activa     Boolean      @default(true)
+  sucursalId Int          @default(1)
+  sucursal   Sucursal     @relation(fields: [sucursalId], references: [id])
+  sesiones   SesionCaja[]
+
+  @@index([sucursalId])
+}
+
+model SesionCaja {
+  id                 Int              @id @default(autoincrement())
+  cajaId             Int
+  usuarioId          Int
+  estado             EstadoSesionCaja @default(ABIERTA)
+  fechaApertura      DateTime         @default(now())
+  fechaCierre        DateTime?
+  montoInicial       Decimal          @db.Decimal(10, 2)
+  montoFinalEsperado Decimal?         @db.Decimal(10, 2)
+  montoFinalReal     Decimal?         @db.Decimal(10, 2)
+  diferencia         Decimal?         @db.Decimal(10, 2)
+  observaciones      String?
+  movimientos        MovimientoCaja[]
+  pagos              Pago[]
+  caja               Caja             @relation(fields: [cajaId], references: [id])
+  usuario            Usuario          @relation(fields: [usuarioId], references: [id])
+  ventas             Venta[]
+
+  @@index([cajaId, estado])
+  @@index([usuarioId, fechaApertura])
+}
+
+model MovimientoCaja {
+  id           Int                @id @default(autoincrement())
+  sesionCajaId Int
+  tipo         TipoMovimientoCaja
+  monto        Decimal            @db.Decimal(10, 2)
+  motivo       String
+  fecha        DateTime           @default(now())
+  sesionCaja   SesionCaja         @relation(fields: [sesionCajaId], references: [id], onDelete: Cascade)
+
+  @@index([sesionCajaId])
+}
+
+model Categoria {
+  id        Int        @id @default(autoincrement())
+  nombre    String     @unique
+  color     String     @default("sky")
+  productos Producto[]
+}
+
+model ShareLink {
+  id           Int           @id @default(autoincrement())
+  codeHash     String        @unique
+  type         ShareLinkType
+  targetId     Int
+  expiresAt    DateTime
+  maxViews     Int           @default(3)
+  views        Int           @default(0)
+  createdAt    DateTime      @default(now())
+  lastViewedAt DateTime?
+  codeEnc      String
+
+  @@index([type, targetId, expiresAt])
+}
+
+model Consignacion {
+  id                Int                   @id @default(autoincrement())
+  clienteId         Int
+  fecha             DateTime              @default(now())
+  estado            EstadoConsignacion    @default(ABIERTA)
+  /// Folio secuencial por cliente (ej: Pedro #1, Pedro #2)
+  numeroFolio       Int
+  porcentajeAumento Float                 @default(0)
+  sucursalId        Int                   @default(1)
+  cliente           Cliente               @relation(fields: [clienteId], references: [id])
+  sucursal          Sucursal              @relation(fields: [sucursalId], references: [id])
+  detalles          ConsignacionDetalle[]
+  liquidaciones     Liquidacion[]
+
+  @@index([clienteId, fecha])
+  @@index([estado, fecha])
+  @@index([clienteId, numeroFolio])
+  @@index([sucursalId])
+}
+
+model ConsignacionDetalle {
+  id                 Int               @id @default(autoincrement())
+  consignacionId     Int
+  productoId         Int
+  /// TODO EN UNITS
+  unitsEntregadas    Int
+  unitsVendidasAcum  Int               @default(0)
+  unitsDevueltasAcum Int               @default(0)
+  precioUnitario     Decimal           @default(0) @db.Decimal(10, 2)
+  consignacion       Consignacion      @relation(fields: [consignacionId], references: [id], onDelete: Cascade)
+  producto           Producto          @relation(fields: [productoId], references: [id])
+  liquidacionItems   LiquidacionItem[]
+
+  @@index([consignacionId])
+  @@index([productoId])
+}
+
+model Liquidacion {
+  id             Int               @id @default(autoincrement())
+  consignacionId Int
+  fecha          DateTime          @default(now())
+  consignacion   Consignacion      @relation(fields: [consignacionId], references: [id], onDelete: Cascade)
+  items          LiquidacionItem[]
+  venta          Venta?
+
+  @@index([consignacionId, fecha])
+}
+
+model LiquidacionItem {
+  id                    Int                 @id @default(autoincrement())
+  liquidacionId         Int
+  consignacionDetalleId Int
+  /// TODO EN UNITS
+  unitsVendidas         Int                 @default(0)
+  unitsDevueltas        Int                 @default(0)
+  /// snapshot del precio al liquidar
+  precioUnitario        Decimal             @db.Decimal(10, 2)
+  detalle               ConsignacionDetalle @relation(fields: [consignacionDetalleId], references: [id])
+  liquidacion           Liquidacion         @relation(fields: [liquidacionId], references: [id], onDelete: Cascade)
+
+  @@index([liquidacionId])
+  @@index([consignacionDetalleId])
+}
+
+model Venta {
+  id            Int            @id @default(autoincrement())
+  clienteId     Int
+  liquidacionId Int?           @unique
+  fecha         DateTime       @default(now())
+  total         Decimal        @db.Decimal(10, 2)
+  sesionCajaId  Int?
+  tipo          TipoVenta      @default(CASUAL)
+  metodoPago    MetodoPago     @default(EFECTIVO)
+  sucursalId    Int            @default(1)
+  cliente       Cliente        @relation(fields: [clienteId], references: [id])
+  liquidacion   Liquidacion?   @relation(fields: [liquidacionId], references: [id])
+  sesionCaja    SesionCaja?    @relation(fields: [sesionCajaId], references: [id], onDelete: Restrict)
+  sucursal      Sucursal       @relation(fields: [sucursalId], references: [id])
+  detalles      VentaDetalle[]
+
+  @@index([clienteId, fecha])
+  @@index([sesionCajaId])
+  @@index([tipo])
+  @@index([sucursalId])
+}
+
+model VentaDetalle {
+  id             Int      @id @default(autoincrement())
+  ventaId        Int
+  productoId     Int
+  /// TODO EN UNITS
+  units          Int
+  precioUnitario Decimal  @db.Decimal(10, 2)
+  subtotal       Decimal  @db.Decimal(10, 2)
+  producto       Producto @relation(fields: [productoId], references: [id])
+  venta          Venta    @relation(fields: [ventaId], references: [id], onDelete: Cascade)
+
+  @@index([ventaId])
+  @@index([productoId])
+}
+
+model Pago {
+  id           Int         @id @default(autoincrement())
+  clienteId    Int
+  fecha        DateTime    @default(now())
+  monto        Decimal     @db.Decimal(10, 2)
+  metodo       MetodoPago
+  sesionCajaId Int?
+  cliente      Cliente     @relation(fields: [clienteId], references: [id])
+  sesionCaja   SesionCaja? @relation(fields: [sesionCajaId], references: [id], onDelete: Restrict)
+
+  @@index([clienteId, fecha])
+  @@index([sesionCajaId])
+}
+
+model Plan {
+  id            Int            @id @default(autoincrement())
+  nombre        String
+  descripcion   String?
+  precioARS     Decimal        @db.Decimal(10, 2)
+  precioUSD     Decimal        @db.Decimal(10, 2)
+  mercadopagoId String?
+  paypalId      String?
+  activo        Boolean        @default(true)
+  limits        PlanLimit?
+  promoCodes    PromoCode[]
+  subscriptions Subscription[]
+}
+
+model Subscription {
+  id                String               @id @default(cuid())
+  userId            Int                  @unique
+  planId            Int
+  status            EstadoSuscripcion    @default(PRUEBA)
+  provider          ProveedorSuscripcion
+  externalId        String               @unique
+  trialEndsAt       DateTime?
+  currentPeriodEnd  DateTime?
+  cancelAtPeriodEnd Boolean              @default(false)
+  createdAt         DateTime             @default(now())
+  updatedAt         DateTime             @updatedAt
+  plan              Plan                 @relation(fields: [planId], references: [id])
+  user              Usuario              @relation(fields: [userId], references: [id])
+}
+
+model PlanLimit {
+  id                  Int      @id @default(autoincrement())
+  planId              Int      @unique
+  maxProductos        Int      @default(-1)
+  maxUsuarios         Int      @default(5)
+  allowConsignaciones Boolean  @default(false)
+  allowSucursales     Boolean  @default(false)
+  updatedAt           DateTime @updatedAt
+  plan                Plan     @relation(fields: [planId], references: [id])
+}
+
+model PromoCode {
+  id           Int       @id @default(autoincrement())
+  code         String    @unique
+  planId       Int
+  durationDays Int
+  maxUses      Int       @default(1)
+  usedCount    Int       @default(0)
+  expiresAt    DateTime?
+  activo       Boolean   @default(true)
+  createdAt    DateTime  @default(now())
+  plan         Plan      @relation(fields: [planId], references: [id])
+}
+
+model ResetPasswordToken {
+  id        String   @id @default(cuid())
+  email     String
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([email])
+}
+
+model Sucursal {
+  id             Int               @id @default(autoincrement())
+  nombre         String
+  esPrincipal    Boolean           @default(false)
+  activa         Boolean           @default(true)
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+  cajas          Caja[]
+  clientes       Cliente[]
+  consignaciones Consignacion[]
+  movimientos    MovimientoStock[]
+  stockProductos StockSucursal[]
+  usuarios       Usuario[]
+  ventas         Venta[]
+}
+
+model StockSucursal {
+  id                   Int      @id @default(autoincrement())
+  productoId           Int
+  sucursalId           Int
+  stockDisponibleUnits Int      @default(0)
+  stockConsignadoUnits Int      @default(0)
+  stockMinUnits        Int      @default(0)
+  precioVentaOverride  Decimal? @db.Decimal(10, 2)
+  precioCostoOverride  Decimal? @db.Decimal(10, 2)
+  producto             Producto @relation(fields: [productoId], references: [id], onDelete: Cascade)
+  sucursal             Sucursal @relation(fields: [sucursalId], references: [id], onDelete: Cascade)
+
+  @@unique([productoId, sucursalId])
+}
+
 enum RolUsuario {
   ADMIN
   EMPLEADO
@@ -22,8 +482,8 @@ enum TipoMovimientoCaja {
 }
 
 enum TipoVenta {
-  CASUAL // Venta directa por mostrador (POS)
-  LIQUIDACION // Venta generada al cerrar una consignación
+  CASUAL
+  LIQUIDACION
 }
 
 enum TipoMovimientoStock {
@@ -32,15 +492,15 @@ enum TipoMovimientoStock {
 }
 
 enum MotivoMovimientoStock {
-  COMPRA // Entrada por compra a proveedor
-  DEVOLUCION_CLIENTE // Entrada por devolución
-  AJUSTE_POSITIVO // Entrada manual por corrección
-  ROTURA // Salida por producto dañado
-  VENCIMIENTO // Salida por producto vencido
-  PERDIDA // Salida por pérdida/robo
-  AJUSTE_NEGATIVO // Salida manual por corrección
-  VENTA // Salida automática por venta (opcional)
-  CONSIGNACION // Movimiento por consignación (opcional)
+  COMPRA
+  DEVOLUCION_CLIENTE
+  AJUSTE_POSITIVO
+  ROTURA
+  VENCIMIENTO
+  PERDIDA
+  AJUSTE_NEGATIVO
+  VENTA
+  CONSIGNACION
 }
 
 enum ShareLinkType {
@@ -53,12 +513,12 @@ enum ShareLinkType {
 enum NotificationType {
   LOW_STOCK
   OUT_OF_STOCK
+  SYSTEM
   EXPIRATION_NEAR
   PRODUCT_EXPIRED
   SUBSCRIPTION_EXPIRING
   TRIAL_ENDING
   SUBSCRIPTION_ACTIVE
-  SYSTEM
   NEW_ORDER
   PAYMENT_RECEIVED
   PAYMENT_FAILED
@@ -92,561 +552,4 @@ enum MetodoPago {
   TRANSFERENCIA
   TARJETA
   OTRO
-}
-
-model Configuracion {
-  id                          Int @id @default(1) // Siempre será ID 1
-  minStockGlobal              Int @default(5) // El admin puede cambiar esto desde el panel
-  diasAnticipacionVencimiento Int @default(7) // <--- Nuevo campo
-
-  // Interruptores de notificación
-  notificarVencimientos          Boolean @default(true)
-  notificarStockBajo             Boolean @default(true)
-  notificarVentas                Boolean @default(true)
-  notificarLiquidaciones         Boolean @default(true)
-  notificarConsignacionesActivas Boolean @default(true)
-
-  diasAvisoConsignacion Int @default(15) // Días que debe llevar en la calle para notificar
-
-  // NUEVO: Interruptor global para forzar o ignorar el uso de turnos/cajas
-  usarControlDeCaja Boolean @default(true)
-}
-
-model Usuario {
-  id        Int        @id @default(autoincrement())
-  nombre    String
-  email     String     @unique
-  hash      String
-  rol       RolUsuario @default(EMPLEADO)
-  activo    Boolean    @default(true)
-  createdAt DateTime   @default(now())
-  updatedAt DateTime   @updatedAt
-
-  sesionesCaja SesionCaja[] // <--- NUEVO: Relación con sus turnos
-  horarios     HorarioLaboral[]
-  subscription Subscription? // <--- NUEVO: Relación con su suscripción
-
-  auditLogs     AuditLog[]
-  userSessions  UserSession[]
-  notifications Notification[] // <--- NUEVO: Relación con sus notificaciones
-
-  sucursalId Int?
-  sucursal   Sucursal? @relation(fields: [sucursalId], references: [id], onDelete: SetNull)
-
-  @@index([rol])
-  @@index([sucursalId])
-}
-
-model UserSession {
-  id     String  @id @default(cuid())
-  userId Int
-  user   Usuario @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  token     String  @unique // Hashed token or session ID
-  userAgent String?
-  ipAddress String?
-
-  // ✅ Datos de dispositivo y ubicación (Real)
-  browser String?
-  os      String?
-  device  String?
-  city    String?
-  country String?
-
-  isActive  Boolean  @default(true)
-  expiresAt DateTime
-
-  lastActivity DateTime @default(now())
-  createdAt    DateTime @default(now())
-
-  @@index([userId])
-  @@index([isActive])
-}
-
-model AuditLog {
-  id     Int      @id @default(autoincrement())
-  userId Int?
-  user   Usuario? @relation(fields: [userId], references: [id], onDelete: SetNull)
-
-  action  String // Ej: "LOGIN", "UPDATE_PRODUCT", "DELETE_SALE"
-  module  String // Ej: "AUTH", "INVENTORY", "SALES"
-  details Json? // Información extra del cambio
-
-  ipAddress String?
-  userAgent String?
-
-  createdAt DateTime @default(now())
-
-  @@index([userId])
-  @@index([action])
-  @@index([module])
-  @@index([createdAt])
-}
-
-model HorarioLaboral {
-  id         Int     @id @default(autoincrement())
-  usuarioId  Int
-  diaSemana  Int // 0 (Domingo) a 6 (Sábado)
-  horaInicio String // "09:00"
-  horaFin    String // "18:00"
-  activo     Boolean @default(true)
-  usuario    Usuario @relation(fields: [usuarioId], references: [id])
-
-  @@unique([usuarioId, diaSemana]) // Un horario por día por usuario
-}
-
-model Cliente {
-  id        Int     @id @default(autoincrement())
-  nombre    String
-  telefono  String?
-  direccion String?
-  activo    Boolean @default(true)
-
-  /// saldo positivo = debe
-  saldoCuenta Decimal @default(0) @db.Decimal(10, 2)
-
-  createdAt DateTime @default(now())
-
-  sucursalId Int      @default(1)
-  sucursal   Sucursal @relation(fields: [sucursalId], references: [id], onDelete: Restrict)
-
-  consignaciones Consignacion[]
-  pagos          Pago[]
-  ventas         Venta[]
-
-  @@index([sucursalId])
-}
-
-model Branding {
-  id           Int      @id @default(autoincrement())
-  businessName String
-  logoMime     String? // "image/png", "image/jpeg", "image/webp"
-  logoData     Bytes? // BLOB
-  primaryColor String   @default("#111827") // gris oscuro
-  footerText   String?
-  phone        String?
-  address      String?
-  updatedAt    DateTime @updatedAt
-}
-
-model MovimientoStock {
-  id         Int      @id @default(autoincrement())
-  productoId Int
-  producto   Producto @relation(fields: [productoId], references: [id], onDelete: Cascade)
-
-  tipo     TipoMovimientoStock
-  motivo   MotivoMovimientoStock
-  cantidad Int
-
-  // Guardamos una foto de cómo estaba el stock antes y después para auditoría
-  stockPrevio    Int
-  stockPosterior Int
-
-  observaciones String? // Nota manual opcional
-
-  sucursalId Int      @default(1)
-  sucursal   Sucursal @relation(fields: [sucursalId], references: [id], onDelete: Restrict)
-
-  createdAt DateTime @default(now())
-
-  @@index([productoId])
-  @@index([createdAt])
-  @@index([sucursalId])
-}
-
-model Notification {
-  id Int @id @default(autoincrement())
-
-  type        NotificationType
-  title       String
-  description String
-
-  // Relación con Producto (Opcional, por si se borra el producto físico)
-  productoId Int?
-  producto   Producto? @relation(fields: [productoId], references: [id], onDelete: SetNull)
-
-  // Estado
-  read Boolean @default(false)
-
-  // Relación con Usuario (Opcional, para notificaciones privadas)
-  userId Int?
-  user   Usuario? @relation(fields: [userId], references: [id], onDelete: SetNull)
-
-  fingerprint String @unique
-
-  // Timestamps
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt // <--- AGREGADO: Vital para ordenar por "actividad reciente"
-  readAt    DateTime?
-
-  // Índices optimizados para tus queries del panel
-  @@index([read, updatedAt]) // Para: "Dame las no leídas más recientes"
-  @@index([type, createdAt]) // Para filtros por tipo
-  @@index([productoId]) // Para ver historial de un producto
-}
-
-model Producto {
-  id          Int     @id @default(autoincrement())
-  nombre      String
-  descripcion String? // Opcional, para detalles extra
-  codigoBarra String? @unique
-  sku         String? @unique
-  activo      Boolean @default(true)
-
-  precioVenta Decimal @db.Decimal(10, 2)
-  precioCosto Decimal @db.Decimal(10, 2)
-  iva         Decimal @default(21.0) @db.Decimal(5, 2)
-
-  stockDisponibleUnits Int @default(0)
-  stockConsignadoUnits Int @default(0)
-  stockMinUnits        Int @default(0)
-
-  packSizeUnits    Int? // Ej: 12 si es un pack
-  fechaVencimiento DateTime?
-
-  // Relaciones
-  categoriaId Int?
-  categoria   Categoria? @relation(fields: [categoriaId], references: [id])
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  consignacionDetalles ConsignacionDetalle[]
-  ventaDetalles        VentaDetalle[]
-  notifications        Notification[]
-  movimientoStocks     MovimientoStock[]
-  stockSucursals       StockSucursal[]
-
-  @@index([codigoBarra])
-  @@index([categoriaId])
-}
-
-model Caja {
-  id     Int     @id @default(autoincrement())
-  nombre String  @unique // Ej: "Caja Principal"
-  activa Boolean @default(true)
-
-  sucursalId Int      @default(1)
-  sucursal   Sucursal @relation(fields: [sucursalId], references: [id], onDelete: Restrict)
-
-  sesiones SesionCaja[]
-
-  @@index([sucursalId])
-}
-
-model SesionCaja {
-  id Int @id @default(autoincrement())
-
-  cajaId Int
-  caja   Caja @relation(fields: [cajaId], references: [id], onDelete: Restrict)
-
-  usuarioId Int
-  usuario   Usuario @relation(fields: [usuarioId], references: [id], onDelete: Restrict)
-
-  estado EstadoSesionCaja @default(ABIERTA)
-
-  fechaApertura DateTime  @default(now())
-  fechaCierre   DateTime?
-
-  montoInicial       Decimal  @db.Decimal(10, 2)
-  montoFinalEsperado Decimal? @db.Decimal(10, 2)
-  montoFinalReal     Decimal? @db.Decimal(10, 2)
-  diferencia         Decimal? @db.Decimal(10, 2)
-
-  observaciones String?
-
-  movimientos MovimientoCaja[]
-  ventas      Venta[]
-  pagos       Pago[]
-
-  @@index([cajaId, estado])
-  @@index([usuarioId, fechaApertura])
-}
-
-model MovimientoCaja {
-  id Int @id @default(autoincrement())
-
-  sesionCajaId Int
-  sesionCaja   SesionCaja @relation(fields: [sesionCajaId], references: [id], onDelete: Cascade)
-
-  tipo   TipoMovimientoCaja
-  monto  Decimal            @db.Decimal(10, 2)
-  motivo String
-
-  fecha DateTime @default(now())
-
-  @@index([sesionCajaId])
-}
-
-model Categoria {
-  id        Int        @id @default(autoincrement())
-  nombre    String     @unique
-  color     String     @default("sky")
-  productos Producto[]
-}
-
-model ShareLink {
-  id Int @id @default(autoincrement())
-
-  // Lookup seguro (no reversible)
-  codeHash String @unique
-
-  // Reutilización: guardamos el code cifrado (reversible con secret)
-  codeEnc String
-
-  type     ShareLinkType
-  targetId Int
-
-  expiresAt DateTime
-  maxViews  Int      @default(3)
-  views     Int      @default(0)
-
-  createdAt    DateTime  @default(now())
-  lastViewedAt DateTime?
-
-  @@index([type, targetId, expiresAt])
-}
-
-model Consignacion {
-  id Int @id @default(autoincrement())
-
-  /// Folio secuencial por cliente (ej: Pedro #1, Pedro #2)
-  numeroFolio       Int
-  porcentajeAumento Float @default(0)
-
-  clienteId Int
-  cliente   Cliente @relation(fields: [clienteId], references: [id], onDelete: Restrict)
-
-  fecha  DateTime           @default(now())
-  estado EstadoConsignacion @default(ABIERTA)
-
-  sucursalId Int      @default(1)
-  sucursal   Sucursal @relation(fields: [sucursalId], references: [id], onDelete: Restrict)
-
-  detalles      ConsignacionDetalle[]
-  liquidaciones Liquidacion[]
-
-  @@index([clienteId, fecha])
-  @@index([estado, fecha])
-  // Indexamos el folio para búsquedas rápidas si fuera necesario
-  @@index([clienteId, numeroFolio])
-  @@index([sucursalId])
-}
-
-model ConsignacionDetalle {
-  id             Int          @id @default(autoincrement())
-  consignacionId Int
-  consignacion   Consignacion @relation(fields: [consignacionId], references: [id], onDelete: Cascade)
-
-  productoId     Int
-  producto       Producto @relation(fields: [productoId], references: [id], onDelete: Restrict)
-  precioUnitario Decimal  @default(0) @db.Decimal(10, 2)
-
-  /// TODO EN UNITS
-  unitsEntregadas    Int
-  unitsVendidasAcum  Int @default(0)
-  unitsDevueltasAcum Int @default(0)
-
-  /// Relación inversa requerida por LiquidacionItem.detalle
-  liquidacionItems LiquidacionItem[]
-
-  @@index([consignacionId])
-  @@index([productoId])
-}
-
-model Liquidacion {
-  id             Int          @id @default(autoincrement())
-  consignacionId Int
-  consignacion   Consignacion @relation(fields: [consignacionId], references: [id], onDelete: Cascade)
-
-  fecha DateTime @default(now())
-
-  items LiquidacionItem[]
-  venta Venta? // venta opcional asociada (si hubo unitsVendidas)
-
-  @@index([consignacionId, fecha])
-}
-
-model LiquidacionItem {
-  id            Int         @id @default(autoincrement())
-  liquidacionId Int
-  liquidacion   Liquidacion @relation(fields: [liquidacionId], references: [id], onDelete: Cascade)
-
-  consignacionDetalleId Int
-  detalle               ConsignacionDetalle @relation(fields: [consignacionDetalleId], references: [id], onDelete: Restrict)
-
-  /// TODO EN UNITS
-  unitsVendidas  Int @default(0)
-  unitsDevueltas Int @default(0)
-
-  /// snapshot del precio al liquidar
-  precioUnitario Decimal @db.Decimal(10, 2)
-
-  @@index([liquidacionId])
-  @@index([consignacionDetalleId])
-}
-
-model Venta {
-  id         Int        @id @default(autoincrement())
-  tipo       TipoVenta  @default(CASUAL)
-  metodoPago MetodoPago @default(EFECTIVO)
-
-  clienteId Int
-  cliente   Cliente @relation(fields: [clienteId], references: [id], onDelete: Restrict)
-
-  // Campos de origen (uno u otro estará presente según el tipo)
-  liquidacionId Int?         @unique
-  liquidacion   Liquidacion? @relation(fields: [liquidacionId], references: [id], onDelete: SetNull)
-
-  sesionCajaId Int?
-  sesionCaja   SesionCaja? @relation(fields: [sesionCajaId], references: [id], onDelete: Restrict)
-
-  fecha    DateTime       @default(now())
-  total    Decimal        @db.Decimal(10, 2)
-  detalles VentaDetalle[]
-
-  sucursalId Int      @default(1)
-  sucursal   Sucursal @relation(fields: [sucursalId], references: [id], onDelete: Restrict)
-
-  @@index([clienteId, fecha])
-  @@index([sesionCajaId])
-  @@index([tipo]) // Para filtrar rápido en el Dashboard
-  @@index([sucursalId])
-}
-
-model VentaDetalle {
-  id      Int   @id @default(autoincrement())
-  ventaId Int
-  venta   Venta @relation(fields: [ventaId], references: [id], onDelete: Cascade)
-
-  productoId Int
-  producto   Producto @relation(fields: [productoId], references: [id], onDelete: Restrict)
-
-  /// TODO EN UNITS
-  units Int
-
-  precioUnitario Decimal @db.Decimal(10, 2)
-  subtotal       Decimal @db.Decimal(10, 2)
-
-  @@index([ventaId])
-  @@index([productoId])
-}
-
-model Pago {
-  id           Int         @id @default(autoincrement())
-  clienteId    Int
-  cliente      Cliente     @relation(fields: [clienteId], references: [id], onDelete: Restrict)
-  sesionCajaId Int?
-  sesionCaja   SesionCaja? @relation(fields: [sesionCajaId], references: [id], onDelete: Restrict)
-
-  fecha  DateTime   @default(now())
-  monto  Decimal    @db.Decimal(10, 2)
-  metodo MetodoPago
-
-  @@index([clienteId, fecha])
-  @@index([sesionCajaId])
-}
-
-model Plan {
-  id            Int     @id @default(autoincrement())
-  nombre        String // Basic, Pro, Enterprise
-  descripcion   String?
-  precioARS     Decimal @db.Decimal(10, 2)
-  precioUSD     Decimal @db.Decimal(10, 2)
-  mercadopagoId String? // ID en MP
-  paypalId      String? // ID en PayPal
-  activo        Boolean @default(true)
-
-  subscriptions Subscription[]
-  limits        PlanLimit?
-  promoCodes    PromoCode[]
-}
-
-model Subscription {
-  id                String               @id @default(cuid())
-  userId            Int                  @unique
-  user              Usuario              @relation(fields: [userId], references: [id])
-  planId            Int
-  plan              Plan                 @relation(fields: [planId], references: [id])
-  status            EstadoSuscripcion    @default(PRUEBA)
-  provider          ProveedorSuscripcion
-  externalId        String               @unique // ID de MP o PayPal
-  trialEndsAt       DateTime?
-  currentPeriodEnd  DateTime?
-  cancelAtPeriodEnd Boolean              @default(false)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-
-model PlanLimit {
-  id     Int  @id @default(autoincrement())
-  planId Int  @unique
-  plan   Plan @relation(fields: [planId], references: [id])
-
-  maxProductos        Int     @default(-1) // -1 = ilimitado
-  maxUsuarios         Int     @default(5)
-  allowConsignaciones Boolean @default(false)
-  allowSucursales     Boolean @default(false)
-
-  updatedAt DateTime @updatedAt
-}
-
-model PromoCode {
-  id           Int       @id @default(autoincrement())
-  code         String    @unique
-  planId       Int
-  plan         Plan      @relation(fields: [planId], references: [id])
-  durationDays Int // ej: 90 = 3 meses gratis
-  maxUses      Int       @default(1)
-  usedCount    Int       @default(0)
-  expiresAt    DateTime?
-  activo       Boolean   @default(true)
-  createdAt    DateTime  @default(now())
-}
-
-model ResetPasswordToken {
-  id        String   @id @default(cuid())
-  email     String
-  token     String   @unique
-  expiresAt DateTime
-  createdAt DateTime @default(now())
-
-  @@index([email])
-}
-
-model Sucursal {
-  id          Int      @id @default(autoincrement())
-  nombre      String
-  esPrincipal Boolean  @default(false)
-  activa      Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  usuarios       Usuario[]
-  clientes       Cliente[]
-  cajas          Caja[]
-  consignaciones Consignacion[]
-  ventas         Venta[]
-  movimientos    MovimientoStock[]
-  stockProductos StockSucursal[]
-}
-
-model StockSucursal {
-  id         Int @id @default(autoincrement())
-  productoId Int
-  sucursalId Int
-
-  stockDisponibleUnits Int @default(0)
-  stockConsignadoUnits Int @default(0)
-  stockMinUnits        Int @default(0)
-
-  // Si estos campos son NULL, se utiliza el precio maestro de "Producto"
-  precioVentaOverride Decimal? @db.Decimal(10, 2)
-  precioCostoOverride Decimal? @db.Decimal(10, 2)
-
-  producto Producto @relation(fields: [productoId], references: [id], onDelete: Cascade)
-  sucursal Sucursal @relation(fields: [sucursalId], references: [id], onDelete: Cascade)
-
-  @@unique([productoId, sucursalId])
 }
