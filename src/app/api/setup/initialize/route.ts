@@ -245,7 +245,8 @@ export async function POST(req: Request) {
             if (staff && Array.isArray(staff) && staff.length > 0) {
                 for (const member of staff) {
                     if (member.email && member.nombre) {
-                        const staffHash = await bcrypt.hash("123456", 10);
+                        const passwordToUse = member.password && member.password.trim() !== "" ? member.password : "123456";
+                        const staffHash = await bcrypt.hash(passwordToUse, 10);
                         await tx.usuario.create({
                             data: {
                                 nombre: member.nombre,
