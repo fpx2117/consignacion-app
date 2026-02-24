@@ -1,10 +1,3 @@
--- Add 'VENCIDO' to "EstadoSuscripcion"
-ALTER TYPE "EstadoSuscripcion" ADD VALUE IF NOT EXISTS 'VENCIDO';
-
--- Add 'CONSIGNMENT_ALERT' to "NotificationType"
-ALTER TYPE "NotificationType" ADD VALUE IF NOT EXISTS 'CONSIGNMENT_ALERT';
-
-
 -- CreateTable
 CREATE TABLE "Sucursal" (
     "id" SERIAL NOT NULL,
