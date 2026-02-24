@@ -68,6 +68,8 @@ const MOBILE_PRIMARY = [
   { label: "Vender", href: "/ventas/nueva", icon: ShoppingCart },
 ];
 
+import { BrandLogo } from "@/components/brand-logo";
+
 export function SidebarDock() {
   const pathname = usePathname() ?? "";
   const router = useRouter();
@@ -326,9 +328,9 @@ export function SidebarDock() {
       <div className="hidden h-full w-full md:flex md:flex-col md:items-center md:py-6">
 
         {/* LOGO POS PRINCIPAL */}
-        <div className="h-10 w-10 flex shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground font-black text-xs mb-8 shadow-lg">
-          POS
-        </div>
+        <Link href="/dashboard" className="transition-transform active:scale-95 mb-8">
+          <BrandLogo size="md" />
+        </Link>
 
         <div className="flex-1 flex flex-col items-center justify-center w-full">
           <div className="relative overflow-hidden rounded-3xl p-[1px]">
