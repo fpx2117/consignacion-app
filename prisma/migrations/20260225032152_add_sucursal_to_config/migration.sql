@@ -5,10 +5,7 @@
 
 */
 -- AlterTable
-CREATE SEQUENCE configuracion_id_seq;
-ALTER TABLE "Configuracion" ADD COLUMN     "sucursalId" INTEGER NOT NULL DEFAULT 1,
-ALTER COLUMN "id" SET DEFAULT nextval('configuracion_id_seq');
-ALTER SEQUENCE configuracion_id_seq OWNED BY "Configuracion"."id";
+ALTER TABLE "Configuracion" ADD COLUMN     "sucursalId" INTEGER NOT NULL DEFAULT 1;
 
 -- CreateIndex
 CREATE UNIQUE INDEX "Configuracion_sucursalId_key" ON "Configuracion"("sucursalId");
