@@ -1,0 +1,13 @@
+Loaded Prisma config from prisma.config.ts.
+
+Prisma schema loaded from prisma\schema.prisma.
+Datasource "db": PostgreSQL database "railway", schema "public" at "hopper.proxy.rlwy.net:54604"
+
+1 migration found in prisma/migrations
+
+Error: P3009
+
+migrate found failed migrations in the target database, new migrations will not be applied. Read more about how to resolve migration issues in a production database: https://pris.ly/d/migrate-resolve
+The `20260225052034_01` migration started at 2026-02-25 05:27:47.611166 UTC failed
+
+

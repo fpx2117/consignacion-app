@@ -42,8 +42,8 @@ export async function GET(_: Request, { params }: RouteParams) {
     const branchStock = producto.stockSucursals[0];
     const data = {
       ...producto,
-      stockDisponibleUnits: branchStock?.stockDisponibleUnits ?? 0,
-      stockConsignadoUnits: branchStock?.stockConsignadoUnits ?? 0,
+      stockDisponibleUnits: branchStock?.stockDisponibleUnits ?? producto.stockDisponibleUnits ?? 0,
+      stockConsignadoUnits: branchStock?.stockConsignadoUnits ?? producto.stockConsignadoUnits ?? 0,
       stockMinUnits: branchStock?.stockMinUnits ?? producto.stockMinUnits,
     };
 

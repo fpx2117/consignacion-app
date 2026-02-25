@@ -39,8 +39,8 @@ export async function GET() {
       const branchStock = p.stockSucursals[0];
       return {
         ...p,
-        stockDisponibleUnits: branchStock?.stockDisponibleUnits ?? 0,
-        stockConsignadoUnits: branchStock?.stockConsignadoUnits ?? 0,
+        stockDisponibleUnits: branchStock?.stockDisponibleUnits ?? p.stockDisponibleUnits ?? 0,
+        stockConsignadoUnits: branchStock?.stockConsignadoUnits ?? p.stockConsignadoUnits ?? 0,
         stockMinUnits: branchStock?.stockMinUnits ?? p.stockMinUnits,
       };
     });
