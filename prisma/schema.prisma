@@ -7,20 +7,16 @@ datasource db {
 }
 
 model Configuracion {
-  id                             Int      @id @default(autoincrement())
-  minStockGlobal                 Int      @default(5)
-  diasAnticipacionVencimiento    Int      @default(7)
-  notificarStockBajo             Boolean  @default(true)
-  notificarVencimientos          Boolean  @default(true)
-  notificarVentas                Boolean  @default(true)
-  usarControlDeCaja              Boolean  @default(true)
-  diasAvisoConsignacion          Int      @default(15)
-  notificarConsignacionesActivas Boolean  @default(true)
-  notificarLiquidaciones         Boolean  @default(true)
-  mensajeWhatsappConsignacion    String?
-  mensajeWhatsappVenta           String?
-  sucursalId                     Int      @unique @default(1)
-  sucursal                       Sucursal @relation(fields: [sucursalId], references: [id])
+  id                             Int     @id @default(1)
+  minStockGlobal                 Int     @default(5)
+  diasAnticipacionVencimiento    Int     @default(7)
+  notificarStockBajo             Boolean @default(true)
+  notificarVencimientos          Boolean @default(true)
+  notificarVentas                Boolean @default(true)
+  usarControlDeCaja              Boolean @default(true)
+  diasAvisoConsignacion          Int     @default(15)
+  notificarConsignacionesActivas Boolean @default(true)
+  notificarLiquidaciones         Boolean @default(true)
 }
 
 model Usuario {
@@ -123,8 +119,6 @@ model Branding {
   updatedAt    DateTime @updatedAt
   logoData     Bytes?
   logoMime     String?
-  sucursalId   Int      @unique @default(1)
-  sucursal     Sucursal @relation(fields: [sucursalId], references: [id])
 }
 
 model MovimientoStock {
@@ -180,24 +174,19 @@ model Producto {
   fechaVencimiento     DateTime?
   activo               Boolean               @default(true)
   categoriaId          Int?
-  codigoBarra          String?
+  codigoBarra          String?               @unique
   descripcion          String?
   iva                  Decimal               @default(21.0) @db.Decimal(5, 2)
-  sku                  String?
-  sucursalId           Int?                  @default(1)
+  sku                  String?               @unique
   consignacionDetalles ConsignacionDetalle[]
   movimientoStocks     MovimientoStock[]
   notifications        Notification[]
   categoria            Categoria?            @relation(fields: [categoriaId], references: [id])
   stockSucursals       StockSucursal[]
   ventaDetalles        VentaDetalle[]
-  sucursal             Sucursal?             @relation(fields: [sucursalId], references: [id])
 
-  @@unique([codigoBarra, sucursalId])
-  @@unique([sku, sucursalId])
   @@index([codigoBarra])
   @@index([categoriaId])
-  @@index([sucursalId])
 }
 
 model Caja {
@@ -403,7 +392,6 @@ model Subscription {
   status            EstadoSuscripcion    @default(PRUEBA)
   provider          ProveedorSuscripcion
   externalId        String               @unique
-  mpPreapprovalId   String?
   trialEndsAt       DateTime?
   currentPeriodEnd  DateTime?
   cancelAtPeriodEnd Boolean              @default(false)
@@ -461,9 +449,6 @@ model Sucursal {
   stockProductos StockSucursal[]
   usuarios       Usuario[]
   ventas         Venta[]
-  productos      Producto[]
-  configuracion  Configuracion?
-  branding       Branding?
 }
 
 model StockSucursal {
@@ -539,7 +524,6 @@ enum NotificationType {
   PAYMENT_FAILED
   EXPORT_READY
   CLIENT_REGISTERED
-  CONSIGNMENT_ALERT
 }
 
 enum EstadoConsignacion {
@@ -553,7 +537,6 @@ enum EstadoSuscripcion {
   ATRASADO
   CANCELADO
   INCOMPLETO
-  VENCIDO
 }
 
 enum ProveedorSuscripcion {

@@ -44,8 +44,9 @@ async function seedPromoCodes() {
   console.log("🎟️ Sincronizando códigos promocionales...");
 
   const promoCodes = [
-    { code: "Agustin2026", planId: 2, durationDays: 90, maxUses: 1 },
+    { code: "AGUSTIN2026", planId: 2, durationDays: 90, maxUses: 1 },
     { code: "A-DATA2026", planId: 3, durationDays: 90, maxUses: 1 },
+    { code: "PROMOCODE", planId: 3, durationDays: 365, maxUses: 999 },
   ];
 
   for (const promo of promoCodes) {

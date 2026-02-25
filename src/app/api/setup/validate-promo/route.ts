@@ -27,12 +27,7 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: "Código expirado" }, { status: 400 });
         }
 
-        // Validate plan compatibility if specified
-        if (planId && promo.planId !== planId) {
-            return NextResponse.json({
-                error: `Este código solo es válido para el plan ${promo.plan.nombre}`
-            }, { status: 400 });
-        }
+        // Plan compatibility check removed to allow license to override selection
 
         return NextResponse.json({
             valid: true,
