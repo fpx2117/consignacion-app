@@ -1,81 +1,101 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
+import { prisma } from "@/lib/prisma";
 import { SUBSCRIPTION_PLANS, PLAN_LIMITS_DEFAULTS } from "@/constants/subscriptions";
-import { RolUsuario, ProveedorSuscripcion, EstadoSuscripcion } from "@prisma/client";
-import { MercadoPagoConfig, Payment } from "mercadopago";
-import { paymentConfig } from "@/lib/paymentConfig";
+import { EstadoSuscripcion, ProveedorSuscripcion, RolUsuario } from "@prisma/client";
 
-const mpClient = new MercadoPagoConfig({
-    accessToken: paymentConfig.mp.accessToken,
-});
+// ✅ IMPORTANT: Prisma necesita Node runtime (NO Edge)
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
 type InitializeBody = {
     admin: { nombre: string; email: string; password: string };
-    planId: number;
+    planId?: number;
     staff?: Array<{ nombre: string; email: string; password?: string }>;
     businessName?: string;
     promoCode?: string;
     paymentId?: string;
 };
 
+function jsonError(status: number, payload: any) {
+    return NextResponse.json(payload, { status });
+}
+
+function requireEnv(name: string) {
+    const v = process.env[name];
+    if (!v || String(v).trim() === "") {
+        throw new Error(`Missing required env var: ${name}`);
+    }
+    return v;
+}
+
 export async function POST(req: Request) {
     try {
-        // 1) Security check: Only initialize if there are NO users
+        // ✅ Hard fail early if DB is not configured
+        requireEnv("DATABASE_URL");
+
+        // 1) Security check: only initialize if there are NO users
         const userCount = await prisma.usuario.count();
         if (userCount > 0) {
-            return NextResponse.json(
-                { message: "El sistema ya ha sido inicializado" },
-                { status: 403 }
-            );
+            return jsonError(403, { message: "El sistema ya ha sido inicializado" });
         }
 
-        const body = (await req.json()) as InitializeBody;
+        let body: InitializeBody;
+        try {
+            body = (await req.json()) as InitializeBody;
+        } catch {
+            return jsonError(400, { message: "Body inválido (JSON requerido)" });
+        }
+
         const { admin, planId, staff, businessName, promoCode, paymentId } = body;
 
         if (!admin?.nombre || !admin?.email || !admin?.password) {
-            return NextResponse.json({ message: "Faltan datos del administrador" }, { status: 400 });
+            return jsonError(400, { message: "Faltan datos del administrador" });
         }
 
-        // --- VERIFICATION LOGIC ---
-        let verificationProvider: ProveedorSuscripcion = ProveedorSuscripcion.PROMO;
-        let verificationExternalId = `SETUP-UNVERIFIED-${Date.now()}`;
-        const verificationStatus = EstadoSuscripcion.ACTIVO;
+        // --- VERIFICATION LOGIC (robusta) ---
+        let verificationProvider: ProveedorSuscripcion;
+        let verificationExternalId: string;
+        const verificationStatus: EstadoSuscripcion = EstadoSuscripcion.ACTIVO;
         let trialDays = 30;
-        let finalPlanId = planId;
+        let finalPlanId: number | null = typeof planId === "number" ? planId : null;
 
-        if (promoCode) {
+        // Validate planId when provided
+        if (finalPlanId !== null && finalPlanId <= 0) {
+            return jsonError(400, { message: "planId inválido" });
+        }
+
+        if (promoCode && String(promoCode).trim() !== "") {
+            // Promo verification (read now; increment later in TX to keep atomic)
             const promo = await prisma.promoCode.findUnique({
                 where: { code: promoCode.toUpperCase() },
                 include: { plan: true },
             });
 
             if (!promo || !promo.activo || promo.usedCount >= promo.maxUses) {
-                return NextResponse.json(
-                    { message: "La licencia es inválida o ya fue utilizada" },
-                    { status: 400 }
-                );
+                return jsonError(400, { message: "La licencia es inválida o ya fue utilizada" });
             }
 
             verificationProvider = ProveedorSuscripcion.PROMO;
             verificationExternalId = `PROMO-${promo.code}-${Date.now()}`;
             trialDays = promo.durationDays || 30;
             finalPlanId = promo.planId;
-
-            await prisma.promoCode.update({
-                where: { id: promo.id },
-                data: { usedCount: { increment: 1 } },
-            });
-        } else if (paymentId) {
-            const isPayPal = paymentId.startsWith("S-");
+        } else if (paymentId && String(paymentId).trim() !== "") {
+            const pid = String(paymentId).trim();
+            const isPayPal = pid.startsWith("S-");
 
             if (isPayPal) {
+                // PayPal verification
                 try {
+                    const { paymentConfig } = await import("@/lib/paymentConfig");
                     const { getPayPalAccessToken } = await import("@/lib/paypal");
-                    const accessToken = await getPayPalAccessToken();
-                    const base = paymentConfig.paypal.apiUrl;
 
-                    const response = await fetch(`${base}/v1/billing/subscriptions/${paymentId}`, {
+                    const accessToken = await getPayPalAccessToken();
+                    const base = paymentConfig?.paypal?.apiUrl;
+
+                    if (!base) return jsonError(500, { message: "PayPal apiUrl no configurado" });
+
+                    const response = await fetch(`${base}/v1/billing/subscriptions/${pid}`, {
                         headers: {
                             Authorization: `Bearer ${accessToken}`,
                             "Content-Type": "application/json",
@@ -83,98 +103,107 @@ export async function POST(req: Request) {
                     });
 
                     if (!response.ok) {
-                        return NextResponse.json(
-                            { message: "No se pudo verificar la suscripción de PayPal" },
-                            { status: 400 }
-                        );
+                        return jsonError(400, { message: "No se pudo verificar la suscripción de PayPal" });
                     }
 
                     const subData = await response.json();
                     if (subData.status !== "ACTIVE") {
-                        return NextResponse.json(
-                            { message: `La suscripción de PayPal no está activa (Estado: ${subData.status})` },
-                            { status: 400 }
-                        );
+                        return jsonError(400, {
+                            message: `La suscripción de PayPal no está activa (Estado: ${subData.status})`,
+                        });
                     }
 
                     verificationProvider = ProveedorSuscripcion.PAYPAL;
-                    verificationExternalId = paymentId;
+                    verificationExternalId = pid;
                     trialDays = 30;
                 } catch (err) {
-                    console.error("PayPal Verification Error:", err);
-                    return NextResponse.json({ message: "Error verificando con PayPal" }, { status: 400 });
+                    console.error("PayPal verification error:", err);
+                    return jsonError(400, { message: "Error verificando con PayPal" });
                 }
             } else {
+                // MercadoPago verification (Payment or PreApproval)
                 try {
-                    // 1) Intento como Payment (pago único)
-                    const payment = new Payment(mpClient);
+                    const { paymentConfig } = await import("@/lib/paymentConfig");
+                    const mpAccessToken = paymentConfig?.mp?.accessToken;
+
+                    if (!mpAccessToken) {
+                        return jsonError(500, { message: "MercadoPago accessToken no configurado" });
+                    }
+
+                    const { MercadoPagoConfig, Payment } = await import("mercadopago");
+                    const mpClient = new MercadoPagoConfig({ accessToken: mpAccessToken });
 
                     let verified = false;
 
+                    // Try as single payment
                     try {
-                        const paymentData = await payment.get({ id: paymentId });
+                        const payment = new Payment(mpClient);
+                        const paymentData = await payment.get({ id: pid });
 
                         if (paymentData?.status === "approved") {
                             verificationProvider = ProveedorSuscripcion.MERCADOPAGO;
-                            verificationExternalId = String(paymentId);
+                            verificationExternalId = pid;
                             trialDays = 30;
                             verified = true;
                         }
                     } catch {
-                        // ignore -> try PreApproval
+                        // ignore -> try preapproval
                     }
 
-                    // 2) Si no fue pago único, intento como PreApproval (suscripción)
+                    // Try as subscription (preapproval)
                     if (!verified) {
                         const { PreApproval } = await import("mercadopago");
                         const preApproval = new PreApproval(mpClient);
-                        const subData = await preApproval.get({ id: paymentId });
+                        const subData = await preApproval.get({ id: pid });
 
                         if (subData?.status !== "authorized") {
-                            return NextResponse.json(
-                                {
-                                    message: `La suscripción de Mercado Pago no está autorizada (Estado: ${subData?.status})`,
-                                },
-                                { status: 400 }
-                            );
+                            return jsonError(400, {
+                                message: `La suscripción de Mercado Pago no está autorizada (Estado: ${subData?.status})`,
+                            });
                         }
 
                         verificationProvider = ProveedorSuscripcion.MERCADOPAGO;
-                        verificationExternalId = String(paymentId);
+                        verificationExternalId = pid;
                         trialDays = 30;
                         verified = true;
                     }
 
                     if (!verified) {
-                        return NextResponse.json(
-                            { message: "El pago o suscripción no está aprobado" },
-                            { status: 400 }
-                        );
+                        return jsonError(400, { message: "El pago o suscripción no está aprobado" });
                     }
                 } catch (err) {
-                    console.error("MP Verification Error:", err);
-                    return NextResponse.json(
-                        { message: "No se pudo verificar con Mercado Pago" },
-                        { status: 400 }
-                    );
+                    console.error("MercadoPago verification error:", err);
+                    return jsonError(400, { message: "No se pudo verificar con Mercado Pago" });
                 }
             }
         } else {
-            return NextResponse.json(
-                { message: "Se requiere un pago o código promocional para activar el sistema" },
-                { status: 402 }
-            );
+            return jsonError(402, {
+                message: "Se requiere un pago o código promocional para activar el sistema",
+            });
         }
-        // --- END VERIFICATION ---
 
-        const { fetchDolarBlue } = await import("@/lib/dolarBlue");
-        const exchangeRate = await fetchDolarBlue();
+        if (finalPlanId === null) {
+            // fallback defensivo: si no vino planId y no vino promo con planId (no debería pasar)
+            finalPlanId = 1;
+        }
 
+        // Exchange rate (NO rompe si falla)
+        let exchangeRate = 1;
+        try {
+            const { fetchDolarBlue } = await import("@/lib/dolarBlue");
+            const r = await fetchDolarBlue();
+            exchangeRate = typeof r === "number" && !Number.isNaN(r) && r > 0 ? r : 1;
+        } catch (e) {
+            console.warn("fetchDolarBlue failed, fallback=1:", e);
+            exchangeRate = 1;
+        }
+
+        // ✅ Transaction (todo lo que puede faltar -> upsert / create seguro)
         const result = await prisma.$transaction(async (tx) => {
-            // 0) Ensure default Sucursal exists (FK default=1 relies on this)
+            // 0) Ensure Sucursal 1 exists (evita FK defaults sucursalId=1)
             await tx.sucursal.upsert({
                 where: { id: 1 },
-                update: {},
+                update: { activa: true },
                 create: {
                     id: 1,
                     nombre: "Sucursal Principal",
@@ -183,7 +212,7 @@ export async function POST(req: Request) {
                 },
             });
 
-            // a) Sync Plans and Limits
+            // 1) Sync plans and limits (upsert)
             for (const p of SUBSCRIPTION_PLANS) {
                 const calculatedPrecioARS = p.precioUSD * exchangeRate;
 
@@ -231,23 +260,17 @@ export async function POST(req: Request) {
                 }
             }
 
-            // b) Branding (id=1)
-            if (businessName && businessName.trim() !== "") {
-                await tx.branding.upsert({
-                    where: { id: 1 },
-                    update: { businessName },
-                    create: { id: 1, businessName },
-                });
-            } else {
-                // opcional: garantizar que exista un branding base para evitar nulls en UI
-                await tx.branding.upsert({
-                    where: { id: 1 },
-                    update: {},
-                    create: { id: 1, businessName: "Mi Negocio" },
-                });
-            }
+            // 2) Branding (id=1)
+            await tx.branding.upsert({
+                where: { id: 1 },
+                update: businessName && businessName.trim() ? { businessName } : {},
+                create: {
+                    id: 1,
+                    businessName: businessName && businessName.trim() ? businessName : "Mi Negocio",
+                },
+            });
 
-            // c) Configuracion (id=1)
+            // 3) Configuracion (id=1)
             await tx.configuracion.upsert({
                 where: { id: 1 },
                 update: {},
@@ -255,8 +278,8 @@ export async function POST(req: Request) {
                     id: 1,
                     minStockGlobal: 5,
                     diasAnticipacionVencimiento: 7,
-                    notificarVencimientos: true,
                     notificarStockBajo: true,
+                    notificarVencimientos: true,
                     notificarVentas: true,
                     usarControlDeCaja: true,
                     diasAvisoConsignacion: 15,
@@ -265,7 +288,14 @@ export async function POST(req: Request) {
                 },
             });
 
-            // d) Create Admin (unique email, but we’re safe because there are no users)
+            // 4) Caja Principal (depende de sucursal 1)
+            await tx.caja.upsert({
+                where: { nombre: "Caja Principal" },
+                update: { activa: true, sucursalId: 1 },
+                create: { nombre: "Caja Principal", activa: true, sucursalId: 1 },
+            });
+
+            // 5) Admin user
             const adminHash = await bcrypt.hash(admin.password, 10);
             const mainAdmin = await tx.usuario.create({
                 data: {
@@ -274,42 +304,34 @@ export async function POST(req: Request) {
                     hash: adminHash,
                     rol: RolUsuario.ADMIN,
                     activo: true,
-                    // opcional: asignar sucursal principal
                     sucursalId: 1,
                 },
             });
 
-            // e) Subscription (verified)
+            // 6) Subscription (externalId unique)
             const trialEndsAt = new Date(Date.now() + trialDays * 24 * 60 * 60 * 1000);
 
-            // OJO: externalId es unique -> garantizamos unicidad con timestamp
             const sub = await tx.subscription.create({
                 data: {
                     userId: mainAdmin.id,
-                    planId: finalPlanId,
-                    provider: verificationProvider,
-                    externalId: verificationExternalId,
+                    planId: finalPlanId!,
+                    provider: verificationProvider!,
+                    externalId: verificationExternalId!,
                     status: verificationStatus,
                     trialEndsAt,
                 },
             });
 
-            // f) Caja Principal (depende de Sucursal 1)
-            await tx.caja.upsert({
-                where: { nombre: "Caja Principal" },
-                update: {
-                    activa: true,
-                    sucursalId: 1,
-                },
-                create: {
-                    nombre: "Caja Principal",
-                    activa: true,
-                    sucursalId: 1,
-                },
-            });
+            // 7) If promoCode was used -> increment within TX (atomic)
+            if (promoCode && promoCode.trim()) {
+                await tx.promoCode.update({
+                    where: { code: promoCode.toUpperCase() },
+                    data: { usedCount: { increment: 1 } },
+                });
+            }
 
-            // g) Staff
-            if (staff && Array.isArray(staff) && staff.length > 0) {
+            // 8) Staff
+            if (Array.isArray(staff) && staff.length > 0) {
                 for (const member of staff) {
                     if (!member?.email || !member?.nombre) continue;
 
@@ -318,7 +340,6 @@ export async function POST(req: Request) {
 
                     const staffHash = await bcrypt.hash(passwordToUse, 10);
 
-                    // Como estamos en "no users", no hay conflicto. Igual dejo create normal.
                     await tx.usuario.create({
                         data: {
                             nombre: member.nombre,
@@ -335,6 +356,7 @@ export async function POST(req: Request) {
             return { adminId: mainAdmin.id, subId: sub.id, user: mainAdmin };
         });
 
+        // 9) Login cookie
         const { signUserJwt, setAuthCookie } = await import("@/lib/auth");
         const token = await signUserJwt({
             sub: String(result.adminId),
@@ -347,14 +369,17 @@ export async function POST(req: Request) {
 
         return NextResponse.json({ success: true, data: result }, { status: 201 });
     } catch (error: any) {
-        console.error("Initialization error:", error);
+        console.error("Initialization error FULL:", error);
 
         return NextResponse.json(
             {
                 message: "Error interno durante la inicialización",
+                name: error?.name,
                 prismaCode: error?.code,
                 meta: error?.meta,
                 error: error?.message,
+                // stack solo en dev
+                stack: process.env.NODE_ENV === "development" ? error?.stack : undefined,
             },
             { status: 500 }
         );
