@@ -14,7 +14,7 @@ CREATE TYPE "TipoMovimientoCaja" AS ENUM ('INGRESO', 'EGRESO');
 ALTER TABLE "Pago" ADD COLUMN     "sesionCajaId" INTEGER;
 
 -- AlterTable
-ALTER TABLE "Venta" ADD COLUMN     "sesionCajaId" INTEGER NOT NULL;
+ALTER TABLE "Venta" ADD COLUMN     "sesionCajaId" INTEGER;
 
 -- CreateTable
 CREATE TABLE "Caja" (

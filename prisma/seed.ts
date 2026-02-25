@@ -8,44 +8,7 @@ const connectionString = process.env.DATABASE_URL;
 const pool = new pg.Pool({ connectionString });
 const adapter = new PrismaPg(pool);
 const prisma = new PrismaClient({ adapter });
-async function seedUsers() {
-  console.log("🔐 Sincronizando usuarios...");
 
-  const adminEmail = process.env.ADMIN_EMAIL;
-  const adminPassword = process.env.ADMIN_PASSWORD;
-
-  if (!adminEmail || !adminPassword) {
-    console.warn("⚠️ Faltan credenciales ADMIN en .env, saltando.");
-    return;
-  }
-
-  const adminHash = await bcrypt.hash(adminPassword, 10);
-
-  console.log(`Checking if admin exists: ${adminEmail}...`);
-  const existingAdmin = await prisma.usuario.findUnique({
-    where: { email: adminEmail },
-  });
-
-  if (existingAdmin) {
-    console.log(`Admin found. Updating hash...`);
-    await prisma.usuario.update({
-      where: { email: adminEmail },
-      data: { hash: adminHash },
-    });
-  } else {
-    console.log(`Admin not found. Creating...`);
-    await prisma.usuario.create({
-      data: {
-        nombre: "Administrador",
-        email: adminEmail,
-        hash: adminHash,
-        rol: RolUsuario.ADMIN,
-        activo: true,
-      },
-    });
-  }
-  console.log("✅ Admin verificado:", adminEmail);
-}
 
 async function seedPlans() {
   console.log("🌱 Sincronizando planes de suscripción...");
@@ -81,8 +44,8 @@ async function seedPromoCodes() {
   console.log("🎟️ Sincronizando códigos promocionales...");
 
   const promoCodes = [
-    { code: "IMPORT.VPS", planId: 2, durationDays: 90, maxUses: 1 },
-    { code: "WELCOME.VPS", planId: 3, durationDays: 90, maxUses: 1 },
+    { code: "Agustin2026", planId: 2, durationDays: 90, maxUses: 1 },
+    { code: "A-DATA2026", planId: 3, durationDays: 90, maxUses: 1 },
   ];
 
   for (const promo of promoCodes) {
@@ -113,7 +76,7 @@ async function main() {
     // Conectar explícitamente
     await prisma.$connect();
 
-    await seedUsers();
+
     await seedPlans();
     await seedPromoCodes();
 

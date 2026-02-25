@@ -5,6 +5,8 @@ import { sendNotification } from "@/lib/socket-trigger";
 import { NOTIFICATION_TYPE, NOTIFICATION_CONFIG } from "@/lib/notificationes/notificaciones-types";
 import { obtenerConfiguracionGlobal } from "@/lib/config";
 
+export const dynamic = "force-dynamic";
+
 // Helper para mostrar la fecha en formato Argentino (DD/MM/YYYY)
 const formatearFecha = (fecha: Date | null) => {
   if (!fecha) return "Fecha desconocida";
@@ -13,8 +15,11 @@ const formatearFecha = (fecha: Date | null) => {
 };
 
 export async function GET(request: Request) {
+  console.log("CRON INICIADO: Módulo check-vencimientos");
+
   const authHeader = request.headers.get('authorization');
   if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+    console.error("CRON ERROR: No autorizado. Verifica tu CRON_SECRET");
     return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   }
 
@@ -33,15 +38,21 @@ export async function GET(request: Request) {
       include: { configuracion: true }
     });
 
+    console.log(`CRON: Se encontraron ${sucursales.length} sucursales activas.`);
+
     const stats = {
       vencidos: 0,
       porVencer: 0
     };
 
     for (const sucursal of sucursales) {
+      console.log(`CRON: Procesando sucursal ID ${sucursal.id} - ${sucursal.nombre}`);
       const config = sucursal.configuracion || await obtenerConfiguracionGlobal(sucursal.id);
 
-      if (!config.notificarVencimientos) continue;
+      if (!config.notificarVencimientos) {
+        console.log(`CRON: Sucursal ${sucursal.nombre} tiene notificaciones de vencimiento desactivadas. Omitiendo.`);
+        continue;
+      }
 
       const diasAnticipacion = config.diasAnticipacionVencimiento;
       const fechaLimite = new Date(hoy);
@@ -60,6 +71,7 @@ export async function GET(request: Request) {
         }
       });
 
+      console.log(`CRON: Sucursal ${sucursal.nombre} - ${vencidos.length} productos vencidos con stock encontrado.`);
       stats.vencidos += vencidos.length;
 
       for (const prod of vencidos) {
