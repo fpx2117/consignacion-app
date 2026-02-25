@@ -1,22 +1,20 @@
-import "dotenv/config";
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient } from '@prisma/client'
 
-const prisma = new PrismaClient();
+const prisma = new PrismaClient()
 
 async function main() {
-    console.log("Testing connection...");
-    console.log("DATABASE_URL present:", !!process.env.DATABASE_URL);
-    try {
-        await prisma.$connect();
-        console.log("Connected successfully!");
-        const count = await prisma.usuario.count();
-        console.log("User count:", count);
-    } catch (error) {
-        console.error("Connection failed:");
-        console.error(error);
-    } finally {
-        await prisma.$disconnect();
-    }
+    const sucursales = await prisma.$queryRaw`SELECT id FROM "Sucursal"`;
+    console.log("Sucursales:", sucursales);
+
+    const brandings = await prisma.$queryRaw`SELECT id FROM "Branding"`;
+    console.log("Brandings:", brandings);
 }
 
-main();
+main()
+    .catch((e) => {
+        console.error(e)
+        process.exit(1)
+    })
+    .finally(async () => {
+        await prisma.$disconnect()
+    })
