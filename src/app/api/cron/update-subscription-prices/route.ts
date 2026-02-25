@@ -3,15 +3,22 @@ import { prisma } from "@/lib/prisma";
 import { fetchDolarBlue } from "@/lib/dolarBlue";
 import { updateMercadoPagoSubscriptionPrice } from "@/lib/mercadopago";
 
+export const dynamic = "force-dynamic";
+
 export async function GET(request: Request) {
+    console.log("CRON INICIADO: Módulo update-subscription-prices");
+
     const authHeader = request.headers.get('authorization');
     if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+        console.error("CRON ERROR: No autorizado. Verifica tu CRON_SECRET");
         return NextResponse.json({ error: "No autorizado" }, { status: 401 });
     }
 
     try {
+        console.log("CRON: Obteniendo cotización Dólar Blue...");
         // 1. Get the current dollar blue rate
         const exchangeRate = await fetchDolarBlue();
+        console.log("CRON: Cotización Dólar Blue obtenida:", exchangeRate);
 
         if (!exchangeRate || exchangeRate <= 0) {
             console.error("CRON_PRICE_UPDATE: Invalid dollar rate received:", exchangeRate);
@@ -21,6 +28,8 @@ export async function GET(request: Request) {
         // 2. Fetch all Plans and update their ARS price based on USD price
         const plans = await prisma.plan.findMany();
         let planUpdates = 0;
+        console.log(`CRON: Se encontraron ${plans.length} planes. Iniciando actualización...`);
+
         for (const plan of plans) {
             if (plan.precioUSD && Number(plan.precioUSD) > 0) {
                 const newPlanPriceARS = Number((Number(plan.precioUSD) * exchangeRate).toFixed(2));
@@ -30,9 +39,11 @@ export async function GET(request: Request) {
                         data: { precioARS: newPlanPriceARS }
                     });
                     planUpdates++;
+                    console.log(`CRON: Plan ${plan.nombre} (ID: ${plan.id}) actualizado a ARS ${newPlanPriceARS}`);
                 }
             }
         }
+        console.log(`CRON: Se actualizaron ${planUpdates} planes en la Base de Datos.`);
 
         // 3. Fetch all active subscriptions with MP Preapproval IDs
         const activeSubscribers = await prisma.subscription.findMany({
