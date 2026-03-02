@@ -188,6 +188,9 @@ export type Producto = {
   packSizeUnits?: number | null;
   fechaVencimiento?: ISODateString | null;
   imagenUrl?: string | null;
+  tieneDescuento: boolean;
+  descuentoCantidadMin?: number | null;
+  descuentoPorcentaje?: number | null;
   categoriaId?: ID | null;
   categoria?: Categoria;
   createdAt: ISODateString;
@@ -354,6 +357,9 @@ export type CreateProductoInput = {
   fechaVencimiento?: ISODateString | null;
   categoriaId?: ID | null;
   imagenUrl?: string | null;
+  tieneDescuento?: boolean;
+  descuentoCantidadMin?: number | null;
+  descuentoPorcentaje?: number | null;
 };
 
 export type UpdateProductoInput = Partial<CreateProductoInput> & {

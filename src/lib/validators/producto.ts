@@ -14,15 +14,20 @@ export const createProductoSchema = z.object({
   fechaVencimiento: z.string().nullish(),
   categoriaId: z.number().int().nullish(),
   imagenUrl: z.string().nullish(),
+  tieneDescuento: z.boolean().default(false),
+  descuentoCantidadMin: z.number().int().min(1).nullish(),
+  descuentoPorcentaje: z.number().min(0).max(100).nullish(),
 });
 
 // Corregimos el UpdateProductoInput para que acepte NULL explícitamente
 export const updateProductoSchema = createProductoSchema.partial().extend({
   activo: z.boolean().optional(),
-  // Forzamos la unión con null para evitar el error TS(2322)
   codigoBarra: z.string().nullable().optional(),
   sku: z.string().nullable().optional(),
   fechaVencimiento: z.string().nullable().optional(),
+  // Sobrescribir para eliminar .default(0) que resetea el stock al editar
+  stockDisponibleUnits: z.number().int().min(0).optional(),
+  stockMinUnits: z.number().int().min(0).optional(),
 });
 
 export type CreateProductoInput = z.infer<typeof createProductoSchema>;
