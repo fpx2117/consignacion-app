@@ -44,6 +44,9 @@ export function DiscountTiersInline({ descuentos, onChange }: DiscountTiersInlin
                             <div className="relative">
                                 <Package className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-primary" />
                                 <Input
+                                    type="number"
+                                    step="1"
+                                    min="1"
                                     value={d.cantidadMin || ""}
                                     onChange={(e) => {
                                         const val = parseInt(e.target.value) || 0;
@@ -51,12 +54,15 @@ export function DiscountTiersInline({ descuentos, onChange }: DiscountTiersInlin
                                     }}
                                     placeholder="Cant."
                                     className="pl-7 h-8 bg-primary/5 border-primary/20 text-xs"
-                                    inputMode="numeric"
                                 />
                             </div>
                             <div className="relative">
                                 <Percent className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-primary" />
                                 <Input
+                                    type="number"
+                                    step="0.01"
+                                    min="0"
+                                    max="100"
                                     value={d.porcentaje || ""}
                                     onChange={(e) => {
                                         const val = parseFloat(e.target.value) || 0;
@@ -64,7 +70,6 @@ export function DiscountTiersInline({ descuentos, onChange }: DiscountTiersInlin
                                     }}
                                     placeholder="%"
                                     className="pl-7 h-8 bg-primary/5 border-primary/20 text-xs"
-                                    inputMode="decimal"
                                 />
                             </div>
                             <Button
