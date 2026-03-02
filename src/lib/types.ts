@@ -172,6 +172,11 @@ export type Categoria = {
   color?: string;
 };
 
+export type DescuentoNivel = {
+  cantidadMin: number;
+  porcentaje: number;
+};
+
 export type Producto = {
   id: ID;
   nombre: string;
@@ -188,9 +193,7 @@ export type Producto = {
   packSizeUnits?: number | null;
   fechaVencimiento?: ISODateString | null;
   imagenUrl?: string | null;
-  tieneDescuento: boolean;
-  descuentoCantidadMin?: number | null;
-  descuentoPorcentaje?: number | null;
+  descuentos?: DescuentoNivel[] | null;
   categoriaId?: ID | null;
   categoria?: Categoria;
   createdAt: ISODateString;
@@ -357,9 +360,7 @@ export type CreateProductoInput = {
   fechaVencimiento?: ISODateString | null;
   categoriaId?: ID | null;
   imagenUrl?: string | null;
-  tieneDescuento?: boolean;
-  descuentoCantidadMin?: number | null;
-  descuentoPorcentaje?: number | null;
+  descuentos?: DescuentoNivel[] | null;
 };
 
 export type UpdateProductoInput = Partial<CreateProductoInput> & {
