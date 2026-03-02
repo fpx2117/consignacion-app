@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 
 import { apiService } from "@/lib/apiService";
-import type { Producto, Cliente, CreateVentaDirectaInput, MetodoPago } from "@/lib/types";
+import type { Producto, Cliente, CreateVentaDirectaInput, MetodoPago, DescuentoNivel } from "@/lib/types";
 import { SuccessDialog } from "@/components/success-dialog";
 import { ErrorDialog } from "@/components/error-dialog";
 import { Button } from "@/components/ui/button";
@@ -33,6 +33,20 @@ import { useSucursalStore } from "@/store/useSucursalStore";
 
 // --- TIPOS ---
 type ProductoConStock = Producto & { stockDisponibleUnits?: number };
+
+// Encuentra el mejor descuento aplicable para una cantidad dada
+function getBestDiscount(descuentos: DescuentoNivel[] | null | undefined, qty: number): DescuentoNivel | null {
+  if (!descuentos || !Array.isArray(descuentos) || descuentos.length === 0) return null;
+  const sorted = [...descuentos].sort((a, b) => b.cantidadMin - a.cantidadMin);
+  return sorted.find(d => qty >= d.cantidadMin) ?? null;
+}
+
+// Obtiene el menor nivel de descuento (para mostrar como hint)
+function getNextDiscount(descuentos: DescuentoNivel[] | null | undefined, qty: number): DescuentoNivel | null {
+  if (!descuentos || !Array.isArray(descuentos) || descuentos.length === 0) return null;
+  const sorted = [...descuentos].sort((a, b) => a.cantidadMin - b.cantidadMin);
+  return sorted.find(d => qty < d.cantidadMin) ?? null;
+}
 type CartItem = { producto: ProductoConStock; quantity: number; };
 
 const formatCurrency = (value: number) => {
@@ -222,9 +236,9 @@ export default function NuevaVentaPage() {
 
   const totalSinInteres = cart.reduce((acc, curr) => acc + (Number(curr.producto.precioVenta) * curr.quantity), 0);
   const totalDescuento = cart.reduce((acc, item) => {
-    const prod = item.producto;
-    if (prod.tieneDescuento && prod.descuentoCantidadMin && prod.descuentoPorcentaje && item.quantity >= prod.descuentoCantidadMin) {
-      return acc + (Number(prod.precioVenta) * item.quantity * (prod.descuentoPorcentaje / 100));
+    const best = getBestDiscount(item.producto.descuentos, item.quantity);
+    if (best) {
+      return acc + (Number(item.producto.precioVenta) * item.quantity * (best.porcentaje / 100));
     }
     return acc;
   }, 0);
@@ -501,9 +515,9 @@ export default function NuevaVentaPage() {
                                         </span>
                                       )}
                                       <span>{sinStock ? "AGOTADO" : `Disp: ${stock}`}</span>
-                                      {p.tieneDescuento && p.descuentoPorcentaje && (
+                                      {Array.isArray(p.descuentos) && p.descuentos.length > 0 && (
                                         <span className="flex items-center gap-0.5 text-emerald-600 bg-emerald-50 dark:bg-emerald-950/30 px-1 rounded border border-emerald-200 dark:border-emerald-800">
-                                          <BadgePercent className="h-3 w-3" /> −{p.descuentoPorcentaje}%
+                                          <BadgePercent className="h-3 w-3" /> {p.descuentos.length} desc.
                                         </span>
                                       )}
                                     </div>
@@ -572,14 +586,23 @@ export default function NuevaVentaPage() {
                         <div className="min-w-0 pr-2">
                           <p className="font-bold text-sm truncate text-foreground">{item.producto.nombre}</p>
                           <p className="text-[11px] text-muted-foreground font-medium mt-0.5">{formatCurrency(item.producto.precioVenta)} / unidad</p>
-                          {item.producto.tieneDescuento && item.producto.descuentoCantidadMin && item.producto.descuentoPorcentaje && (
-                            <div className={`flex items-center gap-1 mt-1 text-[10px] font-bold ${item.quantity >= item.producto.descuentoCantidadMin ? 'text-emerald-600' : 'text-muted-foreground/60'}`}>
-                              <BadgePercent className="h-3 w-3" />
-                              {item.quantity >= item.producto.descuentoCantidadMin
-                                ? `−${item.producto.descuentoPorcentaje}% aplicado`
-                                : `−${item.producto.descuentoPorcentaje}% llevando ${item.producto.descuentoCantidadMin}+`}
-                            </div>
-                          )}
+                          {(() => {
+                            const best = getBestDiscount(item.producto.descuentos, item.quantity);
+                            const next = getNextDiscount(item.producto.descuentos, item.quantity);
+                            if (best) return (
+                              <div className="flex items-center gap-1 mt-1 text-[10px] font-bold text-emerald-600">
+                                <BadgePercent className="h-3 w-3" />
+                                −{best.porcentaje}% aplicado
+                              </div>
+                            );
+                            if (next) return (
+                              <div className="flex items-center gap-1 mt-1 text-[10px] font-bold text-muted-foreground/60">
+                                <BadgePercent className="h-3 w-3" />
+                                −{next.porcentaje}% llevando {next.cantidadMin}+
+                              </div>
+                            );
+                            return null;
+                          })()}
                         </div>
                       </div>
                       <div className="flex items-center gap-3 shrink-0">

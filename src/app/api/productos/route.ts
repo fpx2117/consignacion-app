@@ -111,9 +111,7 @@ export async function POST(req: Request) {
           categoriaId: data.categoriaId ?? null,
           fechaVencimiento: data.fechaVencimiento ? new Date(data.fechaVencimiento) : null,
           imagenUrl: data.imagenUrl || null,
-          tieneDescuento: data.tieneDescuento ?? false,
-          descuentoCantidadMin: data.descuentoCantidadMin ?? null,
-          descuentoPorcentaje: data.descuentoPorcentaje ?? null,
+          descuentos: (data.descuentos as any) ?? null,
           sucursalId,
         },
         include: { categoria: true }

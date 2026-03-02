@@ -42,8 +42,10 @@ import {
   Check,
   Image as ImageIcon,
   Percent,
-  BadgePercent
+  BadgePercent,
+  X
 } from "lucide-react";
+import type { DescuentoNivel } from "@/lib/types";
 import { ImageUpload } from "@/components/image-upload";
 import { toast } from "sonner";
 
@@ -86,9 +88,9 @@ export function EditProductoDialog({
   const [imagenUrl, setImagenUrl] = React.useState<string | null>(producto.imagenUrl || null);
 
   // --- ESTADOS DE DESCUENTO ---
-  const [tieneDescuento, setTieneDescuento] = React.useState(producto.tieneDescuento ?? false);
-  const [descuentoCantidadMin, setDescuentoCantidadMin] = React.useState(producto.descuentoCantidadMin ? String(producto.descuentoCantidadMin) : "");
-  const [descuentoPorcentaje, setDescuentoPorcentaje] = React.useState(producto.descuentoPorcentaje ? String(producto.descuentoPorcentaje) : "");
+  const [descuentos, setDescuentos] = React.useState<DescuentoNivel[]>(
+    Array.isArray(producto.descuentos) ? producto.descuentos : []
+  );
 
   // --- ESTADOS DE CATEGORÍA ---
   const [categorias, setCategorias] = React.useState<{ id: number | string, nombre: string, color?: string }[]>([]);
@@ -115,9 +117,7 @@ export function EditProductoDialog({
       setFechaVencimiento(producto.fechaVencimiento ? new Date(producto.fechaVencimiento).toISOString().split('T')[0] : "");
       setCategoriaId(producto.categoriaId?.toString() || "");
       setImagenUrl(producto.imagenUrl || null);
-      setTieneDescuento(producto.tieneDescuento ?? false);
-      setDescuentoCantidadMin(producto.descuentoCantidadMin ? String(producto.descuentoCantidadMin) : "");
-      setDescuentoPorcentaje(producto.descuentoPorcentaje ? String(producto.descuentoPorcentaje) : "");
+      setDescuentos(Array.isArray(producto.descuentos) ? producto.descuentos : []);
 
       // Cargar lista de categorías desde API
       apiService.getCategorias()
@@ -166,9 +166,7 @@ export function EditProductoDialog({
         fechaVencimiento: fechaVencimiento || null,
         categoriaId: finalCategoriaId,
         imagenUrl: imagenUrl || null,
-        tieneDescuento,
-        descuentoCantidadMin: tieneDescuento ? (toInt(descuentoCantidadMin) || null) : null,
-        descuentoPorcentaje: tieneDescuento ? (toNumber(descuentoPorcentaje) || null) : null,
+        descuentos: descuentos.length > 0 ? descuentos : null,
       };
 
       await apiService.updateProducto(producto.id, payload);
@@ -486,57 +484,73 @@ export function EditProductoDialog({
             </div>
           </div>
 
-          {/* SECCIÓN: Descuento por Cantidad */}
+          {/* SECCIÓN: Descuentos por Cantidad */}
           <div className="rounded-xl border border-border/50 p-4 space-y-3 bg-muted/10">
-            <label className="flex items-center gap-3 cursor-pointer select-none">
-              <div className="relative">
-                <input
-                  type="checkbox"
-                  checked={tieneDescuento}
-                  onChange={(e) => setTieneDescuento(e.target.checked)}
-                  className="sr-only peer"
-                />
-                <div className="w-10 h-6 bg-muted rounded-full peer-checked:bg-primary transition-colors" />
-                <div className="absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform peer-checked:translate-x-4" />
-              </div>
+            <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <BadgePercent className={`h-4 w-4 ${tieneDescuento ? 'text-primary' : 'text-muted-foreground'}`} />
-                <span className={`text-sm font-semibold ${tieneDescuento ? 'text-foreground' : 'text-muted-foreground'}`}>
-                  Descuento por Cantidad
+                <BadgePercent className={`h-4 w-4 ${descuentos.length > 0 ? 'text-primary' : 'text-muted-foreground'}`} />
+                <span className={`text-sm font-semibold ${descuentos.length > 0 ? 'text-foreground' : 'text-muted-foreground'}`}>
+                  Descuentos por Cantidad {descuentos.length > 0 && `(${descuentos.length})`}
                 </span>
               </div>
-            </label>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="h-8 px-3 text-xs border-dashed border-primary/40 text-primary hover:bg-primary/5"
+                onClick={() => setDescuentos(prev => [...prev, { cantidadMin: 0, porcentaje: 0 }])}
+              >
+                <Plus className="h-3 w-3 mr-1" /> Agregar Nivel
+              </Button>
+            </div>
 
-            {tieneDescuento && (
-              <div className="grid grid-cols-2 gap-3 animate-in slide-in-from-top-2 duration-200">
-                <div className="space-y-2">
-                  <Label className="text-xs font-bold uppercase text-muted-foreground">Cantidad Mínima</Label>
-                  <div className="relative">
-                    <Package className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-primary" />
-                    <Input
-                      value={descuentoCantidadMin}
-                      onChange={(e) => setDescuentoCantidadMin(e.target.value)}
-                      placeholder="Ej: 3"
-                      className="pl-9 h-11 bg-primary/5 border-primary/20"
-                      inputMode="numeric"
-                    />
-                  </div>
-                  <p className="text-[10px] text-muted-foreground">Llevando esta cantidad o más</p>
+            {descuentos.length > 0 && (
+              <div className="space-y-2 animate-in slide-in-from-top-2 duration-200">
+                <div className="grid grid-cols-[1fr_1fr_32px] gap-2 text-[10px] font-bold uppercase text-muted-foreground px-1">
+                  <span>Llevando ≥</span>
+                  <span>Descuento %</span>
+                  <span />
                 </div>
-                <div className="space-y-2">
-                  <Label className="text-xs font-bold uppercase text-muted-foreground">Descuento (%)</Label>
-                  <div className="relative">
-                    <Percent className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-primary" />
-                    <Input
-                      value={descuentoPorcentaje}
-                      onChange={(e) => setDescuentoPorcentaje(e.target.value)}
-                      placeholder="Ej: 10"
-                      className="pl-9 h-11 bg-primary/5 border-primary/20"
-                      inputMode="decimal"
-                    />
+                {descuentos.map((d, i) => (
+                  <div key={i} className="grid grid-cols-[1fr_1fr_32px] gap-2 items-center">
+                    <div className="relative">
+                      <Package className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-primary" />
+                      <Input
+                        value={d.cantidadMin || ""}
+                        onChange={(e) => {
+                          const val = parseInt(e.target.value) || 0;
+                          setDescuentos(prev => prev.map((item, idx) => idx === i ? { ...item, cantidadMin: val } : item));
+                        }}
+                        placeholder="Cant."
+                        className="pl-8 h-9 bg-primary/5 border-primary/20 text-sm"
+                        inputMode="numeric"
+                      />
+                    </div>
+                    <div className="relative">
+                      <Percent className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-primary" />
+                      <Input
+                        value={d.porcentaje || ""}
+                        onChange={(e) => {
+                          const val = parseFloat(e.target.value) || 0;
+                          setDescuentos(prev => prev.map((item, idx) => idx === i ? { ...item, porcentaje: val } : item));
+                        }}
+                        placeholder="%"
+                        className="pl-8 h-9 bg-primary/5 border-primary/20 text-sm"
+                        inputMode="decimal"
+                      />
+                    </div>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="h-9 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                      onClick={() => setDescuentos(prev => prev.filter((_, idx) => idx !== i))}
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </Button>
                   </div>
-                  <p className="text-[10px] text-muted-foreground">Porcentaje de descuento</p>
-                </div>
+                ))}
+                <p className="text-[10px] text-muted-foreground italic">Se aplica el mayor descuento que cumpla la cantidad.</p>
               </div>
             )}
           </div>
