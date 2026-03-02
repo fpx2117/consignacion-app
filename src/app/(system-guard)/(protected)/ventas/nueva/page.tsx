@@ -235,8 +235,23 @@ export default function NuevaVentaPage() {
   const decrementUnits = () => setUnits(prev => (prev > 1 ? prev - 1 : 1));
 
   const totalSinInteres = cart.reduce((acc, curr) => acc + (Number(curr.producto.precioVenta) * curr.quantity), 0);
+
+  // Agrupar cantidades por categoriaId para calcular descuentos por categoría
+  const categoryQtyMap = React.useMemo(() => {
+    const map = new Map<number, number>();
+    cart.forEach(item => {
+      const catId = item.producto.categoriaId;
+      if (catId) map.set(catId, (map.get(catId) || 0) + item.quantity);
+    });
+    return map;
+  }, [cart]);
+
   const totalDescuento = cart.reduce((acc, item) => {
-    const best = getBestDiscount(item.producto.descuentos, item.quantity);
+    const catId = item.producto.categoriaId;
+    if (!catId) return acc;
+    const totalCatQty = categoryQtyMap.get(catId) || 0;
+    const catDescuentos = item.producto.categoria?.descuentos as DescuentoNivel[] | null | undefined;
+    const best = getBestDiscount(catDescuentos, totalCatQty);
     if (best) {
       return acc + (Number(item.producto.precioVenta) * item.quantity * (best.porcentaje / 100));
     }
@@ -515,9 +530,9 @@ export default function NuevaVentaPage() {
                                         </span>
                                       )}
                                       <span>{sinStock ? "AGOTADO" : `Disp: ${stock}`}</span>
-                                      {Array.isArray(p.descuentos) && p.descuentos.length > 0 && (
+                                      {Array.isArray(p.categoria?.descuentos) && (p.categoria?.descuentos as DescuentoNivel[]).length > 0 && (
                                         <span className="flex items-center gap-0.5 text-emerald-600 bg-emerald-50 dark:bg-emerald-950/30 px-1 rounded border border-emerald-200 dark:border-emerald-800">
-                                          <BadgePercent className="h-3 w-3" /> {p.descuentos.length} desc.
+                                          <BadgePercent className="h-3 w-3" /> {(p.categoria?.descuentos as DescuentoNivel[]).length} desc.
                                         </span>
                                       )}
                                     </div>
@@ -587,18 +602,21 @@ export default function NuevaVentaPage() {
                           <p className="font-bold text-sm truncate text-foreground">{item.producto.nombre}</p>
                           <p className="text-[11px] text-muted-foreground font-medium mt-0.5">{formatCurrency(item.producto.precioVenta)} / unidad</p>
                           {(() => {
-                            const best = getBestDiscount(item.producto.descuentos, item.quantity);
-                            const next = getNextDiscount(item.producto.descuentos, item.quantity);
+                            const catId = item.producto.categoriaId;
+                            const totalCatQty = catId ? (categoryQtyMap.get(catId) || 0) : 0;
+                            const catDescuentos = item.producto.categoria?.descuentos as DescuentoNivel[] | null | undefined;
+                            const best = getBestDiscount(catDescuentos, totalCatQty);
+                            const next = getNextDiscount(catDescuentos, totalCatQty);
                             if (best) return (
                               <div className="flex items-center gap-1 mt-1 text-[10px] font-bold text-emerald-600">
                                 <BadgePercent className="h-3 w-3" />
-                                −{best.porcentaje}% aplicado
+                                {`−${best.porcentaje}% (${totalCatQty} de ${item.producto.categoria?.nombre || "cat."})`}
                               </div>
                             );
                             if (next) return (
                               <div className="flex items-center gap-1 mt-1 text-[10px] font-bold text-muted-foreground/60">
                                 <BadgePercent className="h-3 w-3" />
-                                −{next.porcentaje}% llevando {next.cantidadMin}+
+                                {`−${next.porcentaje}% llevando ${next.cantidadMin}+ de ${item.producto.categoria?.nombre || "cat."}`}
                               </div>
                             );
                             return null;

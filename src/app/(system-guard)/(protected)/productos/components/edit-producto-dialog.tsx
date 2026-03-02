@@ -47,6 +47,7 @@ import {
 } from "lucide-react";
 import type { DescuentoNivel } from "@/lib/types";
 import { ImageUpload } from "@/components/image-upload";
+import { DiscountTiersInline } from "./discount-tiers-inline";
 import { toast } from "sonner";
 
 function toNumber(v: string): number | undefined {
@@ -87,10 +88,9 @@ export function EditProductoDialog({
   );
   const [imagenUrl, setImagenUrl] = React.useState<string | null>(producto.imagenUrl || null);
 
-  // --- ESTADOS DE DESCUENTO ---
-  const [descuentos, setDescuentos] = React.useState<DescuentoNivel[]>(
-    Array.isArray(producto.descuentos) ? producto.descuentos : []
-  );
+  // --- ESTADOS DE DESCUENTO DE CATEGORÍA ---
+  const [editCatDescuentos, setEditCatDescuentos] = React.useState<DescuentoNivel[]>([]);
+  const [nuevaCatDescuentos, setNuevaCatDescuentos] = React.useState<DescuentoNivel[]>([]);
 
   // --- ESTADOS DE CATEGORÍA ---
   const [categorias, setCategorias] = React.useState<{ id: number | string, nombre: string, color?: string }[]>([]);
@@ -117,7 +117,6 @@ export function EditProductoDialog({
       setFechaVencimiento(producto.fechaVencimiento ? new Date(producto.fechaVencimiento).toISOString().split('T')[0] : "");
       setCategoriaId(producto.categoriaId?.toString() || "");
       setImagenUrl(producto.imagenUrl || null);
-      setDescuentos(Array.isArray(producto.descuentos) ? producto.descuentos : []);
 
       // Cargar lista de categorías desde API
       apiService.getCategorias()
@@ -151,9 +150,12 @@ export function EditProductoDialog({
     try {
       let finalCategoriaId: number | null = categoriaId ? Number(categoriaId) : null;
 
-      // 1. Si el usuario creó una categoría nueva en la edición
       if (isCreandoNuevaCat && nuevaCategoria.trim()) {
-        const catCreada = await apiService.createCategoria({ nombre: nuevaCategoria.trim(), color: nuevaCatColor });
+        const catCreada = await apiService.createCategoria({
+          nombre: nuevaCategoria.trim(),
+          color: nuevaCatColor,
+          descuentos: nuevaCatDescuentos.length > 0 ? nuevaCatDescuentos : null,
+        });
         finalCategoriaId = Number(catCreada.id);
       }
 
@@ -166,7 +168,6 @@ export function EditProductoDialog({
         fechaVencimiento: fechaVencimiento || null,
         categoriaId: finalCategoriaId,
         imagenUrl: imagenUrl || null,
-        descuentos: descuentos.length > 0 ? descuentos : null,
       };
 
       await apiService.updateProducto(producto.id, payload);
@@ -283,6 +284,7 @@ export function EditProductoDialog({
                           setEditCatId(cat.id);
                           setEditCatNombre(cat.nombre);
                           setEditCatColor((cat.color || "sky") as CategoryColorKey);
+                          setEditCatDescuentos(Array.isArray((cat as any).descuentos) ? (cat as any).descuentos : []);
                           setIsEditandoCat(true);
                         }
                       }}
@@ -325,6 +327,7 @@ export function EditProductoDialog({
                           await apiService.updateCategoria(Number(editCatId), {
                             nombre: editCatNombre.trim(),
                             color: editCatColor,
+                            descuentos: editCatDescuentos.length > 0 ? editCatDescuentos : null,
                           });
                           const updated = await apiService.getCategorias();
                           setCategorias(updated);
@@ -372,6 +375,7 @@ export function EditProductoDialog({
                       </button>
                     ))}
                   </div>
+                  <DiscountTiersInline descuentos={editCatDescuentos} onChange={setEditCatDescuentos} />
                 </div>
               ) : (
                 <div className="space-y-3 animate-in slide-in-from-left-2 duration-200">
@@ -418,6 +422,7 @@ export function EditProductoDialog({
                       </button>
                     ))}
                   </div>
+                  <DiscountTiersInline descuentos={nuevaCatDescuentos} onChange={setNuevaCatDescuentos} />
                 </div>
               )}
             </div>
@@ -484,76 +489,7 @@ export function EditProductoDialog({
             </div>
           </div>
 
-          {/* SECCIÓN: Descuentos por Cantidad */}
-          <div className="rounded-xl border border-border/50 p-4 space-y-3 bg-muted/10">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <BadgePercent className={`h-4 w-4 ${descuentos.length > 0 ? 'text-primary' : 'text-muted-foreground'}`} />
-                <span className={`text-sm font-semibold ${descuentos.length > 0 ? 'text-foreground' : 'text-muted-foreground'}`}>
-                  Descuentos por Cantidad {descuentos.length > 0 && `(${descuentos.length})`}
-                </span>
-              </div>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="h-8 px-3 text-xs border-dashed border-primary/40 text-primary hover:bg-primary/5"
-                onClick={() => setDescuentos(prev => [...prev, { cantidadMin: 0, porcentaje: 0 }])}
-              >
-                <Plus className="h-3 w-3 mr-1" /> Agregar Nivel
-              </Button>
-            </div>
 
-            {descuentos.length > 0 && (
-              <div className="space-y-2 animate-in slide-in-from-top-2 duration-200">
-                <div className="grid grid-cols-[1fr_1fr_32px] gap-2 text-[10px] font-bold uppercase text-muted-foreground px-1">
-                  <span>Llevando ≥</span>
-                  <span>Descuento %</span>
-                  <span />
-                </div>
-                {descuentos.map((d, i) => (
-                  <div key={i} className="grid grid-cols-[1fr_1fr_32px] gap-2 items-center">
-                    <div className="relative">
-                      <Package className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-primary" />
-                      <Input
-                        value={d.cantidadMin || ""}
-                        onChange={(e) => {
-                          const val = parseInt(e.target.value) || 0;
-                          setDescuentos(prev => prev.map((item, idx) => idx === i ? { ...item, cantidadMin: val } : item));
-                        }}
-                        placeholder="Cant."
-                        className="pl-8 h-9 bg-primary/5 border-primary/20 text-sm"
-                        inputMode="numeric"
-                      />
-                    </div>
-                    <div className="relative">
-                      <Percent className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-primary" />
-                      <Input
-                        value={d.porcentaje || ""}
-                        onChange={(e) => {
-                          const val = parseFloat(e.target.value) || 0;
-                          setDescuentos(prev => prev.map((item, idx) => idx === i ? { ...item, porcentaje: val } : item));
-                        }}
-                        placeholder="%"
-                        className="pl-8 h-9 bg-primary/5 border-primary/20 text-sm"
-                        inputMode="decimal"
-                      />
-                    </div>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      className="h-9 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-                      onClick={() => setDescuentos(prev => prev.filter((_, idx) => idx !== i))}
-                    >
-                      <X className="h-3.5 w-3.5" />
-                    </Button>
-                  </div>
-                ))}
-                <p className="text-[10px] text-muted-foreground italic">Se aplica el mayor descuento que cumpla la cantidad.</p>
-              </div>
-            )}
-          </div>
 
           <div className="flex gap-3 pt-4">
             <Button type="button" variant="outline" className="flex-1 h-11" onClick={() => setOpen(false)} disabled={saving || deleting}>

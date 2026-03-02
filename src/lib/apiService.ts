@@ -30,6 +30,7 @@ import type {
   CerrarCajaInput,
   CrearMovimientoCajaInput,
   Categoria,
+  DescuentoNivel,
   HorarioLaboralConfig,
 } from "./types";
 
@@ -385,7 +386,7 @@ export const apiService = {
     return apiData<Categoria[]>(API_ROUTES.CATEGORIAS);
   },
 
-  createCategoria(data: { nombre: string; color?: string }) {
+  createCategoria(data: { nombre: string; color?: string; descuentos?: DescuentoNivel[] | null }) {
     return apiData<Categoria>(API_ROUTES.CATEGORIAS, {
       method: "POST",
       body: JSON.stringify(data),
@@ -396,7 +397,7 @@ export const apiService = {
     return apiData<{ ok: true }>(API_ROUTES.CATEGORIA_ID(id), { method: "DELETE" });
   },
 
-  updateCategoria(id: number, data: { nombre?: string; color?: string }) {
+  updateCategoria(id: number, data: { nombre?: string; color?: string; descuentos?: DescuentoNivel[] | null }) {
     return apiData<Categoria>(API_ROUTES.CATEGORIA_ID(id), {
       method: "PATCH",
       body: JSON.stringify(data),

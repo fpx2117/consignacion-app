@@ -170,6 +170,7 @@ export type Categoria = {
   id: ID;
   nombre: string;
   color?: string;
+  descuentos?: DescuentoNivel[] | null;
 };
 
 export type DescuentoNivel = {
@@ -193,7 +194,6 @@ export type Producto = {
   packSizeUnits?: number | null;
   fechaVencimiento?: ISODateString | null;
   imagenUrl?: string | null;
-  descuentos?: DescuentoNivel[] | null;
   categoriaId?: ID | null;
   categoria?: Categoria;
   createdAt: ISODateString;
@@ -360,7 +360,6 @@ export type CreateProductoInput = {
   fechaVencimiento?: ISODateString | null;
   categoriaId?: ID | null;
   imagenUrl?: string | null;
-  descuentos?: DescuentoNivel[] | null;
 };
 
 export type UpdateProductoInput = Partial<CreateProductoInput> & {

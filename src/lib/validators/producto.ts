@@ -14,10 +14,6 @@ export const createProductoSchema = z.object({
   fechaVencimiento: z.string().nullish(),
   categoriaId: z.number().int().nullish(),
   imagenUrl: z.string().nullish(),
-  descuentos: z.array(z.object({
-    cantidadMin: z.number().int().min(1),
-    porcentaje: z.number().min(0).max(100),
-  })).nullish(),
 });
 
 // Corregimos el UpdateProductoInput para que acepte NULL explícitamente
