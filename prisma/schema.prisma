@@ -218,7 +218,6 @@ model Producto {
   sku                  String?
   sucursalId           Int?                  @default(1)
   imagenUrl            String?
-  descuentos           Json?
   consignacionDetalles ConsignacionDetalle[]
   movimientoStocks     MovimientoStock[]
   notifications        Notification[]
@@ -280,10 +279,11 @@ model MovimientoCaja {
 }
 
 model Categoria {
-  id        Int        @id @default(autoincrement())
-  nombre    String     @unique
-  color     String     @default("sky")
-  productos Producto[]
+  id         Int        @id @default(autoincrement())
+  nombre     String     @unique
+  color      String     @default("sky")
+  descuentos Json?
+  productos  Producto[]
 }
 
 model ShareLink {

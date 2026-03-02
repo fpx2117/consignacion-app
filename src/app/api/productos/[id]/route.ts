@@ -106,13 +106,11 @@ export async function PUT(req: Request, { params }: RouteParams) {
       if (!anteriorProducto) throw new Error("Producto no encontrado");
 
       // 2. Ejecutar la actualización del producto (datos base)
-      const { descuentos, ...restData } = parsed.data;
       const productoUpdate = await tx.producto.update({
         where: { id, sucursalId },
         data: {
-          ...restData,
-          fechaVencimiento: restData.fechaVencimiento ? new Date(restData.fechaVencimiento) : undefined,
-          ...(descuentos !== undefined ? { descuentos: descuentos ?? undefined } : {}),
+          ...parsed.data,
+          fechaVencimiento: parsed.data.fechaVencimiento ? new Date(parsed.data.fechaVencimiento) : undefined,
         },
       });
 
