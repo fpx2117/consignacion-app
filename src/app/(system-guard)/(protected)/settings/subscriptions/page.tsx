@@ -10,6 +10,8 @@ import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { DowngradeModal } from "./components/DowngradeModal";
+import { TutorialButton } from "@/components/ui/tutorial-button";
+import { SUBSCRIPTIONS_TUTORIAL } from "@/lib/tutorial-content";
 
 export default function SubscriptionsPage() {
     const [showPricing, setShowPricing] = useState(false);
@@ -139,6 +141,7 @@ export default function SubscriptionsPage() {
                                 <p className="text-sm text-muted-foreground font-medium opacity-60">
                                     Control de tu plan actual y facturación.
                                 </p>
+                                <TutorialButton steps={SUBSCRIPTIONS_TUTORIAL} />
                             </div>
                         </div>
 

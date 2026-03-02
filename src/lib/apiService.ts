@@ -33,6 +33,9 @@ import type {
   HorarioLaboralConfig,
 } from "./types";
 
+export type ProductoWithImage = Producto & { imagenUrl?: string | null };
+
+
 /* =========================
     FETCH WRAPPER (HELPER)
  ========================= */
@@ -55,8 +58,9 @@ async function apiRequest<T>(path: string, init?: RequestInit): Promise<ApiRespo
     } catch { /* silently ignore store errors */ }
   }
 
+  const isFormData = init?.body instanceof FormData;
   const headers: RequestInit["headers"] = {
-    "Content-Type": "application/json",
+    ...(!isFormData ? { "Content-Type": "application/json" } : {}),
     ...(init?.headers ?? {}),
   };
 
@@ -192,10 +196,15 @@ export const API_ROUTES = {
   SETTINGS: {
     HORARIOS: "/api/settings/pos/horarios",
     GENERAL: "/api/settings/general",
+    BRANDING: "/api/settings/branding",
     SECURITY: {
       ACTIVITY: "/api/security/activity",
       SESSIONS: "/api/security/sessions",
     },
+  },
+  PUBLIC: {
+    LISTA_PRECIOS: "/api/public/lista-precios",
+    CHECKOUT: "/api/public/checkout",
   },
 } as const;
 
@@ -260,8 +269,19 @@ export const apiService = {
   },
 
   actualizarConfiguracionGeneral(data: any) {
-    // backend parece devolver { message, data }
     return apiRequest<{ message: string; data: any }>(API_ROUTES.SETTINGS.GENERAL, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    });
+  },
+
+  /* ---------- BRANDING ---------- */
+  getBranding() {
+    return apiData<any>(API_ROUTES.SETTINGS.BRANDING);
+  },
+
+  actualizarBranding(data: any) {
+    return apiRequest<{ message: string; data: any }>(API_ROUTES.SETTINGS.BRANDING, {
       method: "PUT",
       body: JSON.stringify(data),
     });
@@ -276,6 +296,19 @@ export const apiService = {
     return apiRequest<{ message: string }>(API_ROUTES.SETTINGS.HORARIOS, {
       method: "POST",
       body: JSON.stringify({ usuarioId, horarios }),
+    });
+  },
+
+  /* ---------- PUBLIC ---------- */
+  getPublicListaPrecios(sucursalId?: number) {
+    const qs = sucursalId ? `?sucursalId=${sucursalId}` : "";
+    return apiData<any>(`${API_ROUTES.PUBLIC.LISTA_PRECIOS}${qs}`);
+  },
+
+  createPublicCheckout(payload: any) {
+    return apiData<any>(API_ROUTES.PUBLIC.CHECKOUT, {
+      method: "POST",
+      body: JSON.stringify(payload),
     });
   },
 
@@ -317,6 +350,17 @@ export const apiService = {
 
   getProducto(id: number) {
     return apiData<Producto>(API_ROUTES.PRODUCTO_ID(id));
+  },
+
+  async uploadImage(file: File) {
+    const formData = new FormData();
+    formData.append("file", file);
+    return apiData<{ url: string }>("/api/upload", {
+      method: "POST",
+      body: formData,
+      // No seteamos Content-Type para que el browser ponga el boundary
+      headers: {},
+    });
   },
 
   createProducto(payload: CreateProductoInput) {

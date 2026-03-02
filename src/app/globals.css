@@ -153,6 +153,35 @@
 }
 
 /* =========================
+   Store Theme Root (Forces Light Mode on Public Storefront/Preview)
+   ========================= */
+.store-theme-root {
+  --background: oklch(0.99 0.005 280);
+  --foreground: oklch(0.20 0.01 280);
+
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.20 0.01 280);
+
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.20 0.01 280);
+
+  --muted: oklch(0.96 0.01 280);
+  --muted-foreground: oklch(0.55 0.02 280);
+
+  --accent: oklch(0.95 0.03 295);
+  --accent-foreground: oklch(0.24 0.01 280);
+
+  --destructive: oklch(0.62 0.22 25);
+  --destructive-foreground: oklch(0.985 0 0);
+
+  --border: oklch(0.90 0.01 280);
+  --input: oklch(0.90 0.01 280);
+
+  --success: oklch(0.70 0.18 145);
+  --success-foreground: oklch(0.14 0.02 145);
+}
+
+/* =========================
    Theme values (DARK)
    ========================= */
 .dark {

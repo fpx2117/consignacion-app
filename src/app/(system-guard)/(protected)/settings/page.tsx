@@ -20,10 +20,22 @@ import {
   Lock,
   CreditCard,
   MessageCircle,
+  Zap,
 } from "lucide-react";
 
 // Lista de configuraciones adaptada
 const SETTINGS_MODULES = [
+  {
+    id: "tienda",
+    title: "Tu Tienda Online",
+    description: "Personalizá tu catálogo público: colores, banners, temas y redes sociales.",
+    href: "/settings/tienda",
+    icon: Zap,
+    color: "text-amber-500",
+    bg: "bg-amber-500/10",
+    borderColor: "group-hover:border-amber-500/30",
+    soon: false,
+  },
   {
     id: "branding",
     title: "Branding y Reportes",

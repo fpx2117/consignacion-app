@@ -7,7 +7,8 @@ import { AnimatePresence, motion } from "framer-motion";
 import {
   Plus, Minus, Trash2, Loader2, ArrowLeft, ShoppingCart,
   Search, Banknote, CreditCard, QrCode, Coins, Check, ChevronsUpDown,
-  UserCircle2, Barcode, Lock, Store
+  UserCircle2, Barcode, Lock, Store,
+  Image as ImageIcon
 } from "lucide-react";
 
 import { apiService } from "@/lib/apiService";
@@ -55,6 +56,7 @@ export default function NuevaVentaPage() {
   // --- States ---
   const [productos, setProductos] = React.useState<ProductoConStock[]>([]);
   const [clientes, setClientes] = React.useState<Cliente[]>([]);
+  const [porcentajeInteresTarjeta, setPorcentajeInteresTarjeta] = React.useState(0);
 
   // Form States
   const [productoId, setProductoId] = React.useState<number | "">("");
@@ -92,6 +94,7 @@ export default function NuevaVentaPage() {
       const configRes = await apiService.getConfiguracionGeneral();
       const requiereCaja = configRes?.usarControlDeCaja ?? true;
       setUsaCajaEstricta(requiereCaja);
+      setPorcentajeInteresTarjeta(configRes?.porcentajeInteresTarjeta ?? configRes?.data?.porcentajeInteresTarjeta ?? 0);
 
       // 2. Verificar estado de caja y traer horario configurado
       const cajaRes = await apiService.verificarCajaAbierta();
@@ -216,7 +219,9 @@ export default function NuevaVentaPage() {
   const incrementUnits = () => setUnits(prev => prev + 1);
   const decrementUnits = () => setUnits(prev => (prev > 1 ? prev - 1 : 1));
 
-  const totalAmount = cart.reduce((acc, curr) => acc + (Number(curr.producto.precioVenta) * curr.quantity), 0);
+  const totalSinInteres = cart.reduce((acc, curr) => acc + (Number(curr.producto.precioVenta) * curr.quantity), 0);
+  const montoInteres = metodoPago === "TARJETA" ? (totalSinInteres * (porcentajeInteresTarjeta / 100)) : 0;
+  const totalAmount = totalSinInteres + montoInteres;
 
   // --- COBRAR ---
   const handleCobrar = async () => {
@@ -471,15 +476,24 @@ export default function NuevaVentaPage() {
                                 }}
                                 className={cn("flex justify-between py-3 cursor-pointer", sinStock && "opacity-50")}
                               >
-                                <div className="flex flex-col">
-                                  <span className="font-medium text-sm leading-none">{p.nombre}</span>
-                                  <div className="flex gap-2 mt-1 text-[10px] text-muted-foreground font-bold">
-                                    {p.codigoBarra && (
-                                      <span className="font-mono bg-muted px-1 rounded flex items-center gap-1 border border-border/40">
-                                        <Barcode className="h-3 w-3" /> {p.codigoBarra}
-                                      </span>
+                                <div className="flex items-center gap-3">
+                                  <div className="h-10 w-10 rounded-lg bg-muted border border-border/40 overflow-hidden flex items-center justify-center shrink-0">
+                                    {p.imagenUrl ? (
+                                      <img src={p.imagenUrl} alt={p.nombre} className="h-full w-full object-cover" />
+                                    ) : (
+                                      <ImageIcon className="h-5 w-5 text-muted-foreground/30" />
                                     )}
-                                    <span>{sinStock ? "AGOTADO" : `Disp: ${stock}`}</span>
+                                  </div>
+                                  <div className="flex flex-col">
+                                    <span className="font-medium text-sm leading-none">{p.nombre}</span>
+                                    <div className="flex gap-2 mt-1 text-[10px] text-muted-foreground font-bold">
+                                      {p.codigoBarra && (
+                                        <span className="font-mono bg-muted px-1 rounded flex items-center gap-1 border border-border/40">
+                                          <Barcode className="h-3 w-3" /> {p.codigoBarra}
+                                        </span>
+                                      )}
+                                      <span>{sinStock ? "AGOTADO" : `Disp: ${stock}`}</span>
+                                    </div>
                                   </div>
                                 </div>
                                 <Badge variant={sinStock ? "destructive" : "secondary"}>
@@ -533,8 +547,14 @@ export default function NuevaVentaPage() {
                       className="flex items-center justify-between p-3.5 rounded-2xl bg-card border border-border/40 shadow-sm group"
                     >
                       <div className="flex items-center gap-3 overflow-hidden">
-                        <div className="h-10 w-10 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary font-black text-xs shrink-0">
-                          {item.quantity}x
+                        <div className="h-10 w-10 rounded-xl bg-primary/10 border border-primary/20 overflow-hidden flex items-center justify-center text-primary font-black text-xs shrink-0">
+                          {item.producto.imagenUrl ? (
+                            <img src={item.producto.imagenUrl} alt={item.producto.nombre} className="h-full w-full object-cover" />
+                          ) : (
+                            <div className="flex flex-col items-center">
+                              <span className="leading-none">{item.quantity}x</span>
+                            </div>
+                          )}
                         </div>
                         <div className="min-w-0 pr-2">
                           <p className="font-bold text-sm truncate text-foreground">{item.producto.nombre}</p>
@@ -594,8 +614,14 @@ export default function NuevaVentaPage() {
             <div className="space-y-2">
               <div className="flex justify-between text-sm text-muted-foreground font-medium">
                 <span>Subtotal</span>
-                <span>{formatCurrency(totalAmount)}</span>
+                <span>{formatCurrency(totalSinInteres)}</span>
               </div>
+              {metodoPago === "TARJETA" && porcentajeInteresTarjeta > 0 && (
+                <div className="flex justify-between text-sm text-indigo-600 dark:text-indigo-400 font-bold">
+                  <span>Interés Tarjeta ({porcentajeInteresTarjeta}%)</span>
+                  <span>+ {formatCurrency(montoInteres)}</span>
+                </div>
+              )}
               <div className="flex justify-between text-sm text-muted-foreground font-medium">
                 <span>Descuentos</span>
                 <span>$ 0</span>
