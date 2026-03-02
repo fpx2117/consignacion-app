@@ -37,7 +37,9 @@ import {
   Plus,
   Check,
   Pencil,
-  Image as ImageIcon
+  Image as ImageIcon,
+  Percent,
+  BadgePercent
 } from "lucide-react";
 import { ImageUpload } from "@/components/image-upload";
 
@@ -75,6 +77,11 @@ export function CreateProductoDialog({
   const [stockMinUnits, setStockMinUnits] = React.useState("");
   const [fechaVencimiento, setFechaVencimiento] = React.useState("");
   const [imagenUrl, setImagenUrl] = React.useState<string | null>(null);
+
+  // --- ESTADOS DE DESCUENTO ---
+  const [tieneDescuento, setTieneDescuento] = React.useState(false);
+  const [descuentoCantidadMin, setDescuentoCantidadMin] = React.useState("");
+  const [descuentoPorcentaje, setDescuentoPorcentaje] = React.useState("");
 
   // --- ESTADOS DE CATEGORÍA ---
   // Mantenemos string para compatibilidad con componentes de UI
@@ -148,6 +155,9 @@ export function CreateProductoDialog({
         fechaVencimiento: fechaVencimiento || undefined,
         categoriaId: finalCategoriaId,
         imagenUrl: imagenUrl || undefined,
+        tieneDescuento,
+        descuentoCantidadMin: tieneDescuento ? (toInt(descuentoCantidadMin) || null) : null,
+        descuentoPorcentaje: tieneDescuento ? (toNumber(descuentoPorcentaje) || null) : null,
       });
 
       // Éxito: Cerrar y Limpiar
@@ -166,6 +176,7 @@ export function CreateProductoDialog({
     setStockDisponibleUnits(""); setStockMinUnits(""); setFechaVencimiento("");
     setCategoriaId(""); setNuevaCategoria(""); setNuevaCatColor("sky"); setIsCreandoNuevaCat(false);
     setImagenUrl(null);
+    setTieneDescuento(false); setDescuentoCantidadMin(""); setDescuentoPorcentaje("");
   };
 
   return (
@@ -456,6 +467,61 @@ export function CreateProductoDialog({
                 <Input value={stockMinUnits} onChange={(e) => setStockMinUnits(e.target.value)} className="pl-9 h-11 bg-orange-500/5 border-orange-500/20" placeholder="5" inputMode="numeric" />
               </div>
             </div>
+          </div>
+
+          {/* SECCIÓN: Descuento por Cantidad */}
+          <div className="rounded-xl border border-border/50 p-4 space-y-3 bg-muted/10">
+            <label className="flex items-center gap-3 cursor-pointer select-none">
+              <div className="relative">
+                <input
+                  type="checkbox"
+                  checked={tieneDescuento}
+                  onChange={(e) => setTieneDescuento(e.target.checked)}
+                  className="sr-only peer"
+                />
+                <div className="w-10 h-6 bg-muted rounded-full peer-checked:bg-primary transition-colors" />
+                <div className="absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform peer-checked:translate-x-4" />
+              </div>
+              <div className="flex items-center gap-2">
+                <BadgePercent className={`h-4 w-4 ${tieneDescuento ? 'text-primary' : 'text-muted-foreground'}`} />
+                <span className={`text-sm font-semibold ${tieneDescuento ? 'text-foreground' : 'text-muted-foreground'}`}>
+                  Descuento por Cantidad
+                </span>
+              </div>
+            </label>
+
+            {tieneDescuento && (
+              <div className="grid grid-cols-2 gap-3 animate-in slide-in-from-top-2 duration-200">
+                <div className="space-y-2">
+                  <Label className="text-sm font-semibold opacity-80">Cantidad Mínima</Label>
+                  <div className="relative">
+                    <Package className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-primary" />
+                    <Input
+                      value={descuentoCantidadMin}
+                      onChange={(e) => setDescuentoCantidadMin(e.target.value)}
+                      placeholder="Ej: 3"
+                      className="pl-9 h-11 bg-primary/5 border-primary/20"
+                      inputMode="numeric"
+                    />
+                  </div>
+                  <p className="text-[10px] text-muted-foreground">Llevando esta cantidad o más</p>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-sm font-semibold opacity-80">Descuento (%)</Label>
+                  <div className="relative">
+                    <Percent className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-primary" />
+                    <Input
+                      value={descuentoPorcentaje}
+                      onChange={(e) => setDescuentoPorcentaje(e.target.value)}
+                      placeholder="Ej: 10"
+                      className="pl-9 h-11 bg-primary/5 border-primary/20"
+                      inputMode="decimal"
+                    />
+                  </div>
+                  <p className="text-[10px] text-muted-foreground">Porcentaje de descuento</p>
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="flex gap-3 pt-4">

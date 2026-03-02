@@ -8,7 +8,8 @@ import {
   Plus, Minus, Trash2, Loader2, ArrowLeft, ShoppingCart,
   Search, Banknote, CreditCard, QrCode, Coins, Check, ChevronsUpDown,
   UserCircle2, Barcode, Lock, Store,
-  Image as ImageIcon
+  Image as ImageIcon,
+  BadgePercent
 } from "lucide-react";
 
 import { apiService } from "@/lib/apiService";
@@ -220,8 +221,15 @@ export default function NuevaVentaPage() {
   const decrementUnits = () => setUnits(prev => (prev > 1 ? prev - 1 : 1));
 
   const totalSinInteres = cart.reduce((acc, curr) => acc + (Number(curr.producto.precioVenta) * curr.quantity), 0);
-  const montoInteres = metodoPago === "TARJETA" ? (totalSinInteres * (porcentajeInteresTarjeta / 100)) : 0;
-  const totalAmount = totalSinInteres + montoInteres;
+  const totalDescuento = cart.reduce((acc, item) => {
+    const prod = item.producto;
+    if (prod.tieneDescuento && prod.descuentoCantidadMin && prod.descuentoPorcentaje && item.quantity >= prod.descuentoCantidadMin) {
+      return acc + (Number(prod.precioVenta) * item.quantity * (prod.descuentoPorcentaje / 100));
+    }
+    return acc;
+  }, 0);
+  const montoInteres = metodoPago === "TARJETA" ? ((totalSinInteres - totalDescuento) * (porcentajeInteresTarjeta / 100)) : 0;
+  const totalAmount = totalSinInteres - totalDescuento + montoInteres;
 
   // --- COBRAR ---
   const handleCobrar = async () => {
@@ -493,6 +501,11 @@ export default function NuevaVentaPage() {
                                         </span>
                                       )}
                                       <span>{sinStock ? "AGOTADO" : `Disp: ${stock}`}</span>
+                                      {p.tieneDescuento && p.descuentoPorcentaje && (
+                                        <span className="flex items-center gap-0.5 text-emerald-600 bg-emerald-50 dark:bg-emerald-950/30 px-1 rounded border border-emerald-200 dark:border-emerald-800">
+                                          <BadgePercent className="h-3 w-3" /> −{p.descuentoPorcentaje}%
+                                        </span>
+                                      )}
                                     </div>
                                   </div>
                                 </div>
@@ -559,6 +572,14 @@ export default function NuevaVentaPage() {
                         <div className="min-w-0 pr-2">
                           <p className="font-bold text-sm truncate text-foreground">{item.producto.nombre}</p>
                           <p className="text-[11px] text-muted-foreground font-medium mt-0.5">{formatCurrency(item.producto.precioVenta)} / unidad</p>
+                          {item.producto.tieneDescuento && item.producto.descuentoCantidadMin && item.producto.descuentoPorcentaje && (
+                            <div className={`flex items-center gap-1 mt-1 text-[10px] font-bold ${item.quantity >= item.producto.descuentoCantidadMin ? 'text-emerald-600' : 'text-muted-foreground/60'}`}>
+                              <BadgePercent className="h-3 w-3" />
+                              {item.quantity >= item.producto.descuentoCantidadMin
+                                ? `−${item.producto.descuentoPorcentaje}% aplicado`
+                                : `−${item.producto.descuentoPorcentaje}% llevando ${item.producto.descuentoCantidadMin}+`}
+                            </div>
+                          )}
                         </div>
                       </div>
                       <div className="flex items-center gap-3 shrink-0">
@@ -624,7 +645,7 @@ export default function NuevaVentaPage() {
               )}
               <div className="flex justify-between text-sm text-muted-foreground font-medium">
                 <span>Descuentos</span>
-                <span>$ 0</span>
+                <span className={totalDescuento > 0 ? 'text-emerald-600 font-bold' : ''}>- {formatCurrency(totalDescuento)}</span>
               </div>
               <div className="flex justify-between items-end pt-2 border-t border-border/50">
                 <span className="text-sm font-black uppercase text-muted-foreground tracking-widest">Total</span>

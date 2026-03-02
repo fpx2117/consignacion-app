@@ -218,6 +218,9 @@ model Producto {
   sku                  String?
   sucursalId           Int?                  @default(1)
   imagenUrl            String?
+  tieneDescuento       Boolean               @default(false)
+  descuentoCantidadMin Int?
+  descuentoPorcentaje  Float?
   consignacionDetalles ConsignacionDetalle[]
   movimientoStocks     MovimientoStock[]
   notifications        Notification[]

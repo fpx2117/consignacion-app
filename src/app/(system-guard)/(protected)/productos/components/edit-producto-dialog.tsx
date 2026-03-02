@@ -40,7 +40,9 @@ import {
   Plus,
   PlusCircle,
   Check,
-  Image as ImageIcon
+  Image as ImageIcon,
+  Percent,
+  BadgePercent
 } from "lucide-react";
 import { ImageUpload } from "@/components/image-upload";
 import { toast } from "sonner";
@@ -83,6 +85,11 @@ export function EditProductoDialog({
   );
   const [imagenUrl, setImagenUrl] = React.useState<string | null>(producto.imagenUrl || null);
 
+  // --- ESTADOS DE DESCUENTO ---
+  const [tieneDescuento, setTieneDescuento] = React.useState(producto.tieneDescuento ?? false);
+  const [descuentoCantidadMin, setDescuentoCantidadMin] = React.useState(producto.descuentoCantidadMin ? String(producto.descuentoCantidadMin) : "");
+  const [descuentoPorcentaje, setDescuentoPorcentaje] = React.useState(producto.descuentoPorcentaje ? String(producto.descuentoPorcentaje) : "");
+
   // --- ESTADOS DE CATEGORÍA ---
   const [categorias, setCategorias] = React.useState<{ id: number | string, nombre: string, color?: string }[]>([]);
   const [categoriaId, setCategoriaId] = React.useState<string>(producto.categoriaId?.toString() || "");
@@ -108,6 +115,9 @@ export function EditProductoDialog({
       setFechaVencimiento(producto.fechaVencimiento ? new Date(producto.fechaVencimiento).toISOString().split('T')[0] : "");
       setCategoriaId(producto.categoriaId?.toString() || "");
       setImagenUrl(producto.imagenUrl || null);
+      setTieneDescuento(producto.tieneDescuento ?? false);
+      setDescuentoCantidadMin(producto.descuentoCantidadMin ? String(producto.descuentoCantidadMin) : "");
+      setDescuentoPorcentaje(producto.descuentoPorcentaje ? String(producto.descuentoPorcentaje) : "");
 
       // Cargar lista de categorías desde API
       apiService.getCategorias()
@@ -156,6 +166,9 @@ export function EditProductoDialog({
         fechaVencimiento: fechaVencimiento || null,
         categoriaId: finalCategoriaId,
         imagenUrl: imagenUrl || null,
+        tieneDescuento,
+        descuentoCantidadMin: tieneDescuento ? (toInt(descuentoCantidadMin) || null) : null,
+        descuentoPorcentaje: tieneDescuento ? (toNumber(descuentoPorcentaje) || null) : null,
       };
 
       await apiService.updateProducto(producto.id, payload);
@@ -471,6 +484,61 @@ export function EditProductoDialog({
                 <Input value={stockMinUnits} onChange={(e) => setStockMinUnits(e.target.value)} className="pl-9 h-11 bg-orange-500/5 border-orange-500/20" placeholder="5" />
               </div>
             </div>
+          </div>
+
+          {/* SECCIÓN: Descuento por Cantidad */}
+          <div className="rounded-xl border border-border/50 p-4 space-y-3 bg-muted/10">
+            <label className="flex items-center gap-3 cursor-pointer select-none">
+              <div className="relative">
+                <input
+                  type="checkbox"
+                  checked={tieneDescuento}
+                  onChange={(e) => setTieneDescuento(e.target.checked)}
+                  className="sr-only peer"
+                />
+                <div className="w-10 h-6 bg-muted rounded-full peer-checked:bg-primary transition-colors" />
+                <div className="absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform peer-checked:translate-x-4" />
+              </div>
+              <div className="flex items-center gap-2">
+                <BadgePercent className={`h-4 w-4 ${tieneDescuento ? 'text-primary' : 'text-muted-foreground'}`} />
+                <span className={`text-sm font-semibold ${tieneDescuento ? 'text-foreground' : 'text-muted-foreground'}`}>
+                  Descuento por Cantidad
+                </span>
+              </div>
+            </label>
+
+            {tieneDescuento && (
+              <div className="grid grid-cols-2 gap-3 animate-in slide-in-from-top-2 duration-200">
+                <div className="space-y-2">
+                  <Label className="text-xs font-bold uppercase text-muted-foreground">Cantidad Mínima</Label>
+                  <div className="relative">
+                    <Package className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-primary" />
+                    <Input
+                      value={descuentoCantidadMin}
+                      onChange={(e) => setDescuentoCantidadMin(e.target.value)}
+                      placeholder="Ej: 3"
+                      className="pl-9 h-11 bg-primary/5 border-primary/20"
+                      inputMode="numeric"
+                    />
+                  </div>
+                  <p className="text-[10px] text-muted-foreground">Llevando esta cantidad o más</p>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-xs font-bold uppercase text-muted-foreground">Descuento (%)</Label>
+                  <div className="relative">
+                    <Percent className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-primary" />
+                    <Input
+                      value={descuentoPorcentaje}
+                      onChange={(e) => setDescuentoPorcentaje(e.target.value)}
+                      placeholder="Ej: 10"
+                      className="pl-9 h-11 bg-primary/5 border-primary/20"
+                      inputMode="decimal"
+                    />
+                  </div>
+                  <p className="text-[10px] text-muted-foreground">Porcentaje de descuento</p>
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="flex gap-3 pt-4">
