@@ -36,8 +36,10 @@ import {
   Layers,
   Plus,
   Check,
-  Pencil
+  Pencil,
+  Image as ImageIcon
 } from "lucide-react";
+import { ImageUpload } from "@/components/image-upload";
 
 // Helpers de conversión
 function toNumber(v: string): number | undefined {
@@ -72,6 +74,7 @@ export function CreateProductoDialog({
   const [stockDisponibleUnits, setStockDisponibleUnits] = React.useState("");
   const [stockMinUnits, setStockMinUnits] = React.useState("");
   const [fechaVencimiento, setFechaVencimiento] = React.useState("");
+  const [imagenUrl, setImagenUrl] = React.useState<string | null>(null);
 
   // --- ESTADOS DE CATEGORÍA ---
   // Mantenemos string para compatibilidad con componentes de UI
@@ -144,6 +147,7 @@ export function CreateProductoDialog({
         stockMinUnits: minStock,
         fechaVencimiento: fechaVencimiento || undefined,
         categoriaId: finalCategoriaId,
+        imagenUrl: imagenUrl || undefined,
       });
 
       // Éxito: Cerrar y Limpiar
@@ -161,6 +165,7 @@ export function CreateProductoDialog({
     setNombre(""); setCodigoBarra(""); setPrecioVenta(""); setPrecioCosto("");
     setStockDisponibleUnits(""); setStockMinUnits(""); setFechaVencimiento("");
     setCategoriaId(""); setNuevaCategoria(""); setNuevaCatColor("sky"); setIsCreandoNuevaCat(false);
+    setImagenUrl(null);
   };
 
   return (
@@ -180,15 +185,33 @@ export function CreateProductoDialog({
 
         <form onSubmit={onSubmit} className="p-6 space-y-4 max-h-[80vh] overflow-y-auto">
 
-          {/* SECCIÓN: Identificación básica */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="space-y-2 sm:col-span-2">
-              <Label className="text-sm font-semibold opacity-80">Nombre del Producto</Label>
-              <div className="relative">
-                <Tag className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input value={nombre} onChange={(e) => setNombre(e.target.value)} placeholder="Ej: Speed XL 500ml" className="pl-9 h-11 bg-muted/30" />
+          {/* SECCIÓN: Imagen y Identificación */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 items-start">
+            <div className="space-y-2">
+              <Label className="text-sm font-semibold opacity-80">Imagen del Producto</Label>
+              <ImageUpload value={imagenUrl} onChange={setImagenUrl} />
+            </div>
+
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label className="text-sm font-semibold opacity-80">Nombre del Producto</Label>
+                <div className="relative">
+                  <Tag className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input value={nombre} onChange={(e) => setNombre(e.target.value)} placeholder="Ej: Speed XL 500ml" className="pl-9 h-11 bg-muted/30" />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label className="text-sm font-semibold opacity-80">Código de Barras</Label>
+                <div className="relative">
+                  <Barcode className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input value={codigoBarra} onChange={(e) => setCodigoBarra(e.target.value)} placeholder="Escanear..." className="pl-9 h-11 bg-muted/30" />
+                </div>
               </div>
             </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
 
             {/* --- SELECT DE CATEGORÍA --- */}
             <div className="space-y-2 sm:col-span-2">
@@ -368,15 +391,7 @@ export function CreateProductoDialog({
               )}
             </div>
 
-            <div className="space-y-2">
-              <Label className="text-sm font-semibold opacity-80">Código de Barras</Label>
-              <div className="relative">
-                <Barcode className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input value={codigoBarra} onChange={(e) => setCodigoBarra(e.target.value)} placeholder="Escanear..." className="pl-9 h-11 bg-muted/30" />
-              </div>
-            </div>
-
-            <div className="space-y-2">
+            <div className="space-y-2 sm:col-span-1">
               <Label className="text-sm font-semibold opacity-80">Vencimiento (Opcional)</Label>
               <div className="relative">
                 <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />

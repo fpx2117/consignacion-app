@@ -42,6 +42,8 @@ import {
   FileText,
   ChevronLeft,
 } from "lucide-react";
+import { TutorialButton } from "@/components/ui/tutorial-button";
+import { BRANDING_TUTORIAL } from "@/lib/tutorial-content";
 
 // Report template (preview real)
 import {
@@ -219,7 +221,10 @@ export default function BrandingPage() {
           <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight bg-gradient-to-br from-foreground to-foreground/60 bg-clip-text text-transparent pb-2">
             Ticket PDF
           </h1>
-          <p className="text-sm text-muted-foreground">Personalizá la identidad visual de tus reportes imprimibles.</p>
+          <div className="flex flex-wrap items-center gap-3">
+            <p className="text-sm text-muted-foreground">Personalizá la identidad visual de tus reportes imprimibles.</p>
+            <TutorialButton steps={BRANDING_TUTORIAL} />
+          </div>
         </div>
 
         <div className="w-full md:w-auto flex flex-col sm:flex-row gap-3">

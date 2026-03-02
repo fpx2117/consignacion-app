@@ -9,6 +9,8 @@ import { requireAuth } from "@/lib/requireAuth";
 import { checkFeature } from "@/lib/requireSubscription";
 import { redirect } from "next/navigation";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { TutorialButton } from "@/components/ui/tutorial-button";
+import { BRANCHES_TUTORIAL } from "@/lib/tutorial-content";
 
 export const metadata: Metadata = {
     title: "Sucursales | Configuración",
@@ -35,6 +37,7 @@ export default async function BranchesPage() {
                 <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight">
                     Gestión de Sucursales
                 </h1>
+                <TutorialButton steps={BRANCHES_TUTORIAL} />
                 <p className="text-sm text-muted-foreground max-w-2xl">
                     Administrá tus diferentes puntos de venta, controlá qué empleados tienen acceso a cada uno y gestioná el stock y precios de forma independiente.
                 </p>

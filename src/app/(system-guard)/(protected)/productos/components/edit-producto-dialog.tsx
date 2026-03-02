@@ -39,8 +39,10 @@ import {
   Layers,
   Plus,
   PlusCircle,
-  Check
+  Check,
+  Image as ImageIcon
 } from "lucide-react";
+import { ImageUpload } from "@/components/image-upload";
 import { toast } from "sonner";
 
 function toNumber(v: string): number | undefined {
@@ -79,6 +81,7 @@ export function EditProductoDialog({
   const [fechaVencimiento, setFechaVencimiento] = React.useState(
     producto.fechaVencimiento ? new Date(producto.fechaVencimiento).toISOString().split('T')[0] : ""
   );
+  const [imagenUrl, setImagenUrl] = React.useState<string | null>(producto.imagenUrl || null);
 
   // --- ESTADOS DE CATEGORÍA ---
   const [categorias, setCategorias] = React.useState<{ id: number | string, nombre: string, color?: string }[]>([]);
@@ -104,6 +107,7 @@ export function EditProductoDialog({
       setStockMinUnits(String(producto.stockMinUnits || ""));
       setFechaVencimiento(producto.fechaVencimiento ? new Date(producto.fechaVencimiento).toISOString().split('T')[0] : "");
       setCategoriaId(producto.categoriaId?.toString() || "");
+      setImagenUrl(producto.imagenUrl || null);
 
       // Cargar lista de categorías desde API
       apiService.getCategorias()
@@ -151,6 +155,7 @@ export function EditProductoDialog({
         stockMinUnits: toInt(stockMinUnits) || 0,
         fechaVencimiento: fechaVencimiento || null,
         categoriaId: finalCategoriaId,
+        imagenUrl: imagenUrl || null,
       };
 
       await apiService.updateProducto(producto.id, payload);
@@ -201,15 +206,33 @@ export function EditProductoDialog({
 
         <div className="p-6 space-y-4 max-h-[80vh] overflow-y-auto">
 
-          {/* Identificación */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="space-y-2 sm:col-span-2">
-              <Label className="text-xs font-bold uppercase text-muted-foreground">Nombre</Label>
-              <div className="relative">
-                <Tag className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input value={nombre} onChange={(e) => setNombre(e.target.value)} className="pl-9 h-11 bg-muted/30" />
+          {/* Identificación y Imagen */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 items-start">
+            <div className="space-y-2">
+              <Label className="text-xs font-bold uppercase text-muted-foreground">Imagen del Producto</Label>
+              <ImageUpload value={imagenUrl} onChange={setImagenUrl} />
+            </div>
+
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label className="text-xs font-bold uppercase text-muted-foreground">Nombre</Label>
+                <div className="relative">
+                  <Tag className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input value={nombre} onChange={(e) => setNombre(e.target.value)} className="pl-9 h-11 bg-muted/30" />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label className="text-xs font-bold uppercase text-muted-foreground">Código de Barras</Label>
+                <div className="relative">
+                  <Barcode className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input value={codigoBarra} onChange={(e) => setCodigoBarra(e.target.value)} className="pl-9 h-11 bg-muted/30" />
+                </div>
               </div>
             </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
 
             {/* --- SECCIÓN CATEGORÍA --- */}
             <div className="space-y-2 sm:col-span-2">
@@ -388,15 +411,7 @@ export function EditProductoDialog({
               )}
             </div>
 
-            <div className="space-y-2">
-              <Label className="text-xs font-bold uppercase text-muted-foreground">Código de Barras</Label>
-              <div className="relative">
-                <Barcode className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input value={codigoBarra} onChange={(e) => setCodigoBarra(e.target.value)} className="pl-9 h-11 bg-muted/30" />
-              </div>
-            </div>
-
-            <div className="space-y-2">
+            <div className="space-y-2 sm:col-span-1">
               <Label className="text-xs font-bold uppercase text-muted-foreground">Vencimiento</Label>
               <div className="relative">
                 <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />

@@ -20,6 +20,16 @@ model Configuracion {
   mensajeWhatsappConsignacion    String?
   mensajeWhatsappVenta           String?
   sucursalId                     Int      @unique @default(1)
+  porcentajeAumentoConsignacion  Float    @default(0)
+  mostrarPreciosConsignacion     Boolean  @default(false)
+  porcentajeInteresTarjeta       Float    @default(0)
+  convertirTienda                Boolean  @default(false)
+  mostrarListaPrecios            Boolean  @default(false)
+  mpAccessTokenTienda            String?
+  mpPublicKeyTienda              String?
+  separarListaPorSucursal        Boolean  @default(true)
+  mostrarCategoriasEnHeader      Boolean  @default(true)
+  tiendaLayout                   String   @default("grid")
   sucursal                       Sucursal @relation(fields: [sucursalId], references: [id])
 }
 
@@ -114,17 +124,39 @@ model Cliente {
 }
 
 model Branding {
-  id           Int      @id @default(autoincrement())
-  businessName String
-  primaryColor String   @default("#111827")
-  footerText   String?
-  phone        String?
-  address      String?
-  updatedAt    DateTime @updatedAt
-  logoData     Bytes?
-  logoMime     String?
-  sucursalId   Int      @unique @default(1)
-  sucursal     Sucursal @relation(fields: [sucursalId], references: [id])
+  id              Int              @id @default(autoincrement())
+  businessName    String
+  primaryColor    String           @default("#111827")
+  footerText      String?
+  phone           String?
+  address         String?
+  updatedAt       DateTime         @updatedAt
+  logoData        Bytes?
+  logoMime        String?
+  sucursalId      Int              @unique @default(1)
+  bannerData      Bytes?
+  bannerMime      String?
+  isBannerSlider  Boolean          @default(false)
+  facebookUrl     String?
+  instagramUrl    String?
+  secondaryColor  String           @default("#3b82f6")
+  themeIdentifier String           @default("modern")
+  whatsappNumber  String?
+  sucursal        Sucursal         @relation(fields: [sucursalId], references: [id])
+  banners         BrandingBanner[]
+}
+
+model BrandingBanner {
+  id         Int      @id @default(autoincrement())
+  brandingId Int
+  bannerData Bytes
+  bannerMime String
+  orden      Int      @default(0)
+  createdAt  DateTime @default(now())
+  branding   Branding @relation(fields: [brandingId], references: [id], onDelete: Cascade)
+
+  @@index([brandingId])
+  @@index([orden])
 }
 
 model MovimientoStock {
@@ -185,13 +217,14 @@ model Producto {
   iva                  Decimal               @default(21.0) @db.Decimal(5, 2)
   sku                  String?
   sucursalId           Int?                  @default(1)
+  imagenUrl            String?
   consignacionDetalles ConsignacionDetalle[]
   movimientoStocks     MovimientoStock[]
   notifications        Notification[]
   categoria            Categoria?            @relation(fields: [categoriaId], references: [id])
+  sucursal             Sucursal?             @relation(fields: [sucursalId], references: [id])
   stockSucursals       StockSucursal[]
   ventaDetalles        VentaDetalle[]
-  sucursal             Sucursal?             @relation(fields: [sucursalId], references: [id])
 
   @@unique([codigoBarra, sucursalId])
   @@unique([sku, sucursalId])
@@ -454,16 +487,16 @@ model Sucursal {
   activa         Boolean           @default(true)
   createdAt      DateTime          @default(now())
   updatedAt      DateTime          @updatedAt
+  branding       Branding?
   cajas          Caja[]
   clientes       Cliente[]
+  configuracion  Configuracion?
   consignaciones Consignacion[]
   movimientos    MovimientoStock[]
+  productos      Producto[]
   stockProductos StockSucursal[]
   usuarios       Usuario[]
   ventas         Venta[]
-  productos      Producto[]
-  configuracion  Configuracion?
-  branding       Branding?
 }
 
 model StockSucursal {

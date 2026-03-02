@@ -48,10 +48,10 @@ export async function POST(req: Request) {
   }
 
   // ✅ 1. Preparar Configuración y Cola de Notificaciones
-  const configGlobal = await obtenerConfiguracionGlobal();
+  const configGlobal = await obtenerConfiguracionGlobal(auth.activeSucursalId);
   const notificationsQueue: any[] = [];
 
-  const porcentaje = parsed.data.porcentajeAumento || 0;
+  const porcentaje = configGlobal.porcentajeAumentoConsignacion || 0;
   const factorAumento = 1 + (porcentaje / 100);
 
   try {

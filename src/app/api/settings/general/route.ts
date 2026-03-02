@@ -10,7 +10,12 @@ export async function GET() {
     try {
         const config = await prisma.configuracion.findUnique({
             where: { sucursalId: auth.activeSucursalId },
-        });
+        }) as any;
+
+        if (config && config.mpAccessTokenTienda) {
+            config.mpAccessTokenTienda = "**************";
+        }
+
         return NextResponse.json({ data: config });
     } catch (error: any) {
         return NextResponse.json({ error: "Error al obtener la configuración" }, { status: 500 });
@@ -36,7 +41,17 @@ export async function PUT(req: Request) {
             diasAvisoConsignacion,
             mensajeWhatsappConsignacion,
             mensajeWhatsappVenta,
-            usarControlDeCaja
+            usarControlDeCaja,
+            porcentajeAumentoConsignacion,
+            mostrarPreciosConsignacion,
+            porcentajeInteresTarjeta,
+            mostrarListaPrecios,
+            convertirTienda,
+            separarListaPorSucursal,
+            mpAccessTokenTienda,
+            mpPublicKeyTienda,
+            tiendaLayout,
+            mostrarCategoriasEnHeader
         } = body;
 
         const configActualizada = await prisma.configuracion.upsert({
@@ -53,6 +68,16 @@ export async function PUT(req: Request) {
                 ...(mensajeWhatsappConsignacion !== undefined && { mensajeWhatsappConsignacion }),
                 ...(mensajeWhatsappVenta !== undefined && { mensajeWhatsappVenta }),
                 ...(usarControlDeCaja !== undefined && { usarControlDeCaja }),
+                ...(porcentajeAumentoConsignacion !== undefined && { porcentajeAumentoConsignacion }),
+                ...(mostrarPreciosConsignacion !== undefined && { mostrarPreciosConsignacion }),
+                ...(porcentajeInteresTarjeta !== undefined && { porcentajeInteresTarjeta }),
+                ...(mostrarListaPrecios !== undefined && { mostrarListaPrecios }),
+                ...(convertirTienda !== undefined && { convertirTienda }),
+                ...(separarListaPorSucursal !== undefined && { separarListaPorSucursal }),
+                ...(mpAccessTokenTienda !== undefined && mpAccessTokenTienda !== "**************" && { mpAccessTokenTienda }),
+                ...(mpPublicKeyTienda !== undefined && { mpPublicKeyTienda }),
+                ...(tiendaLayout !== undefined && { tiendaLayout }),
+                ...(mostrarCategoriasEnHeader !== undefined && { mostrarCategoriasEnHeader }),
             },
             create: {
                 sucursalId: auth.activeSucursalId,
@@ -67,12 +92,22 @@ export async function PUT(req: Request) {
                 mensajeWhatsappConsignacion: mensajeWhatsappConsignacion ?? null,
                 mensajeWhatsappVenta: mensajeWhatsappVenta ?? null,
                 usarControlDeCaja: usarControlDeCaja ?? true,
+                porcentajeAumentoConsignacion: porcentajeAumentoConsignacion ?? 0,
+                mostrarPreciosConsignacion: mostrarPreciosConsignacion ?? false,
+                porcentajeInteresTarjeta: porcentajeInteresTarjeta ?? 0,
+                mostrarListaPrecios: mostrarListaPrecios ?? false,
+                convertirTienda: convertirTienda ?? false,
+                separarListaPorSucursal: separarListaPorSucursal ?? true,
+                mpAccessTokenTienda: mpAccessTokenTienda ?? null,
+                mpPublicKeyTienda: mpPublicKeyTienda ?? null,
+                tiendaLayout: tiendaLayout ?? "grid",
+                mostrarCategoriasEnHeader: mostrarCategoriasEnHeader ?? true,
             }
         });
 
         return NextResponse.json({ data: configActualizada, message: "Configuración actualizada" });
     } catch (error: any) {
         console.error("Error actualizando configuración:", error);
-        return NextResponse.json({ error: "Error al actualizar la configuración" }, { status: 500 });
+        return NextResponse.json({ error: "Error al actualizar la configuración", details: error.message }, { status: 500 });
     }
 }

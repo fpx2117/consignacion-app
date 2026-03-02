@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import * as React from "react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -45,12 +45,22 @@ import {
   Trash2,
   Search,
   Calendar,
-  Clock,
   CircleDollarSign,
   ChevronLeft,
   ChevronRight,
   ArrowUpDown,
+  Image as ImageIcon,
+  ExternalLink,
+  MoreVertical,
 } from "lucide-react";
+import Link from "next/link";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 // Sub-components
 import { CreateProductoDialog } from "./create-producto-dialog";
@@ -218,33 +228,85 @@ export function ProductosView() {
     <div className="max-w-[1600px] mx-auto space-y-8 p-6 md:p-10 pb-20 text-foreground selection:bg-primary/20 font-sans">
 
       {/* HEADER */}
-      <header className="flex flex-col lg:flex-row lg:items-end justify-between gap-6 pb-6 border-b border-border/40">
-        <div className="space-y-2">
-          <div className="flex items-center gap-2 text-muted-foreground font-medium text-sm">
-
-          </div>
-          <h1 className="text-4xl font-black tracking-tight text-foreground flex items-center gap-3">
-            <Package className="h-10 w-10 text-primary" />
+      <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-border/40">
+        <div className="space-y-1.5">
+          <h1 className="text-3xl md:text-4xl font-black tracking-tight text-foreground flex items-center gap-3">
+            <Package className="h-8 w-8 md:h-10 md:w-10 text-primary" />
             Inventario
           </h1>
-          <p className="text-muted-foreground text-lg max-w-2xl">
-            Gestiona tu catálogo, controla existencias y supervisa la rentabilidad de tu negocio en tiempo real.
+          <p className="text-muted-foreground text-sm md:text-base max-w-2xl">
+            Gestiona tu catálogo, controla existencias y supervisá la rentabilidad en tiempo real.
           </p>
         </div>
 
-        <div className="flex flex-wrap gap-3 items-center">
-          <HistoryReportDialog />
-          <DownloadInventoryButton />
-          <CreateProductoDialog
-            onCreated={load}
-            trigger={
-              <Button size="lg" className="h-12 px-6 rounded-xl font-bold text-base shadow-xl shadow-primary/20 hover:shadow-primary/40 transition-all hover:scale-[1.02]">
-                <Plus className="h-5 w-5 mr-2 stroke-[3px]" />
-                Nuevo Producto
+        {/* â”€â”€ BOTONES HEADER â”€â”€ */}
+        <div className="flex items-center gap-3 w-full sm:w-auto">
+
+          {/* DESKTOP: todos los botones visibles */}
+          <div className="hidden sm:flex items-center gap-2">
+            {/* Grupo secundario */}
+            <div className="flex items-center gap-1.5 p-1 bg-muted/50 rounded-xl border border-border/50">
+              <HistoryReportDialog />
+              <DownloadInventoryButton />
+              <Button asChild variant="ghost" size="sm" className="h-9 px-3 rounded-lg font-bold text-sm hover:bg-background hover:text-primary transition-all">
+                <Link href="/lista" target="_blank" rel="noopener noreferrer">
+                  <ExternalLink className="h-3.5 w-3.5 mr-1.5" />
+                  Catálogo
+                </Link>
               </Button>
-            }
-          />
+            </div>
+            {/* CTA principal */}
+            <CreateProductoDialog
+              onCreated={load}
+              trigger={
+                <Button size="lg" className="h-10 px-5 rounded-xl font-bold shadow-lg shadow-primary/20 hover:shadow-primary/40 transition-all hover:scale-[1.02]">
+                  <Plus className="h-4 w-4 mr-2 stroke-[3px]" />
+                  Nuevo Producto
+                </Button>
+              }
+            />
+          </div>
+
+          {/* MOBILE: CTA principal izquierda, ⋯ derecha */}
+          <div className="flex sm:hidden items-center justify-between w-full">
+            {/* CTA principal siempre visible */}
+            <CreateProductoDialog
+              onCreated={load}
+              trigger={
+                <Button size="default" className="h-10 px-4 rounded-xl font-bold shadow-lg shadow-primary/20">
+                  <Plus className="h-4 w-4 mr-1.5 stroke-[3px]" />
+                  Nuevo
+                </Button>
+              }
+            />
+            {/* Dropdown ⋯ — siempre al extremo derecho */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="icon" className="h-10 w-10 rounded-xl border-border/60">
+                  <MoreVertical className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" side="bottom" className="w-56 rounded-xl border-border/60 shadow-xl p-1.5 space-y-0.5">
+                {/* Auditoría — [&_span]:!inline fuerza el texto aunque tenga hidden sm:inline */}
+                <div className="[&_button]:w-full [&_button]:justify-start [&_button]:rounded-lg [&_button]:h-10 [&_button]:text-sm [&_button]:font-semibold [&_button]:px-3 [&_button]:border-0 [&_button]:bg-transparent [&_button]:shadow-none [&_span]:!inline">
+                  <HistoryReportDialog />
+                </div>
+                {/* Ver PDF */}
+                <div className="[&_button]:w-full [&_button]:justify-start [&_button]:rounded-lg [&_button]:h-10 [&_button]:text-sm [&_button]:font-semibold [&_button]:px-3 [&_button]:border-0 [&_button]:bg-transparent [&_button]:shadow-none">
+                  <DownloadInventoryButton />
+                </div>
+                <DropdownMenuSeparator className="my-1" />
+                <DropdownMenuItem asChild className="rounded-lg font-semibold cursor-pointer h-10">
+                  <Link href="/lista" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2.5">
+                    <ExternalLink className="h-4 w-4 text-primary" />
+                    Ver Catálogo público
+                  </Link>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </div>
+
       </header>
 
       {/* STATS */}
@@ -314,7 +376,7 @@ export function ProductosView() {
                   </TableBody>
                 </Table>
 
-                {/* PAGINACIÓN (Desktop) */}
+                {/* PAGINACIÃ“N (Desktop) */}
                 {filtered.length > 0 && (
                   <PaginationControls
                     currentPage={currentPage}
@@ -345,7 +407,7 @@ export function ProductosView() {
                 </div>
               )}
 
-              {/* PAGINACIÓN (Mobile) */}
+              {/* PAGINACIÃ“N (Mobile) */}
               {filtered.length > 0 && (
                 <PaginationControls
                   currentPage={currentPage}
@@ -437,16 +499,25 @@ function ProductoRow({ p, idx, load, isLow, isOut }: { p: Producto; idx: number;
       className="group border-b border-border/40 hover:bg-muted/30 transition-colors"
     >
       <TableCell className="pl-6 py-4">
-        <div className="flex flex-col gap-1">
-          <span className="font-bold text-foreground text-sm leading-none group-hover:text-primary transition-colors">{p.nombre}</span>
-          <div className="flex items-center gap-2 pt-1">
-            {p.codigoBarra ? (
-              <Badge variant="outline" className="text-[10px] h-5 px-1.5 font-mono text-muted-foreground border-border/60 bg-background/50 gap-1 rounded-md">
-                <Barcode className="h-3 w-3 opacity-50" /> {p.codigoBarra}
-              </Badge>
+        <div className="flex items-center gap-4">
+          <div className="h-12 w-12 rounded-lg bg-muted/50 border border-border/60 overflow-hidden flex items-center justify-center shrink-0">
+            {p.imagenUrl ? (
+              <img src={p.imagenUrl} alt={p.nombre} className="h-full w-full object-cover" />
             ) : (
-              <span className="text-[10px] text-muted-foreground/40 italic">Sin código</span>
+              <ImageIcon className="h-6 w-6 text-muted-foreground/40" />
             )}
+          </div>
+          <div className="flex flex-col gap-1">
+            <span className="font-bold text-foreground text-sm leading-none group-hover:text-primary transition-colors">{p.nombre}</span>
+            <div className="flex items-center gap-2 pt-1">
+              {p.codigoBarra ? (
+                <Badge variant="outline" className="text-[10px] h-5 px-1.5 font-mono text-muted-foreground border-border/60 bg-background/50 gap-1 rounded-md">
+                  <Barcode className="h-3 w-3 opacity-50" /> {p.codigoBarra}
+                </Badge>
+              ) : (
+                <span className="text-[10px] text-muted-foreground/40 italic">Sin código</span>
+              )}
+            </div>
           </div>
         </div>
       </TableCell>
@@ -559,8 +630,15 @@ function MobileProductCard({ p, idx, load, isLow, isOut }: { p: Producto; idx: n
       <Card className="p-4 bg-card border-border/50 shadow-sm rounded-2xl relative overflow-hidden space-y-3">
         <div className={cn("absolute left-0 top-0 bottom-0 w-1.5", isOut ? "bg-red-500" : isLow ? "bg-orange-500" : "bg-emerald-500")} />
 
-        <div className="flex justify-between items-start pl-3">
-          <div className="space-y-1">
+        <div className="flex justify-between items-start pl-3 gap-3">
+          <div className="h-14 w-14 rounded-xl bg-muted/50 border border-border/60 overflow-hidden flex items-center justify-center shrink-0">
+            {p.imagenUrl ? (
+              <img src={p.imagenUrl} alt={p.nombre} className="h-full w-full object-cover" />
+            ) : (
+              <ImageIcon className="h-7 w-7 text-muted-foreground/40" />
+            )}
+          </div>
+          <div className="flex-1 space-y-1">
             <h3 className="font-bold text-foreground text-sm leading-tight">{p.nombre}</h3>
             <div className="flex items-center gap-2">
               {(() => {
@@ -573,13 +651,13 @@ function MobileProductCard({ p, idx, load, isLow, isOut }: { p: Producto; idx: n
                   </Badge>
                 );
               })()}
-              {p.codigoBarra && (
-                <span className="text-[10px] font-mono text-muted-foreground/60">{p.codigoBarra}</span>
-              )}
             </div>
           </div>
           <div className="text-right">
             <span className="block font-black text-lg text-primary tabular-nums">{formatMoney(p.precioVenta)}</span>
+            {p.codigoBarra && (
+              <span className="text-[10px] font-mono text-muted-foreground/60">{p.codigoBarra}</span>
+            )}
           </div>
         </div>
 
@@ -610,36 +688,60 @@ function MobileProductCard({ p, idx, load, isLow, isOut }: { p: Producto; idx: n
             </span>
           </div>
 
-          <div className="flex items-center gap-1">
-            <AjustarStockDialog
-              producto={p}
-              onUpdated={load}
-              trigger={
-                <Button variant="ghost" size="icon" className="h-8 w-8 text-amber-600 bg-amber-500/10 rounded-lg">
-                  <ArrowRightLeft className="h-4 w-4" />
-                </Button>
-              }
-            />
-            <EditProductoDialog
-              producto={p}
-              onUpdated={load}
-              trigger={
-                <Button variant="ghost" size="icon" className="h-8 w-8 text-blue-600 bg-blue-500/10 rounded-lg">
-                  <Pencil className="h-4 w-4" />
-                </Button>
-              }
-            />
-            <DeleteButton
-              id={p.id}
-              nombre={p.nombre}
-              onDeleted={load}
-              trigger={
-                <Button variant="ghost" size="icon" className="h-8 w-8 text-red-600 bg-red-500/10 rounded-lg">
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              }
-            />
-          </div>
+          {/* â”€â”€ DROPDOWN DE ACCIONES (Mobile) â”€â”€ */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="icon" className="h-9 w-9 rounded-xl border-border/60">
+                <MoreVertical className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-52 rounded-xl border-border/60 shadow-xl">
+              {/* Ajustar Stock */}
+              <AjustarStockDialog
+                producto={p}
+                onUpdated={load}
+                trigger={
+                  <DropdownMenuItem
+                    className="flex items-center gap-2.5 font-semibold text-amber-600 dark:text-amber-400 cursor-pointer rounded-lg focus:text-amber-600 focus:bg-amber-50 dark:focus:bg-amber-950/40"
+                    onSelect={(e) => e.preventDefault()}
+                  >
+                    <ArrowRightLeft className="h-4 w-4" />
+                    Ajustar Stock
+                  </DropdownMenuItem>
+                }
+              />
+              {/* Editar */}
+              <EditProductoDialog
+                producto={p}
+                onUpdated={load}
+                trigger={
+                  <DropdownMenuItem
+                    className="flex items-center gap-2.5 font-semibold text-blue-600 dark:text-blue-400 cursor-pointer rounded-lg focus:text-blue-600 focus:bg-blue-50 dark:focus:bg-blue-950/40"
+                    onSelect={(e) => e.preventDefault()}
+                  >
+                    <Pencil className="h-4 w-4" />
+                    Editar Producto
+                  </DropdownMenuItem>
+                }
+              />
+              <DropdownMenuSeparator />
+              {/* Eliminar */}
+              <DeleteButton
+                id={p.id}
+                nombre={p.nombre}
+                onDeleted={load}
+                trigger={
+                  <DropdownMenuItem
+                    className="flex items-center gap-2.5 font-semibold text-red-600 dark:text-red-400 cursor-pointer rounded-lg focus:text-red-600 focus:bg-red-50 dark:focus:bg-red-950/40"
+                    onSelect={(e) => e.preventDefault()}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                    Eliminar
+                  </DropdownMenuItem>
+                }
+              />
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </Card>
     </motion.div>
@@ -720,7 +822,7 @@ function DeleteButton({ id, nombre, onDeleted, trigger }: { id: number; nombre: 
             <div className="mx-auto bg-red-100 dark:bg-red-900/30 p-3 rounded-full w-fit mb-2">
               <AlertCircle className="h-8 w-8 text-red-600" />
             </div>
-            <AlertDialogTitle className="text-xl font-bold text-center">¿Eliminar producto?</AlertDialogTitle>
+            <AlertDialogTitle className="text-xl font-bold text-center">Â¿Eliminar producto?</AlertDialogTitle>
             <AlertDialogDescription className="text-center text-muted-foreground">
               Estás a punto de eliminar <span className="font-bold text-foreground">"{nombre}"</span>. Esta acción es irreversible y afectará los reportes de inventario.
             </AlertDialogDescription>

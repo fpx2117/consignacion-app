@@ -39,7 +39,8 @@ export async function obtenerConfiguracionGlobal(sucursalId: number = 1) {
       notificarLiquidaciones: true,
       notificarConsignacionesActivas: true,
       diasAvisoConsignacion: 15,
-      usarControlDeCaja: true
+      usarControlDeCaja: true,
+      porcentajeAumentoConsignacion: 0
     };
   }
 }

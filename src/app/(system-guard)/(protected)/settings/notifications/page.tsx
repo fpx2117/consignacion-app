@@ -18,6 +18,8 @@ import { Card } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { apiService } from "@/lib/apiService";
+import { TutorialButton } from "@/components/ui/tutorial-button";
+import { NOTIFICATIONS_TUTORIAL } from "@/lib/tutorial-content";
 
 export default function NotificationSettingsPage() {
     const router = useRouter();
@@ -107,6 +109,9 @@ export default function NotificationSettingsPage() {
                         <p className="text-xs md:text-sm text-muted-foreground mt-0.5 md:mt-1">
                             Alertas y preferencias del sistema.
                         </p>
+                        <div className="mt-2">
+                            <TutorialButton steps={NOTIFICATIONS_TUTORIAL} />
+                        </div>
                     </div>
                 </div>
 

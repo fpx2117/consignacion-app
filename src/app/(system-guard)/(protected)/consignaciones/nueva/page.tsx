@@ -18,6 +18,8 @@ import {
   ChevronRight,
   BadgePercent,
   AlertTriangle,
+  Settings2,
+  Settings,
 } from "lucide-react";
 
 import { toast } from "sonner";
@@ -91,15 +93,21 @@ export default function NuevaConsignacionPage() {
     setError(null);
     try {
       // ✅ AHORA devuelven arrays directos (no {data})
-      const [c, p] = await Promise.all([apiService.getClientes(), apiService.getProductos()]);
+      const [c, p, config] = await Promise.all([
+        apiService.getClientes(),
+        apiService.getProductos(),
+        apiService.getConfiguracionGeneral()
+      ]);
 
-      // FILTRO: Excluir "Consumidor Final" (case insensitive)
       const clientesFiltrados = (c ?? []).filter(
         (cliente) => (cliente.nombre ?? "").toLowerCase() !== "consumidor final"
       );
 
       setClientes(clientesFiltrados);
       setProductos((p ?? []) as any);
+
+      const pAumento = config?.porcentajeAumentoConsignacion ?? config?.data?.porcentajeAumentoConsignacion ?? 0;
+      setPorcentajeAumento(pAumento);
     } catch (err) {
       setError("Error al cargar datos iniciales.");
     } finally {
@@ -211,7 +219,7 @@ export default function NuevaConsignacionPage() {
     try {
       const res = await apiService.createConsignacion({
         clienteId: Number(clienteId),
-        porcentajeAumento,
+        porcentajeAumento: 0, // Backend lo ignora y usa la config
         items: items.map((i) => ({
           productoId: i.productoId,
           unitsEntregadas: i.unitsEntregadas,
@@ -327,57 +335,29 @@ export default function NuevaConsignacionPage() {
             </CardHeader>
 
             <CardContent>
-              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6">
-                <div className="w-full sm:w-36 space-y-2">
-                  <Label className="text-[10px] font-bold uppercase text-muted-foreground tracking-wider">
-                    Porcentaje
-                  </Label>
-                  <div className="relative">
-                    <Input
-                      type="number"
-                      min={0}
-                      value={porcentajeAumento}
-                      onChange={(e) => setPorcentajeAumento(Number(e.target.value))}
-                      className="h-14 text-2xl font-black text-emerald-600 dark:text-emerald-400 text-center pr-8 focus-visible:ring-emerald-500"
-                    />
-                    <span className="absolute right-4 top-1/2 -translate-y-1/2 font-bold text-emerald-600">%</span>
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <span className="text-4xl font-black text-emerald-600 dark:text-emerald-400">
+                      {porcentajeAumento}%
+                    </span>
+                    <Badge variant="outline" className="bg-emerald-500/10 text-emerald-600 border-emerald-500/20 uppercase text-[10px] font-bold">
+                      Configurado
+                    </Badge>
                   </div>
-                </div>
-
-                <div className="flex-1 space-y-2">
-                  <Label className="text-[10px] font-bold uppercase text-muted-foreground tracking-wider">
-                    Atajos Rápidos
-                  </Label>
-                  <div className="flex flex-wrap gap-2">
-                    {[5, 10, 15, 20].map((num) => (
-                      <Button
-                        key={num}
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setPorcentajeAumento(num)}
-                        className={`rounded-lg transition-all ${porcentajeAumento === num
-                            ? "bg-emerald-100 border-emerald-500 text-emerald-800 dark:bg-emerald-500/20 dark:text-emerald-300"
-                            : "border-dashed hover:border-emerald-300 hover:text-emerald-600"
-                          }`}
-                      >
-                        +{num}%
-                      </Button>
-                    ))}
-                    {porcentajeAumento > 0 && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setPorcentajeAumento(0)}
-                        className="text-xs text-muted-foreground underline hover:text-destructive"
-                      >
-                        Limpiar
-                      </Button>
-                    )}
-                  </div>
-                  <p className="text-xs text-muted-foreground pt-1 italic">
-                    Se aplicará un aumento del {porcentajeAumento}% sobre el precio base.
+                  <p className="text-sm text-muted-foreground">
+                    Este aumento se aplicará a todos los productos de esta consignación.
                   </p>
                 </div>
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => router.push("/settings/pos")}
+                  className="shrink-0 gap-2 border-emerald-200 text-emerald-700 hover:bg-emerald-50 dark:border-emerald-500/30 dark:text-emerald-400 dark:hover:bg-emerald-500/10"
+                >
+                  <Settings2 className="h-4 w-4" /> Cambiar en Ajustes
+                </Button>
               </div>
             </CardContent>
           </Card>

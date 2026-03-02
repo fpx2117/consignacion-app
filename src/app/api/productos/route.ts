@@ -110,6 +110,7 @@ export async function POST(req: Request) {
           sku: data.sku?.trim() || null,
           categoriaId: data.categoriaId ?? null,
           fechaVencimiento: data.fechaVencimiento ? new Date(data.fechaVencimiento) : null,
+          imagenUrl: data.imagenUrl || null,
           sucursalId,
         },
         include: { categoria: true }

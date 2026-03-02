@@ -83,6 +83,13 @@ export type Configuracion = {
   notificarStockBajo: boolean;
   notificarVentas: boolean;
   usarControlDeCaja: boolean;
+  porcentajeAumentoConsignacion: number;
+  porcentajeInteresTarjeta: number;
+  mostrarListaPrecios: boolean;
+  convertirTienda: boolean;
+  separarListaPorSucursal: boolean;
+  mpAccessTokenTienda?: string | null;
+  mpPublicKeyTienda?: string | null;
 };
 
 export type Branding = {
@@ -180,6 +187,7 @@ export type Producto = {
   stockMinUnits: number;
   packSizeUnits?: number | null;
   fechaVencimiento?: ISODateString | null;
+  imagenUrl?: string | null;
   categoriaId?: ID | null;
   categoria?: Categoria;
   createdAt: ISODateString;
@@ -345,6 +353,7 @@ export type CreateProductoInput = {
   packSizeUnits?: number | null;
   fechaVencimiento?: ISODateString | null;
   categoriaId?: ID | null;
+  imagenUrl?: string | null;
 };
 
 export type UpdateProductoInput = Partial<CreateProductoInput> & {

@@ -31,6 +31,8 @@ import {
     Smile
 } from "lucide-react";
 import { apiService } from "@/lib/apiService";
+import { TutorialButton } from "@/components/ui/tutorial-button";
+import { WHATSAPP_TUTORIAL } from "@/lib/tutorial-content";
 
 const SMART_VARIABLES = [
     { label: "Nombre Cliente", value: "{name}", description: "Ej: Juan Pérez" },
@@ -242,6 +244,7 @@ export default function WhatsAppSettingsPage() {
                         <h1 className="text-3xl md:text-4xl font-black tracking-tight text-foreground">
                             Mensajería avanzada
                         </h1>
+                        <TutorialButton steps={WHATSAPP_TUTORIAL} />
                     </div>
                     <p className="text-muted-foreground max-w-xl text-sm leading-relaxed">
                         Personalizá los mensajes automáticos que tus clientes reciben por WhatsApp.

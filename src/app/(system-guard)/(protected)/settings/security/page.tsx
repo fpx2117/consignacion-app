@@ -17,6 +17,8 @@ import {
     Fingerprint,
     BellRing,
 } from "lucide-react";
+import { TutorialButton } from "@/components/ui/tutorial-button";
+import { SECURITY_TUTORIAL } from "@/lib/tutorial-content";
 
 const SECURITY_MODULES = [
     {
@@ -72,9 +74,12 @@ export default function SecurityPage() {
                 <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight text-foreground">
                     Seguridad y Auditoría
                 </h1>
-                <p className="text-sm text-muted-foreground max-w-2xl">
-                    Monitoreá la integridad de tu negocio. Controlá quién accede, qué cambios se realizan y gestioná las sesiones activas en tiempo real.
-                </p>
+                <div className="flex flex-wrap items-center gap-3">
+                    <p className="text-sm text-muted-foreground max-w-2xl">
+                        Monitoreá la integridad de tu negocio. Controlá quién accede, qué cambios se realizan y gestioná las sesiones activas en tiempo real.
+                    </p>
+                    <TutorialButton steps={SECURITY_TUTORIAL} />
+                </div>
             </header>
 
             {/* GRID DE MÓDULOS */}

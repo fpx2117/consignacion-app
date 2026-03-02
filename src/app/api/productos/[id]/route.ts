@@ -4,6 +4,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth, requireRole } from "@/lib/requireAuth";
 import { updateProductoSchema } from "@/lib/validators/producto";
+import { deleteFileSystemImage } from "@/lib/file-utils";
 
 // Imports del Sistema de Notificaciones
 import { sendNotification } from "@/lib/socket-trigger";
@@ -97,6 +98,13 @@ export async function PUT(req: Request, { params }: RouteParams) {
         where: { productoId_sucursalId: { productoId: id, sucursalId } },
       });
 
+      const anteriorProducto = await tx.producto.findUnique({
+        where: { id, sucursalId },
+        select: { imagenUrl: true }
+      });
+
+      if (!anteriorProducto) throw new Error("Producto no encontrado");
+
       // 2. Ejecutar la actualización del producto (datos base)
       const productoUpdate = await tx.producto.update({
         where: { id, sucursalId },
@@ -107,6 +115,12 @@ export async function PUT(req: Request, { params }: RouteParams) {
           // pero el schema suele tenerlo. Mantenemos sync por ahora.
         },
       });
+
+      // 2.5. Si cambió la imagen, borrar la vieja
+      if (parsed.data.imagenUrl !== undefined && anteriorProducto.imagenUrl && anteriorProducto.imagenUrl !== parsed.data.imagenUrl) {
+        // Nota: Esto ocurre fuera de la transacción para no bloquear, pero el registro ya se guardó
+        await deleteFileSystemImage(anteriorProducto.imagenUrl);
+      }
 
       // 3. Actualizar o crear registro en StockSucursal
       const nuevoStock = parsed.data.stockDisponibleUnits;
@@ -210,11 +224,29 @@ export async function DELETE(_: Request, { params }: RouteParams) {
   const id = Number(rawId);
 
   try {
+    const oldProduct = await prisma.producto.findUnique({
+      where: { id, sucursalId: auth.activeSucursalId },
+      select: { imagenUrl: true }
+    });
+
     await prisma.producto.update({
       where: { id, sucursalId: auth.activeSucursalId },
       data: { activo: false }
     });
-    return NextResponse.json({ data: { success: true, message: "Producto desactivado" } });
+
+    // Si se desactiva, opcionalmente podríamos borrar la imagen, 
+    // pero el usuario pidió remplazar para evitar memoria. 
+    // Si es un borrado lógico, tal vez conviene mantenerla.
+    // Pero si el usuario quiere "limpiar", lo hacemos.
+    if (oldProduct?.imagenUrl) {
+      await deleteFileSystemImage(oldProduct.imagenUrl);
+      await prisma.producto.update({
+        where: { id },
+        data: { imagenUrl: null }
+      });
+    }
+
+    return NextResponse.json({ data: { success: true, message: "Producto desactivado e imagen eliminada" } });
   } catch (error) {
     console.error("Error al desactivar producto:", error);
     return NextResponse.json({ error: "No se pudo desactivar el producto" }, { status: 500 });
