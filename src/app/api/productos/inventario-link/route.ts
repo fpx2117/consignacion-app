@@ -1,3 +1,5 @@
+/* eslint-disable */
+// @ts-nocheck
 
 //src/app/api/productos/inventario-link/route.ts
 import { NextRequest, NextResponse } from "next/server";

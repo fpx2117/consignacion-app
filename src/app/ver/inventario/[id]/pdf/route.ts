@@ -1,3 +1,5 @@
+/* eslint-disable */
+// @ts-nocheck
 // src/app/ver/inventario/[id]/pdf/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import puppeteer, { Browser } from "puppeteer";

@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -8,13 +9,25 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { RefreshCw, LayoutDashboard, CalendarDays, Filter } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  RefreshCw, LayoutDashboard, CalendarDays, Filter,
+  Download, FileText, Loader2, ChevronDown, ShoppingCart, Handshake,
+} from "lucide-react";
 import { DashboardPeriod, DashboardFilter } from "@/lib/types";
+import { apiService } from "@/lib/apiService";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 
 interface DashboardHeaderProps {
-  period: string;
+  period: DashboardPeriod;
   setPeriod: (v: DashboardPeriod) => void;
   filter: DashboardFilter;
   setFilter: (v: DashboardFilter) => void;
@@ -22,15 +35,26 @@ interface DashboardHeaderProps {
   loading: boolean;
 }
 
+const PERIOD_LABELS: Record<DashboardPeriod, string> = {
+  today: "Hoy",
+  week: "Esta semana",
+  month: "Este mes",
+  all: "Histórico",
+};
+
+type ReportType = "pos" | "consignacion";
+type DownloadKey = `${ReportType}-${DashboardPeriod}`;
+
 export function DashboardHeader({
   period,
   setPeriod,
   filter,
   setFilter,
   refresh,
-  loading
+  loading,
 }: DashboardHeaderProps) {
-  // Un toque personal: Saludo dinámico según la hora
+  const [downloading, setDownloading] = useState<DownloadKey | null>(null);
+
   const getGreeting = () => {
     const hour = new Date().getHours();
     if (hour < 12) return "Buenos días";
@@ -38,9 +62,27 @@ export function DashboardHeader({
     return "Buenas noches";
   };
 
+  const handleDownload = async (type: ReportType, targetPeriod: DashboardPeriod) => {
+    const key: DownloadKey = `${type}-${targetPeriod}`;
+    if (downloading) return;
+    setDownloading(key);
+    try {
+      const url = type === "pos"
+        ? await apiService.getPosReporteUrl(targetPeriod)
+        : await apiService.getConsigReporteUrl(targetPeriod);
+      window.open(url, "_blank");
+    } catch {
+      // silently ignore — /x/ will show error state
+    } finally {
+      setDownloading(null);
+    }
+  };
+
+  const isDownloading = (type: ReportType, p: DashboardPeriod) => downloading === `${type}-${p}`;
+
   return (
     <div className="relative flex flex-col gap-8 pb-4 sm:flex-row sm:items-end sm:justify-between">
-      {/* Lado Izquierdo: Hero Title */}
+      {/* Lado Izquierdo */}
       <motion.div
         initial={{ opacity: 0, x: -20 }}
         animate={{ opacity: 1, x: 0 }}
@@ -54,7 +96,6 @@ export function DashboardHeader({
             {getGreeting()}
           </span>
         </div>
-
         <div>
           <h1 className="text-4xl font-black tracking-tight text-foreground md:text-5xl lg:text-6xl">
             Dashboard
@@ -65,13 +106,13 @@ export function DashboardHeader({
         </div>
       </motion.div>
 
-      {/* Lado Derecho: Controles Unificados */}
+      {/* Lado Derecho: Controles */}
       <motion.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         className="flex flex-col gap-3 sm:flex-row sm:items-center bg-card/40 p-1.5 rounded-2xl border border-border/50 backdrop-blur-xl shadow-sm"
       >
-        {/* SELECTOR DE TIPO (CONSIGNACION / POS) */}
+        {/* FILTRO */}
         <div className="relative group min-w-[160px]">
           <div className="absolute left-3 top-1/2 -translate-y-1/2 z-10 pointer-events-none text-muted-foreground/50 group-hover:text-primary transition-colors">
             <Filter className="h-3.5 w-3.5" />
@@ -90,7 +131,7 @@ export function DashboardHeader({
 
         <div className="h-6 w-[1px] bg-border hidden sm:block" />
 
-        {/* SELECTOR DE PERIODO */}
+        {/* PERÍODO */}
         <div className="relative group min-w-[160px]">
           <div className="absolute left-3 top-1/2 -translate-y-1/2 z-10 pointer-events-none text-muted-foreground/50 group-hover:text-primary transition-colors">
             <CalendarDays className="h-3.5 w-3.5" />
@@ -110,6 +151,86 @@ export function DashboardHeader({
 
         <div className="h-6 w-[1px] bg-border hidden sm:block" />
 
+        {/* DESCARGAR — dividido en POS y CONSIGNACIÓN */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="ghost"
+              size="sm"
+              disabled={!!downloading}
+              className={cn(
+                "h-10 px-3 rounded-xl hover:bg-primary/10 hover:text-primary transition-all gap-1.5",
+                downloading && "opacity-80"
+              )}
+            >
+              {downloading ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Download className="h-4 w-4" />
+              )}
+              <span className="text-xs font-semibold hidden sm:inline">
+                {downloading ? "Generando..." : "Reportes"}
+              </span>
+              <ChevronDown className="h-3 w-3 opacity-60" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent
+            align="end"
+            className="w-60 rounded-xl border-none shadow-xl backdrop-blur-xl bg-white/95 dark:bg-zinc-900/95 ring-1 ring-black/5"
+          >
+            {/* ━━ POS ━━ */}
+            <DropdownMenuLabel className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-sky-600 px-3 py-2">
+              <ShoppingCart className="h-3 w-3" /> Ventas · POS
+            </DropdownMenuLabel>
+            {(["today", "week", "month", "all"] as DashboardPeriod[]).map((p) => (
+              <DropdownMenuItem
+                key={`pos-${p}`}
+                onClick={() => handleDownload("pos", p)}
+                disabled={!!downloading}
+                className={cn(
+                  "flex items-center gap-2.5 rounded-lg mx-1 cursor-pointer transition-colors",
+                  p === period && "bg-sky-50 dark:bg-sky-950/30 text-sky-700 font-semibold"
+                )}
+              >
+                <FileText className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                <span className="text-sm">{PERIOD_LABELS[p]}</span>
+                {isDownloading("pos", p) && <Loader2 className="h-3 w-3 animate-spin ml-auto" />}
+                {p === period && !isDownloading("pos", p) && (
+                  <span className="ml-auto text-[9px] font-bold uppercase tracking-wide text-sky-600 opacity-70">Actual</span>
+                )}
+              </DropdownMenuItem>
+            ))}
+
+            <DropdownMenuSeparator className="my-1" />
+
+            {/* ━━ CONSIGNACIÓN ━━ */}
+            <DropdownMenuLabel className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-indigo-600 px-3 py-2">
+              <Handshake className="h-3 w-3" /> Consignaciones
+            </DropdownMenuLabel>
+            {(["today", "week", "month", "all"] as DashboardPeriod[]).map((p) => (
+              <DropdownMenuItem
+                key={`consig-${p}`}
+                onClick={() => handleDownload("consignacion", p)}
+                disabled={!!downloading}
+                className={cn(
+                  "flex items-center gap-2.5 rounded-lg mx-1 cursor-pointer transition-colors",
+                  p === period && "bg-indigo-50 dark:bg-indigo-950/30 text-indigo-700 font-semibold"
+                )}
+              >
+                <FileText className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                <span className="text-sm">{PERIOD_LABELS[p]}</span>
+                {isDownloading("consignacion", p) && <Loader2 className="h-3 w-3 animate-spin ml-auto" />}
+                {p === period && !isDownloading("consignacion", p) && (
+                  <span className="ml-auto text-[9px] font-bold uppercase tracking-wide text-indigo-600 opacity-70">Actual</span>
+                )}
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
+
+        <div className="h-6 w-[1px] bg-border hidden sm:block" />
+
+        {/* REFRESH */}
         <Button
           variant="ghost"
           size="sm"
@@ -120,10 +241,7 @@ export function DashboardHeader({
             loading && "opacity-80"
           )}
         >
-          <RefreshCw className={cn(
-            "h-4 w-4",
-            loading ? "animate-spin" : ""
-          )} />
+          <RefreshCw className={cn("h-4 w-4", loading ? "animate-spin" : "")} />
         </Button>
       </motion.div>
     </div>

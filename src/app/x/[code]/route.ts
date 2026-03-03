@@ -25,14 +25,14 @@ function getPublicOrigin(req: NextRequest): string {
 function redirectAbs(req: NextRequest, path: string, cookieToSet?: { name: string, value: string }) {
   const url = new URL(path, getPublicOrigin(req));
   const res = NextResponse.redirect(url);
-  
+
   if (cookieToSet) {
-    res.cookies.set(cookieToSet.name, cookieToSet.value, { 
-      path: '/', 
+    res.cookies.set(cookieToSet.name, cookieToSet.value, {
+      path: '/',
       maxAge: 60 * 60 * 24 // 24 horas de validez
     });
   }
-  
+
   return res;
 }
 
@@ -54,7 +54,7 @@ export async function GET(
   const hasViewedCookie = req.cookies.get(cookieName);
 
   if (!hasViewedCookie && link.views >= link.maxViews) {
-      return redirectAbs(req, `/x/status?state=limit`);
+    return redirectAbs(req, `/x/status?state=limit`);
   }
 
   if (!hasViewedCookie) {
@@ -75,19 +75,40 @@ export async function GET(
     case "REMITO":
       destPath = `/ver/remito/${link.targetId}`;
       break;
-      case "HISTORIAL_INVENTARIO":
-  const fullId = link.targetId || 0;
-  const targetAnio = Math.floor(fullId / 100);
-  const targetMes = fullId % 100;
-  
-  // ✅ Apuntamos a la carpeta base (donde está el page.tsx con el Loader)
-  destPath = `/ver/historial/${targetMes}`; 
-  const query = `?code=${encodeURIComponent(code)}&anio=${targetAnio}`;
-  
-  return redirectAbs(req, `${destPath}${query}`, { name: cookieName, value: '1' });
+    case "HISTORIAL_INVENTARIO":
+      const fullId = link.targetId || 0;
+      const targetAnio = Math.floor(fullId / 100);
+      const targetMes = fullId % 100;
+
+      // ✅ Apuntamos a la carpeta base (donde está el page.tsx con el Loader)
+      destPath = `/ver/historial/${targetMes}`;
+      const query = `?code=${encodeURIComponent(code)}&anio=${targetAnio}`;
+
+      return redirectAbs(req, `${destPath}${query}`, { name: cookieName, value: '1' });
     case "INVENTARIO":
       // ✅ IMPORTANTE: Apuntamos a /pdf para no chocar con page.tsx en la carpeta [id]
       destPath = `/ver/inventario/${link.targetId || '0'}/pdf`;
+      break;
+    case "REPORTE_DASHBOARD": {
+      const PERIOD_MAP: Record<number, string> = { 1: "today", 2: "week", 3: "month", 4: "all" };
+      const periodName = PERIOD_MAP[link.targetId] ?? "month";
+      destPath = `/ver/dashboard/${periodName}`;
+      break;
+    }
+    case "REPORTE_POS": {
+      const PERIOD_MAP_POS: Record<number, string> = { 1: "today", 2: "week", 3: "month", 4: "all" };
+      const periodName = PERIOD_MAP_POS[link.targetId] ?? "month";
+      destPath = `/ver/pos/${periodName}`;
+      break;
+    }
+    case "REPORTE_CONSIGNACION": {
+      const PERIOD_MAP_CONSIG: Record<number, string> = { 1: "today", 2: "week", 3: "month", 4: "all" };
+      const periodName = PERIOD_MAP_CONSIG[link.targetId] ?? "month";
+      destPath = `/ver/consig/${periodName}`;
+      break;
+    }
+    case "COMPROBANTE_GASTO":
+      destPath = `/ver/gasto/${link.targetId}`;
       break;
     default:
       return redirectAbs(req, `/x/status?state=invalid`);

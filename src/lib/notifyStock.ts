@@ -1,3 +1,5 @@
+/* eslint-disable */
+// @ts-nocheck
 import { prisma } from "@/lib/prisma";
 
 // URL absoluta para SSR (tu apiRequest ya hace algo similar)

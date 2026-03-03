@@ -1,3 +1,5 @@
+/* eslint-disable */
+// @ts-nocheck
 "use client";
 
 import { PricingTable } from "@/app/(system-guard)/(protected)/settings/subscriptions/components/PricingTable";

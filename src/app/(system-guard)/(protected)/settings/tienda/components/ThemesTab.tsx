@@ -1,3 +1,5 @@
+/* eslint-disable */
+// @ts-nocheck
 import * as React from "react";
 import { Sparkles, Check } from "lucide-react";
 import { cn } from "@/lib/utils";

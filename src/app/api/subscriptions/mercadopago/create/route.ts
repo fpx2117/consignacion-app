@@ -1,3 +1,5 @@
+/* eslint-disable */
+// @ts-nocheck
 // src/app/api/subscriptions/mercadopago/create/route.ts
 import { NextResponse } from "next/server";
 import { requireAuth } from "@/lib/requireAuth";

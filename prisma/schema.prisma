@@ -49,7 +49,9 @@ model Usuario {
   sesionesCaja  SesionCaja[]
   subscription  Subscription?
   userSessions  UserSession[]
+  gastos        Gasto[]
   sucursal      Sucursal?        @relation(fields: [sucursalId], references: [id])
+
 
   @@index([rol])
   @@index([sucursalId])
@@ -142,6 +144,7 @@ model Branding {
   secondaryColor  String           @default("#3b82f6")
   themeIdentifier String           @default("modern")
   whatsappNumber  String?
+  whatsappMessage String?          @default("Hola, estoy buscando {nombre_producto}")
   sucursal        Sucursal         @relation(fields: [sucursalId], references: [id])
   banners         BrandingBanner[]
 }
@@ -330,6 +333,7 @@ model ConsignacionDetalle {
   unitsVendidasAcum  Int               @default(0)
   unitsDevueltasAcum Int               @default(0)
   precioUnitario     Decimal           @default(0) @db.Decimal(10, 2)
+  descuento          Decimal           @default(0) @db.Decimal(10, 2)
   consignacion       Consignacion      @relation(fields: [consignacionId], references: [id], onDelete: Cascade)
   producto           Producto          @relation(fields: [productoId], references: [id])
   liquidacionItems   LiquidacionItem[]
@@ -358,6 +362,7 @@ model LiquidacionItem {
   unitsDevueltas        Int                 @default(0)
   /// snapshot del precio al liquidar
   precioUnitario        Decimal             @db.Decimal(10, 2)
+  descuento             Decimal             @default(0) @db.Decimal(10, 2)
   detalle               ConsignacionDetalle @relation(fields: [consignacionDetalleId], references: [id])
   liquidacion           Liquidacion         @relation(fields: [liquidacionId], references: [id], onDelete: Cascade)
 
@@ -394,6 +399,7 @@ model VentaDetalle {
   /// TODO EN UNITS
   units          Int
   precioUnitario Decimal  @db.Decimal(10, 2)
+  descuento      Decimal  @default(0) @db.Decimal(10, 2)
   subtotal       Decimal  @db.Decimal(10, 2)
   producto       Producto @relation(fields: [productoId], references: [id])
   venta          Venta    @relation(fields: [ventaId], references: [id], onDelete: Cascade)
@@ -498,7 +504,10 @@ model Sucursal {
   stockProductos StockSucursal[]
   usuarios       Usuario[]
   ventas         Venta[]
+  gastos         Gasto[]
+  categoriasGasto CategoriaGasto[]
 }
+
 
 model StockSucursal {
   id                   Int      @id @default(autoincrement())
@@ -513,6 +522,58 @@ model StockSucursal {
   sucursal             Sucursal @relation(fields: [sucursalId], references: [id], onDelete: Cascade)
 
   @@unique([productoId, sucursalId])
+}
+
+model Gasto {
+  id               Int              @id @default(autoincrement())
+  monto            Decimal          @db.Decimal(10, 2)
+  fecha            DateTime         @default(now())
+  fechaVencimiento DateTime?
+  motivo           String
+  estado           EstadoGasto      @default(PAGADO)
+  esRecurrente     Boolean          @default(false)
+  frecuencia       FrecuenciaGasto  @default(UNICO)
+  categoriaGastoId Int
+  sucursalId       Int              @default(1)
+  userId           Int?
+  comprobanteUrl   String?
+  cuotaActual      Int?
+  cuotaTotal       Int?
+  recurrenciaId    String?
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  categoria        CategoriaGasto   @relation(fields: [categoriaGastoId], references: [id])
+  sucursal         Sucursal         @relation(fields: [sucursalId], references: [id])
+  user             Usuario?         @relation(fields: [userId], references: [id])
+
+  @@index([sucursalId])
+  @@index([categoriaGastoId])
+  @@index([fecha])
+  @@index([estado])
+  @@index([recurrenciaId])
+}
+
+model CategoriaGasto {
+  id         Int      @id @default(autoincrement())
+  nombre     String
+  sucursalId Int      @default(1)
+  sucursal   Sucursal @relation(fields: [sucursalId], references: [id])
+  gastos     Gasto[]
+
+  @@unique([nombre, sucursalId])
+  @@index([sucursalId])
+}
+
+enum EstadoGasto {
+  PENDIENTE
+  PAGADO
+}
+
+enum FrecuenciaGasto {
+  UNICO
+  SEMANAL
+  MENSUAL
+  ANUAL
 }
 
 enum RolUsuario {
@@ -557,6 +618,10 @@ enum ShareLinkType {
   REMITO
   INVENTARIO
   HISTORIAL_INVENTARIO
+  REPORTE_DASHBOARD
+  REPORTE_POS
+  REPORTE_CONSIGNACION
+  COMPROBANTE_GASTO
 }
 
 enum NotificationType {
