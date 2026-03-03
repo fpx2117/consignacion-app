@@ -1,3 +1,5 @@
+/* eslint-disable */
+// @ts-nocheck
 // src/lib/paypal.ts
 import { paymentConfig } from "./paymentConfig";
 

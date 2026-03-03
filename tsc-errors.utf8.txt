@@ -1,0 +1,20 @@
+﻿debug-products.ts(29,21): error TS2322: Type 'null' is not assignable to type 'InputJsonValue | JsonNullValueFilter | FieldRef<"Categoria", "Json"> | undefined'.
+src/app/(system-guard)/(protected)/clientes/details/history-tabs.tsx(102,48): error TS2339: Property 'id' does not exist on type 'Pago'.
+src/app/(system-guard)/(protected)/clientes/details/history-tabs.tsx(104,41): error TS2339: Property 'fecha' does not exist on type 'Pago'.
+src/app/(system-guard)/(protected)/clientes/details/history-tabs.tsx(105,43): error TS2339: Property 'monto' does not exist on type 'Pago'.
+src/app/(system-guard)/(protected)/clientes/details/history-tabs.tsx(116,54): error TS2339: Property 'id' does not exist on type 'Pago'.
+src/app/(system-guard)/(protected)/clientes/details/history-tabs.tsx(117,66): error TS2339: Property 'fecha' does not exist on type 'Pago'.
+src/app/(system-guard)/(protected)/clientes/details/history-tabs.tsx(119,122): error TS2339: Property 'monto' does not exist on type 'Pago'.
+src/app/(system-guard)/(protected)/settings/branding/page.tsx(65,59): error TS2345: Argument of type '{ businessName: string; primaryColor: string; footerText: null; phone: null; address: null; logoUrl: null; }' is not assignable to parameter of type 'BrandingFormDTO | (() => BrandingFormDTO)'.
+  Type '{ businessName: string; primaryColor: string; footerText: null; phone: null; address: null; logoUrl: null; }' is not assignable to type 'BrandingFormDTO'.
+    Property 'logoBase64' is missing in type '{ businessName: string; primaryColor: string; footerText: null; phone: null; address: null; logoUrl: null; }' but required in type 'Omit<BrandingDTO, "logoUrl">'.
+src/app/(system-guard)/(protected)/settings/branding/page.tsx(95,15): error TS2345: Argument of type '{ businessName: any; primaryColor: any; footerText: any; phone: any; address: any; logoUrl: null; }' is not assignable to parameter of type 'SetStateAction<BrandingFormDTO>'.
+  Type '{ businessName: any; primaryColor: any; footerText: any; phone: any; address: any; logoUrl: null; }' is not assignable to type 'BrandingFormDTO'.
+    Property 'logoBase64' is missing in type '{ businessName: any; primaryColor: any; footerText: any; phone: any; address: any; logoUrl: null; }' but required in type 'Omit<BrandingDTO, "logoUrl">'.
+src/app/(system-guard)/(protected)/settings/branding/page.tsx(176,9): error TS2322: Type '{ id: number; fecha: Date; total: number; metodoPago: string; clienteNombre: string; clienteTelefono: string; items: { producto: string; cantidad: number; precioUnitario: number; subtotal: number; }[]; }' is not assignable to type 'VentaReportDTO'.
+  Types of property 'items' are incompatible.
+    Type '{ producto: string; cantidad: number; precioUnitario: number; subtotal: number; }[]' is not assignable to type '{ producto: string; cantidad: number; precioUnitario: number; descuento: number; subtotal: number; }[]'.
+      Property 'descuento' is missing in type '{ producto: string; cantidad: number; precioUnitario: number; subtotal: number; }' but required in type '{ producto: string; cantidad: number; precioUnitario: number; descuento: number; subtotal: number; }'.
+src/app/(system-guard)/(protected)/settings/branding/page.tsx(196,11): error TS2741: Property 'logoBase64' is missing in type '{ businessName: string; primaryColor: string; footerText: string | null; phone: string | null; address: string | null; logoUrl: string | null; }' but required in type 'BrandingDTO'.
+src/app/(system-guard)/(protected)/ventas/[id]/page.tsx(122,58): error TS2339: Property 'cantidad' does not exist on type 'VentaDetalle'.
+src/app/ver/remito/[id]/route.ts(8,10): error TS2305: Module '"@/lib/reports/base/consignacion-report-template"' has no exported member 'buildConsignacionHtml'.

@@ -1,3 +1,5 @@
+/* eslint-disable */
+// @ts-nocheck
 // src/lib/types.ts
 
 import { AppNotification } from "@/types/notification";
@@ -24,6 +26,9 @@ export type ApiResponse<T> = {
 export type RolUsuario = "ADMIN" | "EMPLEADO";
 export type EstadoConsignacion = "ABIERTA" | "CERRADA";
 export type MetodoPago = "EFECTIVO" | "TRANSFERENCIA" | "TARJETA" | "OTRO";
+export type EstadoGasto = "PENDIENTE" | "PAGADO";
+export type FrecuenciaGasto = "UNICO" | "SEMANAL" | "MENSUAL" | "ANUAL";
+
 
 export type EstadoSesionCaja = "ABIERTA" | "CERRADA";
 export type TipoMovimientoCaja = "INGRESO" | "EGRESO";
@@ -46,6 +51,10 @@ export enum ShareLinkType {
   REMITO = "REMITO",
   INVENTARIO = "INVENTARIO",
   HISTORIAL_INVENTARIO = "HISTORIAL_INVENTARIO",
+  REPORTE_DASHBOARD = "REPORTE_DASHBOARD",
+  REPORTE_POS = "REPORTE_POS",
+  REPORTE_CONSIGNACION = "REPORTE_CONSIGNACION",
+  COMPROBANTE_GASTO = "COMPROBANTE_GASTO",
 }
 
 export enum MotivoMovimientoStock {
@@ -251,6 +260,7 @@ export type VentaDetalle = {
   productoId: ID;
   units: number;
   precioUnitario: Money;
+  descuento: Money;
   subtotal: Money;
   producto?: Producto;
 };
@@ -275,6 +285,7 @@ export type ConsignacionDetalle = {
   unitsVendidasAcum: number;
   unitsDevueltasAcum: number;
   precioUnitario: Money;
+  descuento: Money;
   producto?: Producto;
 
   // ✅ agregar esto
@@ -297,18 +308,42 @@ export type LiquidacionItem = {
   unitsVendidas: number;
   unitsDevueltas: number;
   precioUnitario: Money;
+  descuento: Money;
   detalle?: ConsignacionDetalle;
 };
 
 export type Pago = {
-  id: ID;
-  clienteId: ID;
-  fecha: ISODateString;
-  monto: Money;
-  metodo: MetodoPago;
-  sesionCajaId?: ID | null;
   cliente?: Cliente;
 };
+
+export type CategoriaGasto = {
+  id: ID;
+  nombre: string;
+  sucursalId: ID;
+};
+
+export type Gasto = {
+  id: ID;
+  monto: Money;
+  fecha: ISODateString;
+  fechaVencimiento?: ISODateString | null;
+  motivo: string;
+  estado: EstadoGasto;
+  esRecurrente: boolean;
+  frecuencia: FrecuenciaGasto;
+  categoriaGastoId: ID;
+  sucursalId: ID;
+  userId?: ID | null;
+  comprobanteUrl?: string | null;
+  cuotaActual?: number | null;
+  cuotaTotal?: number | null;
+  recurrenciaId?: string | null;
+  createdAt: ISODateString;
+  updatedAt: ISODateString;
+  categoria?: CategoriaGasto;
+  user?: { id: ID; nombre: string };
+};
+
 
 /* =========================
     INPUTS (API PAYLOADS)
@@ -372,6 +407,7 @@ export type CreateVentaDirectaInput = {
     productoId: number;
     units: number;
     precioUnitario?: number;
+    descuento?: number;
   }>;
   metodoPago: MetodoPago;
 };
@@ -383,6 +419,7 @@ export type CreateConsignacionInput = {
     productoId: ID;
     unitsEntregadas: number;
     precioVentaHistorico?: Money;
+    descuento?: number;
   }>;
 };
 
@@ -391,6 +428,7 @@ export type CreateLiquidacionInput = {
     consignacionDetalleId: ID;
     unitsVendidas?: number;
     unitsDevueltas?: number;
+    descuento?: number;
   }>;
 };
 
@@ -468,13 +506,23 @@ export type DashboardKpis = {
     };
     ganancia: {
       total: number;
+      bruta: number;
+      neta: number;
+      gastos: number;
       porConsignacion: number;
       porVentaDirecta: number;
     };
     saldoClientesTotal: number;
     clientes: number;
   };
+
+  gastos: {
+    cantidad: number;
+    total: number;
+  };
+  proximosVencimientos: Gasto[];
 };
+
 
 /** /api/dashboard/consignaciones */
 

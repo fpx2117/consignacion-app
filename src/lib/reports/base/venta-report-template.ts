@@ -11,6 +11,7 @@ export interface VentaReportDTO {
     producto: string;
     cantidad: number;
     precioUnitario: number;
+    descuento: number;
     subtotal: number;
   }>;
 }
@@ -33,12 +34,12 @@ const formatDateAR = (date?: string | Date | null) => {
   return isNaN(d.getTime())
     ? "-"
     : d.toLocaleDateString("es-AR", {
-        day: "2-digit",
-        month: "2-digit",
-        year: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-      });
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
 };
 
 const formatMoney = (amount: number) => {
@@ -104,13 +105,12 @@ export function buildVentaHtml(data: VentaReportDTO, branding: BrandingDTO) {
         <div class="flex justify-between items-start border-b-2 border-slate-100 pb-8 mb-8">
           <div class="flex items-center gap-4">
             
-            ${
-              branding.logoUrl
-                ? `<img src="${escapeAttr(branding.logoUrl)}" class="w-14 h-14 rounded-2xl object-contain bg-white border border-slate-100 shadow-lg" />`
-                : `<div class="w-14 h-14 bg-slate-900 text-white flex items-center justify-center rounded-2xl font-black text-2xl shadow-lg">${escapeHtml(
-                    brandBadge
-                  )}</div>`
-            }
+            ${branding.logoBase64
+      ? `<img src="${escapeAttr(branding.logoBase64)}" class="w-14 h-14 rounded-2xl object-contain bg-white border border-slate-100 shadow-lg" />`
+      : `<div class="w-14 h-14 bg-slate-900 text-white flex items-center justify-center rounded-2xl font-black text-2xl shadow-lg">${escapeHtml(
+        brandBadge
+      )}</div>`
+    }
 
             <div>
               <h1 class="text-2xl font-black tracking-tight text-slate-900">${escapeHtml(brandName)}</h1>
@@ -118,13 +118,12 @@ export function buildVentaHtml(data: VentaReportDTO, branding: BrandingDTO) {
                 Ticket de Venta
               </p>
 
-              ${
-                metaLine.length
-                  ? `<p class="text-[10px] font-semibold text-slate-400 mt-1">${metaLine
-                      .map((x) => escapeHtml(String(x)))
-                      .join(" · ")}</p>`
-                  : ``
-              }
+              ${metaLine.length
+      ? `<p class="text-[10px] font-semibold text-slate-400 mt-1">${metaLine
+        .map((x) => escapeHtml(String(x)))
+        .join(" · ")}</p>`
+      : ``
+    }
             </div>
           </div>
 
@@ -178,13 +177,14 @@ export function buildVentaHtml(data: VentaReportDTO, branding: BrandingDTO) {
                 <th class="py-2 pl-4">Producto</th>
                 <th class="py-2 text-center">Cant.</th>
                 <th class="py-2 text-right">Precio Unit.</th>
+                <th class="py-2 text-right">Desc.</th>
                 <th class="py-2 text-right pr-4">Subtotal</th>
               </tr>
             </thead>
             <tbody class="text-sm">
               ${data.items
-                .map(
-                  (item) => `
+      .map(
+        (item) => `
                 <tr class="group hover:bg-slate-50/50 transition-colors">
                   <td class="py-4 pl-4 font-bold text-slate-700 bg-slate-50 rounded-l-xl border-y border-l border-slate-100">
                     ${escapeHtml(item.producto)}
@@ -197,13 +197,16 @@ export function buildVentaHtml(data: VentaReportDTO, branding: BrandingDTO) {
                   <td class="py-4 text-right money text-slate-400 bg-slate-50 border-y border-slate-100">
                     ${formatMoney(item.precioUnitario)}
                   </td>
+                  <td class="py-4 text-right money text-emerald-600 bg-slate-50 border-y border-slate-100 font-bold">
+                    ${item.descuento > 0 ? `-${formatMoney(item.descuento)}` : "-"}
+                  </td>
                   <td class="py-4 text-right pr-4 font-black money border-y border-r border-slate-100 bg-slate-50 rounded-r-xl text-slate-900">
                     ${formatMoney(item.subtotal)}
                   </td>
                 </tr>
               `
-                )
-                .join("")}
+      )
+      .join("")}
             </tbody>
           </table>
         </div>

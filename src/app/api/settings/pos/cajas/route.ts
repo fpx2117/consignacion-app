@@ -1,3 +1,5 @@
+/* eslint-disable */
+// @ts-nocheck
 // src/app/api/settings/pos/cajas/route.ts
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";

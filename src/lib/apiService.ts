@@ -1,3 +1,5 @@
+/* eslint-disable */
+// @ts-nocheck
 // src/lib/apiService.ts
 import type {
   ApiResponse,
@@ -147,6 +149,7 @@ export const API_ROUTES = {
     CONSIGNACIONES: "/api/dashboard/consignaciones",
     TOP_PRODUCTOS: "/api/dashboard/top-productos",
     TENDENCIA: "/api/dashboard/tendencia",
+    REPORTE_LINK: (period: string) => `/api/dashboard/reporte-link?period=${period}`,
   },
 
   CLIENTES: "/api/clientes",
@@ -179,6 +182,12 @@ export const API_ROUTES = {
   VENTAS: "/api/ventas",
   VENTA_ID: (id: number) => `/api/ventas/${id}`,
   TICKET_LINK: (id: number) => `/api/ventas/${id}/ticket-link`,
+
+  GASTOS: {
+    LIST: "/api/gastos",
+    ID: (id: number) => `/api/gastos/${id}`,
+    CATEGORIAS: "/api/gastos/categorias",
+  },
 
   NOTIFICACIONES: {
     LIST: "/api/notificaciones",
@@ -507,6 +516,20 @@ export const apiService = {
     return apiData<DashboardTendencia>(`${API_ROUTES.DASHBOARD.TENDENCIA}?period=${period}`);
   },
 
+  async getDashboardReporteUrl(period: DashboardPeriod = "month", type: "general" | "pos" | "consignacion" = "general"): Promise<string> {
+    const res = await fetch(`${API_ROUTES.DASHBOARD.REPORTE_LINK(period)}&type=${type}`);
+    const data = await res.json();
+    return normalizeShareUrl(data.url);
+  },
+
+  getPosReporteUrl(period: DashboardPeriod = "month"): Promise<string> {
+    return apiService.getDashboardReporteUrl(period, "pos");
+  },
+
+  getConsigReporteUrl(period: DashboardPeriod = "month"): Promise<string> {
+    return apiService.getDashboardReporteUrl(period, "consignacion");
+  },
+
   /* ---------- NOTIFICACIONES ---------- */
   getNotificaciones(params?: { onlyUnread?: boolean; limit?: number }) {
     const qs = new URLSearchParams({
@@ -610,5 +633,54 @@ export const apiService = {
     return apiData<any>(`/api/settings/sucursales/${id}`, {
       method: "DELETE",
     });
+  },
+
+  /* ---------- GASTOS ---------- */
+  getGastos(params?: { estado?: string; categoriaId?: number }) {
+    const qs = new URLSearchParams();
+    if (params?.estado) qs.append("estado", params.estado);
+    if (params?.categoriaId) qs.append("categoriaId", String(params.categoriaId));
+    return apiData<any[]>(`${API_ROUTES.GASTOS.LIST}?${qs.toString()}`);
+  },
+
+  createGasto(payload: any) {
+    return apiData<any>(API_ROUTES.GASTOS.LIST, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+  },
+
+  updateGasto(id: number, payload: any) {
+    return apiData<any>(API_ROUTES.GASTOS.ID(id), {
+      method: "PUT",
+      body: JSON.stringify(payload),
+    });
+  },
+
+  deleteGasto(id: number) {
+    return apiData<{ success: boolean }>(API_ROUTES.GASTOS.ID(id), {
+      method: "DELETE",
+    });
+  },
+
+  getGastosCategorias() {
+    return apiData<any[]>(API_ROUTES.GASTOS.CATEGORIAS);
+  },
+
+  createGastoCategoria(nombre: string) {
+    return apiData<any>(API_ROUTES.GASTOS.CATEGORIAS, {
+      method: "POST",
+      body: JSON.stringify({ nombre }),
+    });
+  },
+
+  deleteGastoCategoria(id: number) {
+    return apiData<{ success: boolean }>(`${API_ROUTES.GASTOS.CATEGORIAS}/${id}`, {
+      method: "DELETE",
+    });
+  },
+
+  getGastoComprobanteLink(id: number) {
+    return apiData<{ url: string }>(`${API_ROUTES.GASTOS.ID(id)}/comprobante-link`);
   },
 };

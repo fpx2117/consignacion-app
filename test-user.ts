@@ -5,8 +5,8 @@ import { EstadoSuscripcion, ProveedorSuscripcion, RolUsuario } from "@prisma/cli
 async function main() {
     try {
         const exchangeRate = 1;
-        let verificationProvider = ProveedorSuscripcion.PROMO;
-        let verificationExternalId = "TEST-123";
+        const verificationProvider = ProveedorSuscripcion.PROMO;
+        const verificationExternalId = "TEST-123";
         const verificationStatus = EstadoSuscripcion.ACTIVO;
         const finalPlanId = 1;
         const trialDays = 30;

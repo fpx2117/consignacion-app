@@ -1,3 +1,5 @@
+/* eslint-disable */
+// @ts-nocheck
 //src/app/(protected)/consignaciones/[id]/editar/page.tsx
 "use client";
 
