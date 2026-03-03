@@ -31,7 +31,7 @@ async function fix() {
             }
         }
 
-        const newDetallesData = [];
+        const newDetallesData: any[] = [];
 
         for (const d of v.detalles) {
             let calcDesc = 0;
