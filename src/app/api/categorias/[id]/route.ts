@@ -48,17 +48,13 @@ export async function DELETE(
     const { id } = await params;
     const categoriaId = Number(id);
 
-    const productosVinculados = await prisma.producto.count({
+    // Set categoriaId to null for all associated products
+    await prisma.producto.updateMany({
       where: { categoriaId: categoriaId },
+      data: { categoriaId: null },
     });
 
-    if (productosVinculados > 0) {
-      return NextResponse.json(
-        { error: "No se puede eliminar: hay productos usando esta categoría" },
-        { status: 400 }
-      );
-    }
-
+    // Delete the category
     await prisma.categoria.delete({
       where: { id: categoriaId },
     });

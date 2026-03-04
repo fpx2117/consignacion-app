@@ -1,5 +1,3 @@
-/* eslint-disable */
-// @ts-nocheck
 "use client";
 
 import * as React from "react";
@@ -7,7 +5,9 @@ import { toast } from "sonner";
 import { apiService } from "@/lib/apiService";
 import { CATEGORY_PALETTE, type CategoryColorKey } from "@/lib/category-colors";
 import { cn } from "@/lib/utils";
-import { Loader2, Check } from "lucide-react";
+import { Loader2, Check, Plus, Pencil, Trash2, Tag, ChevronDown, ChevronRight, AlertTriangle } from "lucide-react";
+import type { DescuentoNivel } from "@/lib/types";
+import { DiscountTiersInline } from "./discount-tiers-inline";
 
 import {
   Dialog,
@@ -15,8 +15,17 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-  DialogFooter,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -28,25 +37,89 @@ interface Props {
 
 export function CreateCategoriaDialog({ onCreated, trigger }: Props) {
   const [open, setOpen] = React.useState(false);
-  const [saving, setSaving] = React.useState(false);
+  const [loading, setLoading] = React.useState(false);
+  const [categorias, setCategorias] = React.useState<any[]>([]);
+
+  // Modos: 'list' | 'create' | 'edit'
+  const [mode, setMode] = React.useState<"list" | "create" | "edit">("list");
+
+  // States para Create/Edit
+  const [currentId, setCurrentId] = React.useState<number | null>(null);
   const [nombre, setNombre] = React.useState("");
   const [selectedColor, setSelectedColor] = React.useState<CategoryColorKey>("sky");
+  const [descuentos, setDescuentos] = React.useState<DescuentoNivel[]>([]);
+  const [saving, setSaving] = React.useState(false);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = React.useState(false);
+  const [categoryToDelete, setCategoryToDelete] = React.useState<number | null>(null);
+
+  React.useEffect(() => {
+    if (open) {
+      loadCategorias();
+      setMode("list");
+      resetForm();
+    }
+  }, [open]);
+
+  async function loadCategorias() {
+    setLoading(true);
+    try {
+      const data = await apiService.getCategorias();
+      setCategorias(Array.isArray(data) ? data : []);
+    } catch {
+      toast.error("Error al cargar categorías");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  function resetForm() {
+    setNombre("");
+    setSelectedColor("sky");
+    setDescuentos([]);
+    setCurrentId(null);
+  }
 
   async function handleSave() {
     if (!nombre.trim()) return toast.error("El nombre es obligatorio");
 
     setSaving(true);
     try {
-      await apiService.createCategoria({ nombre: nombre.trim(), color: selectedColor });
-      toast.success("Categoría creada con éxito");
-      setNombre("");
-      setSelectedColor("sky");
-      setOpen(false);
+      if (mode === "edit" && currentId) {
+        await apiService.updateCategoria(currentId, {
+          nombre: nombre.trim(),
+          color: selectedColor,
+          descuentos: descuentos.length > 0 ? descuentos : null
+        });
+        toast.success("Categoría actualizada");
+      } else {
+        await apiService.createCategoria({
+          nombre: nombre.trim(),
+          color: selectedColor,
+          descuentos: descuentos.length > 0 ? descuentos : null
+        });
+        toast.success("Categoría creada con éxito");
+      }
+      await loadCategorias();
+      setMode("list");
       onCreated?.();
-    } catch (error) {
-      toast.error("No se pudo crear la categoría");
+    } catch (error: any) {
+      toast.error("Error al guardar la categoría");
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function handleDelete(id: number) {
+    try {
+      await apiService.deleteCategoria(id);
+      toast.success("Categoría eliminada");
+      await loadCategorias();
+      onCreated?.();
+    } catch (error) {
+      toast.error("Error al eliminar categoría");
+    } finally {
+      setDeleteConfirmOpen(false);
+      setCategoryToDelete(null);
     }
   }
 
@@ -57,95 +130,206 @@ export function CreateCategoriaDialog({ onCreated, trigger }: Props) {
       <DialogTrigger asChild>
         {trigger || (
           <Button variant="outline" className="rounded-2xl border-zinc-800 font-black uppercase text-[10px] tracking-widest h-12 px-6">
-            Nueva Categoría
+            Administrar Categorías
           </Button>
         )}
       </DialogTrigger>
 
-      <DialogContent className="rounded-[2.5rem] bg-zinc-950 border-zinc-800 p-8 max-w-[400px]">
-        <DialogHeader className="space-y-3">
-          <div className="flex items-center gap-3">
-            <div className={cn("h-3 w-3 rounded-full shadow-[0_0_10px_rgba(59,130,246,0.5)]", activeColor.dot)} />
-            <DialogTitle className="text-2xl font-black tracking-tighter">
-              Nueva Categoría
+      <DialogContent className="rounded-[2.5rem] bg-zinc-950 border-zinc-800 p-0 max-w-[500px] overflow-hidden">
+        <div className="p-6 pb-2 border-b border-white/5 bg-white/5">
+          <div className="flex items-center justify-between mb-2">
+            <DialogTitle className="text-xl font-bold italic tracking-tight flex items-center gap-2">
+              <Tag className="w-5 h-5 text-primary" />
+              {mode === "list" ? "Administrar Categorías" : mode === "create" ? "Nueva Categoría" : "Editar Categoría"}
             </DialogTitle>
+            {mode !== "list" && (
+              <Button variant="ghost" size="sm" onClick={() => setMode("list")} className="text-xs text-zinc-400 hover:text-white">
+                Volver
+              </Button>
+            )}
           </div>
-          <p className="text-xs text-zinc-500 font-bold uppercase tracking-widest leading-relaxed">
-            Asigna un nombre y color para organizar tus productos.
+          <p className="text-xs text-zinc-500 font-medium mb-4">
+            {mode === "list"
+              ? "Gestiona las categorías de esta sucursal."
+              : "Asigna un nombre, color y descuentos por defecto."}
           </p>
-        </DialogHeader>
-
-        <div className="py-6 space-y-6">
-          <div className="space-y-3">
-            <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400 ml-1">
-              Nombre de Categoría
-            </Label>
-            <Input
-              value={nombre}
-              onChange={(e) => setNombre(e.target.value)}
-              placeholder="Ej: Electrónica, Alimentos..."
-              className="h-14 bg-zinc-900/50 border-zinc-800 rounded-2xl focus-visible:ring-blue-500/20 focus-visible:border-blue-500/50 text-base font-medium px-5 transition-all"
-            />
-          </div>
-
-          {/* Color Palette Picker */}
-          <div className="space-y-3">
-            <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400 ml-1">
-              Color
-            </Label>
-            <div className="grid grid-cols-6 gap-2 p-3 rounded-2xl bg-zinc-900/50 border border-zinc-800">
-              {CATEGORY_PALETTE.map((color) => (
-                <button
-                  key={color.key}
-                  type="button"
-                  onClick={() => setSelectedColor(color.key as CategoryColorKey)}
-                  className={cn(
-                    "relative h-9 w-full rounded-xl transition-all duration-200 flex items-center justify-center",
-                    "hover:scale-110 hover:shadow-lg active:scale-95",
-                    selectedColor === color.key
-                      ? "ring-2 ring-white ring-offset-2 ring-offset-zinc-950 scale-110"
-                      : "opacity-70 hover:opacity-100"
-                  )}
-                  style={{ backgroundColor: color.hex }}
-                  title={color.label}
-                >
-                  {selectedColor === color.key && (
-                    <Check className="h-4 w-4 text-white drop-shadow-md" />
-                  )}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Previsualización */}
-          <div className="p-6 rounded-3xl bg-zinc-900/30 border border-zinc-800 flex flex-col items-center gap-4">
-            <span className="text-[9px] font-black uppercase tracking-widest text-zinc-600">Previsualización en tabla</span>
-            <div className={cn("inline-flex items-center justify-center px-5 py-2 rounded-full gap-2 border", activeColor.bg, activeColor.text, activeColor.border)}>
-              <div className={cn("h-2 w-2 rounded-full", activeColor.dot)} />
-              <span className="text-[11px] font-black uppercase tracking-widest">
-                {nombre || "CATEGORÍA"}
-              </span>
-            </div>
-          </div>
         </div>
 
-        <DialogFooter className="flex-col sm:flex-row gap-3">
-          <Button
-            variant="ghost"
-            onClick={() => setOpen(false)}
-            className="flex-1 rounded-2xl font-bold text-zinc-400 hover:bg-zinc-900"
-          >
-            Cancelar
-          </Button>
-          <Button
-            onClick={handleSave}
-            disabled={saving}
-            className="flex-1 rounded-2xl bg-white text-zinc-950 hover:bg-zinc-200 font-black uppercase text-[11px] tracking-widest h-12 shadow-xl"
-          >
-            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : "Confirmar"}
-          </Button>
-        </DialogFooter>
+        <div className="p-6 max-h-[60vh] overflow-y-auto">
+          {mode === "list" && (
+            <div className="space-y-4">
+              <Button
+                onClick={() => { resetForm(); setMode("create"); }}
+                className="w-full h-12 rounded-xl bg-primary/10 text-primary hover:bg-primary/20 border border-primary/20 flex gap-2"
+              >
+                <Plus className="w-4 h-4" />
+                Nueva Categoría
+              </Button>
+
+              {loading ? (
+                <div className="flex items-center justify-center p-8">
+                  <Loader2 className="w-6 h-6 animate-spin text-zinc-500" />
+                </div>
+              ) : categorias.length === 0 ? (
+                <div className="text-center p-8 text-zinc-500 text-sm">
+                  No hay categorías en esta sucursal.
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {categorias.map(cat => {
+                    const colorData = CATEGORY_PALETTE.find((c) => c.key === (cat.color || "sky")) || CATEGORY_PALETTE[0];
+                    return (
+                      <div key={cat.id} className="flex items-center justify-between p-3 rounded-xl border border-zinc-800/60 bg-zinc-900/30 hover:bg-zinc-900 transition-colors">
+                        <div className="flex items-center gap-3">
+                          <div className={cn("w-3 h-3 rounded-full shadow-sm", colorData.dot)} />
+                          <span className="font-semibold text-sm">{cat.nombre}</span>
+                          {cat.descuentos?.length > 0 && (
+                            <span className="text-[10px] uppercase font-bold text-zinc-500 bg-zinc-800 px-2 py-0.5 rounded-full">
+                              {cat.descuentos.length} desc.
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="w-8 h-8 text-zinc-400 hover:text-white"
+                            onClick={() => {
+                              setCurrentId(cat.id);
+                              setNombre(cat.nombre);
+                              setSelectedColor((cat.color || "sky") as CategoryColorKey);
+                              setDescuentos(Array.isArray(cat.descuentos) ? cat.descuentos : []);
+                              setMode("edit");
+                            }}
+                          >
+                            <Pencil className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="w-8 h-8 text-zinc-500 hover:text-red-400 hover:bg-red-500/10"
+                            onClick={() => {
+                              setCategoryToDelete(cat.id);
+                              setDeleteConfirmOpen(true);
+                            }}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+
+          {mode !== "list" && (
+            <div className="space-y-6">
+              <div className="space-y-3">
+                <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400 ml-1">
+                  Nombre
+                </Label>
+                <div className="relative">
+                  <Tag className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    value={nombre}
+                    onChange={(e) => setNombre(e.target.value)}
+                    placeholder="Ej: Accesorios..."
+                    autoFocus
+                    className="pl-9 h-12 bg-zinc-900/50 border-zinc-800 rounded-xl focus-visible:ring-primary/20 focus-visible:border-primary/50 text-base"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400 ml-1">
+                  Color Identificador
+                </Label>
+                <div className="grid grid-cols-6 gap-2 p-3 rounded-xl bg-zinc-900/50 border border-zinc-800">
+                  {CATEGORY_PALETTE.map((color) => (
+                    <button
+                      key={color.key}
+                      type="button"
+                      onClick={() => setSelectedColor(color.key as CategoryColorKey)}
+                      className={cn(
+                        "relative h-9 w-full rounded-lg transition-all duration-200 flex items-center justify-center",
+                        "hover:scale-110 hover:shadow-lg active:scale-95",
+                        selectedColor === color.key
+                          ? "ring-2 ring-white ring-offset-2 ring-offset-zinc-950 scale-110"
+                          : "opacity-70 hover:opacity-100"
+                      )}
+                      style={{ backgroundColor: color.hex }}
+                      title={color.label}
+                    >
+                      {selectedColor === color.key && (
+                        <Check className="h-4 w-4 text-white drop-shadow-md" />
+                      )}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400 ml-1">
+                  Descuentos Base por Categoría (Opcional)
+                </Label>
+                <div className="p-4 rounded-xl border border-zinc-800 bg-zinc-900/30">
+                  <DiscountTiersInline descuentos={descuentos} onChange={setDescuentos} />
+                </div>
+              </div>
+
+              <div className="flex gap-3 pt-4 border-t border-zinc-800">
+                <Button
+                  variant="ghost"
+                  onClick={() => setMode("list")}
+                  className="flex-1 rounded-xl h-12"
+                  disabled={saving}
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  onClick={handleSave}
+                  disabled={saving || !nombre}
+                  className="flex-1 rounded-xl bg-primary text-primary-foreground font-bold h-12"
+                >
+                  {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                  {mode === "create" ? "Crear Categoría" : "Guardar Cambios"}
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
       </DialogContent>
+
+      <AlertDialog open={deleteConfirmOpen} onOpenChange={(open) => {
+        setDeleteConfirmOpen(open);
+        if (!open) setCategoryToDelete(null);
+      }}>
+        <AlertDialogContent className="bg-zinc-950 border-zinc-800 rounded-3xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-white">¿Seguro que deseas eliminar esta categoría?</AlertDialogTitle>
+            <AlertDialogDescription className="text-zinc-400">
+              Los productos asociados quedarán "Sin Categoría". Esta acción no se puede deshacer.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="bg-transparent text-white border-zinc-800 hover:bg-zinc-900 hover:text-white rounded-xl">
+              Cancelar
+            </AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-red-500 hover:bg-red-600 text-white rounded-xl"
+              onClick={() => {
+                if (categoryToDelete !== null) {
+                  handleDelete(categoryToDelete);
+                }
+              }}
+            >
+              Sí, eliminar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Dialog>
   );
 }

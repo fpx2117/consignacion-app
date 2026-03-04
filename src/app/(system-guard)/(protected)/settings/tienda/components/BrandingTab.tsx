@@ -100,7 +100,7 @@ export function BrandingTab({ branding, setBranding, handleImageUpload }: any) {
                             {/* Preview */}
                             <div className="w-20 h-20 rounded-xl border-2 border-border flex items-center justify-center overflow-hidden shrink-0 bg-muted/30">
                                 {branding.logoData ? (
-                                    // eslint-disable-next-line @next/next/no-img-element
+                                     
                                     <img src={`data:${branding.logoMime};base64,${branding.logoData}`} alt="Logo" className="w-full h-full object-contain p-2" />
                                 ) : (
                                     <ImageIcon className="h-7 w-7 text-muted-foreground/30" />
@@ -189,7 +189,7 @@ export function BrandingTab({ branding, setBranding, handleImageUpload }: any) {
                                     /* Banner cargado: preview + acciones */
                                     <div className="space-y-2">
                                         <div className="relative aspect-[21/9] rounded-xl overflow-hidden border border-border shadow-sm">
-                                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                                            { }
                                             <img src={`data:${branding.bannerMime};base64,${branding.bannerData}`} alt="Banner" className="w-full h-full object-cover" />
                                         </div>
                                         <div className="flex gap-2">
@@ -278,7 +278,7 @@ export function BrandingTab({ branding, setBranding, handleImageUpload }: any) {
                                 <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                                     {(branding.banners || []).map((slide: any, index: number) => (
                                         <div key={index} className="relative aspect-[21/9] rounded-xl overflow-hidden group border border-border shadow-sm">
-                                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                                            { }
                                             <img src={`data:${slide.bannerMime};base64,${slide.bannerData}`} alt={`Slide ${index}`} className="w-full h-full object-cover" />
                                             <div className="absolute inset-x-0 top-0 h-8 bg-gradient-to-b from-black/70 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex justify-between items-start p-1.5">
                                                 <span className="text-[9px] font-black text-white/80 font-mono">#{index + 1}</span>
