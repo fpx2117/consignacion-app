@@ -52,7 +52,6 @@ model Usuario {
   gastos        Gasto[]
   sucursal      Sucursal?        @relation(fields: [sucursalId], references: [id])
 
-
   @@index([rol])
   @@index([sucursalId])
 }
@@ -283,10 +282,15 @@ model MovimientoCaja {
 
 model Categoria {
   id         Int        @id @default(autoincrement())
-  nombre     String     @unique
+  nombre     String
   color      String     @default("sky")
   descuentos Json?
+  sucursalId Int        @default(1)
+  sucursal   Sucursal   @relation(fields: [sucursalId], references: [id])
   productos  Producto[]
+
+  @@unique([nombre, sucursalId])
+  @@index([sucursalId])
 }
 
 model ShareLink {
@@ -488,26 +492,26 @@ model ResetPasswordToken {
 }
 
 model Sucursal {
-  id             Int               @id @default(autoincrement())
-  nombre         String
-  esPrincipal    Boolean           @default(false)
-  activa         Boolean           @default(true)
-  createdAt      DateTime          @default(now())
-  updatedAt      DateTime          @updatedAt
-  branding       Branding?
-  cajas          Caja[]
-  clientes       Cliente[]
-  configuracion  Configuracion?
-  consignaciones Consignacion[]
-  movimientos    MovimientoStock[]
-  productos      Producto[]
-  stockProductos StockSucursal[]
-  usuarios       Usuario[]
-  ventas         Venta[]
-  gastos         Gasto[]
+  id              Int               @id @default(autoincrement())
+  nombre          String
+  esPrincipal     Boolean           @default(false)
+  activa          Boolean           @default(true)
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  branding        Branding?
+  cajas           Caja[]
+  clientes        Cliente[]
+  configuracion   Configuracion?
+  consignaciones  Consignacion[]
+  movimientos     MovimientoStock[]
+  productos       Producto[]
+  stockProductos  StockSucursal[]
+  usuarios        Usuario[]
+  ventas          Venta[]
+  gastos          Gasto[]
   categoriasGasto CategoriaGasto[]
+  categorias      Categoria[]
 }
-
 
 model StockSucursal {
   id                   Int      @id @default(autoincrement())
@@ -525,26 +529,26 @@ model StockSucursal {
 }
 
 model Gasto {
-  id               Int              @id @default(autoincrement())
-  monto            Decimal          @db.Decimal(10, 2)
-  fecha            DateTime         @default(now())
+  id               Int             @id @default(autoincrement())
+  monto            Decimal         @db.Decimal(10, 2)
+  fecha            DateTime        @default(now())
   fechaVencimiento DateTime?
   motivo           String
-  estado           EstadoGasto      @default(PAGADO)
-  esRecurrente     Boolean          @default(false)
-  frecuencia       FrecuenciaGasto  @default(UNICO)
+  estado           EstadoGasto     @default(PAGADO)
+  esRecurrente     Boolean         @default(false)
+  frecuencia       FrecuenciaGasto @default(UNICO)
   categoriaGastoId Int
-  sucursalId       Int              @default(1)
+  sucursalId       Int             @default(1)
   userId           Int?
   comprobanteUrl   String?
   cuotaActual      Int?
   cuotaTotal       Int?
   recurrenciaId    String?
-  createdAt        DateTime         @default(now())
-  updatedAt        DateTime         @updatedAt
-  categoria        CategoriaGasto   @relation(fields: [categoriaGastoId], references: [id])
-  sucursal         Sucursal         @relation(fields: [sucursalId], references: [id])
-  user             Usuario?         @relation(fields: [userId], references: [id])
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+  categoria        CategoriaGasto  @relation(fields: [categoriaGastoId], references: [id])
+  sucursal         Sucursal        @relation(fields: [sucursalId], references: [id])
+  user             Usuario?        @relation(fields: [userId], references: [id])
 
   @@index([sucursalId])
   @@index([categoriaGastoId])

@@ -43,7 +43,7 @@ export function LoginForm() {
 
   useEffect(() => {
     if (error) setError(null);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [email, password]);
 
   const handleCapsLock = (e: React.KeyboardEvent<HTMLInputElement>) => {

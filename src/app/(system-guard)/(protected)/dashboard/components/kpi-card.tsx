@@ -87,7 +87,7 @@ export function KpiCard({
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 className={cn(
-                  "text-3xl font-black tracking-tight tabular-nums",
+                  "text-xl sm:text-2xl md:text-3xl font-black tracking-tight tabular-nums truncate",
                   isSuccess && "text-emerald-600 dark:text-emerald-400",
                   isWarning && "text-amber-600 dark:text-amber-400",
                   isDefault && "text-card-foreground"
@@ -97,7 +97,7 @@ export function KpiCard({
               </motion.div>
             )}
 
-            <p className="text-xs font-medium text-muted-foreground/70 tracking-wide mt-1">
+            <p className="text-[10px] sm:text-xs font-medium text-muted-foreground/70 tracking-wide mt-1 truncate">
               {subtitle}
             </p>
           </div>
