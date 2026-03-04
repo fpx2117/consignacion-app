@@ -1,6 +1,6 @@
 /* eslint-disable */
 // @ts-nocheck
- 
+
 "use client";
 
 import * as React from "react";
@@ -23,6 +23,7 @@ import { CartDrawer } from "./components/cart-drawer";
 // 👇 IMPORTANTE: Asegúrate de tener este componente creado
 import { ProductModal } from "./components/product-modal";
 import { getThemeStyles } from "./lib/theme-utils";
+import { StoreCategorySidebar } from "./components/store-category-sidebar";
 
 function CatalogContent() {
     const searchParams = useSearchParams();
@@ -217,33 +218,50 @@ function CatalogContent() {
                 onOpenCart={() => setIsCartOpen(true)}
             />
 
-            <main className="container mx-auto px-3 sm:px-5 md:px-8 py-5 md:py-12 flex flex-col gap-5 sm:gap-8">
+            <main className="container mx-auto px-3 sm:px-5 md:px-8 py-5 md:py-12 flex flex-col gap-5 sm:gap-8 min-h-[60vh]">
                 <StoreBanner config={config} />
 
-                <StoreFilters
-                    config={config}
-                    products={data?.productos || []}
-                    searchTerm={searchTerm}
-                    setSearchTerm={setSearchTerm}
-                    viewMode={viewMode}
-                    setViewMode={setViewMode}
-                    categories={data?.categorias || []}
-                    selectedCategory={selectedCategory}
-                    setSelectedCategory={setSelectedCategory}
-                    isConsigne={isConsigne}
-                    setIsConsigne={setIsConsigne}
-                    sortBy={sortBy}
-                    setSortBy={setSortBy}
-                />
+                <div className="flex flex-col md:flex-row gap-6 md:gap-8 items-start relative w-full">
+                    <StoreCategorySidebar
+                        config={config}
+                        categories={data?.categorias || []}
+                        categoryCounts={data?.productos?.reduce((acc: any, product: any) => {
+                            const catId = product.categoriaId;
+                            acc[catId] = (acc[catId] || 0) + 1;
+                            return acc;
+                        }, {}) || {}}
+                        selectedCategory={selectedCategory}
+                        setSelectedCategory={setSelectedCategory}
+                        totalProducts={data?.productos?.length || 0}
+                    />
 
-                <ProductList
-                    products={filteredProducts}
-                    config={config}
-                    onViewProduct={(product) => setSelectedProduct(product)}
-                    viewMode={viewMode}
-                    isConsigne={isConsigne}
-                    onAddToCart={addToCart}
-                />
+                    <div className="flex-1 flex flex-col gap-5 sm:gap-8 min-w-0 w-full">
+                        <StoreFilters
+                            config={config}
+                            products={data?.productos || []}
+                            searchTerm={searchTerm}
+                            setSearchTerm={setSearchTerm}
+                            viewMode={viewMode}
+                            setViewMode={setViewMode}
+                            categories={data?.categorias || []}
+                            selectedCategory={selectedCategory}
+                            setSelectedCategory={setSelectedCategory}
+                            isConsigne={isConsigne}
+                            setIsConsigne={setIsConsigne}
+                            sortBy={sortBy}
+                            setSortBy={setSortBy}
+                        />
+
+                        <ProductList
+                            products={filteredProducts}
+                            config={config}
+                            onViewProduct={(product) => setSelectedProduct(product)}
+                            viewMode={viewMode}
+                            isConsigne={isConsigne}
+                            onAddToCart={addToCart}
+                        />
+                    </div>
+                </div>
             </main>
 
             <StoreFooter config={config} />

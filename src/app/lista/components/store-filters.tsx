@@ -6,6 +6,7 @@ import { Search, Grid, List as ListIcon, Zap, PackageOpen, SlidersHorizontal } f
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { getThemeStyles } from "../lib/theme-utils";
 
@@ -74,24 +75,25 @@ export function StoreFilters({
                 {/* Herramientas (Vista y Orden) */}
                 <div className="flex items-center justify-between gap-3">
 
-                    {/* Ordenar Por (Dropdown Nativo Estilizado) */}
-                    <div className={cn(
-                        "relative flex items-center border border-neutral-200 h-10 sm:h-11 px-3 sm:px-4 shadow-sm flex-1 sm:flex-none",
-                        cardBgClass,
-                        inputRadiusClass
-                    )}>
-                        <SlidersHorizontal className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-neutral-500 mr-2 shrink-0" />
-                        <select
-                            className="bg-transparent text-xs sm:text-sm font-semibold text-neutral-700 focus:outline-none appearance-none cursor-pointer pr-4 w-full"
-                            value={sortBy}
-                            onChange={(e) => setSortBy(e.target.value)}
-                        >
-                            <option value="relevance">Relevancia</option>
-                            <option value="price_asc">Menor precio</option>
-                            <option value="price_desc">Mayor precio</option>
-                            <option value="name_asc">A-Z</option>
-                            <option value="name_desc">Z-A</option>
-                        </select>
+                    {/* Ordenar Por (Dropdown Shadcn) */}
+                    <div className="flex-1 sm:flex-none">
+                        <Select value={sortBy} onValueChange={setSortBy}>
+                            <SelectTrigger className={cn(
+                                "h-10 sm:h-11 px-3 sm:px-4 shadow-sm min-w-0 flex items-center gap-2 text-neutral-900 border-neutral-200",
+                                cardBgClass,
+                                inputRadiusClass
+                            )}>
+                                <SlidersHorizontal className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-neutral-500 shrink-0" />
+                                <SelectValue placeholder="Ordenar por" className="font-semibold text-neutral-900 text-xs sm:text-sm mr-auto block" />
+                            </SelectTrigger>
+                            <SelectContent className="rounded-xl overflow-hidden">
+                                <SelectItem value="relevance" className="text-xs sm:text-sm font-semibold">Relevancia</SelectItem>
+                                <SelectItem value="price_asc" className="text-xs sm:text-sm font-semibold">Menor precio</SelectItem>
+                                <SelectItem value="price_desc" className="text-xs sm:text-sm font-semibold">Mayor precio</SelectItem>
+                                <SelectItem value="name_asc" className="text-xs sm:text-sm font-semibold">A-Z</SelectItem>
+                                <SelectItem value="name_desc" className="text-xs sm:text-sm font-semibold">Z-A</SelectItem>
+                            </SelectContent>
+                        </Select>
                     </div>
 
                     {/* Toggle de Vista */}
@@ -129,46 +131,32 @@ export function StoreFilters({
                 </div>
             </div>
 
-            {/* Fila 2: Categorías Dinámicas con Contadores */}
+            {/* Fila 2: Categorías Dinámicas (Sólo Mobile) */}
             {config.mostrarCategoriasEnHeader && (
-                <div className="flex items-center gap-2 pb-2 overflow-x-auto scrollbar-hide border-b border-neutral-100/50 -mx-1 px-1">
-                    <span className="hidden sm:block text-xs font-black uppercase tracking-widest text-neutral-400 mr-2 shrink-0">
+                <div className="flex md:hidden flex-col gap-2 pb-4 border-b border-neutral-100/50">
+                    <span className="text-xs font-bold uppercase tracking-widest text-neutral-500">
                         Categorías
                     </span>
-                    <Badge
-                        variant="outline"
-                        className={cn(
-                            "px-5 py-2 cursor-pointer text-sm font-bold transition-all hover:scale-105 shadow-sm border shrink-0",
-                            buttonRadiusClass,
-                            selectedCategory === null
-                                ? "bg-neutral-900 text-white border-transparent"
-                                : cn(cardBgClass, "text-neutral-600 border-neutral-200 hover:bg-neutral-50")
-                        )}
-                        onClick={() => setSelectedCategory(null)}
+                    <Select
+                        value={selectedCategory === null ? "all" : selectedCategory.toString()}
+                        onValueChange={(val) => setSelectedCategory(val === "all" ? null : Number(val))}
                     >
-                        Todas ({products.length})
-                    </Badge>
-                    {categories.map((cat: any) => {
-                        const count = categoryCounts[cat.id] || 0;
-                        if (count === 0) return null; // Ocultar categorías vacías para mantener limpieza
-
-                        return (
-                            <Badge
-                                key={cat.id}
-                                variant="outline"
-                                className={cn(
-                                    "px-5 py-2 cursor-pointer text-sm font-bold transition-all hover:scale-105 shadow-sm whitespace-nowrap border shrink-0",
-                                    buttonRadiusClass,
-                                    selectedCategory === cat.id
-                                        ? "bg-neutral-900 text-white border-transparent"
-                                        : cn(cardBgClass, "text-neutral-600 border-neutral-200 hover:bg-neutral-50")
-                                )}
-                                onClick={() => setSelectedCategory(cat.id)}
-                            >
-                                {cat.nombre} <span className="opacity-50 ml-1 font-normal">({count})</span>
-                            </Badge>
-                        )
-                    })}
+                        <SelectTrigger className={cn("h-11 px-4 text-sm font-bold border-neutral-200 shadow-sm w-full text-neutral-900", cardBgClass, inputRadiusClass)}>
+                            <SelectValue placeholder="Seleccionar categoría" />
+                        </SelectTrigger>
+                        <SelectContent className="rounded-xl overflow-hidden">
+                            <SelectItem value="all">Todas ({products.length})</SelectItem>
+                            {categories.slice().sort((a, b) => a.nombre.localeCompare(b.nombre)).map((cat: any) => {
+                                const count = categoryCounts[cat.id] || 0;
+                                if (count === 0) return null;
+                                return (
+                                    <SelectItem key={cat.id} value={cat.id.toString()}>
+                                        {cat.nombre} <span className="opacity-50 font-normal">({count})</span>
+                                    </SelectItem>
+                                );
+                            })}
+                        </SelectContent>
+                    </Select>
                 </div>
             )}
 
