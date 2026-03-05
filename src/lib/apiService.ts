@@ -322,6 +322,13 @@ export const apiService = {
     });
   },
 
+  cotizarEnvioPublico(payload: { sucursalId: number, codigoPostal: string, subtotal: number, pesoKg?: number }) {
+    return apiData<any>("/api/public/envios/cotizar", {
+      method: "POST",
+      body: JSON.stringify(payload)
+    });
+  },
+
   /* ---------- CLIENTES ---------- */
   getClientes() {
     return apiData<Cliente[]>(API_ROUTES.CLIENTES);
