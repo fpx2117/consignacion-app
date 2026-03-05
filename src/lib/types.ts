@@ -410,6 +410,7 @@ export type CreateVentaDirectaInput = {
     descuento?: number;
   }>;
   metodoPago: MetodoPago;
+  descuentoGlobal?: number;
 };
 
 export type CreateConsignacionInput = {

@@ -41,7 +41,7 @@ export async function POST(req: Request) {
 
   try {
     const body = await req.json();
-    const { clienteId, items, metodoPago } = body;
+    const { clienteId, items, metodoPago, descuentoGlobal } = body;
 
     if (!items || !Array.isArray(items) || items.length === 0) {
       return NextResponse.json(
@@ -151,6 +151,17 @@ export async function POST(req: Request) {
         });
       }
 
+      // 4. Calcular descuento global y posible interés si es tarjeta
+      const descGlobalFinal = Number(descuentoGlobal) || 0;
+      let montoInteres = 0;
+      const porcentajeInteres = Number(configGlobal.porcentajeInteresTarjeta) || 0;
+
+      if (metodoPago === "TARJETA" && porcentajeInteres > 0) {
+        montoInteres = (totalVenta - descGlobalFinal) * (porcentajeInteres / 100);
+      }
+
+      const totalFinal = totalVenta - descGlobalFinal + montoInteres;
+
       // Crear Venta asignando null si no hay sesión
       const nuevaVenta = await tx.venta.create({
         data: {
@@ -159,7 +170,8 @@ export async function POST(req: Request) {
           sucursalId: auth.activeSucursalId,
           sesionCajaId: sesionActiva?.id || null, // <--- Aquí es clave el ?.
           fecha: new Date(),
-          total: totalVenta,
+          total: totalFinal,
+          descuentoGlobal: descGlobalFinal,
           detalles: { create: detallesData },
         },
         include: { detalles: true, cliente: true },
@@ -171,7 +183,7 @@ export async function POST(req: Request) {
           clienteId: finalClienteId,
           sesionCajaId: sesionActiva?.id || null, // <--- Aquí también
           fecha: new Date(),
-          monto: totalVenta,
+          monto: totalFinal,
           metodo: metodoPago || "EFECTIVO",
         },
       });
@@ -180,7 +192,7 @@ export async function POST(req: Request) {
     });
 
     // Post-Procesamiento
-    await processNotificationQueue(notificationsQueue);
+    await processNotificationQueue(notificationsQueue, auth.activeSucursalId);
 
     // Mensaje de notificación adaptado (Solo si la configuración lo permite)
     if (configGlobal.notificarVentas !== false) {
@@ -194,6 +206,7 @@ export async function POST(req: Request) {
           title: "Venta Exitosa",
           description: `Venta #${result.venta.id} para [${clientId}] ${clientName} por $${result.venta.total} ARS`,
           fingerprint: `SALE_${result.venta.id}`,
+          sucursalId: auth.activeSucursalId,
           read: false,
         }
       }).catch(() => null);

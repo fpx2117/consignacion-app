@@ -141,16 +141,16 @@ export async function PUT(req: Request, { params }: RouteParams) {
             }
           });
         }
-        
+
         // Auditoría Reversa: Lo que se había "vendido", ahora "vuelve" virtualmente (Entra a consignado, no a disponible, pero dejamos registro)
         if (item.unitsVendidas > 0) {
-           await tx.movimientoStock.create({
+          await tx.movimientoStock.create({
             data: {
               productoId: det.productoId,
               tipo: TipoMovimientoStock.ENTRADA, // Entra lógicamente al sistema de nuevo
               motivo: MotivoMovimientoStock.AJUSTE_POSITIVO,
               cantidad: item.unitsVendidas,
-              stockPrevio: productoAntes!.stockDisponibleUnits, 
+              stockPrevio: productoAntes!.stockDisponibleUnits,
               stockPosterior: productoDespues.stockDisponibleUnits, // No cambia el disponible, pero documentamos
               observaciones: `Reverso Venta Liq #${liquidacionId} (Consignación #${consignacionId})`
             }
@@ -315,7 +315,7 @@ export async function PUT(req: Request, { params }: RouteParams) {
     });
 
     // ✅ DISPARAR ALERTAS (Centralizado)
-    await processNotificationQueue(notificationsQueue);
+    await processNotificationQueue(notificationsQueue, auth.activeSucursalId);
 
     return NextResponse.json({ data: result }, { status: 200 });
 

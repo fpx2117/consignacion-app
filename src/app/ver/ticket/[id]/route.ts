@@ -78,12 +78,11 @@ export async function GET(
       include: { cliente: true, detalles: { include: { producto: true } } },
     });
 
-    if (!ventaRaw) return NextResponse.json({ error: "Venta no encontrada" }, { status: 404 });
-
     const reporteData: VentaReportDTO = {
       id: ventaRaw.id,
       fecha: ventaRaw.fecha,
       total: Number(ventaRaw.total),
+      descuentoGlobal: Number((ventaRaw as any).descuentoGlobal || 0),
       metodoPago: String((ventaRaw as any).metodoPago ?? "EFECTIVO"),
       clienteNombre: ventaRaw.cliente?.nombre || "Consumidor Final",
       clienteTelefono: ventaRaw.cliente?.telefono || "",

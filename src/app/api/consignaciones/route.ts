@@ -1,4 +1,4 @@
-/* eslint-disable */
+﻿/* eslint-disable */
 // @ts-nocheck
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
@@ -7,7 +7,7 @@ import { createConsignacionSchema } from "@/lib/validators/consignacion";
 import { TipoMovimientoStock, MotivoMovimientoStock } from "@prisma/client";
 import { checkFeature } from "@/lib/requireSubscription";
 
-// ✅ Imports Centralizados de Config y Notificaciones
+// âœ… Imports Centralizados de Config y Notificaciones
 import { obtenerConfiguracionGlobal } from "@/lib/config";
 import { evaluateStockAlert, processNotificationQueue } from "@/lib/stock-alerts";
 
@@ -28,7 +28,7 @@ export async function GET() {
   return NextResponse.json({ data: consignaciones });
 }
 
-// POST: Crear Consignación
+// POST: Crear ConsignaciÃ³n
 export async function POST(req: Request) {
   const auth = await requireAuth();
   if (!auth.ok) return auth.res;
@@ -44,12 +44,12 @@ export async function POST(req: Request) {
 
   if (!parsed.success) {
     return NextResponse.json(
-      { error: "Validación fallida", details: parsed.error.flatten() },
+      { error: "ValidaciÃ³n fallida", details: parsed.error.flatten() },
       { status: 400 }
     );
   }
 
-  // ✅ 1. Preparar Configuración y Cola de Notificaciones
+  // âœ… 1. Preparar ConfiguraciÃ³n y Cola de Notificaciones
   const configGlobal = await obtenerConfiguracionGlobal(auth.activeSucursalId);
   const notificationsQueue: any[] = [];
 
@@ -64,7 +64,7 @@ export async function POST(req: Request) {
       });
       if (!cliente) throw new Error("CLIENTE_NO_EXISTE");
 
-      // 2. Lógica de Foliado
+      // 2. LÃ³gica de Foliado
       const ultimaConsignacion = await tx.consignacion.findFirst({
         where: { clienteId: parsed.data.clienteId },
         orderBy: { numeroFolio: "desc" },
@@ -97,7 +97,7 @@ export async function POST(req: Request) {
         }
       }
 
-      // 4. Crear consignación
+      // 4. Crear consignaciÃ³n
       const consignacion = await tx.consignacion.create({
         data: {
           clienteId: parsed.data.clienteId,
@@ -122,7 +122,7 @@ export async function POST(req: Request) {
         },
       });
 
-      // ✅ 5. Actualizar Stock en Sucursal, Auditoría y Alertas
+      // âœ… 5. Actualizar Stock en Sucursal, AuditorÃ­a y Alertas
       for (const it of parsed.data.items) {
         const sAntes = mapStock.get(it.productoId)!;
 
@@ -154,7 +154,7 @@ export async function POST(req: Request) {
             cantidad: it.unitsEntregadas,
             stockPrevio: sAntes.stockDisponibleUnits,
             stockPosterior: sDespues.stockDisponibleUnits,
-            observaciones: `Entrega de Consignación Folio #${nuevoFolio}`
+            observaciones: `Entrega de ConsignaciÃ³n Folio #${nuevoFolio}`
           }
         });
 
@@ -162,7 +162,7 @@ export async function POST(req: Request) {
         if (alerta) notificationsQueue.push(alerta);
       }
 
-      // Devolver la consignación completa con sus relaciones (opcional, como lo tenías)
+      // Devolver la consignaciÃ³n completa con sus relaciones (opcional, como lo tenÃ­as)
       return await tx.consignacion.findUnique({
         where: { id: consignacion.id },
         include: {
@@ -172,8 +172,8 @@ export async function POST(req: Request) {
       });
     });
 
-    // ✅ 6. DISPARAR NOTIFICACIONES DE STOCK (Centralizado y fuera de la transacción)
-    await processNotificationQueue(notificationsQueue);
+    // âœ… 6. DISPARAR NOTIFICACIONES DE STOCK (Centralizado y fuera de la transacciÃ³n)
+    await processNotificationQueue(notificationsQueue, auth.activeSucursalId);
 
     return NextResponse.json({ data: result }, { status: 201 });
 

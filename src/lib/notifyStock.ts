@@ -2,13 +2,9 @@
 // @ts-nocheck
 import { prisma } from "@/lib/prisma";
 
-// URL absoluta para SSR (tu apiRequest ya hace algo similar)
+// URL absoluta para SSR
 function getDispatchUrl() {
-  const baseUrl =
-    process.env.NEXT_PUBLIC_APP_URL ||
-    process.env.NEXT_PUBLIC_APP_URL ||
-    "http://localhost:3000";
-
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
   return `${baseUrl}/api/socket/dispatch`;
 }
 
@@ -24,14 +20,13 @@ async function dispatchSocket(notification: any) {
   }
 }
 
-export async function notifyStockIfNeeded(productId: number) {
+export async function notifyStockIfNeeded(productId: number, sucursalId: number = 1) {
   const p = await prisma.producto.findUnique({
     where: { id: productId },
     select: {
       id: true,
       nombre: true,
       stockDisponibleUnits: true,
-      // Si NO tenés este campo, borrá esta línea y el bloque LOW_STOCK
       stockMinUnits: true,
     },
   });
@@ -42,16 +37,17 @@ export async function notifyStockIfNeeded(productId: number) {
 
   // 1) OUT OF STOCK
   if (p.stockDisponibleUnits <= 0) {
-    const fingerprint = `OUT_OF_STOCK:PRODUCT:${p.id}`;
+    const fingerprint = `OUT_OF_STOCK:PRODUCT:${p.id}:SUC:${sucursalId}`;
 
     const n = await prisma.notification.upsert({
       where: { fingerprint },
-      update: { read: false }, // si estaba leída, la reactivamos
+      update: { read: false },
       create: {
         type: "OUT_OF_STOCK",
         title: "Sin stock",
         description: `${p.nombre} quedó sin stock.`,
         productoId: p.id,
+        sucursalId,
         read: false,
         fingerprint,
       },
@@ -69,10 +65,10 @@ export async function notifyStockIfNeeded(productId: number) {
     return;
   }
 
-  // 2) LOW STOCK (solo si existe stockMinUnits y está habilitado)
+  // 2) LOW STOCK
   const min = p.stockMinUnits ?? 0;
   if (min > 0 && p.stockDisponibleUnits <= min) {
-    const fingerprint = `LOW_STOCK:PRODUCT:${p.id}:MIN:${min}`;
+    const fingerprint = `LOW_STOCK:PRODUCT:${p.id}:MIN:${min}:SUC:${sucursalId}`;
 
     const n = await prisma.notification.upsert({
       where: { fingerprint },
@@ -82,6 +78,7 @@ export async function notifyStockIfNeeded(productId: number) {
         title: "Stock bajo",
         description: `${p.nombre} está bajo en stock (${p.stockDisponibleUnits}u).`,
         productoId: p.id,
+        sucursalId,
         read: false,
         fingerprint,
       },

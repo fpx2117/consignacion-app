@@ -1,4 +1,4 @@
-/* eslint-disable */
+﻿/* eslint-disable */
 // @ts-nocheck
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
@@ -7,7 +7,7 @@ import { createLiquidacionSchema } from "@/lib/validators/consignacion";
 import { z } from "zod";
 import { TipoMovimientoStock, MotivoMovimientoStock } from "@prisma/client";
 
-// ✅ Imports Centralizados de Config y Notificaciones
+// âœ… Imports Centralizados de Config y Notificaciones
 import { obtenerConfiguracionGlobal } from "@/lib/config";
 import { evaluateStockAlert, processNotificationQueue } from "@/lib/stock-alerts";
 
@@ -23,7 +23,7 @@ const updateConsignacionSchema = z.object({
 });
 
 /**
- * GET: Obtener el detalle de una consignación específica
+ * GET: Obtener el detalle de una consignaciÃ³n especÃ­fica
  */
 export async function GET(_: Request, { params }: RouteParams) {
   const auth = await requireAuth();
@@ -32,7 +32,7 @@ export async function GET(_: Request, { params }: RouteParams) {
   const { id: rawId } = await params;
   const id = Number(rawId);
 
-  if (!Number.isFinite(id)) return NextResponse.json({ error: "ID inválido" }, { status: 400 });
+  if (!Number.isFinite(id)) return NextResponse.json({ error: "ID invÃ¡lido" }, { status: 400 });
 
   const consignacion = await prisma.consignacion.findUnique({
     where: { id },
@@ -66,16 +66,16 @@ export async function PUT(req: Request, { params }: RouteParams) {
   const { id: rawId } = await params;
   const consignacionId = Number(rawId);
 
-  if (!Number.isFinite(consignacionId)) return NextResponse.json({ error: "ID inválido" }, { status: 400 });
+  if (!Number.isFinite(consignacionId)) return NextResponse.json({ error: "ID invÃ¡lido" }, { status: 400 });
 
   const body = await req.json().catch(() => null);
   const parsed = updateConsignacionSchema.safeParse(body);
 
   if (!parsed.success) {
-    return NextResponse.json({ error: "Validación fallida", details: parsed.error.flatten() }, { status: 400 });
+    return NextResponse.json({ error: "ValidaciÃ³n fallida", details: parsed.error.flatten() }, { status: 400 });
   }
 
-  // ✅ 1. Cola de Alertas
+  // âœ… 1. Cola de Alertas
   const configGlobal = await obtenerConfiguracionGlobal();
   const notificationsQueue: any[] = [];
 
@@ -104,7 +104,7 @@ export async function PUT(req: Request, { params }: RouteParams) {
         const deltaEntregadas = item.unitsEntregadas - (oldDet?.unitsEntregadas ?? 0);
 
         if (deltaEntregadas !== 0) {
-          const sucursalId = consignacion.sucursalId; // Usamos la sucursal de la consignación
+          const sucursalId = consignacion.sucursalId; // Usamos la sucursal de la consignaciÃ³n
 
           // 1. Obtener stock de la sucursal
           const sAntes = await tx.stockSucursal.findUnique({
@@ -112,7 +112,7 @@ export async function PUT(req: Request, { params }: RouteParams) {
             include: { producto: true }
           });
 
-          if (!sAntes) throw new Error(`El producto ${item.productoId} no está asignado a la sucursal de la consignación.`);
+          if (!sAntes) throw new Error(`El producto ${item.productoId} no estÃ¡ asignado a la sucursal de la consignaciÃ³n.`);
 
           if (deltaEntregadas > 0 && sAntes.stockDisponibleUnits < deltaEntregadas) {
             throw new Error(`Stock insuficiente para producto ${sAntes.producto.nombre} en esta sucursal.`);
@@ -136,7 +136,7 @@ export async function PUT(req: Request, { params }: RouteParams) {
             }
           });
 
-          // ✅ REGISTRO DE AUDITORÍA (AJUSTE)
+          // âœ… REGISTRO DE AUDITORÃA (AJUSTE)
           await tx.movimientoStock.create({
             data: {
               productoId: item.productoId,
@@ -146,7 +146,7 @@ export async function PUT(req: Request, { params }: RouteParams) {
               cantidad: Math.abs(deltaEntregadas),
               stockPrevio: sAntes.stockDisponibleUnits,
               stockPosterior: sDespues.stockDisponibleUnits,
-              observaciones: `Ajuste manual Consignación #${consignacionId}`
+              observaciones: `Ajuste manual ConsignaciÃ³n #${consignacionId}`
             }
           });
 
@@ -174,7 +174,7 @@ export async function PUT(req: Request, { params }: RouteParams) {
         }
       }
 
-      // 2. Eliminar productos que ya no están en la lista
+      // 2. Eliminar productos que ya no estÃ¡n en la lista
       const newProductIds = new Set(newItems.map(i => i.productoId));
       for (const [prodId, oldDet] of oldDetalles.entries()) {
         if (!newProductIds.has(prodId)) {
@@ -189,7 +189,7 @@ export async function PUT(req: Request, { params }: RouteParams) {
             where: { productoId_sucursalId: { productoId: prodId, sucursalId } }
           });
 
-          // 2. Devolver stock al almacén de la sucursal
+          // 2. Devolver stock al almacÃ©n de la sucursal
           const sDespues = await tx.stockSucursal.update({
             where: { id: sAntes!.id },
             data: {
@@ -207,7 +207,7 @@ export async function PUT(req: Request, { params }: RouteParams) {
             }
           });
 
-          // ✅ AUDITORÍA: REVERSO DE CONSIGNACIÓN
+          // âœ… AUDITORÃA: REVERSO DE CONSIGNACIÃ“N
           await tx.movimientoStock.create({
             data: {
               productoId: prodId,
@@ -217,7 +217,7 @@ export async function PUT(req: Request, { params }: RouteParams) {
               cantidad: oldDet.unitsEntregadas,
               stockPrevio: sAntes!.stockDisponibleUnits,
               stockPosterior: sDespues.stockDisponibleUnits,
-              observaciones: `Eliminado de Consignación #${consignacionId}`
+              observaciones: `Eliminado de ConsignaciÃ³n #${consignacionId}`
             }
           });
 
@@ -231,8 +231,8 @@ export async function PUT(req: Request, { params }: RouteParams) {
       });
     });
 
-    // ✅ DISPARAR ALERTAS
-    await processNotificationQueue(notificationsQueue);
+    // âœ… DISPARAR ALERTAS
+    await processNotificationQueue(notificationsQueue, auth.activeSucursalId);
 
     return NextResponse.json({ data: updated });
   } catch (e: any) {
@@ -241,7 +241,7 @@ export async function PUT(req: Request, { params }: RouteParams) {
 }
 
 /**
- * POST: Crear una liquidación para esta consignación
+ * POST: Crear una liquidaciÃ³n para esta consignaciÃ³n
  */
 export async function POST(req: Request, { params }: RouteParams) {
   const auth = await requireAuth();
@@ -250,16 +250,16 @@ export async function POST(req: Request, { params }: RouteParams) {
   const { id: rawId } = await params;
   const consignacionId = Number(rawId);
 
-  if (!Number.isFinite(consignacionId)) return NextResponse.json({ error: "ID inválido" }, { status: 400 });
+  if (!Number.isFinite(consignacionId)) return NextResponse.json({ error: "ID invÃ¡lido" }, { status: 400 });
 
   const body = await req.json().catch(() => null);
   const parsed = createLiquidacionSchema.safeParse(body);
 
   if (!parsed.success) {
-    return NextResponse.json({ error: "Validación fallida", details: parsed.error.flatten() }, { status: 400 });
+    return NextResponse.json({ error: "ValidaciÃ³n fallida", details: parsed.error.flatten() }, { status: 400 });
   }
 
-  // ✅ 1. Cola de Alertas
+  // âœ… 1. Cola de Alertas
   const configGlobal = await obtenerConfiguracionGlobal();
   const notificationsQueue: any[] = [];
 
@@ -277,7 +277,7 @@ export async function POST(req: Request, { params }: RouteParams) {
       let totalVenta = 0;
       const soldByProduct = new Map<number, { units: number; precioUnitario: number; descuento: number }>();
 
-      // A) Cálculos previos
+      // A) CÃ¡lculos previos
       for (const it of parsed.data.items) {
         const det = detallesMap.get(it.consignacionDetalleId);
         if (!det) throw new Error("DETALLE_NO_PERTENECE");
@@ -303,7 +303,7 @@ export async function POST(req: Request, { params }: RouteParams) {
         }
       }
 
-      // B) Crear Liquidación Cabecera
+      // B) Crear LiquidaciÃ³n Cabecera
       const liquidacion = await tx.liquidacion.create({
         data: {
           consignacionId,
@@ -322,7 +322,7 @@ export async function POST(req: Request, { params }: RouteParams) {
         },
       });
 
-      // C) Aplicar Liquidación (Stock y Auditoría)
+      // C) Aplicar LiquidaciÃ³n (Stock y AuditorÃ­a)
       for (const it of parsed.data.items) {
         const det = detallesMap.get(it.consignacionDetalleId)!;
         const vendidas = it.unitsVendidas ?? 0;
@@ -361,7 +361,7 @@ export async function POST(req: Request, { params }: RouteParams) {
           },
         });
 
-        // ✅ AUDITORÍA: SI DEVOLVIÓ ALGO (Entra al almacén de la sucursal)
+        // âœ… AUDITORÃA: SI DEVOLVIÃ“ ALGO (Entra al almacÃ©n de la sucursal)
         if (devueltas > 0) {
           await tx.movimientoStock.create({
             data: {
@@ -372,12 +372,12 @@ export async function POST(req: Request, { params }: RouteParams) {
               cantidad: devueltas,
               stockPrevio: sAntes!.stockDisponibleUnits,
               stockPosterior: sDespues.stockDisponibleUnits,
-              observaciones: `Devolución s/Consignación #${consignacionId}`
+              observaciones: `DevoluciÃ³n s/ConsignaciÃ³n #${consignacionId}`
             }
           });
         }
 
-        // ✅ AUDITORÍA: SI VENDIÓ ALGO (Sale definitivamente de la sucursal)
+        // âœ… AUDITORÃA: SI VENDIÃ“ ALGO (Sale definitivamente de la sucursal)
         if (vendidas > 0) {
           await tx.movimientoStock.create({
             data: {
@@ -388,12 +388,12 @@ export async function POST(req: Request, { params }: RouteParams) {
               cantidad: vendidas,
               stockPrevio: sAntes!.stockDisponibleUnits,
               stockPosterior: sDespues.stockDisponibleUnits,
-              observaciones: `Venta Liquidada s/Consignación #${consignacionId}`
+              observaciones: `Venta Liquidada s/ConsignaciÃ³n #${consignacionId}`
             }
           });
         }
 
-        // Evaluar alertas (Aunque el stock devuelto suma, si está muy bajo avisa)
+        // Evaluar alertas (Aunque el stock devuelto suma, si estÃ¡ muy bajo avisa)
         const alerta = evaluateStockAlert(productoDespues, configGlobal);
         if (alerta) notificationsQueue.push(alerta);
       }
@@ -423,7 +423,7 @@ export async function POST(req: Request, { params }: RouteParams) {
         });
       }
 
-      // E) Cerrar si está terminada
+      // E) Cerrar si estÃ¡ terminada
       const detallesFinales = await tx.consignacionDetalle.findMany({ where: { consignacionId } });
       const cerrada = !detallesFinales.some(d => (d.unitsEntregadas - d.unitsVendidasAcum - d.unitsDevueltasAcum) > 0);
       if (cerrada) await tx.consignacion.update({ where: { id: consignacionId }, data: { estado: "CERRADA" } });
@@ -431,8 +431,8 @@ export async function POST(req: Request, { params }: RouteParams) {
       return { liquidacion, cerrada };
     });
 
-    // ✅ DISPARAR ALERTAS
-    await processNotificationQueue(notificationsQueue);
+    // âœ… DISPARAR ALERTAS
+    await processNotificationQueue(notificationsQueue, auth.activeSucursalId);
 
     return NextResponse.json({ data: result }, { status: 201 });
   } catch (e: any) {

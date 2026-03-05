@@ -11,16 +11,21 @@ export async function GET(req: Request) {
     const auth = await requireAuth();
     if (!auth.ok) return auth.res;
 
+    const sucursalId = auth.activeSucursalId;
     const { searchParams } = new URL(req.url);
     const onlyUnread = searchParams.get("onlyUnread") === "true";
     const limit = Number(searchParams.get("limit") || 50);
 
-    // 2. Query Principal
+    // 2. Query filtrada por sucursal
+    const baseWhere = {
+      sucursalId,
+      ...(onlyUnread ? { read: false } : {}),
+    };
+
     const notifications = await prisma.notification.findMany({
-      where: onlyUnread ? { read: false } : {},
-      orderBy: { createdAt: "desc" }, // Las más nuevas primero
+      where: baseWhere,
+      orderBy: { createdAt: "desc" },
       take: limit,
-      // Incluimos datos del producto para mostrar nombres en la alerta
       include: {
         producto: {
           select: { id: true, nombre: true }
@@ -28,14 +33,14 @@ export async function GET(req: Request) {
       }
     });
 
-    // 3. Obtener contador total de no leídas (para el globito rojo 🔴)
+    // 3. Contador de no leídas solo de esta sucursal
     const unreadCount = await prisma.notification.count({
-      where: { read: false }
+      where: { sucursalId, read: false }
     });
 
-    return NextResponse.json({ 
-      data: notifications, 
-      unreadCount // Enviamos el contador separado
+    return NextResponse.json({
+      data: notifications,
+      unreadCount
     });
 
   } catch (error) {
@@ -53,14 +58,15 @@ export async function PATCH(req: Request) {
     const auth = await requireAuth();
     if (!auth.ok) return auth.res;
 
+    const sucursalId = auth.activeSucursalId;
     const body = await req.json();
-    const { ids, markAll } = body; // Esperamos { markAll: true } o { ids: [1, 2] }
+    const { ids, markAll } = body;
 
-    // Opción A: Marcar TODO como leído (botón "Marcar todo como leído")
+    // Opción A: Marcar todo como leído solo en la sucursal activa
     if (markAll) {
       await prisma.notification.updateMany({
-        where: { read: false },
-        data: { 
+        where: { sucursalId, read: false },
+        data: {
           read: true,
           readAt: new Date()
         }
@@ -68,13 +74,13 @@ export async function PATCH(req: Request) {
       return NextResponse.json({ success: true, message: "Todas leídas" });
     }
 
-    // Opción B: Marcar algunas específicas (al hacer clic en una)
+    // Opción B: Marcar algunas específicas (protegemos que sean de esta sucursal)
     if (ids && Array.isArray(ids) && ids.length > 0) {
       await prisma.notification.updateMany({
-        where: { id: { in: ids } },
-        data: { 
-          read: true, 
-          readAt: new Date() 
+        where: { id: { in: ids }, sucursalId },
+        data: {
+          read: true,
+          readAt: new Date()
         }
       });
       return NextResponse.json({ success: true, message: "Actualizadas" });

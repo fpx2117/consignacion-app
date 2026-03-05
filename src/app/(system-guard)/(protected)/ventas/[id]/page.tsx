@@ -124,6 +124,7 @@ export default function VentaDetailPage() {
   const totalItems = detalles.reduce((acc, d) => acc + d.units, 0);
   const metodoPago = (venta as any)?.metodoPago || "Efectivo";
   const clienteNombre = venta?.cliente?.nombre || "Consumidor Final";
+  const descuentoGlobal = Number((venta as any)?.descuentoGlobal || 0);
 
   // Número visual de ticket (001)
   const ticketNumber = String(id).padStart(3, '0');
@@ -215,10 +216,14 @@ export default function VentaDetailPage() {
         </div>
 
         {/* Total Gigante en el Header */}
-        <div className="text-right relative z-10">
+        <div className="text-right relative z-10 flex flex-col items-end">
+          {descuentoGlobal > 0 && !loading && (
+            <Badge variant="outline" className="mb-2 bg-emerald-50 text-emerald-600 border-emerald-200">
+              Descuento General: -{formatCurrency(descuentoGlobal)}
+            </Badge>
+          )}
           <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest mb-1">Total Abonado</p>
 
-          {/* ✅ CAMBIO: Usamos <div> aquí porque adentro puede haber un Skeleton (que es otro div) */}
           <div className="text-4xl md:text-5xl font-black tracking-tighter text-foreground">
             {loading ? (
               <Skeleton className="h-12 w-32 ml-auto" />
@@ -250,13 +255,13 @@ export default function VentaDetailPage() {
           value={venta?.cliente ? "Registrado" : "Casual"}
           loading={loading}
         />
-      </div>
+      </div >
 
       {/* Main Content Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+      < div className="grid grid-cols-1 lg:grid-cols-12 gap-8" >
 
         {/* Columna Izquierda (8): Detalle de Venta */}
-        <div className="lg:col-span-8 space-y-4">
+        < div className="lg:col-span-8 space-y-4" >
           <Card className="shadow-lg border-border bg-card/40 backdrop-blur">
             <CardHeader>
               <CardTitle className="text-xl font-bold flex items-center gap-2 text-foreground">
@@ -276,10 +281,10 @@ export default function VentaDetailPage() {
               )}
             </CardContent>
           </Card>
-        </div>
+        </div >
 
         {/* Columna Derecha (4): Acciones */}
-        <div className="lg:col-span-4 space-y-6">
+        < div className="lg:col-span-4 space-y-6" >
           <Card className="shadow-xl border-indigo-500/20 bg-indigo-500/5 dark:bg-indigo-500/10 overflow-hidden">
             <CardHeader className="pb-3">
               <CardTitle className="text-lg font-bold flex items-center gap-2">
@@ -324,9 +329,9 @@ export default function VentaDetailPage() {
               </div>
             </CardContent>
           </Card>
-        </div>
-      </div>
-    </div>
+        </div >
+      </div >
+    </div >
   );
 }
 
