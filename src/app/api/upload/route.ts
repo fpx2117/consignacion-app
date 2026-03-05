@@ -7,6 +7,15 @@ import { writeFile, mkdir } from "fs/promises";
 import path from "path";
 import { requireAuth, requireRole } from "@/lib/requireAuth";
 
+// En Railway: UPLOAD_DIR=/app/uploads (volumen persistente montado)
+// En local:   guarda en public/uploads (servido estático por Next.js)
+const UPLOAD_DIR = process.env.UPLOAD_DIR
+    ? process.env.UPLOAD_DIR
+    : path.join(process.cwd(), "public", "uploads");
+
+// Si hay UPLOAD_DIR configurado usamos el endpoint /api/files/ para servir
+const USE_API_SERVE = Boolean(process.env.UPLOAD_DIR);
+
 export async function POST(req: Request) {
     try {
         const auth = await requireAuth();
@@ -26,32 +35,25 @@ export async function POST(req: Request) {
         const bytes = await file.arrayBuffer();
         const buffer = Buffer.from(bytes);
 
-        // Definir la ruta de destino
-        const uploadDir = path.join(process.cwd(), "public", "uploads");
-
-        // Asegurarse de que el directorio exista (por si acaso)
-        try {
-            await mkdir(uploadDir, { recursive: true });
-        } catch (e) { }
+        // Crear directorio si no existe
+        await mkdir(UPLOAD_DIR, { recursive: true });
 
         // Generar nombre de archivo único
         const timestamp = Date.now();
         const sanitizedName = file.name.replace(/[^a-z0-9.]/gi, "_").toLowerCase();
         const filename = `${timestamp}-${sanitizedName}`;
-        const filePath = path.join(uploadDir, filename);
+        const filePath = path.join(UPLOAD_DIR, filename);
 
-        // Escribir el archivo
+        // Escribir el archivo en el volumen
         await writeFile(filePath, buffer);
 
-        // Devolver la URL pública
-        const url = `/uploads/${filename}`;
+        // En Railway usamos /api/files/ para servir desde el volumen.
+        // En local usamos /uploads/ (carpeta public, servida estáticamente por Next.js).
+        const url = USE_API_SERVE
+            ? `/api/files/${filename}`
+            : `/uploads/${filename}`;
 
-        return NextResponse.json({
-            success: true,
-            url: url,
-            filename: filename
-        });
-
+        return NextResponse.json({ success: true, url, filename });
     } catch (error) {
         console.error("Error en upload:", error);
         return NextResponse.json(
