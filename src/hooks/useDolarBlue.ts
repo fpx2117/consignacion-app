@@ -1,6 +1,6 @@
 // src/hooks/useDolarBlue.ts
 import { useState, useEffect } from 'react';
-import { DolarBlueResponse } from '@/lib/dolarBlue';
+import { DolarCriptoResponse } from '@/lib/dolarBlue';
 
 export function useDolarBlue() {
     const [rate, setRate] = useState<number | null>(null);
@@ -10,9 +10,9 @@ export function useDolarBlue() {
     useEffect(() => {
         async function getRate() {
             try {
-                const res = await fetch('https://dolarapi.com/v1/dolares/blue');
+                const res = await fetch('https://dolarapi.com/v1/dolares/cripto');
                 if (!res.ok) throw new Error('API Error');
-                const data: DolarBlueResponse = await res.json();
+                const data: DolarCriptoResponse = await res.json();
                 setRate(data.venta);
             } catch (err) {
                 console.error("Failed to fetch client-side dolar rate", err);
