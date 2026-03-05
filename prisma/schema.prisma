@@ -30,6 +30,14 @@ model Configuracion {
   separarListaPorSucursal        Boolean  @default(true)
   mostrarCategoriasEnHeader      Boolean  @default(true)
   tiendaLayout                   String   @default("grid")
+  
+  // Nodos para Andreani
+  andreaniContratoDomicilio      String?
+  andreaniContratoSucursal       String?
+  andreaniCliente                String?
+  andreaniUsuario                String?
+  andreaniPassword               String?
+
   sucursal                       Sucursal @relation(fields: [sucursalId], references: [id])
 }
 
@@ -109,8 +117,13 @@ model HorarioLaboral {
 model Cliente {
   id             Int            @id @default(autoincrement())
   nombre         String
+  email          String?
+  documento      String?
   telefono       String?
   direccion      String?
+  provincia      String?
+  localidad      String?
+  codigoPostal   String?
   activo         Boolean        @default(true)
   /// saldo positivo = debe
   saldoCuenta    Decimal        @default(0) @db.Decimal(10, 2)
@@ -393,11 +406,26 @@ model Venta {
   sesionCaja    SesionCaja?    @relation(fields: [sesionCajaId], references: [id], onDelete: Restrict)
   sucursal      Sucursal       @relation(fields: [sucursalId], references: [id])
   detalles      VentaDetalle[]
+  envio         Envio?
 
   @@index([clienteId, fecha])
   @@index([sesionCajaId])
   @@index([tipo])
   @@index([sucursalId])
+}
+
+model Envio {
+  id                Int      @id @default(autoincrement())
+  ventaId           Int      @unique
+  estado            String   @default("PENDIENTE") // PENDIENTE, ENVIADO, ENTREGADO, CANCELADO
+  codigoSeguimiento String?
+  costo             Decimal  @default(0) @db.Decimal(10, 2)
+  metodoEnvio       String   // DOMICILIO, SUCURSAL
+  direccionEnvio    Json     // Guardamos un snapshot de donde se manda (calle, numero, cp, provincia, depto...)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  venta             Venta    @relation(fields: [ventaId], references: [id], onDelete: Cascade)
 }
 
 model VentaDetalle {

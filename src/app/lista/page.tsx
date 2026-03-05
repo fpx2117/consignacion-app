@@ -130,12 +130,14 @@ function CatalogContent() {
         }));
     };
 
-    const handleCheckout = async () => {
+    const handleCheckout = async (clienteData: any, envioData: any) => {
         setCheckoutLoading(true);
         try {
             const res = await apiService.createPublicCheckout({
                 items: cart,
-                sucursalId: sucursalId ? Number(sucursalId) : 1
+                sucursalId: sucursalId ? Number(sucursalId) : 1,
+                clienteData,
+                envioData
             });
             if (res?.init_point) {
                 window.location.href = res.init_point;
