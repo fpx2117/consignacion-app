@@ -3,6 +3,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { MercadoPagoConfig, Preference } from "mercadopago";
+import crypto from "crypto";
 
 export async function POST(req: Request) {
     try {
@@ -66,6 +67,9 @@ export async function POST(req: Request) {
                 },
                 auto_return: "approved",
                 external_reference: JSON.stringify({ sucursalId: sucursalIdNum, type: "public_store" }),
+            },
+            requestOptions: {
+                idempotencyKey: crypto.randomUUID()
             }
         });
 

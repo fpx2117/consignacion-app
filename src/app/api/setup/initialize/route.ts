@@ -338,7 +338,7 @@ export async function POST(req: Request) {
                     if (!member?.email || !member?.nombre) continue;
 
                     const passwordToUse =
-                        member.password && member.password.trim() !== "" ? member.password : "123456";
+                        member.password && member.password.trim() !== "" ? member.password : Math.random().toString(36).slice(-8);
 
                     const staffHash = await bcrypt.hash(passwordToUse, 10);
 
