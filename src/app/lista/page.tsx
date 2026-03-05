@@ -137,8 +137,12 @@ function CatalogContent() {
                 items: cart,
                 sucursalId: sucursalId ? Number(sucursalId) : 1
             });
-            if (res.data?.init_point) {
+            if (res?.init_point) {
+                window.location.href = res.init_point;
+            } else if (res?.data?.init_point) {
                 window.location.href = res.data.init_point;
+            } else {
+                toast.error("No se pudo obtener el link de pago");
             }
         } catch (err: any) {
             toast.error(err.message || "Error al iniciar el pago");

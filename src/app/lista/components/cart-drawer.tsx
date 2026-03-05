@@ -56,10 +56,10 @@ export function CartDrawer({
                         {/* Header Elegante */}
                         <div className="px-8 py-6 flex items-center justify-between border-b border-zinc-200/50">
                             <div className="flex flex-col">
-                                <h2 className="text-xl font-black tracking-tight flex items-center gap-2">
+                                <h2 className="text-xl font-black tracking-tight flex items-center gap-2 text-zinc-900">
                                     TU CARRITO <span className="text-primary bg-primary/10 px-2 py-0.5 rounded-full text-xs">{cart.length}</span>
                                 </h2>
-                                <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-tighter">Finaliza tu orden ahora</p>
+                                <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-tighter">Finaliza tu orden ahora</p>
                             </div>
                             <Button variant="ghost" size="icon" className="rounded-full hover:rotate-90 transition-transform duration-300" onClick={onClose}>
                                 <XCircle className="h-6 w-6 text-zinc-400" />
@@ -134,7 +134,7 @@ export function CartDrawer({
                                                     </button>
                                                 </div>
                                                 <div className="text-right">
-                                                    <p className="text-xs text-zinc-400 line-through font-medium">
+                                                    <p className="text-xs text-zinc-500 line-through font-medium">
                                                         ${(Number(item.precioVenta)).toLocaleString('es-AR')} c/u
                                                     </p>
                                                     <p className="font-black text-lg text-zinc-900">
@@ -164,7 +164,7 @@ export function CartDrawer({
                                     )}
                                     <div className="pt-4 flex justify-between items-end">
                                         <div>
-                                            <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Total Estimado</p>
+                                            <p className="text-[10px] font-black text-zinc-600 uppercase tracking-widest">Total Estimado</p>
                                             <p className="text-3xl font-black text-zinc-900 tracking-tighter">
                                                 ${total.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
                                             </p>
@@ -177,7 +177,7 @@ export function CartDrawer({
 
                                 <Button
                                     className={cn(
-                                        "w-full h-16 text-md font-black shadow-xl transition-all gap-3 overflow-hidden group relative bg-zinc-900 hover:bg-zinc-800 text-white",
+                                        "w-full h-16 text-md font-black shadow-xl transition-all gap-3 overflow-hidden group relative bg-primary hover:bg-primary/90 text-primary-foreground",
                                         buttonRadiusClass,
                                         buttonHoverClass
                                     )}
@@ -194,7 +194,7 @@ export function CartDrawer({
 
                                 {/* Footer Security */}
                                 <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 pt-2">
-                                    <div className="flex items-center gap-1.5 text-zinc-400">
+                                    <div className="flex items-center gap-1.5 text-zinc-600">
                                         <ShieldCheck className="h-4 w-4 text-emerald-500" />
                                         <span className="text-[9px] uppercase font-bold tracking-wider">Checkout Seguro</span>
                                     </div>
