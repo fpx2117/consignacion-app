@@ -2,6 +2,7 @@
 // @ts-nocheck
 // src/lib/paypal.ts
 import { paymentConfig } from "./paymentConfig";
+import crypto from "crypto";
 
 const base = paymentConfig.paypal.apiUrl;
 
@@ -57,7 +58,8 @@ export async function createPayPalSubscription(planId: string, returnUrl?: strin
             Authorization: `Bearer ${accessToken}`,
             "Content-Type": "application/json",
             Accept: "application/json",
-            "Prefer": "return=representation"
+            "Prefer": "return=representation",
+            "PayPal-Request-Id": crypto.randomUUID()
         },
         body: JSON.stringify({
             plan_id: planId,

@@ -26,9 +26,23 @@ El sistema es una solución integral para la gestión de puntos de venta (POS) c
 - **Saldo deudor**: Seguimiento de deuda por cliente.
 - **Pagos y Recibos**: Registro de pagos a cuenta para reducir saldos.
 
+### 📊 Gastos y Finanzas
+- **Registro de Egresos**: Gestión de pagos con subida de comprobantes opcional.
+- **Gastos Recurrentes**: Creación de cuotas o gastos automáticos (frecuencia semanal, mensual o anual).
+- **Categorización**: Distribución de gastos en categorías por cada sucursal.
+
+### 🌐 Catálogo Público y Enlaces
+- **Vista al Público**: Los comercios pueden activar una URL pública para mostrar su inventario.
+- **Personalización de Marca**: Elección de colores, logo, banner promocional y layout de artículos (`Branding`).
+- **Enlaces Compartibles (`ShareLink`)**: Generación de URLs de acceso público, temporal y con conteo de vistas, para enviar remitos y tickets al cliente (sin que necesite clave).
+
+### � Notificaciones y SAAS (Suscripciones)
+- **Monetización**: Sistema de planes (`Plan`, `Promocode`) integrados con MercadoPago y PayPal para cobro de licencias recurrentes a las sucursales.
+- **Central de Alertas**: Avisos en tiempo real sobre límites de stock, vencimientos de productos, pagos recibidos y alertas de consignaciones (`Notification`).
+
 ---
 
-## 🗺️ Mapa de Rutas (Diagrama)
+## �🗺️ Mapa de Rutas (Diagrama)
 
 ```mermaid
 graph TD
@@ -44,11 +58,12 @@ graph TD
         D --> P[Productos]
         D --> CL[Clientes]
         D --> CA[Caja]
+        D --> G[Gastos]
     end
 
     subgraph "Ventas"
         V --> NV[Nueva Venta]
-        V --> DV[Detalle Venta]
+        V --> DV[Detalle/Abono]
     end
 
     subgraph "Consignaciones"
@@ -57,17 +72,24 @@ graph TD
         C --> DC[Detalle/Editar]
     end
 
+    subgraph "Finanzas y Público"
+        G --> NG[Registrar Gasto]
+        G --> RG[Gastos Recurrentes/Cuotas]
+        PU[Visita Cliente] --> TI[Catálogo/Tienda Pública]
+    end
+
     subgraph "Caja"
         CA --> AB[Abrir Caja]
         CA --> CI[Cerrar Caja]
-        CA --> HI[Historial]
+        CA --> HI[Historial Cajas]
     end
 
     subgraph "Ajustes y Sistema"
         D --> SET[Configuración]
-        SET --> BR[Sucursales]
-        SET --> SEC[Seguridad/Empleados]
-        SET --> SUB[Suscripción]
+        SET --> BR[Sucursales y Branding]
+        SET --> SEC[Roles/Empleados]
+        SET --> SUB[Planes y Suscripción]
+        SET --> NOT[Notificaciones]
     end
 ```
 
@@ -86,8 +108,9 @@ graph TD
 | `/caja/abrir` | Inicio de jornada laboral con monto inicial. |
 | `/productos` | Listado, filtros por categoría y gestión de stock. |
 | `/clientes` | Gestión de base de datos de clientes y saldos. |
-| `/settings/branches` | Gestión de múltiples sucursales. |
-| `/settings/subscriptions` | Gestión de plan (MercadoPago/PayPal). |
+| `/gastos` | Seguimiento de egresos, categorías de gastos y cuotas recurrentes. |
+| `/settings/*` | Ajustes de la cuenta: sucursales, facturación, interfaz y tienda. |
+| `/lista / /ver/[id]` | Catálogo público (Tienda) abierto a los visitantes externos. |
 
 ### API (Backend)
 
@@ -99,8 +122,13 @@ graph TD
 | `/api/liquidaciones` | Cierre de consignaciones y generación de ventas vinculadas. |
 | `/api/productos` | CRUD de productos y búsqueda por código de barras. |
 | `/api/clientes` | Datos de cliente y estado de cuenta corriente. |
+| `/api/gastos` | CRUD de gastos en caja y manejo masivo de cuotas recurrentes. |
+| `/api/public` | Accesos anónimos para el catálogo e inventario. |
+| `/api/notificaciones` | Endpoints de alertas, lectura y eliminación. |
+| `/api/subscriptions` | Gestión de planes, Checkout Pro y estado de la cuenta SAAS. |
+| `/api/webhooks/*` | Recepción de notificaciones de pago (MercadoPago/PayPal). |
+| `/api/historial` | Extracción de reportes de logs, cajas o auditoría. |
 | `/api/cron/*` | Tareas automáticas (check vencimientos, stock, suscripciones). |
-| `/api/webhooks/*` | Recepción de notificaciones de pago (MP/PayPal). |
 
 ---
 
@@ -108,10 +136,12 @@ graph TD
 
 El sistema utiliza **Prisma ORM** con una base de datos **PostgreSQL**. Las entidades principales son:
 
-- **Usuario**: Autenticación y roles (ADMIN/EMPLEADO).
-- **Sucursal**: El eje de la organización de datos.
-- **Producto/StockSucursal**: Inventario desacoplado por local.
-- **Consignacion/Liquidacion**: El motor de la gestión de depósitos externos.
-- **SesionCaja**: Trazabilidad de dinero físico.
-- **Subscription/Plan**: Monetización y límites del sistema.
+- **Usuario / HorarioLaboral**: Autenticación, roles (ADMIN/EMPLEADO) y turnos.
+- **Sucursal / Branding**: Eje de la organización de datos de sistema multi-tenant, incluye colores y logotipo.
+- **Producto / StockSucursal**: Inventario desacoplado por local, soportando stock principal vs stock consignado.
+- **Consignacion / Liquidacion**: Motor iterativo para enviar mercadería temporal y cobrarla a medida que decae.
+- **SesionCaja / MovimientoCaja**: Trazabilidad de dinero y caja fuerte.
+- **Gasto / CategoriaGasto**: Control de finanzas y sistema de pagos que requieren cobros en plazos (recurrentes).
+- **Subscription / Plan / PromoCode**: Monetización, integraciones de cobro de membresías comerciales y límites de uso.
+- **Notification / ShareLink**: Sistema de alertas nativas de la aplicación y generación ágil de visores para tickets/pedidos.
 

@@ -4,6 +4,7 @@
 import { NextResponse } from "next/server";
 import { SUBSCRIPTION_PLANS } from "@/constants/subscriptions";
 import { MercadoPagoConfig, PreApproval } from "mercadopago";
+import crypto from "crypto";
 import { paymentConfig } from "@/lib/paymentConfig";
 import { prisma } from "@/lib/prisma";
 
@@ -54,6 +55,9 @@ export async function POST(req: Request) {
                 external_reference: JSON.stringify({ flow: "setup", planId: plan.id }),
                 payer_email: "test_user_123@testuser.com", // En MP Subscriptions el email es obligatorio
                 status: "pending",
+            },
+            requestOptions: {
+                idempotencyKey: crypto.randomUUID()
             }
         });
 

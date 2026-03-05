@@ -2,41 +2,43 @@
 
 Este documento describe las posibles expansiones y mejoras para el sistema POS & Consignaciones, organizadas por prioridad y área de impacto.
 
+## ✅ Hitos Recientemente Completados
+*Funcionalidades mayores lanzadas en las últimas versiones.*
+
+- **Soporte para Gastos de Sucursal**: Módulo funcional para registrar gastos recurrentes, pagos y comprobantes.
+- **Tienda Pública / Catálogo Propio**: Despliegue de un catálogo on-line independiente para que los clientes finales puedan explorar el inventario y sus fotos.
+- **Multi-tenancy / Modelo SaaS**: El sistema ahora es capaz de soportar múltiples sucursales con configuraciones gráficas y facturación (Planes) independientes.
+- **Centro de Notificaciones en Tiempo Real**: Notificaciones de sistema para eventos críticos, stock y suscripciones.
+
+---
+
 ## 🟢 Corto Plazo: Mejoras Operativas
 *Mejoras directas sobre el flujo actual para optimizar la usabilidad.*
 
 ### 1. Transferencias entre Sucursales
 - Permitir mover stock de una sucursal a otra con un documento de "Envío Interno".
-- Confirmación de recepción en la sucursal de destino.
+- Confirmación de validación de recepción en la sucursal de destino.
 
-### 2. Soporte para Gastos de Sucursal
-- Módulo para registrar gastos (alquiler, servicios, sueldos) dentro de la sesión de caja.
-- Reporte consolidado de Ganancia Neta (Ventas - Costos - Gastos).
-
-### 3. Programa de Fidelización (Puntos)
-- Sistema básico donde cada compra genera puntos para el cliente.
-- Canje de puntos por descuentos en futuras ventas casuales.
-
----
+### 2. Programa de Fidelización (Puntos)
+- Sistema básico donde cada compra genera puntos (Cashback/Puntos) para el cliente recurrente.
+- Canje de puntos por descuentos porcentuales en futuras ventas casuales.
 
 ## 🟡 Mediano Plazo: Expansión de Canales
 *Nuevas formas de interactuar con el sistema y los clientes.*
 
-### 1. Aplicación Móvil (PWA o Nativa)
-- Versión optimizada para celulares enfocada en:
-    - Lectura de códigos con la cámara del teléfono.
-    - Consulta rápida de stock y precios en el salón de ventas.
-    - Visualización de KPI para el dueño desde cualquier lugar.
+### 1. Aplicación Móvil Nativa
+- Versión optimizada y nativa (iOS/Android) enfocada en:
+    - Uso intensivo del escáner con la cámara del teléfono y portabilidad en depósitos.
+    - Consulta rápida de stock y precios de forma ágil desde el salón de ventas.
+    - Visualización de gráficas y reportes clave (KPI).
 
-### 2. Integración con E-commerce (Tienda Online)
-- Sincronización automática de stock con plataformas como Tiendanube, Shopify o catálogo propio.
-- Recepción de pedidos online directamente en el panel de ventas del POS.
+### 2. Integración con Marketplaces y E-commerce
+- Sincronización bidireccional de stock y ventas con plataformas masivas como Tiendanube, Shopify o MercadoLibre.
+- Unificación del embudo de ventas en el POS de Consignaciones.
 
-### 3. Impresión de Etiquetas
-- Generador de etiquetas con código de barras y precios para productos que no traen código de fábrica.
-- Soporte para impresoras térmicas de etiquetas (Zebra, Brother).
-
----
+### 3. Impresión Universal de Etiquetas Térmicas
+- Generador masivo de etiquetas con código de barras y QR adaptativo.
+- Soporte para integración transparente por red de impresoras térmicas ESC/POS e industriales (Zebra, Brother).
 
 ## 🔵 Largo Plazo: Inteligencia y Automatización
 *Uso de tecnologías avanzadas para dar valor estratégico.*
@@ -56,6 +58,6 @@ Este documento describe las posibles expansiones y mejoras para el sistema POS &
 
 ## 🛠️ Mejoras Técnicas Propuestas
 
-- **Multi-tenancy**: Preparar el sistema de base de datos para manejar múltiples empresas independientes (SaaS).
-- **Log de Auditoría Avanzado**: Visualizador en el panel de admin para ver exactamente quién cambió un precio o stock y cuándo.
-- **Exportación masiva**: Generación de reportes contables listos para importar en sistemas como Bejerman o Tango.
+- **Testing E2E Continuo**: Implementación extensa de casos de test con Playwright para blindar regresiones sobre el pipeline de ventas de caja.
+- **Log de Auditoría Avanzado**: Mejoras en el visualizador dentro del panel de administrador para trazabilidad absoluta de movimientos de stock manuales.
+- **Exportación Contable (AFIP/Tango/Bejerman)**: Generación de salidas planas estructuradas para importar directamente en software contable gubernamental.

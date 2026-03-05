@@ -2,6 +2,7 @@
 // @ts-nocheck
 // src/lib/mercadopago.ts
 import { MercadoPagoConfig, Preference } from "mercadopago";
+import crypto from "crypto";
 import { paymentConfig } from "./paymentConfig";
 import { getPlanByExternalId } from "@/constants/subscriptions";
 import { prisma } from "./prisma";
@@ -49,6 +50,9 @@ export async function createMercadoPagoPreference(planId: string, userId: string
                 auto_return: "approved",
                 external_reference: JSON.stringify({ userId, planId }),
                 notification_url: `${process.env.NEXT_PUBLIC_APP_URL}/api/webhooks/mercadopago`,
+            },
+            requestOptions: {
+                idempotencyKey: crypto.randomUUID()
             }
         });
 
