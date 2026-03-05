@@ -17,6 +17,23 @@ import {
 import { apiService } from "@/lib/apiService";
 import type { Producto, Cliente, CreateVentaDirectaInput, MetodoPago, DescuentoNivel } from "@/lib/types";
 import { SuccessDialog } from "@/components/success-dialog";
+// src/app/(protected)/ventas/nueva/page.tsx
+"use client";
+
+import * as React from "react";
+import { useRouter } from "next/navigation";
+import { AnimatePresence, motion } from "framer-motion";
+import {
+  Plus, Minus, Trash2, Loader2, ArrowLeft, ShoppingCart,
+  Search, Banknote, CreditCard, QrCode, Coins, Check, ChevronsUpDown,
+  UserCircle2, Barcode, Lock, Store,
+  Image as ImageIcon,
+  BadgePercent
+} from "lucide-react";
+
+import { apiService } from "@/lib/apiService";
+import type { Producto, Cliente, CreateVentaDirectaInput, MetodoPago, DescuentoNivel } from "@/lib/types";
+import { SuccessDialog } from "@/components/success-dialog";
 import { ErrorDialog } from "@/components/error-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -27,6 +44,9 @@ import {
   Command, CommandEmpty, CommandGroup, CommandInput,
   CommandItem, CommandList
 } from "@/components/ui/command";
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter
+} from "@/components/ui/dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
@@ -92,6 +112,12 @@ export default function NuevaVentaPage() {
   const [showSuccessDialog, setShowSuccessDialog] = React.useState(false);
   const [createdVentaId, setCreatedVentaId] = React.useState<number | null>(null);
   const [errorDialog, setErrorDialog] = React.useState({ open: false, title: "", description: "" });
+
+  // Descuento Global States
+  const [openDescuento, setOpenDescuento] = React.useState(false);
+  const [descuentoTipo, setDescuentoTipo] = React.useState<"MONTO" | "PORCENTAJE">("MONTO");
+  const [descuentoValor, setDescuentoValor] = React.useState<string>("");
+  const [descuentoAplicado, setDescuentoAplicado] = React.useState<{ tipo: "MONTO" | "PORCENTAJE", valor: number } | null>(null);
 
   // --- ESTADOS DE CAJA Y HORARIO ---
   const [usaCajaEstricta, setUsaCajaEstricta] = React.useState<boolean>(true);
@@ -259,8 +285,20 @@ export default function NuevaVentaPage() {
     }
     return acc;
   }, 0);
-  const montoInteres = metodoPago === "TARJETA" ? ((totalSinInteres - totalDescuento) * (porcentajeInteresTarjeta / 100)) : 0;
-  const totalAmount = totalSinInteres - totalDescuento + montoInteres;
+
+  const subtotalNetoItems = totalSinInteres - totalDescuento;
+
+  let montoDescuentoGlobal = 0;
+  if (descuentoAplicado) {
+    if (descuentoAplicado.tipo === "MONTO") {
+      montoDescuentoGlobal = descuentoAplicado.valor;
+    } else {
+      montoDescuentoGlobal = subtotalNetoItems * (descuentoAplicado.valor / 100);
+    }
+  }
+
+  const montoInteres = metodoPago === "TARJETA" ? ((subtotalNetoItems - montoDescuentoGlobal) * (porcentajeInteresTarjeta / 100)) : 0;
+  const totalAmount = subtotalNetoItems - montoDescuentoGlobal + montoInteres;
 
   // --- COBRAR ---
   const handleCobrar = async () => {
@@ -290,7 +328,8 @@ export default function NuevaVentaPage() {
             descuento: discountForItem
           };
         }),
-        metodoPago: metodoPago
+        metodoPago: metodoPago,
+        descuentoGlobal: montoDescuentoGlobal
       };
       const res = await apiService.createVentaDirecta(payload);
       setCreatedVentaId(res.id);
@@ -308,6 +347,8 @@ export default function NuevaVentaPage() {
     setSelectedClienteId("");
     setCreatedVentaId(null);
     setShowSuccessDialog(false);
+    setDescuentoAplicado(null);
+    setDescuentoValor("");
     fetchData();
   };
 
@@ -724,9 +765,15 @@ export default function NuevaVentaPage() {
                 </div>
               )}
               <div className="flex justify-between text-sm text-muted-foreground font-medium">
-                <span>Descuentos</span>
+                <span>Desc. x Producto</span>
                 <span className={totalDescuento > 0 ? 'text-emerald-600 font-bold' : ''}>- {formatCurrency(totalDescuento)}</span>
               </div>
+              {montoDescuentoGlobal > 0 && (
+                <div className="flex justify-between text-sm text-emerald-600 font-bold">
+                  <span>Desc. General {descuentoAplicado?.tipo === "PORCENTAJE" ? `(${descuentoAplicado.valor}%)` : ""}</span>
+                  <span>- {formatCurrency(montoDescuentoGlobal)}</span>
+                </div>
+              )}
               <div className="flex justify-between items-end pt-2 border-t border-border/50">
                 <span className="text-sm font-black uppercase text-muted-foreground tracking-widest">Total</span>
                 <span className="text-3xl font-black text-primary tabular-nums">{formatCurrency(totalAmount)}</span>
@@ -741,7 +788,7 @@ export default function NuevaVentaPage() {
       <div className="fixed bottom-[90px] md:bottom-6 left-0 right-0 z-40 px-4 flex justify-center pointer-events-none">
         <div className="w-full max-w-2xl bg-background/90 backdrop-blur-xl border border-border/50 shadow-2xl rounded-[2rem] p-3 md:p-4 pointer-events-auto transition-all duration-300">
           <div className="space-y-4">
-            <PaymentSelector metodoPago={metodoPago} setMetodoPago={setMetodoPago} />
+            <PaymentSelector metodoPago={metodoPago} setMetodoPago={setMetodoPago} onOpenDescuento={() => setOpenDescuento(true)} />
             <Button
               onClick={handleCobrar}
               disabled={loading || cart.length === 0}
@@ -784,28 +831,103 @@ export default function NuevaVentaPage() {
         title={errorDialog.title}
         description={errorDialog.description}
       />
+
+      <Dialog open={openDescuento} onOpenChange={setOpenDescuento}>
+        <DialogContent className="sm:max-w-xs md:max-w-sm rounded-2xl">
+          <DialogHeader>
+            <DialogTitle>Descuento General</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="flex gap-2">
+              <Button
+                variant={descuentoTipo === "MONTO" ? "default" : "outline"}
+                className={cn("flex-1", descuentoTipo === "MONTO" && "bg-emerald-600 hover:bg-emerald-700 text-white")}
+                onClick={() => setDescuentoTipo("MONTO")}
+              >
+                Monto Fijo ($)
+              </Button>
+              <Button
+                variant={descuentoTipo === "PORCENTAJE" ? "default" : "outline"}
+                className={cn("flex-1", descuentoTipo === "PORCENTAJE" && "bg-emerald-600 hover:bg-emerald-700 text-white")}
+                onClick={() => setDescuentoTipo("PORCENTAJE")}
+              >
+                Porcentaje (%)
+              </Button>
+            </div>
+            <div>
+              <Input
+                type="number"
+                placeholder={descuentoTipo === "MONTO" ? "Ej: 1500" : "Ej: 10"}
+                value={descuentoValor}
+                onChange={(e) => setDescuentoValor(e.target.value)}
+                className="text-lg font-bold text-center h-12"
+              />
+            </div>
+            {descuentoAplicado && (
+              <Button
+                variant="ghost"
+                className="w-full text-red-500 hover:text-red-600 hover:bg-red-50"
+                onClick={() => {
+                  setDescuentoAplicado(null);
+                  setDescuentoValor("");
+                  setOpenDescuento(false);
+                }}
+              >
+                Quitar Descuento Actual
+              </Button>
+            )}
+          </div>
+          <DialogFooter>
+            <Button
+              className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold"
+              onClick={() => {
+                const val = parseFloat(descuentoValor);
+                if (!isNaN(val) && val > 0) {
+                  setDescuentoAplicado({ tipo: descuentoTipo, valor: val });
+                } else {
+                  setDescuentoAplicado(null);
+                }
+                setOpenDescuento(false);
+              }}
+            >
+              Aplicar Descuento
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
 
-function PaymentSelector({ metodoPago, setMetodoPago }: any) {
+function PaymentSelector({ metodoPago, setMetodoPago, onOpenDescuento }: any) {
   return (
     <div className="grid grid-cols-4 gap-2 md:gap-3">
-      {METODOS_PAGO.map((m: any) => (
+      {METODOS_PAGO.map((m: any) => m.value !== "OTRO" ? (
         <button
           key={m.value}
           onClick={() => setMetodoPago(m.value)}
           className={cn(
             "flex flex-col items-center justify-center rounded-xl font-bold border transition-all h-[52px] md:h-[64px]",
             metodoPago === m.value
-              ? "bg-primary border-primary text-primary-foreground shadow-md ring-2 ring-primary/20"
-              : "bg-muted/50 border-transparent text-muted-foreground hover:bg-muted"
+              ? "bg-primary border-primary text-primary-foreground shadow-md"
+              : "bg-card border-border hover:bg-muted/50 text-muted-foreground"
           )}
         >
-          <m.icon className={cn("mb-1 transition-transform", metodoPago === m.value ? "h-4 w-4 md:h-5 md:w-5 scale-110" : "h-4 w-4 opacity-60")} />
-          <span className="text-[9px] md:text-[10px] uppercase tracking-wider">{m.label}</span>
+          <m.icon className={cn("h-5 w-5 md:h-6 md:w-6 mb-1", metodoPago === m.value ? "opacity-100" : "opacity-50")} />
+          <span className="text-[10px] md:text-xs tracking-wider uppercase">{m.label}</span>
+        </button>
+      ) : (
+        <button
+          key="descuento"
+          onClick={onOpenDescuento}
+          className={cn(
+            "flex flex-col items-center justify-center rounded-xl font-bold border transition-all h-[52px] md:h-[64px] bg-card border-border hover:bg-emerald-50 text-emerald-600 dark:hover:bg-emerald-950/30"
+          )}
+        >
+          <BadgePercent className="h-5 w-5 md:h-6 md:w-6 mb-1 opacity-80" />
+          <span className="text-[10px] md:text-xs tracking-wider uppercase">Desc.</span>
         </button>
       ))}
     </div>
-  )
+  );
 }

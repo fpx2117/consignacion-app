@@ -192,12 +192,15 @@ model Notification {
   readAt      DateTime?
   updatedAt   DateTime         @updatedAt
   userId      Int?
+  sucursalId  Int              @default(1)
   producto    Producto?        @relation(fields: [productoId], references: [id])
   user        Usuario?         @relation(fields: [userId], references: [id])
+  sucursal    Sucursal         @relation(fields: [sucursalId], references: [id])
 
   @@index([read, updatedAt])
   @@index([type, createdAt])
   @@index([productoId])
+  @@index([sucursalId])
 }
 
 model Producto {
@@ -380,6 +383,7 @@ model Venta {
   liquidacionId Int?           @unique
   fecha         DateTime       @default(now())
   total         Decimal        @db.Decimal(10, 2)
+  descuentoGlobal Decimal        @default(0) @db.Decimal(10, 2)
   sesionCajaId  Int?
   tipo          TipoVenta      @default(CASUAL)
   metodoPago    MetodoPago     @default(EFECTIVO)
@@ -504,6 +508,7 @@ model Sucursal {
   configuracion   Configuracion?
   consignaciones  Consignacion[]
   movimientos     MovimientoStock[]
+  notifications   Notification[]
   productos       Producto[]
   stockProductos  StockSucursal[]
   usuarios        Usuario[]

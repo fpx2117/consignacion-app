@@ -16,6 +16,9 @@ export const SocketToaster = () => {
   useEffect(() => {
     if (!socket) return;
 
+    // No mostrar notificaciones del sistema en rutas públicas
+    if (pathname.startsWith("/lista")) return;
+
     // Escuchar el evento genérico
     socket.on("new-notification", (data: any) => {
       console.log("🔔 CLIENTE: Notificación recibida:", data.type, data.title);

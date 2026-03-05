@@ -6,16 +6,16 @@ import { requireAuth } from "@/lib/requireAuth"; // 🔒 Importante
 
 export async function PATCH(req: Request) {
   try {
-    // 1. Seguridad: Solo usuarios logueados pueden hacer esto
     const auth = await requireAuth();
     if (!auth.ok) return auth.res;
 
-    // 2. Ejecutamos la actualización GLOBAL
-    // Como las notificaciones son de sistema (Stock, Vencimientos), 
-    // "Leer todo" significa limpiar la bandeja para todos.
+    const sucursalId = auth.activeSucursalId;
+
+    // Marcamos como leídas solo las notificaciones de esta sucursal
     const result = await prisma.notification.updateMany({
-      where: { 
-        read: false // Solo actualizamos las que no están leídas
+      where: {
+        sucursalId,
+        read: false,
       },
       data: {
         read: true,
@@ -23,8 +23,8 @@ export async function PATCH(req: Request) {
       },
     });
 
-    return NextResponse.json({ 
-      success: true, 
+    return NextResponse.json({
+      success: true,
       count: result.count,
       message: `Se marcaron ${result.count} notificaciones como leídas.`
     });

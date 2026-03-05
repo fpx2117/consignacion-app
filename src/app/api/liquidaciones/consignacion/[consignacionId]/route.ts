@@ -226,7 +226,7 @@ export async function POST(req: Request, { params }: RouteParams) {
     });
 
     // ✅ Disparar notificaciones fuera de la transacción para no bloquear
-    await processNotificationQueue(notificationsQueue);
+    await processNotificationQueue(notificationsQueue, auth.activeSucursalId);
 
     // ✅ Disparar notificación de Venta si corresponde
     if (result.venta && configGlobal.notificarVentas !== false) {
@@ -239,6 +239,7 @@ export async function POST(req: Request, { params }: RouteParams) {
           title: "Venta Exitosa (Liquidación)",
           description: `Venta #${result.venta.id} para [${clientId}] ${clientName} por $${result.venta.total} ARS`,
           fingerprint: `SALE_${result.venta.id}`,
+          sucursalId: auth.activeSucursalId,
           read: false,
         }
       }).catch(() => null);

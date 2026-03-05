@@ -8,11 +8,10 @@ import { NOTIFICATION_TYPE, NOTIFICATION_CONFIG } from "@/lib/notificationes/not
 // 1. EVALUADOR DE STOCK: Decide si hay que generar una alerta
 export function evaluateStockAlert(productoActualizado: any, configGlobal: any) {
   const stockActual = productoActualizado.stockDisponibleUnits;
-  const umbralAlerta = productoActualizado.stockMinUnits > 0 
-    ? productoActualizado.stockMinUnits 
+  const umbralAlerta = productoActualizado.stockMinUnits > 0
+    ? productoActualizado.stockMinUnits
     : configGlobal.minStockGlobal;
 
-  // Si está apagado en la configuración (si agregaste el campo) no alertamos
   if (configGlobal.notificarStockBajo === false) return null;
 
   if (stockActual <= 0) {
@@ -31,14 +30,14 @@ export function evaluateStockAlert(productoActualizado: any, configGlobal: any) 
     };
   }
 
-  return null; // El stock está bien, no hay alerta
+  return null;
 }
 
-// 2. PROCESADOR DE COLAS: Guarda en DB y emite Sockets
-export async function processNotificationQueue(queue: any[]) {
+// 2. PROCESADOR DE COLAS: Guarda en DB y emite Sockets (ahora acepta sucursalId)
+export async function processNotificationQueue(queue: any[], sucursalId: number = 1) {
   for (const notif of queue) {
     try {
-      const fingerprint = `${notif.type}:PROD_${notif.data.productId}`;
+      const fingerprint = `${notif.type}:PROD_${notif.data.productId}:SUC_${sucursalId}`;
 
       const savedNotif = await prisma.notification.upsert({
         where: { fingerprint },
@@ -53,6 +52,7 @@ export async function processNotificationQueue(queue: any[]) {
           title: notif.title,
           description: notif.message,
           productoId: notif.data.productId,
+          sucursalId,
           fingerprint,
           read: false,
         },
@@ -62,10 +62,10 @@ export async function processNotificationQueue(queue: any[]) {
         type: savedNotif.type,
         title: savedNotif.title,
         message: savedNotif.description,
-        data: { 
+        data: {
           id: savedNotif.id,
           productId: savedNotif.productoId,
-          createdAt: savedNotif.createdAt 
+          createdAt: savedNotif.createdAt
         }
       });
     } catch (err) {

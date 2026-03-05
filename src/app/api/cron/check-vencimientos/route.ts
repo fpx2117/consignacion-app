@@ -90,6 +90,7 @@ export async function GET(request: Request) {
               description: `[${sucursal.nombre}] El producto "${prod.nombre}" venció el ${fechaLegible}.`,
               productoId: prod.id,
               fingerprint: fingerprint,
+              sucursalId: sucursal.id,
             }
           });
 
@@ -134,6 +135,7 @@ export async function GET(request: Request) {
               description: `[${sucursal.nombre}] "${prod.nombre}" vence pronto (${fechaLegible}).`,
               productoId: prod.id,
               fingerprint: fingerprint,
+              sucursalId: sucursal.id,
             }
           });
 

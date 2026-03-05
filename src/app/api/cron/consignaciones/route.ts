@@ -58,6 +58,7 @@ export async function GET() {
                             description: desc,
                             fingerprint,
                             read: false,
+                            sucursalId: sucursal.id,
                         }
                     });
 

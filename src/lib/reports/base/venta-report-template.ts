@@ -4,6 +4,7 @@ export interface VentaReportDTO {
   id: number;
   fecha: Date | string;
   total: number;
+  descuentoGlobal?: number;
   metodoPago: string;
   clienteNombre: string;
   clienteTelefono: string;
@@ -207,6 +208,16 @@ export function buildVentaHtml(data: VentaReportDTO, branding: BrandingDTO) {
               `
       )
       .join("")}
+              ${data.descuentoGlobal && data.descuentoGlobal > 0 ? `
+                <tr>
+                  <td colspan="4" class="py-3 text-right font-black text-emerald-600 uppercase tracking-widest text-[9px] pr-4">
+                    Descuento General
+                  </td>
+                  <td class="py-3 text-right pr-4 font-black money text-emerald-600 bg-emerald-50 rounded-xl border border-emerald-100">
+                    -${formatMoney(data.descuentoGlobal)}
+                  </td>
+                </tr>
+              ` : ""}
             </tbody>
           </table>
         </div>
