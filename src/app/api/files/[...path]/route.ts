@@ -11,7 +11,6 @@ const UPLOAD_DIR = process.env.UPLOAD_DIR
     ? process.env.UPLOAD_DIR
     : path.join(process.cwd(), "public", "uploads");
 
-// Mapa básico de MIME types
 const MIME_MAP: Record<string, string> = {
     jpg: "image/jpeg",
     jpeg: "image/jpeg",
@@ -24,17 +23,17 @@ const MIME_MAP: Record<string, string> = {
 
 export async function GET(
     _req: NextRequest,
-    { params }: { params: { path: string[] } }
+    { params }: { params: Promise<{ path: string[] }> }
 ) {
     try {
-        // Unir los segmentos del path
-        const filename = params.path.join("/");
+        // En Next.js 15+ los params son una Promise
+        const { path: segments } = await params;
+        const filename = segments.join("/");
 
         // Security: evitar path traversal
         const safePath = path.normalize(filename).replace(/^(\.\.(\/|\\|$))+/, "");
         const filePath = path.join(UPLOAD_DIR, safePath);
 
-        // Verificar que el archivo sigue dentro del UPLOAD_DIR
         if (!filePath.startsWith(UPLOAD_DIR)) {
             return NextResponse.json({ error: "Acceso no permitido" }, { status: 403 });
         }
