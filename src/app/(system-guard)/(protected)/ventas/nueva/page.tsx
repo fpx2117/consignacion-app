@@ -17,23 +17,7 @@ import {
 import { apiService } from "@/lib/apiService";
 import type { Producto, Cliente, CreateVentaDirectaInput, MetodoPago, DescuentoNivel } from "@/lib/types";
 import { SuccessDialog } from "@/components/success-dialog";
-// src/app/(protected)/ventas/nueva/page.tsx
-"use client";
 
-import * as React from "react";
-import { useRouter } from "next/navigation";
-import { AnimatePresence, motion } from "framer-motion";
-import {
-  Plus, Minus, Trash2, Loader2, ArrowLeft, ShoppingCart,
-  Search, Banknote, CreditCard, QrCode, Coins, Check, ChevronsUpDown,
-  UserCircle2, Barcode, Lock, Store,
-  Image as ImageIcon,
-  BadgePercent
-} from "lucide-react";
-
-import { apiService } from "@/lib/apiService";
-import type { Producto, Cliente, CreateVentaDirectaInput, MetodoPago, DescuentoNivel } from "@/lib/types";
-import { SuccessDialog } from "@/components/success-dialog";
 import { ErrorDialog } from "@/components/error-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
