@@ -17,7 +17,7 @@ async function check() {
     console.log('Ventas Totales (Count):', ventas.length);
     console.log('Ventas Totales (Sum):', ventas.reduce((acc, v) => acc + Number(v.total), 0));
 
-    const ventasPorTipo = { CASUAL: 0, LIQUIDACION: 0 };
+    const ventasPorTipo: Record<string, number> = { CASUAL: 0, LIQUIDACION: 0 };
     ventas.forEach(v => { ventasPorTipo[v.tipo || 'CASUAL'] += Number(v.total); });
     console.log('Ventas por Tipo:', ventasPorTipo);
 
@@ -25,7 +25,7 @@ async function check() {
     console.log('Pagos Totales (Count):', pagos.length);
     console.log('Pagos Totales (Sum):', pagos.reduce((acc, pg) => acc + Number(pg.monto), 0));
 
-    const pagosPorTipo = { VENTA: 0, DEUDA: 0 };
+    const pagosPorTipo: Record<string, number> = { VENTA: 0, DEUDA: 0 };
     pagos.forEach(pg => { pagosPorTipo[pg.tipo || 'VENTA'] += Number(pg.monto); });
     console.log('Pagos por Tipo:', pagosPorTipo);
 
