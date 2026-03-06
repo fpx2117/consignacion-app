@@ -1,6 +1,6 @@
 /* eslint-disable */
 // @ts-nocheck
-﻿"use client";
+"use client";
 
 import * as React from "react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -100,6 +100,7 @@ export function ProductosView() {
   const [q, setQ] = React.useState("");
   const [stockFilter, setStockFilter] = React.useState("all");
   const [categoryFilter, setCategoryFilter] = React.useState("all");
+  const [subCategoryFilter, setSubCategoryFilter] = React.useState("all");
   const [expiryFilter, setExpiryFilter] = React.useState("all");
 
   // Paginación y Ordenamiento
@@ -158,6 +159,7 @@ export function ProductosView() {
               stockFilter === "available" ? p.stockDisponibleUnits > 0 : true;
 
       const matchesCategory = categoryFilter === "all" || p.categoria?.nombre === categoryFilter;
+      const matchesSubCategory = subCategoryFilter === "all" || p.subcategoria?.nombre === subCategoryFilter;
 
       let matchesExpiry = true;
       if (expiryFilter !== "all") {
@@ -174,7 +176,7 @@ export function ProductosView() {
           } else if (expiryFilter === "none") matchesExpiry = false;
         }
       }
-      return matchesQuery && matchesStock && matchesCategory && matchesExpiry;
+      return matchesQuery && matchesStock && matchesCategory && matchesSubCategory && matchesExpiry;
     });
   }, [items, q, stockFilter, categoryFilter, expiryFilter, isLowStock, isOutOfStock]);
 
@@ -327,6 +329,7 @@ export function ProductosView() {
             query={q} setQuery={setQ}
             stockFilter={stockFilter} setStockFilter={setStockFilter}
             categoryFilter={categoryFilter} setCategoryFilter={setCategoryFilter}
+            subCategoryFilter={subCategoryFilter} setSubCategoryFilter={setSubCategoryFilter}
             expiryFilter={expiryFilter} setExpiryFilter={setExpiryFilter}
             categories={allCategories}
           />
@@ -350,7 +353,7 @@ export function ProductosView() {
                   <TableHeader className="bg-muted/30">
                     <TableRow className="hover:bg-transparent border-b border-border/60">
                       <SortableHead label="Producto" sortKey="nombre" currentSort={sortConfig} onSort={handleSort} className="pl-6 w-[30%]" />
-                      <SortableHead label="Categoría" sortKey="categoria" currentSort={sortConfig} onSort={handleSort} />
+                      <SortableHead label="Categoría / Subcat." sortKey="categoria" currentSort={sortConfig} onSort={handleSort} />
                       <TableHead className="text-center font-bold text-xs uppercase tracking-wider text-muted-foreground/70">Estado</TableHead>
                       <SortableHead label="Stock" sortKey="stockDisponibleUnits" currentSort={sortConfig} onSort={handleSort} className="text-center" />
                       <TableHead className="text-center font-bold text-xs uppercase tracking-wider text-muted-foreground/70">Vencimiento</TableHead>
@@ -525,16 +528,23 @@ function ProductoRow({ p, idx, load, isLow, isOut }: { p: Producto; idx: number;
       </TableCell>
 
       <TableCell className="text-left">
-        {(() => {
-          const catName = p.categoria?.nombre || "General";
-          const color = p.categoria?.color ? getCategoryColorByKey(p.categoria.color) : getCategoryColorByName(catName);
-          return (
-            <Badge variant="secondary" className={cn("px-2.5 py-0.5 rounded-lg font-bold text-[10px] border uppercase tracking-tight gap-1.5", color.bg, color.text, color.border)}>
-              <div className={cn("h-1.5 w-1.5 rounded-full", color.dot)} />
-              {catName}
-            </Badge>
-          );
-        })()}
+        <div className="flex flex-col gap-1">
+          {(() => {
+            const catName = p.categoria?.nombre || "General";
+            const color = p.categoria?.color ? getCategoryColorByKey(p.categoria.color) : getCategoryColorByName(catName);
+            return (
+              <Badge variant="secondary" className={cn("px-2.5 py-0.5 rounded-lg font-bold text-[10px] border uppercase tracking-tight gap-1.5 w-fit", color.bg, color.text, color.border)}>
+                <div className={cn("h-1.5 w-1.5 rounded-full", color.dot)} />
+                {catName}
+              </Badge>
+            );
+          })()}
+          {p.subcategoria && (
+            <span className="text-[10px] text-zinc-500 font-medium ml-1">
+              {p.subcategoria.nombre}
+            </span>
+          )}
+        </div>
       </TableCell>
 
       <TableCell className="text-center">
@@ -647,10 +657,17 @@ function MobileProductCard({ p, idx, load, isLow, isOut }: { p: Producto; idx: n
                 const catName = p.categoria?.nombre || "General";
                 const color = p.categoria?.color ? getCategoryColorByKey(p.categoria.color) : getCategoryColorByName(catName);
                 return (
-                  <Badge variant="outline" className={cn("text-[10px] h-5 px-1.5 font-bold border rounded-md gap-1", color.bg, color.text, color.border)}>
-                    <div className={cn("h-1.5 w-1.5 rounded-full", color.dot)} />
-                    {catName}
-                  </Badge>
+                  <div className="flex flex-col gap-0.5">
+                    <Badge variant="outline" className={cn("text-[10px] h-5 px-1.5 font-bold border rounded-md gap-1 w-fit", color.bg, color.text, color.border)}>
+                      <div className={cn("h-1.5 w-1.5 rounded-full", color.dot)} />
+                      {catName}
+                    </Badge>
+                    {p.subcategoria && (
+                      <span className="text-[10px] text-zinc-500 font-medium ml-1">
+                        {p.subcategoria.nombre}
+                      </span>
+                    )}
+                  </div>
                 );
               })()}
             </div>

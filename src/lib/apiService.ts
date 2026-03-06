@@ -420,6 +420,31 @@ export const apiService = {
     });
   },
 
+  /* ---------- SUBCATEGORÍAS ---------- */
+  getSubcategorias(categoriaId: number) {
+    return apiData<Subcategoria[]>(`/api/subcategorias?categoriaId=${categoriaId}`);
+  },
+
+  createSubcategoria(data: { nombre: string; categoriaId: number }) {
+    return apiData<Subcategoria>("/api/subcategorias", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  },
+
+  updateSubcategoria(id: number, data: { nombre: string }) {
+    return apiData<Subcategoria>(`/api/subcategorias/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(data),
+    });
+  },
+
+  deleteSubcategoria(id: number) {
+    return apiData<{ ok: true }>(`/api/subcategorias/${id}`, {
+      method: "DELETE",
+    });
+  },
+
   /* ---------- CONSIGNACIONES ---------- */
   getConsignaciones() {
     return apiData<Consignacion[]>(API_ROUTES.CONSIGNACIONES);
