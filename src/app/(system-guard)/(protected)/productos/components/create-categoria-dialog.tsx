@@ -5,10 +5,10 @@ import { toast } from "sonner";
 import { apiService } from "@/lib/apiService";
 import { CATEGORY_PALETTE, type CategoryColorKey } from "@/lib/category-colors";
 import { cn } from "@/lib/utils";
-import { Loader2, Check, Plus, Pencil, Trash2, Tag, ChevronDown, ChevronRight, AlertTriangle } from "lucide-react";
+import { Loader2, Check, Plus, Pencil, Trash2, Tag, ChevronDown, ChevronRight, AlertTriangle, Layers } from "lucide-react";
 import type { DescuentoNivel } from "@/lib/types";
 import { DiscountTiersInline } from "./discount-tiers-inline";
-
+import { ManageSubcategoriasDialog } from "./manage-subcategorias-dialog";
 import {
   Dialog,
   DialogContent,
@@ -51,6 +51,10 @@ export function CreateCategoriaDialog({ onCreated, trigger }: Props) {
   const [saving, setSaving] = React.useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = React.useState(false);
   const [categoryToDelete, setCategoryToDelete] = React.useState<number | null>(null);
+
+  // Subcategorías management
+  const [subOpen, setSubOpen] = React.useState(false);
+  const [selectedCatForSub, setSelectedCatForSub] = React.useState<{ id: number, nombre: string } | null>(null);
 
   React.useEffect(() => {
     if (open) {
@@ -193,6 +197,18 @@ export function CreateCategoriaDialog({ onCreated, trigger }: Props) {
                           <Button
                             variant="ghost"
                             size="icon"
+                            title="Gestionar Subcategorías"
+                            className="w-8 h-8 text-zinc-400 hover:text-primary hover:bg-primary/10"
+                            onClick={() => {
+                              setSelectedCatForSub({ id: cat.id, nombre: cat.nombre });
+                              setSubOpen(true);
+                            }}
+                          >
+                            <Layers className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
                             className="w-8 h-8 text-zinc-400 hover:text-white"
                             onClick={() => {
                               setCurrentId(cat.id);
@@ -330,6 +346,17 @@ export function CreateCategoriaDialog({ onCreated, trigger }: Props) {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </Dialog>
+
+      {
+        selectedCatForSub && (
+          <ManageSubcategoriasDialog
+            categoriaId={selectedCatForSub.id}
+            categoriaNombre={selectedCatForSub.nombre}
+            open={subOpen}
+            onOpenChange={setSubOpen}
+          />
+        )
+      }
+    </Dialog >
   );
 }

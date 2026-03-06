@@ -33,6 +33,7 @@ export async function GET(_: Request, { params }: RouteParams) {
       where: { id, sucursalId },
       include: {
         categoria: true,
+        subcategoria: true, // Incluimos subcategoría
         stockSucursals: {
           where: { sucursalId }
         }
@@ -95,7 +96,6 @@ export async function PUT(req: Request, { params }: RouteParams) {
     // --- TRANSACCIÓN PARA ACTUALIZAR Y REGISTRAR MOVIMIENTO ---
     const updated = await prisma.$transaction(async (tx) => {
       // 1. Obtener estado actual de la sucursal antes de la actualización
-      // Verificamos que el producto pertenezca a la sucursal
       const anterior = await tx.stockSucursal.findUnique({
         where: { productoId_sucursalId: { productoId: id, sucursalId } },
       });
@@ -112,13 +112,13 @@ export async function PUT(req: Request, { params }: RouteParams) {
         where: { id, sucursalId },
         data: {
           ...parsed.data,
+          subcategoriaId: body.subcategoriaId !== undefined ? body.subcategoriaId : undefined,
           fechaVencimiento: parsed.data.fechaVencimiento ? new Date(parsed.data.fechaVencimiento) : undefined,
         },
       });
 
       // 2.5. Si cambió la imagen, borrar la vieja
       if (parsed.data.imagenUrl !== undefined && anteriorProducto.imagenUrl && anteriorProducto.imagenUrl !== parsed.data.imagenUrl) {
-        // Nota: Esto ocurre fuera de la transacción para no bloquear, pero el registro ya se guardó
         await deleteFileSystemImage(anteriorProducto.imagenUrl);
       }
 
@@ -161,7 +161,6 @@ export async function PUT(req: Request, { params }: RouteParams) {
         }
       }
 
-      // Devolvemos el producto con el stock de la sucursal mezclado
       return {
         ...productoUpdate,
         stockDisponibleUnits: stockSucursalUpdate.stockDisponibleUnits,
@@ -234,10 +233,6 @@ export async function DELETE(_: Request, { params }: RouteParams) {
       data: { activo: false }
     });
 
-    // Si se desactiva, opcionalmente podríamos borrar la imagen, 
-    // pero el usuario pidió remplazar para evitar memoria. 
-    // Si es un borrado lógico, tal vez conviene mantenerla.
-    // Pero si el usuario quiere "limpiar", lo hacemos.
     if (oldProduct?.imagenUrl) {
       await deleteFileSystemImage(oldProduct.imagenUrl);
       await prisma.producto.update({

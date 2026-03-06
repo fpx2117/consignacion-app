@@ -14,6 +14,8 @@ import {
 import { cn } from "@/lib/utils";
 import { Separator } from "@/components/ui/separator";
 import { getCategoryColorByKey, getCategoryColorByName } from "@/lib/category-colors";
+import { apiService } from "@/lib/apiService";
+import { Label } from "@/components/ui/label"; // Added Label import
 import type { Categoria } from "@/lib/types";
 
 interface FiltersProps {
@@ -23,6 +25,8 @@ interface FiltersProps {
   setStockFilter: (val: string) => void;
   categoryFilter: string;
   setCategoryFilter: (val: string) => void;
+  subCategoryFilter: string; // Added subCategoryFilter
+  setSubCategoryFilter: (val: string) => void; // Added setSubCategoryFilter
   expiryFilter: string;
   setExpiryFilter: (val: string) => void;
   categories: Categoria[];
@@ -32,11 +36,30 @@ export function ProductosFilters({
   query, setQuery,
   stockFilter, setStockFilter,
   categoryFilter, setCategoryFilter,
+  subCategoryFilter, setSubCategoryFilter, // Destructured new props
   expiryFilter, setExpiryFilter,
   categories
 }: FiltersProps) {
 
-  const hasActiveFilters = stockFilter !== "all" || categoryFilter !== "all" || expiryFilter !== "all" || query !== "";
+  const [subcategories, setSubcategories] = React.useState<Categoria[]>([]);
+
+  React.useEffect(() => {
+    if (categoryFilter && categoryFilter !== "all") {
+      const selectedCategory = categories.find(cat => cat.nombre === categoryFilter);
+      if (selectedCategory) {
+        apiService.getSubcategorias(selectedCategory.id)
+          .then(setSubcategories)
+          .catch(() => setSubcategories([]));
+      } else {
+        setSubcategories([]);
+      }
+    } else {
+      setSubcategories([]);
+      setSubCategoryFilter("all"); // Reset subcategory filter when category is "all"
+    }
+  }, [categoryFilter, categories, setSubCategoryFilter]);
+
+  const hasActiveFilters = stockFilter !== "all" || categoryFilter !== "all" || subCategoryFilter !== "all" || expiryFilter !== "all" || query !== "";
 
   return (
     <div className="p-4 space-y-4">
@@ -77,7 +100,10 @@ export function ProductosFilters({
 
             <Separator orientation="vertical" className="h-5" />
 
-            <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+            <Select value={categoryFilter} onValueChange={(value) => {
+              setCategoryFilter(value);
+              setSubCategoryFilter("all"); // Reset subcategory when category changes
+            }}>
               <SelectTrigger className="h-9 border-none bg-transparent gap-2 px-3 text-xs font-medium focus:ring-0 w-[150px]">
                 <span className="text-muted-foreground">Categoría:</span>
                 <SelectValue placeholder="Todas" />
@@ -97,6 +123,27 @@ export function ProductosFilters({
                 })}
               </SelectContent>
             </Select>
+
+            {/* Subcategoría */}
+            {categoryFilter !== "all" && subcategories.length > 0 && (
+              <>
+                <Separator orientation="vertical" className="h-5" />
+                <Select value={subCategoryFilter} onValueChange={setSubCategoryFilter}>
+                  <SelectTrigger className="h-9 border-none bg-transparent gap-2 px-3 text-xs font-medium focus:ring-0 w-[150px]">
+                    <span className="text-muted-foreground">Subcategoría:</span>
+                    <SelectValue placeholder="Todas" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todas</SelectItem>
+                    {subcategories.map((sub) => (
+                      <SelectItem key={sub.id} value={sub.nombre}>
+                        {sub.nombre}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </>
+            )}
 
             <Separator orientation="vertical" className="h-5" />
 

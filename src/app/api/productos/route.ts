@@ -13,7 +13,7 @@ import { checkProductLimit } from "@/lib/requireSubscription";
 
 /**
  * GET: OBTENER PRODUCTOS
- * Trae todos los productos activos con sus categorías.
+ * Trae todos los productos activos con sus categorías y subcategorías.
  */
 export async function GET() {
   try {
@@ -29,6 +29,7 @@ export async function GET() {
       },
       include: {
         categoria: true,
+        subcategoria: true,
         stockSucursals: {
           where: { sucursalId }
         }
@@ -111,11 +112,12 @@ export async function POST(req: Request) {
           codigoBarra: data.codigoBarra?.trim() || null,
           sku: data.sku?.trim() || null,
           categoriaId: data.categoriaId ?? null,
+          subcategoriaId: body.subcategoriaId ?? null,
           fechaVencimiento: data.fechaVencimiento ? new Date(data.fechaVencimiento) : null,
           imagenUrl: data.imagenUrl || null,
           sucursalId,
         },
-        include: { categoria: true }
+        include: { categoria: true, subcategoria: true }
       });
 
       // 2. Crear el registro de StockSucursal para la sucursal activa
@@ -123,7 +125,7 @@ export async function POST(req: Request) {
         data: {
           productoId: nuevoProducto.id,
           sucursalId,
-          stockDisponibleUnits: stockInicial,
+          stockDisponibleUnits: stockInitial,
           stockConsignadoUnits: 0,
           stockMinUnits: data.stockMinUnits ?? 0,
         }

@@ -78,6 +78,8 @@ export function CreateProductoDialog({
   // Categorías
   const [categorias, setCategorias] = React.useState<{ id: number | string; nombre: string; color?: string }[]>([]);
   const [categoriaId, setCategoriaId] = React.useState<string>("");
+  const [subcategorias, setSubcategorias] = React.useState<{ id: number; nombre: string }[]>([]);
+  const [subcategoriaId, setSubcategoriaId] = React.useState<string>("");
 
   React.useEffect(() => {
     if (open) {
@@ -95,8 +97,24 @@ export function CreateProductoDialog({
           setCategorias(Array.isArray(data) ? data : []);
         })
         .catch(() => setCategorias([]));
+
+      setSubcategorias([]);
+      setSubcategoriaId("");
     }
   }, [open]);
+
+  // Cargar subcategorías al cambiar categoría
+  React.useEffect(() => {
+    if (categoriaId) {
+      apiService.getSubcategorias(Number(categoriaId))
+        .then(setSubcategorias)
+        .catch(() => setSubcategorias([]));
+      setSubcategoriaId("");
+    } else {
+      setSubcategorias([]);
+      setSubcategoriaId("");
+    }
+  }, [categoriaId]);
 
   const pv = toNumber(precioVenta) || 0;
   const pc = toNumber(precioCosto) || 0;
@@ -121,6 +139,7 @@ export function CreateProductoDialog({
         stockMinUnits: toInt(stockMinUnits) || 0,
         fechaVencimiento: fechaVencimiento || null,
         categoriaId: Number(categoriaId),
+        subcategoriaId: subcategoriaId ? Number(subcategoriaId) : undefined,
       });
       toast.success("Producto creado con éxito");
       setOpen(false);
@@ -204,6 +223,28 @@ export function CreateProductoDialog({
                 />
               </div>
             </div>
+
+            {categoriaId && subcategorias.length > 0 && (
+              <div className="space-y-2 sm:col-span-2 animate-in fade-in slide-in-from-top-2 duration-300">
+                <Label className="text-xs font-bold uppercase text-muted-foreground">Subcategoría (Opcional)</Label>
+                <div className="relative">
+                  <Tag className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground z-10" />
+                  <Select value={subcategoriaId} onValueChange={setSubcategoriaId}>
+                    <SelectTrigger className="pl-9 h-11 bg-muted/30">
+                      <SelectValue placeholder="Seleccionar subcategoría..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Sin subcategoría</SelectItem>
+                      {subcategorias.map((sub) => (
+                        <SelectItem key={sub.id} value={sub.id.toString()}>
+                          {sub.nombre}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            )}
 
             <div className="space-y-2 sm:col-span-1">
               <Label className="text-sm font-semibold opacity-80">Vencimiento (Opcional)</Label>
