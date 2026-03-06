@@ -272,6 +272,8 @@ export async function PUT(req: Request, { params }: RouteParams) {
             clienteId: liqExistente.consignacion.clienteId,
             liquidacionId,
             total: nuevoTotalVenta,
+            sucursalId: liqExistente.consignacion.sucursalId,
+            tipo: "LIQUIDACION",
             detalles: {
               create: Array.from(soldByProduct.entries()).map(([productoId, info]) => ({
                 productoId,

@@ -25,8 +25,8 @@ export function useDashboard(period: DashboardPeriod) {
     try {
       const [k, c, t] = await Promise.all([
         apiService.getDashboardKpis(period),
-        apiService.getDashboardConsignaciones(8),
-        apiService.getDashboardTopProductos(period, 8),
+        apiService.getDashboardConsignaciones(5),
+        apiService.getDashboardTopProductos(period, 5),
       ]);
 
       let trData = null;

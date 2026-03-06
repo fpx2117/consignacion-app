@@ -401,12 +401,18 @@ model Venta {
   tipo          TipoVenta      @default(CASUAL)
   metodoPago    MetodoPago     @default(EFECTIVO)
   sucursalId    Int            @default(1)
+  numeroVenta   Int?
   cliente       Cliente        @relation(fields: [clienteId], references: [id])
   liquidacion   Liquidacion?   @relation(fields: [liquidacionId], references: [id])
   sesionCaja    SesionCaja?    @relation(fields: [sesionCajaId], references: [id], onDelete: Restrict)
   sucursal      Sucursal       @relation(fields: [sucursalId], references: [id])
   detalles      VentaDetalle[]
   envio         Envio?
+
+  // Anulación
+  anulada         Boolean   @default(false)
+  motivoAnulacion String?
+  fechaAnulacion  DateTime?
 
   @@index([clienteId, fecha])
   @@index([sesionCajaId])
@@ -440,6 +446,9 @@ model VentaDetalle {
   producto       Producto @relation(fields: [productoId], references: [id])
   venta          Venta    @relation(fields: [ventaId], references: [id], onDelete: Cascade)
 
+  // Estado del item al anular
+  esRotura       Boolean  @default(false)
+
   @@index([ventaId])
   @@index([productoId])
 }
@@ -447,15 +456,20 @@ model VentaDetalle {
 model Pago {
   id           Int         @id @default(autoincrement())
   clienteId    Int
+  sucursalId   Int         @default(1)
+  tipo         String      @default("VENTA") // VENTA, DEUDA
   fecha        DateTime    @default(now())
   monto        Decimal     @db.Decimal(10, 2)
   metodo       MetodoPago
   sesionCajaId Int?
   cliente      Cliente     @relation(fields: [clienteId], references: [id])
+  sucursal     Sucursal    @relation(fields: [sucursalId], references: [id])
   sesionCaja   SesionCaja? @relation(fields: [sesionCajaId], references: [id], onDelete: Restrict)
 
   @@index([clienteId, fecha])
   @@index([sesionCajaId])
+  @@index([sucursalId])
+  @@index([tipo])
 }
 
 model Plan {
@@ -541,9 +555,11 @@ model Sucursal {
   stockProductos  StockSucursal[]
   usuarios        Usuario[]
   ventas          Venta[]
-  gastos          Gasto[]
-  categoriasGasto CategoriaGasto[]
-  categorias      Categoria[]
+  gastos            Gasto[]
+  categoriasGasto   CategoriaGasto[]
+  categorias        Categoria[]
+  pagos             Pago[]
+  gastosCompartidos GastoSucursal[]
 }
 
 model StockSucursal {
@@ -576,18 +592,33 @@ model Gasto {
   comprobanteUrl   String?
   cuotaActual      Int?
   cuotaTotal       Int?
-  recurrenciaId    String?
-  createdAt        DateTime        @default(now())
-  updatedAt        DateTime        @updatedAt
-  categoria        CategoriaGasto  @relation(fields: [categoriaGastoId], references: [id])
-  sucursal         Sucursal        @relation(fields: [sucursalId], references: [id])
-  user             Usuario?        @relation(fields: [userId], references: [id])
+  recurrenciaId         String?
+  esCompartido          Boolean         @default(false)
+  createdAt             DateTime        @default(now())
+  updatedAt             DateTime        @updatedAt
+  categoria             CategoriaGasto  @relation(fields: [categoriaGastoId], references: [id])
+  sucursal              Sucursal        @relation(fields: [sucursalId], references: [id])
+  user                  Usuario?        @relation(fields: [userId], references: [id])
+  sucursalesCompartidas GastoSucursal[]
 
   @@index([sucursalId])
   @@index([categoriaGastoId])
   @@index([fecha])
   @@index([estado])
   @@index([recurrenciaId])
+}
+
+model GastoSucursal {
+  id                Int      @id @default(autoincrement())
+  gastoId           Int
+  sucursalId        Int
+  montoProporcional Decimal  @db.Decimal(10, 2)
+  gasto             Gasto    @relation(fields: [gastoId], references: [id], onDelete: Cascade)
+  sucursal          Sucursal @relation(fields: [sucursalId], references: [id])
+
+  @@unique([gastoId, sucursalId])
+  @@index([sucursalId])
+  @@index([gastoId])
 }
 
 model CategoriaGasto {

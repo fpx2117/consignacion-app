@@ -45,41 +45,61 @@ const brandInitials = (name: string) => {
   return (a + b).toUpperCase();
 };
 
-export function buildInventoryHtml(productos: Producto[], branding: BrandingDTO) {
-  // --- 1. PROCESAMIENTO Y CÁLCULOS (Safe Numbers) ---
-  const totalItems = productos.length;
+export interface InventoryGroup {
+  sucursal: string;
+  productos: Producto[];
+}
 
-  let totalStockUnits = 0;
-  let valorVentaTotal = 0;
-  let valorCostoTotal = 0;
-  let stockCritico = 0;
-  let agotados = 0;
+export function buildInventoryHtml(groups: InventoryGroup[], branding: BrandingDTO) {
+  // --- 1. PROCESAMIENTO Y CÁLCULOS GLOBALES ---
+  let totalItemsGlobal = 0;
+  let totalStockUnitsGlobal = 0;
+  let valorVentaTotalGlobal = 0;
+  let valorCostoTotalGlobal = 0;
+  let stockCriticoGlobal = 0;
+  let agotadosGlobal = 0;
 
-  const itemsProcesados = productos.map((p) => {
-    const stock = Number((p as any).stockDisponibleUnits) || 0;
-    const precioVenta = Number((p as any).precioVenta) || 0;
-    const precioCosto = Number((p as any).precioCosto) || 0;
-    const minStock = Number((p as any).stockMinUnits) || 5;
+  const groupsProcesados = groups.map(group => {
+    let groupTotalStock = 0;
+    let groupValorVenta = 0;
 
-    totalStockUnits += stock;
-    valorVentaTotal += precioVenta * stock;
-    valorCostoTotal += precioCosto * stock;
+    const itemsProcesados = (group.productos || []).map((p) => {
+      const stock = Number((p as any).stockDisponibleUnits) || 0;
+      const precioVenta = Number((p as any).precioVenta) || 0;
+      const precioCosto = Number((p as any).precioCosto) || 0;
+      const minStock = Number((p as any).stockMinUnits) || 5;
 
-    if (stock === 0) agotados++;
-    else if (stock <= minStock) stockCritico++;
+      groupTotalStock += stock;
+      groupValorVenta += precioVenta * stock;
+      valorCostoTotalGlobal += precioCosto * stock;
+
+      if (stock === 0) agotadosGlobal++;
+      else if (stock <= minStock) stockCriticoGlobal++;
+
+      return {
+        ...p,
+        stock,
+        precioVenta,
+        precioCosto,
+        subtotalVenta: precioVenta * stock,
+        isLow: stock > 0 && stock <= minStock,
+        isOut: stock === 0,
+      };
+    });
+
+    totalItemsGlobal += (group.productos || []).length;
+    totalStockUnitsGlobal += groupTotalStock;
+    valorVentaTotalGlobal += groupValorVenta;
 
     return {
-      ...p,
-      stock,
-      precioVenta,
-      precioCosto,
-      subtotalVenta: precioVenta * stock,
-      isLow: stock > 0 && stock <= minStock,
-      isOut: stock === 0,
+      ...group,
+      productos: itemsProcesados,
+      totalStock: groupTotalStock,
+      valorVenta: groupValorVenta,
     };
   });
 
-  const margenEstimadoTotal = valorVentaTotal - valorCostoTotal;
+  const margenEstimadoTotalGlobal = valorVentaTotalGlobal - valorCostoTotalGlobal;
 
   // Branding values
   const brandName = branding.businessName || "Consignación";
@@ -102,6 +122,7 @@ export function buildInventoryHtml(productos: Producto[], branding: BrandingDTO)
           .money { font-feature-settings: "tnum"; font-variant-numeric: tabular-nums; }
           @page { margin: 0; size: A4; }
           table { border-collapse: separate; border-spacing: 0 0.5rem; }
+          .branch-header { page-break-after: avoid; }
         </style>
       </head>
 
@@ -125,7 +146,7 @@ export function buildInventoryHtml(productos: Producto[], branding: BrandingDTO)
           </div>
 
           <div class="text-right">
-            <h2 class="text-[9px] font-black text-slate-400 uppercase tracking-[0.3em] mb-1">Estado de Existencias</h2>
+            <h2 class="text-[9px] font-black text-slate-400 uppercase tracking-[0.3em] mb-1">Estado General de Existencias</h2>
             <p class="text-xs font-bold text-slate-600 uppercase">${formatDateAR(new Date())}</p>
           </div>
         </div>
@@ -133,102 +154,108 @@ export function buildInventoryHtml(productos: Producto[], branding: BrandingDTO)
         <div class="grid grid-cols-3 gap-4 mb-8">
           <div class="bg-slate-50 rounded-2xl p-5 border border-slate-100">
             <h3 class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Total Productos</h3>
-            <p class="text-2xl font-black text-slate-800 tracking-tight">${totalItems}</p>
-            <p class="text-[9px] font-bold text-slate-400 mt-1 uppercase">${totalStockUnits} Unidades en sistema</p>
+            <p class="text-2xl font-black text-slate-800 tracking-tight">${totalItemsGlobal}</p>
+            <p class="text-[9px] font-bold text-slate-400 mt-1 uppercase">${totalStockUnitsGlobal} Unidades en sistema</p>
           </div>
 
           <div class="bg-slate-900 rounded-2xl p-5 text-white shadow-xl relative overflow-hidden">
             <h3 class="text-[9px] font-black text-white/60 uppercase tracking-widest mb-1 relative z-10">Valuación de Venta</h3>
-            <p class="text-2xl font-black money tracking-tighter relative z-10">${formatMoney(valorVentaTotal)}</p>
+            <p class="text-2xl font-black money tracking-tighter relative z-10">${formatMoney(valorVentaTotalGlobal)}</p>
             <p class="text-[9px] uppercase font-bold text-white/40 mt-1 relative z-10">Stock actual a PVP</p>
           </div>
 
           <div class="bg-emerald-600 rounded-2xl p-5 text-white shadow-xl relative overflow-hidden">
             <h3 class="text-[9px] font-black text-white/60 uppercase tracking-widest mb-1 relative z-10">Margen Potencial</h3>
-            <p class="text-2xl font-black money tracking-tighter relative z-10">${formatMoney(margenEstimadoTotal)}</p>
+            <p class="text-2xl font-black money tracking-tighter relative z-10">${formatMoney(margenEstimadoTotalGlobal)}</p>
             <p class="text-[9px] uppercase font-bold text-white/60 mt-1 relative z-10">Utilidad bruta estimada</p>
           </div>
         </div>
 
         <div class="flex gap-3 mb-6">
           <div class="px-3 py-1.5 rounded-lg border bg-orange-50 border-orange-200 text-orange-700 text-[10px] font-black uppercase">
-            Stock Crítico: ${stockCritico}
+            Stock Crítico: ${stockCriticoGlobal}
           </div>
           <div class="px-3 py-1.5 rounded-lg border bg-red-50 border-red-200 text-red-700 text-[10px] font-black uppercase">
-            Agotados: ${agotados}
+            Agotados: ${agotadosGlobal}
           </div>
         </div>
 
         <div class="flex-grow">
-          <table class="w-full text-left">
-            <thead>
-              <tr class="text-[8px] text-slate-400 uppercase font-black tracking-widest">
-                <th class="py-2 pl-4">Producto / Detalles</th>
-                <th class="py-2 text-center">Vencimiento</th>
-                <th class="py-2 text-center">Stock</th>
-                <th class="py-2 text-right">Costo</th>
-                <th class="py-2 text-right">Venta</th>
-                <th class="py-2 text-right pr-4">Subtotal</th>
-              </tr>
-            </thead>
+          ${groupsProcesados.map(group => `
+            <div class="mb-10 last:mb-0">
+              <div class="branch-header flex items-baseline justify-between border-b-2 border-slate-900 mb-4 pb-1">
+                <h3 class="text-sm font-black uppercase tracking-widest text-slate-900">SUCURSAL: ${escapeHtml(group.sucursal)}</h3>
+                <span class="text-[10px] font-bold text-slate-500 uppercase">${group.productos.length} items · ${group.totalStock} unidades · PVP: ${formatMoney(group.valorVenta)}</span>
+              </div>
 
-            <tbody class="text-[11px]">
-              ${itemsProcesados
-      .map((p: any) => {
-        const hasExpiry = p.fechaVencimiento != null;
-        const expiryDate = hasExpiry ? new Date(p.fechaVencimiento) : null;
-        const isExpired = expiryDate && expiryDate < new Date();
+              <table class="w-full text-left">
+                <thead>
+                  <tr class="text-[8px] text-slate-400 uppercase font-black tracking-widest">
+                    <th class="py-2 pl-4">Producto / Detalles</th>
+                    <th class="py-2 text-center">Vencimiento</th>
+                    <th class="py-2 text-center">Stock</th>
+                    <th class="py-2 text-right">Costo</th>
+                    <th class="py-2 text-right">Venta</th>
+                    <th class="py-2 text-right pr-4">Subtotal</th>
+                  </tr>
+                </thead>
 
-        return `
-                <tr>
-                  <td class="py-3 pl-5 bg-slate-50 rounded-l-xl border-y border-l border-slate-100">
-                    <div class="font-bold text-slate-800">${escapeHtml(p.nombre)}</div>
-                    <div class="text-[8px] text-slate-400 font-mono mt-0.5 uppercase">${p.codigoBarra ? "• " + escapeHtml(p.codigoBarra) : ""
-          }</div>
-                  </td>
-                  
-                  <td class="py-3 text-center bg-slate-50 border-y border-slate-100">
-                    ${hasExpiry
-            ? `
-                      <div class="inline-flex flex-col">
-                        <span class="font-bold ${isExpired ? "text-red-600" : "text-slate-600"}">
-                          ${formatDateAR(p.fechaVencimiento, false)}
-                        </span>
-                        ${isExpired ? '<span class="text-[7px] text-red-500 font-black uppercase tracking-tighter">Vencido</span>' : ""}
-                      </div>
-                    `
-            : '<span class="text-slate-300 italic text-[9px]">No vence</span>'
-          }
-                  </td>
+                <tbody class="text-[11px]">
+                  ${group.productos.map((p: any) => {
+      const hasExpiry = p.fechaVencimiento != null;
+      const expiryDate = hasExpiry ? new Date(p.fechaVencimiento) : null;
+      const isExpired = expiryDate && expiryDate < new Date();
 
-                  <td class="py-3 text-center bg-slate-50 border-y border-slate-100">
-                     <span class="px-2 py-1 rounded-md font-black ${p.isOut
-            ? "bg-red-100 text-red-600"
-            : p.isLow
-              ? "bg-orange-100 text-orange-600"
-              : "bg-emerald-100 text-emerald-700"
-          }">
-                        ${p.stock}
-                     </span>
-                  </td>
+      return `
+                    <tr class="group">
+                      <td class="py-3 pl-5 bg-slate-50 rounded-l-xl border-y border-l border-slate-100">
+                        <div class="font-bold text-slate-800">${escapeHtml(p.nombre)}</div>
+                        <div class="text-[8px] text-slate-400 font-mono mt-0.5 uppercase">${p.codigoBarra ? "• " + escapeHtml(p.codigoBarra) : ""}</div>
+                      </td>
+                      
+                      <td class="py-3 text-center bg-slate-50 border-y border-slate-100">
+                        ${hasExpiry
+          ? `
+                          <div class="inline-flex flex-col">
+                            <span class="font-bold ${isExpired ? "text-red-600" : "text-slate-600"}">
+                              ${formatDateAR(p.fechaVencimiento, false)}
+                            </span>
+                            ${isExpired ? '<span class="text-[7px] text-red-500 font-black uppercase tracking-tighter">Vencido</span>' : ""}
+                          </div>
+                        `
+          : '<span class="text-slate-300 italic text-[9px]">No vence</span>'
+        }
+                      </td>
 
-                  <td class="py-3 text-right bg-slate-50 border-y border-slate-100 text-slate-400 money">
-                    ${formatMoney(p.precioCosto)}
-                  </td>
+                      <td class="py-3 text-center bg-slate-50 border-y border-slate-100">
+                         <span class="px-2 py-1 rounded-md font-black ${p.isOut
+          ? "bg-red-100 text-red-600"
+          : p.isLow
+            ? "bg-orange-100 text-orange-600"
+            : "bg-emerald-100 text-emerald-700"
+        }">
+                            ${p.stock}
+                         </span>
+                      </td>
 
-                  <td class="py-3 text-right bg-slate-50 border-y border-slate-100 font-bold text-slate-700 money">
-                    ${formatMoney(p.precioVenta)}
-                  </td>
+                      <td class="py-3 text-right bg-slate-50 border-y border-slate-100 text-slate-400 money">
+                        ${formatMoney(p.precioCosto)}
+                      </td>
 
-                  <td class="py-3 text-right pr-5 bg-slate-50 rounded-r-xl border-y border-r border-slate-100 font-black text-slate-900 money">
-                    ${formatMoney(p.subtotalVenta)}
-                  </td>
-                </tr>
-              `;
-      })
-      .join("")}
-            </tbody>
-          </table>
+                      <td class="py-3 text-right bg-slate-50 border-y border-slate-100 font-bold text-slate-700 money">
+                        ${formatMoney(p.precioVenta)}
+                      </td>
+
+                      <td class="py-3 text-right pr-5 bg-slate-50 rounded-r-xl border-y border-r border-slate-100 font-black text-slate-900 money">
+                        ${formatMoney(p.subtotalVenta)}
+                      </td>
+                    </tr>
+                  `;
+    }).join("")}
+                </tbody>
+              </table>
+            </div>
+          `).join("")}
         </div>
 
         ${footerText

@@ -156,27 +156,64 @@ export default function DashboardPage() {
       );
     }
 
-    // Ingresos Caja: visible en "all" y "pos"
-    if (filter === "all" || filter === "pos") {
+    const usesCashControl = kpis?.usarControlDeCaja ?? true;
+
+    if (usesCashControl) {
+      // UNIFICADO: MOVIMIENTO TOTAL (Ingresos vs Facturación)
+      let displayedVentas = kpis?.finanzas?.ventas?.total ?? 0;
+      let displayedPagos = kpis?.finanzas?.pagos?.total ?? 0;
+      let titleSuffix = "";
+
+      if (filter === "pos") {
+        displayedVentas = kpis?.finanzas?.ventas?.soloVenta ?? 0;
+        displayedPagos = kpis?.finanzas?.pagos?.soloVenta ?? 0;
+        titleSuffix = " (POS)";
+      } else if (filter === "consignacion") {
+        displayedVentas = kpis?.finanzas?.ventas?.soloConsig ?? 0;
+        displayedPagos = kpis?.finanzas?.pagos?.soloDeuda ?? 0;
+        titleSuffix = " (Consig)";
+      }
+
       items.push({
-        key: "ingresos-caja",
-        title: "Ingresos en Caja",
-        value: formatMoney(kpis?.finanzas?.pagos?.total ?? 0),
-        subtitle: "Cobros procesados",
+        key: "movimiento-unificado",
+        title: `Movimiento Total${titleSuffix}`,
+        value: formatMoney(displayedPagos),
+        subtitle: `Facturado: ${formatMoney(displayedVentas)}`,
         icon: Store,
+        loading,
+      });
+    } else {
+      // SOLO VENTAS: Cuando el control de caja está deshabilitado
+      let displayedVentas = kpis?.finanzas?.ventas?.total ?? 0;
+      let titleSuffix = "";
+
+      if (filter === "pos") {
+        displayedVentas = kpis?.finanzas?.ventas?.soloVenta ?? 0;
+        titleSuffix = " POS";
+      } else if (filter === "consignacion") {
+        displayedVentas = kpis?.finanzas?.ventas?.soloConsig ?? 0;
+        titleSuffix = " Consignación";
+      }
+
+      items.push({
+        key: "ventas-solo",
+        title: "Ventas",
+        value: formatMoney(displayedVentas),
+        subtitle: `Facturación total${titleSuffix}`,
+        icon: Activity,
         loading,
       });
     }
 
     return items;
-  }, [kpis, filter, loading, displayedGanancia, displayedGananciaLabel]);
+  }, [kpis, filter, loading, displayedGanancia]);
 
   // Grid adaptativo: las tarjetas siempre llenan todo el ancho
   const gridCols = (count: number) =>
     cn(
       "grid gap-3 md:gap-6",
       count >= 4
-        ? "grid-cols-2 lg:grid-cols-4"
+        ? "grid-cols-1 sm:grid-cols-2 lg:grid-cols-4"
         : count === 3
           ? "grid-cols-1 sm:grid-cols-3"
           : count === 2

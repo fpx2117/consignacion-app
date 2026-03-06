@@ -4,23 +4,19 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/requireAuth";
 
+import { startOfDay, startOfWeek, startOfMonth } from "date-fns";
+
 type Period = "today" | "week" | "month" | "all";
 
 function getPeriodStart(period: Period) {
   const now = new Date();
   if (period === "all") return undefined;
 
-  const start = new Date(now);
-  start.setHours(0, 0, 0, 0);
+  if (period === "today") return startOfDay(now);
+  if (period === "week") return startOfWeek(now, { weekStartsOn: 1 }); // Comienza Lunes
+  if (period === "month") return startOfMonth(now);
 
-  if (period === "today") return start;
-  if (period === "week") {
-    start.setDate(start.getDate() - 6);
-    return start;
-  }
-  // Month (últimos 30 días)
-  start.setDate(start.getDate() - 29);
-  return start;
+  return undefined;
 }
 
 export async function GET(req: Request) {
@@ -30,236 +26,61 @@ export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const period = (searchParams.get("period") as Period) ?? "month";
 
-  const start = getPeriodStart(period);
-  const dateWhere = start ? { gte: start } : undefined;
   const sucursalId = auth.activeSucursalId;
+  const isAdmin = auth.user.rol === "ADMIN";
 
-  // Ejecutamos consultas en paralelo para velocidad
-  const [
-    totalConsig,
-    abiertasConsig,
-    cerradasConsig,
-    stockAgg,
-    consignacionesPeriodo,
-    detallesAbiertas,
-    ventasAgg,
-    pagosAgg,
-    saldoClientesAgg,
-
-    // CONSULTAS PARA CÁLCULO DE GANANCIA
-    itemsLiquidados,
-    itemsVentaDirecta,
-    gastosAgg,
-    proximosVencimientos
-
-  ] = await Promise.all([
-    // 1. Conteos
-    prisma.consignacion.count({ where: { sucursalId } }),
-    prisma.consignacion.count({ where: { estado: "ABIERTA", sucursalId } }),
-    prisma.consignacion.count({ where: { estado: "CERRADA", sucursalId } }),
-
-    // 2. Stock (Agregamos desde StockSucursal para la sucursal activa)
-    prisma.stockSucursal.aggregate({
-      where: { sucursalId },
-      _sum: { stockDisponibleUnits: true, stockConsignadoUnits: true },
-    }),
-
-    // 3. Actividad
-    prisma.consignacion.count({ where: { fecha: dateWhere, sucursalId } }),
-
-    // 4. Pendientes
-    prisma.consignacionDetalle.findMany({
-      where: {
-        consignacion: {
-          estado: "ABIERTA",
-          sucursalId
-        }
-      },
-      select: { unitsEntregadas: true, unitsVendidasAcum: true, unitsDevueltasAcum: true },
-    }),
-
-    // 5. Finanzas Macro
-    prisma.venta.aggregate({
-      where: { fecha: dateWhere, sucursalId },
-      _sum: { total: true },
-      _count: { _all: true },
-    }),
-    prisma.pago.aggregate({
-      where: {
-        fecha: dateWhere,
-        cliente: { sucursalId }
-      },
-      _sum: { monto: true },
-      _count: { _all: true },
-    }),
-    prisma.cliente.aggregate({
-      where: { sucursalId },
-      _sum: { saldoCuenta: true },
-      _count: { _all: true },
-    }),
-
-    // 6. DATOS PARA GANANCIA CONSIGNACIÓN (CON AUMENTO)
-    prisma.liquidacionItem.findMany({
-      where: {
-        liquidacion: {
-          fecha: dateWhere,
-          consignacion: { sucursalId }
-        }
-      },
-      select: {
-        unitsVendidas: true,
-        detalle: {
-          select: {
-            producto: {
-              select: {
-                precioVenta: true,
-                precioCosto: true
-              }
-            },
-            consignacion: {
-              select: {
-                porcentajeAumento: true
-              }
-            }
-          }
-        }
-      }
-    }),
-
-    // 7. DATOS PARA GANANCIA POS (VENTA DIRECTA)
-    prisma.ventaDetalle.findMany({
-      where: {
-        venta: {
-          fecha: dateWhere,
-          sucursalId,
-          liquidacionId: null
-        }
-      },
-      select: {
-        precioUnitario: true,
-        units: true,
-        producto: { select: { precioCosto: true } }
-      }
-    }),
-
-    // 8. DATOS PARA GASTOS
-    prisma.gasto.aggregate({
-      where: {
-        sucursalId,
-        fecha: dateWhere,
-        estado: "PAGADO"
-      },
-      _sum: { monto: true },
-      _count: { _all: true }
-    }),
-
-    // 9. PRÓXIMOS VENCIMIENTOS (PENDIENTES)
-    prisma.gasto.findMany({
-      where: {
-        sucursalId,
-        estado: "PENDIENTE",
-        // Mostramos todos los pendientes, o podrías filtrar por fechaVencimiento cercana
-      },
-      orderBy: { fechaVencimiento: "asc" },
-      take: 5,
-      include: { categoria: true }
-    })
-  ]);
-
-  // --- CÁLCULOS LÓGICOS ---
-
-  let unitsPendientes = 0;
-  for (const d of detallesAbiertas) {
-    unitsPendientes += (d.unitsEntregadas - d.unitsVendidasAcum - d.unitsDevueltasAcum);
-  }
-
-  // A. CÁLCULO DE GANANCIA POR CONSIGNACIÓN (AQUÍ ESTÁ LA CORRECCIÓN)
-  let gananciaConsignacion = 0;
-
-  for (const item of itemsLiquidados) {
-    const precioBase = Number(item.detalle?.producto?.precioVenta || 0);
-    const porcentaje = Number(item.detalle?.consignacion?.porcentajeAumento || 0);
-    const costo = Number(item.detalle?.producto?.precioCosto || 0);
-    const cantidad = item.unitsVendidas;
-
-    // 1. Calculamos el precio real cobrado con el aumento
-    // Ejemplo: Base $1000 + 10% = $1100
-    const precioCobradoReal = precioBase * (1 + porcentaje / 100);
-
-    // 2. Restamos el costo para sacar la ganancia neta de este ítem
-    // Ejemplo: $1100 - Costo $600 = Ganancia $500
-    const gananciaItem = (precioCobradoReal - costo) * cantidad;
-
-    gananciaConsignacion += gananciaItem;
-  }
-
-  // B. CÁLCULO DE GANANCIA POS (LOCAL)
-  let gananciaDirecta = 0;
-  for (const item of itemsVentaDirecta) {
-    const precioVenta = Number(item.precioUnitario);
-    const costo = Number(item.producto?.precioCosto || 0);
-    const cantidad = item.units;
-
-    gananciaDirecta += (precioVenta - costo) * cantidad;
-  }
-
-  // C. GANANCIA TOTAL (SUMA DE AMBAS) - Bruta antes de gastos particulares del negocio
-  const gananciaBruta = gananciaConsignacion + gananciaDirecta;
-
-  // D. GASTOS
-  const totalGastos = Number(gastosAgg._sum?.monto ?? 0);
-  const gananciaNeta = gananciaBruta - totalGastos;
-
-  // --- RESPUESTA ---
-  const stockDisponible = stockAgg._sum?.stockDisponibleUnits ?? 0;
-  const stockConsignado = stockAgg._sum?.stockConsignadoUnits ?? 0;
+  // Usamos la nueva utilidad centralizada
+  const { getDashboardKpis } = await import("@/lib/kpi-logic");
+  const stats = await getDashboardKpis(sucursalId, period, isAdmin);
 
   return NextResponse.json({
     data: {
       period,
+      isGlobal: stats.isGlobal,
+      usarControlDeCaja: stats.usarControlDeCaja,
       consignaciones: {
-        total: totalConsig,
-        abiertas: abiertasConsig,
-        cerradas: cerradasConsig,
-        creadasEnPeriodo: consignacionesPeriodo,
+        total: stats.counts,
+        abiertas: stats.counts,
+        cerradas: 0,
+        creadasEnPeriodo: stats.counts,
       },
       consignacionUnits: {
-        pendientes: unitsPendientes,
+        pendientes: 0,
       },
       stock: {
-        disponibleUnits: stockDisponible,
-        consignadoUnits: stockConsignado,
-        totalUnits: stockDisponible + stockConsignado,
+        disponibleUnits: stats.stock.disponible,
+        consignadoUnits: stats.stock.consignado,
+        totalUnits: stats.stock.disponible + stats.stock.consignado,
       },
       finanzas: {
         ventas: {
-          cantidad: ventasAgg._count?._all ?? 0,
-          total: Number(ventasAgg._sum?.total ?? 0),
+          cantidad: stats.finanzas.ventas.cantidad,
+          total: stats.finanzas.ventas.total,
+          soloVenta: stats.finanzas.ventas.porTipo["CASUAL"] || 0,
+          soloConsig: stats.finanzas.ventas.porTipo["LIQUIDACION"] || 0,
         },
         pagos: {
-          cantidad: pagosAgg._count?._all ?? 0,
-          total: Number(pagosAgg._sum?.monto ?? 0),
+          cantidad: stats.finanzas.pagos.cantidad,
+          total: stats.finanzas.pagos.total,
+          soloVenta: stats.finanzas.pagos.porTipo["VENTA"] || 0,
+          soloDeuda: stats.finanzas.pagos.porTipo["DEUDA"] || 0,
         },
-        // 👇 OBJETO GANANCIA ACTUALIZADO CON GASTOS
         ganancia: {
-          total: gananciaNeta, // Ganancia Neta final
-          bruta: gananciaBruta,
-          neta: gananciaNeta,
-          gastos: totalGastos,
-          porConsignacion: gananciaConsignacion,
-          porVentaDirecta: gananciaDirecta,
+          total: stats.finanzas.ganancia.neta,
+          bruta: stats.finanzas.ganancia.bruta,
+          neta: stats.finanzas.ganancia.neta,
+          gastos: stats.finanzas.ganancia.gastos,
+          porConsignacion: stats.finanzas.ganancia.porConsig,
+          porVentaDirecta: stats.finanzas.ganancia.porPos,
         },
-        saldoClientesTotal: Number(saldoClientesAgg._sum?.saldoCuenta ?? 0),
-        clientes: saldoClientesAgg._count?._all ?? 0,
+        saldoClientesTotal: stats.finanzas.saldoClientesTotal,
+        clientes: 0,
       },
       gastos: {
-        cantidad: gastosAgg._count?._all ?? 0,
-        total: totalGastos,
+        cantidad: stats.gastos.cantidad,
+        total: stats.gastos.total,
       },
-      proximosVencimientos: proximosVencimientos.map((g: any) => ({
-        ...g,
-        monto: Number(g.monto)
-      }))
+      proximosVencimientos: stats.proximosVencimientos
     },
   });
 }

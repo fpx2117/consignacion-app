@@ -2,6 +2,7 @@ import type { BrandingDTO } from "@/lib/reports/get-branding";
 
 export interface VentaReportDTO {
   id: number;
+  numeroVenta?: number | null;
   fecha: Date | string;
   total: number;
   descuentoGlobal?: number;
@@ -52,15 +53,17 @@ const formatMoney = (amount: number) => {
 };
 
 // ✅ NUEVO FORMATO DE TICKET: SERIE + NÚMERO
-const getTicketDetails = (id: number) => {
-  const LIMITE_POR_SERIE = 100;
-  const serie = Math.floor((id - 1) / LIMITE_POR_SERIE) + 1;
-  const numero = ((id - 1) % LIMITE_POR_SERIE) + 1;
+const getTicketDetails = (id: number, numeroVenta?: number | null) => {
+  const numberToUse = (typeof numeroVenta === 'number' && numeroVenta > 0) ? numeroVenta : id;
+
+  const LIMITE_POR_SERIE = 1000;
+  const serie = Math.floor((numberToUse - 1) / LIMITE_POR_SERIE) + 1;
+  const numero = ((numberToUse - 1) % LIMITE_POR_SERIE) + 1;
 
   return {
     serie: String(serie).padStart(2, "0"),
-    numero: String(numero).padStart(3, "0"),
-    full: `${String(serie).padStart(2, "0")}-${String(numero).padStart(3, "0")}`,
+    numero: String(numero).padStart(4, "0"),
+    full: `${String(serie).padStart(2, "0")}-${String(numero).padStart(4, "0")}`,
   };
 };
 
@@ -73,7 +76,7 @@ const brandInitials = (name: string) => {
 };
 
 export function buildVentaHtml(data: VentaReportDTO, branding: BrandingDTO) {
-  const ticket = getTicketDetails(data.id);
+  const ticket = getTicketDetails(data.id, data.numeroVenta);
 
   // Tailwind classes (se mantienen)
   const colorPrincipal = "bg-indigo-600";

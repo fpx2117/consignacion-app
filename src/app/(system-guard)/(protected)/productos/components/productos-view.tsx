@@ -500,8 +500,8 @@ function ProductoRow({ p, idx, load, isLow, isOut }: { p: Producto; idx: number;
       transition={{ delay: idx * 0.03 }}
       className="group border-b border-border/40 hover:bg-muted/30 transition-colors"
     >
-      <TableCell className="pl-6 py-4">
-        <div className="flex items-center gap-4">
+      <TableCell className="pl-6 py-4 w-[30%] max-w-0">
+        <div className="flex items-center gap-4 min-w-0">
           <div className="h-12 w-12 rounded-lg bg-muted/50 border border-border/60 overflow-hidden flex items-center justify-center shrink-0">
             {p.imagenUrl ? (
               <img src={p.imagenUrl} alt={p.nombre} className="h-full w-full object-cover" />
@@ -509,8 +509,8 @@ function ProductoRow({ p, idx, load, isLow, isOut }: { p: Producto; idx: number;
               <ImageIcon className="h-6 w-6 text-muted-foreground/40" />
             )}
           </div>
-          <div className="flex flex-col gap-1">
-            <span className="font-bold text-foreground text-sm leading-none group-hover:text-primary transition-colors">{p.nombre}</span>
+          <div className="flex flex-col gap-1 min-w-0">
+            <span className="font-bold text-foreground text-sm leading-none group-hover:text-primary transition-colors truncate" title={p.nombre}>{p.nombre}</span>
             <div className="flex items-center gap-2 pt-1">
               {p.codigoBarra ? (
                 <Badge variant="outline" className="text-[10px] h-5 px-1.5 font-mono text-muted-foreground border-border/60 bg-background/50 gap-1 rounded-md">

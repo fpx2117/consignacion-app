@@ -248,10 +248,17 @@ export type Venta = {
   fecha: ISODateString;
   metodoPago: MetodoPago;
   total: Money;
+  descuentoGlobal?: Money;
+  numeroVenta?: number | null;
   sesionCajaId?: ID | null;
+  sucursalId?: ID;
   cliente?: Cliente;
   detalles?: VentaDetalle[];
   liquidacionId?: ID | null;
+  // Anulación
+  anulada?: boolean;
+  motivoAnulacion?: string | null;
+  fechaAnulacion?: ISODateString | null;
 };
 
 export type VentaDetalle = {
@@ -263,6 +270,7 @@ export type VentaDetalle = {
   descuento: Money;
   subtotal: Money;
   producto?: Producto;
+  esRotura?: boolean;
 };
 
 export type Consignacion = {
@@ -338,6 +346,9 @@ export type Gasto = {
   cuotaActual?: number | null;
   cuotaTotal?: number | null;
   recurrenciaId?: string | null;
+  esCompartido?: boolean;
+  esVistaCompartida?: boolean;
+  sucursalesCompartidas?: { sucursalId: ID; montoProporcional: Money }[];
   createdAt: ISODateString;
   updatedAt: ISODateString;
   categoria?: CategoriaGasto;
@@ -475,6 +486,7 @@ export type DashboardFilter = "all" | "consignacion" | "pos";
 /** /api/dashboard/kpis */
 export type DashboardKpis = {
   period: DashboardPeriod;
+  usarControlDeCaja: boolean;
 
   consignaciones: {
     total: number;

@@ -81,6 +81,7 @@ export function SidebarDock() {
   const router = useRouter();
   const { setTheme, resolvedTheme } = useTheme();
   const [loggingOut, setLoggingOut] = React.useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
 
   // Hook unificado de notificaciones para evitar múltiples polling
   const notificationsState = useNotifications({ limit: 50 });
@@ -267,7 +268,7 @@ export function SidebarDock() {
               <>
                 <Separator orientation="vertical" className="h-5 mx-1 opacity-50" />
                 <DockIcon>
-                  <Sheet>
+                  <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
                     <SheetTrigger asChild>
                       <button className="flex h-9 w-9 items-center justify-center rounded-full text-muted-foreground hover:bg-muted"><LayoutGrid className="h-4 w-4" /></button>
                     </SheetTrigger>
@@ -275,7 +276,7 @@ export function SidebarDock() {
                       <SheetHeader className="mb-6"><SheetTitle className="text-left text-2xl font-black">Menú Principal</SheetTitle></SheetHeader>
                       <div className="grid grid-cols-3 gap-4">
                         {filteredMobileMenu.map((item) => (
-                          <Link key={item.href} href={item.href} className="flex flex-col items-center gap-2 p-4 rounded-3xl bg-muted/40 active:scale-95 transition-all">
+                          <Link key={item.href} href={item.href} onClick={() => setMobileMenuOpen(false)} className="flex flex-col items-center gap-2 p-4 rounded-3xl bg-muted/40 active:scale-95 transition-all">
                             <div className="h-12 w-12 rounded-2xl bg-background flex items-center justify-center shadow-sm"><item.icon className="h-6 w-6 text-primary" /></div>
                             <span className="text-[10px] font-bold text-center uppercase tracking-tighter">{item.label}</span>
                           </Link>

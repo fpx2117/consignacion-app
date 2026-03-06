@@ -44,6 +44,8 @@ export async function POST(
             const nuevoPago = await tx.pago.create({
                 data: {
                     clienteId,
+                    sucursalId: auth.activeSucursalId, // <--- NUEVO
+                    tipo: "DEUDA",                     // <--- NUEVO
                     monto,
                     metodo,
                     sesionCajaId: sesionActiva.id,

@@ -43,8 +43,12 @@ export async function GET(req: NextRequest) {
 
     const period = rawPeriod as Period;
     const reportType = rawType as ReportType;
-    const targetId = PERIOD_TARGET_MAP[period];
+    const periodId = PERIOD_TARGET_MAP[period];
     const shareLinkType = SHARE_LINK_TYPE_MAP[reportType];
+
+    // Encode sucursalId into targetId (SucursalId * 10 + PeriodId)
+    const sucursalId = auth.activeSucursalId;
+    const targetId = (sucursalId * 10) + periodId;
 
     // Reuse existing valid link
     const existing = await prisma.shareLink.findFirst({

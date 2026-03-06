@@ -180,11 +180,20 @@ export async function POST(req: Request, { params }: RouteParams) {
       // 4) Crear venta asociada (Administrativa, sin sesión de caja obligatoria)
       let nuevaVenta = null;
       if (totalVenta > 0) {
+        // Calcular el siguiente número de ticket para esta sucursal
+        const lastVenta = await tx.venta.findFirst({
+          where: { sucursalId: consignacion.sucursalId },
+          orderBy: { numeroVenta: "desc" },
+          select: { numeroVenta: true },
+        });
+        const nextNumeroVenta = (lastVenta?.numeroVenta || 0) + 1;
+
         nuevaVenta = await tx.venta.create({
           data: {
             tipo: TipoVenta.LIQUIDACION, // 👈 Clasificamos la venta
             clienteId: consignacion.clienteId,
-            sucursalId: auth.activeSucursalId,
+            sucursalId: consignacion.sucursalId, // Usa la sucursal de la consignación
+            numeroVenta: nextNumeroVenta,
             liquidacionId: nuevaLiquidacion.id,
             total: totalVenta,
             // sesionCajaId: null, (No se envía porque es opcional en el Schema)

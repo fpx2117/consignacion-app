@@ -21,8 +21,8 @@ export const useSucursalStore = create<SucursalState>()(
             activeSucursalId: 1, // Default Sede Principal
             availableSucursales: [],
             setActiveSucursalId: (id: number) => {
-                // Validar que la sucursal exista en las disponibles
-                const exists = get().availableSucursales.find(s => s.id === id);
+                // Validar que la sucursal exista en las disponibles o sea 0 (Global)
+                const exists = id === 0 || get().availableSucursales.find(s => s.id === id);
                 if (exists) {
                     set({ activeSucursalId: id });
                 }

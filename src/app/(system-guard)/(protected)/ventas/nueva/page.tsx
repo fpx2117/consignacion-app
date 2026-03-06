@@ -433,6 +433,16 @@ export default function NuevaVentaPage() {
         )}
       </div>
 
+      {/* ⚠️ ADVERTENCIA DE VISTA GLOBAL */}
+      {activeSucursalId === 0 && (
+        <Alert variant="destructive" className="mx-4 mt-2 rounded-xl border-dashed bg-red-500/10 text-red-600">
+          <AlertDescription className="flex items-center gap-2 font-bold text-center justify-center">
+            <Lock className="h-4 w-4" />
+            Ventas deshabilitadas en "Vista General". Selecciona una sucursal específica arriba.
+          </AlertDescription>
+        </Alert>
+      )}
+
       {/* 2. CONTENIDO PRINCIPAL */}
       <div className="flex-1 flex overflow-hidden">
         <div className="flex-1 flex flex-col min-h-0 relative bg-background">
@@ -775,7 +785,7 @@ export default function NuevaVentaPage() {
             <PaymentSelector metodoPago={metodoPago} setMetodoPago={setMetodoPago} onOpenDescuento={() => setOpenDescuento(true)} />
             <Button
               onClick={handleCobrar}
-              disabled={loading || cart.length === 0}
+              disabled={loading || cart.length === 0 || activeSucursalId === 0}
               className="w-full h-12 md:h-14 text-base md:text-lg font-black shadow-lg shadow-indigo-500/20 bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl md:rounded-2xl active:scale-[0.98] transition-all"
             >
               {loading ? <Loader2 className="animate-spin h-5 w-5" /> : (

@@ -33,17 +33,26 @@ function formatDateAR(d: Date) {
 }
 
 export async function GET(
-    _req: NextRequest,
+    req: NextRequest,
     { params }: { params: Promise<{ period: string }> }
 ) {
     let browser: Browser | null = null;
     try {
-        const VALID: Period[] = ["today", "week", "month", "all"];
         const { period: rawPeriod } = await params;
+        const VALID: Period[] = ["today", "week", "month", "all"];
         const period: Period = VALID.includes(rawPeriod as Period) ? (rawPeriod as Period) : "month";
+
+        const { searchParams } = new URL(req.url);
+        const code = searchParams.get("code");
+        const sucursalId = Number(searchParams.get("sucursalId") || 1);
+
+        if (!code) {
+            return NextResponse.json({ error: "Code is required" }, { status: 400 });
+        }
 
         const start = getPeriodStart(period);
         const dateWhere = start ? { gte: start } : undefined;
+        const sucursalWhere = { sucursalId };
 
         const [
             consignaciones,
@@ -57,7 +66,10 @@ export async function GET(
         ] = await Promise.all([
             // Todas las consignaciones con detalles y cliente
             prisma.consignacion.findMany({
-                where: dateWhere ? { fecha: dateWhere } : undefined,
+                where: {
+                    ...sucursalWhere,
+                    ...(dateWhere ? { fecha: dateWhere } : {})
+                },
                 include: {
                     cliente: true,
                     detalles: {
@@ -86,23 +98,34 @@ export async function GET(
             }),
 
             // Stock consignado total
-            prisma.stockSucursal.aggregate({ _sum: { stockConsignadoUnits: true } }),
+            prisma.stockSucursal.aggregate({ where: sucursalWhere, _sum: { stockConsignadoUnits: true } }),
 
             // Saldo pendiente clientes
-            prisma.cliente.aggregate({ _sum: { saldoCuenta: true } }),
+            prisma.cliente.aggregate({ where: sucursalWhere, _sum: { saldoCuenta: true } }),
 
             // Cantidad de liquidaciones en período
-            prisma.liquidacion.count({ where: { fecha: dateWhere } }),
+            prisma.liquidacion.count({
+                where: {
+                    fecha: dateWhere,
+                    consignacion: sucursalWhere
+                }
+            }),
 
             // Items liquidados para ganancia
             prisma.liquidacionItem.findMany({
-                where: { liquidacion: { fecha: dateWhere } },
+                where: {
+                    liquidacion: {
+                        fecha: dateWhere,
+                        consignacion: sucursalWhere
+                    }
+                },
                 select: {
                     unitsVendidas: true,
+                    precioUnitario: true,
+                    descuento: true,
                     detalle: {
                         select: {
-                            producto: { select: { precioVenta: true, precioCosto: true } },
-                            consignacion: { select: { porcentajeAumento: true } },
+                            producto: { select: { precioCosto: true } },
                         },
                     },
                 },
@@ -110,7 +133,12 @@ export async function GET(
 
             // Unidades pendientes (consiguiendo ABIERTAS)
             prisma.consignacionDetalle.findMany({
-                where: { consignacion: { estado: "ABIERTA" } },
+                where: {
+                    consignacion: {
+                        ...sucursalWhere,
+                        estado: "ABIERTA"
+                    }
+                },
                 select: { unitsEntregadas: true, unitsVendidasAcum: true, unitsDevueltasAcum: true },
             }),
 
@@ -118,7 +146,7 @@ export async function GET(
             period !== "all"
                 ? prisma.consignacion.groupBy({
                     by: ["fecha"],
-                    where: { fecha: dateWhere },
+                    where: { ...sucursalWhere, fecha: dateWhere },
                     _count: { _all: true },
                     orderBy: { fecha: "asc" },
                 })
@@ -128,7 +156,10 @@ export async function GET(
             period !== "all"
                 ? prisma.liquidacion.groupBy({
                     by: ["fecha"],
-                    where: { fecha: dateWhere },
+                    where: {
+                        fecha: dateWhere,
+                        consignacion: sucursalWhere
+                    },
                     _count: { _all: true },
                     orderBy: { fecha: "asc" },
                 })
@@ -138,11 +169,10 @@ export async function GET(
         // ── Cálculo de ganancia total por liquidaciones
         let gananciaTotal = 0;
         for (const item of liquidacionItems) {
-            const precioBase = Number(item.detalle?.producto?.precioVenta || 0);
-            const pct = Number(item.detalle?.consignacion?.porcentajeAumento || 0);
-            const costo = Number(item.detalle?.producto?.precioCosto || 0);
-            const precioCobrado = precioBase * (1 + pct / 100);
-            gananciaTotal += (precioCobrado - costo) * item.unitsVendidas;
+            const precioVenta = Number(item.precioUnitario);
+            const descuento = Number(item.descuento || 0);
+            const costo = Number(item.detalle?.producto?.precioCosto || 0) * item.unitsVendidas;
+            gananciaTotal += (precioVenta * item.unitsVendidas - descuento - costo);
         }
 
         // ── Unidades pendientes
@@ -163,11 +193,11 @@ export async function GET(
 
             for (const liq of c.liquidaciones) {
                 for (const item of liq.items) {
-                    const precioBase = Number(item.detalle?.producto?.precioVenta || 0);
-                    const pct = Number(item.detalle?.consignacion?.porcentajeAumento || 0);
-                    const costo = Number(item.detalle?.producto?.precioCosto || 0);
-                    const precioCobrado = precioBase * (1 + pct / 100);
-                    gananciaCliente += (precioCobrado - costo) * item.unitsVendidas;
+                    const pVenta = Number(item.precioUnitario);
+                    const desc = Number(item.descuento || 0);
+                    const costoTotal = Number(item.detalle?.producto?.precioCosto || 0) * item.unitsVendidas;
+
+                    gananciaCliente += (pVenta * item.unitsVendidas - desc - costoTotal);
                     unitsVendidas += item.unitsVendidas;
                     unitsDevueltas += item.unitsDevueltas;
                 }
@@ -194,36 +224,48 @@ export async function GET(
         // ── Top productos por rotación
         const productoMap = new Map<string, { unitsEntregadas: number; unitsVendidas: number; ganancia: number }>();
         for (const c of consignaciones) {
-            const pct = Number(c.porcentajeAumento);
             for (const d of c.detalles) {
                 const key = d.producto?.nombre ?? "Desconocido";
                 const prev = productoMap.get(key) ?? { unitsEntregadas: 0, unitsVendidas: 0, ganancia: 0 };
                 prev.unitsEntregadas += d.unitsEntregadas;
                 prev.unitsVendidas += d.unitsVendidasAcum;
-                // Calculate ganancia using product prices
-                const precioBase = Number(d.producto?.precioVenta || 0);
-                const costo = Number(d.producto?.precioCosto || 0);
-                const precioCobrado = precioBase * (1 + pct / 100);
-                prev.ganancia += (precioCobrado - costo) * d.unitsVendidasAcum;
+
+                // Calculamos ganancia acumulada para este producto en esta consignacion
+                let gAcum = 0;
+                for (const liqItem of d.liquidacionItems) {
+                    const pVenta = Number(liqItem.precioUnitario);
+                    const desc = Number(liqItem.descuento || 0);
+                    const cost = Number(d.producto?.precioCosto || 0) * liqItem.unitsVendidas;
+                    gAcum += (pVenta * liqItem.unitsVendidas - desc - cost);
+                }
+                prev.ganancia += gAcum;
                 productoMap.set(key, prev);
             }
         }
 
         const topProductos: ConsigTopProducto[] = [...productoMap.entries()]
             .map(([nombre, v]) => ({ nombre, ...v }))
-            .sort((a, b) => b.unitsVendidas - a.unitsVendidas);
+            .sort((a, b) => b.unitsVendidas - a.unitsVendidas)
+            .slice(0, 5);
+
 
         // ── Tendencia ganancia per day
         const gananciaByDate = new Map<string, number>();
         if (period !== "all") {
             const liquidacionDetalleRaw = await prisma.liquidacionItem.findMany({
-                where: { liquidacion: { fecha: dateWhere } },
+                where: {
+                    liquidacion: {
+                        fecha: dateWhere,
+                        consignacion: sucursalWhere
+                    }
+                },
                 select: {
                     unitsVendidas: true,
+                    precioUnitario: true,
+                    descuento: true,
                     detalle: {
                         select: {
-                            producto: { select: { precioVenta: true, precioCosto: true } },
-                            consignacion: { select: { porcentajeAumento: true } },
+                            producto: { select: { precioCosto: true } },
                         },
                     },
                     liquidacion: { select: { fecha: true } },
@@ -231,10 +273,10 @@ export async function GET(
             });
             for (const item of liquidacionDetalleRaw) {
                 const key = new Date(item.liquidacion.fecha).toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit", year: "numeric" });
-                const precioBase = Number(item.detalle?.producto?.precioVenta || 0);
-                const pct = Number(item.detalle?.consignacion?.porcentajeAumento || 0);
-                const costo = Number(item.detalle?.producto?.precioCosto || 0);
-                const g = (precioBase * (1 + pct / 100) - costo) * item.unitsVendidas;
+                const pVenta = Number(item.precioUnitario);
+                const desc = Number(item.descuento || 0);
+                const cost = Number(item.detalle?.producto?.precioCosto || 0) * item.unitsVendidas;
+                const g = (pVenta * item.unitsVendidas - desc - cost);
                 gananciaByDate.set(key, (gananciaByDate.get(key) ?? 0) + g);
             }
         }
@@ -285,7 +327,7 @@ export async function GET(
             tendencia,
         };
 
-        const branding = await getBranding();
+        const branding = await getBranding(sucursalId);
         const htmlContent = buildConsigReportHtml(reportData, branding);
 
         browser = await puppeteer.launch({ headless: true, args: ["--no-sandbox", "--disable-setuid-sandbox"] });

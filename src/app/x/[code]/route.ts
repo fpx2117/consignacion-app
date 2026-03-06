@@ -90,22 +90,34 @@ export async function GET(
       destPath = `/ver/inventario/${link.targetId || '0'}/pdf`;
       break;
     case "REPORTE_DASHBOARD": {
+      const fullId = link.targetId || 11; // Default S1 Today
+      const sucursalId = Math.floor(fullId / 10);
+      const periodId = fullId % 10;
       const PERIOD_MAP: Record<number, string> = { 1: "today", 2: "week", 3: "month", 4: "all" };
-      const periodName = PERIOD_MAP[link.targetId] ?? "month";
+      const periodName = PERIOD_MAP[periodId] ?? "month";
       destPath = `/ver/dashboard/${periodName}`;
-      break;
+      destPath += `?code=${encodeURIComponent(code)}&sucursalId=${sucursalId}`;
+      return redirectAbs(req, destPath, { name: cookieName, value: '1' });
     }
     case "REPORTE_POS": {
+      const fullId = link.targetId || 11;
+      const sucursalId = Math.floor(fullId / 10);
+      const periodId = fullId % 10;
       const PERIOD_MAP_POS: Record<number, string> = { 1: "today", 2: "week", 3: "month", 4: "all" };
-      const periodName = PERIOD_MAP_POS[link.targetId] ?? "month";
+      const periodName = PERIOD_MAP_POS[periodId] ?? "month";
       destPath = `/ver/pos/${periodName}`;
-      break;
+      destPath += `?code=${encodeURIComponent(code)}&sucursalId=${sucursalId}`;
+      return redirectAbs(req, destPath, { name: cookieName, value: '1' });
     }
     case "REPORTE_CONSIGNACION": {
+      const fullId = link.targetId || 11;
+      const sucursalId = Math.floor(fullId / 10);
+      const periodId = fullId % 10;
       const PERIOD_MAP_CONSIG: Record<number, string> = { 1: "today", 2: "week", 3: "month", 4: "all" };
-      const periodName = PERIOD_MAP_CONSIG[link.targetId] ?? "month";
+      const periodName = PERIOD_MAP_CONSIG[periodId] ?? "month";
       destPath = `/ver/consig/${periodName}`;
-      break;
+      destPath += `?code=${encodeURIComponent(code)}&sucursalId=${sucursalId}`;
+      return redirectAbs(req, destPath, { name: cookieName, value: '1' });
     }
     case "COMPROBANTE_GASTO":
       destPath = `/ver/gasto/${link.targetId}`;

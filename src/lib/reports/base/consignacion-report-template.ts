@@ -118,7 +118,7 @@ export function buildConsigReportHtml(data: ConsigReportData, branding: Branding
 
   // ─ Top productos
   const productosHtml = data.topProductos.length > 0
-    ? data.topProductos.slice(0, 6).map((p, i) => {
+    ? data.topProductos.slice(0, 5).map((p, i) => {
       const tasaP = p.unitsEntregadas > 0
         ? Math.round((p.unitsVendidas / p.unitsEntregadas) * 100)
         : 0;

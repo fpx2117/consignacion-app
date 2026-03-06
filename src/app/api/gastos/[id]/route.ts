@@ -20,7 +20,8 @@ export async function GET(
                 categoria: true,
                 user: {
                     select: { id: true, nombre: true }
-                }
+                },
+                sucursalesCompartidas: true,
             }
         });
 
@@ -60,21 +61,53 @@ export async function PUT(
             estado,
             esRecurrente,
             frecuencia,
-            categoriaGastoId
+            categoriaGastoId,
+            sucursalesCompartir, // number[] para actualizar reparto, [] para desactivar
         } = body;
 
         const existing = await prisma.gasto.findUnique({
-            where: { id: Number(id) }
+            where: { id: Number(id) },
+            include: { sucursalesCompartidas: true },
         });
 
         if (!existing || existing.sucursalId !== auth.activeSucursalId) {
             return NextResponse.json({ error: "Gasto no encontrado" }, { status: 404 });
         }
 
+        const montoFinal = monto !== undefined ? Number(monto) : Number(existing.monto);
+
+        // Actualizar reparto si viene en el payload
+        let nuevoEsCompartido = existing.esCompartido;
+        if (sucursalesCompartir !== undefined) {
+            if (Array.isArray(sucursalesCompartir) && sucursalesCompartir.length > 1) {
+                nuevoEsCompartido = true;
+                const nuevoProporcional = montoFinal / sucursalesCompartir.length;
+                await prisma.gastoSucursal.deleteMany({ where: { gastoId: existing.id } });
+                await prisma.gastoSucursal.createMany({
+                    data: sucursalesCompartir.map((sid: number) => ({
+                        gastoId: existing.id,
+                        sucursalId: sid,
+                        montoProporcional: nuevoProporcional,
+                    })),
+                });
+            } else {
+                // Array vacío o 1 sucursal: desactivar reparto
+                nuevoEsCompartido = false;
+                await prisma.gastoSucursal.deleteMany({ where: { gastoId: existing.id } });
+            }
+        } else if (monto !== undefined && existing.esCompartido && existing.sucursalesCompartidas.length > 0) {
+            // Solo cambió el monto: recalcular proporcionales existentes
+            const nuevoProporcional = montoFinal / existing.sucursalesCompartidas.length;
+            await prisma.gastoSucursal.updateMany({
+                where: { gastoId: existing.id },
+                data: { montoProporcional: nuevoProporcional },
+            });
+        }
+
         const updated = await prisma.gasto.update({
             where: { id: Number(id) },
             data: {
-                ...(monto !== undefined && { monto: Number(monto) }),
+                ...(monto !== undefined && { monto: montoFinal }),
                 ...(motivo !== undefined && { motivo }),
                 ...(fecha !== undefined && { fecha: new Date(fecha) }),
                 ...(fechaVencimiento !== undefined && { fechaVencimiento: fechaVencimiento ? new Date(fechaVencimiento) : null }),
@@ -82,9 +115,11 @@ export async function PUT(
                 ...(esRecurrente !== undefined && { esRecurrente: !!esRecurrente }),
                 ...(frecuencia !== undefined && { frecuencia }),
                 ...(categoriaGastoId !== undefined && { categoriaGastoId: Number(categoriaGastoId) }),
+                esCompartido: nuevoEsCompartido,
             },
             include: {
-                categoria: true
+                categoria: true,
+                sucursalesCompartidas: true,
             }
         });
 

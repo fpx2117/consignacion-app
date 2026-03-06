@@ -3,7 +3,6 @@
 "use client";
 
 import * as React from "react";
-import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import {
   ArrowLeft,
@@ -19,7 +18,9 @@ import {
   User,
   AlertTriangle,
   Printer,
-  MessageCircle
+  MessageCircle,
+  Ban,
+  Flame,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -37,17 +38,23 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 // --- Helpers ---
 function formatDate(d: string | Date) {
@@ -78,6 +85,17 @@ export default function VentaDetailPage() {
   const [loading, setLoading] = React.useState(true);
   const [isDeleting, setIsDeleting] = React.useState(false);
 
+  // Estado del diálogo de anulación
+  const [voidOpen, setVoidOpen] = React.useState(false);
+  const [voidMotivo, setVoidMotivo] = React.useState("");
+  const [brokenItems, setBrokenItems] = React.useState<number[]>([]);
+
+  const toggleBrokenItem = (id: number) => {
+    setBrokenItems(prev =>
+      prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
+    );
+  };
+
   const load = React.useCallback(async () => {
     setLoading(true);
     try {
@@ -106,15 +124,21 @@ export default function VentaDetailPage() {
 
   // --- Anular Venta ---
   const handleAnular = async () => {
-    if (!venta) return;
+    if (!venta || !voidMotivo) return;
     setIsDeleting(true);
     try {
-      await fetch(`/api/ventas/${venta.id}`, { method: "DELETE" });
-      toast.success("Venta anulada y stock restaurado");
-      router.push("/ventas/nueva");
-    } catch (error) {
+      await apiService.anularVenta(venta.id as number, {
+        motivo: voidMotivo,
+        brokenItems,
+      });
+      toast.success("Venta anulada correctamente");
+      setVoidOpen(false);
+      // Recargar para mostrar estado anulado
+      await load();
+    } catch (error: any) {
       console.error("Error al anular:", error);
       toast.error("No se pudo anular la venta.");
+    } finally {
       setIsDeleting(false);
     }
   };
@@ -125,9 +149,15 @@ export default function VentaDetailPage() {
   const metodoPago = (venta as any)?.metodoPago || "Efectivo";
   const clienteNombre = venta?.cliente?.nombre || "Consumidor Final";
   const descuentoGlobal = Number((venta as any)?.descuentoGlobal || 0);
+  const isAnulada = venta?.anulada === true;
+
+  // Pérdida por rotura: suma de precioCosto * units de los ítems marcados como rotura
+  const perdidaRotura = detalles
+    .filter(d => (d as any).esRotura)
+    .reduce((acc, d) => acc + Number((d.producto as any)?.precioCosto || 0) * d.units, 0);
 
   // Número visual de ticket (001)
-  const ticketNumber = String(id).padStart(3, '0');
+  const ticketNumber = String(venta?.numeroVenta || id).padStart(3, '0');
 
   return (
     <div className="max-w-6xl mx-auto space-y-8 pb-10 px-4 sm:px-0 animate-in fade-in duration-500">
@@ -143,67 +173,159 @@ export default function VentaDetailPage() {
           <ArrowLeft className="h-4 w-4" /> Volver
         </Button>
 
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-2 items-center">
 
-          {/* BOTÓN ANULAR (PELIGRO) */}
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={loading || !venta}
-                className="border-red-200 text-red-700 bg-red-50 hover:bg-red-100 hover:text-red-800 dark:border-red-500/20 dark:bg-red-500/10 dark:text-red-400"
-              >
-                <Trash2 className="h-4 w-4 mr-2" />
-                Anular Venta
-              </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle className="flex items-center gap-2 text-red-600">
-                  <AlertTriangle className="h-5 w-5" /> ¿Estás seguro?
-                </AlertDialogTitle>
-                <AlertDialogDescription>
-                  Esta acción es irreversible. Se eliminará el registro de venta y <strong>se devolverá el stock</strong> de los productos al inventario.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                <AlertDialogAction onClick={handleAnular} disabled={isDeleting} className="bg-red-600 hover:bg-red-700">
-                  {isDeleting ? "Anulando..." : "Sí, Anular Venta"}
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
+          {/* BOTÓN ANULAR (solo si no está anulada) */}
+          {!isAnulada && (
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={loading || !venta}
+              onClick={() => { setVoidMotivo(""); setBrokenItems([]); setVoidOpen(true); }}
+              className="border-red-200 text-red-700 bg-red-50 hover:bg-red-100 hover:text-red-800 dark:border-red-500/20 dark:bg-red-500/10 dark:text-red-400"
+            >
+              <Trash2 className="h-4 w-4 mr-2" />
+              Anular Venta
+            </Button>
+          )}
 
           <div className="h-8 w-px bg-border mx-1 hidden sm:block" />
 
-          {/* Botón Imprimir (Acción rápida Header) */}
-          <Button variant="outline" size="sm" onClick={handleDownloadPdf} disabled={loading}>
+          {/* Botón Imprimir (deshabilitado si anulada) */}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleDownloadPdf}
+            disabled={loading || isAnulada}
+            title={isAnulada ? "No se puede imprimir una venta anulada" : undefined}
+          >
             <Printer className="h-4 w-4 mr-2 text-indigo-500" />
             Imprimir Ticket
           </Button>
-
         </div>
       </div>
 
+      {/* Diálogo de Anulación */}
+      <Dialog open={voidOpen} onOpenChange={setVoidOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-red-600">
+              <AlertTriangle className="h-5 w-5" /> Anular Venta #{ticketNumber}
+            </DialogTitle>
+            <DialogDescription>
+              Seleccioná el motivo de anulación. El stock se devolverá automáticamente, excepto los ítems marcados como rotura.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-5 py-2">
+            {/* Motivo */}
+            <div className="space-y-2">
+              <Label>Motivo de anulación</Label>
+              <Select value={voidMotivo} onValueChange={setVoidMotivo}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Seleccioná un motivo…" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Error de carga">Error de carga</SelectItem>
+                  <SelectItem value="Devolución del cliente">Devolución del cliente</SelectItem>
+                  <SelectItem value="Mal estado / Rotura">Mal estado / Rotura</SelectItem>
+                  <SelectItem value="Otro">Otro</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Ítems rotos (siempre visible para flexibilidad) */}
+            {detalles.length > 0 && (
+              <div className="space-y-2">
+                <Label className="flex items-center gap-2">
+                  <Flame className="h-4 w-4 text-red-500" />
+                  Marcar ítems dañados (no se devolverá su stock)
+                </Label>
+                <div className="border rounded-lg divide-y">
+                  {detalles.map((d: any) => (
+                    <div key={d.id} className="flex items-center gap-3 p-3">
+                      <Checkbox
+                        id={`broken-${d.id}`}
+                        checked={brokenItems.includes(d.id)}
+                        onCheckedChange={() => toggleBrokenItem(d.id)}
+                      />
+                      <label
+                        htmlFor={`broken-${d.id}`}
+                        className="flex-1 text-sm cursor-pointer"
+                      >
+                        <span className="font-medium">{d.producto?.nombre ?? `Producto #${d.productoId}`}</span>
+                        <span className="text-muted-foreground ml-2">× {d.units}</span>
+                      </label>
+                      {brokenItems.includes(d.id) && (
+                        <Badge variant="destructive" className="text-[10px]">ROTO</Badge>
+                      )}
+                    </div>
+                  ))}
+                </div>
+                {brokenItems.length > 0 && (
+                  <p className="text-xs text-red-600 font-medium">
+                    Pérdida estimada por rotura:{" "}
+                    {formatCurrency(
+                      detalles
+                        .filter(d => brokenItems.includes(d.id))
+                        .reduce((acc, d) => acc + Number((d.producto as any)?.precioCosto || 0) * d.units, 0)
+                    )}
+                  </p>
+                )}
+              </div>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setVoidOpen(false)} disabled={isDeleting}>
+              Cancelar
+            </Button>
+            <Button
+              onClick={handleAnular}
+              disabled={isDeleting || !voidMotivo}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              {isDeleting ? "Anulando…" : "Confirmar Anulación"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Header Profile (Card Principal) */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 bg-card border rounded-2xl p-6 shadow-sm relative overflow-hidden">
+      <div className={cn(
+        "flex flex-col md:flex-row md:items-center justify-between gap-6 border rounded-2xl p-6 shadow-sm relative overflow-hidden",
+        isAnulada ? "bg-red-50/50 dark:bg-red-950/20 border-red-200 dark:border-red-800/40" : "bg-card"
+      )}>
         {/* Decoración de fondo */}
-        <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/5 rounded-full blur-3xl -mr-10 -mt-10" />
+        <div className={cn(
+          "absolute top-0 right-0 w-32 h-32 rounded-full blur-3xl -mr-10 -mt-10",
+          isAnulada ? "bg-red-500/10" : "bg-indigo-500/5"
+        )} />
 
         <div className="flex items-center gap-4 relative z-10">
-          <div className="bg-indigo-500/10 p-4 rounded-2xl hidden sm:block font-bold">
-            <ShoppingCart className="h-8 w-8 text-indigo-600 dark:text-indigo-400" />
+          <div className={cn(
+            "p-4 rounded-2xl hidden sm:block font-bold",
+            isAnulada ? "bg-red-500/10" : "bg-indigo-500/10"
+          )}>
+            {isAnulada
+              ? <Ban className="h-8 w-8 text-red-500" />
+              : <ShoppingCart className="h-8 w-8 text-indigo-600 dark:text-indigo-400" />
+            }
           </div>
           <div>
-            <div className="flex items-center gap-2 mb-1">
+            <div className="flex items-center gap-2 mb-1 flex-wrap">
               <Badge variant="outline" className="font-mono text-[10px] border-indigo-500/30 text-indigo-600 dark:text-indigo-400">
                 TICKET #{ticketNumber}
               </Badge>
-              <Badge variant="outline" className="px-3 py-0.5 font-bold uppercase text-[9px] tracking-tighter rounded-full border-emerald-500/50 text-emerald-600 bg-emerald-500/10">
-                ● Confirmada
-              </Badge>
+              {isAnulada ? (
+                <Badge variant="destructive" className="px-3 py-0.5 font-bold uppercase text-[9px] tracking-tighter rounded-full">
+                  ✕ ANULADA
+                </Badge>
+              ) : (
+                <Badge variant="outline" className="px-3 py-0.5 font-bold uppercase text-[9px] tracking-tighter rounded-full border-emerald-500/50 text-emerald-600 bg-emerald-500/10">
+                  ● Confirmada
+                </Badge>
+              )}
             </div>
             <h1 className="text-3xl font-black tracking-tight text-foreground flex items-center gap-2">
               {loading ? <Skeleton className="h-8 w-48" /> : clienteNombre}
@@ -212,6 +334,23 @@ export default function VentaDetailPage() {
               <Clock className="h-3.5 w-3.5" /> Procesada el{" "}
               {venta?.fecha ? formatDate(venta.fecha) : "-"} hs
             </p>
+            {isAnulada && venta?.motivoAnulacion && (
+              <p className="text-xs text-red-600 font-medium mt-1 flex items-center gap-1">
+                <AlertTriangle className="h-3 w-3" />
+                Motivo: {venta.motivoAnulacion}
+                {venta.fechaAnulacion && (
+                  <span className="text-muted-foreground font-normal ml-1">
+                    — {formatDate(venta.fechaAnulacion)}
+                  </span>
+                )}
+              </p>
+            )}
+            {isAnulada && perdidaRotura > 0 && (
+              <p className="text-xs text-red-700 font-bold mt-0.5 flex items-center gap-1">
+                <Flame className="h-3 w-3" />
+                Pérdida por rotura: {formatCurrency(perdidaRotura)}
+              </p>
+            )}
           </div>
         </div>
 
@@ -285,50 +424,71 @@ export default function VentaDetailPage() {
 
         {/* Columna Derecha (4): Acciones */}
         < div className="lg:col-span-4 space-y-6" >
-          <Card className="shadow-xl border-indigo-500/20 bg-indigo-500/5 dark:bg-indigo-500/10 overflow-hidden">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-lg font-bold flex items-center gap-2">
-                <Share2 className="h-5 w-5 text-indigo-500" /> Comprobante
-              </CardTitle>
-              <CardDescription>Opciones del documento digital.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <Button
-                onClick={handleDownloadPdf}
-                variant="outline"
-                className="w-full justify-start bg-background hover:bg-muted shadow-sm h-12"
-                disabled={loading}
-              >
-                <Download className="h-4 w-4 mr-3 text-indigo-500" />
-                Descargar Ticket PDF
-              </Button>
+          {isAnulada ? (
+            <Card className="border-red-200 dark:border-red-800/40 bg-red-50/50 dark:bg-red-950/20 shadow-none">
+              <CardContent className="p-5 flex items-start gap-3">
+                <Ban className="h-5 w-5 text-red-500 mt-0.5 shrink-0" />
+                <div className="text-sm space-y-1">
+                  <p className="font-bold text-red-700 dark:text-red-400">Venta Anulada</p>
+                  <p className="text-muted-foreground text-xs">
+                    El stock fue devuelto al inventario para los ítems no dañados.
+                    Los ítems marcados como rotura no recuperaron stock.
+                  </p>
+                  {perdidaRotura > 0 && (
+                    <p className="text-xs text-red-700 font-semibold pt-1">
+                      Pérdida registrada: {formatCurrency(perdidaRotura)}
+                    </p>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          ) : (
+            <>
+              <Card className="shadow-xl border-indigo-500/20 bg-indigo-500/5 dark:bg-indigo-500/10 overflow-hidden">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-lg font-bold flex items-center gap-2">
+                    <Share2 className="h-5 w-5 text-indigo-500" /> Comprobante
+                  </CardTitle>
+                  <CardDescription>Opciones del documento digital.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <Button
+                    onClick={handleDownloadPdf}
+                    variant="outline"
+                    className="w-full justify-start bg-background hover:bg-muted shadow-sm h-12"
+                    disabled={loading}
+                  >
+                    <Download className="h-4 w-4 mr-3 text-indigo-500" />
+                    Descargar Ticket PDF
+                  </Button>
 
-              <Button
-                onClick={() => {
-                  const phone = venta?.cliente?.telefono || "";
-                  const name = venta?.cliente?.nombre || "Cliente";
-                  window.open(`/ticket-loading/${venta?.id}?mode=whatsapp&phone=${encodeURIComponent(phone)}&name=${encodeURIComponent(name)}`, '_blank');
-                }}
-                variant="outline"
-                className="w-full justify-start bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/20 shadow-sm h-12"
-                disabled={loading}
-              >
-                <MessageCircle className="h-4 w-4 mr-3 text-emerald-500" />
-                Compartir por WhatsApp
-              </Button>
+                  <Button
+                    onClick={() => {
+                      const phone = venta?.cliente?.telefono || "";
+                      const name = venta?.cliente?.nombre || "Cliente";
+                      window.open(`/ticket-loading/${venta?.id}?mode=whatsapp&phone=${encodeURIComponent(phone)}&name=${encodeURIComponent(name)}`, '_blank');
+                    }}
+                    variant="outline"
+                    className="w-full justify-start bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/20 shadow-sm h-12"
+                    disabled={loading}
+                  >
+                    <MessageCircle className="h-4 w-4 mr-3 text-emerald-500" />
+                    Compartir por WhatsApp
+                  </Button>
+                </CardContent>
+              </Card>
 
-            </CardContent>
-          </Card>
-
-          <Card className="border-dashed bg-muted/30 shadow-none">
-            <CardContent className="p-4 flex items-start gap-3">
-              <CheckCircle2 className="h-5 w-5 text-emerald-500 mt-0.5" />
-              <div className="text-xs text-muted-foreground space-y-1">
-                <p className="font-medium text-foreground">Stock Actualizado</p>
-                <p>Las unidades se descontaron automáticamente del inventario al momento de la venta.</p>
-              </div>
-            </CardContent>
-          </Card>
+              <Card className="border-dashed bg-muted/30 shadow-none">
+                <CardContent className="p-4 flex items-start gap-3">
+                  <CheckCircle2 className="h-5 w-5 text-emerald-500 mt-0.5" />
+                  <div className="text-xs text-muted-foreground space-y-1">
+                    <p className="font-medium text-foreground">Stock Actualizado</p>
+                    <p>Las unidades se descontaron automáticamente del inventario al momento de la venta.</p>
+                  </div>
+                </CardContent>
+              </Card>
+            </>
+          )}
         </div >
       </div >
     </div >
@@ -364,16 +524,32 @@ function ProductRowVenta({ d }: { d: any }) {
   const descuento = Number(d.descuento || 0);
   const subtotal = Number(d.subtotal);
   const nombreCategoria = d.producto?.categoria?.nombre || "Sin Categoría";
+  const esRotura = d.esRotura === true;
 
   return (
-    <div className="group rounded-xl border border-border p-4 bg-background transition-all hover:bg-indigo-50/50 hover:border-indigo-200 dark:hover:bg-indigo-900/10 dark:hover:border-indigo-800">
+    <div className={cn(
+      "group rounded-xl border p-4 transition-all",
+      esRotura
+        ? "border-red-200 bg-red-50/50 dark:bg-red-950/20 dark:border-red-800/40"
+        : "border-border bg-background hover:bg-indigo-50/50 hover:border-indigo-200 dark:hover:bg-indigo-900/10 dark:hover:border-indigo-800"
+    )}>
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
 
         {/* Info Producto */}
         <div className="space-y-1">
-          <p className="font-bold text-foreground text-lg tracking-tight italic group-hover:text-indigo-600 transition-colors">
-            {d.producto?.nombre ?? `Producto #${d.productoId}`}
-          </p>
+          <div className="flex items-center gap-2 flex-wrap">
+            <p className={cn(
+              "font-bold text-lg tracking-tight italic",
+              esRotura ? "line-through text-red-500" : "text-foreground group-hover:text-indigo-600 transition-colors"
+            )}>
+              {d.producto?.nombre ?? `Producto #${d.productoId}`}
+            </p>
+            {esRotura && (
+              <Badge variant="destructive" className="text-[10px] font-bold shrink-0">
+                <Flame className="h-3 w-3 mr-1" /> ROTO
+              </Badge>
+            )}
+          </div>
           <div className="flex items-center gap-3 flex-wrap mt-2">
             <Badge variant="secondary" className="text-[10px] font-mono bg-muted border-border text-foreground/80">
               {formatCurrency(precio)} ud.
@@ -399,14 +575,18 @@ function ProductRowVenta({ d }: { d: any }) {
         <div className="text-right flex items-center gap-6 sm:gap-10">
           <div className="flex flex-col items-end">
             <span className="text-[9px] font-black text-muted-foreground uppercase mb-0.5">Cantidad</span>
-            <span className="text-xl font-black text-foreground">{d.units}</span>
+            <span className={cn("text-xl font-black", esRotura ? "text-red-500" : "text-foreground")}>{d.units}</span>
           </div>
 
           <div className="h-8 w-px bg-border" />
 
           <div className="flex flex-col items-end min-w-[80px]">
-            <span className="text-[9px] font-black text-indigo-500 uppercase mb-0.5">Subtotal</span>
-            <span className="text-xl font-black text-foreground">{formatCurrency(subtotal)}</span>
+            <span className={cn("text-[9px] font-black uppercase mb-0.5", esRotura ? "text-red-500" : "text-indigo-500")}>
+              {esRotura ? "Perdido" : "Subtotal"}
+            </span>
+            <span className={cn("text-xl font-black", esRotura ? "line-through text-red-400" : "text-foreground")}>
+              {formatCurrency(subtotal)}
+            </span>
           </div>
         </div>
       </div>
