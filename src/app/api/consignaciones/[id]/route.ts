@@ -405,6 +405,8 @@ export async function POST(req: Request, { params }: RouteParams) {
             clienteId: consignacion.clienteId,
             liquidacionId: liquidacion.id,
             total: totalVenta,
+            sucursalId: consignacion.sucursalId,
+            tipo: "LIQUIDACION",
             detalles: {
               create: Array.from(soldByProduct.entries()).map(([productoId, info]) => ({
                 productoId,

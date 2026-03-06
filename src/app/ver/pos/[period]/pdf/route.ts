@@ -33,137 +33,140 @@ function formatDateAR(d: Date) {
 }
 
 export async function GET(
-    _req: NextRequest,
+    req: NextRequest,
     { params }: { params: Promise<{ period: string }> }
 ) {
     let browser: Browser | null = null;
     try {
-        const VALID: Period[] = ["today", "week", "month", "all"];
         const { period: rawPeriod } = await params;
+        const VALID: Period[] = ["today", "week", "month", "all"];
         const period: Period = VALID.includes(rawPeriod as Period) ? (rawPeriod as Period) : "month";
+
+        const { searchParams } = new URL(req.url);
+        const code = searchParams.get("code");
+        const sucursalId = Number(searchParams.get("sucursalId") || 1);
+
+        if (!code) {
+            return NextResponse.json({ error: "Code is required" }, { status: 400 });
+        }
 
         const start = getPeriodStart(period);
         const dateWhere = start ? { gte: start } : undefined;
+        const sucursalWhere = { sucursalId };
 
         // Fetch data in parallel
-        // NOTE: tendencia is computed from ventasConDetalles directly (single pass) to avoid
-        // the groupBy(DateTime) bug where all rows in a day share the same date key.
-        const [ventasAgg, pagosAgg, detallesVentas, ventasConDetalles, pagosPorMetodo] = await Promise.all([
+        const [ventasAgg, pagosAgg, ventasConDetalles, pagosPorMetodo] = await Promise.all([
             // Totales de ventas directas
             prisma.venta.aggregate({
-                where: { fecha: dateWhere, liquidacionId: null },
-                _sum: { total: true },
+                where: { ...sucursalWhere, fecha: dateWhere, liquidacionId: null },
+                _sum: { total: true, descuentoGlobal: true },
                 _count: { _all: true },
             }),
 
             // Cobros totales
             prisma.pago.aggregate({
-                where: { fecha: dateWhere },
+                where: { ...sucursalWhere, fecha: dateWhere },
                 _sum: { monto: true },
                 _count: { _all: true },
             }),
 
-            // Detalles de ventas directas para ganancia y top productos
-            prisma.ventaDetalle.findMany({
-                where: { venta: { fecha: dateWhere, liquidacionId: null } },
+            // Ventas con sus detalles para ganancia, top productos y tendencia
+            prisma.venta.findMany({
+                where: { ...sucursalWhere, fecha: dateWhere, liquidacionId: null },
                 select: {
-                    precioUnitario: true,
-                    units: true,
-                    subtotal: true,
-                    producto: { select: { nombre: true, precioCosto: true } },
-                    venta: { select: { metodoPago: true, clienteId: true, cliente: { select: { nombre: true } } } },
-                },
-            }),
-
-            // Ventas con sus detalles para tendencia (un solo pass, sin groupBy por DateTime)
-            period !== "all"
-                ? prisma.venta.findMany({
-                    where: { fecha: dateWhere, liquidacionId: null },
-                    select: {
-                        fecha: true,
-                        total: true,
-                        detalles: {
-                            select: {
-                                precioUnitario: true,
-                                units: true,
-                                producto: { select: { precioCosto: true } },
-                            },
+                    fecha: true,
+                    total: true,
+                    descuentoGlobal: true,
+                    metodoPago: true,
+                    detalles: {
+                        select: {
+                            precioUnitario: true,
+                            units: true,
+                            subtotal: true,
+                            producto: { select: { nombre: true, precioCosto: true } },
                         },
                     },
-                    orderBy: { fecha: "asc" },
-                })
-                : Promise.resolve([]),
+                },
+                orderBy: { fecha: "asc" },
+            }),
 
             // Por método de pago
             prisma.venta.groupBy({
                 by: ["metodoPago"],
-                where: { fecha: dateWhere, liquidacionId: null },
-                _sum: { total: true },
+                where: { ...sucursalWhere, fecha: dateWhere, liquidacionId: null },
+                _sum: { total: true, descuentoGlobal: true },
                 _count: { _all: true },
             }),
         ]);
 
-        // Ganancia total + ganancias para tendencia
+        // Procesar ventas para KPIs, Top Productos y Tendencia
         let totalGanancia = 0;
-        const productoMapGanancia = new Map<string, { units: number; total: number; ganancia: number }>();
+        let totalDescuentosGlob = 0;
+        const productoMap = new Map<string, { units: number; total: number; ganancia: number }>();
+        const tendenciaMap = new Map<string, { ventasTotal: number; cantidad: number; ganancia: number; unitsVendidas: number }>();
 
-        for (const d of detallesVentas) {
-            const precio = Number(d.precioUnitario);
-            const costo = Number(d.producto?.precioCosto || 0);
-            const gananciaItem = (precio - costo) * d.units;
-            totalGanancia += gananciaItem;
+        for (const v of ventasConDetalles) {
+            const dateStr = new Date(v.fecha).toLocaleDateString("es-AR", {
+                day: "2-digit", month: "2-digit", year: "numeric",
+            });
+            const tPrev = tendenciaMap.get(dateStr) ?? { ventasTotal: 0, cantidad: 0, ganancia: 0, unitsVendidas: 0 };
 
-            const key = d.producto?.nombre ?? "Desconocido";
-            const prev = productoMapGanancia.get(key) ?? { units: 0, total: 0, ganancia: 0 };
-            prev.units += d.units;
-            prev.total += Number(d.subtotal);
-            prev.ganancia += gananciaItem;
-            productoMapGanancia.set(key, prev);
-        }
+            const descGlobalVenta = Number(v.descuentoGlobal || 0);
+            totalDescuentosGlob += descGlobalVenta;
 
-        const topProductos = [...productoMapGanancia.entries()]
-            .map(([nombre, v]) => ({ nombre, ...v }))
-            .sort((a, b) => b.total - a.total);
+            let gananciaVenta = 0;
+            const netoVenta = Number(v.total) - descGlobalVenta;
 
-        // ─ Tendencia: un solo pass sobre ventasConDetalles, agrupando por día
-        // (evita el bug de groupBy DateTime donde múltiples timestamps del mismo
-        // día comparten la misma clave de fecha string y suman ganancia incorrectamente)
-        const tendenciaMap = new Map<string, { ventasTotal: number; cantidad: number; ganancia: number }>();
+            for (const d of v.detalles) {
+                const sub = Number(d.subtotal);
+                const costoTotal = Number(d.producto?.precioCosto || 0) * d.units;
+                const gItem = sub - costoTotal;
+                gananciaVenta += gItem;
 
-        if (Array.isArray(ventasConDetalles)) {
-            for (const venta of ventasConDetalles) {
-                const dateStr = new Date(venta.fecha).toLocaleDateString("es-AR", {
-                    day: "2-digit", month: "2-digit", year: "numeric",
-                });
-                const prev = tendenciaMap.get(dateStr) ?? { ventasTotal: 0, cantidad: 0, ganancia: 0 };
-                prev.ventasTotal += Number(venta.total);
-                prev.cantidad += 1;
-                for (const d of venta.detalles) {
-                    prev.ganancia += (Number(d.precioUnitario) - Number(d.producto?.precioCosto || 0)) * d.units;
-                }
-                tendenciaMap.set(dateStr, prev);
+                const name = d.producto?.nombre ?? "Desconocido";
+                const pPrev = productoMap.get(name) ?? { units: 0, total: 0, ganancia: 0 };
+                pPrev.units += d.units;
+                pPrev.total += sub;
+                pPrev.ganancia += gItem;
+                productoMap.set(name, pPrev);
             }
+
+            // Aplicar descuento global a la ganancia de la venta
+            gananciaVenta -= descGlobalVenta;
+            totalGanancia += gananciaVenta;
+
+            tPrev.ventasTotal += netoVenta;
+            tPrev.cantidad += 1;
+            tPrev.ganancia += gananciaVenta;
+            tPrev.unitsVendidas += v.detalles.reduce((acc, d) => acc + (d.units || 0), 0);
+            tendenciaMap.set(dateStr, tPrev);
         }
+
+        const topProductos = [...productoMap.entries()]
+            .map(([nombre, v]) => ({ nombre, ...v }))
+            .sort((a, b) => b.total - a.total)
+            .slice(0, 5);
 
         const tendencia = [...tendenciaMap.entries()]
             .sort(([a], [b]) => a.localeCompare(b))
             .map(([date, v]) => ({ date, ...v }));
 
-        const totalVentas = Number(ventasAgg._sum?.total ?? 0);
+        const totalVentasBruto = Number(ventasAgg._sum?.total ?? 0);
+        const totalVentasNeto = totalVentasBruto - totalDescuentosGlob;
         const cantidadVentas = ventasAgg._count?._all ?? 0;
 
         const reportData: PosReportData = {
             period,
             periodLabel: PERIOD_LABELS[period],
             fechaGeneracion: formatDateAR(new Date()),
-            totalVentas,
+            totalVentas: totalVentasNeto,
             cantidadVentas,
             totalGanancia,
             ingresosCaja: Number(pagosAgg._sum?.monto ?? 0),
-            ticketPromedio: cantidadVentas > 0 ? totalVentas / cantidadVentas : 0,
+            ticketPromedio: cantidadVentas > 0 ? totalVentasNeto / cantidadVentas : 0,
             pagosPorMetodo: pagosPorMetodo.map(m => ({
                 metodo: m.metodoPago,
-                total: Number(m._sum.total ?? 0),
+                total: Number(m._sum.total ?? 0) - Number(m._sum.descuentoGlobal || 0),
                 cantidad: m._count._all,
             })),
             topProductos,
@@ -171,12 +174,11 @@ export async function GET(
             tendencia,
         };
 
-        const branding = await getBranding();
+        const branding = await getBranding(sucursalId);
         const htmlContent = buildPosReportHtml(reportData, branding);
 
         browser = await puppeteer.launch({ headless: true, args: ["--no-sandbox", "--disable-setuid-sandbox"] });
         const page = await browser.newPage();
-
         await page.setContent(htmlContent, { waitUntil: "networkidle2" });
         await page.emulateMediaType("screen");
 

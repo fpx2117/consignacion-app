@@ -12,13 +12,14 @@ export default function PosReporteLoadingPage({ params }: { params: Promise<{ pe
     const { period } = use(params);
     const searchParams = useSearchParams();
     const code = searchParams.get("code");
+    const sucursalId = searchParams.get("sucursalId") || "1";
     const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
         if (!code) { setError("Acceso no autorizado o enlace invalido."); return; }
-        const t = setTimeout(() => window.location.replace(`/ver/pos/${period}/pdf?code=${code}`), 1200);
+        const t = setTimeout(() => window.location.replace(`/ver/pos/${period}/pdf?code=${code}&sucursalId=${sucursalId}`), 1200);
         return () => clearTimeout(t);
-    }, [period, code]);
+    }, [period, code, sucursalId]);
 
     if (error) return (
         <div className="h-screen w-full flex flex-col items-center justify-center bg-rose-50 dark:bg-zinc-950 p-6 text-center">

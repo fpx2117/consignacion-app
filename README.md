@@ -1,119 +1,223 @@
 # Sistema Integral de Gestión POS & Consignaciones (B2B SaaS)
 
-Este repositorio contiene el código de un sistema de gestión comercial robusto (*Fullstack*), construido con **Next.js**, **React**, **Tailwind CSS**, **Prisma ORM** y **PostgreSQL**. El sistema está diseñado para manejar ventas directas (POS), gestión de stock por sucursales y un flujo completo de mercancía en consignación, operando bajo un modelo de suscripción (SaaS).
+Sistema de gestión comercial fullstack construido con **Next.js 16**, **React 19**, **Prisma 7** y **PostgreSQL**. Diseñado para manejar ventas directas (POS), gestión de stock multisucursal y un flujo completo de mercadería en consignación, bajo un modelo de suscripción SaaS con soporte para MercadoPago y PayPal.
 
-## 🚀 Características Principales
-
-* **Plataforma Multi-Sucursal (Multi-tenant):** Cuentas aisladas por sucursal con sistema de roles (`ADMIN`, `EMPLEADO`).
-* **Control de Stock Dual:** Seguimiento diferenciado entre stock físicamente disponible y stock entregado en consignación en la calle.
-* **Módulo de Consignaciones:** Flujo completo desde la entrega de mercancía hasta la liquidación paso a paso y devolución.
-* **Catálogo Público y Enlaces (Tienda):** Posibilidad de activar una tienda en línea pública para que los clientes vean el stock. Generación de URLs compartibles (Remitos, Tickets).
-* **Gestión de Gastos y Finanzas:** Control de caja (`SesionCaja`), egresos y sistema de pagos recurrentes (cuotas automatizadas).
-* **Central de Notificaciones:** Alertas automáticas por stock bajo, productos vencidos, y recepciones de dinero.
-* **Modelo SaaS (Suscripciones):** Cobro de membresías comerciales a las tiendas, integrado con MercadoPago y PayPal.
+> Para documentación técnica detallada (rutas, modelos, enumeraciones) ver [DOCUMENTACION.md](./DOCUMENTACION.md).
 
 ---
 
-## 🏗️ Arquitectura de Datos
+## Características Principales
 
-### Modelos de Inventario y Empresa
-* **`Sucursal` / `Branding`**: Define el comercio, su apariencia (Colores, Logos, Banners) y agrupa sus entidades.
-* **`Producto` / `StockSucursal`**: El núcleo del catálogo, controla precios, categorías y umbrales de stock independientes por local.
-
-### Flujo de Consignación
-1.  **`Consignacion`**: Agrupa el proceso de entrega de mercadería a un cliente bajo un `numeroFolio`.
-2.  **`ConsignacionDetalle`**: Registra las unidades entregadas, vendidas acumuladas y devueltas.
-3.  **`Liquidacion`**: El evento donde se rinden cuentas de lo vendido en una consignación abierta.
-
-### Finanzas (Caja, Gastos y Ventas)
-* **`Venta` & `VentaDetalle`**: Registro de ingresos ya sea de forma directa en sucursal o derivados de devoluciones.
-* **`SesionCaja` & `MovimientoCaja`**: Turnos de ventas de empleados controlando el arqueo de billetes físicos.
-* **`Gasto` & `CategoriaGasto`**: Rastreo del flujo de salida de dinero, incluyendo facturas recurrentes programadas.
-* **`Cliente` & `Pago`**: Cuentas corrientes (saldo a favor/deuda) de compradores frecuentes.
-
-### Infraestructura SaaS (Sistema)
-* **`Subscription` & `Plan`**: Controla el estado del cobro mensual de la licencia a las sucursales, limitando acceso.
-* **`Notification`**: Gestiona las alertas *in-app* y por mail sobre métricas críticas del local.
-* **`ShareLink`**: Visores web estáticos generados temporalmente para enviar tickets sin usar cuentas de usuario.
+- **Multi-Sucursal (Multi-tenant):** Stock, clientes, cajas y configuración completamente aislados por sucursal. Roles `ADMIN` y `EMPLEADO` con restricciones de horario laboral.
+- **Control de Stock Dual:** Seguimiento diferenciado entre stock disponible en góndola y stock entregado en consignación.
+- **Módulo de Consignaciones:** Flujo completo desde la entrega de mercadería (remito con folio secuencial) hasta la liquidación iterativa y devolución.
+- **Punto de Venta (POS):** Terminal de venta con carrito, lector de código de barras, descuentos por ítem y global, múltiples métodos de pago y anulación de ventas.
+- **Tienda Pública:** Catálogo online activable por sucursal con personalización de marca, carrusel de banners, temas visuales, redes sociales y checkout integrado con MercadoPago.
+- **Envíos con Andreani:** Cotización y gestión de envíos a domicilio o sucursal Andreani desde la tienda pública.
+- **Reportes PDF:** Generación server-side con Puppeteer de tickets, remitos, inventario, historial, reporte POS, dashboard y comprobantes de gastos. Todos compartibles via links temporales.
+- **Notificaciones en Tiempo Real:** Servidor Socket.io integrado que emite alertas de stock bajo, vencimientos, pagos y consignaciones a los clientes conectados.
+- **Seguridad y Auditoría:** Sesiones de usuario rastreadas (IP, dispositivo, geolocalización), log de auditoría por acción/módulo, recuperación de clave por email.
+- **Gastos y Finanzas:** Egresos con comprobantes, cuotas recurrentes (semanal/mensual/anual) y distribución proporcional de gastos entre sucursales.
+- **SaaS con Suscripciones:** Planes con límites configurables, integración con MercadoPago y PayPal, códigos promocionales y webhooks de pago automáticos.
 
 ---
 
-## 🛠️ Stack Tecnológico
+## Stack Tecnológico
 
-* **Framework:** Next.js 15 (App Router)
-* **Librería UI:** React 19, Tailwind CSS, Shadcn UI
-* **Motor de Base de Datos:** PostgreSQL
-* **ORM:** Prisma Client
-* **Procesamiento de Pagos:** Mercado Pago (Webhooks & Checkout Pro), PayPal
-* **Lenguaje:** TypeScript
-* **Herramientas Adicionales:** Recharts, React Hook Form, Zod.
-
----
-
-## 📋 Reglas de Negocio Implementadas
-
-| Concepto | Regla de Datos |
+| Capa | Tecnología |
 | :--- | :--- |
-| **Stock Mínimo** | Si `stockMinUnits` es 0, las notificaciones automáticas están desactivadas. |
-| **Folios** | Índice compuesto en `[clienteId, numeroFolio]` para rastrear entregas cronológicas por cliente. |
-| **Saldos** | El campo `saldoCuenta` en `Cliente` centraliza la deuda total pendiente de cobro. |
-| **Integridad** | Uso de `onDelete: Restrict` en productos para evitar pérdida de historial en ventas o consignaciones. |
+| Framework | Next.js 16 (App Router) |
+| UI | React 19, Tailwind CSS 4, shadcn/ui, Radix UI |
+| ORM / DB | Prisma 7 + PostgreSQL (`@prisma/adapter-pg`) |
+| Servidor custom | Node.js HTTP + `tsx` (`server.ts`) |
+| Tiempo real | Socket.io 4 |
+| Reportes PDF | Puppeteer 24 |
+| Pagos SaaS | MercadoPago SDK + PayPal |
+| Envíos | Andreani (`node-andreani`) |
+| Email | Resend |
+| Auth | JWT (`jose`) + bcryptjs, sesiones en DB |
+| Formularios | React Hook Form + Zod |
+| Estado global | Zustand |
+| Gráficos | Recharts |
+| Animaciones | Motion (Framer Motion v12) |
+| Lenguaje | TypeScript 5 |
 
 ---
 
-## ⚙️ Configuración del Proyecto
+## Reglas de Negocio Clave
 
-A continuación, los pasos para desplegar el proyecto localmente:
+| Concepto | Regla |
+| :--- | :--- |
+| **Stock mínimo** | Si `stockMinUnits` es 0, las notificaciones de stock bajo están desactivadas para ese producto. |
+| **Folios** | Las consignaciones tienen un índice `[clienteId, numeroFolio]` para rastrear cronológicamente las entregas por cliente. |
+| **Saldo de cliente** | `saldoCuenta > 0` significa deuda pendiente. Se actualiza automáticamente al registrar ventas y pagos. |
+| **Integridad histórica** | `onDelete: Restrict` en ventas y consignaciones impide borrar productos con historial. |
+| **Notificaciones deduplicadas** | Cada notificación tiene un campo `fingerprint` único que evita alertas repetidas. |
+| **Gastos compartidos** | Un gasto puede distribuirse en proporciones distintas entre múltiples sucursales via `GastoSucursal`. |
+| **Descuentos por volumen** | Las categorías soportan descuentos escalonados por cantidad mínima (`descuentos: Json`). |
+| **ShareLinks seguros** | Cada link compartible tiene `codeHash` para verificar integridad, límite de vistas y fecha de expiración. |
+| **Anulación de ventas** | Una venta anulada registra motivo y fecha; sus ítems pueden marcarse como rotura (`esRotura`). |
 
-### 1. Clonar el Repositorio
+---
+
+## Configuración del Proyecto
+
+### Requisitos previos
+
+- Node.js v20+
+- PostgreSQL 14+
+- (Opcional) Cuenta de MercadoPago y/o PayPal para el módulo de pagos.
+
+### 1. Clonar el repositorio
 
 ```bash
 git clone https://github.com/tu-usuario/consignacion-app.git
 cd consignacion-app
 ```
 
-### 2. Instalar Dependencias
+### 2. Instalar dependencias
 
-Asegúrate de tener Node.js instalado (v18+ recomendado).
 ```bash
 npm install
 ```
 
-### 3. Configurar Variables de Entorno
+### 3. Configurar variables de entorno
 
-Duplica el archivo `.env.example` y renómbralo a `.env`:
+Copia el archivo de ejemplo y completa las credenciales:
+
 ```bash
 cp .env.example .env
 ```
-Actualiza las credenciales dentro de tu `.env`:
-*   `DATABASE_URL`: URI de conexión a PostgreSQL.
-*   `NEXTAUTH_SECRET`: Secreto criptográfico para las sesiones de Auth.js.
-*   `MP_ACCESS_TOKEN` / `PAYPAL_CLIENT_ID`: Credenciales para los gateways de pago SaaS.
 
-### 4. Configurar la Base de Datos
+#### Variables requeridas
 
-Ejecuta las migraciones de Prisma para generar las tablas en tu base de datos:
+| Variable | Descripción |
+| :--- | :--- |
+| `DATABASE_URL` | URI de conexión a PostgreSQL. |
+| `JWT_SECRET` | Secreto para firma de tokens JWT. |
+| `JWT_COOKIE_NAME` | Nombre interno de la cookie de sesión. |
+| `CRON_SECRET` | Token para proteger los endpoints de cron. |
+| `PDF_SECRET` | Secreto para firmar los links de reportes PDF. |
+| `SHARE_LINK_SECRET` | Secreto para cifrar/verificar ShareLinks. |
+| `NEXT_PUBLIC_APP_URL` | URL pública de la aplicación (ej: `https://miapp.com`). |
+| `NEXT_PUBLIC_BASE_URL` | URL base usada por el servidor Socket.io y Puppeteer. |
+| `SOCKET_DISPATCH_URL` | URL interna del endpoint de despacho de notificaciones. |
+
+#### Variables de pagos SaaS (MercadoPago)
+
+| Variable | Descripción |
+| :--- | :--- |
+| `MP_ACCESS_TOKEN` | Access Token de la cuenta MercadoPago del SaaS. |
+| `MP_PUBLIC_KEY` | Public Key de MercadoPago. |
+| `MP_WEBHOOK_SECRET` | Secreto para validar webhooks de MercadoPago. |
+
+#### Variables de pagos SaaS (PayPal)
+
+| Variable | Descripción |
+| :--- | :--- |
+| `PAYPAL_CLIENT_ID` | Client ID de la app PayPal. |
+| `PAYPAL_SECRET` | Secret de la app PayPal. |
+| `PAYPAL_WEBHOOK_ID` | ID del webhook registrado en PayPal. |
+| `PAYPAL_API_URL` | URL de la API de PayPal (`sandbox` o `live`). |
+
+#### Otras variables
+
+| Variable | Descripción |
+| :--- | :--- |
+| `RESEND_API_KEY` | API Key de Resend para el envío de emails (reset de clave, etc.). |
+| `DEFAULT_TRIAL_DAYS` | Días del período de prueba gratuito (por defecto `7`). |
+
+> Las credenciales de MercadoPago que cada comercio configura para su **tienda pública** se guardan en `Configuracion.mpAccessTokenTienda` / `mpPublicKeyTienda` y se gestionan desde el panel de settings, no desde variables de entorno.
+
+### 4. Configurar la base de datos
+
 ```bash
+# Genera el cliente de Prisma
 npx prisma generate
+
+# Aplica el schema a la base de datos
 npx prisma db push
 ```
 
-**(Opcional)** Para poblar la base de datos con datos semilla de prueba (Usuarios admin, configuración, planes base):
+**(Opcional)** Poblar con datos iniciales de prueba (usuario admin, configuración base, planes):
+
 ```bash
-npx prisma db seed
+npm run seed
 ```
 
-### 5. Iniciar el Entorno de Desarrollo
+### 5. Iniciar en desarrollo
+
+El servidor de desarrollo es un servidor Node.js custom (`server.ts`) que integra Next.js con Socket.io:
 
 ```bash
 npm run dev
 ```
+
 La aplicación estará disponible en `http://localhost:3000`.
 
-### 6. Construcción para Producción
+> `npm run dev` ejecuta `tsx server.ts`, no `next dev`, para que Socket.io funcione correctamente.
 
-Para compilar el proyecto optimizado:
+### 6. Construcción y producción
+
 ```bash
+# Compila el proyecto (genera cliente Prisma + build de Next.js)
 npm run build
+
+# Inicia en producción (aplica migraciones pendientes y levanta el servidor)
 npm start
 ```
+
+`npm start` ejecuta `prisma migrate deploy` antes de iniciar el servidor, garantizando que la base de datos esté sincronizada.
+
+---
+
+## Arquitectura del Servidor
+
+El archivo `server.ts` implementa un servidor HTTP Node.js custom que:
+
+1. **Integra Socket.io** en el mismo proceso que Next.js, evitando la necesidad de un servidor separado.
+2. **Expone `/api/socket/dispatch`** como endpoint interno para que los Route Handlers de Next.js puedan emitir eventos a los clientes conectados (notificaciones en tiempo real).
+3. **Delega todo lo demás** al request handler de Next.js (`handle`).
+4. Escucha en `0.0.0.0` para ser compatible con entornos de cloud (Railway, Render, etc.).
+
+---
+
+## Estructura de Directorios Relevante
+
+```
+consignacion-app/
+├── prisma/
+│   └── schema.prisma          # Modelos de datos completos
+├── src/
+│   ├── app/
+│   │   ├── (system-guard)/
+│   │   │   ├── (protected)/   # Rutas protegidas (dashboard, ventas, etc.)
+│   │   │   ├── login/
+│   │   │   ├── forgot-password/
+│   │   │   └── reset-password/
+│   │   ├── api/               # Route Handlers de Next.js
+│   │   ├── lista/             # Tienda pública (acceso anónimo)
+│   │   ├── ver/               # Visores HTML de reportes
+│   │   ├── x/[code]/          # Redireccionador de ShareLinks
+│   │   └── setup/             # Wizard de configuración inicial
+│   ├── lib/
+│   │   ├── reports/           # Templates HTML para reportes PDF
+│   │   ├── validators/        # Schemas Zod por entidad
+│   │   └── *.ts               # Servicios: auth, prisma, mercadopago, etc.
+│   ├── providers/             # Socket.io provider + toaster en tiempo real
+│   ├── store/                 # Estado global con Zustand
+│   └── types/                 # Tipos TypeScript compartidos
+├── server.ts                  # Servidor HTTP custom (Next.js + Socket.io)
+└── DOCUMENTACION.md           # Documentación técnica detallada
+```
+
+---
+
+## Despliegue en Producción
+
+El proyecto está configurado para desplegarse en plataformas como **Railway** o **Render**:
+
+- El script `npm start` aplica migraciones automáticamente antes de iniciar.
+- El servidor escucha en `0.0.0.0` con el puerto definido por la variable de entorno `PORT`.
+- Asegurarse de que `NEXT_PUBLIC_APP_URL` y `NEXT_PUBLIC_BASE_URL` apunten a la URL pública del deployment.
+- Puppeteer requiere que el entorno tenga Chromium disponible (incluido en el paquete por defecto).

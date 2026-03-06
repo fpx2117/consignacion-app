@@ -49,13 +49,20 @@ export async function GET(
 
     try {
         const { period: rawPeriod } = await params;
-        const validPeriods: Period[] = ["today", "week", "month", "all"];
-        const period: Period = validPeriods.includes(rawPeriod as Period)
-            ? (rawPeriod as Period)
-            : "month";
+        const VALID_PERIODS: Period[] = ["today", "week", "month", "all"];
+        const period: Period = VALID_PERIODS.includes(rawPeriod as Period) ? (rawPeriod as Period) : "month";
+
+        const { searchParams } = new URL(req.url);
+        const code = searchParams.get("code");
+        const sucursalId = Number(searchParams.get("sucursalId") || 1);
+
+        if (!code) {
+            return NextResponse.json({ error: "Code is required" }, { status: 400 });
+        }
 
         const start = getPeriodStart(period);
         const dateWhere = start ? { gte: start } : undefined;
+        const sucursalWhere = { sucursalId };
 
         // 1. Fetch all data in parallel
         const [
@@ -68,67 +75,106 @@ export async function GET(
             itemsLiquidados,
             itemsVentaDirecta,
             tendenciaSeries,
+            gastosPropiosAgg,
+            gastosLinksData,
         ] = await Promise.all([
             // Stock
-            prisma.stockSucursal.aggregate({ _sum: { stockDisponibleUnits: true, stockConsignadoUnits: true } }),
+            prisma.stockSucursal.aggregate({ where: sucursalWhere, _sum: { stockDisponibleUnits: true, stockConsignadoUnits: true } }),
 
             // Consignaciones
-            prisma.consignacion.count({ where: { estado: "ABIERTA" } }),
-            prisma.consignacion.count({ where: { estado: "CERRADA" } }),
+            prisma.consignacion.count({ where: { ...sucursalWhere, estado: "ABIERTA" } }),
+            prisma.consignacion.count({ where: { ...sucursalWhere, estado: "CERRADA" } }),
 
             // Unidades pendientes (abiertas)
             prisma.consignacionDetalle.findMany({
-                where: { consignacion: { estado: "ABIERTA" } },
+                where: { consignacion: { ...sucursalWhere, estado: "ABIERTA" } },
                 select: { unitsEntregadas: true, unitsVendidasAcum: true, unitsDevueltasAcum: true },
             }),
 
             // Ventas
             prisma.venta.aggregate({
-                where: { fecha: dateWhere },
+                where: { ...sucursalWhere, fecha: dateWhere },
                 _sum: { total: true },
                 _count: { _all: true },
             }),
 
             // Pagos
             prisma.pago.aggregate({
-                where: { fecha: dateWhere },
+                where: { ...sucursalWhere, fecha: dateWhere },
                 _sum: { monto: true },
                 _count: { _all: true },
             }),
 
             // Ganancia por consignación
             prisma.liquidacionItem.findMany({
-                where: { liquidacion: { fecha: dateWhere } },
+                where: { liquidacion: { fecha: dateWhere, consignacion: sucursalWhere } },
                 select: {
                     unitsVendidas: true,
+                    precioUnitario: true,
+                    descuento: true,
                     detalle: {
                         select: {
-                            producto: { select: { precioVenta: true, precioCosto: true } },
-                            consignacion: { select: { porcentajeAumento: true } },
+                            producto: { select: { precioCosto: true } },
                         },
                     },
                 },
             }),
 
-            // Ganancia ventas directas
-            prisma.ventaDetalle.findMany({
-                where: { venta: { fecha: dateWhere, liquidacionId: null } },
+            // Ganancia ventas directas + Descuentos Globales
+            prisma.venta.findMany({
+                where: { ...sucursalWhere, fecha: dateWhere },
                 select: {
-                    precioUnitario: true,
-                    units: true,
-                    producto: { select: { precioCosto: true } },
+                    descuentoGlobal: true,
+                    detalles: {
+                        select: {
+                            precioUnitario: true,
+                            subtotal: true,
+                            units: true,
+                            producto: { select: { precioCosto: true } },
+                        },
+                    },
                 },
             }),
 
             // Tendencia diaria (solo si el period no es "all")
             period !== "all"
-                ? prisma.venta.groupBy({
-                    by: ["fecha"],
-                    where: { fecha: dateWhere },
-                    _sum: { total: true },
+                ? prisma.venta.findMany({
+                    where: { ...sucursalWhere, fecha: dateWhere },
+                    select: { fecha: true, total: true, descuentoGlobal: true },
                     orderBy: { fecha: "asc" },
                 })
                 : Promise.resolve([]),
+
+            // Gastos propios PAGADO no compartidos (con detalle)
+            prisma.gasto.findMany({
+                where: { sucursalId, esCompartido: false, fecha: dateWhere, estado: "PAGADO" },
+                select: {
+                    monto: true,
+                    motivo: true,
+                    fecha: true,
+                    categoria: { select: { nombre: true } },
+                },
+                orderBy: { fecha: "asc" },
+            }),
+
+            // Participación proporcional en gastos compartidos (con detalle)
+            prisma.gastoSucursal.findMany({
+                where: {
+                    sucursalId,
+                    gasto: { fecha: dateWhere, estado: "PAGADO" },
+                },
+                select: {
+                    montoProporcional: true,
+                    gasto: {
+                        select: {
+                            motivo: true,
+                            fecha: true,
+                            categoria: { select: { nombre: true } },
+                        },
+                    },
+                },
+                orderBy: { gasto: { fecha: "asc" } },
+            }),
         ]);
 
         // 2. Calculations
@@ -139,18 +185,24 @@ export async function GET(
 
         let gananciaConsignacion = 0;
         for (const item of itemsLiquidados) {
-            const precioBase = Number(item.detalle?.producto?.precioVenta || 0);
-            const porcentaje = Number(item.detalle?.consignacion?.porcentajeAumento || 0);
-            const costo = Number(item.detalle?.producto?.precioCosto || 0);
-            const precioCobrado = precioBase * (1 + porcentaje / 100);
-            gananciaConsignacion += (precioCobrado - costo) * item.unitsVendidas;
+            const precioVenta = Number(item.precioUnitario);
+            const descuento = Number(item.descuento || 0);
+            const costo = Number(item.detalle?.producto?.precioCosto || 0) * item.unitsVendidas;
+            gananciaConsignacion += (precioVenta * item.unitsVendidas - descuento - costo);
         }
 
         let gananciaDirecta = 0;
-        for (const item of itemsVentaDirecta) {
-            const precio = Number(item.precioUnitario);
-            const costo = Number(item.producto?.precioCosto || 0);
-            gananciaDirecta += (precio - costo) * item.units;
+        let totalDescuentosEscrito = 0;
+        for (const v of itemsVentaDirecta) {
+            let gananciaVenta = 0;
+            for (const det of v.detalles) {
+                const subtotal = Number(det.subtotal);
+                const costo = Number(det.producto?.precioCosto || 0) * det.units;
+                gananciaVenta += (subtotal - costo);
+            }
+            gananciaVenta -= Number(v.descuentoGlobal || 0);
+            totalDescuentosEscrito += Number(v.descuentoGlobal || 0);
+            gananciaDirecta += gananciaVenta;
         }
 
         // 3. Tendencia (aggregate by date string)
@@ -164,20 +216,56 @@ export async function GET(
                     year: "numeric",
                 });
                 const existing = tendenciaMap.get(dateStr) ?? { ventasTotal: 0, pagosTotal: 0 };
-                existing.ventasTotal += Number(row._sum.total ?? 0);
+                const totalNeto = Number(row.total) - Number(row.descuentoGlobal || 0);
+                existing.ventasTotal += totalNeto;
                 tendenciaMap.set(dateStr, existing);
             }
         }
 
         const tendencia = Array.from(tendenciaMap.entries()).map(([date, v]) => ({ date, ...v }));
 
+        // Gastos: propios no compartidos + proporcional en compartidos
+        const totalGastosPropios = (gastosPropiosAgg as any[]).reduce(
+            (acc: number, g: any) => acc + Number(g.monto), 0
+        );
+        const totalGastosLinks = (gastosLinksData as any[]).reduce(
+            (acc: number, g: any) => acc + Number(g.montoProporcional), 0
+        );
+        const totalGastos = totalGastosPropios + totalGastosLinks;
+
+        function formatDateShort(d: Date | string): string {
+            return new Date(d).toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit", year: "numeric" });
+        }
+
+        const gastosDetalle = [
+            ...(gastosPropiosAgg as any[]).map((g: any) => ({
+                motivo: g.motivo as string,
+                categoria: g.categoria?.nombre ?? "Sin categoría",
+                monto: Number(g.monto),
+                fecha: formatDateShort(g.fecha),
+                esCompartido: false,
+            })),
+            ...(gastosLinksData as any[]).map((g: any) => ({
+                motivo: g.gasto.motivo as string,
+                categoria: g.gasto.categoria?.nombre ?? "Sin categoría",
+                monto: Number(g.montoProporcional),
+                fecha: formatDateShort(g.gasto.fecha),
+                esCompartido: true,
+            })),
+        ].sort((a, b) => a.fecha.localeCompare(b.fecha));
+
+        const gananciaBruta = gananciaConsignacion + gananciaDirecta;
+        const utilidadNeta = gananciaBruta - totalGastos;
+
         const reportData: DashboardReportData = {
             period,
             periodLabel: getPeriodLabel(period),
             fechaGeneracion: formatDateAR(new Date()),
-            gananciaTotal: gananciaConsignacion + gananciaDirecta,
+            gananciaBruta,
             gananciaConsignacion,
             gananciaDirecta,
+            gastos: totalGastos,
+            utilidadNeta,
             ingresosCaja: Number(pagosAgg._sum?.monto ?? 0),
             cantidadVentas: ventasAgg._count?._all ?? 0,
             cantidadPagos: pagosAgg._count?._all ?? 0,
@@ -187,9 +275,10 @@ export async function GET(
             consignacionesCerradas: consigCerradas,
             unitsPendientes,
             tendencia,
+            gastosDetalle,
         };
 
-        const branding = await getBranding();
+        const branding = await getBranding(sucursalId);
         const htmlContent = buildDashboardReportHtml(reportData, branding);
 
         // 4. Puppeteer PDF

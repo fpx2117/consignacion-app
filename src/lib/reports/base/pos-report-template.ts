@@ -32,7 +32,7 @@ export type PosReportData = {
   // Detalle ventas (últimas 50)
   ventas: VentaPosRow[];
   // Tendencia diaria
-  tendencia: { date: string; ventasTotal: number; cantidad: number; ganancia: number }[];
+  tendencia: { date: string; ventasTotal: number; cantidad: number; ganancia: number; unitsVendidas: number }[];
 };
 
 // ─────────────────────────────────────────────
@@ -93,11 +93,11 @@ export function buildPosReportHtml(data: PosReportData, branding: BrandingDTO): 
 
   // ─ Top productos
   const topHtml = data.topProductos.length > 0
-    ? data.topProductos.slice(0, 8).map((p, i) => `
+    ? data.topProductos.slice(0, 5).map((p, i) => `
       <tr class="group">
         <td class="py-3 pl-4 bg-slate-50 rounded-l-xl border-y border-l border-slate-100">
           <span class="text-[10px] font-black text-slate-300 w-5 inline-block">${i + 1}</span>
-          <span class="text-xs font-bold text-slate-800">${e(p.nombre)}</span>
+          <span class="text-xs font-bold text-slate-800">${e(p.nombre) || "Sin nombre"}</span>
         </td>
         <td class="py-3 bg-slate-50 border-y border-slate-100 text-center">
           <span class="text-xs font-black text-slate-600 money">${fmtN(p.units)} u.</span>
@@ -117,10 +117,11 @@ export function buildPosReportHtml(data: PosReportData, branding: BrandingDTO): 
       <tr>
         <td class="py-2 pl-4 bg-slate-50 rounded-l-xl border-y border-l border-slate-100 text-[10px] font-bold text-slate-500">${e(t.date)}</td>
         <td class="py-2 bg-slate-50 border-y border-slate-100 text-center text-[10px] font-bold text-slate-600">${fmtN(t.cantidad)}</td>
+        <td class="py-2 bg-slate-50 border-y border-slate-100 text-center text-[10px] font-bold text-slate-600 money">${fmtN(t.unitsVendidas)} u.</td>
         <td class="py-2 bg-slate-50 border-y border-slate-100 text-right text-[10px] font-black text-slate-900 money">${fmt(t.ventasTotal)}</td>
         <td class="py-2 pr-4 bg-slate-50 rounded-r-xl border-y border-r border-slate-100 text-right text-[10px] font-black text-emerald-600 money">${fmt(t.ganancia)}</td>
       </tr>`).join("")
-    : `<tr><td colspan="4" class="py-4 text-center text-xs text-slate-400">Sin datos de tendencia para período histórico.</td></tr>`;
+    : `<tr><td colspan="5" class="py-4 text-center text-xs text-slate-400">Sin datos de tendencia para período histórico.</td></tr>`;
 
   return `<!DOCTYPE html>
 <html>
@@ -211,7 +212,8 @@ export function buildPosReportHtml(data: PosReportData, branding: BrandingDTO): 
       <thead>
         <tr class="text-[9px] text-slate-400 uppercase font-bold tracking-wider">
           <th class="py-2 pl-4 text-left">Fecha</th>
-          <th class="py-2 text-center">Ventas</th>
+          <th class="py-2 text-center">Ops.</th>
+          <th class="py-2 text-center">Uds.</th>
           <th class="py-2 text-right">Total ($)</th>
           <th class="py-2 pr-4 text-right">Ganancia</th>
         </tr>

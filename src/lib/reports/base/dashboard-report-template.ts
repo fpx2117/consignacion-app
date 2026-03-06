@@ -8,9 +8,11 @@ export type DashboardReportData = {
     fechaGeneracion: string;
 
     // Finanzas
-    gananciaTotal: number;
+    gananciaBruta: number;
     gananciaConsignacion: number;
     gananciaDirecta: number;
+    gastos: number;
+    utilidadNeta: number;
     ingresosCaja: number;
     cantidadVentas: number;
     cantidadPagos: number;
@@ -26,6 +28,9 @@ export type DashboardReportData = {
 
     // Tendencia (optional, can be empty array for "all" period)
     tendencia: { date: string; ventasTotal: number; pagosTotal: number }[];
+
+    // Gastos detallados
+    gastosDetalle: { motivo: string; categoria: string; monto: number; fecha: string; esCompartido: boolean }[];
 };
 
 function escapeHtml(s: unknown): string {
@@ -64,11 +69,11 @@ function sectionTitle(title: string, color: string): string {
 export function buildDashboardReportHtml(data: DashboardReportData, branding: BrandingDTO): string {
     const color = branding.primaryColor || "#294c98";
 
-    const pctConsig = data.gananciaTotal > 0
-        ? Math.round((data.gananciaConsignacion / data.gananciaTotal) * 100)
+    const pctConsig = data.gananciaBruta > 0
+        ? Math.round((data.gananciaConsignacion / data.gananciaBruta) * 100)
         : 0;
-    const pctDirecta = data.gananciaTotal > 0
-        ? Math.round((data.gananciaDirecta / data.gananciaTotal) * 100)
+    const pctDirecta = data.gananciaBruta > 0
+        ? Math.round((data.gananciaDirecta / data.gananciaBruta) * 100)
         : 0;
 
     const tendenciaRows = data.tendencia.length > 0
@@ -106,14 +111,51 @@ export function buildDashboardReportHtml(data: DashboardReportData, branding: Br
 
   ${sectionTitle("Rentabilidad", color)}
   <div class="kpi-row">
-    ${kpiBox("Ganancia Neta", fmt(data.gananciaTotal), color, "Utilidad real (venta − costo)")}
-    ${kpiBox("Por Consignación", fmt(data.gananciaConsignacion), "#059669", `${pctConsig}% del total`)}
-    ${kpiBox("Ventas Directas", fmt(data.gananciaDirecta), "#d97706", `${pctDirecta}% del total`)}
+    ${kpiBox("Ganancia Bruta", fmt(data.gananciaBruta), "#059669", "Ventas − Costos")}
+    ${kpiBox("Gastos Totales", fmt(data.gastos), "#ef4444", "Egresos del período")}
+    ${kpiBox("Ganancia Neta", fmt(data.utilidadNeta), color, "Bruta − Gastos")}
     ${kpiBox("Ingresos en Caja", fmt(data.ingresosCaja), "#7c3aed", `${fmtN(data.cantidadPagos)} transacciones`)}
   </div>
   <div class="kpi-row" style="margin-top:10px;">
+    ${kpiBox("Por Consignación", fmt(data.gananciaConsignacion), "#0ea5e9", `${pctConsig}% de bruta`)}
+    ${kpiBox("Ventas Directas", fmt(data.gananciaDirecta), "#d97706", `${pctDirecta}% de bruta`)}
     ${kpiBox("Ventas Registradas", fmtN(data.cantidadVentas), color, "Operaciones en el período")}
   </div>
+
+  ${data.gastosDetalle.length > 0 ? `
+  ${sectionTitle("Detalle de Gastos", "#ef4444")}
+  <table>
+    <thead>
+      <tr>
+        <th>Fecha</th>
+        <th>Concepto</th>
+        <th>Categoría</th>
+        <th style="text-align:center;">Tipo</th>
+        <th class="right">Monto</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${data.gastosDetalle.map((g) => `
+      <tr>
+        <td style="padding:5px 8px; font-size:11px; border-bottom:1px solid #f3f4f6; white-space:nowrap;">${escapeHtml(g.fecha)}</td>
+        <td style="padding:5px 8px; font-size:11px; border-bottom:1px solid #f3f4f6;">${escapeHtml(g.motivo)}</td>
+        <td style="padding:5px 8px; font-size:11px; border-bottom:1px solid #f3f4f6;">${escapeHtml(g.categoria)}</td>
+        <td style="padding:5px 8px; font-size:10px; border-bottom:1px solid #f3f4f6; text-align:center;">
+          <span style="background:${g.esCompartido ? "#fef3c7" : "#fee2e2"}; color:${g.esCompartido ? "#b45309" : "#dc2626"}; padding:2px 6px; border-radius:4px; font-weight:700; font-size:9px; text-transform:uppercase;">
+            ${g.esCompartido ? "Compartido" : "Propio"}
+          </span>
+        </td>
+        <td style="padding:5px 8px; font-size:11px; border-bottom:1px solid #f3f4f6; text-align:right; font-weight:700; color:#ef4444;">${escapeHtml(fmt(g.monto))}</td>
+      </tr>`).join("")}
+    </tbody>
+    <tfoot>
+      <tr>
+        <td colspan="4" style="padding:6px 8px; font-size:11px; font-weight:700; text-align:right; border-top:2px solid #e5e7eb;">Total Gastos:</td>
+        <td style="padding:6px 8px; font-size:12px; font-weight:800; text-align:right; border-top:2px solid #e5e7eb; color:#ef4444;">${escapeHtml(fmt(data.gastos))}</td>
+      </tr>
+    </tfoot>
+  </table>
+  ` : ""}
 
   ${sectionTitle("Stock", color)}
   <div class="kpi-row">

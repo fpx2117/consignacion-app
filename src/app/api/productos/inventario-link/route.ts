@@ -9,19 +9,23 @@ import { decryptCode, encryptCode, generateShortCode, hashCode } from "@/lib/sha
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
-export async function GET(_req: NextRequest) {
+export async function GET(req: NextRequest) {
+  // Obtenemos sucursalId de la query si existe
+  const { searchParams } = new URL(req.url);
+  const sucursalId = searchParams.get("sucursalId");
+  const targetId = sucursalId ? Number(sucursalId) : 0;
+
   // Configuraciones del link
-  const expiresInDays = 1; // El inventario suele ser más volátil, 24hs está bien
-  const maxViews = 10;     // Permitimos más aperturas que en un ticket
+  const expiresInDays = 1;
+  const maxViews = 20;
 
   const now = new Date();
 
   // ✅ 1. Reutilizar link activo para evitar duplicados en la DB
-  // Buscamos un link de tipo INVENTARIO que no haya expirado y tenga vistas disponibles
   const existing = await prisma.shareLink.findFirst({
     where: {
       type: "INVENTARIO",
-      targetId: 0, // Usamos 0 para el inventario general
+      targetId,
       expiresAt: { gt: now },
       views: { lt: maxViews },
       maxViews,
@@ -32,7 +36,6 @@ export async function GET(_req: NextRequest) {
   let code: string;
 
   if (existing) {
-    // Si existe, desencriptamos el código para devolverlo
     code = decryptCode(existing.codeEnc);
   } else {
     // ✅ 2. Generar nuevo link si no hay uno válido
@@ -41,9 +44,8 @@ export async function GET(_req: NextRequest) {
     let created = false;
     code = "";
 
-    // Intento de generación (mismo loop de colisiones que ticket-link)
     for (let i = 0; i < 15; i++) {
-      code = generateShortCode(8); // Un poco más largo para inventario
+      code = generateShortCode(8);
       const codeHash = hashCode(code);
 
       const used = await prisma.shareLink.findUnique({ where: { codeHash } });
@@ -52,9 +54,9 @@ export async function GET(_req: NextRequest) {
       await prisma.shareLink.create({
         data: {
           codeHash,
-          codeEnc: encryptCode(code), // Usamos tu función de encriptación
+          codeEnc: encryptCode(code),
           type: "INVENTARIO",
-          targetId: 0, 
+          targetId,
           expiresAt,
           maxViews,
         },
@@ -69,6 +71,6 @@ export async function GET(_req: NextRequest) {
     }
   }
 
-  // ✅ SIEMPRE JSON (Para que el apiService lo procese y normalice la URL)
+  // ✅ SIEMPRE JSON
   return NextResponse.json({ url: `/x/${code}` });
 }

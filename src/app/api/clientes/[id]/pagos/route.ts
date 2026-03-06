@@ -15,7 +15,7 @@ export async function POST(req: Request, { params }: RouteContext) {
   // Resolvemos los params de forma asíncrona
   const { id: rawId } = await params;
   const clienteId = Number(rawId);
-  
+
   if (!Number.isFinite(clienteId)) {
     return NextResponse.json({ error: "ID inválido" }, { status: 400 });
   }
@@ -37,6 +37,8 @@ export async function POST(req: Request, { params }: RouteContext) {
     const pago = await tx.pago.create({
       data: {
         clienteId,
+        sucursalId: auth.activeSucursalId, // <--- NUEVO
+        tipo: "DEUDA",                     // <--- NUEVO
         monto: parsed.data.monto,
         metodo: parsed.data.metodo,
       },

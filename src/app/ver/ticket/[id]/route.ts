@@ -80,6 +80,7 @@ export async function GET(
 
     const reporteData: VentaReportDTO = {
       id: ventaRaw.id,
+      numeroVenta: ventaRaw.numeroVenta,
       fecha: ventaRaw.fecha,
       total: Number(ventaRaw.total),
       descuentoGlobal: Number((ventaRaw as any).descuentoGlobal || 0),

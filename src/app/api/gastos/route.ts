@@ -13,7 +13,8 @@ export async function GET(req: Request) {
     const categoriaId = searchParams.get("categoriaId");
 
     try {
-        const gastos = await prisma.gasto.findMany({
+        // Gastos propios de esta sucursal
+        const ownGastos = await prisma.gasto.findMany({
             where: {
                 sucursalId: auth.activeSucursalId,
                 ...(estado && { estado: estado as any }),
@@ -21,13 +22,58 @@ export async function GET(req: Request) {
             },
             include: {
                 categoria: true,
-                user: {
-                    select: { id: true, nombre: true }
-                }
+                user: { select: { id: true, nombre: true } },
+                sucursalesCompartidas: true,
             },
             orderBy: { fecha: "desc" },
         });
-        return NextResponse.json({ data: gastos });
+
+        // Normalizar gastos propios: si son compartidos, usar el montoProporcional
+        const normalizedOwn = ownGastos.map((g) => {
+            if (g.esCompartido && g.sucursalesCompartidas?.length > 0) {
+                const link = g.sucursalesCompartidas.find(
+                    (s) => s.sucursalId === auth.activeSucursalId
+                );
+                if (link) {
+                    return { ...g, monto: link.montoProporcional };
+                }
+            }
+            return g;
+        });
+
+        // Gastos compartidos con esta sucursal por otra sucursal (ella es la dueña)
+        const sharedLinks = await prisma.gastoSucursal.findMany({
+            where: {
+                sucursalId: auth.activeSucursalId,
+                gasto: { NOT: { sucursalId: auth.activeSucursalId } },
+                ...(estado && { gasto: { NOT: { sucursalId: auth.activeSucursalId }, estado: estado as any } }),
+            },
+            include: {
+                gasto: {
+                    include: {
+                        categoria: true,
+                        user: { select: { id: true, nombre: true } },
+                        sucursalesCompartidas: true,
+                    },
+                },
+            },
+        });
+
+        // Filtrar por categoría si aplica y mapear con montoProporcional
+        const compartidos = sharedLinks
+            .filter((link) => !categoriaId || link.gasto.categoriaGastoId === Number(categoriaId))
+            .map((link) => ({
+                ...link.gasto,
+                monto: link.montoProporcional,
+                esVistaCompartida: true,
+            }));
+
+        // Merge y ordenar por fecha desc
+        const all = [...normalizedOwn, ...compartidos].sort(
+            (a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime()
+        );
+
+        return NextResponse.json({ data: all });
     } catch (error) {
         return NextResponse.json(
             { error: "Error al obtener gastos" },
@@ -40,7 +86,6 @@ export async function POST(req: Request) {
     const auth = await requireAuth();
     if (!auth.ok) return auth.res;
 
-    // Solo ADMIN puede registrar gastos según requerimiento
     if (auth.user?.rol !== "ADMIN") {
         return NextResponse.json({ error: "No autorizado" }, { status: 403 });
     }
@@ -55,7 +100,8 @@ export async function POST(req: Request) {
             estado,
             esRecurrente,
             frecuencia,
-            categoriaGastoId
+            categoriaGastoId,
+            sucursalesCompartir, // number[] - IDs de sucursales con las que compartir
         } = body;
 
         if (!monto || !motivo || !categoriaGastoId) {
@@ -69,6 +115,11 @@ export async function POST(req: Request) {
         const endDate = fechaVencimiento ? new Date(fechaVencimiento) : null;
         const sucursalId = auth.activeSucursalId;
         const userId = Number(auth.user.sub);
+
+        const esCompartido =
+            Array.isArray(sucursalesCompartir) && sucursalesCompartir.length > 1;
+        const totalSucursales = esCompartido ? sucursalesCompartir.length : 1;
+        const montoProporcional = Number(monto) / totalSucursales;
 
         // Si es recurrente y tiene fecha de vencimiento final, generamos cuotas
         if (!!esRecurrente && endDate && ["MENSUAL", "SEMANAL", "ANUAL"].includes(frecuencia)) {
@@ -84,25 +135,44 @@ export async function POST(req: Request) {
             }
 
             const totalCuotas = dates.length;
-            const batch = dates.map((d, index) => ({
-                monto: Number(monto),
-                motivo,
-                fecha: d,
-                fechaVencimiento: d, // En préstamos, la cuota vence el día que corresponde
-                estado: index === 0 ? (estado || "PAGADO") : "PENDIENTE",
-                esRecurrente: true,
-                frecuencia,
-                categoriaGastoId: Number(categoriaGastoId),
-                sucursalId,
-                userId,
-                recurrenciaId,
-                cuotaActual: index + 1,
-                cuotaTotal: totalCuotas
-            }));
 
-            await prisma.gasto.createMany({ data: batch });
+            // Crear cada cuota individualmente para poder crear los GastoSucursal asociados
+            for (let index = 0; index < dates.length; index++) {
+                const d = dates[index];
+                const gasto = await prisma.gasto.create({
+                    data: {
+                        monto: Number(monto),
+                        motivo,
+                        fecha: d,
+                        fechaVencimiento: d,
+                        estado: index === 0 ? (estado || "PAGADO") : "PENDIENTE",
+                        esRecurrente: true,
+                        frecuencia,
+                        categoriaGastoId: Number(categoriaGastoId),
+                        sucursalId,
+                        userId,
+                        recurrenciaId,
+                        cuotaActual: index + 1,
+                        cuotaTotal: totalCuotas,
+                        esCompartido,
+                    },
+                });
 
-            return NextResponse.json({ message: `${totalCuotas} cuotas generadas correctamente` }, { status: 201 });
+                if (esCompartido) {
+                    await prisma.gastoSucursal.createMany({
+                        data: sucursalesCompartir.map((sid: number) => ({
+                            gastoId: gasto.id,
+                            sucursalId: sid,
+                            montoProporcional,
+                        })),
+                    });
+                }
+            }
+
+            return NextResponse.json(
+                { message: `${totalCuotas} cuotas generadas correctamente` },
+                { status: 201 }
+            );
         }
 
         // Caso normal (único)
@@ -120,12 +190,21 @@ export async function POST(req: Request) {
                 userId,
                 cuotaActual: null,
                 cuotaTotal: null,
-                recurrenciaId: null
+                recurrenciaId: null,
+                esCompartido,
             },
-            include: {
-                categoria: true
-            }
+            include: { categoria: true },
         });
+
+        if (esCompartido) {
+            await prisma.gastoSucursal.createMany({
+                data: sucursalesCompartir.map((sid: number) => ({
+                    gastoId: nuevoGasto.id,
+                    sucursalId: sid,
+                    montoProporcional,
+                })),
+            });
+        }
 
         return NextResponse.json({ data: nuevoGasto }, { status: 201 });
     } catch (error) {

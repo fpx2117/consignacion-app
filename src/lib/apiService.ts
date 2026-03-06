@@ -160,7 +160,7 @@ export const API_ROUTES = {
   PRODUCTO_ID: (id: number) => `/api/productos/${id}`,
   CATEGORIAS: "/api/categorias",
   CATEGORIA_ID: (id: number) => `/api/categorias/${id}`,
-  INVENTARIO_LINK: "/api/productos/inventario-link",
+  INVENTARIO_LINK: (id?: string | number) => `/api/productos/inventario-link${id ? `?sucursalId=${id}` : ""}`,
 
   CONSIGNACIONES: "/api/consignaciones",
   CONSIGNACION_ID: (id: number) => `/api/consignaciones/${id}`,
@@ -490,8 +490,11 @@ export const apiService = {
     });
   },
 
-  deleteVenta(id: number) {
-    return apiData<{ success: true }>(API_ROUTES.VENTA_ID(id), { method: "DELETE" });
+  anularVenta(id: number, payload: { motivo: string; brokenItems?: number[] }) {
+    return apiData<{ success: true }>(API_ROUTES.VENTA_ID(id), {
+      method: "DELETE",
+      body: JSON.stringify(payload),
+    });
   },
 
   /* ---------- PAGOS ---------- */
@@ -595,8 +598,8 @@ export const apiService = {
     return normalizeShareUrl(data.url);
   },
 
-  async getInventarioPdfUrl(): Promise<string> {
-    const res = await fetch(API_ROUTES.INVENTARIO_LINK);
+  async getInventarioPdfUrl(sucursalId?: string | number): Promise<string> {
+    const res = await fetch(API_ROUTES.INVENTARIO_LINK(sucursalId));
     const data = await res.json();
     return normalizeShareUrl(data.url);
   },

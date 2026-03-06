@@ -138,7 +138,7 @@ export function ClientHistoryTabs({ consignaciones, pagos, ventas }: HistoryProp
                         <div className="grid gap-3 md:hidden">
                             {ventas.map(v => (
                                 <MobileCard key={v.id}
-                                    title={`Ticket #${v.id}`}
+                                    title={`Ticket #${v.numeroVenta || v.id}`}
                                     date={v.fecha}
                                     amount={v.total}
                                     subtitle={`${(v as any).cantidadTotal ?? "-"} artículos`}
@@ -153,7 +153,7 @@ export function ClientHistoryTabs({ consignaciones, pagos, ventas }: HistoryProp
                                     {ventas.map(v => (
                                         <TableRow key={v.id}>
                                             <TableCell>{formatDate(v.fecha)}</TableCell>
-                                            <TableCell className="font-mono text-xs">#{v.id}</TableCell>
+                                            <TableCell className="font-mono text-xs">#{v.numeroVenta || v.id}</TableCell>
                                             <TableCell>{(v as any).cantidadTotal ?? "-"} un.</TableCell>
                                             <TableCell className="text-right font-bold">{formatCurrency(v.total)}</TableCell>
                                         </TableRow>

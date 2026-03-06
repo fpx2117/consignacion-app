@@ -4,7 +4,7 @@
 
 // src/app/ver/dashboard/[period]/page.tsx
 import { useEffect, useState, use } from "react";
-import { Loader2, AlertCircle, BarChart3 } from "lucide-react";
+import { Loader2, AlertCircle, BarChart3, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useSearchParams } from "next/navigation";
 
@@ -23,6 +23,7 @@ export default function DashboardReporteLoadingPage({
     const { period } = use(params);
     const searchParams = useSearchParams();
     const code = searchParams.get("code");
+    const sucursalId = searchParams.get("sucursalId") || "1";
     const [error, setError] = useState<string | null>(null);
 
     const label = PERIOD_LABELS[period] ?? period;
@@ -34,11 +35,11 @@ export default function DashboardReporteLoadingPage({
         }
 
         const timer = setTimeout(() => {
-            window.location.replace(`/ver/dashboard/${period}/pdf?code=${code}`);
+            window.location.replace(`/ver/dashboard/${period}/pdf?code=${code}&sucursalId=${sucursalId}`);
         }, 1200);
 
         return () => clearTimeout(timer);
-    }, [period, code]);
+    }, [period, code, sucursalId]);
 
     if (error) {
         return (

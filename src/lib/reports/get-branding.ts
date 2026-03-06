@@ -37,13 +37,27 @@ function detectMime(buf: Buffer): string {
   return "image/png"; // fallback seguro
 }
 
-export async function getBranding(): Promise<BrandingDTO> {
+export async function getBranding(sucursalId?: number): Promise<BrandingDTO> {
   const branding = await prisma.branding.findFirst({
+    where: sucursalId ? { sucursalId } : undefined,
     orderBy: { updatedAt: "desc" },
   });
 
-  if (!branding) return DEFAULT_BRANDING;
+  if (!branding) {
+    // Si no hay branding para esa sucursal, intentamos el más reciente de cualquier sucursal
+    // o simplemente retornamos el default.
+    const fallback = sucursalId
+      ? await prisma.branding.findFirst({ orderBy: { updatedAt: "desc" } })
+      : null;
 
+    if (!fallback) return DEFAULT_BRANDING;
+    return mapToDTO(fallback);
+  }
+
+  return mapToDTO(branding);
+}
+
+function mapToDTO(branding: any): BrandingDTO {
   const baseUrl =
     process.env.NEXT_PUBLIC_APP_URL ||
     process.env.APP_URL ||

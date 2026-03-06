@@ -73,14 +73,19 @@ export async function POST(req: Request) {
 
     const notificationsQueue: any[] = [];
 
-    // Lógica de Cliente
+    // Lógica de Cliente - Filtrado por sucursal
     let finalClienteId = clienteId;
     if (!finalClienteId) {
       const consumidor = await prisma.cliente.findFirst({
-        where: { nombre: "Consumidor Final" },
+        where: { nombre: "Consumidor Final", sucursalId: auth.activeSucursalId },
       });
       finalClienteId = consumidor ? consumidor.id : (await prisma.cliente.create({
-        data: { nombre: "Consumidor Final", direccion: "Venta Mostrador", activo: true },
+        data: {
+          nombre: "Consumidor Final",
+          direccion: "Venta Mostrador",
+          activo: true,
+          sucursalId: auth.activeSucursalId
+        },
       })).id;
     }
 
@@ -151,7 +156,15 @@ export async function POST(req: Request) {
         });
       }
 
-      // 4. Calcular descuento global y posible interés si es tarjeta
+      // 4. Calcular el siguiente número de ticket para esta sucursal
+      const lastVenta = await tx.venta.findFirst({
+        where: { sucursalId: auth.activeSucursalId },
+        orderBy: { numeroVenta: "desc" },
+        select: { numeroVenta: true },
+      });
+      const nextNumeroVenta = (lastVenta?.numeroVenta || 0) + 1;
+
+      // 5. Calcular descuento global y posible interés si es tarjeta
       const descGlobalFinal = Number(descuentoGlobal) || 0;
       let montoInteres = 0;
       const porcentajeInteres = Number(configGlobal.porcentajeInteresTarjeta) || 0;
@@ -168,6 +181,7 @@ export async function POST(req: Request) {
           tipo: TipoVenta.CASUAL,
           clienteId: finalClienteId,
           sucursalId: auth.activeSucursalId,
+          numeroVenta: nextNumeroVenta,
           sesionCajaId: sesionActiva?.id || null, // <--- Aquí es clave el ?.
           fecha: new Date(),
           total: totalFinal,
@@ -181,7 +195,9 @@ export async function POST(req: Request) {
       const nuevoPago = await tx.pago.create({
         data: {
           clienteId: finalClienteId,
-          sesionCajaId: sesionActiva?.id || null, // <--- Aquí también
+          sucursalId: auth.activeSucursalId, // <--- NUEVO
+          tipo: "VENTA",                     // <--- NUEVO
+          sesionCajaId: sesionActiva?.id || null,
           fecha: new Date(),
           monto: totalFinal,
           metodo: metodoPago || "EFECTIVO",

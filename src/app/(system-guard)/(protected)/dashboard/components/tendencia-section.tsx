@@ -177,6 +177,21 @@ export function TendenciaSection({ trend, period, loading, filter = "all" }: Ten
                     content={({ active, payload }) => {
                       if (!active || !payload?.length) return null;
                       const data = payload[0].payload;
+
+                      // Determinar qué valores mostrar según el filtro
+                      let vTotal = data.ventasTotal;
+                      let pTotal = data.pagosTotal;
+                      let vCount = data.ventasCount;
+
+                      if (filter === "pos") {
+                        vTotal = data.ventasPosTotal;
+                        pTotal = data.pagosPosTotal;
+                        // Para counts en POS, podrías seguir usando ventasCount si solo hay ventas POS en ese filtro
+                      } else if (filter === "consignacion") {
+                        vTotal = data.ventasConsigTotal;
+                        pTotal = data.pagosConsigTotal;
+                      }
+
                       return (
                         <div className="rounded-xl border border-border bg-card/95 p-4 shadow-2xl backdrop-blur-xl ring-1 ring-border/50">
                           <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/80 mb-3">
@@ -185,13 +200,12 @@ export function TendenciaSection({ trend, period, loading, filter = "all" }: Ten
                           <div className="space-y-2">
                             {metric === "amounts" ? (
                               <>
-                                {(filter === "all" || filter === "pos") && (
-                                  <MetricRow label="Ventas" value={formatMoney(data.ventasTotal)} color="bg-primary" />
+                                {(filter === "all" || filter === "pos" || filter === "consignacion") && (
+                                  <MetricRow label="Ventas" value={formatMoney(vTotal)} color="bg-primary" />
                                 )}
-                                {(filter === "all" || filter === "pos") && (
-                                  <MetricRow label="Pagos" value={formatMoney(data.pagosTotal)} color="bg-success" highlight />
+                                {(filter === "all" || filter === "pos" || filter === "consignacion") && (
+                                  <MetricRow label="Pagos" value={formatMoney(pTotal)} color="bg-success" highlight />
                                 )}
-                                {/* Si filtran por consignación, tal vez mostrar liquidaciones en montos? No tenemos monto de liquidación en tendencia point por ahora, solo count liquidaciones */}
                               </>
                             ) : (
                               <>
@@ -202,7 +216,7 @@ export function TendenciaSection({ trend, period, loading, filter = "all" }: Ten
                                   <MetricRow label="Liquidaciones" value={data.liquidaciones} color="bg-success" />
                                 )}
                                 {(filter === "all" || filter === "pos") && (
-                                  <MetricRow label="Ventas (Q)" value={data.ventasCount} color="bg-chart-3" />
+                                  <MetricRow label="Ventas (Q)" value={vCount} color="bg-chart-3" />
                                 )}
                               </>
                             )}
@@ -215,26 +229,22 @@ export function TendenciaSection({ trend, period, loading, filter = "all" }: Ten
                   {/* AREAS DEPENDIENDO DEL METRIC Y FILTER */}
                   {metric === "amounts" ? (
                     <>
-                      {(filter === "all" || filter === "pos") && (
-                        <Area
-                          type="monotone"
-                          dataKey="ventasTotal"
-                          stroke="hsl(var(--primary))"
-                          strokeWidth={2}
-                          fill="url(#colorPrimary)"
-                          animationDuration={1500}
-                        />
-                      )}
-                      {(filter === "all" || filter === "pos") && (
-                        <Area
-                          type="monotone"
-                          dataKey="pagosTotal"
-                          stroke="hsl(var(--success))"
-                          strokeWidth={2}
-                          fill="url(#colorSuccess)"
-                          animationDuration={1500}
-                        />
-                      )}
+                      <Area
+                        type="monotone"
+                        dataKey={filter === "pos" ? "ventasPosTotal" : filter === "consignacion" ? "ventasConsigTotal" : "ventasTotal"}
+                        stroke="hsl(var(--primary))"
+                        strokeWidth={2}
+                        fill="url(#colorPrimary)"
+                        animationDuration={1500}
+                      />
+                      <Area
+                        type="monotone"
+                        dataKey={filter === "pos" ? "pagosPosTotal" : filter === "consignacion" ? "pagosConsigTotal" : "pagosTotal"}
+                        stroke="hsl(var(--success))"
+                        strokeWidth={2}
+                        fill="url(#colorSuccess)"
+                        animationDuration={1500}
+                      />
                     </>
                   ) : (
                     <>
@@ -259,8 +269,8 @@ export function TendenciaSection({ trend, period, loading, filter = "all" }: Ten
                           animationDuration={1500}
                         />
                       )}
-                      {(filter === "all" || filter === "pos") && filter !== "all" && (
-                        <Area // Si solo es POS, mostramos count ventas
+                      {(filter === "all" || filter === "pos") && (
+                        <Area
                           type="monotone"
                           dataKey="ventasCount"
                           stroke="hsl(var(--chart-3))"

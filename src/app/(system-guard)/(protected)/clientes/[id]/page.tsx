@@ -22,15 +22,22 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   ArrowLeft, FolderOpen, ChevronRight,
   Search, Package,
   ArrowUpRight, ChevronLeft, Calendar as CalendarIcon, X,
-  ShoppingCart, ReceiptText
+  ShoppingCart, ReceiptText, Ban
 } from "lucide-react";
 import { DetailSkeleton } from "../details/skeletons";
 import { cn } from "@/lib/utils";
 
-// --- TIPOS (Sin cambios) ---
+// --- TIPOS ---
 type OperacionTipo = "CONSIGNACION" | "VENTA_DIRECTA";
 
 interface OperacionDisplay {
@@ -41,6 +48,8 @@ interface OperacionDisplay {
   total?: number;
   itemsCount?: number;
   estado?: string;
+  anulada?: boolean;
+  motivoAnulacion?: string | null;
 }
 
 export default function ClienteDetailPage() {
@@ -54,10 +63,11 @@ export default function ClienteDetailPage() {
 
   const [q, setQ] = React.useState("");
   const [date, setDate] = React.useState<Date | undefined>(undefined);
+  const [estadoFiltro, setEstadoFiltro] = React.useState<"todas" | "activas" | "anuladas">("todas");
   const [currentPage, setCurrentPage] = React.useState(1);
   const itemsPerPage = 8;
 
-  // --- EFFECT (Lógica de carga intacta) ---
+  // --- EFFECT ---
   React.useEffect(() => {
     let isMounted = true;
     async function loadData() {
@@ -74,7 +84,7 @@ export default function ClienteDetailPage() {
         setCliente(cRes);
 
         const listaOperaciones: OperacionDisplay[] = [];
-        // Lógica de mapeo igual a la original...
+
         if (consRes) {
           const consignaciones = consRes.filter((c) => c.clienteId === id);
           consignaciones.forEach(c => {
@@ -93,14 +103,16 @@ export default function ClienteDetailPage() {
             .filter((v) => v.clienteId === id)
             .filter((v) => !v.liquidacionId);
           ventasDirectas.forEach(v => {
-            const ticketId = String(v.id).padStart(3, '0');
+            const ticketId = String(v.numeroVenta || v.id).padStart(3, '0');
             listaOperaciones.push({
               id: v.id,
               tipo: "VENTA_DIRECTA",
               fecha: v.fecha,
               referencia: `Ticket #${ticketId}`,
-              total: v.total,
-              itemsCount: v.detalles?.length || 0
+              total: Number(v.total),
+              itemsCount: v.detalles?.length || 0,
+              anulada: v.anulada ?? false,
+              motivoAnulacion: v.motivoAnulacion ?? null,
             });
           });
         }
@@ -116,7 +128,7 @@ export default function ClienteDetailPage() {
     return () => { isMounted = false; };
   }, [id]);
 
-  // --- FILTROS (Lógica intacta) ---
+  // --- FILTROS ---
   const filtered = React.useMemo(() => {
     return operaciones.filter(op => {
       const fechaDoc = new Date(op.fecha);
@@ -128,9 +140,13 @@ export default function ClienteDetailPage() {
         fechaDoc.getMonth() === date.getMonth() &&
         fechaDoc.getFullYear() === date.getFullYear()
       );
-      return matchesText && matchesDate;
+      const matchesEstado =
+        estadoFiltro === "todas" ? true :
+        estadoFiltro === "anuladas" ? op.anulada === true :
+        !op.anulada;
+      return matchesText && matchesDate && matchesEstado;
     });
-  }, [operaciones, q, date]);
+  }, [operaciones, q, date, estadoFiltro]);
 
   const totalPages = Math.ceil(filtered.length / itemsPerPage);
   const paginatedItems = React.useMemo(() => {
@@ -143,10 +159,6 @@ export default function ClienteDetailPage() {
 
   return (
     <div className="min-h-screen bg-background text-foreground transition-colors duration-300">
-      {/* CORRECCIÓN RESPONSIVE 1: 
-        Padding reducido en móvil (p-4), aumentado en tablet/desktop.
-        max-w-4xl mantiene el contenido centrado en pantallas grandes.
-      */}
       <div className="mx-auto w-full max-w-4xl p-4 md:p-8 lg:p-12 space-y-6 md:space-y-10">
 
         {/* NAV */}
@@ -163,17 +175,14 @@ export default function ClienteDetailPage() {
         {/* HEADER CARD */}
         <header>
           <Card className="bg-card/50 backdrop-blur-xl border-border rounded-[2rem] md:rounded-[2.5rem] p-6 md:p-10 shadow-xl overflow-hidden">
-            {/* Flex-col en móvil, Row en desktop */}
             <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 md:gap-8">
 
               <div className="flex items-center gap-4 md:gap-6 w-full md:w-auto">
-                {/* Icono más pequeño en móvil (h-16 vs h-20) */}
                 <div className="h-16 w-16 md:h-20 md:w-20 bg-gradient-to-br from-primary/10 to-primary/5 rounded-[1.2rem] md:rounded-[1.8rem] flex items-center justify-center border border-primary/10 shrink-0">
                   <FolderOpen className="h-7 w-7 md:h-9 md:w-9 text-primary" />
                 </div>
 
                 <div className="space-y-1 min-w-0 flex-1">
-                  {/* Título dinámico: text-2xl en móvil, text-5xl en desktop. break-words para nombres largos */}
                   <h1 className="text-2xl sm:text-3xl md:text-5xl font-black tracking-tighter italic uppercase leading-none break-words text-foreground">
                     {cliente.nombre}
                   </h1>
@@ -192,7 +201,6 @@ export default function ClienteDetailPage() {
                 </div>
               </div>
 
-              {/* Stats a la derecha en desktop, ancho completo o alineado en móvil */}
               <div className="flex flex-row md:flex-col items-center md:items-end justify-between w-full md:w-auto gap-2 text-right border-t md:border-t-0 border-border/50 pt-4 md:pt-0 mt-2 md:mt-0">
                 <span className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Movimientos</span>
                 <Badge variant="secondary" className="rounded-xl py-1.5 px-4 font-bold text-xs tracking-tighter">
@@ -201,7 +209,6 @@ export default function ClienteDetailPage() {
               </div>
             </div>
 
-            {/* FILTROS */}
             <div className="mt-8 md:mt-12 flex flex-col sm:flex-row gap-3">
               <div className="relative flex-1 w-full">
                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -215,8 +222,7 @@ export default function ClienteDetailPage() {
               <div className="flex gap-2 w-full sm:w-auto">
                 <Popover>
                   <PopoverTrigger asChild>
-                    {/* Botón de fecha full width en móvil */}
-                    <Button variant="outline" className={cn("h-12 md:h-14 w-full sm:w-[220px] justify-start text-left font-bold rounded-xl md:rounded-2xl border-border bg-muted/30 text-[10px] md:text-[11px] tracking-widest uppercase truncate", !date && "text-muted-foreground")}>
+                    <Button variant="outline" className={cn("h-12 md:h-14 w-full sm:w-[180px] justify-start text-left font-bold rounded-xl md:rounded-2xl border-border bg-muted/30 text-[10px] md:text-[11px] tracking-widest uppercase truncate", !date && "text-muted-foreground")}>
                       <CalendarIcon className="mr-2 h-4 w-4 shrink-0" />
                       {date ? format(date, "PPP", { locale: es }) : <span>Fecha</span>}
                     </Button>
@@ -225,8 +231,24 @@ export default function ClienteDetailPage() {
                     <Calendar mode="single" selected={date} onSelect={(d) => { setDate(d); setCurrentPage(1); }} initialFocus locale={es} />
                   </PopoverContent>
                 </Popover>
-                {date && (
-                  <Button variant="ghost" size="icon" onClick={() => setDate(undefined)} className="h-12 md:h-14 w-12 md:w-14 shrink-0 rounded-xl md:rounded-2xl bg-destructive/10 text-destructive">
+
+                <Select value={estadoFiltro} onValueChange={(v) => { setEstadoFiltro(v as any); setCurrentPage(1); }}>
+                  <SelectTrigger className={cn(
+                    "h-12 md:h-14 w-full sm:w-[140px] font-bold rounded-xl md:rounded-2xl border-border bg-muted/30 text-[10px] md:text-[11px] tracking-widest uppercase shrink-0",
+                    estadoFiltro === "anuladas" && "border-red-300 bg-red-50/50 text-red-600 dark:bg-red-950/20 dark:border-red-800/50 dark:text-red-400",
+                    estadoFiltro === "activas" && "border-emerald-300 bg-emerald-50/50 text-emerald-600 dark:bg-emerald-950/20 dark:border-emerald-800/50 dark:text-emerald-400"
+                  )}>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="todas">Todas</SelectItem>
+                    <SelectItem value="activas">Activas</SelectItem>
+                    <SelectItem value="anuladas">Anuladas</SelectItem>
+                  </SelectContent>
+                </Select>
+
+                {(date || estadoFiltro !== "todas") && (
+                  <Button variant="ghost" size="icon" onClick={() => { setDate(undefined); setEstadoFiltro("todas"); }} className="h-12 md:h-14 w-12 md:w-14 shrink-0 rounded-xl md:rounded-2xl bg-destructive/10 text-destructive">
                     <X className="h-5 w-5" />
                   </Button>
                 )}
@@ -253,6 +275,7 @@ export default function ClienteDetailPage() {
               {paginatedItems.map((op, index) => {
                 const dateObj = new Date(op.fecha);
                 const isPOS = op.tipo === "VENTA_DIRECTA";
+                const isAnulada = isPOS && op.anulada === true;
 
                 return (
                   <motion.div
@@ -262,50 +285,78 @@ export default function ClienteDetailPage() {
                     exit={{ opacity: 0, scale: 0.95 }}
                     transition={{ delay: index * 0.03 }}
                     onClick={() => router.push(isPOS ? `/ventas/${op.id}` : `/consignaciones/${op.id}`)}
-                    // CORRECCIÓN RESPONSIVE 2: Padding y gap ajustados
-                    className="group relative flex items-center justify-between p-3 md:p-5 bg-card/30 hover:bg-card border border-border/50 hover:border-primary/30 rounded-[1.5rem] md:rounded-[1.8rem] cursor-pointer transition-all duration-300"
+                    className={cn(
+                      "group relative flex items-center justify-between p-3 md:p-5 border rounded-[1.5rem] md:rounded-[1.8rem] cursor-pointer transition-all duration-300",
+                      isAnulada
+                        ? "bg-red-50/40 hover:bg-red-50/80 border-red-200/70 hover:border-red-300 dark:bg-red-950/20 dark:hover:bg-red-950/40 dark:border-red-800/40"
+                        : "bg-card/30 hover:bg-card border-border/50 hover:border-primary/30"
+                    )}
                   >
-                    {/* Contenedor Izquierdo: Fecha + Info (ocupa todo el espacio disponible menos la flecha) */}
                     <div className="flex items-center gap-3 md:gap-6 min-w-0 flex-1">
 
-                      {/* FECHA CARD - Fija, no se encoge */}
+                      {/* Fecha box */}
                       <div className={cn(
                         "flex flex-col items-center justify-center h-12 w-12 md:h-14 md:w-14 rounded-xl md:rounded-2xl border transition-colors shrink-0",
-                        isPOS
-                          ? "bg-indigo-50 border-indigo-100 dark:bg-indigo-900/20 dark:border-indigo-800"
-                          : "bg-orange-50 border-orange-100 dark:bg-orange-900/20 dark:border-orange-800"
+                        isAnulada
+                          ? "bg-red-100/80 border-red-200 dark:bg-red-900/30 dark:border-red-800"
+                          : isPOS
+                            ? "bg-indigo-50 border-indigo-100 dark:bg-indigo-900/20 dark:border-indigo-800"
+                            : "bg-orange-50 border-orange-100 dark:bg-orange-900/20 dark:border-orange-800"
                       )}>
-                        <span className="text-[7px] md:text-[8px] font-black text-muted-foreground uppercase leading-none">
-                          {dateObj.toLocaleString('es-AR', { month: 'short' }).toUpperCase()}
-                        </span>
-                        <span className={cn("text-base md:text-xl font-black leading-none mt-0.5 md:mt-1",
-                          isPOS ? "text-indigo-600 dark:text-indigo-400" : "text-orange-600 dark:text-orange-400"
-                        )}>
-                          {dateObj.getDate()}
-                        </span>
+                        {isAnulada ? (
+                          <Ban className="h-5 w-5 text-red-500 dark:text-red-400" />
+                        ) : (
+                          <>
+                            <span className="text-[7px] md:text-[8px] font-black text-muted-foreground uppercase leading-none">
+                              {dateObj.toLocaleString('es-AR', { month: 'short' }).toUpperCase()}
+                            </span>
+                            <span className={cn("text-base md:text-xl font-black leading-none mt-0.5 md:mt-1",
+                              isPOS ? "text-indigo-600 dark:text-indigo-400" : "text-orange-600 dark:text-orange-400"
+                            )}>
+                              {dateObj.getDate()}
+                            </span>
+                          </>
+                        )}
                       </div>
 
-                      {/* DETALLE PRINCIPAL - Se encoge si es necesario */}
                       <div className="space-y-0.5 md:space-y-1 min-w-0 flex-1">
                         <div className="flex items-center gap-2 flex-wrap">
                           <Badge variant="outline" className={cn(
                             "text-[8px] md:text-[9px] font-black border-none px-2 py-0.5 whitespace-nowrap",
-                            isPOS
-                              ? "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300"
-                              : "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300"
+                            isAnulada
+                              ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300"
+                              : isPOS
+                                ? "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300"
+                                : "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300"
                           )}>
                             {isPOS ? "VENTA POS" : "CONSIGNACIÓN"}
                           </Badge>
+
+                          {isAnulada && (
+                            <Badge variant="destructive" className="text-[8px] md:text-[9px] font-black px-2 py-0.5 whitespace-nowrap">
+                              ✕ ANULADA
+                            </Badge>
+                          )}
 
                           {!isPOS && op.estado === "ABIERTA" && (
                             <Badge className="text-[8px] h-4 bg-emerald-500/10 text-emerald-600 border-none px-1.5">ABIERTA</Badge>
                           )}
                         </div>
 
-                        {/* TRUNCATE: Vital para responsive. Corta el texto con '...' si es muy largo */}
-                        <span className="text-sm md:text-lg font-black tracking-tighter text-foreground group-hover:text-primary transition-colors uppercase block truncate">
+                        <span className={cn(
+                          "text-sm md:text-lg font-black tracking-tighter transition-colors uppercase block truncate",
+                          isAnulada
+                            ? "line-through text-red-400 dark:text-red-500"
+                            : "text-foreground group-hover:text-primary"
+                        )}>
                           {op.referencia}
                         </span>
+
+                        {isAnulada && op.motivoAnulacion && (
+                          <p className="text-[9px] md:text-[10px] font-bold text-red-500/80 dark:text-red-400/70 uppercase tracking-tight truncate">
+                            Motivo: {op.motivoAnulacion}
+                          </p>
+                        )}
 
                         <div className="flex items-center gap-3 md:gap-4 text-muted-foreground/60">
                           <div className="flex items-center gap-1.5 text-[9px] md:text-[10px] font-bold uppercase tracking-tight shrink-0">
@@ -314,7 +365,10 @@ export default function ClienteDetailPage() {
                           </div>
 
                           {isPOS && op.total !== undefined && (
-                            <div className="flex items-center gap-1.5 text-[9px] md:text-[10px] font-bold uppercase tracking-tight text-indigo-600 dark:text-indigo-400 shrink-0">
+                            <div className={cn(
+                              "flex items-center gap-1.5 text-[9px] md:text-[10px] font-bold uppercase tracking-tight shrink-0",
+                              isAnulada ? "line-through text-red-400/60" : "text-indigo-600 dark:text-indigo-400"
+                            )}>
                               <ShoppingCart className="h-3 w-3 opacity-50" />
                               <span>$ {op.total.toLocaleString("es-AR")}</span>
                             </div>
@@ -323,9 +377,16 @@ export default function ClienteDetailPage() {
                       </div>
                     </div>
 
-                    {/* FLECHA - Derecha, fija */}
-                    <div className="h-8 w-8 md:h-10 md:w-10 ml-2 rounded-full flex items-center justify-center bg-muted group-hover:bg-primary transition-all duration-500 shadow-sm shrink-0">
-                      <ArrowUpRight className="h-3 w-3 md:h-4 md:w-4 text-muted-foreground group-hover:text-primary-foreground transition-colors" />
+                    <div className={cn(
+                      "h-8 w-8 md:h-10 md:w-10 ml-2 rounded-full flex items-center justify-center transition-all duration-500 shadow-sm shrink-0",
+                      isAnulada
+                        ? "bg-red-100 dark:bg-red-900/30"
+                        : "bg-muted group-hover:bg-primary"
+                    )}>
+                      {isAnulada
+                        ? <Ban className="h-3 w-3 md:h-4 md:w-4 text-red-400" />
+                        : <ArrowUpRight className="h-3 w-3 md:h-4 md:w-4 text-muted-foreground group-hover:text-primary-foreground transition-colors" />
+                      }
                     </div>
                   </motion.div>
                 );
@@ -337,7 +398,7 @@ export default function ClienteDetailPage() {
                 <Search className="h-10 w-10 md:h-12 md:w-12 text-muted-foreground/20 mb-4" />
                 <h3 className="text-sm font-black text-muted-foreground uppercase tracking-widest">Sin registros</h3>
                 <p className="text-[10px] text-muted-foreground/60 uppercase mt-1">Este cliente no tiene operaciones con ese criterio.</p>
-                <Button variant="link" size="sm" onClick={() => { setQ(""); setDate(undefined); }} className="mt-4 text-primary font-bold uppercase text-[10px] tracking-widest">
+                <Button variant="link" size="sm" onClick={() => { setQ(""); setDate(undefined); setEstadoFiltro("todas"); }} className="mt-4 text-primary font-bold uppercase text-[10px] tracking-widest">
                   Limpiar filtros
                 </Button>
               </div>

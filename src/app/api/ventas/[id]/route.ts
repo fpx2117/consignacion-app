@@ -36,15 +36,14 @@ export async function GET(
   return NextResponse.json({ data: venta });
 }
 
-// DELETE: Anular venta y devolver stock
+// DELETE: Anular venta (soft-delete) con manejo de stock y roturas
 export async function DELETE(
-  _: Request,
-  { params }: { params: Promise<{ id: string }> } // 👈 Cambio 1: Tipo Promise
+  req: Request,
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const auth = await requireAuth();
   if (!auth.ok) return auth.res;
 
-  // 👈 Cambio 2: Await params
   const { id: idParam } = await params;
   const id = Number(idParam);
 
@@ -52,8 +51,18 @@ export async function DELETE(
     return NextResponse.json({ error: "ID inválido" }, { status: 400 });
   }
 
+  // Leer payload del body (motivo obligatorio, brokenItems opcional)
+  let motivo: string = "Sin motivo";
+  let brokenItems: number[] = [];
   try {
-    // 1. Buscamos la venta con sus detalles para saber qué devolver
+    const body = await req.json();
+    if (body?.motivo) motivo = String(body.motivo);
+    if (Array.isArray(body?.brokenItems)) brokenItems = body.brokenItems.map(Number);
+  } catch {
+    // body vacío es aceptable
+  }
+
+  try {
     const venta = await prisma.venta.findUnique({
       where: { id },
       include: { detalles: true },
@@ -63,29 +72,90 @@ export async function DELETE(
       return NextResponse.json({ error: "Venta no encontrada" }, { status: 404 });
     }
 
-    // 2. Transacción: Devolver Stock y Borrar Venta
+    if (venta.anulada) {
+      return NextResponse.json({ error: "La venta ya fue anulada" }, { status: 400 });
+    }
+
+    const sucursalId = venta.sucursalId;
+
     await prisma.$transaction(async (tx) => {
-      // A) Devolver stock de cada producto
+      // A) Marcar detalles como rotura y restituir stock solo para los no-rotos
       for (const detalle of venta.detalles) {
-        await tx.producto.update({
-          where: { id: detalle.productoId },
-          data: {
-            stockDisponibleUnits: { increment: detalle.units },
-          },
-        });
+        const esRotura = brokenItems.includes(detalle.id);
+
+        // Actualizar el flag en el detalle
+        if (esRotura) {
+          await tx.ventaDetalle.update({
+            where: { id: detalle.id },
+            data: { esRotura: true },
+          });
+        }
+
+        if (!esRotura) {
+          // Incrementar stock en StockSucursal (si existe registro)
+          const stockSucursal = await tx.stockSucursal.findUnique({
+            where: { productoId_sucursalId: { productoId: detalle.productoId, sucursalId } },
+          });
+
+          if (stockSucursal) {
+            const stockPrevio = stockSucursal.stockDisponibleUnits;
+            const stockPosterior = stockPrevio + detalle.units;
+            await tx.stockSucursal.update({
+              where: { id: stockSucursal.id },
+              data: { stockDisponibleUnits: { increment: detalle.units } },
+            });
+            await tx.movimientoStock.create({
+              data: {
+                productoId: detalle.productoId,
+                sucursalId,
+                tipo: "ENTRADA",
+                motivo: "DEVOLUCION_CLIENTE",
+                cantidad: detalle.units,
+                stockPrevio,
+                stockPosterior,
+                observaciones: `Anulación venta #${id} - ${motivo}`,
+              },
+            });
+          }
+
+          // Sincronizar stock global del producto
+          await tx.producto.update({
+            where: { id: detalle.productoId },
+            data: { stockDisponibleUnits: { increment: detalle.units } },
+          });
+        } else {
+          // Rotura: registrar movimiento de pérdida sin devolver stock
+          const stockSucursal = await tx.stockSucursal.findUnique({
+            where: { productoId_sucursalId: { productoId: detalle.productoId, sucursalId } },
+          });
+          const stockPrevio = stockSucursal?.stockDisponibleUnits ?? 0;
+          await tx.movimientoStock.create({
+            data: {
+              productoId: detalle.productoId,
+              sucursalId,
+              tipo: "SALIDA",
+              motivo: "ROTURA",
+              cantidad: detalle.units,
+              stockPrevio,
+              stockPosterior: stockPrevio, // stock no cambia
+              observaciones: `Rotura en anulación venta #${id} - ${motivo}`,
+            },
+          });
+        }
       }
 
-      // B) Eliminar la venta
-      // Nota: Si tienes "onDelete: Cascade" en tu esquema para los detalles,
-      // estos se borrarán solos. Si no, deberías borrar primero los detalles.
-      await tx.venta.delete({
+      // B) Marcar la venta como anulada (soft-delete)
+      await tx.venta.update({
         where: { id },
+        data: {
+          anulada: true,
+          motivoAnulacion: motivo,
+          fechaAnulacion: new Date(),
+        },
       });
-
-      // Opcional: Si quisieras revertir el pago o saldo, sería aquí.
     });
 
-    return NextResponse.json({ success: true, message: "Venta anulada y stock restaurado" });
+    return NextResponse.json({ success: true, message: "Venta anulada correctamente" });
 
   } catch (error: any) {
     console.error("Error anulando venta:", error);

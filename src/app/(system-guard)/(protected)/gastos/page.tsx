@@ -7,7 +7,7 @@ import {
     Plus, Wallet, Calendar, AlertTriangle,
     Trash2, Edit2, Filter, ChevronRight,
     MoreVertical, Receipt, Repeat, Share2,
-    ExternalLink, MessageSquare, Copy, Search, User
+    ExternalLink, MessageSquare, Copy, Search, User, GitFork
 } from "lucide-react";
 import { toast } from "sonner";
 import { apiService } from "@/lib/apiService";
@@ -198,93 +198,109 @@ export default function GastosPage() {
                     </div>
                 ) : (
                     <div className="grid gap-4 px-2 md:px-0">
-                        {gastos.map((g) => (
-                            <div
-                                key={g.id}
-                                className={cn(
-                                    "group p-1 rounded-[2rem] transition-all hover:scale-[1.01] active:scale-[0.99]",
-                                    g.estado === "PENDIENTE" ? "bg-gradient-to-br from-orange-500/20 to-transparent" : "bg-gradient-to-br from-emerald-500/20 to-transparent"
-                                )}
-                            >
-                                <div className="bg-card border border-white/10 rounded-[1.8rem] p-4 md:p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 shadow-sm group-hover:shadow-xl transition-all">
-                                    <div className="flex items-center gap-4 w-full sm:w-auto">
-                                        <div className={cn(
-                                            "h-14 w-14 rounded-2xl flex items-center justify-center shrink-0 shadow-inner transition-transform group-hover:rotate-12",
-                                            g.estado === "PENDIENTE" ? "bg-orange-500/10 text-orange-500" : "bg-emerald-500/10 text-emerald-500"
-                                        )}>
-                                            {g.esRecurrente ? <Repeat className="h-7 w-7" /> : <Receipt className="h-7 w-7" />}
-                                        </div>
-                                        <div className="min-w-0 flex-1">
-                                            <div className="flex flex-wrap items-center gap-2 mb-1">
-                                                <h3 className="text-lg md:text-xl font-black tracking-tighter truncate leading-none">{g.motivo}</h3>
-                                                {g.cuotaActual && g.cuotaTotal && (
-                                                    <Badge variant="outline" className="text-[10px] font-black border-primary/30 text-primary bg-primary/5 rounded-full px-2">
-                                                        Cuota {g.cuotaActual}/{g.cuotaTotal}
+                        {gastos.map((g) => {
+                            const isOwner = g.sucursalId === activeSucursalId;
+                            return (
+                                <div
+                                    key={`${g.id}-${g.esVistaCompartida ? "shared" : "own"}`}
+                                    className={cn(
+                                        "group p-1 rounded-[2rem] transition-all hover:scale-[1.01] active:scale-[0.99]",
+                                        g.estado === "PENDIENTE" ? "bg-gradient-to-br from-orange-500/20 to-transparent" : "bg-gradient-to-br from-emerald-500/20 to-transparent"
+                                    )}
+                                >
+                                    <div className="bg-card border border-white/10 rounded-[1.8rem] p-4 md:p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 shadow-sm group-hover:shadow-xl transition-all">
+                                        <div className="flex items-center gap-4 w-full sm:w-auto">
+                                            <div className={cn(
+                                                "h-14 w-14 rounded-2xl flex items-center justify-center shrink-0 shadow-inner transition-transform group-hover:rotate-12",
+                                                g.estado === "PENDIENTE" ? "bg-orange-500/10 text-orange-500" : "bg-emerald-500/10 text-emerald-500"
+                                            )}>
+                                                {g.esRecurrente ? <Repeat className="h-7 w-7" /> : <Receipt className="h-7 w-7" />}
+                                            </div>
+                                            <div className="min-w-0 flex-1">
+                                                <div className="flex flex-wrap items-center gap-2 mb-1">
+                                                    <h3 className="text-lg md:text-xl font-black tracking-tighter truncate leading-none">{g.motivo}</h3>
+                                                    {g.cuotaActual && g.cuotaTotal && (
+                                                        <Badge variant="outline" className="text-[10px] font-black border-primary/30 text-primary bg-primary/5 rounded-full px-2">
+                                                            Cuota {g.cuotaActual}/{g.cuotaTotal}
+                                                        </Badge>
+                                                    )}
+                                                    <Badge variant="secondary" className="text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full bg-primary/5 text-primary/70">
+                                                        {g.categoria?.nombre}
                                                     </Badge>
+                                                    {(g.esCompartido || g.esVistaCompartida) && (
+                                                        <Badge variant="outline" className="text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full border-violet-400/40 bg-violet-500/10 text-violet-600 flex items-center gap-1">
+                                                            <GitFork className="h-2.5 w-2.5" />
+                                                            Compartido
+                                                        </Badge>
+                                                    )}
+                                                </div>
+                                                <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4 text-[11px] font-bold text-muted-foreground/60 uppercase tracking-widest">
+                                                    <span className="flex items-center gap-1.5">
+                                                        <Calendar className="h-3 w-3" /> {formatDate(g.fecha)}
+                                                    </span>
+                                                    {g.fechaVencimiento && (
+                                                        <span className={cn(
+                                                            "flex items-center gap-1.5",
+                                                            new Date(g.fechaVencimiento) < new Date() && g.estado === "PENDIENTE" ? "text-destructive" : "text-orange-500/70"
+                                                        )}>
+                                                            <AlertTriangle className="h-3 w-3" /> Vence: {formatDate(g.fechaVencimiento)}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div className="flex items-center justify-between sm:justify-end gap-6 w-full sm:w-auto pt-4 sm:pt-0 border-t sm:border-t-0 border-white/5">
+                                            <div className="text-left sm:text-right">
+                                                <div className="text-2xl md:text-3xl font-black tracking-tighter leading-none mb-1">{formatMoney(Number(g.monto))}</div>
+                                                {g.esVistaCompartida && (
+                                                    <p className="text-[9px] font-black uppercase tracking-widest text-violet-500/70 mb-1">tu parte</p>
                                                 )}
-                                                <Badge variant="secondary" className="text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full bg-primary/5 text-primary/70">
-                                                    {g.categoria?.nombre}
+                                                <Badge className={cn(
+                                                    "text-[9px] font-black uppercase tracking-[0.2em] px-3 py-1 rounded-full",
+                                                    g.estado === "PENDIENTE" ? "bg-orange-500 text-white" : "bg-emerald-500 text-white"
+                                                )}>
+                                                    {g.estado}
                                                 </Badge>
                                             </div>
-                                            <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4 text-[11px] font-bold text-muted-foreground/60 uppercase tracking-widest">
-                                                <span className="flex items-center gap-1.5">
-                                                    <Calendar className="h-3 w-3" /> {formatDate(g.fecha)}
-                                                </span>
-                                                {g.fechaVencimiento && (
-                                                    <span className={cn(
-                                                        "flex items-center gap-1.5",
-                                                        new Date(g.fechaVencimiento) < new Date() && g.estado === "PENDIENTE" ? "text-destructive" : "text-orange-500/70"
-                                                    )}>
-                                                        <AlertTriangle className="h-3 w-3" /> Vence: {formatDate(g.fechaVencimiento)}
-                                                    </span>
-                                                )}
-                                            </div>
-                                        </div>
-                                    </div>
 
-                                    <div className="flex items-center justify-between sm:justify-end gap-6 w-full sm:w-auto pt-4 sm:pt-0 border-t sm:border-t-0 border-white/5">
-                                        <div className="text-left sm:text-right">
-                                            <div className="text-2xl md:text-3xl font-black tracking-tighter leading-none mb-1">{formatMoney(Number(g.monto))}</div>
-                                            <Badge className={cn(
-                                                "text-[9px] font-black uppercase tracking-[0.2em] px-3 py-1 rounded-full",
-                                                g.estado === "PENDIENTE" ? "bg-orange-500 text-white" : "bg-emerald-500 text-white"
-                                            )}>
-                                                {g.estado}
-                                            </Badge>
+                                            <DropdownMenu>
+                                                <DropdownMenuTrigger asChild>
+                                                    <Button variant="ghost" size="icon" className="rounded-2xl h-12 w-12 bg-muted/20 hover:bg-primary/10 hover:text-primary transition-all">
+                                                        <MoreVertical className="h-5 w-5" />
+                                                    </Button>
+                                                </DropdownMenuTrigger>
+                                                <DropdownMenuContent align="end" className="rounded-[1.5rem] border-none shadow-2xl p-2 w-56">
+                                                    <DropdownMenuItem onClick={() => handleShareClick(g)} className="gap-3 py-3 rounded-xl font-bold cursor-pointer focus:bg-emerald-500/10 focus:text-emerald-600 transition-colors">
+                                                        <div className="h-8 w-8 rounded-lg bg-emerald-500/10 flex items-center justify-center">
+                                                            <Share2 className="h-4 w-4 text-emerald-500" />
+                                                        </div>
+                                                        Compartir Voucher
+                                                    </DropdownMenuItem>
+                                                    {isOwner && (
+                                                        <>
+                                                            <DropdownMenuItem onClick={() => { setEditingGasto(g); setModalOpen(true); }} className="gap-3 py-3 rounded-xl font-bold cursor-pointer focus:bg-blue-500/10 focus:text-blue-600 transition-colors">
+                                                                <div className="h-8 w-8 rounded-lg bg-blue-500/10 flex items-center justify-center">
+                                                                    <Edit2 className="h-4 w-4 text-blue-500" />
+                                                                </div>
+                                                                Editar Gasto
+                                                            </DropdownMenuItem>
+                                                            <div className="h-px bg-muted my-1 mx-2" />
+                                                            <DropdownMenuItem onClick={() => handleDelete(g.id)} className="gap-3 py-3 rounded-xl font-bold cursor-pointer text-destructive focus:bg-destructive/10 transition-colors">
+                                                                <div className="h-8 w-8 rounded-lg bg-destructive/10 flex items-center justify-center">
+                                                                    <Trash2 className="h-4 w-4" />
+                                                                </div>
+                                                                Eliminar
+                                                            </DropdownMenuItem>
+                                                        </>
+                                                    )}
+                                                </DropdownMenuContent>
+                                            </DropdownMenu>
                                         </div>
-
-                                        <DropdownMenu>
-                                            <DropdownMenuTrigger asChild>
-                                                <Button variant="ghost" size="icon" className="rounded-2xl h-12 w-12 bg-muted/20 hover:bg-primary/10 hover:text-primary transition-all">
-                                                    <MoreVertical className="h-5 w-5" />
-                                                </Button>
-                                            </DropdownMenuTrigger>
-                                            <DropdownMenuContent align="end" className="rounded-[1.5rem] border-none shadow-2xl p-2 w-56">
-                                                <DropdownMenuItem onClick={() => handleShareClick(g)} className="gap-3 py-3 rounded-xl font-bold cursor-pointer focus:bg-emerald-500/10 focus:text-emerald-600 transition-colors">
-                                                    <div className="h-8 w-8 rounded-lg bg-emerald-500/10 flex items-center justify-center">
-                                                        <Share2 className="h-4 w-4 text-emerald-500" />
-                                                    </div>
-                                                    Compartir Voucher
-                                                </DropdownMenuItem>
-                                                <DropdownMenuItem onClick={() => { setEditingGasto(g); setModalOpen(true); }} className="gap-3 py-3 rounded-xl font-bold cursor-pointer focus:bg-blue-500/10 focus:text-blue-600 transition-colors">
-                                                    <div className="h-8 w-8 rounded-lg bg-blue-500/10 flex items-center justify-center">
-                                                        <Edit2 className="h-4 w-4 text-blue-500" />
-                                                    </div>
-                                                    Editar Gasto
-                                                </DropdownMenuItem>
-                                                <div className="h-px bg-muted my-1 mx-2" />
-                                                <DropdownMenuItem onClick={() => handleDelete(g.id)} className="gap-3 py-3 rounded-xl font-bold cursor-pointer text-destructive focus:bg-destructive/10 transition-colors">
-                                                    <div className="h-8 w-8 rounded-lg bg-destructive/10 flex items-center justify-center">
-                                                        <Trash2 className="h-4 w-4" />
-                                                    </div>
-                                                    Eliminar
-                                                </DropdownMenuItem>
-                                            </DropdownMenuContent>
-                                        </DropdownMenu>
                                     </div>
                                 </div>
-                            </div>
-                        ))}
+                            );
+                        })}
                     </div>
                 )}
             </div>
@@ -297,6 +313,7 @@ export default function GastosPage() {
                     onSuccess={loadData}
                     categorias={categorias}
                     editingGasto={editingGasto}
+                    activeSucursalId={activeSucursalId}
                 />
             )}
 
@@ -321,7 +338,7 @@ export default function GastosPage() {
     );
 }
 
-function GastoModal({ open, onOpenChange, onSuccess, categorias, editingGasto }: any) {
+function GastoModal({ open, onOpenChange, onSuccess, categorias, editingGasto, activeSucursalId }: any) {
     const [formData, setFormData] = React.useState({
         monto: "",
         motivo: "",
@@ -333,6 +350,11 @@ function GastoModal({ open, onOpenChange, onSuccess, categorias, editingGasto }:
         categoriaGastoId: "",
     });
     const [loading, setLoading] = React.useState(false);
+
+    // Compartir entre sucursales
+    const [sucursales, setSucursales] = React.useState<any[]>([]);
+    const [esCompartido, setEsCompartido] = React.useState(false);
+    const [selectedSucursales, setSelectedSucursales] = React.useState<number[]>([]);
 
     React.useEffect(() => {
         if (editingGasto) {
@@ -346,19 +368,60 @@ function GastoModal({ open, onOpenChange, onSuccess, categorias, editingGasto }:
                 frecuencia: editingGasto.frecuencia,
                 categoriaGastoId: String(editingGasto.categoriaGastoId),
             });
+            setEsCompartido(!!editingGasto.esCompartido);
+            if (editingGasto.esCompartido && editingGasto.sucursalesCompartidas?.length > 0) {
+                setSelectedSucursales(editingGasto.sucursalesCompartidas.map((s: any) => s.sucursalId));
+            } else if (activeSucursalId) {
+                setSelectedSucursales([activeSucursalId]);
+            }
         }
     }, [editingGasto]);
+
+    // Cargar sucursales al abrir el modal (tanto crear como editar)
+    React.useEffect(() => {
+        if (open) {
+            apiService.getSucursales().then((data: any[]) => {
+                setSucursales(data || []);
+                // Pre-seleccionar la sucursal activa solo al crear
+                if (!editingGasto && activeSucursalId) {
+                    setSelectedSucursales([activeSucursalId]);
+                }
+            }).catch(() => {});
+        }
+    }, [open, editingGasto, activeSucursalId]);
+
+    const toggleSucursal = (id: number) => {
+        setSelectedSucursales((prev) =>
+            prev.includes(id) ? prev.filter((s) => s !== id) : [...prev, id]
+        );
+    };
+
+    const montoProporcional = esCompartido && selectedSucursales.length > 1 && formData.monto
+        ? Number(formData.monto) / selectedSucursales.length
+        : null;
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setLoading(true);
         try {
+            const payload: any = { ...formData };
+
+            if (esCompartido && selectedSucursales.length > 1) {
+                payload.sucursalesCompartir = selectedSucursales;
+            } else if (!esCompartido && editingGasto?.esCompartido) {
+                // Si se quitó el compartir, enviar array vacío para desactivarlo
+                payload.sucursalesCompartir = [];
+            }
+
             if (editingGasto) {
-                await apiService.updateGasto(editingGasto.id, formData);
+                await apiService.updateGasto(editingGasto.id, payload);
                 toast.success("Gasto actualizado");
             } else {
-                await apiService.createGasto(formData);
-                toast.success("Gasto registrado");
+                await apiService.createGasto(payload);
+                toast.success(esCompartido && selectedSucursales.length > 1
+                    ? `Gasto compartido entre ${selectedSucursales.length} sucursales`
+                    : "Gasto registrado"
+                );
             }
             onSuccess();
             onOpenChange(false);
@@ -491,8 +554,75 @@ function GastoModal({ open, onOpenChange, onSuccess, categorias, editingGasto }:
                         )}
                     </div>
 
+                    {/* Dividir entre sucursales */}
+                    {sucursales.length > 1 && (
+                        <div className="space-y-3 pt-2 border-t border-border/40">
+                            <div className="flex items-center gap-2">
+                                <input
+                                    type="checkbox"
+                                    id="esCompartido"
+                                    checked={esCompartido}
+                                    onChange={(e) => {
+                                        setEsCompartido(e.target.checked);
+                                        if (e.target.checked && activeSucursalId && !selectedSucursales.includes(activeSucursalId)) {
+                                            setSelectedSucursales([activeSucursalId]);
+                                        }
+                                    }}
+                                    className="rounded border-border text-violet-600 focus:ring-violet-500 h-4 w-4"
+                                />
+                                <label htmlFor="esCompartido" className="text-sm font-bold flex items-center gap-1.5 select-none cursor-pointer text-violet-700">
+                                    <GitFork className="h-3.5 w-3.5" />
+                                    Dividir entre sucursales
+                                </label>
+                            </div>
+
+                            {esCompartido && (
+                                <div className="rounded-2xl bg-violet-500/5 border border-violet-400/20 p-4 space-y-3">
+                                    <p className="text-[10px] font-black uppercase tracking-widest text-violet-600/70">Seleccionar sucursales</p>
+                                    <div className="space-y-2">
+                                        {sucursales.map((s: any) => (
+                                            <label key={s.id} className="flex items-center gap-3 cursor-pointer group">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={selectedSucursales.includes(s.id)}
+                                                    onChange={() => toggleSucursal(s.id)}
+                                                    disabled={s.id === activeSucursalId} // La sucursal creadora siempre incluida
+                                                    className="rounded border-border text-violet-600 focus:ring-violet-500 h-4 w-4"
+                                                />
+                                                <span className={cn(
+                                                    "text-sm font-bold",
+                                                    s.id === activeSucursalId ? "text-violet-700" : "text-foreground"
+                                                )}>
+                                                    {s.nombre}
+                                                    {s.id === activeSucursalId && (
+                                                        <span className="ml-1.5 text-[9px] font-black uppercase tracking-widest text-violet-500/70">(esta sucursal)</span>
+                                                    )}
+                                                </span>
+                                            </label>
+                                        ))}
+                                    </div>
+                                    {montoProporcional !== null && (
+                                        <div className="flex items-center justify-between pt-2 border-t border-violet-400/20">
+                                            <span className="text-[10px] font-black uppercase tracking-widest text-violet-600/70">Cada sucursal pagará:</span>
+                                            <span className="text-lg font-black text-violet-700">{formatMoney(montoProporcional)}</span>
+                                        </div>
+                                    )}
+                                    {esCompartido && selectedSucursales.length < 2 && (
+                                        <p className="text-[10px] font-bold text-orange-500/80 italic">
+                                            * Seleccioná al menos 2 sucursales para dividir el gasto.
+                                        </p>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+                    )}
+
                     <div className="pt-4">
-                        <Button disabled={loading} type="submit" className="w-full h-12 rounded-2xl font-black text-base shadow-lg shadow-primary/20">
+                        <Button
+                            disabled={loading || (esCompartido && selectedSucursales.length < 2)}
+                            type="submit"
+                            className="w-full h-12 rounded-2xl font-black text-base shadow-lg shadow-primary/20"
+                        >
                             {loading ? "Guardando..." : editingGasto ? "Guardar Cambios" : "Confirmar Gasto"}
                         </Button>
                     </div>
