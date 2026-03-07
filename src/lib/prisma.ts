@@ -38,9 +38,7 @@ const createPrismaClient = () => {
  * 4. Export the Singleton
  * In dev, we recreate the client to avoid stale generated code cache
  */
-export const prisma = process.env.NODE_ENV === "development"
-  ? createPrismaClient()
-  : (globalForPrisma.prisma ?? createPrismaClient());
+export const prisma = globalForPrisma.prisma ?? createPrismaClient();
 
 /**
  * 5. Store in Global (Only in Prod or if we want to stick to one instance)
