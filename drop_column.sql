@@ -1,1 +1,0 @@
-ALTER TABLE "Branding" DROP COLUMN IF EXISTS "sucursalId" CASCADE;
