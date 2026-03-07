@@ -46,8 +46,7 @@ export function CreateCategoriaDialog({ onCreated, trigger }: Props) {
   // States para Create/Edit
   const [currentId, setCurrentId] = React.useState<number | null>(null);
   const [nombre, setNombre] = React.useState("");
-  const [selectedColor, setSelectedColor] = React.useState<CategoryColorKey>("sky");
-  const [descuentos, setDescuentos] = React.useState<DescuentoNivel[]>([]);
+  const [color, setColor] = React.useState("sky");
   const [saving, setSaving] = React.useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = React.useState(false);
   const [categoryToDelete, setCategoryToDelete] = React.useState<number | null>(null);
@@ -78,8 +77,7 @@ export function CreateCategoriaDialog({ onCreated, trigger }: Props) {
 
   function resetForm() {
     setNombre("");
-    setSelectedColor("sky");
-    setDescuentos([]);
+    setColor("sky");
     setCurrentId(null);
   }
 
@@ -91,15 +89,13 @@ export function CreateCategoriaDialog({ onCreated, trigger }: Props) {
       if (mode === "edit" && currentId) {
         await apiService.updateCategoria(currentId, {
           nombre: nombre.trim(),
-          color: selectedColor,
-          descuentos: descuentos.length > 0 ? descuentos : null
+          color: color,
         });
         toast.success("Categoría actualizada");
       } else {
         await apiService.createCategoria({
           nombre: nombre.trim(),
-          color: selectedColor,
-          descuentos: descuentos.length > 0 ? descuentos : null
+          color: color,
         });
         toast.success("Categoría creada con éxito");
       }
@@ -127,7 +123,7 @@ export function CreateCategoriaDialog({ onCreated, trigger }: Props) {
     }
   }
 
-  const activeColor = CATEGORY_PALETTE.find((c) => c.key === selectedColor) || CATEGORY_PALETTE[0];
+  const activeColor = CATEGORY_PALETTE.find((c) => c.key === color) || CATEGORY_PALETTE[0];
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -155,7 +151,7 @@ export function CreateCategoriaDialog({ onCreated, trigger }: Props) {
           <p className="text-xs text-zinc-500 font-medium mb-4">
             {mode === "list"
               ? "Gestiona las categorías de esta sucursal."
-              : "Asigna un nombre, color y descuentos por defecto."}
+              : "Asigna un nombre y color por defecto."}
           </p>
         </div>
 
@@ -187,11 +183,6 @@ export function CreateCategoriaDialog({ onCreated, trigger }: Props) {
                         <div className="flex items-center gap-3">
                           <div className={cn("w-3 h-3 rounded-full shadow-sm", colorData.dot)} />
                           <span className="font-semibold text-sm">{cat.nombre}</span>
-                          {cat.descuentos?.length > 0 && (
-                            <span className="text-[10px] uppercase font-bold text-zinc-500 bg-zinc-800 px-2 py-0.5 rounded-full">
-                              {cat.descuentos.length} desc.
-                            </span>
-                          )}
                         </div>
                         <div className="flex gap-1">
                           <Button
@@ -213,8 +204,7 @@ export function CreateCategoriaDialog({ onCreated, trigger }: Props) {
                             onClick={() => {
                               setCurrentId(cat.id);
                               setNombre(cat.nombre);
-                              setSelectedColor((cat.color || "sky") as CategoryColorKey);
-                              setDescuentos(Array.isArray(cat.descuentos) ? cat.descuentos : []);
+                              setColor(cat.color || "sky");
                               setMode("edit");
                             }}
                           >
@@ -263,35 +253,26 @@ export function CreateCategoriaDialog({ onCreated, trigger }: Props) {
                   Color Identificador
                 </Label>
                 <div className="grid grid-cols-6 gap-2 p-3 rounded-xl bg-zinc-900/50 border border-zinc-800">
-                  {CATEGORY_PALETTE.map((color) => (
+                  {CATEGORY_PALETTE.map((c) => (
                     <button
-                      key={color.key}
+                      key={c.key}
                       type="button"
-                      onClick={() => setSelectedColor(color.key as CategoryColorKey)}
+                      onClick={() => setColor(c.key)}
                       className={cn(
                         "relative h-9 w-full rounded-lg transition-all duration-200 flex items-center justify-center",
                         "hover:scale-110 hover:shadow-lg active:scale-95",
-                        selectedColor === color.key
+                        color === c.key
                           ? "ring-2 ring-white ring-offset-2 ring-offset-zinc-950 scale-110"
                           : "opacity-70 hover:opacity-100"
                       )}
-                      style={{ backgroundColor: color.hex }}
-                      title={color.label}
+                      style={{ backgroundColor: c.hex }}
+                      title={c.label}
                     >
-                      {selectedColor === color.key && (
+                      {color === c.key && (
                         <Check className="h-4 w-4 text-white drop-shadow-md" />
                       )}
                     </button>
                   ))}
-                </div>
-              </div>
-
-              <div className="space-y-3">
-                <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400 ml-1">
-                  Descuentos Base por Categoría (Opcional)
-                </Label>
-                <div className="p-4 rounded-xl border border-zinc-800 bg-zinc-900/30">
-                  <DiscountTiersInline descuentos={descuentos} onChange={setDescuentos} />
                 </div>
               </div>
 

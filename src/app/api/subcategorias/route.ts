@@ -33,7 +33,7 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
     try {
         const body = await req.json();
-        const { nombre, categoriaId } = body;
+        const { nombre, categoriaId, descuentos } = body;
 
         if (!nombre || !categoriaId) {
             return NextResponse.json(
@@ -46,6 +46,7 @@ export async function POST(req: NextRequest) {
             data: {
                 nombre: nombre.trim(),
                 categoriaId: parseInt(categoriaId, 10),
+                ...(descuentos && { descuentos }),
             },
         });
 

@@ -1,6 +1,11 @@
 import { PrismaClient } from "@prisma/client";
+import { PrismaPg } from "@prisma/adapter-pg";
+import pg from "pg";
 
-const prisma = new PrismaClient();
+const connectionString = process.env.DATABASE_URL;
+const pool = new pg.Pool({ connectionString });
+const adapter = new PrismaPg(pool);
+const prisma = new PrismaClient({ adapter });
 
 function getBestDiscount(descuentos: any, qty: number): any {
     if (!descuentos || !Array.isArray(descuentos) || descuentos.length === 0) return null;
@@ -13,7 +18,7 @@ async function fix() {
         include: {
             cliente: true,
             sesionCaja: true,
-            detalles: { include: { producto: { include: { categoria: true } } } }
+            detalles: { include: { producto: { include: { subcategoria: true } } } }
         }
     });
 
@@ -24,10 +29,10 @@ async function fix() {
         const oldTotal = Number(v.total);
         let newTotal = 0;
 
-        const catQty = new Map();
+        const subQty = new Map();
         for (const d of v.detalles) {
-            if (d.producto.categoriaId) {
-                catQty.set(d.producto.categoriaId, (catQty.get(d.producto.categoriaId) || 0) + d.units);
+            if (d.producto.subcategoriaId) {
+                subQty.set(d.producto.subcategoriaId, (subQty.get(d.producto.subcategoriaId) || 0) + d.units);
             }
         }
 
@@ -36,9 +41,9 @@ async function fix() {
         for (const d of v.detalles) {
             let calcDesc = 0;
             const pu = Number(d.precioUnitario);
-            if (d.producto.categoriaId) {
-                const tq = catQty.get(d.producto.categoriaId);
-                const best = getBestDiscount(d.producto.categoria?.descuentos, tq);
+            if (d.producto.subcategoriaId) {
+                const tq = subQty.get(d.producto.subcategoriaId);
+                const best = getBestDiscount(d.producto.subcategoria?.descuentos, tq);
                 if (best) {
                     calcDesc = pu * d.units * (best.porcentaje / 100);
                 }

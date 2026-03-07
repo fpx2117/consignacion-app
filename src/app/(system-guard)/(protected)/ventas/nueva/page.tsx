@@ -248,22 +248,22 @@ export default function NuevaVentaPage() {
 
   const totalSinInteres = cart.reduce((acc, curr) => acc + (Number(curr.producto.precioVenta) * curr.quantity), 0);
 
-  // Agrupar cantidades por categoriaId para calcular descuentos por categoría
-  const categoryQtyMap = React.useMemo(() => {
+  // Agrupar cantidades por subcategoriaId para calcular descuentos por subcategoría (Marca)
+  const subcategoryQtyMap = React.useMemo(() => {
     const map = new Map<number, number>();
     cart.forEach(item => {
-      const catId = item.producto.categoriaId;
-      if (catId) map.set(catId, (map.get(catId) || 0) + item.quantity);
+      const subId = item.producto.subcategoriaId;
+      if (subId) map.set(subId, (map.get(subId) || 0) + item.quantity);
     });
     return map;
   }, [cart]);
 
   const totalDescuento = cart.reduce((acc, item) => {
-    const catId = item.producto.categoriaId;
-    if (!catId) return acc;
-    const totalCatQty = categoryQtyMap.get(catId) || 0;
-    const catDescuentos = item.producto.categoria?.descuentos as DescuentoNivel[] | null | undefined;
-    const best = getBestDiscount(catDescuentos, totalCatQty);
+    const subId = item.producto.subcategoriaId;
+    if (!subId) return acc;
+    const totalSubQty = subcategoryQtyMap.get(subId) || 0;
+    const subDescuentos = item.producto.subcategoria?.descuentos as DescuentoNivel[] | null | undefined;
+    const best = getBestDiscount(subDescuentos, totalSubQty);
     if (best) {
       return acc + (Number(item.producto.precioVenta) * item.quantity * (best.porcentaje / 100));
     }
@@ -294,12 +294,12 @@ export default function NuevaVentaPage() {
       const payload: CreateVentaDirectaInput = {
         clienteId: finalClienteId,
         items: cart.map((item) => {
-          const catId = item.producto.categoriaId;
+          const subId = item.producto.subcategoriaId;
           let discountForItem = 0;
-          if (catId) {
-            const totalCatQty = categoryQtyMap.get(catId) || 0;
-            const catDescuentos = item.producto.categoria?.descuentos as DescuentoNivel[] | null | undefined;
-            const best = getBestDiscount(catDescuentos, totalCatQty);
+          if (subId) {
+            const totalSubQty = subcategoryQtyMap.get(subId) || 0;
+            const subDescuentos = item.producto.subcategoria?.descuentos as DescuentoNivel[] | null | undefined;
+            const best = getBestDiscount(subDescuentos, totalSubQty);
             if (best) {
               discountForItem = Number(item.producto.precioVenta) * item.quantity * (best.porcentaje / 100);
             }
@@ -581,9 +581,9 @@ export default function NuevaVentaPage() {
                                         </span>
                                       )}
                                       <span>{sinStock ? "AGOTADO" : `Disp: ${stock}`}</span>
-                                      {Array.isArray(p.categoria?.descuentos) && (p.categoria?.descuentos as DescuentoNivel[]).length > 0 && (
+                                      {Array.isArray(p.subcategoria?.descuentos) && (p.subcategoria?.descuentos as DescuentoNivel[]).length > 0 && (
                                         <span className="flex items-center gap-0.5 text-emerald-600 bg-emerald-50 dark:bg-emerald-950/30 px-1 rounded border border-emerald-200 dark:border-emerald-800">
-                                          <BadgePercent className="h-3 w-3" /> {(p.categoria?.descuentos as DescuentoNivel[]).length} desc.
+                                          <BadgePercent className="h-3 w-3" /> {(p.subcategoria?.descuentos as DescuentoNivel[]).length} desc.
                                         </span>
                                       )}
                                     </div>
@@ -653,21 +653,21 @@ export default function NuevaVentaPage() {
                           <p className="font-bold text-sm truncate text-foreground">{item.producto.nombre}</p>
                           <p className="text-[11px] text-muted-foreground font-medium mt-0.5">{formatCurrency(item.producto.precioVenta)} / unidad</p>
                           {(() => {
-                            const catId = item.producto.categoriaId;
-                            const totalCatQty = catId ? (categoryQtyMap.get(catId) || 0) : 0;
-                            const catDescuentos = item.producto.categoria?.descuentos as DescuentoNivel[] | null | undefined;
-                            const best = getBestDiscount(catDescuentos, totalCatQty);
-                            const next = getNextDiscount(catDescuentos, totalCatQty);
+                            const subId = item.producto.subcategoriaId;
+                            const totalSubQty = subId ? (subcategoryQtyMap.get(subId) || 0) : 0;
+                            const subDescuentos = item.producto.subcategoria?.descuentos as DescuentoNivel[] | null | undefined;
+                            const best = getBestDiscount(subDescuentos, totalSubQty);
+                            const next = getNextDiscount(subDescuentos, totalSubQty);
                             if (best) return (
                               <div className="flex items-center gap-1 mt-1 text-[10px] font-bold text-emerald-600">
                                 <BadgePercent className="h-3 w-3" />
-                                {`−${best.porcentaje}% (${totalCatQty} de ${item.producto.categoria?.nombre || "cat."})`}
+                                {`−${best.porcentaje}% (${totalSubQty} de ${item.producto.subcategoria?.nombre || "marca"})`}
                               </div>
                             );
                             if (next) return (
                               <div className="flex items-center gap-1 mt-1 text-[10px] font-bold text-muted-foreground/60">
                                 <BadgePercent className="h-3 w-3" />
-                                {`−${next.porcentaje}% llevando ${next.cantidadMin}+ de ${item.producto.categoria?.nombre || "cat."}`}
+                                {`−${next.porcentaje}% llevando ${next.cantidadMin}+ de ${item.producto.subcategoria?.nombre || "marca"}`}
                               </div>
                             );
                             return null;
@@ -676,10 +676,10 @@ export default function NuevaVentaPage() {
                       </div>
                       <div className="flex flex-col items-end gap-1 shrink-0">
                         {(() => {
-                          const catId = item.producto.categoriaId;
-                          const totalCatQty = catId ? (categoryQtyMap.get(catId) || 0) : 0;
-                          const catDescuentos = item.producto.categoria?.descuentos as DescuentoNivel[] | null | undefined;
-                          const best = getBestDiscount(catDescuentos, totalCatQty);
+                          const subId = item.producto.subcategoriaId;
+                          const totalSubQty = subId ? (subcategoryQtyMap.get(subId) || 0) : 0;
+                          const subDescuentos = item.producto.subcategoria?.descuentos as DescuentoNivel[] | null | undefined;
+                          const best = getBestDiscount(subDescuentos, totalSubQty);
                           const subtotalBruto = Number(item.producto.precioVenta) * item.quantity;
 
                           if (best) {

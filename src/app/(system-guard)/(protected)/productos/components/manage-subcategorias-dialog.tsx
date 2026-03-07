@@ -6,7 +6,9 @@ import * as React from "react";
 import { toast } from "sonner";
 import { apiService } from "@/lib/apiService";
 import { cn } from "@/lib/utils";
-import { Loader2, Plus, Pencil, Trash2, Tag, ChevronLeft } from "lucide-react";
+import { Loader2, Plus, Pencil, Trash2, Tag, ChevronLeft, BadgePercent } from "lucide-react";
+import { DiscountTiersInline } from "./discount-tiers-inline";
+import type { DescuentoNivel } from "@/lib/types";
 import {
     Dialog,
     DialogContent,
@@ -42,6 +44,7 @@ export function ManageSubcategoriasDialog({ categoriaId, categoriaNombre, open, 
 
     const [currentId, setCurrentId] = React.useState<number | null>(null);
     const [nombre, setNombre] = React.useState("");
+    const [descuentos, setDescuentos] = React.useState<DescuentoNivel[]>([]);
     const [saving, setSaving] = React.useState(false);
     const [deleteConfirmOpen, setDeleteConfirmOpen] = React.useState(false);
     const [subToDelete, setSubToDelete] = React.useState<number | null>(null);
@@ -67,6 +70,7 @@ export function ManageSubcategoriasDialog({ categoriaId, categoriaNombre, open, 
 
     function resetForm() {
         setNombre("");
+        setDescuentos([]);
         setCurrentId(null);
     }
 
@@ -76,12 +80,16 @@ export function ManageSubcategoriasDialog({ categoriaId, categoriaNombre, open, 
         setSaving(true);
         try {
             if (mode === "edit" && currentId) {
-                await apiService.updateSubcategoria(currentId, { nombre: nombre.trim() });
+                await apiService.updateSubcategoria(currentId, {
+                    nombre: nombre.trim(),
+                    descuentos: descuentos.length > 0 ? descuentos : null
+                });
                 toast.success("Subcategoría actualizada");
             } else {
                 await apiService.createSubcategoria({
                     nombre: nombre.trim(),
-                    categoriaId
+                    categoriaId,
+                    descuentos: descuentos.length > 0 ? descuentos : null
                 });
                 toast.success("Subcategoría creada");
             }
@@ -158,6 +166,7 @@ export function ManageSubcategoriasDialog({ categoriaId, categoriaNombre, open, 
                                                     onClick={() => {
                                                         setCurrentId(sub.id);
                                                         setNombre(sub.nombre);
+                                                        setDescuentos(Array.isArray(sub.descuentos) ? sub.descuentos : []);
                                                         setMode("edit");
                                                     }}
                                                 >
@@ -195,6 +204,15 @@ export function ManageSubcategoriasDialog({ categoriaId, categoriaNombre, open, 
                                     autoFocus
                                     className="h-11 bg-zinc-900/50 border-zinc-800 rounded-xl focus-visible:ring-primary/20 focus-visible:border-primary/50 text-base"
                                 />
+                            </div>
+
+                            <div className="space-y-3">
+                                <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400 ml-1">
+                                    Descuentos por Marca (Opcional)
+                                </Label>
+                                <div className="p-4 rounded-xl border border-zinc-800 bg-zinc-900/30">
+                                    <DiscountTiersInline descuentos={descuentos} onChange={setDescuentos} />
+                                </div>
                             </div>
 
                             <div className="flex gap-3 pt-4 border-t border-zinc-800">

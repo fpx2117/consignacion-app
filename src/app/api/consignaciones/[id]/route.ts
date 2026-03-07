@@ -38,12 +38,12 @@ export async function GET(_: Request, { params }: RouteParams) {
     where: { id },
     include: {
       cliente: true,
-      detalles: { include: { producto: true } },
+      detalles: { include: { producto: { include: { subcategoria: true } } } },
       liquidaciones: {
         orderBy: { id: "desc" },
         include: {
           items: {
-            include: { detalle: { include: { producto: true } } },
+            include: { detalle: { include: { producto: { include: { subcategoria: true } } } } },
           },
           venta: { include: { detalles: true } },
         },
@@ -227,7 +227,7 @@ export async function PUT(req: Request, { params }: RouteParams) {
 
       return await tx.consignacion.findUnique({
         where: { id: consignacionId },
-        include: { detalles: { include: { producto: true } } }
+        include: { detalles: { include: { producto: { include: { subcategoria: true } } } } }
       });
     });
 
@@ -267,7 +267,7 @@ export async function POST(req: Request, { params }: RouteParams) {
     const result = await prisma.$transaction(async (tx) => {
       const consignacion = await tx.consignacion.findUnique({
         where: { id: consignacionId },
-        include: { cliente: true, detalles: { include: { producto: true } } },
+        include: { cliente: true, detalles: { include: { producto: { include: { subcategoria: true } } } } },
       });
 
       if (!consignacion) throw new Error("CONSIGNACION_NO_EXISTE");

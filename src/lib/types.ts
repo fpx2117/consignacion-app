@@ -179,6 +179,13 @@ export type Categoria = {
   id: ID;
   nombre: string;
   color?: string;
+  subcategorias?: Subcategoria[];
+};
+
+export type Subcategoria = {
+  id: ID;
+  nombre: string;
+  categoriaId: ID;
   descuentos?: DescuentoNivel[] | null;
 };
 

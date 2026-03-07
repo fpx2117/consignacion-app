@@ -12,12 +12,11 @@ export async function PATCH(
     const { id } = await params;
     const categoriaId = Number(id);
     const body = await req.json();
-    const { nombre, color, descuentos } = body;
+    const { nombre, color } = body;
 
     const data: Record<string, any> = {};
     if (nombre) data.nombre = nombre.trim();
     if (color) data.color = color;
-    if (descuentos !== undefined) data.descuentos = descuentos;
 
     if (Object.keys(data).length === 0) {
       return NextResponse.json(

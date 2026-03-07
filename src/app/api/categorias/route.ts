@@ -20,6 +20,7 @@ export async function GET(req: NextRequest) {
     });
     return NextResponse.json(categorias);
   } catch (error) {
+    console.error("Error al obtener categorías:", error);
     return NextResponse.json(
       { error: "Error al obtener categorías" },
       { status: 500 }
@@ -31,7 +32,7 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { nombre, color, descuentos } = body;
+    const { nombre, color } = body;
     const sucursalId = getSucursalIdFromHeader(req);
 
     if (!nombre) {
@@ -46,7 +47,6 @@ export async function POST(req: NextRequest) {
         nombre: nombre.trim(),
         sucursalId,
         ...(color && { color }),
-        ...(descuentos && { descuentos }),
       },
     });
 

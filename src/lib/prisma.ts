@@ -1,7 +1,7 @@
 import { PrismaClient } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import pg from "pg";
-// Reload triggered by Antigravity to refresh generated client
+// Reload triggered by Antigravity to refresh generated client (v2)
 
 /**
  * 1. Setup the Connection String

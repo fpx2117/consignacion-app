@@ -32,7 +32,7 @@ El sistema es una solución integral para la gestión de puntos de venta (POS) c
 ### Gestión de Inventario
 - **Multisucursal**: El stock se gestiona de forma aislada por sucursal mediante `StockSucursal`. Soporta precios de venta y costo por sucursal (`precioVentaOverride`, `precioCostoOverride`).
 - **Vencimientos**: Control y alertas automáticas de productos próximos a vencer.
-- **Categorización**: Organización de productos por categorías con códigos de colores y **descuentos por nivel de cantidad** (`descuentos: Json` en `Categoria`).
+- **Categorización**: Organización de productos por categorías y **subcategorías** (marcas), con **descuentos por nivel de cantidad** definidos a nivel de subcategoría (`descuentos: Json` en `Subcategoria`).
 - **Movimientos de Stock**: Registro histórico de entradas, salidas, ajustes, roturas, pérdidas, devoluciones y transferencias por consignación.
 - **Código de barras / SKU**: Búsqueda y unicidad garantizada por sucursal.
 - **Imagen de producto**: Almacenada via URL (`imagenUrl`).
@@ -420,7 +420,8 @@ El sistema utiliza **Prisma ORM 7** con **PostgreSQL**. A continuación se descr
 | :--- | :--- |
 | `Producto` | Artículo con nombre, precios (venta/costo), IVA, stock, stock mínimo, código de barras, SKU, imagen y vencimiento. |
 | `StockSucursal` | Stock disponible y consignado por producto y sucursal. Permite precios de venta/costo sobreescritos por sucursal. |
-| `Categoria` | Categoría con color y descuentos por nivel de cantidad (`descuentos: Json` → `[{cantidadMin, porcentaje}]`). |
+| `Categoria` | Agrupador principal de productos con color identificativo. |
+| `Subcategoria` | Agrupador secundario (ej: Marca) vinculado a una categoría. Define los **descuentos por nivel de cantidad** (`descuentos: Json` → `[{cantidadMin, porcentaje}]`). |
 | `MovimientoStock` | Registro histórico de cada cambio de stock: tipo (ENTRADA/SALIDA), motivo, stock previo y posterior. |
 
 ### Punto de Venta y Caja
