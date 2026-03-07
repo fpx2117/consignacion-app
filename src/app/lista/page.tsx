@@ -37,6 +37,7 @@ function CatalogContent() {
     // --- Estados de UI/Filtros ---
     const [searchTerm, setSearchTerm] = React.useState("");
     const [selectedCategory, setSelectedCategory] = React.useState<number | null>(null);
+    const [selectedSubcategory, setSelectedSubcategory] = React.useState<number | null>(null);
     const [viewMode, setViewMode] = React.useState<"grid" | "list">("grid");
     const [isConsigne, setIsConsigne] = React.useState(false);
     const [selectedProduct, setSelectedProduct] = React.useState<any>(null);
@@ -182,9 +183,16 @@ function CatalogContent() {
     const filteredProducts = (() => {
         if (!data?.productos) return [];
 
-        // 1. Filtrar por búsqueda y categoría
+        // 1. Filtrar por búsqueda y categoría/subcategoría
         const result = data.productos.filter((p: any) => {
             const matchesSearch = p.nombre.toLowerCase().includes(searchTerm.toLowerCase());
+
+            // Si hay subcategoría seleccionada, filtramos estrictamente por ella
+            if (selectedSubcategory) {
+                return matchesSearch && p.subcategoriaId === selectedSubcategory;
+            }
+
+            // Si no hay subcategoría pero sí categoría, filtramos por la categoría
             const matchesCategory = !selectedCategory || p.categoriaId === selectedCategory;
             return matchesSearch && matchesCategory;
         });
@@ -237,8 +245,14 @@ function CatalogContent() {
                             return acc;
                         }, {}) || {}}
                         selectedCategory={selectedCategory}
-                        setSelectedCategory={setSelectedCategory}
+                        setSelectedCategory={(id) => {
+                            setSelectedCategory(id);
+                            setSelectedSubcategory(null); // Reset subcategory when category changes
+                        }}
+                        selectedSubcategory={selectedSubcategory}
+                        setSelectedSubcategory={setSelectedSubcategory}
                         totalProducts={data?.productos?.length || 0}
+                        allProducts={data?.productos || []}
                     />
 
                     <div className="flex-1 flex flex-col gap-5 sm:gap-8 min-w-0 w-full">
@@ -251,7 +265,12 @@ function CatalogContent() {
                             setViewMode={setViewMode}
                             categories={data?.categorias || []}
                             selectedCategory={selectedCategory}
-                            setSelectedCategory={setSelectedCategory}
+                            setSelectedCategory={(id) => {
+                                setSelectedCategory(id);
+                                setSelectedSubcategory(null);
+                            }}
+                            selectedSubcategory={selectedSubcategory}
+                            setSelectedSubcategory={setSelectedSubcategory}
                             isConsigne={isConsigne}
                             setIsConsigne={setIsConsigne}
                             sortBy={sortBy}
