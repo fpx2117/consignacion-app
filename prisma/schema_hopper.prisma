@@ -1,0 +1,738 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model AuditLog {
+  id        Int      @id @default(autoincrement())
+  userId    Int?
+  action    String
+  module    String
+  details   Json?
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime @default(now())
+  Usuario   Usuario? @relation(fields: [userId], references: [id])
+
+  @@index([action])
+  @@index([createdAt])
+  @@index([module])
+  @@index([userId])
+}
+
+model Branding {
+  id              Int              @id @default(autoincrement())
+  businessName    String
+  primaryColor    String           @default("#111827")
+  footerText      String?
+  phone           String?
+  address         String?
+  updatedAt       DateTime
+  logoData        Bytes?
+  logoMime        String?
+  sucursalId      Int              @unique @default(1)
+  bannerData      Bytes?
+  bannerMime      String?
+  facebookUrl     String?
+  instagramUrl    String?
+  secondaryColor  String           @default("#3b82f6")
+  themeIdentifier String           @default("modern")
+  whatsappNumber  String?
+  isBannerSlider  Boolean          @default(false)
+  whatsappMessage String?          @default("Hola, estoy buscando {nombre_producto}")
+  Sucursal        Sucursal         @relation(fields: [sucursalId], references: [id])
+  BrandingBanner  BrandingBanner[]
+}
+
+model BrandingBanner {
+  id         Int      @id @default(autoincrement())
+  brandingId Int
+  bannerData Bytes
+  bannerMime String
+  orden      Int      @default(0)
+  createdAt  DateTime @default(now())
+  Branding   Branding @relation(fields: [brandingId], references: [id], onDelete: Cascade)
+
+  @@index([brandingId])
+  @@index([orden])
+}
+
+model Caja {
+  id         Int          @id @default(autoincrement())
+  nombre     String       @unique
+  activa     Boolean      @default(true)
+  sucursalId Int          @default(1)
+  Sucursal   Sucursal     @relation(fields: [sucursalId], references: [id])
+  SesionCaja SesionCaja[]
+
+  @@index([sucursalId])
+}
+
+model Categoria {
+  id           Int            @id @default(autoincrement())
+  nombre       String
+  color        String         @default("sky")
+  descuentos   Json?
+  sucursalId   Int            @default(1)
+  Sucursal     Sucursal       @relation(fields: [sucursalId], references: [id])
+  Producto     Producto[]
+  Subcategoria Subcategoria[]
+
+  @@unique([nombre, sucursalId])
+  @@index([sucursalId])
+}
+
+model CategoriaGasto {
+  id         Int      @id @default(autoincrement())
+  nombre     String
+  sucursalId Int      @default(1)
+  Sucursal   Sucursal @relation(fields: [sucursalId], references: [id])
+  Gasto      Gasto[]
+
+  @@unique([nombre, sucursalId])
+  @@index([sucursalId])
+}
+
+model Cliente {
+  id           Int            @id @default(autoincrement())
+  nombre       String
+  telefono     String?
+  direccion    String?
+  activo       Boolean        @default(true)
+  saldoCuenta  Decimal        @default(0) @db.Decimal(10, 2)
+  createdAt    DateTime       @default(now())
+  sucursalId   Int            @default(1)
+  codigoPostal String?
+  documento    String?
+  email        String?
+  localidad    String?
+  provincia    String?
+  Sucursal     Sucursal       @relation(fields: [sucursalId], references: [id])
+  Consignacion Consignacion[]
+  Pago         Pago[]
+  Venta        Venta[]
+
+  @@index([sucursalId])
+}
+
+model Configuracion {
+  id                             Int      @id @default(autoincrement())
+  minStockGlobal                 Int      @default(5)
+  diasAnticipacionVencimiento    Int      @default(7)
+  notificarStockBajo             Boolean  @default(true)
+  notificarVencimientos          Boolean  @default(true)
+  notificarVentas                Boolean  @default(true)
+  usarControlDeCaja              Boolean  @default(true)
+  diasAvisoConsignacion          Int      @default(15)
+  notificarConsignacionesActivas Boolean  @default(true)
+  notificarLiquidaciones         Boolean  @default(true)
+  mensajeWhatsappConsignacion    String?
+  mensajeWhatsappVenta           String?
+  sucursalId                     Int      @unique @default(1)
+  porcentajeAumentoConsignacion  Float    @default(0)
+  porcentajeInteresTarjeta       Float    @default(0)
+  convertirTienda                Boolean  @default(false)
+  mostrarListaPrecios            Boolean  @default(false)
+  mpAccessTokenTienda            String?
+  mpPublicKeyTienda              String?
+  separarListaPorSucursal        Boolean  @default(true)
+  mostrarCategoriasEnHeader      Boolean  @default(true)
+  tiendaLayout                   String   @default("grid")
+  mostrarPreciosConsignacion     Boolean  @default(false)
+  andreaniCliente                String?
+  andreaniContratoDomicilio      String?
+  andreaniContratoSucursal       String?
+  andreaniPassword               String?
+  andreaniUsuario                String?
+  Sucursal                       Sucursal @relation(fields: [sucursalId], references: [id])
+}
+
+model Consignacion {
+  id                  Int                   @id @default(autoincrement())
+  clienteId           Int
+  fecha               DateTime              @default(now())
+  estado              EstadoConsignacion    @default(ABIERTA)
+  numeroFolio         Int
+  porcentajeAumento   Float                 @default(0)
+  sucursalId          Int                   @default(1)
+  Cliente             Cliente               @relation(fields: [clienteId], references: [id])
+  Sucursal            Sucursal              @relation(fields: [sucursalId], references: [id])
+  ConsignacionDetalle ConsignacionDetalle[]
+  Liquidacion         Liquidacion[]
+
+  @@index([clienteId, fecha])
+  @@index([clienteId, numeroFolio])
+  @@index([estado, fecha])
+  @@index([sucursalId])
+}
+
+model ConsignacionDetalle {
+  id                 Int               @id @default(autoincrement())
+  consignacionId     Int
+  productoId         Int
+  unitsEntregadas    Int
+  unitsVendidasAcum  Int               @default(0)
+  unitsDevueltasAcum Int               @default(0)
+  precioUnitario     Decimal           @default(0) @db.Decimal(10, 2)
+  descuento          Decimal           @default(0) @db.Decimal(10, 2)
+  Consignacion       Consignacion      @relation(fields: [consignacionId], references: [id], onDelete: Cascade)
+  Producto           Producto          @relation(fields: [productoId], references: [id])
+  LiquidacionItem    LiquidacionItem[]
+
+  @@index([consignacionId])
+  @@index([productoId])
+}
+
+model Envio {
+  id                Int      @id @default(autoincrement())
+  ventaId           Int      @unique
+  estado            String   @default("PENDIENTE")
+  codigoSeguimiento String?
+  costo             Decimal  @default(0) @db.Decimal(10, 2)
+  metodoEnvio       String
+  direccionEnvio    Json
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime
+  Venta             Venta    @relation(fields: [ventaId], references: [id], onDelete: Cascade)
+}
+
+model Gasto {
+  id               Int             @id @default(autoincrement())
+  monto            Decimal         @db.Decimal(10, 2)
+  fecha            DateTime        @default(now())
+  fechaVencimiento DateTime?
+  motivo           String
+  estado           EstadoGasto     @default(PAGADO)
+  esRecurrente     Boolean         @default(false)
+  frecuencia       FrecuenciaGasto @default(UNICO)
+  categoriaGastoId Int
+  sucursalId       Int             @default(1)
+  userId           Int?
+  comprobanteUrl   String?
+  cuotaActual      Int?
+  cuotaTotal       Int?
+  recurrenciaId    String?
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime
+  esCompartido     Boolean         @default(false)
+  CategoriaGasto   CategoriaGasto  @relation(fields: [categoriaGastoId], references: [id])
+  Sucursal         Sucursal        @relation(fields: [sucursalId], references: [id])
+  Usuario          Usuario?        @relation(fields: [userId], references: [id])
+  GastoSucursal    GastoSucursal[]
+
+  @@index([categoriaGastoId])
+  @@index([estado])
+  @@index([fecha])
+  @@index([recurrenciaId])
+  @@index([sucursalId])
+}
+
+model GastoSucursal {
+  id                Int      @id @default(autoincrement())
+  gastoId           Int
+  sucursalId        Int
+  montoProporcional Decimal  @db.Decimal(10, 2)
+  Gasto             Gasto    @relation(fields: [gastoId], references: [id], onDelete: Cascade)
+  Sucursal          Sucursal @relation(fields: [sucursalId], references: [id])
+
+  @@unique([gastoId, sucursalId])
+  @@index([gastoId])
+  @@index([sucursalId])
+}
+
+model HorarioLaboral {
+  id         Int     @id @default(autoincrement())
+  usuarioId  Int
+  diaSemana  Int
+  horaInicio String
+  horaFin    String
+  activo     Boolean @default(true)
+  Usuario    Usuario @relation(fields: [usuarioId], references: [id])
+
+  @@unique([usuarioId, diaSemana])
+}
+
+model Liquidacion {
+  id              Int               @id @default(autoincrement())
+  consignacionId  Int
+  fecha           DateTime          @default(now())
+  Consignacion    Consignacion      @relation(fields: [consignacionId], references: [id], onDelete: Cascade)
+  LiquidacionItem LiquidacionItem[]
+  Venta           Venta?
+
+  @@index([consignacionId, fecha])
+}
+
+model LiquidacionItem {
+  id                    Int                 @id @default(autoincrement())
+  liquidacionId         Int
+  consignacionDetalleId Int
+  unitsVendidas         Int                 @default(0)
+  unitsDevueltas        Int                 @default(0)
+  precioUnitario        Decimal             @db.Decimal(10, 2)
+  descuento             Decimal             @default(0) @db.Decimal(10, 2)
+  ConsignacionDetalle   ConsignacionDetalle @relation(fields: [consignacionDetalleId], references: [id])
+  Liquidacion           Liquidacion         @relation(fields: [liquidacionId], references: [id], onDelete: Cascade)
+
+  @@index([consignacionDetalleId])
+  @@index([liquidacionId])
+}
+
+model MovimientoCaja {
+  id           Int                @id @default(autoincrement())
+  sesionCajaId Int
+  tipo         TipoMovimientoCaja
+  monto        Decimal            @db.Decimal(10, 2)
+  motivo       String
+  fecha        DateTime           @default(now())
+  SesionCaja   SesionCaja         @relation(fields: [sesionCajaId], references: [id], onDelete: Cascade)
+
+  @@index([sesionCajaId])
+}
+
+model MovimientoStock {
+  id             Int                   @id @default(autoincrement())
+  productoId     Int
+  tipo           TipoMovimientoStock
+  motivo         MotivoMovimientoStock
+  cantidad       Int
+  stockPrevio    Int
+  stockPosterior Int
+  observaciones  String?
+  createdAt      DateTime              @default(now())
+  sucursalId     Int                   @default(1)
+  Producto       Producto              @relation(fields: [productoId], references: [id], onDelete: Cascade)
+  Sucursal       Sucursal              @relation(fields: [sucursalId], references: [id])
+
+  @@index([createdAt])
+  @@index([productoId])
+  @@index([sucursalId])
+}
+
+model Notification {
+  id          Int              @id @default(autoincrement())
+  type        NotificationType
+  title       String
+  description String
+  productoId  Int?
+  read        Boolean          @default(false)
+  fingerprint String           @unique
+  createdAt   DateTime         @default(now())
+  readAt      DateTime?
+  updatedAt   DateTime
+  userId      Int?
+  sucursalId  Int              @default(1)
+  Producto    Producto?        @relation(fields: [productoId], references: [id])
+  Sucursal    Sucursal         @relation(fields: [sucursalId], references: [id])
+  Usuario     Usuario?         @relation(fields: [userId], references: [id])
+
+  @@index([productoId])
+  @@index([read, updatedAt])
+  @@index([sucursalId])
+  @@index([type, createdAt])
+}
+
+model Pago {
+  id           Int         @id @default(autoincrement())
+  clienteId    Int
+  fecha        DateTime    @default(now())
+  monto        Decimal     @db.Decimal(10, 2)
+  metodo       MetodoPago
+  sesionCajaId Int?
+  sucursalId   Int         @default(1)
+  tipo         String      @default("VENTA")
+  Cliente      Cliente     @relation(fields: [clienteId], references: [id])
+  SesionCaja   SesionCaja? @relation(fields: [sesionCajaId], references: [id], onDelete: Restrict)
+  Sucursal     Sucursal    @relation(fields: [sucursalId], references: [id])
+
+  @@index([clienteId, fecha])
+  @@index([sesionCajaId])
+  @@index([sucursalId])
+  @@index([tipo])
+}
+
+model Plan {
+  id            Int            @id @default(autoincrement())
+  nombre        String
+  descripcion   String?
+  precioARS     Decimal        @db.Decimal(10, 2)
+  precioUSD     Decimal        @db.Decimal(10, 2)
+  mercadopagoId String?
+  paypalId      String?
+  activo        Boolean        @default(true)
+  PlanLimit     PlanLimit?
+  PromoCode     PromoCode[]
+  Subscription  Subscription[]
+}
+
+model PlanLimit {
+  id                  Int      @id @default(autoincrement())
+  planId              Int      @unique
+  maxProductos        Int      @default(-1)
+  maxUsuarios         Int      @default(5)
+  allowConsignaciones Boolean  @default(false)
+  allowSucursales     Boolean  @default(false)
+  updatedAt           DateTime
+  Plan                Plan     @relation(fields: [planId], references: [id])
+}
+
+model Producto {
+  id                   Int                   @id @default(autoincrement())
+  nombre               String
+  precioVenta          Decimal               @db.Decimal(10, 2)
+  precioCosto          Decimal               @db.Decimal(10, 2)
+  stockDisponibleUnits Int                   @default(0)
+  stockConsignadoUnits Int                   @default(0)
+  packSizeUnits        Int?
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime
+  stockMinUnits        Int                   @default(0)
+  fechaVencimiento     DateTime?
+  activo               Boolean               @default(true)
+  categoriaId          Int?
+  codigoBarra          String?
+  descripcion          String?
+  iva                  Decimal               @default(21.0) @db.Decimal(5, 2)
+  sku                  String?
+  sucursalId           Int?                  @default(1)
+  imagenUrl            String?
+  subcategoriaId       Int?
+  ConsignacionDetalle  ConsignacionDetalle[]
+  MovimientoStock      MovimientoStock[]
+  Notification         Notification[]
+  Categoria            Categoria?            @relation(fields: [categoriaId], references: [id])
+  Subcategoria         Subcategoria?         @relation(fields: [subcategoriaId], references: [id])
+  Sucursal             Sucursal?             @relation(fields: [sucursalId], references: [id])
+  StockSucursal        StockSucursal[]
+  VentaDetalle         VentaDetalle[]
+
+  @@unique([codigoBarra, sucursalId])
+  @@unique([sku, sucursalId])
+  @@index([categoriaId])
+  @@index([codigoBarra])
+  @@index([subcategoriaId])
+  @@index([sucursalId])
+}
+
+model PromoCode {
+  id           Int       @id @default(autoincrement())
+  code         String    @unique
+  planId       Int
+  durationDays Int
+  maxUses      Int       @default(1)
+  usedCount    Int       @default(0)
+  expiresAt    DateTime?
+  activo       Boolean   @default(true)
+  createdAt    DateTime  @default(now())
+  Plan         Plan      @relation(fields: [planId], references: [id])
+}
+
+model ResetPasswordToken {
+  id        String   @id
+  email     String
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([email])
+}
+
+model SesionCaja {
+  id                 Int              @id @default(autoincrement())
+  cajaId             Int
+  usuarioId          Int
+  estado             EstadoSesionCaja @default(ABIERTA)
+  fechaApertura      DateTime         @default(now())
+  fechaCierre        DateTime?
+  montoInicial       Decimal          @db.Decimal(10, 2)
+  montoFinalEsperado Decimal?         @db.Decimal(10, 2)
+  montoFinalReal     Decimal?         @db.Decimal(10, 2)
+  diferencia         Decimal?         @db.Decimal(10, 2)
+  observaciones      String?
+  MovimientoCaja     MovimientoCaja[]
+  Pago               Pago[]
+  Caja               Caja             @relation(fields: [cajaId], references: [id])
+  Usuario            Usuario          @relation(fields: [usuarioId], references: [id])
+  Venta              Venta[]
+
+  @@index([cajaId, estado])
+  @@index([usuarioId, fechaApertura])
+}
+
+model ShareLink {
+  id           Int           @id @default(autoincrement())
+  codeHash     String        @unique
+  type         ShareLinkType
+  targetId     Int
+  expiresAt    DateTime
+  maxViews     Int           @default(3)
+  views        Int           @default(0)
+  createdAt    DateTime      @default(now())
+  lastViewedAt DateTime?
+  codeEnc      String
+
+  @@index([type, targetId, expiresAt])
+}
+
+model StockSucursal {
+  id                   Int      @id @default(autoincrement())
+  productoId           Int
+  sucursalId           Int
+  stockDisponibleUnits Int      @default(0)
+  stockConsignadoUnits Int      @default(0)
+  stockMinUnits        Int      @default(0)
+  precioVentaOverride  Decimal? @db.Decimal(10, 2)
+  precioCostoOverride  Decimal? @db.Decimal(10, 2)
+  Producto             Producto @relation(fields: [productoId], references: [id], onDelete: Cascade)
+  Sucursal             Sucursal @relation(fields: [sucursalId], references: [id], onDelete: Cascade)
+
+  @@unique([productoId, sucursalId])
+}
+
+model Subcategoria {
+  id          Int        @id @default(autoincrement())
+  nombre      String
+  categoriaId Int
+  Producto    Producto[]
+  Categoria   Categoria  @relation(fields: [categoriaId], references: [id], onDelete: Cascade)
+
+  @@unique([nombre, categoriaId])
+  @@index([categoriaId])
+}
+
+model Subscription {
+  id                String               @id
+  userId            Int                  @unique
+  planId            Int
+  status            EstadoSuscripcion    @default(PRUEBA)
+  provider          ProveedorSuscripcion
+  externalId        String               @unique
+  trialEndsAt       DateTime?
+  currentPeriodEnd  DateTime?
+  cancelAtPeriodEnd Boolean              @default(false)
+  createdAt         DateTime             @default(now())
+  updatedAt         DateTime
+  mpPreapprovalId   String?
+  Plan              Plan                 @relation(fields: [planId], references: [id])
+  Usuario           Usuario              @relation(fields: [userId], references: [id])
+}
+
+model Sucursal {
+  id              Int               @id @default(autoincrement())
+  nombre          String
+  esPrincipal     Boolean           @default(false)
+  activa          Boolean           @default(true)
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime
+  Branding        Branding?
+  Caja            Caja[]
+  Categoria       Categoria[]
+  CategoriaGasto  CategoriaGasto[]
+  Cliente         Cliente[]
+  Configuracion   Configuracion?
+  Consignacion    Consignacion[]
+  Gasto           Gasto[]
+  GastoSucursal   GastoSucursal[]
+  MovimientoStock MovimientoStock[]
+  Notification    Notification[]
+  Pago            Pago[]
+  Producto        Producto[]
+  StockSucursal   StockSucursal[]
+  Usuario         Usuario[]
+  Venta           Venta[]
+}
+
+model UserSession {
+  id           String   @id
+  userId       Int
+  token        String   @unique
+  userAgent    String?
+  ipAddress    String?
+  browser      String?
+  os           String?
+  device       String?
+  city         String?
+  country      String?
+  isActive     Boolean  @default(true)
+  expiresAt    DateTime
+  lastActivity DateTime @default(now())
+  createdAt    DateTime @default(now())
+  Usuario      Usuario  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([isActive])
+  @@index([userId])
+}
+
+model Usuario {
+  id             Int              @id @default(autoincrement())
+  nombre         String
+  email          String           @unique
+  hash           String
+  rol            RolUsuario       @default(EMPLEADO)
+  activo         Boolean          @default(true)
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime
+  sucursalId     Int?
+  AuditLog       AuditLog[]
+  Gasto          Gasto[]
+  HorarioLaboral HorarioLaboral[]
+  Notification   Notification[]
+  SesionCaja     SesionCaja[]
+  Subscription   Subscription?
+  UserSession    UserSession[]
+  Sucursal       Sucursal?        @relation(fields: [sucursalId], references: [id])
+
+  @@index([rol])
+  @@index([sucursalId])
+}
+
+model Venta {
+  id              Int            @id @default(autoincrement())
+  clienteId       Int
+  liquidacionId   Int?           @unique
+  fecha           DateTime       @default(now())
+  total           Decimal        @db.Decimal(10, 2)
+  sesionCajaId    Int?
+  tipo            TipoVenta      @default(CASUAL)
+  metodoPago      MetodoPago     @default(EFECTIVO)
+  sucursalId      Int            @default(1)
+  descuentoGlobal Decimal        @default(0) @db.Decimal(10, 2)
+  anulada         Boolean        @default(false)
+  fechaAnulacion  DateTime?
+  motivoAnulacion String?
+  numeroVenta     Int?
+  Envio           Envio?
+  Cliente         Cliente        @relation(fields: [clienteId], references: [id])
+  Liquidacion     Liquidacion?   @relation(fields: [liquidacionId], references: [id])
+  SesionCaja      SesionCaja?    @relation(fields: [sesionCajaId], references: [id], onDelete: Restrict)
+  Sucursal        Sucursal       @relation(fields: [sucursalId], references: [id])
+  VentaDetalle    VentaDetalle[]
+
+  @@index([clienteId, fecha])
+  @@index([sesionCajaId])
+  @@index([sucursalId])
+  @@index([tipo])
+}
+
+model VentaDetalle {
+  id             Int      @id @default(autoincrement())
+  ventaId        Int
+  productoId     Int
+  units          Int
+  precioUnitario Decimal  @db.Decimal(10, 2)
+  subtotal       Decimal  @db.Decimal(10, 2)
+  descuento      Decimal  @default(0) @db.Decimal(10, 2)
+  esRotura       Boolean  @default(false)
+  Producto       Producto @relation(fields: [productoId], references: [id])
+  Venta          Venta    @relation(fields: [ventaId], references: [id], onDelete: Cascade)
+
+  @@index([productoId])
+  @@index([ventaId])
+}
+
+enum EstadoConsignacion {
+  ABIERTA
+  CERRADA
+}
+
+enum EstadoGasto {
+  PENDIENTE
+  PAGADO
+}
+
+enum EstadoSesionCaja {
+  ABIERTA
+  CERRADA
+}
+
+enum EstadoSuscripcion {
+  PRUEBA
+  ACTIVO
+  ATRASADO
+  CANCELADO
+  INCOMPLETO
+  VENCIDO
+}
+
+enum FrecuenciaGasto {
+  UNICO
+  SEMANAL
+  MENSUAL
+  ANUAL
+}
+
+enum MetodoPago {
+  EFECTIVO
+  TRANSFERENCIA
+  TARJETA
+  OTRO
+}
+
+enum MotivoMovimientoStock {
+  COMPRA
+  DEVOLUCION_CLIENTE
+  AJUSTE_POSITIVO
+  ROTURA
+  VENCIMIENTO
+  PERDIDA
+  AJUSTE_NEGATIVO
+  VENTA
+  CONSIGNACION
+}
+
+enum NotificationType {
+  LOW_STOCK
+  OUT_OF_STOCK
+  SYSTEM
+  EXPIRATION_NEAR
+  PRODUCT_EXPIRED
+  SUBSCRIPTION_EXPIRING
+  TRIAL_ENDING
+  SUBSCRIPTION_ACTIVE
+  NEW_ORDER
+  PAYMENT_RECEIVED
+  PAYMENT_FAILED
+  EXPORT_READY
+  CLIENT_REGISTERED
+  CONSIGNMENT_ALERT
+}
+
+enum ProveedorSuscripcion {
+  MERCADOPAGO
+  PAYPAL
+  PROMO
+}
+
+enum RolUsuario {
+  ADMIN
+  EMPLEADO
+}
+
+enum ShareLinkType {
+  TICKET
+  REMITO
+  INVENTARIO
+  HISTORIAL_INVENTARIO
+  REPORTE_DASHBOARD
+  REPORTE_POS
+  REPORTE_CONSIGNACION
+  COMPROBANTE_GASTO
+}
+
+enum TipoMovimientoCaja {
+  INGRESO
+  EGRESO
+}
+
+enum TipoMovimientoStock {
+  ENTRADA
+  SALIDA
+}
+
+enum TipoVenta {
+  CASUAL
+  LIQUIDACION
+}

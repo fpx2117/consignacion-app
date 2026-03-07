@@ -300,6 +300,7 @@ model Categoria {
   id         Int        @id @default(autoincrement())
   nombre     String
   color      String     @default("sky")
+  descuentos Json?
   sucursalId Int        @default(1)
   sucursal   Sucursal   @relation(fields: [sucursalId], references: [id])
   subcategorias Subcategoria[]

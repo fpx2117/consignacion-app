@@ -10,6 +10,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { cn } from "@/lib/utils";
 import { getThemeStyles } from "../lib/theme-utils";
 
+import { motion, AnimatePresence } from "motion/react";
+import { ChevronRight, ChevronDown } from "lucide-react";
+
 interface StoreFiltersProps {
     config: any;
     products: any[];
@@ -20,6 +23,8 @@ interface StoreFiltersProps {
     categories: any[];
     selectedCategory: number | null;
     setSelectedCategory: (id: number | null) => void;
+    selectedSubcategory: number | null;
+    setSelectedSubcategory: (id: number | null) => void;
     isConsigne: boolean;
     setIsConsigne: (val: boolean) => void;
     sortBy: string;
@@ -36,6 +41,8 @@ export function StoreFilters({
     categories,
     selectedCategory,
     setSelectedCategory,
+    selectedSubcategory,
+    setSelectedSubcategory,
     isConsigne,
     setIsConsigne,
     sortBy,
@@ -43,12 +50,19 @@ export function StoreFilters({
 }: StoreFiltersProps) {
     const { inputRadiusClass, buttonRadiusClass, cardBgClass } = getThemeStyles(config.themeIdentifier);
 
-    // Calcular cuántos productos hay por categoría para mostrar el contador
+    // Calcular cuántos productos hay por categoría/subcategoría para mostrar el contador
     const categoryCounts = products.reduce((acc, product) => {
         const catId = product.categoriaId;
         acc[catId] = (acc[catId] || 0) + 1;
         return acc;
     }, {} as Record<number, number>);
+
+    const subcategoryCounts = products.reduce((acc: any, p: any) => {
+        if (p.subcategoriaId) {
+            acc[p.subcategoriaId] = (acc[p.subcategoriaId] || 0) + 1;
+        }
+        return acc;
+    }, {});
 
     return (
         <section className="flex flex-col gap-5">
@@ -131,32 +145,109 @@ export function StoreFilters({
                 </div>
             </div>
 
-            {/* Fila 2: Categorías Dinámicas (Sólo Mobile) */}
+            {/* Fila 2: Categorías Dinámicas (Sólo Mobile) - MEJORADO con Subcategorías */}
             {config.mostrarCategoriasEnHeader && (
-                <div className="flex md:hidden flex-col gap-2 pb-4 border-b border-neutral-100/50">
+                <div className="flex md:hidden flex-col gap-3 pb-4 border-b border-neutral-100/50">
                     <span className="text-xs font-bold uppercase tracking-widest text-neutral-500">
                         Categorías
                     </span>
-                    <Select
-                        value={selectedCategory === null ? "all" : selectedCategory.toString()}
-                        onValueChange={(val) => setSelectedCategory(val === "all" ? null : Number(val))}
-                    >
-                        <SelectTrigger className={cn("h-11 px-4 text-sm font-bold border-neutral-200 shadow-sm w-full text-neutral-900", cardBgClass, inputRadiusClass)}>
-                            <SelectValue placeholder="Seleccionar categoría" />
-                        </SelectTrigger>
-                        <SelectContent className="rounded-xl overflow-hidden">
-                            <SelectItem value="all">Todas ({products.length})</SelectItem>
-                            {categories.slice().sort((a, b) => a.nombre.localeCompare(b.nombre)).map((cat: any) => {
-                                const count = categoryCounts[cat.id] || 0;
-                                if (count === 0) return null;
-                                return (
-                                    <SelectItem key={cat.id} value={cat.id.toString()}>
-                                        {cat.nombre} <span className="opacity-50 font-normal">({count})</span>
-                                    </SelectItem>
-                                );
-                            })}
-                        </SelectContent>
-                    </Select>
+
+                    <div className="flex flex-col gap-2">
+                        {/* Selector de Todas */}
+                        <button
+                            onClick={() => {
+                                setSelectedCategory(null);
+                                setSelectedSubcategory(null);
+                            }}
+                            className={cn(
+                                "flex items-center justify-between px-4 py-3 text-sm font-bold border transition-all shadow-sm",
+                                inputRadiusClass,
+                                selectedCategory === null
+                                    ? "bg-neutral-900 text-white border-transparent"
+                                    : cn(cardBgClass, "text-neutral-900 border-neutral-200")
+                            )}
+                        >
+                            <span>Todas las categorías</span>
+                            <Badge variant="secondary" className="bg-neutral-100 text-neutral-600 border-none">{products.length}</Badge>
+                        </button>
+
+                        {/* Lista de Categorías con Acordeón para Subcategorías */}
+                        {categories.slice().sort((a, b) => a.nombre.localeCompare(b.nombre)).map((cat: any) => {
+                            const count = categoryCounts[cat.id] || 0;
+                            if (count === 0) return null;
+
+                            const isSelected = selectedCategory === cat.id;
+                            const hasSubcategories = cat.subcategorias && cat.subcategorias.length > 0;
+
+                            return (
+                                <div key={cat.id} className="flex flex-col gap-1">
+                                    <button
+                                        onClick={() => setSelectedCategory(isSelected ? null : cat.id)}
+                                        className={cn(
+                                            "flex items-center justify-between px-4 py-3 text-sm font-bold border transition-all shadow-sm",
+                                            inputRadiusClass,
+                                            isSelected
+                                                ? "bg-neutral-900 text-white border-transparent"
+                                                : cn(cardBgClass, "text-neutral-900 border-neutral-200")
+                                        )}
+                                    >
+                                        <div className="flex items-center gap-2">
+                                            <span>{cat.nombre}</span>
+                                            <span className={cn("text-[10px] font-normal opacity-60", isSelected ? "text-white/70" : "text-neutral-500")}>({count})</span>
+                                        </div>
+                                        {hasSubcategories && (
+                                            <ChevronDown className={cn("h-4 w-4 transition-transform", isSelected ? "rotate-180" : "")} />
+                                        )}
+                                    </button>
+
+                                    <AnimatePresence>
+                                        {isSelected && hasSubcategories && (
+                                            <motion.div
+                                                initial={{ height: 0, opacity: 0 }}
+                                                animate={{ height: "auto", opacity: 1 }}
+                                                exit={{ height: 0, opacity: 0 }}
+                                                className="overflow-hidden bg-neutral-50/50 rounded-2xl p-1 flex flex-wrap gap-1 mt-1 border border-neutral-100"
+                                            >
+                                                {/* Opción de "Ver Todo de [Categoría]" */}
+                                                <button
+                                                    onClick={() => setSelectedSubcategory(null)}
+                                                    className={cn(
+                                                        "px-3 py-1.5 text-xs font-bold rounded-xl transition-all border",
+                                                        selectedSubcategory === null
+                                                            ? "bg-white text-neutral-900 border-neutral-200 shadow-sm"
+                                                            : "text-neutral-400 border-transparent hover:text-neutral-600"
+                                                    )}
+                                                >
+                                                    Todo {cat.nombre}
+                                                </button>
+
+                                                {cat.subcategorias.map((sub: any) => {
+                                                    const subCount = subcategoryCounts[sub.id] || 0;
+                                                    if (subCount === 0) return null;
+                                                    const isSubSelected = selectedSubcategory === sub.id;
+
+                                                    return (
+                                                        <button
+                                                            key={sub.id}
+                                                            onClick={() => setSelectedSubcategory(isSubSelected ? null : sub.id)}
+                                                            className={cn(
+                                                                "px-3 py-1.5 text-xs font-bold rounded-xl transition-all border",
+                                                                isSubSelected
+                                                                    ? "bg-white text-neutral-900 border-neutral-200 shadow-sm"
+                                                                    : "text-neutral-400 border-transparent hover:text-neutral-600"
+                                                            )}
+                                                        >
+                                                            {sub.nombre} ({subCount})
+                                                        </button>
+                                                    );
+                                                })}
+                                            </motion.div>
+                                        )}
+                                    </AnimatePresence>
+                                </div>
+                            );
+                        })}
+                    </div>
                 </div>
             )}
 

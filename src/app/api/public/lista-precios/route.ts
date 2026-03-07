@@ -41,10 +41,18 @@ export async function GET(req: Request) {
         const [productos, categorias] = await Promise.all([
             prisma.producto.findMany({
                 where,
-                include: { categoria: true },
+                include: {
+                    categoria: true,
+                    subcategoria: true
+                },
                 orderBy: { nombre: "asc" }
             }),
             prisma.categoria.findMany({
+                include: {
+                    subcategorias: {
+                        orderBy: { nombre: "asc" }
+                    }
+                },
                 orderBy: { nombre: "asc" }
             })
         ]);
