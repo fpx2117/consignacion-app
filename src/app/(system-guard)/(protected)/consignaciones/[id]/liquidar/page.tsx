@@ -36,7 +36,7 @@ type Row = {
   unitsVendidas: number;
   unitsDevueltas: number;
   descuento: number;
-  categoria?: any;
+  subcategoria?: any;
 };
 
 const formatCurrency = (value: number) => {
@@ -46,13 +46,12 @@ const formatCurrency = (value: number) => {
 export default function LiquidarConsignacionPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
-  const consignacionId = Number(params.id); // o const id = Number(params.id)
+  const consignacionId = Number(params.id);
 
   const [consignacion, setConsignacion] = React.useState<Consignacion | null>(null);
   const [rows, setRows] = React.useState<Row[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [saving, setSaving] = React.useState(false);
-  const [discountTiers, setDiscountTiers] = React.useState<Record<number, any[]>>({});
   const [error, setError] = React.useState<string | null>(null);
   const [showSuccessDialog, setShowSuccessDialog] = React.useState(false);
 
@@ -61,7 +60,6 @@ export default function LiquidarConsignacionPage() {
     setLoading(true);
     setError(null);
     try {
-      // ✅ AHORA getConsignacion devuelve Consignacion directo
       const c = await apiService.getConsignacion(consignacionId);
       setConsignacion(c);
 
@@ -69,10 +67,8 @@ export default function LiquidarConsignacionPage() {
 
       const mapped: Row[] = (c.detalles ?? []).map((d) => {
         const pend = Math.max(0, d.unitsEntregadas - d.unitsVendidasAcum - d.unitsDevueltasAcum);
-
         const precioBase = Number(d.producto?.precioVenta ?? 0);
 
-        // ⚠️ si no existe el campo en el type, usá (d as any).precioVentaAplicado o eliminá esta parte
         let precioFinal = Number((d as any).precioVentaAplicado);
         if (!precioFinal || precioFinal === 0) {
           precioFinal = precioBase * (1 + porcentaje / 100);
@@ -87,7 +83,7 @@ export default function LiquidarConsignacionPage() {
           unitsVendidas: 0,
           unitsDevueltas: pend,
           descuento: 0,
-          categoria: d.producto?.categoria
+          subcategoria: d.producto?.subcategoria
         };
       });
 
@@ -103,28 +99,22 @@ export default function LiquidarConsignacionPage() {
     if (consignacionId) load();
   }, [consignacionId, load]);
 
-  // --- LÓGICA CORE: ACTUALIZACIÓN DE FILAS ---
   const updateRow = (id: number, inputValue: string) => {
-    // 1. Convertir entrada a número (si está vacío es 0)
     let val = inputValue === "" ? 0 : Number(inputValue);
 
     setRows((prev) => prev.map((r) => {
       if (r.consignacionDetalleId !== id) return r;
 
-      // 2. VALIDACIÓN ESTRICTA: No permitir superar el máximo
-      if (val > r.maxPendiente) {
-        val = r.maxPendiente; // Lo topamos al máximo
-      }
-      if (val < 0) val = 0; // No negativos
+      if (val > r.maxPendiente) val = r.maxPendiente;
+      if (val < 0) val = 0;
 
-      // 3. CÁLCULO AUTOMÁTICO INVERSO
       const vendidas = val;
       const devueltas = r.maxPendiente - val;
 
-      // 4. CALCULO DE DESCUENTO
       let discount = 0;
-      if (r.categoria?.descuentos && Array.isArray(r.categoria.descuentos)) {
-        const sorted = [...r.categoria.descuentos].sort((a: any, b: any) => b.cantidadMin - a.cantidadMin);
+      const subDescuentos = r.subcategoria?.descuentos;
+      if (subDescuentos && Array.isArray(subDescuentos)) {
+        const sorted = [...subDescuentos].sort((a: any, b: any) => b.cantidadMin - a.cantidadMin);
         const best = sorted.find((d: any) => vendidas >= d.cantidadMin);
         if (best) {
           discount = (r.precioFinal * vendidas) * (best.porcentaje / 100);

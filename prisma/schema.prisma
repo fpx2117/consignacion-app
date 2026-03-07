@@ -30,15 +30,11 @@ model Configuracion {
   separarListaPorSucursal        Boolean  @default(true)
   mostrarCategoriasEnHeader      Boolean  @default(true)
   tiendaLayout                   String   @default("grid")
-  
-  
-  // Nodos para Andreani
   andreaniContratoDomicilio      String?
   andreaniContratoSucursal       String?
   andreaniCliente                String?
   andreaniUsuario                String?
   andreaniPassword               String?
-
   sucursal                       Sucursal @relation(fields: [sucursalId], references: [id])
 }
 
@@ -304,7 +300,6 @@ model Categoria {
   id         Int        @id @default(autoincrement())
   nombre     String
   color      String     @default("sky")
-  descuentos Json?
   sucursalId Int        @default(1)
   sucursal   Sucursal   @relation(fields: [sucursalId], references: [id])
   subcategorias Subcategoria[]
@@ -318,6 +313,7 @@ model Subcategoria {
   id          Int        @id @default(autoincrement())
   nombre      String
   categoriaId Int
+  descuentos  Json?
   categoria   Categoria  @relation(fields: [categoriaId], references: [id], onDelete: Cascade)
   productos   Producto[]
 

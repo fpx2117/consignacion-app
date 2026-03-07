@@ -5,12 +5,13 @@ import { prisma } from "@/lib/prisma";
 
 export async function PATCH(
     req: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
-        const id = parseInt(params.id, 10);
+        const { id: rawId } = await params;
+        const id = parseInt(rawId, 10);
         const body = await req.json();
-        const { nombre } = body;
+        const { nombre, descuentos } = body;
 
         if (!nombre) {
             return NextResponse.json(
@@ -21,7 +22,10 @@ export async function PATCH(
 
         const subcategoria = await prisma.subcategoria.update({
             where: { id },
-            data: { nombre: nombre.trim() },
+            data: {
+                nombre: nombre?.trim(),
+                ...(descuentos !== undefined && { descuentos })
+            },
         });
 
         return NextResponse.json(subcategoria);
@@ -35,10 +39,11 @@ export async function PATCH(
 
 export async function DELETE(
     req: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
-        const id = parseInt(params.id, 10);
+        const { id: rawId } = await params;
+        const id = parseInt(rawId, 10);
 
         // Los productos asociados quedarán con subcategoriaId = null por defecto de Prisma
         // o podemos hacerlo explícito si queremos. 

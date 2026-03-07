@@ -1,7 +1,13 @@
 import { PrismaClient } from "@prisma/client";
+import { PrismaPg } from "@prisma/adapter-pg";
+import pg from "pg";
 
 async function main() {
-    const prisma = new PrismaClient();
+    const connectionString = process.env.DATABASE_URL;
+    if (!connectionString) throw new Error("DATABASE_URL not set");
+    const pool = new pg.Pool({ connectionString });
+    const adapter = new PrismaPg(pool);
+    const prisma = new PrismaClient({ adapter });
     try {
         const products = await prisma.producto.findMany({
             where: {
@@ -11,23 +17,25 @@ async function main() {
                 }
             },
             include: {
-                categoria: true
+                categoria: true,
+                subcategoria: true
             }
         });
 
         console.log("DEBUG: Found products matching 'ELFBAR':");
         products.forEach(p => {
             console.log(`- Product: ${p.nombre} (ID: ${p.id})`);
-            console.log(`  Category ID: ${p.categoriaId}`);
-            console.log(`  Category Name: ${p.categoria?.nombre}`);
-            console.log(`  Category Discounts: ${JSON.stringify(p.categoria?.descuentos)}`);
+            console.log(`  Category: ${p.categoria?.nombre || 'None'}`);
+            console.log(`  Subcategory: ${p.subcategoria?.nombre || 'None'}`);
+            console.log(`  Subcategory Discounts: ${JSON.stringify((p.subcategoria as any)?.descuentos)}`);
         });
 
-        const allCategoriesWithDiscounts = (await prisma.categoria.findMany()).filter(c => c.descuentos);
-        console.log("\nDEBUG: All categories with discounts:");
-        allCategoriesWithDiscounts.forEach(c => {
-            console.log(`- Category: ${c.nombre} (ID: ${c.id})`);
-            console.log(`  Discounts: ${JSON.stringify(c.descuentos)}`);
+        const allSubcategories = await prisma.subcategoria.findMany();
+        const subcategoriesWithDiscounts = allSubcategories.filter(s => (s as any).descuentos);
+        console.log("\nDEBUG: All subcategories with discounts:");
+        subcategoriesWithDiscounts.forEach(s => {
+            console.log(`- Subcategory: ${s.nombre} (ID: ${s.id})`);
+            console.log(`  Discounts: ${JSON.stringify((s as any).descuentos)}`);
         });
 
     } catch (error) {

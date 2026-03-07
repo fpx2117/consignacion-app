@@ -184,9 +184,9 @@ export async function POST(req: Request) {
       );
     }
 
-    console.error("Error creando producto:", error);
+    console.error("Error al obtener productos:", error);
     return NextResponse.json(
-      { error: "Error interno al crear el producto" },
+      { error: "Error interno al obtener productos" },
       { status: 500 }
     );
   }

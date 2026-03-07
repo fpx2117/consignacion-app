@@ -402,7 +402,7 @@ export const apiService = {
     return apiData<Categoria[]>(API_ROUTES.CATEGORIAS);
   },
 
-  createCategoria(data: { nombre: string; color?: string; descuentos?: DescuentoNivel[] | null }) {
+  createCategoria(data: { nombre: string; color?: string }) {
     return apiData<Categoria>(API_ROUTES.CATEGORIAS, {
       method: "POST",
       body: JSON.stringify(data),
@@ -413,7 +413,7 @@ export const apiService = {
     return apiData<{ ok: true }>(API_ROUTES.CATEGORIA_ID(id), { method: "DELETE" });
   },
 
-  updateCategoria(id: number, data: { nombre?: string; color?: string; descuentos?: DescuentoNivel[] | null }) {
+  updateCategoria(id: number, data: { nombre?: string; color?: string }) {
     return apiData<Categoria>(API_ROUTES.CATEGORIA_ID(id), {
       method: "PATCH",
       body: JSON.stringify(data),
@@ -425,14 +425,14 @@ export const apiService = {
     return apiData<Subcategoria[]>(`/api/subcategorias?categoriaId=${categoriaId}`);
   },
 
-  createSubcategoria(data: { nombre: string; categoriaId: number }) {
+  createSubcategoria(data: { nombre: string; categoriaId: number; descuentos?: DescuentoNivel[] | null }) {
     return apiData<Subcategoria>("/api/subcategorias", {
       method: "POST",
       body: JSON.stringify(data),
     });
   },
 
-  updateSubcategoria(id: number, data: { nombre: string }) {
+  updateSubcategoria(id: number, data: { nombre?: string; descuentos?: DescuentoNivel[] | null }) {
     return apiData<Subcategoria>(`/api/subcategorias/${id}`, {
       method: "PATCH",
       body: JSON.stringify(data),
