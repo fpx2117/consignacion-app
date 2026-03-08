@@ -46,13 +46,13 @@ export function ProductListGenerator({ value, onChange }: ProductListGeneratorPr
             const categories = Object.keys(grouped).sort();
 
             categories.forEach(cat => {
-                text += `💎 ${cat.toUpperCase()}\n`;
+                text += `💎 ${cat.toUpperCase()}\n\n`;
 
                 const subcategories = Object.keys(grouped[cat]).sort();
                 subcategories.forEach(sub => {
                     // Only show subcategory header if it's not "General" or if there are multiple subcategories
                     if (sub !== "General" || subcategories.length > 1) {
-                        text += `  🔸 ${sub}\n`;
+                        text += `  🔸 ${sub}\n\n`;
                     }
 
                     grouped[cat][sub].forEach((p: any) => {
@@ -62,14 +62,14 @@ export function ProductListGenerator({ value, onChange }: ProductListGeneratorPr
                             maximumFractionDigits: 0
                         }).format(p.precioVenta).replace('$', '$ ');
 
-                        text += `  * ${p.nombre} — ${priceFormatted}\n`;
+                        text += `  ${p.nombre} — ${priceFormatted}\n`;
                     });
                     text += `\n`;
                 });
             });
 
-            text += `📲 Consultas, fotos y stock actualizado al privado\n\n`;
-            text += `💳 Aceptamos transferencias y efectivo.\n\n`;
+            text += `📲 Consultas, fotos y stock actualizado al privado\n`;
+            text += `💳 Aceptamos transferencias y efectivo.\n`;
             text += `🚚 Envíos en el día (consultá zona).`;
 
             onChange(text);
