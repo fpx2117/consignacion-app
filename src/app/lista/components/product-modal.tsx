@@ -55,7 +55,7 @@ export function ProductModal({ product, isOpen, onClose, config, isConsigne, onA
                             exit={{ opacity: 0, scale: 0.95, y: 20 }}
                             onClick={(e) => e.stopPropagation()} // Evita que el click cierre el modal
                             className={cn(
-                                "w-full max-w-4xl max-h-[90vh] overflow-hidden shadow-2xl flex flex-col md:flex-row relative",
+                                "w-full max-w-4xl max-h-[92dvh] overflow-hidden shadow-2xl flex flex-col md:flex-row relative",
                                 cardBgClass,
                                 radiusClass
                             )}
@@ -65,7 +65,7 @@ export function ProductModal({ product, isOpen, onClose, config, isConsigne, onA
                                 variant="ghost"
                                 size="icon"
                                 className={cn(
-                                    "absolute top-4 right-4 z-10 backdrop-blur-md hover:bg-neutral-200 rounded-full h-10 w-10 text-neutral-900",
+                                    "absolute top-3 right-3 sm:top-4 sm:right-4 z-10 backdrop-blur-md hover:bg-neutral-200 rounded-full h-9 w-9 sm:h-10 sm:w-10 text-neutral-900",
                                     cardBgClass ? cardBgClass.split(" ")[0] + "/50" : "bg-white/50" // A bit hacky but works for bg-white -> bg-white/50
                                 )}
                                 onClick={onClose}
@@ -74,7 +74,7 @@ export function ProductModal({ product, isOpen, onClose, config, isConsigne, onA
                             </Button>
 
                             {/* Lado Izquierdo: Imagen */}
-                            <div className="w-full md:w-1/2 bg-neutral-50 flex items-center justify-center p-8 aspect-square md:aspect-auto">
+                            <div className="w-full md:w-1/2 bg-neutral-50 flex items-center justify-center p-4 sm:p-8 aspect-square md:aspect-auto">
                                 {product.imagenUrl ? (
                                     <img
                                         src={product.imagenUrl}
@@ -87,12 +87,12 @@ export function ProductModal({ product, isOpen, onClose, config, isConsigne, onA
                             </div>
 
                             {/* Lado Derecho: Detalles */}
-                            <div className="w-full md:w-1/2 p-6 sm:p-10 flex flex-col overflow-y-auto">
+                            <div className="w-full md:w-1/2 p-4 sm:p-8 flex flex-col overflow-y-auto">
                                 <div>
                                     <span className="text-xs font-black uppercase tracking-widest text-neutral-400 mb-2 block">
                                         {product.categoria?.nombre || "Sin Categoría"}
                                     </span>
-                                    <h2 className="text-2xl sm:text-3xl font-black text-neutral-900 leading-tight mb-4">
+                                    <h2 className="text-xl sm:text-3xl font-black text-neutral-900 leading-tight mb-4">
                                         {product.nombre}
                                     </h2>
 
@@ -110,7 +110,7 @@ export function ProductModal({ product, isOpen, onClose, config, isConsigne, onA
                                 </div>
 
                                 <div className="flex flex-col gap-1 mb-8 pb-8 border-b border-neutral-100">
-                                    <span className="text-4xl font-black text-neutral-900 tracking-tight">
+                                    <span className="text-3xl sm:text-4xl font-black text-neutral-900 tracking-tight">
                                         ${displayedPrice.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
                                     </span>
                                     {isConsigne && (

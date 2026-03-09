@@ -4,10 +4,15 @@ import * as React from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Image as ImageIcon, Palette, Trash2, FileText, Type, Check, ChevronsUpDown, Upload } from "lucide-react";
+import {
+    Image as ImageIcon, Palette, Trash2, FileText, Type, Check,
+    ChevronsUpDown, Upload, Camera, MapPin, Phone, Store, X
+} from "lucide-react";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
+
+/* ─── Data ─────────────────────────────────────────────────── */
 
 const GOOGLE_FONTS = [
     { id: 'Inter', name: 'Inter', type: 'Sans Serif' },
@@ -35,35 +40,106 @@ const GOOGLE_FONTS = [
 ];
 
 const COLOR_SWATCHES = [
-    "#000000", "#171717", "#1e293b", "#dc2626",
-    "#ea580c", "#16a34a", "#0284c7", "#0891b2",
-    "#854d0e", "#db2777", "#7c3aed", "#4f46e5",
+    { hex: "#000000", name: "Negro" },
+    { hex: "#171717", name: "Carbón" },
+    { hex: "#1e293b", name: "Pizarra" },
+    { hex: "#dc2626", name: "Rojo" },
+    { hex: "#ea580c", name: "Naranja" },
+    { hex: "#16a34a", name: "Verde" },
+    { hex: "#0284c7", name: "Azul" },
+    { hex: "#0891b2", name: "Cyan" },
+    { hex: "#854d0e", name: "Bronce" },
+    { hex: "#db2777", name: "Rosa" },
+    { hex: "#7c3aed", name: "Violeta" },
+    { hex: "#4f46e5", name: "Índigo" },
 ];
 
-function SectionHeader({ step, icon: Icon, title, description }: {
-    step: string; icon: React.ElementType; title: string; description?: string;
+/* ─── Font Groups ──────────────────────────────────────────── */
+
+const FONT_GROUPS = ['Sans Serif', 'Serif', 'Display'] as const;
+
+function groupedFonts() {
+    return FONT_GROUPS.map(type => ({
+        type,
+        fonts: GOOGLE_FONTS.filter(f => f.type === type),
+    })).filter(g => g.fonts.length > 0);
+}
+
+/* ─── Color Swatch Palette ─────────────────────────────────── */
+
+function ColorPalette({
+    value,
+    onChange,
+    label,
+    hint,
+}: {
+    value: string;
+    onChange: (color: string) => void;
+    label: string;
+    hint: string;
 }) {
     return (
-        <div className="flex items-start gap-3 mb-4">
-            <div className="flex items-center justify-center h-8 w-8 rounded-lg bg-primary text-primary-foreground text-xs font-black shrink-0 mt-0.5 select-none">
-                {step}
-            </div>
-            <div>
-                <div className="flex items-center gap-2">
-                    <Icon className="h-4 w-4 text-primary" />
-                    <h3 className="text-sm font-black tracking-tight">{title}</h3>
+        <div className="space-y-3">
+            <div className="flex items-center justify-between">
+                <div>
+                    <p className="text-sm font-semibold">{label}</p>
+                    <p className="text-xs text-muted-foreground">{hint}</p>
                 </div>
-                {description && <p className="text-[11px] text-muted-foreground mt-0.5">{description}</p>}
+                <div className="flex items-center gap-2.5">
+                    <div
+                        className="relative w-9 h-9 rounded-lg border border-border/60 cursor-pointer overflow-hidden shadow-sm hover:shadow-md transition-shadow"
+                        style={{ backgroundColor: value }}
+                    >
+                        <input
+                            type="color"
+                            value={value}
+                            onChange={(e) => onChange(e.target.value)}
+                            className="absolute inset-0 opacity-0 cursor-pointer w-[200%] h-[200%] -translate-x-1/4 -translate-y-1/4"
+                        />
+                    </div>
+                    <Input
+                        type="text"
+                        value={value}
+                        onChange={(e) => onChange(e.target.value)}
+                        className="font-mono rounded-lg h-9 w-24 text-xs uppercase tracking-wider text-center border-border/60"
+                        maxLength={7}
+                    />
+                </div>
+            </div>
+            <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
+                {COLOR_SWATCHES.map((swatch) => (
+                    <button
+                        key={swatch.hex}
+                        type="button"
+                        onClick={() => onChange(swatch.hex)}
+                        className={cn(
+                            "w-8 h-8 rounded-lg border-2 transition-all duration-150 hover:scale-110 relative group",
+                            value === swatch.hex
+                                ? "border-foreground ring-2 ring-foreground/20 scale-110"
+                                : "border-transparent hover:border-border"
+                        )}
+                        style={{ backgroundColor: swatch.hex }}
+                        title={swatch.name}
+                    >
+                        {value === swatch.hex && (
+                            <Check className="h-3.5 w-3.5 text-white absolute inset-0 m-auto drop-shadow-md" />
+                        )}
+                        <span className="absolute -top-7 left-1/2 -translate-x-1/2 bg-foreground text-background text-[10px] px-1.5 py-0.5 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap font-medium">
+                            {swatch.name}
+                        </span>
+                    </button>
+                ))}
             </div>
         </div>
     );
 }
 
+/* ─── Main Component ───────────────────────────────────────── */
+
 export function BrandingTab({ branding, setBranding, handleImageUpload }: any) {
     const [fontOpen, setFontOpen] = React.useState(false);
     const [bannerDragOver, setBannerDragOver] = React.useState(false);
 
-    // --- Refs para los inputs de archivo (evita labels con htmlFor que capturan clicks) ---
     const logoInputRef = React.useRef<HTMLInputElement>(null);
     const bannerInputRef = React.useRef<HTMLInputElement>(null);
     const sliderInputRef = React.useRef<HTMLInputElement>(null);
@@ -84,78 +160,91 @@ export function BrandingTab({ branding, setBranding, handleImageUpload }: any) {
     }, [branding.typography]);
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-8">
 
-            {/* ── 01 — IMÁGENES ── */}
-            <section className="bg-background border border-border rounded-2xl overflow-hidden">
-                <div className="px-5 py-4 border-b border-border/60 bg-muted/20">
-                    <SectionHeader step="01" icon={ImageIcon} title="Imágenes de la Tienda" description="Logo y banner que ven tus clientes" />
+            {/* ── IMÁGENES ────────────────────────────────────── */}
+            <section className="border border-border/50 rounded-xl overflow-hidden">
+                <div className="px-4 sm:px-6 py-4 border-b border-border/30">
+                    <div className="flex items-center gap-2.5">
+                        <ImageIcon className="h-4 w-4 text-muted-foreground" />
+                        <h3 className="text-sm font-semibold tracking-tight">Imágenes de la Tienda</h3>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-0.5 ml-[26px]">Logo y banner que ven tus clientes</p>
                 </div>
 
-                <div className="p-5 space-y-6">
+                <div className="p-4 sm:p-6 space-y-8">
+
                     {/* LOGO */}
-                    <div>
-                        <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-3">Logo del Negocio</p>
-                        <div className="flex items-center gap-4">
-                            {/* Preview */}
-                            <div className="w-20 h-20 rounded-xl border-2 border-border flex items-center justify-center overflow-hidden shrink-0 bg-muted/30">
-                                {branding.logoData ? (
-                                     
-                                    <img src={`data:${branding.logoMime};base64,${branding.logoData}`} alt="Logo" className="w-full h-full object-contain p-2" />
-                                ) : (
-                                    <ImageIcon className="h-7 w-7 text-muted-foreground/30" />
-                                )}
-                            </div>
-                            {/* Acciones */}
-                            <div className="flex flex-col gap-2">
-                                {/* Input oculto — activado vía ref */}
-                                <input
-                                    ref={logoInputRef}
-                                    type="file"
-                                    className="hidden"
-                                    accept="image/*"
-                                    onChange={(e) => handleImageUpload(e, 'logo')}
+                    <div className="flex flex-col sm:flex-row items-start gap-4 sm:gap-5">
+                        <input
+                            ref={logoInputRef}
+                            type="file"
+                            className="hidden"
+                            accept="image/*"
+                            onChange={(e) => handleImageUpload(e, 'logo')}
+                        />
+
+                        {/* Preview — click to upload */}
+                        <button
+                            type="button"
+                            onClick={() => logoInputRef.current?.click()}
+                            className="relative w-24 h-24 rounded-2xl border border-border/60 flex items-center justify-center overflow-hidden shrink-0 bg-muted/20 group cursor-pointer transition-shadow hover:shadow-lg"
+                        >
+                            {branding.logoData ? (
+                                <img
+                                    src={`data:${branding.logoMime};base64,${branding.logoData}`}
+                                    alt="Logo"
+                                    className="w-full h-full object-contain p-2"
                                 />
-                                <Button
-                                    type="button"
-                                    variant="outline"
-                                    size="sm"
-                                    className="rounded-lg font-bold"
-                                    onClick={() => logoInputRef.current?.click()}
-                                >
-                                    <Upload className="h-3.5 w-3.5 mr-1.5" />
-                                    {branding.logoData ? "Cambiar Logo" : "Subir Logo"}
-                                </Button>
-                                {branding.logoData && (
-                                    <Button
-                                        type="button"
-                                        variant="ghost"
-                                        size="sm"
-                                        className="rounded-lg font-bold text-destructive hover:bg-destructive/10 h-7 text-xs"
-                                        onClick={() => setBranding((prev: any) => ({ ...prev, logoData: null, logoMime: null }))}
-                                    >
-                                        <Trash2 className="h-3 w-3 mr-1" /> Eliminar
-                                    </Button>
-                                )}
-                                <p className="text-[10px] text-muted-foreground">PNG transparente · máx 20MB</p>
+                            ) : (
+                                <ImageIcon className="h-8 w-8 text-muted-foreground/25" />
+                            )}
+                            {/* Hover overlay */}
+                            <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex flex-col items-center justify-center gap-1 rounded-2xl">
+                                <Camera className="h-5 w-5 text-white" />
+                                <span className="text-[10px] text-white/80 font-medium">
+                                    {branding.logoData ? "Cambiar" : "Subir"}
+                                </span>
                             </div>
+                        </button>
+
+                        <div className="pt-1">
+                            <p className="text-sm font-semibold">Logo del Negocio</p>
+                            <p className="text-xs text-muted-foreground mt-0.5">
+                                Hacé click en la imagen para {branding.logoData ? "cambiar" : "subir"} tu logo
+                            </p>
+                            <p className="text-[11px] text-muted-foreground/60 mt-1">PNG transparente recomendado</p>
+                            {branding.logoData && (
+                                <button
+                                    type="button"
+                                    onClick={() => setBranding((prev: any) => ({ ...prev, logoData: null, logoMime: null }))}
+                                    className="mt-2 text-xs text-destructive/70 hover:text-destructive font-medium flex items-center gap-1 transition-colors"
+                                >
+                                    <Trash2 className="h-3 w-3" /> Eliminar logo
+                                </button>
+                            )}
                         </div>
                     </div>
 
+                    {/* DIVIDER */}
+                    <div className="border-t border-border/30" />
+
                     {/* TIPO BANNER */}
-                    <div className="pt-5 border-t border-border/60">
-                        <div className="flex items-center justify-between mb-4">
+                    <div>
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-5">
                             <div>
-                                <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Tipo de Banner</p>
-                                <p className="text-[11px] text-muted-foreground mt-0.5">Imagen única o carrusel animado</p>
+                                <p className="text-sm font-semibold">Banner</p>
+                                <p className="text-xs text-muted-foreground mt-0.5">Imagen única o carrusel de imágenes</p>
                             </div>
-                            <div className="flex p-1 bg-muted rounded-lg gap-1">
+                            <div className="flex p-0.5 bg-muted/60 rounded-lg gap-0.5 w-full sm:w-auto">
                                 <button
                                     type="button"
                                     onClick={() => setBranding({ ...branding, isBannerSlider: false })}
                                     className={cn(
-                                        "px-3 py-1.5 text-xs font-bold rounded-md transition-all",
-                                        !branding.isBannerSlider ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+                                        "flex-1 sm:flex-none px-3.5 py-1.5 text-xs font-medium rounded-md transition-all duration-200",
+                                        !branding.isBannerSlider
+                                            ? "bg-background text-foreground shadow-sm"
+                                            : "text-muted-foreground hover:text-foreground"
                                     )}
                                 >
                                     Única
@@ -164,8 +253,10 @@ export function BrandingTab({ branding, setBranding, handleImageUpload }: any) {
                                     type="button"
                                     onClick={() => setBranding({ ...branding, isBannerSlider: true })}
                                     className={cn(
-                                        "px-3 py-1.5 text-xs font-bold rounded-md transition-all",
-                                        branding.isBannerSlider ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+                                        "flex-1 sm:flex-none px-3.5 py-1.5 text-xs font-medium rounded-md transition-all duration-200",
+                                        branding.isBannerSlider
+                                            ? "bg-background text-foreground shadow-sm"
+                                            : "text-muted-foreground hover:text-foreground"
                                     )}
                                 >
                                     Slider
@@ -176,7 +267,6 @@ export function BrandingTab({ branding, setBranding, handleImageUpload }: any) {
                         {/* Banner único */}
                         {!branding.isBannerSlider && (
                             <div className="animate-in fade-in slide-in-from-top-1 duration-200">
-                                {/* Input oculto — activado vía ref */}
                                 <input
                                     ref={bannerInputRef}
                                     type="file"
@@ -186,44 +276,45 @@ export function BrandingTab({ branding, setBranding, handleImageUpload }: any) {
                                 />
 
                                 {branding.bannerData ? (
-                                    /* Banner cargado: preview + acciones */
-                                    <div className="space-y-2">
-                                        <div className="relative aspect-[21/9] rounded-xl overflow-hidden border border-border shadow-sm">
-                                            { }
-                                            <img src={`data:${branding.bannerMime};base64,${branding.bannerData}`} alt="Banner" className="w-full h-full object-cover" />
-                                        </div>
-                                        <div className="flex gap-2">
-                                            <Button
-                                                type="button"
-                                                variant="outline"
-                                                size="sm"
-                                                className="rounded-lg font-bold text-xs"
-                                                onClick={() => bannerInputRef.current?.click()}
-                                            >
-                                                <Upload className="h-3.5 w-3.5 mr-1.5" />Cambiar
-                                            </Button>
-                                            <Button
-                                                type="button"
-                                                variant="ghost"
-                                                size="sm"
-                                                className="rounded-lg font-bold text-xs text-destructive hover:bg-destructive/10"
-                                                onClick={() => setBranding((prev: any) => ({ ...prev, bannerData: null, bannerMime: null }))}
-                                            >
-                                                <Trash2 className="h-3.5 w-3.5 mr-1.5" />Quitar
-                                            </Button>
+                                    <div className="space-y-3">
+                                        <div className="relative aspect-[3/1] rounded-xl overflow-hidden border border-border/40 group">
+                                            <img
+                                                src={`data:${branding.bannerMime};base64,${branding.bannerData}`}
+                                                alt="Banner"
+                                                className="w-full h-full object-cover"
+                                            />
+                                            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors duration-200 flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100">
+                                                <Button
+                                                    type="button"
+                                                    size="sm"
+                                                    variant="secondary"
+                                                    className="rounded-lg text-xs font-medium shadow-lg"
+                                                    onClick={() => bannerInputRef.current?.click()}
+                                                >
+                                                    <Upload className="h-3.5 w-3.5 mr-1.5" /> Cambiar
+                                                </Button>
+                                                <Button
+                                                    type="button"
+                                                    size="sm"
+                                                    variant="secondary"
+                                                    className="rounded-lg text-xs font-medium shadow-lg text-destructive"
+                                                    onClick={() => setBranding((prev: any) => ({ ...prev, bannerData: null, bannerMime: null }))}
+                                                >
+                                                    <Trash2 className="h-3.5 w-3.5 mr-1.5" /> Quitar
+                                                </Button>
+                                            </div>
                                         </div>
                                     </div>
                                 ) : (
-                                    /* Drop zone vacía */
                                     <div
                                         role="button"
                                         tabIndex={0}
                                         aria-label="Subir banner"
                                         className={cn(
-                                            "aspect-[21/9] rounded-xl border-2 border-dashed flex flex-col items-center justify-center gap-2 transition-all duration-200 cursor-pointer select-none",
+                                            "aspect-[3/1] rounded-xl border-2 border-dashed flex flex-col items-center justify-center gap-3 transition-all duration-300 cursor-pointer select-none",
                                             bannerDragOver
-                                                ? "border-primary bg-primary/5 scale-[1.01]"
-                                                : "border-border hover:border-primary/50 hover:bg-muted/30 text-muted-foreground hover:text-primary"
+                                                ? "border-primary bg-primary/5 scale-[1.005]"
+                                                : "border-border/40 hover:border-primary/40 bg-gradient-to-br from-muted/20 to-muted/40 hover:from-primary/[0.03] hover:to-primary/[0.06] text-muted-foreground hover:text-foreground"
                                         )}
                                         onClick={() => bannerInputRef.current?.click()}
                                         onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') bannerInputRef.current?.click(); }}
@@ -238,9 +329,23 @@ export function BrandingTab({ branding, setBranding, handleImageUpload }: any) {
                                             handleImageUpload(fakeEvent, 'banner');
                                         }}
                                     >
-                                        <Upload className={cn("h-7 w-7 transition-transform", bannerDragOver && "scale-125 text-primary")} />
-                                        <p className="text-xs font-bold">{bannerDragOver ? "Soltar aquí" : "Arrastrá o hacé clic para subir"}</p>
-                                        <p className="text-[10px] opacity-60">1920×600px recomendado · JPG/PNG</p>
+                                        <div className={cn(
+                                            "w-12 h-12 rounded-full bg-muted/60 flex items-center justify-center transition-all",
+                                            bannerDragOver ? "bg-primary/10 scale-110" : "group-hover:bg-muted"
+                                        )}>
+                                            <Upload className={cn(
+                                                "h-5 w-5 transition-all",
+                                                bannerDragOver ? "text-primary scale-110" : "text-muted-foreground/50"
+                                            )} />
+                                        </div>
+                                        <div className="text-center">
+                                            <p className="text-sm font-medium">
+                                                {bannerDragOver ? "Soltá la imagen aquí" : "Arrastrá una imagen o hacé click"}
+                                            </p>
+                                            <p className="text-[11px] text-muted-foreground/50 mt-1">
+                                                1920 x 640 px recomendado &middot; JPG o PNG
+                                            </p>
+                                        </div>
                                     </div>
                                 )}
                             </div>
@@ -249,7 +354,6 @@ export function BrandingTab({ branding, setBranding, handleImageUpload }: any) {
                         {/* Slider */}
                         {branding.isBannerSlider && (
                             <div className="space-y-3 animate-in fade-in slide-in-from-top-1 duration-200">
-                                {/* Input oculto para slider */}
                                 <input
                                     ref={sliderInputRef}
                                     type="file"
@@ -277,39 +381,53 @@ export function BrandingTab({ branding, setBranding, handleImageUpload }: any) {
 
                                 <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                                     {(branding.banners || []).map((slide: any, index: number) => (
-                                        <div key={index} className="relative aspect-[21/9] rounded-xl overflow-hidden group border border-border shadow-sm">
-                                            { }
-                                            <img src={`data:${slide.bannerMime};base64,${slide.bannerData}`} alt={`Slide ${index}`} className="w-full h-full object-cover" />
-                                            <div className="absolute inset-x-0 top-0 h-8 bg-gradient-to-b from-black/70 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex justify-between items-start p-1.5">
-                                                <span className="text-[9px] font-black text-white/80 font-mono">#{index + 1}</span>
+                                        <div key={index} className="relative aspect-[3/1] rounded-xl overflow-hidden group border border-border/40">
+                                            <img
+                                                src={`data:${slide.bannerMime};base64,${slide.bannerData}`}
+                                                alt={`Slide ${index + 1}`}
+                                                className="w-full h-full object-cover"
+                                            />
+                                            {/* Overlay on hover */}
+                                            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors duration-200">
+                                                {/* Number badge */}
+                                                <span className="absolute top-2 left-2 text-[10px] font-bold text-white/0 group-hover:text-white bg-black/0 group-hover:bg-black/50 rounded-md px-1.5 py-0.5 transition-all font-mono">
+                                                    {index + 1}
+                                                </span>
+                                                {/* Delete button */}
                                                 <button
                                                     type="button"
-                                                    className="h-5 w-5 bg-white/20 hover:bg-red-500 rounded-full flex items-center justify-center transition-colors"
+                                                    className="absolute top-2 right-2 h-6 w-6 bg-black/0 group-hover:bg-red-500/90 rounded-lg flex items-center justify-center transition-all opacity-0 group-hover:opacity-100 hover:bg-red-600"
                                                     onClick={() => {
                                                         const newBanners = [...branding.banners];
                                                         newBanners.splice(index, 1);
                                                         setBranding({ ...branding, banners: newBanners });
                                                     }}
                                                 >
-                                                    <Trash2 className="h-3 w-3 text-white" />
+                                                    <X className="h-3.5 w-3.5 text-white" />
                                                 </button>
                                             </div>
                                         </div>
                                     ))}
 
-                                    {/* Botón agregar */}
+                                    {/* Add button */}
                                     <button
                                         type="button"
                                         onClick={() => sliderInputRef.current?.click()}
-                                        className="aspect-[21/9] rounded-xl border-2 border-dashed border-border hover:border-primary/50 hover:bg-primary/5 transition-all flex flex-col items-center justify-center gap-1 cursor-pointer group"
+                                        className="aspect-[3/1] rounded-xl border-2 border-dashed border-border/40 hover:border-primary/40 hover:bg-primary/[0.03] transition-all flex flex-col items-center justify-center gap-1.5 cursor-pointer group"
                                     >
-                                        <Upload className="h-5 w-5 text-muted-foreground/40 group-hover:text-primary transition-colors" />
-                                        <p className="text-[10px] font-bold text-muted-foreground/60 group-hover:text-primary transition-colors">Agregar imágenes</p>
+                                        <div className="w-9 h-9 rounded-full bg-muted/40 group-hover:bg-primary/10 flex items-center justify-center transition-colors">
+                                            <Upload className="h-4 w-4 text-muted-foreground/40 group-hover:text-primary transition-colors" />
+                                        </div>
+                                        <p className="text-[11px] font-medium text-muted-foreground/50 group-hover:text-primary transition-colors">
+                                            Agregar
+                                        </p>
                                     </button>
                                 </div>
 
                                 {(!branding.banners || branding.banners.length === 0) && (
-                                    <p className="text-[11px] text-muted-foreground text-center pb-2">Aún no hay imágenes en el slider</p>
+                                    <p className="text-xs text-muted-foreground/60 text-center py-2">
+                                        Aún no hay imágenes en el slider
+                                    </p>
                                 )}
                             </div>
                         )}
@@ -317,158 +435,111 @@ export function BrandingTab({ branding, setBranding, handleImageUpload }: any) {
                 </div>
             </section>
 
-            {/* ── 02 — INFORMACIÓN ── */}
-            <section className="bg-background border border-border rounded-2xl overflow-hidden">
-                <div className="px-5 py-4 border-b border-border/60 bg-muted/20">
-                    <SectionHeader step="02" icon={FileText} title="Información Básica" description="Datos que aparecen en la tienda pública" />
+            {/* ── INFORMACIÓN ─────────────────────────────────── */}
+            <section className="border border-border/50 rounded-xl overflow-hidden">
+                <div className="px-4 sm:px-6 py-4 border-b border-border/30">
+                    <div className="flex items-center gap-2.5">
+                        <FileText className="h-4 w-4 text-muted-foreground" />
+                        <h3 className="text-sm font-semibold tracking-tight">Información Básica</h3>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-0.5 ml-[26px]">Datos que aparecen en la tienda pública</p>
                 </div>
 
-                <div className="p-5 grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-1.5">
-                        <Label className="text-xs font-semibold text-muted-foreground">Nombre de la Tienda</Label>
-                        <Input
-                            value={branding.businessName}
-                            onChange={(e) => setBranding({ ...branding, businessName: e.target.value })}
-                            placeholder="Ej: Mi Marca"
-                            className="h-10 rounded-lg border-border bg-muted/30 focus:bg-background text-sm"
-                        />
-                    </div>
-                    <div className="space-y-1.5">
-                        <Label className="text-xs font-semibold text-muted-foreground">Dirección Física</Label>
-                        <Input
-                            value={branding.address || ""}
-                            onChange={(e) => setBranding({ ...branding, address: e.target.value })}
-                            placeholder="Calle Verdadera 123"
-                            className="h-10 rounded-lg border-border bg-muted/30 focus:bg-background text-sm"
-                        />
-                    </div>
-                    <div className="space-y-1.5">
-                        <Label className="text-xs font-semibold text-muted-foreground">Teléfono de Soporte</Label>
-                        <Input
-                            value={branding.phone || ""}
-                            onChange={(e) => setBranding({ ...branding, phone: e.target.value })}
-                            placeholder="Para llamadas directas"
-                            className="h-10 rounded-lg border-border bg-muted/30 focus:bg-background text-sm"
-                        />
-                    </div>
-                    <div className="space-y-1.5">
-                        <div className="flex items-center justify-between">
-                            <Label className="text-xs font-semibold text-muted-foreground">Texto del Footer</Label>
-                            <span className="text-[10px] font-mono text-muted-foreground/50">Mínimo 3 palabras</span>
+                <div className="p-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                        <div className="space-y-2">
+                            <Label className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
+                                <Store className="h-3 w-3" />
+                                Nombre de la Tienda
+                            </Label>
+                            <Input
+                                value={branding.businessName}
+                                onChange={(e) => setBranding({ ...branding, businessName: e.target.value })}
+                                placeholder="Ej: Mi Marca"
+                                className="h-10 rounded-lg border-border/60 text-sm"
+                            />
                         </div>
-                        <Input
-                            value={branding.footerText || ""}
-                            onChange={(e) => setBranding({ ...branding, footerText: e.target.value })}
-                            placeholder="© 2026 Mi Marca. Todos los derechos reservados."
-                            className="h-10 rounded-lg border-border bg-muted/30 focus:bg-background text-sm"
-                        />
+                        <div className="space-y-2">
+                            <Label className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
+                                <MapPin className="h-3 w-3" />
+                                Dirección Física
+                            </Label>
+                            <Input
+                                value={branding.address || ""}
+                                onChange={(e) => setBranding({ ...branding, address: e.target.value })}
+                                placeholder="Calle Verdadera 123"
+                                className="h-10 rounded-lg border-border/60 text-sm"
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <Label className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
+                                <Phone className="h-3 w-3" />
+                                Teléfono de Soporte
+                            </Label>
+                            <Input
+                                value={branding.phone || ""}
+                                onChange={(e) => setBranding({ ...branding, phone: e.target.value })}
+                                placeholder="Para llamadas directas"
+                                className="h-10 rounded-lg border-border/60 text-sm"
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <div className="flex items-center justify-between">
+                                <Label className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
+                                    <FileText className="h-3 w-3" />
+                                    Texto del Footer
+                                </Label>
+                            </div>
+                            <Input
+                                value={branding.footerText || ""}
+                                onChange={(e) => setBranding({ ...branding, footerText: e.target.value })}
+                                placeholder="© 2026 Mi Marca. Todos los derechos reservados."
+                                className="h-10 rounded-lg border-border/60 text-sm"
+                            />
+                        </div>
                     </div>
                 </div>
             </section>
 
-            {/* ── 03 — ESTILO ── */}
-            <section className="bg-background border border-border rounded-2xl overflow-hidden">
-                <div className="px-5 py-4 border-b border-border/60 bg-muted/20">
-                    <SectionHeader step="03" icon={Palette} title="Estilo de Marca" description="Colores y tipografía" />
+            {/* ── ESTILO DE MARCA ──────────────────────────────── */}
+            <section className="border border-border/50 rounded-xl overflow-hidden">
+                <div className="px-4 sm:px-6 py-4 border-b border-border/30">
+                    <div className="flex items-center gap-2.5">
+                        <Palette className="h-4 w-4 text-muted-foreground" />
+                        <h3 className="text-sm font-semibold tracking-tight">Estilo de Marca</h3>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-0.5 ml-[26px]">Colores y tipografía de tu tienda</p>
                 </div>
 
-                <div className="p-5 space-y-6">
-                    {/* Color Primario */}
-                    <div className="space-y-2">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="text-xs font-bold">Color Primario</p>
-                                <p className="text-[11px] text-muted-foreground">Botones y acciones principales</p>
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <div
-                                    className="relative w-8 h-8 rounded-lg border-2 border-border cursor-pointer overflow-hidden shadow-sm"
-                                    style={{ backgroundColor: branding.primaryColor }}
-                                    title="Abrir selector de color"
-                                >
-                                    <input
-                                        type="color"
-                                        value={branding.primaryColor}
-                                        onChange={(e) => setBranding({ ...branding, primaryColor: e.target.value })}
-                                        className="absolute inset-0 opacity-0 cursor-pointer w-[200%] h-[200%] -translate-x-1/4 -translate-y-1/4"
-                                    />
-                                </div>
-                                <Input
-                                    type="text"
-                                    value={branding.primaryColor}
-                                    onChange={(e) => setBranding({ ...branding, primaryColor: e.target.value })}
-                                    className="font-mono rounded-lg h-8 w-24 text-xs uppercase tracking-wider text-center"
-                                    maxLength={7}
-                                />
-                            </div>
-                        </div>
-                        <div className="flex flex-wrap gap-1.5 pt-1">
-                            {COLOR_SWATCHES.map((c) => (
-                                <button
-                                    key={c}
-                                    type="button"
-                                    onClick={() => setBranding({ ...branding, primaryColor: c })}
-                                    className={cn(
-                                        "w-6 h-6 rounded-md border-2 transition-transform hover:scale-110",
-                                        branding.primaryColor === c ? "border-primary scale-110 ring-2 ring-primary/30" : "border-border/40"
-                                    )}
-                                    style={{ backgroundColor: c }}
-                                    title={c}
-                                />
-                            ))}
-                        </div>
+                <div className="p-4 sm:p-6 space-y-8">
+
+                    {/* Colores */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <ColorPalette
+                            value={branding.primaryColor}
+                            onChange={(c) => setBranding({ ...branding, primaryColor: c })}
+                            label="Color Primario"
+                            hint="Botones y acciones principales"
+                        />
+                        <ColorPalette
+                            value={branding.secondaryColor}
+                            onChange={(c) => setBranding({ ...branding, secondaryColor: c })}
+                            label="Color Secundario"
+                            hint="Fondos y acentos sutiles"
+                        />
                     </div>
 
-                    {/* Color Secundario */}
-                    <div className="space-y-2 pt-4 border-t border-border/60">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="text-xs font-bold">Color Secundario</p>
-                                <p className="text-[11px] text-muted-foreground">Fondos y banners sutiles</p>
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <div
-                                    className="relative w-8 h-8 rounded-lg border-2 border-border cursor-pointer overflow-hidden shadow-sm"
-                                    style={{ backgroundColor: branding.secondaryColor }}
-                                >
-                                    <input
-                                        type="color"
-                                        value={branding.secondaryColor}
-                                        onChange={(e) => setBranding({ ...branding, secondaryColor: e.target.value })}
-                                        className="absolute inset-0 opacity-0 cursor-pointer w-[200%] h-[200%] -translate-x-1/4 -translate-y-1/4"
-                                    />
-                                </div>
-                                <Input
-                                    type="text"
-                                    value={branding.secondaryColor}
-                                    onChange={(e) => setBranding({ ...branding, secondaryColor: e.target.value })}
-                                    className="font-mono rounded-lg h-8 w-24 text-xs uppercase tracking-wider text-center"
-                                    maxLength={7}
-                                />
-                            </div>
-                        </div>
-                        <div className="flex flex-wrap gap-1.5 pt-1">
-                            {COLOR_SWATCHES.slice().reverse().map((c) => (
-                                <button
-                                    key={c}
-                                    type="button"
-                                    onClick={() => setBranding({ ...branding, secondaryColor: c })}
-                                    className={cn(
-                                        "w-6 h-6 rounded-md border-2 transition-transform hover:scale-110",
-                                        branding.secondaryColor === c ? "border-primary scale-110 ring-2 ring-primary/30" : "border-border/40"
-                                    )}
-                                    style={{ backgroundColor: c }}
-                                    title={c}
-                                />
-                            ))}
-                        </div>
-                    </div>
+                    {/* DIVIDER */}
+                    <div className="border-t border-border/30" />
 
                     {/* Tipografía */}
-                    <div className="pt-4 border-t border-border/60">
-                        <div className="flex items-center gap-2 mb-3">
-                            <Type className="h-3.5 w-3.5 text-muted-foreground" />
-                            <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Tipografía</p>
+                    <div>
+                        <div className="flex items-center gap-2 mb-4">
+                            <Type className="h-4 w-4 text-muted-foreground" />
+                            <div>
+                                <p className="text-sm font-semibold">Tipografía</p>
+                                <p className="text-xs text-muted-foreground">Fuente que se usará en toda la tienda</p>
+                            </div>
                         </div>
 
                         <Popover open={fontOpen} onOpenChange={setFontOpen}>
@@ -478,7 +549,7 @@ export function BrandingTab({ branding, setBranding, handleImageUpload }: any) {
                                     variant="outline"
                                     role="combobox"
                                     aria-expanded={fontOpen}
-                                    className="w-full justify-between rounded-lg h-10 bg-muted/30 border-border text-sm font-semibold"
+                                    className="w-full justify-between rounded-lg h-10 border-border/60 text-sm font-medium"
                                 >
                                     <span className="truncate">
                                         {branding.typography
@@ -488,46 +559,49 @@ export function BrandingTab({ branding, setBranding, handleImageUpload }: any) {
                                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-40" />
                                 </Button>
                             </PopoverTrigger>
-                            <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0 rounded-xl border-2" align="start">
+                            <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0 rounded-xl" align="start">
                                 <Command>
                                     <CommandInput placeholder="Buscar fuente..." className="h-10 text-sm" />
-                                    <CommandList className="max-h-[240px]">
+                                    <CommandList className="max-h-[280px]">
                                         <CommandEmpty>No se encontraron tipografías.</CommandEmpty>
-                                        <CommandGroup>
-                                            {GOOGLE_FONTS.map((font) => (
-                                                <CommandItem
-                                                    key={font.id}
-                                                    value={font.name}
-                                                    onSelect={(currentValue) => {
-                                                        const fontObj = GOOGLE_FONTS.find(f => f.name.toLowerCase() === currentValue.toLowerCase());
-                                                        if (fontObj) setBranding({ ...branding, typography: fontObj.id });
-                                                        setFontOpen(false);
-                                                    }}
-                                                    className="rounded-lg my-0.5 py-2.5 px-3 flex items-center justify-between cursor-pointer"
-                                                >
-                                                    <div>
-                                                        <span className="text-sm font-medium block">{font.name}</span>
-                                                        <span className="text-[10px] text-muted-foreground uppercase tracking-widest">{font.type}</span>
-                                                    </div>
-                                                    <Check className={cn(
-                                                        "h-4 w-4 text-primary transition-opacity",
-                                                        (branding.typography || 'Inter') === font.id ? "opacity-100" : "opacity-0"
-                                                    )} />
-                                                </CommandItem>
-                                            ))}
-                                        </CommandGroup>
+                                        {groupedFonts().map((group) => (
+                                            <CommandGroup key={group.type} heading={group.type}>
+                                                {group.fonts.map((font) => (
+                                                    <CommandItem
+                                                        key={font.id}
+                                                        value={font.name}
+                                                        onSelect={(currentValue) => {
+                                                            const fontObj = GOOGLE_FONTS.find(f => f.name.toLowerCase() === currentValue.toLowerCase());
+                                                            if (fontObj) setBranding({ ...branding, typography: fontObj.id });
+                                                            setFontOpen(false);
+                                                        }}
+                                                        className="rounded-lg my-0.5 py-2 px-3 flex items-center justify-between cursor-pointer"
+                                                    >
+                                                        <span className="text-sm">{font.name}</span>
+                                                        <Check className={cn(
+                                                            "h-4 w-4 text-primary transition-opacity",
+                                                            (branding.typography || 'Inter') === font.id ? "opacity-100" : "opacity-0"
+                                                        )} />
+                                                    </CommandItem>
+                                                ))}
+                                            </CommandGroup>
+                                        ))}
                                     </CommandList>
                                 </Command>
                             </PopoverContent>
                         </Popover>
 
-                        <div className="mt-3 p-4 rounded-xl bg-muted/30 border border-border flex flex-col items-center justify-center gap-1 pointer-events-none select-none">
-                            <span className="text-3xl font-bold leading-none" style={{ fontFamily: `"${branding.typography || 'Inter'}", sans-serif` }}>
-                                Aa
-                            </span>
-                            <span className="text-sm text-muted-foreground" style={{ fontFamily: `"${branding.typography || 'Inter'}", sans-serif` }}>
-                                {branding.typography || 'Inter'} — Texto de muestra
-                            </span>
+                        {/* Font preview */}
+                        <div
+                            className="mt-4 rounded-xl bg-muted/20 border border-border/30 p-6 select-none"
+                            style={{ fontFamily: `"${branding.typography || 'Inter'}", sans-serif` }}
+                        >
+                            <p className="text-2xl font-bold leading-tight">
+                                The quick brown fox jumps over the lazy dog
+                            </p>
+                            <p className="text-sm text-muted-foreground mt-2 leading-relaxed">
+                                {branding.typography || 'Inter'} &mdash; ABCDEFGHIJKLMNOPQRSTUVWXYZ abcdefghijklmnopqrstuvwxyz 0123456789
+                            </p>
                         </div>
                     </div>
                 </div>

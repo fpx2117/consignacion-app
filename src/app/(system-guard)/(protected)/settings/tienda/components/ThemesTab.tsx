@@ -1,7 +1,7 @@
 /* eslint-disable */
 // @ts-nocheck
 import * as React from "react";
-import { Sparkles, Check } from "lucide-react";
+import { Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const THEMES = [
@@ -82,96 +82,85 @@ export function ThemesTab({ branding, setBranding }: any) {
     };
 
     return (
-        <div className="space-y-5">
-            {/* Header explainer */}
-            <div className="bg-background border border-border rounded-2xl p-5">
-                <div className="flex items-start gap-3">
-                    <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-                        <Sparkles className="h-4 w-4 text-primary" />
-                    </div>
-                    <div>
-                        <h3 className="text-sm font-black">Paletas Predefinidas</h3>
-                        <p className="text-xs text-muted-foreground mt-1">
-                            Seleccioná una combinación coordinada para aplicar al instante.
-                            Podés ajustar los colores manualmente desde <span className="font-bold text-foreground">Identidad Visual</span>.
-                        </p>
-                    </div>
-                </div>
-            </div>
+        <div className="space-y-4">
+            {/* Minimal explainer — single line */}
+            <p className="text-xs text-muted-foreground px-1">
+                Elegí una combinación de colores — podés ajustarlos en{" "}
+                <span className="font-semibold text-foreground">Identidad Visual</span>.
+            </p>
 
-            {/* Theme grid */}
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+            {/* Theme grid — 2 cols mobile, 4 cols desktop */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
                 {THEMES.map((theme) => {
                     const isActive = branding.themeIdentifier === theme.id;
+
                     return (
                         <button
                             key={theme.id}
                             onClick={() => handleThemeSelect(theme)}
                             className={cn(
-                                "group relative rounded-2xl border-2 overflow-hidden cursor-pointer transition-all duration-200 text-left",
-                                "hover:-translate-y-0.5 hover:shadow-lg",
+                                "group relative flex flex-col rounded-2xl overflow-hidden cursor-pointer",
+                                "transition-all duration-200 ease-out text-left",
+                                "motion-reduce:transition-none",
+                                "hover:scale-[1.02] hover:shadow-lg",
                                 isActive
-                                    ? "border-primary ring-2 ring-primary/25 shadow-md"
-                                    : "border-border hover:border-primary/40"
+                                    ? "ring-[2.5px] ring-primary shadow-md shadow-primary/10"
+                                    : "ring-1 ring-border hover:ring-primary/40 hover:shadow-md"
                             )}
                         >
-                            {/* Color preview — 3 bands */}
-                            <div className="flex h-20 w-full">
-                                <div className="flex-[3]" style={{ backgroundColor: theme.primary }} />
-                                <div className="flex-[1]" style={{ backgroundColor: theme.accent }} />
-                                <div className="flex-[2]" style={{ backgroundColor: theme.secondary }} />
-                            </div>
-
-                            {/* Name + check */}
-                            <div className="px-3 py-2.5 flex items-start justify-between gap-2 bg-background">
-                                <div className="min-w-0">
-                                    <p className="text-xs font-black truncate">{theme.name}</p>
-                                    <p className="text-[10px] text-muted-foreground truncate">{theme.tagline}</p>
-                                </div>
-                                {isActive && (
-                                    <div className="h-5 w-5 rounded-full bg-primary flex items-center justify-center shrink-0 animate-in zoom-in duration-200">
-                                        <Check className="h-3 w-3 text-primary-foreground" />
-                                    </div>
-                                )}
-                            </div>
-
-                            {/* Swatches preview strip */}
-                            <div className="absolute top-2 left-2 flex gap-1">
+                            {/* Color swatch area — paint chip layout */}
+                            <div className="relative aspect-[4/3] w-full overflow-hidden">
+                                {/* Primary — dominant fill (70%) */}
                                 <div
-                                    className="h-3.5 w-3.5 rounded-full border border-white/30 shadow-sm"
+                                    className="absolute inset-0"
                                     style={{ backgroundColor: theme.primary }}
                                 />
+
+                                {/* Accent — diagonal band (20%) */}
                                 <div
-                                    className="h-3.5 w-3.5 rounded-full border border-white/30 shadow-sm"
+                                    className="absolute bottom-0 right-0 w-[55%] h-[55%] rounded-tl-[2rem]"
                                     style={{ backgroundColor: theme.accent }}
                                 />
+
+                                {/* Secondary — nested corner chip (10%) */}
                                 <div
-                                    className="h-3.5 w-3.5 rounded-full border border-white/30 shadow-sm"
+                                    className="absolute bottom-0 right-0 w-[30%] h-[30%] rounded-tl-[1.25rem]"
                                     style={{ backgroundColor: theme.secondary }}
                                 />
+
+                                {/* Selection checkmark — top-right corner */}
+                                <div
+                                    className={cn(
+                                        "absolute top-2 right-2 h-5 w-5 rounded-full flex items-center justify-center",
+                                        "transition-all duration-200",
+                                        isActive
+                                            ? "bg-white scale-100 opacity-100"
+                                            : "bg-white/0 scale-75 opacity-0 group-hover:bg-white/20 group-hover:scale-100 group-hover:opacity-100"
+                                    )}
+                                >
+                                    {isActive && (
+                                        <Check
+                                            className="h-3 w-3 animate-in zoom-in-50 duration-200"
+                                            style={{ color: theme.primary }}
+                                            strokeWidth={3}
+                                        />
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Label area */}
+                            <div className="px-3 py-2.5 bg-background">
+                                <p className="text-[13px] font-bold leading-tight truncate">
+                                    {theme.name}
+                                </p>
+                                <p className="text-[10px] text-muted-foreground italic truncate mt-0.5">
+                                    {theme.tagline}
+                                </p>
                             </div>
                         </button>
                     );
                 })}
             </div>
-
-            {/* Currently selected */}
-            {branding.themeIdentifier && (
-                <div className="animate-in fade-in duration-300 flex items-center gap-3 px-4 py-3 bg-primary/5 border border-primary/20 rounded-xl">
-                    <div className="flex gap-1.5">
-                        {(() => {
-                            const t = THEMES.find(th => th.id === branding.themeIdentifier);
-                            if (!t) return null;
-                            return [t.primary, t.accent, t.secondary].map((c, i) => (
-                                <div key={i} className="h-4 w-4 rounded-full border border-white/30 shadow-sm" style={{ backgroundColor: c }} />
-                            ));
-                        })()}
-                    </div>
-                    <p className="text-xs font-bold text-primary">
-                        Tema activo: {THEMES.find(t => t.id === branding.themeIdentifier)?.name}
-                    </p>
-                </div>
-            )}
         </div>
     );
 }

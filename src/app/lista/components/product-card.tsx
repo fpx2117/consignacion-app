@@ -52,13 +52,17 @@ export function ProductCard({
                     "overflow-hidden border border-neutral-200/60 transition-all duration-500 h-full flex group cursor-pointer relative",
                     cardBgClass,
                     radiusClass,
-                    isGrid ? "flex-col shadow-sm hover:shadow-2xl" : "flex-row h-36 p-2 items-center shadow-md hover:shadow-lg"
+                    isGrid
+                        ? "flex-col shadow-sm hover:shadow-2xl"
+                        : "flex-col sm:flex-row min-h-[290px] sm:h-36 p-2 sm:items-center shadow-md hover:shadow-lg"
                 )}
             >
                 {/* Contenedor de la Imagen */}
                 <div className={cn(
                     "relative overflow-hidden shrink-0 flex items-center justify-center bg-black/5",
-                    isGrid ? "w-full aspect-square border-b border-border/10" : "h-full aspect-square",
+                    isGrid
+                        ? "w-full aspect-square border-b border-border/10"
+                        : "w-full aspect-[4/3] sm:h-full sm:w-auto sm:aspect-square",
                     (!isGrid) ? "rounded-xl" : ""
                 )}>
                     {product.imagenUrl ? (
@@ -103,7 +107,7 @@ export function ProductCard({
                 {/* Contenedor de la Información */}
                 <div className={cn(
                     "flex flex-col flex-1 gap-1 sm:gap-2",
-                    isGrid ? "p-3 sm:p-4 lg:p-5 mt-auto z-10" : "px-3 sm:px-5 py-2 justify-center h-full",
+                    isGrid ? "p-3 sm:p-4 lg:p-5 mt-auto z-10" : "px-3 sm:px-5 py-3 sm:py-2 justify-center h-full",
                     cardBgClass
                 )}>
                     <div>
@@ -112,7 +116,7 @@ export function ProductCard({
                         </span>
                         <h3 className={cn(
                             "font-bold leading-snug text-neutral-900 group-hover:text-neutral-600 transition-colors",
-                            isGrid ? "text-sm sm:text-base lg:text-lg line-clamp-2" : "text-base line-clamp-1"
+                            isGrid ? "text-sm sm:text-base lg:text-lg line-clamp-2" : "text-base line-clamp-2 sm:line-clamp-1"
                         )}>
                             {product.nombre}
                         </h3>

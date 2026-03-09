@@ -138,7 +138,7 @@ export function CartDrawer({
                         )}
                     >
                         {/* Header */}
-                        <div className="px-8 py-6 flex items-center justify-between border-b border-zinc-200/50">
+                        <div className="px-4 sm:px-8 py-4 sm:py-6 flex items-center justify-between border-b border-zinc-200/50 gap-2">
                             <div className="flex items-center gap-3">
                                 {step > 1 && (
                                     <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full" onClick={() => setStep(step - 1)}>
@@ -146,7 +146,7 @@ export function CartDrawer({
                                     </Button>
                                 )}
                                 <div className="flex flex-col">
-                                    <h2 className="text-xl font-black tracking-tight flex items-center gap-2 text-zinc-900">
+                                    <h2 className="text-lg sm:text-xl font-black tracking-tight flex items-center gap-2 text-zinc-900">
                                         {step === 1 ? "TU CARRITO" : step === 2 ? "TUS DATOS" : "ENTREGA"}
                                         {step === 1 && <span className="text-primary bg-primary/10 px-2 py-0.5 rounded-full text-xs">{cart.length}</span>}
                                     </h2>
@@ -161,7 +161,7 @@ export function CartDrawer({
                         </div>
 
                         {/* Contenido principal según paso */}
-                        <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4 custom-scrollbar">
+                        <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-4 space-y-4 custom-scrollbar">
 
                             {/* PASO 1: PRODUCTOS */}
                             {step === 1 && (
@@ -364,7 +364,7 @@ export function CartDrawer({
 
                         {/* Footer / Resumen de Compra */}
                         {cart.length > 0 && (
-                            <div className={cn("p-8 border-t border-zinc-100 space-y-4", cardBgClass)}>
+                            <div className={cn("p-4 sm:p-8 border-t border-zinc-100 space-y-4", cardBgClass)}>
                                 <div className="space-y-2.5">
                                     <div className="flex justify-between text-sm text-zinc-500 font-medium">
                                         <span>Productos</span>
@@ -394,7 +394,7 @@ export function CartDrawer({
 
                                 <Button
                                     className={cn(
-                                        "w-full h-16 text-md font-black shadow-xl transition-all gap-3 overflow-hidden group relative bg-primary hover:bg-primary/90 text-primary-foreground",
+                                        "w-full h-14 sm:h-16 text-sm sm:text-md font-black shadow-xl transition-all gap-3 overflow-hidden group relative bg-primary hover:bg-primary/90 text-primary-foreground",
                                         buttonRadiusClass,
                                         buttonHoverClass
                                     )}

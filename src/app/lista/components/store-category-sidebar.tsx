@@ -53,7 +53,7 @@ export function StoreCategorySidebar({
     }, {});
 
     return (
-        <aside className="hidden md:flex w-64 lg:w-72 shrink-0 flex-col gap-4 sticky top-6 self-start">
+        <aside className="hidden lg:flex w-64 xl:w-72 shrink-0 flex-col gap-4 sticky top-6 self-start">
             <span className="text-sm font-black uppercase tracking-widest text-neutral-400">
                 Categorías
             </span>

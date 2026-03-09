@@ -7,6 +7,7 @@
  */
 
 import * as React from "react";
+import { createPortal } from "react-dom";
 import {
     BookOpen, X, ChevronLeft, ChevronRight,
     CheckCircle2, XCircle, Info,
@@ -38,14 +39,19 @@ function TutorialModal({
     onClose: () => void;
 }) {
     const [step, setStep] = React.useState(0);
+    const [mounted, setMounted] = React.useState(false);
     const scrollRef = React.useRef<HTMLDivElement>(null);
+
+    React.useEffect(() => {
+        setMounted(true);
+    }, []);
 
     useEffect_resetOnOpen(open, setStep, scrollRef);
     useEffect_scrollOnStep(step, scrollRef);
     useEffect_escapeKey(open, onClose);
     useEffect_bodyScroll(open);
 
-    if (!open || steps.length === 0) return null;
+    if (!mounted || !open || steps.length === 0) return null;
 
     const current = steps[step];
     const Icon = ICON_MAP[current.iconName] ?? BookOpen;
@@ -54,7 +60,7 @@ function TutorialModal({
     const isLast = step === steps.length - 1;
     const positiveLines = current.example.on.split("\n").filter(l => l.trim() !== "");
 
-    return (
+    const modalNode = (
         /*
          * Overlay fijo que cubre TODA la pantalla.
          * Fondo semitransparente + backdrop-blur visible siempre.
@@ -62,7 +68,7 @@ function TutorialModal({
          *   [header fijo] + [contenido scroll] + [footer fijo]
          */
         <div
-            className="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-sm flex items-end md:items-center justify-center"
+            className="fixed inset-0 z-[9999] bg-black/70 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4"
             onClick={onClose}
             role="dialog"
             aria-modal="true"
@@ -70,16 +76,14 @@ function TutorialModal({
             {/* Panel — intercepta clicks para no cerrar */}
             <div
                 className="
-                    relative w-full bg-card shadow-2xl flex flex-col
-                    rounded-t-[28px] md:rounded-2xl
-                    md:max-w-lg md:mx-4
-                    h-[calc(100%-62px)] md:h-auto md:max-h-[90vh]
-                    mb-[62px] md:mb-0
+                    relative w-full max-w-lg bg-card shadow-2xl flex flex-col
+                    rounded-2xl
+                    max-h-[92dvh] h-[min(92dvh,760px)]
                 "
                 onClick={e => e.stopPropagation()}
             >
                 {/* Barra de progreso (muy top) */}
-                <div className="h-1 w-full bg-muted rounded-t-[28px] md:rounded-t-2xl overflow-hidden shrink-0">
+                <div className="h-1 w-full bg-muted rounded-t-2xl overflow-hidden shrink-0">
                     <div
                         className="h-full bg-primary transition-all duration-500 ease-out"
                         style={{ width: `${progress}%` }}
@@ -164,7 +168,7 @@ function TutorialModal({
                 </div>
 
                 {/* Footer — siempre fijo al fondo del panel */}
-                <div className="flex items-center gap-3 px-5 py-3 md:py-4 border-t border-border/40 shrink-0 bg-card rounded-b-[28px] md:rounded-b-2xl pb-[safe-area-inset-bottom] md:pb-4">
+                <div className="flex items-center gap-3 px-5 py-3 md:py-4 border-t border-border/40 shrink-0 bg-card rounded-b-2xl">
                     <Button
                         variant="outline"
                         onClick={() => setStep(s => s - 1)}
@@ -195,6 +199,8 @@ function TutorialModal({
             </div>
         </div>
     );
+
+    return createPortal(modalNode, document.body);
 }
 
 // ─── Hooks extraídos (para claridad) ──────────────────────────────────────────

@@ -29,7 +29,7 @@ export function StoreBanner({ config }: { config: any }) {
         <section className="animate-in fade-in slide-in-from-top-4 duration-1000">
             <div
                 className={cn(
-                    "relative aspect-[3/2] sm:aspect-[21/9] w-full overflow-hidden shadow-2xl",
+                    "relative aspect-[16/10] sm:aspect-[21/9] w-full overflow-hidden shadow-2xl",
                     radiusClass,
                     theme !== 'minimal' && theme !== 'luxury' ? "border-2 sm:border-4 border-primary/10" : ""
                 )}
@@ -64,7 +64,7 @@ export function StoreBanner({ config }: { config: any }) {
                     <motion.h2
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
-                        className="font-black text-2xl sm:text-3xl md:text-5xl lg:text-6xl tracking-tighter drop-shadow-2xl mb-3"
+                        className="font-black text-xl sm:text-3xl md:text-5xl lg:text-6xl tracking-tighter drop-shadow-2xl mb-3"
                     >
                         BIENVENIDOS
                     </motion.h2>
