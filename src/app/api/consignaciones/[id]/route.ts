@@ -34,8 +34,8 @@ export async function GET(_: Request, { params }: RouteParams) {
 
   if (!Number.isFinite(id)) return NextResponse.json({ error: "ID invÃ¡lido" }, { status: 400 });
 
-  const consignacion = await prisma.consignacion.findUnique({
-    where: { id },
+  const consignacion = await prisma.consignacion.findFirst({
+    where: { id, sucursalId: auth.activeSucursalId },
     include: {
       cliente: true,
       detalles: { include: { producto: { include: { subcategoria: true } } } },
@@ -81,8 +81,8 @@ export async function PUT(req: Request, { params }: RouteParams) {
 
   try {
     const updated = await prisma.$transaction(async (tx) => {
-      const consignacion = await tx.consignacion.findUnique({
-        where: { id: consignacionId },
+      const consignacion = await tx.consignacion.findFirst({
+        where: { id: consignacionId, sucursalId: auth.activeSucursalId },
         include: { detalles: true },
       });
 
@@ -265,8 +265,8 @@ export async function POST(req: Request, { params }: RouteParams) {
 
   try {
     const result = await prisma.$transaction(async (tx) => {
-      const consignacion = await tx.consignacion.findUnique({
-        where: { id: consignacionId },
+      const consignacion = await tx.consignacion.findFirst({
+        where: { id: consignacionId, sucursalId: auth.activeSucursalId },
         include: { cliente: true, detalles: { include: { producto: { include: { subcategoria: true } } } } },
       });
 

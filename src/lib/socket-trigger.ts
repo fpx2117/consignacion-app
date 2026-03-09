@@ -1,24 +1,28 @@
 /* eslint-disable */
 // @ts-nocheck
-import { NOTIFICATION_TYPE } from "@/lib/notificationes/notificaciones-types"; // O tu ruta actual
+import { NOTIFICATION_TYPE } from "@/lib/notificationes/notificaciones-types";
 
 interface NotificationPayload {
-  id?: number; // ✅ Opcional: Para vincular con la DB en el cliente
+  id?: number;
   type: NOTIFICATION_TYPE | string;
   title?: string;
   message: string;
-  branch?: string; // ✅ Opcional: Para mostrar la sucursal en el toast
+  branch?: string;
   data?: any;
 }
 
 export async function sendNotification({ id, type, title, message, branch, data }: NotificationPayload) {
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+  const dispatchSecret = process.env.SOCKET_DISPATCH_SECRET || process.env.CRON_SECRET;
 
   try {
     console.log(`📡 [sendNotification] Despachando a ${baseUrl}/api/socket/dispatch`, { type, title });
     const response = await fetch(`${baseUrl}/api/socket/dispatch`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        ...(dispatchSecret && { "Authorization": `Bearer ${dispatchSecret}` }),
+      },
       body: JSON.stringify({
         notification: {
           id,

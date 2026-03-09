@@ -52,6 +52,7 @@ export async function POST(req: Request) {
         return NextResponse.json({ data: sesionCerrada });
 
     } catch (error: any) {
-        return NextResponse.json({ error: error.message }, { status: 500 });
+        console.error("Error al cerrar la caja:", error);
+        return NextResponse.json({ error: "Error al cerrar la caja" }, { status: 500 });
     }
 }

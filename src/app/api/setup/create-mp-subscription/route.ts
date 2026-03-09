@@ -69,8 +69,7 @@ export async function POST(req: Request) {
     } catch (error: any) {
         console.error("SETUP_CREATE_MP_SUBSCRIPTION_ERROR:", error);
         return NextResponse.json({
-            error: "Error al crear la suscripción de Mercado Pago",
-            details: error.message
+            error: "Error al crear la suscripción de Mercado Pago"
         }, { status: 500 });
     }
 }

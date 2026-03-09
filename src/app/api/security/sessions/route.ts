@@ -69,7 +69,7 @@ export async function GET() {
         return NextResponse.json({ ok: true, data: sessions });
     } catch (error: any) {
         console.error("Fetch sessions error:", error);
-        return NextResponse.json({ error: error.message || "Error al obtener sesiones" }, { status: 500 });
+        return NextResponse.json({ error: "Error al obtener las sesiones" }, { status: 500 });
     }
 }
 
@@ -102,6 +102,6 @@ export async function DELETE(req: Request) {
         return NextResponse.json({ ok: true });
     } catch (error: any) {
         console.error("Revoke session error:", error);
-        return NextResponse.json({ error: error.message || "Error al revocar sesión" }, { status: 500 });
+        return NextResponse.json({ error: "Error al revocar la sesión" }, { status: 500 });
     }
 }

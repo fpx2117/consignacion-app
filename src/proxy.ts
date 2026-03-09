@@ -2,7 +2,11 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { jwtVerify } from "jose";
 
-const secret = new TextEncoder().encode(process.env.JWT_SECRET || "dev-secret");
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET) {
+  throw new Error("FATAL: La variable de entorno JWT_SECRET es obligatoria. El servidor no puede iniciar sin ella.");
+}
+const secret = new TextEncoder().encode(JWT_SECRET);
 const cookieName = process.env.JWT_COOKIE_NAME || "access_token";
 
 /* ============================

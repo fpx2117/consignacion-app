@@ -37,7 +37,8 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
 
         return NextResponse.json({ data: updated });
     } catch (error: any) {
-        return NextResponse.json({ error: error.message }, { status: 500 });
+        console.error("Error al actualizar la sucursal:", error);
+        return NextResponse.json({ error: "Error al actualizar la sucursal" }, { status: 500 });
     }
 }
 

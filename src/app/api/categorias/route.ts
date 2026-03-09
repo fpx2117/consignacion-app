@@ -2,18 +2,16 @@
 // @ts-nocheck
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-
-// Helper to get sucursalId from headers
-function getSucursalIdFromHeader(req: NextRequest): number {
-  const header = req.headers.get("x-sucursal-id");
-  const parsed = parseInt(header || "1", 10);
-  return Number.isNaN(parsed) ? 1 : parsed;
-}
+import { requireAuth } from "@/lib/requireAuth";
 
 // GET: Obtener todas las categorías ordenadas por nombre (por sucursal)
 export async function GET(req: NextRequest) {
+  // Auth: Requiere usuario autenticado
+  const auth = await requireAuth();
+  if (!auth.ok) return auth.res;
+
   try {
-    const sucursalId = getSucursalIdFromHeader(req);
+    const sucursalId = auth.activeSucursalId;
     const categorias = await prisma.categoria.findMany({
       where: { sucursalId },
       orderBy: { nombre: "asc" },
@@ -30,10 +28,14 @@ export async function GET(req: NextRequest) {
 
 // POST: Crear una nueva categoría
 export async function POST(req: NextRequest) {
+  // Auth: Requiere usuario autenticado
+  const auth = await requireAuth();
+  if (!auth.ok) return auth.res;
+
   try {
     const body = await req.json();
     const { nombre, color } = body;
-    const sucursalId = getSucursalIdFromHeader(req);
+    const sucursalId = auth.activeSucursalId;
 
     if (!nombre) {
       return NextResponse.json(

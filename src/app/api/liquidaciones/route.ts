@@ -17,7 +17,12 @@ export async function GET(req: Request) {
   }
 
   try {
-    const where = clienteId ? { consignacion: { clienteId } } : {};
+    const where: any = {
+      consignacion: {
+        sucursalId: auth.activeSucursalId,
+        ...(clienteId ? { clienteId } : {}),
+      },
+    };
 
     const liquidaciones = await prisma.liquidacion.findMany({
       where,

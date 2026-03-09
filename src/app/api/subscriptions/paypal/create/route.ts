@@ -31,7 +31,7 @@ export async function POST(req: Request) {
     } catch (error: any) {
         console.error("API_PAYPAL_CREATE_ERROR:", error);
         return NextResponse.json(
-            { error: error.message || "Error al crear la suscripción en PayPal" },
+            { error: "Error al crear la suscripción en PayPal" },
             { status: 500 }
         );
     }

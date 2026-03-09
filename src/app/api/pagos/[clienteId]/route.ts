@@ -62,6 +62,7 @@ export async function POST(
 
         return NextResponse.json({ data: result });
     } catch (error: any) {
-        return NextResponse.json({ error: error.message }, { status: 500 });
+        console.error("Error al registrar pago:", error);
+        return NextResponse.json({ error: "Error al registrar el pago" }, { status: 500 });
     }
 }

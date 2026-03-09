@@ -8,6 +8,7 @@ export async function GET() {
   if (!auth.ok) return auth.res;
 
   const pagos = await prisma.pago.findMany({
+    where: { sucursalId: auth.activeSucursalId },
     orderBy: { id: "desc" },
     include: { cliente: true },
     take: 200,

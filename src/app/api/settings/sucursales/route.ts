@@ -43,6 +43,7 @@ export async function POST(req: Request) {
 
         return NextResponse.json({ data: nueva }, { status: 201 });
     } catch (error: any) {
-        return NextResponse.json({ error: error.message }, { status: 500 });
+        console.error("Error al crear la sucursal:", error);
+        return NextResponse.json({ error: "Error al crear la sucursal" }, { status: 500 });
     }
 }

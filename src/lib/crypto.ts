@@ -1,6 +1,10 @@
 import { createHmac } from "crypto";
 
-const PDF_SECRET = process.env.PDF_SECRET || "secreto_super_seguro_2026";
+const _PDF_SECRET = process.env.SHARE_LINK_SECRET || process.env.PDF_SECRET;
+if (!_PDF_SECRET) {
+  throw new Error("FATAL: La variable de entorno SHARE_LINK_SECRET (o PDF_SECRET) es obligatoria.");
+}
+const PDF_SECRET: string = _PDF_SECRET;
 
 // Duración por defecto: 7 días (en milisegundos)
 const DEFAULT_EXPIRATION_MS = 7 * 24 * 60 * 60 * 1000; 

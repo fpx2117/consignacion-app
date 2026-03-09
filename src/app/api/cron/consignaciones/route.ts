@@ -1,11 +1,16 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { sendNotification } from "@/lib/socket-trigger";
 import { NOTIFICATION_TYPE } from "@/lib/notificationes/notificaciones-types";
 import { obtenerConfiguracionGlobal } from "@/lib/config";
 
-// Permite ser llamado sin auth explícita para que un cron service pueda pegarle
-export async function GET() {
+// Auth: Requiere CRON_SECRET (igual que los demás cron endpoints)
+export async function GET(request: NextRequest) {
+    const authHeader = request.headers.get("authorization");
+    if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+        return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+    }
+
     try {
         const sucursales = await prisma.sucursal.findMany({
             where: { activa: true },

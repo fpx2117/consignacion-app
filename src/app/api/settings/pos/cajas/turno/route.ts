@@ -114,7 +114,8 @@ export async function GET() {
             } : null
         });
     } catch (error: any) {
-        return NextResponse.json({ error: error.message }, { status: 500 });
+        console.error("Error al obtener el turno activo:", error);
+        return NextResponse.json({ error: "Error al obtener el turno activo" }, { status: 500 });
     }
 }
 
@@ -157,7 +158,8 @@ export async function POST(req: Request) {
 
         return NextResponse.json({ data: nueva });
     } catch (error: any) {
-        return NextResponse.json({ error: error.message }, { status: 500 });
+        console.error("Error al abrir el turno de caja:", error);
+        return NextResponse.json({ error: "Error al abrir el turno de caja" }, { status: 500 });
     }
 }
 
@@ -192,7 +194,8 @@ export async function PATCH(req: Request) {
 
         return NextResponse.json({ data: actualizada });
     } catch (error: any) {
-        return NextResponse.json({ error: error.message }, { status: 500 });
+        console.error("Error al extender el turno:", error);
+        return NextResponse.json({ error: "Error al extender el turno" }, { status: 500 });
     }
 }
 
@@ -246,6 +249,7 @@ export async function PUT(req: Request) {
             extra: { esperadoEfectivo: esperado }
         });
     } catch (error: any) {
-        return NextResponse.json({ error: error.message }, { status: 500 });
+        console.error("Error al cerrar la caja:", error);
+        return NextResponse.json({ error: "Error al cerrar la caja" }, { status: 500 });
     }
 }

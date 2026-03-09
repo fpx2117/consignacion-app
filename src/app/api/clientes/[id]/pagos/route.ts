@@ -31,7 +31,9 @@ export async function POST(req: Request, { params }: RouteContext) {
   }
 
   const result = await prisma.$transaction(async (tx) => {
-    const cliente = await tx.cliente.findUnique({ where: { id: clienteId } });
+    const cliente = await tx.cliente.findFirst({
+      where: { id: clienteId, sucursalId: auth.activeSucursalId },
+    });
     if (!cliente) throw new Error("CLIENTE_NO_EXISTE");
 
     const pago = await tx.pago.create({

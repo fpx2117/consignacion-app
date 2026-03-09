@@ -110,6 +110,6 @@ export async function PUT(req: Request) {
         return NextResponse.json({ data: configActualizada, message: "Configuración actualizada" });
     } catch (error: any) {
         console.error("Error actualizando configuración:", error);
-        return NextResponse.json({ error: "Error al actualizar la configuración", details: error.message }, { status: 500 });
+        return NextResponse.json({ error: "Error al actualizar la configuración" }, { status: 500 });
     }
 }

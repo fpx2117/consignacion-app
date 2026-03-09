@@ -28,8 +28,11 @@ export async function GET(_: Request, { params }: RouteParams) {
     return NextResponse.json({ error: "ID inválido" }, { status: 400 });
   }
 
-  const liq = await prisma.liquidacion.findUnique({
-    where: { id: liquidacionId },
+  const liq = await prisma.liquidacion.findFirst({
+    where: {
+      id: liquidacionId,
+      consignacion: { sucursalId: auth.activeSucursalId },
+    },
     include: {
       items: { include: { detalle: { include: { producto: true } } } },
       venta: { include: { detalles: true } },
@@ -79,8 +82,11 @@ export async function PUT(req: Request, { params }: RouteParams) {
   try {
     const result = await prisma.$transaction(async (tx) => {
       // 0) Buscar liquidación existente
-      const liqExistente = await tx.liquidacion.findUnique({
-        where: { id: liquidacionId },
+      const liqExistente = await tx.liquidacion.findFirst({
+        where: {
+          id: liquidacionId,
+          consignacion: { sucursalId: auth.activeSucursalId },
+        },
         include: {
           items: true,
           venta: true,

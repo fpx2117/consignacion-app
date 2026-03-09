@@ -20,8 +20,8 @@ export async function GET(
     return NextResponse.json({ error: "ID inválido" }, { status: 400 });
   }
 
-  const venta = await prisma.venta.findUnique({
-    where: { id },
+  const venta = await prisma.venta.findFirst({
+    where: { id, sucursalId: auth.activeSucursalId },
     include: {
       cliente: true,
       detalles: { include: { producto: { include: { categoria: true } } } },
@@ -63,8 +63,8 @@ export async function DELETE(
   }
 
   try {
-    const venta = await prisma.venta.findUnique({
-      where: { id },
+    const venta = await prisma.venta.findFirst({
+      where: { id, sucursalId: auth.activeSucursalId },
       include: { detalles: true },
     });
 
@@ -160,7 +160,7 @@ export async function DELETE(
   } catch (error: any) {
     console.error("Error anulando venta:", error);
     return NextResponse.json(
-      { error: "Error al anular la venta: " + error.message },
+      { error: "Error al anular la venta" },
       { status: 500 }
     );
   }

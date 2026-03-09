@@ -15,7 +15,8 @@ export async function GET() {
         });
         return NextResponse.json({ data: usuarios });
     } catch (error: any) {
-        return NextResponse.json({ error: error.message }, { status: 500 });
+        console.error("Error al obtener los horarios:", error);
+        return NextResponse.json({ error: "Error al obtener los horarios" }, { status: 500 });
     }
 }
 
@@ -37,6 +38,7 @@ export async function POST(req: Request) {
 
         return NextResponse.json({ message: "Horarios actualizados" });
     } catch (error: any) {
-        return NextResponse.json({ error: error.message }, { status: 500 });
+        console.error("Error al actualizar los horarios:", error);
+        return NextResponse.json({ error: "Error al actualizar los horarios" }, { status: 500 });
     }
 }
