@@ -1,52 +1,54 @@
+```markdown
 ---
 name: database-design
-description: Database design principles and decision-making. Schema design, indexing strategy, ORM selection, serverless databases.
+description: Principios de diseño de bases de datos y toma de decisiones. Diseño de esquemas, estrategia de indexación, selección de ORM, bases de datos serverless.
 allowed-tools: Read, Write, Edit, Glob, Grep
 ---
 
-# Database Design
+# Diseño de Bases de Datos
 
-> **Learn to THINK, not copy SQL patterns.**
+> **Aprende a PENSAR, no a copiar patrones SQL.**
 
-## 🎯 Selective Reading Rule
+## 🎯 Regla de Lectura Selectiva
 
-**Read ONLY files relevant to the request!** Check the content map, find what you need.
+**¡Lee SOLO los archivos relevantes para la solicitud!** Revisa el mapa de contenido, encuentra lo que necesitas.
 
-| File | Description | When to Read |
+| Archivo | Descripción | Cuándo leer |
 |------|-------------|--------------|
-| `database-selection.md` | PostgreSQL vs Neon vs Turso vs SQLite | Choosing database |
-| `orm-selection.md` | Drizzle vs Prisma vs Kysely | Choosing ORM |
-| `schema-design.md` | Normalization, PKs, relationships | Designing schema |
-| `indexing.md` | Index types, composite indexes | Performance tuning |
-| `optimization.md` | N+1, EXPLAIN ANALYZE | Query optimization |
-| `migrations.md` | Safe migrations, serverless DBs | Schema changes |
+| `database-selection.md` | PostgreSQL vs Neon vs Turso vs SQLite | Elección de base de datos |
+| `orm-selection.md` | Drizzle vs Prisma vs Kysely | Elección de ORM |
+| `schema-design.md` | Normalización, PKs, relaciones | Diseño de esquema |
+| `indexing.md` | Tipos de índices, índices compuestos | Ajuste de rendimiento |
+| `optimization.md` | N+1, EXPLAIN ANALYZE | Optimización de consultas |
+| `migrations.md` | Migraciones seguras, DBs serverless | Cambios de esquema |
 
 ---
 
-## ⚠️ Core Principle
+## ⚠️ Principio Fundamental
 
-- ASK user for database preferences when unclear
-- Choose database/ORM based on CONTEXT
-- Don't default to PostgreSQL for everything
-
----
-
-## Decision Checklist
-
-Before designing schema:
-
-- [ ] Asked user about database preference?
-- [ ] Chosen database for THIS context?
-- [ ] Considered deployment environment?
-- [ ] Planned index strategy?
-- [ ] Defined relationship types?
+- PREGUNTA al usuario por sus preferencias de base de datos cuando no estén claras.
+- Elige la base de datos/ORM basándote en el CONTEXTO.
+- No uses PostgreSQL por defecto para todo.
 
 ---
 
-## Anti-Patterns
+## Lista de Verificación de Decisiones
 
-❌ Default to PostgreSQL for simple apps (SQLite may suffice)
-❌ Skip indexing
-❌ Use SELECT * in production
-❌ Store JSON when structured data is better
-❌ Ignore N+1 queries
+Antes de diseñar el esquema:
+
+- [ ] ¿Se consultó al usuario sobre su preferencia de base de datos?
+- [ ] ¿Se eligió la base de datos para ESTE contexto?
+- [ ] ¿Se consideró el entorno de despliegue?
+- [ ] ¿Se planificó la estrategia de índices?
+- [ ] ¿Se definieron los tipos de relaciones?
+
+---
+
+## Anti-patrones
+
+❌ Usar PostgreSQL por defecto para aplicaciones simples (SQLite puede ser suficiente)
+❌ Omitir la creación de índices
+❌ Usar SELECT * en producción
+❌ Almacenar JSON cuando los datos estructurados son mejores
+❌ Ignorar consultas N+1
+```

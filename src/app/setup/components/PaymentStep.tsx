@@ -11,6 +11,7 @@ import { Separator } from "@/components/ui/separator";
 import { useState } from "react";
 import { SubscriptionPlan } from "@/constants/subscriptions";
 import { toast } from "sonner";
+import { useDolarBlue } from "@/hooks/useDolarBlue";
 
 interface PaymentStepProps {
     plan: SubscriptionPlan;
@@ -23,84 +24,11 @@ export function PaymentStep({ plan, onPaymentSuccess, loading }: PaymentStepProp
     const [isValidatingPromo, setIsValidatingPromo] = useState(false);
     const [promoApplied, setPromoApplied] = useState<{ valid: boolean, discountPercentage: number, planId?: string, planName?: string } | null>(null);
     const [isRedirecting, setIsRedirecting] = useState(false);
+    const { rate, isLoading: isLoadingDolar } = useDolarBlue();
 
-    const handleApplyPromo = async () => {
-        if (!promoCode) return;
-        setIsValidatingPromo(true);
-        try {
-            const res = await fetch("/api/setup/validate-promo", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ code: promoCode, planId: plan.id }),
-            });
-            const data = await res.json();
-            if (res.ok && data.valid) {
-                setPromoApplied({
-                    valid: true,
-                    discountPercentage: data.discountPercentage,
-                    planId: data.planId,
-                    planName: data.planName
-                });
-                toast.success(`¡Licencia de ${data.planName} activada!`);
-            } else {
-                setPromoApplied({ valid: false, discountPercentage: 0 });
-                toast.error(data.error || "Licencia inválida");
-            }
-        } catch (error) {
-            console.error("Promo validation error:", error);
-            toast.error("Error al validar licencia");
-        } finally {
-            setIsValidatingPromo(false);
-        }
-    };
-
-    const handlePayPalPayment = async () => {
-        setIsRedirecting(true);
-        try {
-            const res = await fetch("/api/setup/create-paypal", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ planId: plan.id }),
-            });
-            const data = await res.json();
-            if (res.ok && data.approveUrl) {
-                // Redirect to PayPal
-                window.location.href = data.approveUrl;
-            } else {
-                toast.error(data.error || "Error al iniciar PayPal");
-                setIsRedirecting(false);
-            }
-        } catch (error) {
-            console.error("PayPal redirect error:", error);
-            toast.error("Error de conexión");
-            setIsRedirecting(false);
-        }
-    };
-
-    const handleMercadoPagoPayment = async () => {
-        setIsRedirecting(true);
-        try {
-            const res = await fetch("/api/setup/create-mp-subscription", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ planId: plan.id }),
-            });
-            const data = await res.json();
-            if (res.ok && data.initPoint) {
-                // Redirect to MP (Recurrent Subscription)
-                window.location.href = data.initPoint;
-            } else {
-                toast.error(data.error || "Error al iniciar suscripción de Mercado Pago");
-                setIsRedirecting(false);
-            }
-        } catch (error) {
-            console.error("MP subscription redirect error:", error);
-            toast.error("Error de conexión");
-            setIsRedirecting(false);
-        }
-    };
-
-    const finalPrice = promoApplied?.discountPercentage === 100 ? 0 : plan.precioARS;
+    // Calcular precio dinámico basado en dólar cripto
+    const calculatedPrice = Math.round(plan.precioUSD * (rate || 1200));
+    const finalPrice = promoApplied?.discountPercentage === 100 ? 0 : calculatedPrice;
     const activePlanName = promoApplied?.planName || plan.nombre;
 
     return (
@@ -138,7 +66,9 @@ export function PaymentStep({ plan, onPaymentSuccess, loading }: PaymentStepProp
                     <div className="text-right">
                         <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-1">Costo</p>
                         <p className={`text-2xl font-black ${promoApplied?.valid ? "text-emerald-500" : "text-foreground"}`}>
-                            {promoApplied?.valid ? "Bonificado" : `$${plan.precioARS.toLocaleString()}`}
+                            {promoApplied?.valid ? "Bonificado" : isLoadingDolar ? (
+                                <span className="inline-block w-20 h-6 bg-muted/50 rounded animate-pulse" />
+                            ) : `$${calculatedPrice.toLocaleString()}`}
                         </p>
                     </div>
                 </div>
@@ -177,7 +107,11 @@ export function PaymentStep({ plan, onPaymentSuccess, loading }: PaymentStepProp
                 <div className="flex items-center justify-between mb-8 relative z-10">
                     <span className="text-lg font-black uppercase tracking-widest">A pagar hoy</span>
                     <span className="text-4xl font-black text-violet-600">
-                        ${finalPrice.toLocaleString()}
+                        {isLoadingDolar ? (
+                            <span className="inline-block w-32 h-10 bg-muted/50 rounded animate-pulse" />
+                        ) : (
+                            `$${finalPrice.toLocaleString()}`
+                        )}
                     </span>
                 </div>
 

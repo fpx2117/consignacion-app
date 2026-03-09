@@ -4,6 +4,7 @@
 
 import { createContext, useContext, useEffect, useState } from "react";
 import { io as ClientIO, Socket } from "socket.io-client";
+import { usePathname } from "next/navigation";
 
 type SocketContextType = {
   socket: Socket | null;
@@ -20,9 +21,19 @@ export const useSocket = () => useContext(SocketContext);
 export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
   const [socket, setSocket] = useState<Socket | null>(null);
   const [isConnected, setIsConnected] = useState(false);
+  const pathname = usePathname();
+
+  // No intentar conectar si estamos en el setup o login (no hay sesión)
+  const isAuthPage = pathname?.startsWith("/setup") || pathname?.startsWith("/login") || pathname?.startsWith("/forgot-password") || pathname?.startsWith("/reset-password");
 
   useEffect(() => {
-    // 1. Definir la URL correctamente.
+    // 1. No conectar si estamos en una página de autenticación
+    if (isAuthPage) {
+      console.log(`⏭️ CLIENTE: Ruta de auth detectada (${pathname}), socket omitido`);
+      return;
+    }
+
+    // 2. Definir la URL correctamente.
     // En local, window.location.origin suele ser suficiente y maneja http/https automáticamente.
     const siteUrl = process.env.NEXT_PUBLIC_BASE_URL || process.env.NEXT_PUBLIC_APP_URL || (typeof window !== "undefined" ? window.location.origin : "");
 

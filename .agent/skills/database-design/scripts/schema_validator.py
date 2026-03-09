@@ -1,172 +1,124 @@
 #!/usr/bin/env python3
 """
 Schema Validator - Database schema validation
-Validates Prisma schemas and checks for common issues.
+Validates Prisma and Drizzle schemas for common issues and best practices.
 
 Usage:
     python schema_validator.py <project_path>
-
-Checks:
-    - Prisma schema syntax
-    - Missing relations
-    - Index recommendations
-    - Naming conventions
 """
 
 import sys
 import json
 import re
+import argparse
 from pathlib import Path
 from datetime import datetime
+from typing import List, Tuple, Dict
 
-# Fix Windows console encoding
-try:
-    sys.stdout.reconfigure(encoding='utf-8', errors='replace')
-except:
-    pass
-
-
-def find_schema_files(project_path: Path) -> list:
-    """Find database schema files."""
+def find_schema_files(project_path: Path) -> List[Tuple[str, Path]]:
+    """Find database schema files for Prisma and Drizzle."""
     schemas = []
     
-    # Prisma schema
-    prisma_files = list(project_path.glob('**/prisma/schema.prisma'))
+    # Prisma schemas
+    prisma_files = list(project_path.glob('**/prisma/*.prisma'))
     schemas.extend([('prisma', f) for f in prisma_files])
     
     # Drizzle schema files
-    drizzle_files = list(project_path.glob('**/drizzle/*.ts'))
-    drizzle_files.extend(project_path.glob('**/schema/*.ts'))
-    for f in drizzle_files:
-        if 'schema' in f.name.lower() or 'table' in f.name.lower():
-            schemas.append(('drizzle', f))
+    drizzle_patterns = ['**/drizzle/*.ts', '**/schema/*.ts', '**/db/schema.ts']
+    for pattern in drizzle_patterns:
+        for f in project_path.glob(pattern):
+            content_lower = f.name.lower()
+            if any(k in content_lower for k in ['schema', 'table', 'models']):
+                schemas.append(('drizzle', f))
     
-    return schemas[:10]  # Limit
+    # Remove duplicates and limit
+    unique_schemas = list({f.resolve(): (t, f) for t, f in schemas}.values())
+    return unique_schemas[:15]
 
-
-def validate_prisma_schema(file_path: Path) -> list:
-    """Validate Prisma schema file."""
+def validate_prisma_schema(file_path: Path) -> List[str]:
+    """Validate Prisma schema file with improved regex and logic."""
     issues = []
-    
     try:
         content = file_path.read_text(encoding='utf-8', errors='ignore')
+        # Remove comments for cleaner parsing
+        clean_content = re.sub(r'//.*', '', content)
         
-        # Find all models
-        models = re.findall(r'model\s+(\w+)\s*{([^}]+)}', content, re.DOTALL)
+        models = re.findall(r'model\s+(\w+)\s*{([\s\S]*?)}', clean_content)
         
         for model_name, model_body in models:
-            # Check naming convention (PascalCase)
             if not model_name[0].isupper():
-                issues.append(f"Model '{model_name}' should be PascalCase")
+                issues.append(f"Model '{model_name}' should use PascalCase")
             
-            # Check for id field
-            if '@id' not in model_body and 'id' not in model_body.lower():
-                issues.append(f"Model '{model_name}' might be missing @id field")
+            if '@id' not in model_body and '@@id' not in model_body:
+                issues.append(f"Model '{model_name}' is missing a primary key (@id or @@id)")
             
-            # Check for createdAt/updatedAt
-            if 'createdAt' not in model_body and 'created_at' not in model_body:
-                issues.append(f"Model '{model_name}' missing createdAt field (recommended)")
-            
-            # Check for @relation without fields
-            relations = re.findall(r'@relation\([^)]*\)', model_body)
-            for rel in relations:
-                if 'fields:' not in rel and 'references:' not in rel:
-                    pass  # Implicit relation, ok
-            
-            # Check for @@index suggestions
-            foreign_keys = re.findall(r'(\w+Id)\s+\w+', model_body)
-            for fk in foreign_keys:
-                if f'@@index([{fk}])' not in content and f'@@index(["{fk}"])' not in content:
-                    issues.append(f"Consider adding @@index([{fk}]) for better query performance in {model_name}")
-        
-        # Check for enum definitions
-        enums = re.findall(r'enum\s+(\w+)\s*{', content)
+            if not any(field in model_body for field in ['createdAt', 'created_at']):
+                issues.append(f"Model '{model_name}' missing createdAt field")
+                
+            # Check for missing indexes on foreign keys
+            fk_fields = re.findall(r'(\w+Id)\s+\w+', model_body)
+            for fk in fk_fields:
+                index_pattern = rf'@@index\(\[.*{fk}.*\]\)'
+                if not re.search(index_pattern, model_body) and not re.search(rf'@unique', model_body):
+                    issues.append(f"Consider adding @@index([{fk}]) in model '{model_name}'")
+
+        enums = re.findall(r'enum\s+(\w+)\s*{', clean_content)
         for enum_name in enums:
             if not enum_name[0].isupper():
-                issues.append(f"Enum '{enum_name}' should be PascalCase")
-        
+                issues.append(f"Enum '{enum_name}' should use PascalCase")
+                
     except Exception as e:
-        issues.append(f"Error reading schema: {str(e)[:50]}")
+        issues.append(f"Error parsing Prisma schema: {str(e)}")
     
     return issues
 
+def validate_drizzle_schema(file_path: Path) -> List[str]:
+    """Basic validation for Drizzle TypeScript schemas."""
+    issues = []
+    try:
+        content = file_path.read_text(encoding='utf-8', errors='ignore')
+        
+        # Check for table definitions
+        tables = re.findall(r'(?:pgTable|mysqlTable|sqliteTable)\s*\(\s*["\'](\w+)["\']', content)
+        
+        for table_name in tables:
+            if table_name != table_name.lower() and '_' not in table_name:
+                # Drizzle convention usually favors snake_case for DB table names
+                pass 
+            
+        if "primaryKey" not in content and "serial(" not in content and ".primaryKey()" not in content:
+            issues.append(f"Schema {file_path.name} might be missing primary key definitions")
+            
+    except Exception as e:
+        issues.append(f"Error parsing Drizzle schema: {str(e)}")
+    return issues
 
 def main():
-    project_path = Path(sys.argv[1] if len(sys.argv) > 1 else ".").resolve()
+    parser = argparse.ArgumentParser(description="Validate database schemas.")
+    parser.add_argument("path", nargs="?", default=".", help="Project root path")
+    args = parser.parse_args()
     
-    print(f"\n{'='*60}")
-    print(f"[SCHEMA VALIDATOR] Database Schema Validation")
-    print(f"{'='*60}")
-    print(f"Project: {project_path}")
-    print(f"Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-    print("-"*60)
-    
-    # Find schema files
+    project_path = Path(args.path).resolve()
     schemas = find_schema_files(project_path)
-    print(f"Found {len(schemas)} schema files")
     
-    if not schemas:
-        output = {
-            "script": "schema_validator",
-            "project": str(project_path),
-            "schemas_checked": 0,
-            "issues_found": 0,
-            "passed": True,
-            "message": "No schema files found"
-        }
-        print(json.dumps(output, indent=2))
-        sys.exit(0)
-    
-    # Validate each schema
-    all_issues = []
-    
-    for schema_type, file_path in schemas:
-        print(f"\nValidating: {file_path.name} ({schema_type})")
-        
-        if schema_type == 'prisma':
-            issues = validate_prisma_schema(file_path)
-        else:
-            issues = []  # Drizzle validation could be added
-        
+    results = []
+    for stype, spath in schemas:
+        validator = validate_prisma_schema if stype == 'prisma' else validate_drizzle_schema
+        issues = validator(spath)
         if issues:
-            all_issues.append({
-                "file": str(file_path.name),
-                "type": schema_type,
-                "issues": issues
-            })
-    
-    # Summary
-    print("\n" + "="*60)
-    print("SCHEMA ISSUES")
-    print("="*60)
-    
-    if all_issues:
-        for item in all_issues:
-            print(f"\n{item['file']} ({item['type']}):")
-            for issue in item["issues"][:5]:  # Limit per file
-                print(f"  - {issue}")
-            if len(item["issues"]) > 5:
-                print(f"  ... and {len(item['issues']) - 5} more issues")
-    else:
-        print("No schema issues found!")
-    
-    total_issues = sum(len(item["issues"]) for item in all_issues)
-    # Schema issues are warnings, not failures
-    passed = True
-    
+            results.append({"file": str(spath.relative_to(project_path)), "type": stype, "issues": issues})
+
     output = {
-        "script": "schema_validator",
+        "timestamp": datetime.now().isoformat(),
         "project": str(project_path),
-        "schemas_checked": len(schemas),
-        "issues_found": total_issues,
-        "passed": passed,
-        "issues": all_issues
+        "files_scanned": len(schemas),
+        "total_issues": sum(len(r["issues"]) for r in results),
+        "results": results
     }
     
-    print("\n" + json.dumps(output, indent=2))
-    
+    print(json.dumps(output, indent=2))
     sys.exit(0)
-
 
 if __name__ == "__main__":
     main()
+```

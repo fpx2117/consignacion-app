@@ -17,6 +17,37 @@ type InitializeBody = {
     businessName?: string;
     promoCode?: string;
     paymentId?: string;
+    // Nuevos campos del Setup Enhanced
+    branding?: {
+        phone?: string;
+        address?: string;
+        primaryColor?: string;
+        logoData?: string;
+        logoMime?: string;
+    };
+    branch?: {
+        nombre: string;
+        terminalNombre: string;
+    };
+    posConfig?: {
+        usarControlDeCaja?: boolean;
+        porcentajeAumentoConsignacion?: number;
+        porcentajeInteresTarjeta?: number;
+    };
+    catalog?: {
+        mostrarListaPrecios?: boolean;
+        whatsappNumber?: string;
+    };
+    notifications?: {
+        minStockGlobal?: number;
+        diasAnticipacionVencimiento?: number;
+        notificarStockBajo?: boolean;
+        notificarVencimientos?: boolean;
+        notificarVentas?: boolean;
+        notificarLiquidaciones?: boolean;
+        notificarConsignacionesActivas?: boolean;
+        diasAvisoConsignacion?: number;
+    };
 };
 
 function jsonError(status: number, payload: any) {
@@ -49,7 +80,7 @@ export async function POST(req: Request) {
             return jsonError(400, { message: "Body inválido (JSON requerido)" });
         }
 
-        const { admin, planId, staff, businessName, promoCode, paymentId } = body;
+        const { admin, planId, staff, businessName, promoCode, paymentId, branding, branch, posConfig, catalog, notifications } = body;
 
         if (!admin?.nombre || !admin?.email || !admin?.password) {
             return jsonError(400, { message: "Faltan datos del administrador" });
@@ -202,17 +233,20 @@ export async function POST(req: Request) {
 
         // ✅ Transaction (todo lo que puede faltar -> upsert / create seguro)
         const result = await prisma.$transaction(async (tx) => {
-            // 0) Ensure Sucursal 1 exists (evita FK defaults sucursalId=1)
-            await tx.sucursal.upsert({
+            // 0) Ensure Sucursal 1 exists (evita FK defaults sucursalId=1) - usar nombre del branch o default
+            const branchName = branch?.nombre?.trim() || "Sucursal Principal";
+            const sucursalResult = await tx.sucursal.upsert({
                 where: { id: 1 },
-                update: { activa: true },
+                update: { nombre: branchName, activa: true },
                 create: {
                     id: 1,
-                    nombre: "Sucursal Principal",
+                    nombre: branchName,
                     esPrincipal: true,
                     activa: true,
                 },
+                select: { id: true }, // Obtener ID dinámicamente
             });
+            const sucursalId = sucursalResult.id;
 
             // 1) Sync plans and limits (upsert)
             for (const p of SUBSCRIPTION_PLANS) {
@@ -262,39 +296,77 @@ export async function POST(req: Request) {
                 }
             }
 
-            // 2) Branding (id=1)
+            // 2) Branding (id=1) - incluir datos del setup
+            const brandingData = branding || {};
+            const logoBuffer = brandingData.logoData ? Buffer.from(brandingData.logoData, 'base64') : null;
+            
             await tx.branding.upsert({
                 where: { id: 1 },
-                update: businessName && businessName.trim() ? { businessName } : {},
+                update: {
+                    ...(businessName && businessName.trim() && { businessName }),
+                    ...(brandingData.phone && { phone: brandingData.phone }),
+                    ...(brandingData.address && { address: brandingData.address }),
+                    ...(brandingData.primaryColor && { primaryColor: brandingData.primaryColor }),
+                    ...(logoBuffer && { logoData: logoBuffer, logoMime: brandingData.logoMime }),
+                },
                 create: {
                     id: 1,
                     businessName: businessName && businessName.trim() ? businessName : "Mi Negocio",
+                    phone: brandingData.phone || null,
+                    address: brandingData.address || null,
+                    primaryColor: brandingData.primaryColor || "#111827",
+                    logoData: logoBuffer,
+                    logoMime: brandingData.logoMime || null,
+                    sucursalId: sucursalId,
                 },
             });
 
-            // 3) Configuracion (id=1)
+            // 3) Configuracion - sincronizar con schema de Prisma
+            const posData = posConfig || {};
+            const catData = catalog || {};
+            const notifData = notifications || {};
+            
             await tx.configuracion.upsert({
-                where: { id: 1 },
-                update: {},
+                where: { sucursalId: sucursalId },
+                update: {
+                    ...(posData.usarControlDeCaja !== undefined && { usarControlDeCaja: posData.usarControlDeCaja }),
+                    ...(posData.porcentajeAumentoConsignacion !== undefined && { porcentajeAumentoConsignacion: posData.porcentajeAumentoConsignacion }),
+                    ...(posData.porcentajeInteresTarjeta !== undefined && { porcentajeInteresTarjeta: posData.porcentajeInteresTarjeta }),
+                    ...(catData.mostrarListaPrecios !== undefined && { mostrarListaPrecios: catData.mostrarListaPrecios }),
+                    ...(catData.whatsappNumber && { mensajeWhatsappConsignacion: catData.whatsappNumber }),
+                    ...(notifData.minStockGlobal !== undefined && { minStockGlobal: notifData.minStockGlobal }),
+                    ...(notifData.diasAnticipacionVencimiento !== undefined && { diasAnticipacionVencimiento: notifData.diasAnticipacionVencimiento }),
+                    ...(notifData.notificarStockBajo !== undefined && { notificarStockBajo: notifData.notificarStockBajo }),
+                    ...(notifData.notificarVencimientos !== undefined && { notificarVencimientos: notifData.notificarVencimientos }),
+                    ...(notifData.notificarVentas !== undefined && { notificarVentas: notifData.notificarVentas }),
+                    ...(notifData.notificarLiquidaciones !== undefined && { notificarLiquidaciones: notifData.notificarLiquidaciones }),
+                    ...(notifData.notificarConsignacionesActivas !== undefined && { notificarConsignacionesActivas: notifData.notificarConsignacionesActivas }),
+                    ...(notifData.diasAvisoConsignacion !== undefined && { diasAvisoConsignacion: notifData.diasAvisoConsignacion }),
+                },
                 create: {
-                    id: 1,
-                    minStockGlobal: 5,
-                    diasAnticipacionVencimiento: 7,
-                    notificarStockBajo: true,
-                    notificarVencimientos: true,
-                    notificarVentas: true,
-                    usarControlDeCaja: true,
-                    diasAvisoConsignacion: 15,
-                    notificarConsignacionesActivas: true,
-                    notificarLiquidaciones: true,
+                    sucursal: { connect: { id: sucursalId } },
+                    minStockGlobal: notifData.minStockGlobal ?? 5,
+                    diasAnticipacionVencimiento: notifData.diasAnticipacionVencimiento ?? 7,
+                    notificarStockBajo: notifData.notificarStockBajo ?? true,
+                    notificarVencimientos: notifData.notificarVencimientos ?? true,
+                    notificarVentas: notifData.notificarVentas ?? true,
+                    usarControlDeCaja: posData.usarControlDeCaja ?? true,
+                    diasAvisoConsignacion: notifData.diasAvisoConsignacion ?? 15,
+                    notificarConsignacionesActivas: notifData.notificarConsignacionesActivas ?? true,
+                    notificarLiquidaciones: notifData.notificarLiquidaciones ?? true,
+                    porcentajeAumentoConsignacion: posData.porcentajeAumentoConsignacion ?? 0,
+                    porcentajeInteresTarjeta: posData.porcentajeInteresTarjeta ?? 0,
+                    mostrarListaPrecios: catData.mostrarListaPrecios ?? false,
+                    mensajeWhatsappConsignacion: catData.whatsappNumber || null,
                 },
             });
 
-            // 4) Caja Principal (depende de sucursal 1)
+            // 4) Caja Principal - usar nombre del branch o default
+            const terminalName = branch?.terminalNombre?.trim() || "Caja Principal";
             await tx.caja.upsert({
-                where: { nombre: "Caja Principal" },
-                update: { activa: true, sucursalId: 1 },
-                create: { nombre: "Caja Principal", activa: true, sucursalId: 1 },
+                where: { nombre: terminalName },
+                update: { activa: true, sucursalId: sucursalId },
+                create: { nombre: terminalName, activa: true, sucursalId: sucursalId },
             });
 
             // 5) Admin user
@@ -306,7 +378,7 @@ export async function POST(req: Request) {
                     hash: adminHash,
                     rol: RolUsuario.ADMIN,
                     activo: true,
-                    sucursalId: 1,
+                    sucursalId: sucursalId,
                 },
             });
 
@@ -349,7 +421,7 @@ export async function POST(req: Request) {
                             hash: staffHash,
                             rol: RolUsuario.EMPLEADO,
                             activo: true,
-                            sucursalId: 1,
+                            sucursalId: sucursalId,
                         },
                     });
                 }

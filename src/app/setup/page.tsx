@@ -1,296 +1,400 @@
-/* eslint-disable */
-// @ts-nocheck
 "use client";
 
-import { useState, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, ArrowRight } from "lucide-react";
+import { useState, useEffect, useCallback } from "react";
 import { toast } from "sonner";
 import { useRouter, useSearchParams } from "next/navigation";
 
-// Sub-components
-import { WelcomeStep } from "./components/WelcomeStep";
-import { BusinessStep } from "./components/BusinessStep";
-import { AdminStep } from "./components/AdminStep";
-import { TeamStep, StaffMember } from "./components/TeamStep";
-import { SubscriptionStep } from "./components/SubscriptionStep";
-import { PaymentStep } from "./components/PaymentStep";
-import { LoadingStep } from "./components/LoadingStep";
+import { SetupShell } from "./components/SetupShell";
+import { WelcomeStep } from "./components/steps/WelcomeStep";
+import { BusinessStep } from "./components/steps/BusinessStep";
+import { AdminStep } from "./components/steps/AdminStep";
+import { BranchStep } from "./components/steps/BranchStep";
+import { PosConfigStep } from "./components/steps/PosConfigStep";
+import { CatalogStep } from "./components/steps/CatalogStep";
+import { NotificationsStep } from "./components/steps/NotificationsStep";
+import { TeamStep } from "./components/steps/TeamStep";
+import { SubscriptionStep } from "./components/steps/SubscriptionStep";
+import { PaymentStep } from "./components/steps/PaymentStep";
+import { LoadingStep } from "./components/steps/LoadingStep";
+import { SuccessStep } from "./components/steps/SuccessStep";
 
-import { SUBSCRIPTION_PLANS, SubscriptionPlan } from "@/constants/subscriptions";
-import { Button } from "@/components/ui/button";
+import { STEPS } from "./constants";
+import { DEFAULT_FORM_DATA } from "./constants";
+import { SUBSCRIPTION_PLANS } from "@/constants/subscriptions";
 
-const stepsCount = 7; // excluding success/loading
+import type {
+  SetupStep,
+  SetupFormData,
+  InitializePayload,
+} from "./types";
+import type { SubscriptionPlan } from "@/constants/subscriptions";
+
+// ─── Helpers ────────────────────────────────────────────────────────────────
+
+function fileToBase64(file: File): Promise<{ data: string; mime: string }> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const result = reader.result as string;
+      const [mimeInfo, data] = result.split(";base64,");
+      const mime = mimeInfo.split(":")[1];
+      resolve({ data, mime });
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+function toSafeData(form: SetupFormData): Record<string, unknown> {
+  const { password: _ap, confirmPassword: _acp, ...safeAdmin } = form.adminData;
+  const safeStaff = form.staff.map(({ password: _sp, ...rest }) => rest);
+  const { logoFile: _lf, logoPreview: _lp, ...safeBranding } = form.branding;
+
+  return {
+    businessName: form.businessName,
+    adminData: safeAdmin,
+    branding: safeBranding,
+    branch: form.branch,
+    posConfig: form.posConfig,
+    catalog: form.catalog,
+    notifications: form.notifications,
+    staff: safeStaff,
+    selectedPlanId: form.selectedPlanId,
+  };
+}
+
+// ─── Main Component ─────────────────────────────────────────────────────────
 
 export default function SetupPage() {
-    const [currentStep, setCurrentStep] = useState(0); // 0 = Welcome
-    const [isProcessing, setIsProcessing] = useState(false);
+  const router = useRouter();
+  const searchParams = useSearchParams();
 
-    const router = useRouter();
-    const searchParams = useSearchParams();
+  const [stepIndex, setStepIndex] = useState(0);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [form, setForm] = useState<SetupFormData>({ ...DEFAULT_FORM_DATA });
+  const [selectedPlan, setSelectedPlan] = useState<SubscriptionPlan | null>(null);
 
-    // Form States
-    const [businessName, setBusinessName] = useState("");
-    const [adminData, setAdminData] = useState({
-        nombre: "",
-        email: "",
-        password: "",
-        confirmPassword: "",
-    });
-    const [staff, setStaff] = useState<StaffMember[]>([
-        { nombre: "", email: "", rol: "EMPLEADO", password: "" }
-    ]);
-    const [selectedPlan, setSelectedPlan] = useState<SubscriptionPlan | null>(null);
+  const currentStep = STEPS[stepIndex]?.id ?? "welcome";
 
-    // Persistence: Load from sessionStorage on mount
-    useEffect(() => {
-        const savedData = sessionStorage.getItem("setup_data");
-        if (savedData) {
-            try {
-                const data = JSON.parse(savedData);
-                setBusinessName(data.businessName || "");
-                setAdminData(data.adminData || { nombre: "", email: "", password: "", confirmPassword: "" });
-                setStaff(data.staff || [{ nombre: "", email: "", rol: "EMPLEADO" }]);
-                if (data.selectedPlanId) {
-                    const plan = SUBSCRIPTION_PLANS.find(p => p.id === data.selectedPlanId);
-                    if (plan) setSelectedPlan(plan);
-                }
-                if (data.currentStep) setCurrentStep(data.currentStep);
-            } catch (e) {
-                console.error("Error loading persisted setup data", e);
-            }
-        }
-    }, []);
+  // ─── Persistence ────────────────────────────────────────────────────────
+  useEffect(() => {
+    const saved = sessionStorage.getItem("setup_data_v2");
+    if (!saved) return;
+    try {
+      const data = JSON.parse(saved);
+      setForm(prev => ({
+        ...prev,
+        businessName: data.businessName ?? prev.businessName,
+        branding: { ...prev.branding, ...data.branding },
+        adminData: { ...prev.adminData, ...data.adminData },
+        branch: { ...prev.branch, ...data.branch },
+        posConfig: { ...prev.posConfig, ...data.posConfig },
+        catalog: { ...prev.catalog, ...data.catalog },
+        notifications: { ...prev.notifications, ...data.notifications },
+        staff: data.staff ?? prev.staff,
+        selectedPlanId: data.selectedPlanId ?? prev.selectedPlanId,
+      }));
+      if (data.selectedPlanId) {
+        const plan = SUBSCRIPTION_PLANS.find(p => p.id === data.selectedPlanId);
+        if (plan) setSelectedPlan(plan);
+      }
+      if (typeof data.stepIndex === "number") setStepIndex(data.stepIndex);
+    } catch {
+      // silently ignore corrupt data
+    }
+  }, []);
 
-    // Persistence: Save to sessionStorage on change (SIN passwords por seguridad)
-    useEffect(() => {
-        const { password: _ap, confirmPassword: _acp, ...safeAdmin } = adminData;
-        const safeStaff = staff.map(({ password: _sp, ...rest }) => rest);
-        const data = {
-            businessName,
-            adminData: safeAdmin,
-            staff: safeStaff,
-            selectedPlanId: selectedPlan?.id,
-            currentStep
-        };
-        sessionStorage.setItem("setup_data", JSON.stringify(data));
-    }, [businessName, adminData, staff, selectedPlan, currentStep]);
-
-    // Handle payment redirect success
-    useEffect(() => {
-        const status = searchParams.get("status");
-        const paymentId = searchParams.get("payment_id");
-        const preferenceId = searchParams.get("preference_id");
-        const subscriptionId = searchParams.get("subscription_id");
-
-        const activePaymentId = paymentId || preferenceId || subscriptionId;
-
-        if (status === "success" && activePaymentId) {
-            handlePaymentSuccess(undefined, activePaymentId);
-        } else if (status === "failure") {
-            toast.error("El pago no pudo ser procesado. Reintenta.");
-            setCurrentStep(5); // Go back to payment selection
-        }
-    }, [searchParams]);
-
-    const handleNext = () => {
-        if (currentStep === 1) { // Business Step
-            if (!businessName.trim()) {
-                toast.error("El nombre de la empresa es requerido");
-                return;
-            }
-        } else if (currentStep === 2) { // Admin Step
-            if (!adminData.nombre || !adminData.email || !adminData.password) {
-                toast.error("Todos los datos del administrador son requeridos");
-                return;
-            }
-            if (adminData.password !== adminData.confirmPassword) {
-                toast.error("Las contraseñas no coinciden");
-                return;
-            }
-        } else if (currentStep === 4) { // Subscription Step
-            if (!selectedPlan) {
-                toast.error("Debes seleccionar un plan");
-                return;
-            }
-        }
-        setCurrentStep(prev => prev + 1);
-    };
-
-    const handleBack = () => setCurrentStep(prev => prev - 1);
-
-    const handlePlanSelected = (plan: SubscriptionPlan) => {
-        setSelectedPlan(plan);
-        setCurrentStep(5); // Go to Payment
-    };
-
-    const handlePaymentSuccess = async (promoCode?: string, paymentId?: string) => {
-        if (!selectedPlan && !promoCode) return;
-
-        // Final Loading Step
-        setCurrentStep(6);
-        setIsProcessing(true);
-
-        try {
-            const payload = {
-                admin: adminData,
-                planId: selectedPlan?.id || 1, // Fallback if promo overrides
-                businessName,
-                staff: staff.filter(s => s.nombre && s.email),
-                promoCode,
-                paymentId
-            };
-
-            const response = await fetch("/api/setup/initialize", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(payload),
-            });
-
-            if (response.ok) {
-                sessionStorage.removeItem("setup_data");
-                setCurrentStep(7); // Success Step
-                setTimeout(() => {
-                    router.push("/dashboard");
-                }, 4000);
-            } else {
-                const error = await response.json();
-                toast.error(error.message || "Error al inicializar el sistema");
-                setCurrentStep(5); // Go back to payment
-            }
-        } catch (error) {
-            console.error("Setup error:", error);
-            toast.error("Ocurrió un error en el servidor");
-            setCurrentStep(5);
-        } finally {
-            setIsProcessing(false);
-        }
-    };
-
-    // Progress Bar Calculation
-    const progressPercentage = Math.min((currentStep / (stepsCount - 2)) * 100, 100);
-
-    return (
-        <div className="min-h-screen bg-[#0A0A0B] text-foreground flex flex-col items-center justify-center relative overflow-hidden font-sans">
-            {/* Background effects */}
-            <div className="fixed top-[-20%] left-[-10%] w-[50%] h-[50%] bg-violet-600/10 blur-[150px] rounded-full pointer-events-none" />
-            <div className="fixed bottom-[-20%] right-[-10%] w-[50%] h-[50%] bg-indigo-900/10 blur-[150px] rounded-full pointer-events-none" />
-
-            {/* Top Progress Bar (Visible outside welcome and loading/success) */}
-            {currentStep > 0 && currentStep < 6 && (
-                <div className="absolute top-0 left-0 w-full h-1 bg-muted/30 z-50">
-                    <motion.div
-                        initial={{ width: 0 }}
-                        animate={{ width: `${progressPercentage}%` }}
-                        transition={{ duration: 0.5, ease: "easeInOut" }}
-                        className="h-full bg-gradient-to-r from-indigo-500 to-violet-500 shadow-[0_0_10px_2px_rgba(139,92,246,0.5)]"
-                    />
-                </div>
-            )}
-
-            <div className="w-full max-w-5xl px-6 py-12 md:py-24 relative z-10 flex flex-col min-h-screen">
-                <div className="flex-1 flex flex-col justify-center">
-                    <AnimatePresence mode="wait" initial={false}>
-                        {currentStep === 0 && (
-                            <motion.div key="step0">
-                                <WelcomeStep onNext={() => setCurrentStep(1)} />
-                            </motion.div>
-                        )}
-
-                        {currentStep === 1 && (
-                            <BusinessStep key="step1" value={businessName} onChange={setBusinessName} onNext={handleNext} />
-                        )}
-
-                        {currentStep === 2 && (
-                            <AdminStep key="step2" data={adminData} onChange={setAdminData} onNext={handleNext} />
-                        )}
-
-                        {currentStep === 3 && (
-                            <TeamStep key="step3" staff={staff} setStaff={setStaff} onNext={handleNext} />
-                        )}
-
-                        {currentStep === 4 && (
-                            <motion.div key="step4" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="w-full">
-                                <div className="text-center mb-10">
-                                    <h2 className="text-3xl font-black tracking-tight">Selecciona tu Plan</h2>
-                                    <p className="text-muted-foreground mt-2">Elige la capacidad que necesita tu ecosistema.</p>
-                                </div>
-                                <SubscriptionStep onPlanSelected={handlePlanSelected} />
-                            </motion.div>
-                        )}
-
-                        {currentStep === 5 && selectedPlan && (
-                            <motion.div key="step5" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="w-full max-w-3xl mx-auto">
-                                <div className="text-center mb-10">
-                                    <h2 className="text-3xl font-black tracking-tight">Activación de Licencia</h2>
-                                    <p className="text-muted-foreground mt-2">Inicia tu pago de forma segura para activar el sistema.</p>
-                                </div>
-                                <PaymentStep plan={selectedPlan} onPaymentSuccess={handlePaymentSuccess} loading={isProcessing} />
-                            </motion.div>
-                        )}
-
-                        {currentStep === 6 && (
-                            <LoadingStep key="step6" />
-                        )}
-
-                        {currentStep === 7 && (
-                            <motion.div
-                                key="step7"
-                                initial={{ opacity: 0, scale: 0.8, filter: "blur(10px)" }}
-                                animate={{ opacity: 1, scale: 1, filter: "blur(0px)" }}
-                                transition={{ type: "spring", stiffness: 100, damping: 20 }}
-                                className="flex flex-col items-center justify-center text-center space-y-6 h-[50vh]"
-                            >
-                                <div className="w-24 h-24 rounded-full bg-green-500/20 flex items-center justify-center mb-4">
-                                    <div className="w-16 h-16 rounded-full bg-green-500 flex items-center justify-center shadow-[0_0_50px_10px_rgba(34,197,94,0.4)]">
-                                        <svg className="w-8 h-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                                            <motion.path
-                                                initial={{ pathLength: 0 }}
-                                                animate={{ pathLength: 1 }}
-                                                transition={{ duration: 0.5, delay: 0.2 }}
-                                                strokeLinecap="round"
-                                                strokeLinejoin="round"
-                                                d="M5 13l4 4L19 7"
-                                            />
-                                        </svg>
-                                    </div>
-                                </div>
-                                <h2 className="text-4xl md:text-5xl font-black tracking-tight">¡Todo Listo!</h2>
-                                <p className="text-muted-foreground text-xl">Tu ecosistema empresarial ha sido configurado con éxito.</p>
-                                <p className="text-sm font-medium text-foreground/50 animate-pulse pt-4">Redirigiendo al panel de control...</p>
-                            </motion.div>
-                        )}
-                    </AnimatePresence>
-                </div>
-
-                {/* Bottom Navigation */}
-                {currentStep > 0 && currentStep < 6 && (
-                    <div className="fixed bottom-0 left-0 w-full p-6 sm:p-8 flex justify-between pointer-events-none z-50">
-                        <div className="pointer-events-auto">
-                            <Button
-                                variant="ghost"
-                                onClick={handleBack}
-                                className="h-12 px-4 rounded-full text-muted-foreground hover:text-foreground hover:bg-white/5 transition-all"
-                            >
-                                <ArrowLeft className="w-4 h-4 mr-2" />
-                                <span className="text-xs font-bold uppercase tracking-widest hidden sm:inline">Atrás</span>
-                            </Button>
-                        </div>
-
-                        {currentStep < 3 && ( // Only show "Next" for Business & Admin step, Team step handles it inside
-                            <div className="pointer-events-auto">
-                                <Button
-                                    onClick={handleNext}
-                                    className="h-12 px-6 rounded-full bg-foreground text-background hover:bg-foreground/90 shadow-[0_4px_20px_-5px_var(--tw-shadow-color)] shadow-foreground/30 hover:-translate-y-1 transition-all"
-                                >
-                                    <span className="text-xs font-bold uppercase tracking-widest">Siguiente</span>
-                                    <ArrowRight className="w-4 h-4 ml-2" />
-                                </Button>
-                            </div>
-                        )}
-                    </div>
-                )}
-            </div>
-        </div>
+  useEffect(() => {
+    const safe = toSafeData(form);
+    sessionStorage.setItem(
+      "setup_data_v2",
+      JSON.stringify({ ...safe, stepIndex })
     );
+  }, [form, stepIndex]);
+
+  // ─── Payment redirect handler ──────────────────────────────────────────
+  useEffect(() => {
+    const status = searchParams.get("status");
+    const paymentId =
+      searchParams.get("payment_id") ??
+      searchParams.get("preference_id") ??
+      searchParams.get("subscription_id");
+
+    if (status === "success" && paymentId) {
+      handlePaymentSuccess(undefined, paymentId);
+    } else if (status === "failure") {
+      toast.error("El pago no pudo ser procesado. Reintenta.");
+      goToStep("payment");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
+
+  // ─── Navigation ─────────────────────────────────────────────────────────
+  const goToStep = useCallback(
+    (step: SetupStep) => {
+      const idx = STEPS.findIndex(s => s.id === step);
+      if (idx >= 0) setStepIndex(idx);
+    },
+    []
+  );
+
+  const handleNext = useCallback(() => {
+    const step = STEPS[stepIndex]?.id;
+
+    if (step === "business") {
+      if (!form.businessName.trim()) {
+        toast.error("El nombre del negocio es requerido");
+        return;
+      }
+    }
+
+    if (step === "admin") {
+      if (!form.adminData.nombre || !form.adminData.email || !form.adminData.password) {
+        toast.error("Todos los datos del administrador son requeridos");
+        return;
+      }
+      if (form.adminData.password !== form.adminData.confirmPassword) {
+        toast.error("Las contraseñas no coinciden");
+        return;
+      }
+      if (form.adminData.password.length < 6) {
+        toast.error("La contraseña debe tener al menos 6 caracteres");
+        return;
+      }
+    }
+
+    if (step === "branch") {
+      if (!form.branch.nombre.trim()) {
+        toast.error("El nombre de la sucursal es requerido");
+        return;
+      }
+      if (!form.branch.terminalNombre.trim()) {
+        toast.error("El nombre de la terminal es requerido");
+        return;
+      }
+    }
+
+    if (step === "subscription") {
+      if (!selectedPlan) {
+        toast.error("Debes seleccionar un plan");
+        return;
+      }
+    }
+
+    setStepIndex(prev => Math.min(prev + 1, STEPS.length - 1));
+  }, [stepIndex, form, selectedPlan]);
+
+  const handleBack = useCallback(() => {
+    setStepIndex(prev => Math.max(prev - 1, 0));
+  }, []);
+
+  const handleSkip = useCallback(() => {
+    setStepIndex(prev => Math.min(prev + 1, STEPS.length - 1));
+  }, []);
+
+  // ─── Plan selection ────────────────────────────────────────────────────
+  const handlePlanSelected = useCallback(
+    (plan: SubscriptionPlan) => {
+      setSelectedPlan(plan);
+      setForm(prev => ({ ...prev, selectedPlanId: plan.id }));
+      goToStep("payment");
+    },
+    [goToStep]
+  );
+
+  // ─── Form updaters ────────────────────────────────────────────────────
+  const updateForm = useCallback(<K extends keyof SetupFormData>(key: K, value: SetupFormData[K]) => {
+    setForm(prev => ({ ...prev, [key]: value }));
+  }, []);
+
+  // ─── Payment + Initialize ──────────────────────────────────────────────
+  const handlePaymentSuccess = async (promoCode?: string, paymentId?: string) => {
+    console.log("🚀 handlePaymentSuccess llamado - promoCode:", promoCode, "paymentId:", paymentId);
+    
+    if (!selectedPlan && !promoCode) {
+      console.warn("⚠️ No hay selectedPlan ni promoCode");
+      return;
+    }
+
+    goToStep("loading");
+    setIsProcessing(true);
+
+    try {
+      let logoPayload: { logoData?: string; logoMime?: string } = {};
+      if (form.branding.logoFile) {
+        const { data, mime } = await fileToBase64(form.branding.logoFile);
+        logoPayload = { logoData: data, logoMime: mime };
+      }
+
+      const payload: InitializePayload = {
+        admin: {
+          nombre: form.adminData.nombre,
+          email: form.adminData.email,
+          password: form.adminData.password,
+        },
+        planId: selectedPlan?.id ?? 1,
+        businessName: form.businessName,
+        staff: form.staff.filter(s => s.nombre && s.email),
+        promoCode,
+        paymentId,
+        branding: {
+          phone: form.branding.phone || undefined,
+          address: form.branding.address || undefined,
+          primaryColor: form.branding.primaryColor,
+          ...logoPayload,
+        },
+        branch: {
+          nombre: form.branch.nombre,
+          terminalNombre: form.branch.terminalNombre,
+        },
+        posConfig: form.posConfig,
+        catalog: form.catalog.mostrarListaPrecios
+          ? {
+              mostrarListaPrecios: form.catalog.mostrarListaPrecios,
+              whatsappNumber: form.catalog.whatsappNumber || undefined,
+            }
+          : undefined,
+        notifications: {
+          minStockGlobal: form.notifications.minStockGlobal,
+          diasAnticipacionVencimiento: form.notifications.diasAnticipacionVencimiento,
+          notificarStockBajo: form.notifications.notificarStockBajo,
+          notificarVencimientos: form.notifications.notificarVencimientos,
+          notificarVentas: form.notifications.notificarVentas,
+          notificarLiquidaciones: form.notifications.notificarLiquidaciones,
+          notificarConsignacionesActivas: form.notifications.notificarConsignacionesActivas,
+          diasAvisoConsignacion: form.notifications.diasAvisoConsignacion,
+        },
+      };
+
+      const response = await fetch("/api/setup/initialize", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      console.log("📡 API Response status:", response.status);
+
+      if (response.ok) {
+        console.log("✅ Setup inicializado correctamente");
+        console.log("📝 Response:", await response.clone().json());
+        sessionStorage.removeItem("setup_data_v2");
+        goToStep("success");
+        setTimeout(() => {
+          console.log("🔄 Redirigiendo a /dashboard...");
+          router.push("/dashboard");
+        }, 4000);
+      } else {
+        const error = await response.json();
+        console.error("❌ API Error:", error);
+        toast.error(error.message || "Error al inicializar el sistema");
+        goToStep("payment");
+      }
+    } catch {
+      toast.error("Ocurrió un error en el servidor");
+      goToStep("payment");
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  // ─── Render ─────────────────────────────────────────────────────────────
+  const stepsWithOwnNext: SetupStep[] = ["welcome", "subscription", "payment", "loading", "success"];
+  const showNextButton = !stepsWithOwnNext.includes(currentStep);
+
+  return (
+    <SetupShell
+      currentStep={currentStep}
+      stepIndex={stepIndex}
+      onBack={handleBack}
+      onNext={handleNext}
+      onSkip={!STEPS[stepIndex]?.required ? handleSkip : undefined}
+      showNextButton={showNextButton}
+    >
+      {currentStep === "welcome" && (
+        <WelcomeStep key="welcome" onNext={() => setStepIndex(1)} />
+      )}
+
+      {currentStep === "business" && (
+        <BusinessStep
+          key="business"
+          businessName={form.businessName}
+          branding={form.branding}
+          onBusinessNameChange={(v) => updateForm("businessName", v)}
+          onBrandingChange={(v) => updateForm("branding", v)}
+        />
+      )}
+
+      {currentStep === "admin" && (
+        <AdminStep
+          key="admin"
+          data={form.adminData}
+          onChange={(v) => updateForm("adminData", v)}
+        />
+      )}
+
+      {currentStep === "branch" && (
+        <BranchStep
+          key="branch"
+          data={form.branch}
+          onChange={(v) => updateForm("branch", v)}
+        />
+      )}
+
+      {currentStep === "pos" && (
+        <PosConfigStep
+          key="pos"
+          data={form.posConfig}
+          onChange={(v) => updateForm("posConfig", v)}
+        />
+      )}
+
+      {currentStep === "catalog" && (
+        <CatalogStep
+          key="catalog"
+          data={form.catalog}
+          onChange={(v) => updateForm("catalog", v)}
+        />
+      )}
+
+      {currentStep === "notifications" && (
+        <NotificationsStep
+          key="notifications"
+          data={form.notifications}
+          onChange={(v) => updateForm("notifications", v)}
+        />
+      )}
+
+      {currentStep === "team" && (
+        <TeamStep
+          key="team"
+          staff={form.staff}
+          onChange={(v) => updateForm("staff", v)}
+        />
+      )}
+
+      {currentStep === "subscription" && (
+        <SubscriptionStep
+          key="subscription"
+          onPlanSelected={handlePlanSelected}
+        />
+      )}
+
+      {currentStep === "payment" && selectedPlan && (
+        <PaymentStep
+          key="payment"
+          plan={selectedPlan}
+          onPaymentSuccess={handlePaymentSuccess}
+          loading={isProcessing}
+        />
+      )}
+
+      {currentStep === "loading" && (
+        <LoadingStep key="loading" />
+      )}
+
+      {currentStep === "success" && (
+        <SuccessStep key="success" />
+      )}
+    </SetupShell>
+  );
 }

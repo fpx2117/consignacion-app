@@ -12,7 +12,7 @@ async function checkAuth() {
   const cookieHeader = h.get("cookie") ?? "";
 
   const host = h.get("x-forwarded-host") ?? h.get("host");
-  const proto = h.get("x-forwarded-proto") ?? "https";
+  const proto = h.get("x-forwarded-proto") ?? (host?.includes("localhost") ? "http" : "https");
 
   if (!host) {
     console.error("Error verificando auth: no se pudo determinar host");

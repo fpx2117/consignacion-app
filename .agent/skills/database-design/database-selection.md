@@ -1,43 +1,44 @@
-# Database Selection (2025)
+# Selección de Base de Datos (2026)
 
-> Choose database based on context, not default.
+> Elige la base de datos según el contexto, no por defecto.
 
-## Decision Tree
+## Árbol de Decisión
 
 ```
-What are your requirements?
+¿Cuáles son tus requisitos?
 │
-├── Full relational features needed
-│   ├── Self-hosted → PostgreSQL
+├── Funcionalidades relacionales completas
+│   ├── Autohospedado → PostgreSQL
 │   └── Serverless → Neon, Supabase
 │
-├── Edge deployment / Ultra-low latency
-│   └── Turso (edge SQLite)
+├── Despliegue en el Edge / Latencia ultra baja
+│   └── Turso (SQLite en el edge)
 │
-├── AI / Vector search
+├── IA / Búsqueda vectorial
 │   └── PostgreSQL + pgvector
 │
-├── Simple / Embedded / Local
+├── Simple / Embebida / Local
 │   └── SQLite
 │
-└── Global distribution
+└── Distribución global
     └── PlanetScale, CockroachDB, Turso
 ```
 
-## Comparison
+## Comparativa
 
-| Database | Best For | Trade-offs |
-|----------|----------|------------|
-| **PostgreSQL** | Full features, complex queries | Needs hosting |
-| **Neon** | Serverless PG, branching | PG complexity |
-| **Turso** | Edge, low latency | SQLite limitations |
-| **SQLite** | Simple, embedded, local | Single-writer |
-| **PlanetScale** | MySQL, global scale | No foreign keys |
+| Base de Datos | Ideal para | Compromisos |
+|---------------|------------|-------------|
+| **PostgreSQL** | Funciones completas, consultas complejas | Requiere gestión de hosting |
+| **Neon** | PG Serverless, branching de datos | Complejidad inherente de PG |
+| **Turso** | Edge, baja latencia | Limitaciones de SQLite |
+| **SQLite** | Proyectos simples, embebidos o locales | Escritor único (Single-writer) |
+| **PlanetScale** | MySQL, escala global | Restricciones en claves foráneas |
 
-## Questions to Ask
+## Preguntas Clave
 
-1. What's the deployment environment?
-2. How complex are the queries?
-3. Is edge/serverless important?
-4. Vector search needed?
-5. Global distribution required?
+1. ¿Cuál es el entorno de despliegue?
+2. ¿Qué tan complejas son las consultas?
+3. ¿Es prioritario el Edge o Serverless?
+4. ¿Necesitas capacidades de búsqueda vectorial (IA)?
+5. ¿Se requiere distribución global de datos?
+```
