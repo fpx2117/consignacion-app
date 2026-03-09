@@ -163,9 +163,9 @@ export async function POST(req: Request) {
                     name: cliente.nombre,
                 },
                 back_urls: {
-                    success: `${baseUrl}/lista-de-precios?sucursalId=${sucursalIdNum}&status=success`,
-                    failure: `${baseUrl}/lista-de-precios?sucursalId=${sucursalIdNum}&status=failure`,
-                    pending: `${baseUrl}/lista-de-precios?sucursalId=${sucursalIdNum}&status=pending`,
+                    success: `${baseUrl}/lista?sucursalId=${sucursalIdNum}&status=success`,
+                    failure: `${baseUrl}/lista?sucursalId=${sucursalIdNum}&status=failure`,
+                    pending: `${baseUrl}/lista?sucursalId=${sucursalIdNum}&status=pending`,
                 },
                 auto_return: "approved",
                 external_reference: JSON.stringify({ ventaId: venta.id, type: "public_store_venta" }),

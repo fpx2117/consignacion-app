@@ -1,56 +1,57 @@
-# Schema Design Principles
+# Principios de Diseño de Esquemas
 
-> Normalization, primary keys, timestamps, relationships.
+> Normalización, claves primarias, marcas de tiempo, relaciones.
 
-## Normalization Decision
+## Decisión de Normalización
 
 ```
-When to normalize (separate tables):
-├── Data is repeated across rows
-├── Updates would need multiple changes
-├── Relationships are clear
-└── Query patterns benefit
+Cuándo normalizar (tablas separadas):
+├── Los datos se repiten en las filas
+├── Las actualizaciones requerirían múltiples cambios
+├── Las relaciones son claras
+└── Los patrones de consulta se benefician
 
-When to denormalize (embed/duplicate):
-├── Read performance critical
-├── Data rarely changes
-├── Always fetched together
-└── Simpler queries needed
+Cuándo desnormalizar (incrustar/duplicar):
+├── El rendimiento de lectura es crítico
+├── Los datos cambian raramente
+├── Siempre se recuperan juntos
+└── Se necesitan consultas más simples
 ```
 
-## Primary Key Selection
+## Selección de Clave Primaria
 
-| Type | Use When |
+| Tipo | Usar Cuando |
 |------|----------|
-| **UUID** | Distributed systems, security |
-| **ULID** | UUID + sortable by time |
-| **Auto-increment** | Simple apps, single database |
-| **Natural key** | Rarely (business meaning) |
+| **UUID** | Sistemas distribuidos, seguridad |
+| **ULID** | UUID + ordenable por tiempo |
+| **Auto-increment** | Aplicaciones simples, base de datos única |
+| **Natural key** | Raramente (significado de negocio) |
 
-## Timestamp Strategy
+## Estrategia de Marcas de Tiempo
 
 ```
-For every table:
-├── created_at → When created
-├── updated_at → Last modified
-└── deleted_at → Soft delete (if needed)
+Para cada tabla:
+├── created_at → Cuándo se creó
+├── updated_at → Última modificación
+└── deleted_at → Borrado lógico (si es necesario)
 
-Use TIMESTAMPTZ (with timezone) not TIMESTAMP
+Usar TIMESTAMPTZ (con zona horaria) no TIMESTAMP
 ```
 
-## Relationship Types
+## Tipos de Relaciones
 
-| Type | When | Implementation |
+| Tipo | Cuándo | Implementación |
 |------|------|----------------|
-| **One-to-One** | Extension data | Separate table with FK |
-| **One-to-Many** | Parent-children | FK on child table |
-| **Many-to-Many** | Both sides have many | Junction table |
+| **Uno a Uno** | Datos de extensión | Tabla separada con FK |
+| **Uno a Muchos** | Padre-hijos | FK en la tabla hija |
+| **Muchos a Muchos** | Ambos lados tienen muchos | Tabla de unión |
 
-## Foreign Key ON DELETE
+## Clave Foránea ON DELETE
 
 ```
-├── CASCADE → Delete children with parent
-├── SET NULL → Children become orphans
-├── RESTRICT → Prevent delete if children exist
-└── SET DEFAULT → Children get default value
+├── CASCADE → Eliminar hijos con el padre
+├── SET NULL → Los hijos se vuelven huérfanos
+├── RESTRICT → Prevenir eliminación si existen hijos
+└── SET DEFAULT → Los hijos obtienen el valor por defecto
+```
 ```

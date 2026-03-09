@@ -1,30 +1,31 @@
-# ORM Selection (2025)
+# Selección de ORM (2025)
 
-> Choose ORM based on deployment and DX needs.
+> Elige el ORM basado en las necesidades de despliegue y DX.
 
-## Decision Tree
+## Árbol de Decisión
 
 ```
-What's the context?
+¿Cuál es el contexto?
 │
-├── Edge deployment / Bundle size matters
-│   └── Drizzle (smallest, SQL-like)
+├── Despliegue en el Edge / El tamaño del bundle importa
+│   └── Drizzle (más pequeño, similar a SQL)
 │
-├── Best DX / Schema-first
-│   └── Prisma (migrations, studio)
+├── Mejor DX / Primero el esquema (Schema-first)
+│   └── Prisma (migraciones, studio)
 │
-├── Maximum control
-│   └── Raw SQL with query builder
+├── Control máximo
+│   └── SQL puro con constructor de consultas (query builder)
 │
-└── Python ecosystem
-    └── SQLAlchemy 2.0 (async support)
+└── Ecosistema Python
+    └── SQLAlchemy 2.0 (soporte asíncrono)
 ```
 
-## Comparison
+## Comparación
 
-| ORM | Best For | Trade-offs |
+| ORM | Ideal para | Compensaciones (Trade-offs) |
 |-----|----------|------------|
-| **Drizzle** | Edge, TypeScript | Newer, less examples |
-| **Prisma** | DX, schema management | Heavier, not edge-ready |
-| **Kysely** | Type-safe SQL builder | Manual migrations |
-| **Raw SQL** | Complex queries, control | Manual type safety |
+| **Drizzle** | Edge, TypeScript | Más nuevo, menos ejemplos |
+| **Prisma** | DX, gestión de esquemas | Más pesado, no apto para Edge |
+| **Kysely** | Constructor SQL con tipos seguros | Migraciones manuales |
+| **Raw SQL** | Consultas complejas, control | Seguridad de tipos manual |
+```

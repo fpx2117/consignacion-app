@@ -291,6 +291,14 @@ function CatalogContent() {
 
             <StoreFooter config={config} />
 
+            <div className="pb-8 sm:pb-10 px-4">
+                <div className="mx-auto max-w-3xl flex justify-center">
+                    <Button asChild variant="outline" className="rounded-xl px-5">
+                        <a href="/login">Ir al panel de login</a>
+                    </Button>
+                </div>
+            </div>
+
             <CartDrawer
                 isOpen={isCartOpen}
                 onClose={() => setIsCartOpen(false)}

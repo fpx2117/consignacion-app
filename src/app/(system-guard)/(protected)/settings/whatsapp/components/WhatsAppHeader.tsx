@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { ArrowLeft, MessageCircle, Save } from "lucide-react";
+import { ArrowLeft, MessageCircle, Save, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { TutorialButton } from "@/components/ui/tutorial-button";
 import { WHATSAPP_TUTORIAL } from "@/lib/tutorial-content";
@@ -14,44 +14,59 @@ interface WhatsAppHeaderProps {
 
 export function WhatsAppHeader({ onSave, saving }: WhatsAppHeaderProps) {
     return (
-        <header className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-            <div className="space-y-2">
-                <Link
-                    href="/settings"
-                    className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors w-fit group"
-                >
-                    <ArrowLeft className="h-4 w-4 transition-transform group-hover:-translate-x-1" />
-                    Volver a Configuración
-                </Link>
-                <div className="flex items-center gap-3">
-                    <div className="p-2.5 bg-emerald-500/10 rounded-2xl border border-emerald-500/20">
-                        <MessageCircle className="h-7 w-7 text-emerald-600" />
-                    </div>
-                    <h1 className="text-3xl md:text-4xl font-black tracking-tight text-foreground">
-                        Mensajería avanzada
-                    </h1>
-                    <TutorialButton steps={WHATSAPP_TUTORIAL} />
-                </div>
-                <p className="text-muted-foreground max-w-xl text-sm leading-relaxed">
-                    Personalizá los mensajes automáticos que tus clientes reciben por WhatsApp.
-                    Diferenciá recordatorios de consignación de tickets de venta directa.
-                </p>
-            </div>
+        <header className="relative overflow-hidden rounded-3xl border border-border/60 bg-gradient-to-br from-card via-card to-emerald-500/[0.03] p-6 md:p-8">
+            {/* Decorative gradient orb */}
+            <div className="pointer-events-none absolute -right-20 -top-20 h-64 w-64 rounded-full bg-emerald-500/[0.07] blur-3xl" />
+            <div className="pointer-events-none absolute -bottom-16 -left-16 h-48 w-48 rounded-full bg-emerald-500/[0.04] blur-3xl" />
 
-            <Button
-                onClick={onSave}
-                disabled={saving}
-                className="h-12 px-8 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold shadow-lg shadow-emerald-500/20 transition-all active:scale-95"
-            >
-                {saving ? (
-                    <div className="h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                ) : (
-                    <>
-                        <Save className="h-5 w-5 mr-2" />
-                        Guardar Cambios
-                    </>
-                )}
-            </Button>
+            <div className="relative z-10 flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
+                {/* Left side */}
+                <div className="flex flex-col gap-4">
+                    <Link
+                        href="/settings"
+                        className="group flex w-fit items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
+                    >
+                        <ArrowLeft className="h-4 w-4 transition-transform group-hover:-translate-x-1" />
+                        Configuración
+                    </Link>
+
+                    <div className="flex items-center gap-4">
+                        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-500/10 ring-1 ring-emerald-500/20">
+                            <MessageCircle className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
+                        </div>
+                        <div>
+                            <div className="flex items-center gap-2">
+                                <h1 className="text-2xl font-bold tracking-tight md:text-3xl">
+                                    Mensajería WhatsApp
+                                </h1>
+                                <TutorialButton steps={WHATSAPP_TUTORIAL} />
+                            </div>
+                            <p className="mt-1 max-w-lg text-sm text-muted-foreground">
+                                Personalizá los mensajes que reciben tus clientes. Consignaciones, ventas y pedidos de tienda.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Save button */}
+                <Button
+                    onClick={onSave}
+                    disabled={saving}
+                    className="h-11 cursor-pointer gap-2 rounded-xl bg-emerald-600 px-6 font-semibold text-white shadow-lg shadow-emerald-600/20 transition-all hover:bg-emerald-700 hover:shadow-emerald-600/30 active:scale-[0.97] disabled:opacity-60"
+                >
+                    {saving ? (
+                        <>
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                            Guardando…
+                        </>
+                    ) : (
+                        <>
+                            <Save className="h-4 w-4" />
+                            Guardar cambios
+                        </>
+                    )}
+                </Button>
+            </div>
         </header>
     );
 }

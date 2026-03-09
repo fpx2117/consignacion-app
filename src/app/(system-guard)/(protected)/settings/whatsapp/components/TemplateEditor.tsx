@@ -1,16 +1,23 @@
 "use client";
 
 import * as React from "react";
-import { Sparkles, Smile, Smartphone } from "lucide-react";
-import { Card } from "@/components/ui/card";
+import { Sparkles, Smile, Smartphone, Bold, Italic, Phone } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import {
     Popover,
     PopoverContent,
     PopoverTrigger,
 } from "@/components/ui/popover";
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipProvider,
+    TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 
 const CURATED_EMOJIS = [
@@ -45,7 +52,7 @@ export function TemplateEditor({
     onMagicMessage,
     whatsappNumber,
     onWhatsappNumberChange,
-    showWhatsappNumber = false
+    showWhatsappNumber = false,
 }: TemplateEditorProps) {
     const textareaRef = React.useRef<HTMLTextAreaElement>(null);
 
@@ -83,123 +90,102 @@ export function TemplateEditor({
         }, 0);
     };
 
-    return (
-        <Card className="rounded-[2.5rem] p-8 border hover:border-emerald-500/30 transition-all bg-card/50 overflow-hidden relative group">
-            <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-10 transition-opacity">
-                <Sparkles className="h-24 w-24 text-emerald-600" />
-            </div>
+    const charCount = value.length;
+    const maxRecommended = 1024;
 
-            <div className="relative z-10 flex flex-col gap-6">
-                <div className="flex items-center justify-between">
-                    <div className="flex flex-col gap-1">
-                        <label className="text-sm font-black uppercase tracking-widest text-emerald-600/80">
-                            {label}
-                        </label>
-                        <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">Editor Inteligente</p>
-                    </div>
-                    <div className="flex items-center gap-3">
-                        {onMagicMessage && (
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={onMagicMessage}
-                                className="h-9 px-4 rounded-xl border-amber-500/20 bg-amber-500/5 text-amber-600 hover:bg-amber-500/10 hover:border-amber-500/40 gap-2 transition-all active:scale-95 group"
-                            >
-                                <Sparkles className="h-4 w-4 transition-transform group-hover:rotate-12" />
-                                <span className="font-bold">Mensaje Mágico</span>
-                            </Button>
-                        )}
-                        <Badge variant="outline" className="bg-emerald-500/10 text-emerald-600 border-emerald-500/20 px-3 font-mono font-bold">
-                            FORMATO WA
-                        </Badge>
-                    </div>
+    return (
+        <Card className="overflow-hidden rounded-2xl border border-border/60 bg-card shadow-sm transition-shadow hover:shadow-md">
+            {/* Card Header */}
+            <div className="flex items-center justify-between border-b border-border/50 bg-muted/30 px-5 py-3.5">
+                <div className="flex items-center gap-3">
+                    <Badge
+                        variant="secondary"
+                        className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20 font-semibold text-xs"
+                    >
+                        {label}
+                    </Badge>
+                    <span className={cn(
+                        "text-xs tabular-nums",
+                        charCount > maxRecommended ? "text-amber-500 font-medium" : "text-muted-foreground"
+                    )}>
+                        {charCount} / {maxRecommended}
+                    </span>
                 </div>
 
-                <Textarea
-                    ref={textareaRef}
-                    value={value}
-                    onChange={(e) => onChange(e.target.value)}
-                    placeholder={placeholder}
-                    className="min-h-[220px] text-lg leading-relaxed bg-background/30 border-none focus-visible:ring-0 resize-none p-0"
-                />
-
-                {showWhatsappNumber && onWhatsappNumberChange && (
-                    <div className="pt-4 border-t border-emerald-500/10 flex flex-col gap-3">
-                        <label className="text-xs font-black uppercase tracking-widest text-emerald-600/80">
-                            Número de WhatsApp para Pedidos
-                        </label>
-                        <div className="flex items-center gap-3">
-                            <div className="p-2 bg-emerald-500/10 rounded-xl">
-                                <Smartphone className="h-4 w-4 text-emerald-600" />
-                            </div>
-                            <input
-                                type="text"
-                                value={whatsappNumber}
-                                onChange={(e) => onWhatsappNumberChange(e.target.value)}
-                                placeholder="Ej: 5491122334455"
-                                className="flex-1 bg-background/30 border-none focus-visible:ring-0 text-sm font-bold placeholder:text-muted-foreground/50"
-                            />
-                        </div>
-                        <p className="text-[10px] text-muted-foreground italic">Este es el número que recibirá los mensajes de tus clientes desde el catálogo.</p>
-                    </div>
+                {onMagicMessage && (
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={onMagicMessage}
+                        className="h-8 cursor-pointer gap-1.5 rounded-lg text-amber-600 hover:bg-amber-500/10 hover:text-amber-600 transition-colors"
+                    >
+                        <Sparkles className="h-3.5 w-3.5" />
+                        <span className="text-xs font-semibold">Generar mensaje</span>
+                    </Button>
                 )}
+            </div>
 
-                <div className="pt-6 border-t border-emerald-500/10 flex flex-col sm:flex-row gap-6">
-                    <div className="flex-1">
-                        <p className="flex items-center gap-2 text-[11px] font-black uppercase tracking-tighter text-muted-foreground mb-4">
-                            <Sparkles className="h-3.5 w-3.5 text-emerald-500" /> Variables dinámicas
-                        </p>
-                        <div className="flex flex-wrap gap-2">
-                            {variables.map((v) => (
-                                <button
-                                    key={v.value}
-                                    onClick={() => insertText(v.value)}
-                                    className="group flex flex-col items-start p-3 bg-white dark:bg-zinc-900 border border-emerald-500/10 hover:border-emerald-500/40 rounded-2xl transition-all hover:bg-emerald-500/5 text-left"
+            <CardContent className="p-0">
+                {/* Toolbar */}
+                <TooltipProvider delayDuration={300}>
+                    <div className="flex items-center gap-1 border-b border-border/40 bg-muted/20 px-3 py-1.5">
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-7 w-7 cursor-pointer rounded-md hover:bg-foreground/5"
+                                    onClick={() => insertText("*", true)}
                                 >
-                                    <span className="font-bold text-emerald-600 group-hover:scale-105 transition-transform">{v.value}</span>
-                                    <span className="text-[10px] text-muted-foreground mt-0.5">{v.label}</span>
-                                </button>
-                            ))}
-                        </div>
-
-                        <p className="flex items-center gap-2 text-[11px] font-black uppercase tracking-tighter text-muted-foreground mb-4 mt-6">
-                            <Smartphone className="h-3.5 w-3.5 text-emerald-500" /> Formato WhatsApp
-                        </p>
-                        <div className="flex gap-2">
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                className="rounded-xl border-emerald-500/10 hover:border-emerald-500/30"
-                                onClick={() => insertText("*", true)}
-                            >
-                                <span className="font-bold">B</span>
-                            </Button>
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                className="rounded-xl border-emerald-500/10 hover:border-emerald-500/30 font-serif italic"
-                                onClick={() => insertText("_", true)}
-                            >
-                                I
-                            </Button>
-                        </div>
-                    </div>
-
-                    <div className="flex-none sm:pt-7">
-                        <Popover>
-                            <PopoverTrigger asChild>
-                                <Button variant="outline" className="h-[60px] rounded-2xl border-emerald-500/10 hover:border-emerald-500/30 hover:bg-emerald-500/5 gap-2 px-6">
-                                    <Smile className="h-5 w-5 text-amber-500" />
-                                    <span className="font-bold">Emoji</span>
+                                    <Bold className="h-3.5 w-3.5" />
                                 </Button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-[300px] p-4 rounded-[2rem] shadow-2xl border-emerald-500/20 bg-card/95 backdrop-blur-xl" align="end">
-                                <div className="grid grid-cols-6 gap-2">
+                            </TooltipTrigger>
+                            <TooltipContent side="bottom" className="text-xs">Negrita (*texto*)</TooltipContent>
+                        </Tooltip>
+
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-7 w-7 cursor-pointer rounded-md hover:bg-foreground/5"
+                                    onClick={() => insertText("_", true)}
+                                >
+                                    <Italic className="h-3.5 w-3.5" />
+                                </Button>
+                            </TooltipTrigger>
+                            <TooltipContent side="bottom" className="text-xs">Cursiva (_texto_)</TooltipContent>
+                        </Tooltip>
+
+                        <div className="mx-1.5 h-4 w-px bg-border/60" />
+
+                        <Popover>
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <PopoverTrigger asChild>
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            className="h-7 w-7 cursor-pointer rounded-md hover:bg-foreground/5"
+                                        >
+                                            <Smile className="h-3.5 w-3.5" />
+                                        </Button>
+                                    </PopoverTrigger>
+                                </TooltipTrigger>
+                                <TooltipContent side="bottom" className="text-xs">Insertar emoji</TooltipContent>
+                            </Tooltip>
+                            <PopoverContent
+                                className="w-72 rounded-xl border border-border/60 bg-card p-3 shadow-xl"
+                                align="start"
+                                sideOffset={8}
+                            >
+                                <p className="mb-2 text-xs font-medium text-muted-foreground">Emojis populares</p>
+                                <div className="grid grid-cols-7 gap-0.5">
                                     {CURATED_EMOJIS.map((emoji) => (
                                         <button
                                             key={emoji}
                                             onClick={() => insertText(emoji)}
-                                            className="h-10 w-10 flex items-center justify-center text-xl hover:bg-emerald-500/10 rounded-xl transition-all active:scale-90"
+                                            className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-lg text-lg transition-colors hover:bg-emerald-500/10 active:scale-90"
                                         >
                                             {emoji}
                                         </button>
@@ -208,8 +194,63 @@ export function TemplateEditor({
                             </PopoverContent>
                         </Popover>
                     </div>
+                </TooltipProvider>
+
+                {/* Textarea */}
+                <Textarea
+                    ref={textareaRef}
+                    value={value}
+                    onChange={(e) => onChange(e.target.value)}
+                    placeholder={placeholder}
+                    className="min-h-[200px] resize-none rounded-none border-0 bg-transparent px-5 py-4 text-sm leading-relaxed placeholder:text-muted-foreground/50 focus-visible:ring-0"
+                />
+
+                {/* Variables section */}
+                <div className="border-t border-border/40 px-5 py-4">
+                    <p className="mb-2.5 text-xs font-medium text-muted-foreground">
+                        Variables dinámicas — click para insertar
+                    </p>
+                    <div className="flex flex-wrap gap-1.5">
+                        {variables.map((v) => (
+                            <button
+                                key={v.value}
+                                onClick={() => insertText(v.value)}
+                                className="group inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-emerald-500/15 bg-emerald-500/[0.06] px-2.5 py-1.5 text-xs transition-all hover:border-emerald-500/30 hover:bg-emerald-500/10 active:scale-95"
+                            >
+                                <code className="font-mono text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">
+                                    {v.value}
+                                </code>
+                                <span className="text-muted-foreground">{v.label}</span>
+                            </button>
+                        ))}
+                    </div>
                 </div>
-            </div>
+
+                {/* WhatsApp number field (only for Tienda tab) */}
+                {showWhatsappNumber && onWhatsappNumberChange && (
+                    <div className="border-t border-border/40 px-5 py-4">
+                        <label className="mb-2.5 flex items-center gap-2 text-xs font-medium text-muted-foreground">
+                            <Phone className="h-3.5 w-3.5 text-emerald-500" />
+                            Número de WhatsApp para pedidos
+                        </label>
+                        <div className="flex items-center gap-3">
+                            <div className="flex h-10 items-center rounded-lg border border-border/60 bg-muted/30 px-3 text-sm font-medium text-muted-foreground">
+                                +54
+                            </div>
+                            <Input
+                                type="tel"
+                                value={whatsappNumber}
+                                onChange={(e) => onWhatsappNumberChange(e.target.value)}
+                                placeholder="9 11 2233 4455"
+                                className="h-10 max-w-xs rounded-lg font-mono tabular-nums"
+                            />
+                        </div>
+                        <p className="mt-2 text-[11px] text-muted-foreground">
+                            Este número recibe los mensajes de pedidos desde tu catálogo online.
+                        </p>
+                    </div>
+                )}
+            </CardContent>
         </Card>
     );
 }

@@ -503,7 +503,7 @@ export default function PosSettingsPage() {
                                     <div className="flex items-center gap-2 sm:gap-3 min-w-0">
                                         <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
                                         <p className="text-xs sm:text-sm font-medium text-primary/80 truncate">
-                                            Activo en: <code className="bg-primary/10 px-1.5 py-0.5 rounded text-primary text-xs">/lista-de-precios</code>
+                                            Activo en: <code className="bg-primary/10 px-1.5 py-0.5 rounded text-primary text-xs">/lista</code>
                                         </p>
                                     </div>
                                     <Button
@@ -511,7 +511,7 @@ export default function PosSettingsPage() {
                                         size="sm"
                                         className="text-primary hover:text-primary hover:bg-primary/10 font-bold rounded-xl shrink-0"
                                         onClick={() => {
-                                            const url = `${window.location.origin}/lista-de-precios${separarListaPorSucursal ? "?sucursalId=" + localStorage.getItem("activeSucursalId") : ""}`;
+                                            const url = `${window.location.origin}/lista${separarListaPorSucursal ? "?sucursalId=" + localStorage.getItem("activeSucursalId") : ""}`;
                                             navigator.clipboard.writeText(url);
                                             toast.success("Link copiado al portapapeles");
                                         }}
