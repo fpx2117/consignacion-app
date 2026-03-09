@@ -11,10 +11,34 @@ export async function GET() {
     if (!auth.ok) return auth.res;
 
     try {
-        const subscription = await prisma.subscription.findUnique({
+        const now = new Date();
+
+        // 1) Intentar suscripcion del usuario actual
+        let subscription = await prisma.subscription.findUnique({
             where: { userId: Number(auth.user.sub) },
             include: { plan: true },
         });
+
+        // 2) Fallback a nivel sistema/programa: evita que admins secundarios queden "sin plan"
+        // cuando la suscripcion esta asociada al admin principal.
+        if (!subscription) {
+            subscription = await prisma.subscription.findFirst({
+                where: {
+                    OR: [
+                        { status: { in: ["ACTIVO", "PRUEBA"] } },
+                        {
+                            status: "CANCELADO",
+                            OR: [
+                                { currentPeriodEnd: { gt: now } },
+                                { trialEndsAt: { gt: now } },
+                            ],
+                        },
+                    ],
+                },
+                orderBy: { createdAt: "desc" },
+                include: { plan: true },
+            });
+        }
 
         if (!subscription) {
             return NextResponse.json({
