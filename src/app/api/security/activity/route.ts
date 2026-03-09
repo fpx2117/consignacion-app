@@ -38,6 +38,6 @@ export async function GET(req: Request) {
         return NextResponse.json({ ok: true, data: logs });
     } catch (error: any) {
         console.error("Fetch audit logs error:", error);
-        return NextResponse.json({ error: error.message || "Error al obtener registros" }, { status: 500 });
+        return NextResponse.json({ error: "Error al obtener los registros de actividad" }, { status: 500 });
     }
 }

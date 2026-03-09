@@ -27,6 +27,7 @@ export async function GET() {
 
         return NextResponse.json({ data: historial });
     } catch (error: any) {
-        return NextResponse.json({ error: error.message }, { status: 500 });
+        console.error("Error al obtener historial de cajas:", error);
+        return NextResponse.json({ error: "Error al obtener el historial de cajas" }, { status: 500 });
     }
 }

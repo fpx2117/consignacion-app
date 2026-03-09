@@ -41,6 +41,6 @@ export async function POST(req: Request) {
         return NextResponse.json({ data: tarifas });
     } catch (error: any) {
         console.error("Error al cotizar envío:", error);
-        return NextResponse.json({ error: error.message || "Error al cotizar envío" }, { status: 500 });
+        return NextResponse.json({ error: "Error al cotizar el envío" }, { status: 500 });
     }
 }

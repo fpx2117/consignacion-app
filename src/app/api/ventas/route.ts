@@ -245,7 +245,7 @@ export async function POST(req: Request) {
   } catch (error: any) {
     console.error("Error POS:", error);
     return NextResponse.json(
-      { error: error.message || "Error al procesar la venta." },
+      { error: "Error al procesar la venta" },
       { status: 500 }
     );
   }

@@ -4,6 +4,7 @@
 //src/app/api/notificaciones/[id]/read/route.ts
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
+import { requireAuth } from "@/lib/requireAuth";
 
 interface RouteContext {
   params: Promise<{ id: string }>;
@@ -13,6 +14,10 @@ export async function PATCH(
   req: Request,
   { params }: RouteContext
 ) {
+  // Auth: Requiere usuario autenticado
+  const auth = await requireAuth();
+  if (!auth.ok) return auth.res;
+
   try {
     const { id: rawId } = await params;
     

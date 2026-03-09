@@ -3,6 +3,15 @@ import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 
 export async function POST(req: Request) {
+  // Guard: Solo permitir si el sistema NO tiene usuarios (primera inicialización)
+  const userCount = await prisma.usuario.count();
+  if (userCount > 0) {
+    return NextResponse.json(
+      { error: "El sistema ya fue inicializado. No se pueden crear usuarios por esta vía." },
+      { status: 403 }
+    );
+  }
+
   const body = await req.json().catch(() => null);
 
   const email = String(body?.email || "").toLowerCase().trim();

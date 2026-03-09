@@ -374,15 +374,7 @@ export async function POST(req: Request) {
         console.error("Initialization error FULL:", error);
 
         return NextResponse.json(
-            {
-                message: "Error interno durante la inicialización",
-                name: error?.name,
-                prismaCode: error?.code,
-                meta: error?.meta,
-                error: error?.message,
-                // stack solo en dev
-                stack: process.env.NODE_ENV === "development" ? error?.stack : undefined,
-            },
+            { message: "Error interno durante la inicialización" },
             { status: 500 }
         );
     }

@@ -9,6 +9,10 @@ export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 export async function GET() {
+  // Auth: Requiere usuario autenticado para ver el logo
+  const auth = await requireAuth();
+  if (!auth.ok) return auth.res;
+
   try {
     const branding = await prisma.branding.findFirst({
       orderBy: { updatedAt: "desc" },
@@ -32,6 +36,10 @@ export async function GET() {
 }
 
 export async function DELETE() {
+  // Auth: Solo ADMIN puede eliminar el logo
+  const auth = await requireAuth();
+  if (!auth.ok) return auth.res;
+
   try {
     // Buscamos el último branding (el que usás como vigente)
     const branding = await prisma.branding.findFirst({

@@ -15,7 +15,8 @@ export async function GET() {
         });
         return NextResponse.json({ data: cajas });
     } catch (error: any) {
-        return NextResponse.json({ error: error.message }, { status: 500 });
+        console.error("Error al obtener las cajas:", error);
+        return NextResponse.json({ error: "Error al obtener las cajas" }, { status: 500 });
     }
 }
 
@@ -37,6 +38,7 @@ export async function POST(req: Request) {
         return NextResponse.json({ data: nuevaCaja });
     } catch (error: any) {
         if (error.code === 'P2002') return NextResponse.json({ error: "Ya existe." }, { status: 400 });
-        return NextResponse.json({ error: error.message }, { status: 500 });
+        console.error("Error al crear la caja:", error);
+        return NextResponse.json({ error: "Error al crear la caja" }, { status: 500 });
     }
 }

@@ -19,14 +19,19 @@ export async function GET(_: Request, { params }: RouteContext) {
     return NextResponse.json({ error: "ID inválido" }, { status: 400 });
   }
 
-  const cliente = await prisma.cliente.findUnique({
-    where: { id },
+  const cliente = await prisma.cliente.findFirst({
+    where: { id, sucursalId: auth.activeSucursalId },
     include: {
-      pagos: { orderBy: { fecha: "desc" }, take: 50 },
-      ventas: { 
-        orderBy: { fecha: "desc" }, 
-        take: 50, 
-        include: { detalles: true } 
+      pagos: {
+        where: { sucursalId: auth.activeSucursalId },
+        orderBy: { fecha: "desc" },
+        take: 50,
+      },
+      ventas: {
+        where: { sucursalId: auth.activeSucursalId },
+        orderBy: { fecha: "desc" },
+        take: 50,
+        include: { detalles: true },
       },
     },
   });

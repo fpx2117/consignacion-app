@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
+import { validatePasswordStrength } from "@/lib/validators/password";
 
 export async function POST(req: Request) {
     try {
@@ -9,6 +10,15 @@ export async function POST(req: Request) {
         if (!token || !password) {
             return NextResponse.json(
                 { message: "Token o nueva contraseña faltante" },
+                { status: 400 }
+            );
+        }
+
+        // Validate password strength server-side
+        const passwordCheck = validatePasswordStrength(password);
+        if (!passwordCheck.valid) {
+            return NextResponse.json(
+                { message: passwordCheck.errors.join(". ") },
                 { status: 400 }
             );
         }

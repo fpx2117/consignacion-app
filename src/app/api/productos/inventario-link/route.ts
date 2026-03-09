@@ -5,11 +5,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { decryptCode, encryptCode, generateShortCode, hashCode } from "@/lib/share-links";
+import { requireAuth } from "@/lib/requireAuth";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 export async function GET(req: NextRequest) {
+  // Auth: Requiere usuario autenticado
+  const auth = await requireAuth();
+  if (!auth.ok) return auth.res;
+
   // Obtenemos sucursalId de la query si existe
   const { searchParams } = new URL(req.url);
   const sucursalId = searchParams.get("sucursalId");

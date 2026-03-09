@@ -2,12 +2,17 @@
 // @ts-nocheck
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { requireAuth } from "@/lib/requireAuth";
 
 // PATCH: Actualizar nombre y/o color de una categoría
 export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  // Auth: Requiere usuario autenticado
+  const auth = await requireAuth();
+  if (!auth.ok) return auth.res;
+
   try {
     const { id } = await params;
     const categoriaId = Number(id);
@@ -43,6 +48,10 @@ export async function DELETE(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  // Auth: Requiere usuario autenticado
+  const auth = await requireAuth();
+  if (!auth.ok) return auth.res;
+
   try {
     const { id } = await params;
     const categoriaId = Number(id);

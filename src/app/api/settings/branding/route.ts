@@ -150,7 +150,7 @@ export async function PUT(req: Request) {
     });
   } catch (error: any) {
     console.error("Error actualizando branding:", error);
-    return NextResponse.json({ error: "Error al actualizar branding", details: error.message }, { status: 500 });
+    return NextResponse.json({ error: "Error al actualizar branding" }, { status: 500 });
   }
 }
 

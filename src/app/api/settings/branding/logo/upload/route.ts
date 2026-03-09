@@ -12,6 +12,10 @@ const MAX_BYTES = 500 * 1024; // 500KB
 const ALLOWED = new Set(["image/png", "image/jpeg", "image/webp"]);
 
 export async function POST(req: NextRequest) {
+  // Auth: Solo ADMIN puede subir logo
+  const auth = await requireAuth();
+  if (!auth.ok) return auth.res;
+
   try {
     const form = await req.formData();
     const file = form.get("file");

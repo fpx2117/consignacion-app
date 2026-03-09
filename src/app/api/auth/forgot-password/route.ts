@@ -76,7 +76,7 @@ export async function POST(req: Request) {
         `,
             });
         } else {
-            console.warn("No RESEND_API_KEY found. Token is:", token, "Link:", resetLink);
+            console.warn("No RESEND_API_KEY found. Password reset email could not be sent for:", cleanEmail);
         }
 
         return NextResponse.json(

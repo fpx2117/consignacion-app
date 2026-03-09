@@ -10,28 +10,38 @@ import { NOTIFICATION_TYPE } from "@/lib/notificationes/notificaciones-types";
 import { seedPlanLimits } from "@/lib/requireSubscription";
 
 // Mercado Pago Webhook Validation
-function validateSignature(xSignature: string, xRequestId: string, body: string) {
+// Ref: https://www.mercadopago.com.ar/developers/es/docs/your-integrations/notifications/webhooks
+function validateSignature(xSignature: string, xRequestId: string, dataId: string | undefined) {
     const secret = paymentConfig.mp.webhookSecret;
+    if (!secret) {
+        console.error("[MercadoPago] Missing webhook secret — cannot validate signature");
+        return false;
+    }
 
-    // The signature format is often "ts=...,v1=..."
-    // But for simpler V2 implementations or IPN it might differ.
-    // Standard V2 validation using HMAC:
+    // The signature format is "ts=...,v1=..."
     const parts = xSignature.split(",");
-    const tsPart = parts.find((p) => p.startsWith("ts="));
-    const v1Part = parts.find((p) => p.startsWith("v1="));
+    const tsPart = parts.find((p) => p.trimStart().startsWith("ts="));
+    const v1Part = parts.find((p) => p.trimStart().startsWith("v1="));
 
     if (!tsPart || !v1Part) return false;
 
     const ts = tsPart.split("=")[1];
     const v1 = v1Part.split("=")[1];
 
-    const manifest = `id:${xRequestId};request-id:${xRequestId};ts:${ts};`;
+    // Build manifest per MP docs: id:[data.id];request-id:[x-request-id];ts:[ts];
+    let manifest = "";
+    if (dataId) manifest += `id:${dataId};`;
+    manifest += `request-id:${xRequestId};ts:${ts};`;
+
     const signature = crypto
         .createHmac("sha256", secret)
         .update(manifest)
         .digest("hex");
 
-    return signature === v1;
+    return crypto.timingSafeEqual(
+        Buffer.from(signature, "hex"),
+        Buffer.from(v1, "hex")
+    );
 }
 
 export async function POST(request: Request) {
@@ -39,15 +49,22 @@ export async function POST(request: Request) {
     const xRequestId = request.headers.get("x-request-id");
     const rawBody = await request.text();
 
-    // 1. Signature Validation (Critical for Security)
-    if (!xSignature || !xRequestId || !validateSignature(xSignature, xRequestId, rawBody)) {
-        console.warn("⚠️ Invalid Mercado Pago Webhook Signature");
-        // Return 200 to suggest reception but log the error (or 403 if we want to be strict)
-        return NextResponse.json({ error: "Invalid signature" }, { status: 403 });
+    let data: any;
+    try {
+        data = JSON.parse(rawBody);
+    } catch {
+        return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
     }
 
-    const data = JSON.parse(rawBody);
     const { action, data: eventData } = data;
+
+    // 1. Signature Validation (Critical for Security)
+    // data.id is included in the manifest per MercadoPago V2 webhook docs
+    const dataId = eventData?.id ? String(eventData.id) : undefined;
+    if (!xSignature || !xRequestId || !validateSignature(xSignature, xRequestId, dataId)) {
+        console.warn("⚠️ Invalid Mercado Pago Webhook Signature");
+        return NextResponse.json({ error: "Invalid signature" }, { status: 403 });
+    }
 
     console.log(`[MercadoPago Webhook] Action: ${action}`, eventData);
 

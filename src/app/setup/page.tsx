@@ -62,12 +62,14 @@ export default function SetupPage() {
         }
     }, []);
 
-    // Persistence: Save to sessionStorage on change
+    // Persistence: Save to sessionStorage on change (SIN passwords por seguridad)
     useEffect(() => {
+        const { password: _ap, confirmPassword: _acp, ...safeAdmin } = adminData;
+        const safeStaff = staff.map(({ password: _sp, ...rest }) => rest);
         const data = {
             businessName,
-            adminData,
-            staff,
+            adminData: safeAdmin,
+            staff: safeStaff,
             selectedPlanId: selectedPlan?.id,
             currentStep
         };

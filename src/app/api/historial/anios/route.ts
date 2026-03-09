@@ -1,11 +1,16 @@
 //src/app/api/historial/anios/route.ts
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { requireAuth } from "@/lib/requireAuth";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 export async function GET() {
+  // Auth: Requiere usuario autenticado
+  const auth = await requireAuth();
+  if (!auth.ok) return auth.res;
+
   try {
     // ✅ Traemos solo fechas únicas (mucho más liviano)
     const movimientos = await prisma.movimientoStock.findMany({

@@ -27,7 +27,7 @@ export async function POST(req: Request) {
     } catch (error: any) {
         console.error("API_MERCADOPAGO_CREATE_ERROR:", error);
         return NextResponse.json(
-            { error: error.message || "Error al crear la preferencia en Mercado Pago" },
+            { error: "Error al crear la preferencia en Mercado Pago" },
             { status: 500 }
         );
     }

@@ -18,6 +18,6 @@ export async function GET(req: Request) {
     return NextResponse.json({ data: { period, topVendidos: data } });
   } catch (error: any) {
     console.error("Top Productos API Error:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: "Error al obtener los productos más vendidos" }, { status: 500 });
   }
 }
