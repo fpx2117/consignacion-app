@@ -1,113 +1,167 @@
-export function getThemeStyles(themeIdentifier: string | undefined | null) {
-    const theme = themeIdentifier || "modern";
+type StoreTheme =
+  | "modern"
+  | "nature"
+  | "ocean"
+  | "sunset"
+  | "luxury"
+  | "minimal"
+  | "barbie"
+  | "tech";
 
-    // 1. Configuración de Bordes (Border Radius)
-    let radiusClass = "rounded-xl"; // Default fallback
-    let buttonRadiusClass = "rounded-xl"; // Default buttons
-    let inputRadiusClass = "rounded-xl"; // Default inputs
+type ThemeStyles = {
+  theme: StoreTheme;
+  radiusClass: string;
+  buttonRadiusClass: string;
+  inputRadiusClass: string;
+  buttonHoverClass: string;
+  pageBgClass: string;
+  cardBgClass: string;
+  headerBgClass: string;
+};
 
-    switch (theme) {
-        // Redondeado extremo (amigable)
-        case "modern":
-        case "ocean":
-        case "barbie":
-            radiusClass = "rounded-[2rem]";
-            buttonRadiusClass = "rounded-full";
-            inputRadiusClass = "rounded-full";
-            break;
-        // Redondeado estándar suave
-        case "nature":
-        case "sunset":
-            radiusClass = "rounded-2xl";
-            buttonRadiusClass = "rounded-2xl";
-            inputRadiusClass = "rounded-xl";
-            break;
-        // Ligeramente redondeado (tecnológico)
-        case "tech":
-            radiusClass = "rounded-lg";
-            buttonRadiusClass = "rounded-md";
-            inputRadiusClass = "rounded-md";
-            break;
-        // Bordes rectos y afilados (elegancia/minimalismo)
-        case "minimal":
-        case "luxury":
-            radiusClass = "rounded-none";
-            buttonRadiusClass = "rounded-none";
-            inputRadiusClass = "rounded-none";
-            break;
-    }
+const THEME_ALIASES: Record<string, StoreTheme> = {
+  modern: "modern",
+  moderno: "modern",
+  nature: "nature",
+  natural: "nature",
+  ocean: "ocean",
+  oceano: "ocean",
+  sunset: "sunset",
+  atardecer: "sunset",
+  luxury: "luxury",
+  lujo: "luxury",
+  minimal: "minimal",
+  minimalista: "minimal",
+  barbie: "barbie",
+  pop: "barbie",
+  tech: "tech",
+  tecnologia: "tech",
+};
 
-    // 2. Comportamiento en Hovers para Botones
-    let buttonHoverClass = "hover:scale-[1.05]"; // Default
-    switch (theme) {
-        case "minimal":
-            buttonHoverClass = "hover:bg-neutral-800 transition-colors";
-            break;
-        case "luxury":
-            buttonHoverClass = "hover:bg-transparent hover:text-primary border-2 border-primary transition-all";
-            break;
-        case "tech":
-            buttonHoverClass = "hover:shadow-[0_0_15px_rgba(var(--primary-rgb),0.5)] transition-shadow";
-            break;
-    }
+const RADII: Record<StoreTheme, Pick<ThemeStyles, "radiusClass" | "buttonRadiusClass" | "inputRadiusClass">> = {
+  modern: {
+    radiusClass: "rounded-[2rem]",
+    buttonRadiusClass: "rounded-full",
+    inputRadiusClass: "rounded-full",
+  },
+  nature: {
+    radiusClass: "rounded-2xl",
+    buttonRadiusClass: "rounded-2xl",
+    inputRadiusClass: "rounded-xl",
+  },
+  ocean: {
+    radiusClass: "rounded-[2rem]",
+    buttonRadiusClass: "rounded-full",
+    inputRadiusClass: "rounded-full",
+  },
+  sunset: {
+    radiusClass: "rounded-2xl",
+    buttonRadiusClass: "rounded-2xl",
+    inputRadiusClass: "rounded-xl",
+  },
+  luxury: {
+    radiusClass: "rounded-none",
+    buttonRadiusClass: "rounded-none",
+    inputRadiusClass: "rounded-none",
+  },
+  minimal: {
+    radiusClass: "rounded-none",
+    buttonRadiusClass: "rounded-none",
+    inputRadiusClass: "rounded-none",
+  },
+  barbie: {
+    radiusClass: "rounded-[2rem]",
+    buttonRadiusClass: "rounded-full",
+    inputRadiusClass: "rounded-full",
+  },
+  tech: {
+    radiusClass: "rounded-lg",
+    buttonRadiusClass: "rounded-md",
+    inputRadiusClass: "rounded-md",
+  },
+};
 
-    // 3. Colores de Fondo (Backgrounds)
-    let pageBgClass = "bg-neutral-50";
-    let cardBgClass = "bg-white";
-    let headerBgClass = "bg-white/90";
+const HOVERS: Record<StoreTheme, string> = {
+  modern: "hover:scale-[1.05]",
+  nature: "hover:scale-[1.05]",
+  ocean: "hover:scale-[1.05]",
+  sunset: "hover:scale-[1.05]",
+  barbie: "hover:scale-[1.05]",
+  minimal: "hover:bg-neutral-800 transition-colors",
+  luxury: "hover:bg-transparent hover:text-primary border-2 border-primary transition-all",
+  tech: "hover:shadow-[0_0_15px_rgba(var(--primary-rgb),0.5)] transition-shadow",
+};
 
-    switch (theme) {
-        case "nature":
-            pageBgClass = "bg-green-50/40";
-            cardBgClass = "bg-white";
-            headerBgClass = "bg-green-50/80";
-            break;
-        case "ocean":
-            pageBgClass = "bg-sky-50/40";
-            cardBgClass = "bg-white";
-            headerBgClass = "bg-sky-50/80";
-            break;
-        case "sunset":
-            pageBgClass = "bg-orange-50/40";
-            cardBgClass = "bg-white";
-            headerBgClass = "bg-orange-50/80";
-            break;
-        case "luxury":
-            pageBgClass = "bg-amber-50/20";
-            cardBgClass = "bg-white";
-            headerBgClass = "bg-white/90";
-            break;
-        case "minimal":
-            pageBgClass = "bg-white";
-            cardBgClass = "bg-white";
-            headerBgClass = "bg-white/95";
-            break;
-        case "barbie":
-            pageBgClass = "bg-pink-50/40";
-            cardBgClass = "bg-white";
-            headerBgClass = "bg-pink-50/80";
-            break;
-        case "tech":
-            pageBgClass = "bg-indigo-50/20";
-            cardBgClass = "bg-white";
-            headerBgClass = "bg-indigo-50/80";
-            break;
-        case "modern":
-        default:
-            pageBgClass = "bg-neutral-50";
-            cardBgClass = "bg-white";
-            headerBgClass = "bg-white/90";
-            break;
-    }
+const SURFACES: Record<StoreTheme, Pick<ThemeStyles, "pageBgClass" | "cardBgClass" | "headerBgClass">> = {
+  modern: {
+    pageBgClass: "bg-[linear-gradient(180deg,var(--secondary)_0%,#ffffff_65%)]",
+    cardBgClass: "bg-white",
+    headerBgClass: "bg-white/90",
+  },
+  nature: {
+    pageBgClass:
+      "bg-[radial-gradient(circle_at_top_right,rgba(var(--primary-rgb),0.14),transparent_42%),linear-gradient(180deg,var(--secondary)_0%,#ffffff_72%)]",
+    cardBgClass: "bg-white",
+    headerBgClass: "bg-[linear-gradient(180deg,var(--secondary)_0%,rgba(255,255,255,0.95)_100%)]",
+  },
+  ocean: {
+    pageBgClass:
+      "bg-[radial-gradient(circle_at_top_right,rgba(var(--primary-rgb),0.16),transparent_44%),linear-gradient(180deg,var(--secondary)_0%,#ffffff_70%)]",
+    cardBgClass: "bg-white",
+    headerBgClass: "bg-[linear-gradient(180deg,var(--secondary)_0%,rgba(255,255,255,0.95)_100%)]",
+  },
+  sunset: {
+    pageBgClass:
+      "bg-[radial-gradient(circle_at_top_right,rgba(var(--primary-rgb),0.15),transparent_45%),linear-gradient(180deg,var(--secondary)_0%,#ffffff_74%)]",
+    cardBgClass: "bg-white",
+    headerBgClass: "bg-[linear-gradient(180deg,var(--secondary)_0%,rgba(255,255,255,0.95)_100%)]",
+  },
+  luxury: {
+    pageBgClass:
+      "bg-[linear-gradient(180deg,var(--secondary)_0%,#ffffff_55%),radial-gradient(circle_at_top,rgba(var(--primary-rgb),0.08),transparent_55%)]",
+    cardBgClass: "bg-white",
+    headerBgClass: "bg-white/95",
+  },
+  minimal: {
+    pageBgClass: "bg-white",
+    cardBgClass: "bg-white",
+    headerBgClass: "bg-white/95",
+  },
+  barbie: {
+    pageBgClass:
+      "bg-[radial-gradient(circle_at_top_right,rgba(var(--primary-rgb),0.14),transparent_40%),linear-gradient(180deg,var(--secondary)_0%,#ffffff_70%)]",
+    cardBgClass: "bg-white",
+    headerBgClass: "bg-[linear-gradient(180deg,var(--secondary)_0%,rgba(255,255,255,0.95)_100%)]",
+  },
+  tech: {
+    pageBgClass:
+      "bg-[radial-gradient(circle_at_top_right,rgba(var(--primary-rgb),0.18),transparent_48%),linear-gradient(180deg,var(--secondary)_0%,#ffffff_75%)]",
+    cardBgClass: "bg-white",
+    headerBgClass: "bg-[linear-gradient(180deg,var(--secondary)_0%,rgba(255,255,255,0.94)_100%)]",
+  },
+};
 
-    return {
-        theme,
-        radiusClass,
-        buttonRadiusClass,
-        inputRadiusClass,
-        buttonHoverClass,
-        pageBgClass,
-        cardBgClass,
-        headerBgClass
-    };
+function normalizeThemeIdentifier(input: string | undefined | null): string {
+  return (input || "modern")
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/\p{Diacritic}/gu, "")
+    .replace(/[\s_-]+/g, "");
+}
+
+function resolveTheme(themeIdentifier: string | undefined | null): StoreTheme {
+  const normalized = normalizeThemeIdentifier(themeIdentifier);
+  return THEME_ALIASES[normalized] || "modern";
+}
+
+export function getThemeStyles(themeIdentifier: string | undefined | null): ThemeStyles {
+  const theme = resolveTheme(themeIdentifier);
+
+  return {
+    theme,
+    ...RADII[theme],
+    buttonHoverClass: HOVERS[theme],
+    ...SURFACES[theme],
+  };
 }

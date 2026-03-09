@@ -29,6 +29,9 @@ import type {
 } from "./types";
 import type { SubscriptionPlan } from "@/constants/subscriptions";
 
+const ENABLED_SETUP_PLAN_IDS = [2, 3] as const;
+const isEnabledSetupPlan = (planId: number) => ENABLED_SETUP_PLAN_IDS.includes(planId as (typeof ENABLED_SETUP_PLAN_IDS)[number]);
+
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
 function fileToBase64(file: File): Promise<{ data: string; mime: string }> {
@@ -95,7 +98,9 @@ export default function SetupPage() {
         selectedPlanId: data.selectedPlanId ?? prev.selectedPlanId,
       }));
       if (data.selectedPlanId) {
-        const plan = SUBSCRIPTION_PLANS.find(p => p.id === data.selectedPlanId);
+        const plan = SUBSCRIPTION_PLANS.find(
+          (p) => p.id === data.selectedPlanId && isEnabledSetupPlan(p.id)
+        );
         if (plan) setSelectedPlan(plan);
       }
       if (typeof data.stepIndex === "number") setStepIndex(data.stepIndex);
@@ -232,7 +237,7 @@ export default function SetupPage() {
           email: form.adminData.email,
           password: form.adminData.password,
         },
-        planId: selectedPlan?.id ?? 1,
+        planId: selectedPlan?.id ?? 2,
         businessName: form.businessName,
         staff: form.staff.filter(s => s.nombre && s.email),
         promoCode,

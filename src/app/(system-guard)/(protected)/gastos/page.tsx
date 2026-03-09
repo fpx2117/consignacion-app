@@ -4,10 +4,18 @@
 
 import * as React from "react";
 import {
-    Plus, Wallet, Calendar, AlertTriangle,
-    Trash2, Edit2, Filter, ChevronRight,
-    MoreVertical, Receipt, Repeat, Share2,
-    ExternalLink, MessageSquare, Copy, Search, User, GitFork
+    Plus,
+    Calendar,
+    AlertTriangle,
+    Repeat,
+    Trash2,
+    ExternalLink,
+    MessageSquare,
+    Copy,
+    Search,
+    User,
+    GitFork,
+    Share2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { apiService } from "@/lib/apiService";
@@ -15,16 +23,8 @@ import { useSucursalStore } from "@/store/useSucursalStore";
 import type { Gasto, CategoriaGasto } from "@/lib/types";
 import { formatMoney, formatDate } from "@/lib/utils-format";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import {
     Dialog,
     DialogContent,
@@ -41,6 +41,10 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
+import { GastosHeader } from "./components/gastos-header";
+import { GastosSummaryCards } from "./components/gastos-summary-cards";
+import { GastosFilters } from "./components/gastos-filters";
+import { GastosList } from "./components/gastos-list";
 
 export default function GastosPage() {
     const [gastos, setGastos] = React.useState<Gasto[]>([]);
@@ -105,205 +109,35 @@ export default function GastosPage() {
 
     return (
         <div className="max-w-6xl mx-auto space-y-8 p-4 md:p-8 animate-in fade-in duration-500 pb-32">
-            {/* Header */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 px-2 md:px-0">
-                <div className="space-y-1">
-                    <div className="flex items-center gap-2 mb-1">
-                        <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
-                            <Wallet className="h-4 w-4 text-primary" />
-                        </div>
-                        <span className="text-[10px] md:text-xs font-black text-primary uppercase tracking-[0.2em]">Finanzas del Negocio</span>
-                    </div>
-                    <h1 className="text-3xl md:text-4xl lg:text-5xl font-black text-foreground tracking-tighter leading-none">
-                        Gestión de <span className="text-primary">Gastos</span>
-                    </h1>
-                </div>
+            <GastosHeader
+                onOpenCategories={() => setCatModalOpen(true)}
+                onOpenNew={() => {
+                    setEditingGasto(null);
+                    setModalOpen(true);
+                }}
+            />
 
-                <div className="flex items-center gap-3 w-full md:w-auto">
-                    <Button variant="outline" onClick={() => setCatModalOpen(true)} className="flex-1 md:flex-none rounded-2xl h-12 md:h-14 font-black text-xs uppercase tracking-widest border-primary/20 hover:bg-primary/5 transition-all">
-                        Categorías
-                    </Button>
-                    <Button onClick={() => { setEditingGasto(null); setModalOpen(true); }} className="flex-[1.5] md:flex-none bg-primary hover:bg-primary/90 text-primary-foreground rounded-2xl h-12 md:h-14 font-black text-xs uppercase tracking-widest gap-2 shadow-xl shadow-primary/20 active:scale-95 transition-all">
-                        <Plus className="h-4 w-4 stroke-[3px]" /> Nuevo Gasto
-                    </Button>
-                </div>
-            </div>
+            <GastosSummaryCards totalPagado={totalPagado} totalPendiente={totalPendiente} />
 
-            {/* Summary Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <Card className="rounded-2xl border-emerald-500/20 bg-emerald-500/5">
-                    <CardHeader className="pb-2">
-                        <CardTitle className="text-sm font-bold text-emerald-600 uppercase tracking-widest">Total Pagado</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-3xl font-black text-emerald-700">{formatMoney(totalPagado)}</div>
-                        <p className="text-xs text-emerald-600/70 mt-1">Suma de egresos efectivos en el periodo</p>
-                    </CardContent>
-                </Card>
-                <Card className="rounded-2xl border-orange-500/20 bg-orange-500/5">
-                    <CardHeader className="pb-2">
-                        <CardTitle className="text-sm font-bold text-orange-600 uppercase tracking-widest">Total Pendiente</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-3xl font-black text-orange-700">{formatMoney(totalPendiente)}</div>
-                        <p className="text-xs text-orange-600/70 mt-1">Pagos futuros y vencimientos próximos</p>
-                    </CardContent>
-                </Card>
-            </div>
+            <GastosFilters
+                filterEstado={filterEstado}
+                filterCategoria={filterCategoria}
+                categorias={categorias}
+                onEstadoChange={setFilterEstado}
+                onCategoriaChange={setFilterCategoria}
+            />
 
-            {/* Filters */}
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 bg-card/50 backdrop-blur-sm p-3 rounded-2xl border border-border/50 shadow-sm mx-2 md:mx-0">
-                <div className="flex items-center gap-2 px-3 sm:border-r border-border/50 sm:pr-4 py-1 sm:py-0">
-                    <Filter className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Filtros</span>
-                </div>
-
-                <div className="grid grid-cols-2 sm:flex items-center gap-2 flex-1">
-                    <Select value={filterEstado} onValueChange={setFilterEstado}>
-                        <SelectTrigger className="w-full sm:w-[160px] border-transparent bg-muted/30 rounded-xl h-11 text-xs font-black uppercase tracking-widest hover:bg-muted/50 transition-all">
-                            <SelectValue placeholder="Estado" />
-                        </SelectTrigger>
-                        <SelectContent className="rounded-2xl border-none shadow-2xl">
-                            <SelectItem value="all" className="font-bold">Todos los Estados</SelectItem>
-                            <SelectItem value="PAGADO" className="font-bold text-emerald-600">Pagados</SelectItem>
-                            <SelectItem value="PENDIENTE" className="font-bold text-orange-600">Pendientes</SelectItem>
-                        </SelectContent>
-                    </Select>
-
-                    <Select value={filterCategoria} onValueChange={setFilterCategoria}>
-                        <SelectTrigger className="w-full sm:w-auto sm:min-w-[180px] border-transparent bg-muted/30 rounded-xl h-11 text-xs font-black uppercase tracking-widest hover:bg-muted/50 transition-all">
-                            <SelectValue placeholder="Categoría" />
-                        </SelectTrigger>
-                        <SelectContent className="rounded-2xl border-none shadow-2xl">
-                            <SelectItem value="all" className="font-bold">Todas las Categorías</SelectItem>
-                            {categorias.map((cat) => (
-                                <SelectItem key={cat.id} value={String(cat.id)} className="font-bold">{cat.nombre}</SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
-                </div>
-            </div>
-
-            {/* Main List */}
-            <div className="space-y-3">
-                {loading ? (
-                    [...Array(3)].map((_, i) => <Skeleton key={i} className="h-20 w-full rounded-2xl" />)
-                ) : gastos.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
-                        <div className="h-20 w-20 rounded-full bg-muted/50 flex items-center justify-center mb-4">
-                            <Receipt className="h-10 w-10 opacity-20" />
-                        </div>
-                        <p className="text-lg font-bold">No hay gastos registrados</p>
-                        <p className="text-sm mt-1">Los egresos del negocio aparecerán aquí</p>
-                    </div>
-                ) : (
-                    <div className="grid gap-4 px-2 md:px-0">
-                        {gastos.map((g) => {
-                            const isOwner = g.sucursalId === activeSucursalId;
-                            return (
-                                <div
-                                    key={`${g.id}-${g.esVistaCompartida ? "shared" : "own"}`}
-                                    className={cn(
-                                        "group p-1 rounded-[2rem] transition-all hover:scale-[1.01] active:scale-[0.99]",
-                                        g.estado === "PENDIENTE" ? "bg-gradient-to-br from-orange-500/20 to-transparent" : "bg-gradient-to-br from-emerald-500/20 to-transparent"
-                                    )}
-                                >
-                                    <div className="bg-card border border-white/10 rounded-[1.8rem] p-4 md:p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 shadow-sm group-hover:shadow-xl transition-all">
-                                        <div className="flex items-center gap-4 w-full sm:w-auto">
-                                            <div className={cn(
-                                                "h-14 w-14 rounded-2xl flex items-center justify-center shrink-0 shadow-inner transition-transform group-hover:rotate-12",
-                                                g.estado === "PENDIENTE" ? "bg-orange-500/10 text-orange-500" : "bg-emerald-500/10 text-emerald-500"
-                                            )}>
-                                                {g.esRecurrente ? <Repeat className="h-7 w-7" /> : <Receipt className="h-7 w-7" />}
-                                            </div>
-                                            <div className="min-w-0 flex-1">
-                                                <div className="flex flex-wrap items-center gap-2 mb-1">
-                                                    <h3 className="text-lg md:text-xl font-black tracking-tighter truncate leading-none">{g.motivo}</h3>
-                                                    {g.cuotaActual && g.cuotaTotal && (
-                                                        <Badge variant="outline" className="text-[10px] font-black border-primary/30 text-primary bg-primary/5 rounded-full px-2">
-                                                            Cuota {g.cuotaActual}/{g.cuotaTotal}
-                                                        </Badge>
-                                                    )}
-                                                    <Badge variant="secondary" className="text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full bg-primary/5 text-primary/70">
-                                                        {g.categoria?.nombre}
-                                                    </Badge>
-                                                    {(g.esCompartido || g.esVistaCompartida) && (
-                                                        <Badge variant="outline" className="text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full border-violet-400/40 bg-violet-500/10 text-violet-600 flex items-center gap-1">
-                                                            <GitFork className="h-2.5 w-2.5" />
-                                                            Compartido
-                                                        </Badge>
-                                                    )}
-                                                </div>
-                                                <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4 text-[11px] font-bold text-muted-foreground/60 uppercase tracking-widest">
-                                                    <span className="flex items-center gap-1.5">
-                                                        <Calendar className="h-3 w-3" /> {formatDate(g.fecha)}
-                                                    </span>
-                                                    {g.fechaVencimiento && (
-                                                        <span className={cn(
-                                                            "flex items-center gap-1.5",
-                                                            new Date(g.fechaVencimiento) < new Date() && g.estado === "PENDIENTE" ? "text-destructive" : "text-orange-500/70"
-                                                        )}>
-                                                            <AlertTriangle className="h-3 w-3" /> Vence: {formatDate(g.fechaVencimiento)}
-                                                        </span>
-                                                    )}
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        <div className="flex items-center justify-between sm:justify-end gap-6 w-full sm:w-auto pt-4 sm:pt-0 border-t sm:border-t-0 border-white/5">
-                                            <div className="text-left sm:text-right">
-                                                <div className="text-2xl md:text-3xl font-black tracking-tighter leading-none mb-1">{formatMoney(Number(g.monto))}</div>
-                                                {g.esVistaCompartida && (
-                                                    <p className="text-[9px] font-black uppercase tracking-widest text-violet-500/70 mb-1">tu parte</p>
-                                                )}
-                                                <Badge className={cn(
-                                                    "text-[9px] font-black uppercase tracking-[0.2em] px-3 py-1 rounded-full",
-                                                    g.estado === "PENDIENTE" ? "bg-orange-500 text-white" : "bg-emerald-500 text-white"
-                                                )}>
-                                                    {g.estado}
-                                                </Badge>
-                                            </div>
-
-                                            <DropdownMenu>
-                                                <DropdownMenuTrigger asChild>
-                                                    <Button variant="ghost" size="icon" className="rounded-2xl h-12 w-12 bg-muted/20 hover:bg-primary/10 hover:text-primary transition-all">
-                                                        <MoreVertical className="h-5 w-5" />
-                                                    </Button>
-                                                </DropdownMenuTrigger>
-                                                <DropdownMenuContent align="end" className="rounded-[1.5rem] border-none shadow-2xl p-2 w-56">
-                                                    <DropdownMenuItem onClick={() => handleShareClick(g)} className="gap-3 py-3 rounded-xl font-bold cursor-pointer focus:bg-emerald-500/10 focus:text-emerald-600 transition-colors">
-                                                        <div className="h-8 w-8 rounded-lg bg-emerald-500/10 flex items-center justify-center">
-                                                            <Share2 className="h-4 w-4 text-emerald-500" />
-                                                        </div>
-                                                        Compartir Voucher
-                                                    </DropdownMenuItem>
-                                                    {isOwner && (
-                                                        <>
-                                                            <DropdownMenuItem onClick={() => { setEditingGasto(g); setModalOpen(true); }} className="gap-3 py-3 rounded-xl font-bold cursor-pointer focus:bg-blue-500/10 focus:text-blue-600 transition-colors">
-                                                                <div className="h-8 w-8 rounded-lg bg-blue-500/10 flex items-center justify-center">
-                                                                    <Edit2 className="h-4 w-4 text-blue-500" />
-                                                                </div>
-                                                                Editar Gasto
-                                                            </DropdownMenuItem>
-                                                            <div className="h-px bg-muted my-1 mx-2" />
-                                                            <DropdownMenuItem onClick={() => handleDelete(g.id)} className="gap-3 py-3 rounded-xl font-bold cursor-pointer text-destructive focus:bg-destructive/10 transition-colors">
-                                                                <div className="h-8 w-8 rounded-lg bg-destructive/10 flex items-center justify-center">
-                                                                    <Trash2 className="h-4 w-4" />
-                                                                </div>
-                                                                Eliminar
-                                                            </DropdownMenuItem>
-                                                        </>
-                                                    )}
-                                                </DropdownMenuContent>
-                                            </DropdownMenu>
-                                        </div>
-                                    </div>
-                                </div>
-                            );
-                        })}
-                    </div>
-                )}
-            </div>
+            <GastosList
+                gastos={gastos as any}
+                loading={loading}
+                activeSucursalId={activeSucursalId}
+                onShare={(gasto) => handleShareClick(gasto as any)}
+                onEdit={(gasto) => {
+                    setEditingGasto(gasto as any);
+                    setModalOpen(true);
+                }}
+                onDelete={handleDelete}
+            />
 
             {/* Modals */}
             {modalOpen && (

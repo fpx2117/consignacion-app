@@ -1,8 +1,9 @@
+import "dotenv/config";
 import { createServer } from "http";
 import { parse } from "url";
 import next from "next";
 import { Server } from "socket.io";
-// @ts-ignore — cookie viene como dep transitiva de socket.io/engine.io
+// @ts-expect-error cookie viene como dep transitiva de socket.io/engine.io
 import { parse as parseCookie } from "cookie";
 import { jwtVerify } from "jose";
 
@@ -16,6 +17,32 @@ const SOCKET_DISPATCH_SECRET = process.env.SOCKET_DISPATCH_SECRET || process.env
 const JWT_SECRET_RAW = process.env.JWT_SECRET;
 const JWT_COOKIE_NAME = process.env.JWT_COOKIE_NAME || "access_token";
 
+function looksLikeJwt(value: string | undefined) {
+  if (!value) return false;
+  return /^eyJ[\w-]*\.[\w-]*\.[\w-]*$/.test(value);
+}
+
+function extractJwtFromCookies(cookieHeader: string) {
+  const cookies = parseCookie(cookieHeader || "");
+
+  const candidates = [
+    cookies[JWT_COOKIE_NAME],
+    cookies.access_token,
+    cookies.token,
+    cookies.jwt,
+    cookies.auth_token,
+  ];
+
+  const direct = candidates.find((candidate) => looksLikeJwt(candidate));
+  if (direct) return direct;
+
+  for (const value of Object.values(cookies) as Array<string | undefined>) {
+    if (looksLikeJwt(value)) return value;
+  }
+
+  return null;
+}
+
 // 1. Extraer Hostname de la variable de entorno
 let hostname = "localhost";
 try {
@@ -23,7 +50,7 @@ try {
     const urlObj = new URL(process.env.NEXT_PUBLIC_BASE_URL);
     hostname = urlObj.hostname;
   }
-} catch (e) {
+} catch {
   console.warn("⚠️ No se pudo parsear NEXT_PUBLIC_BASE_URL, usando localhost");
 }
 
@@ -78,8 +105,9 @@ app.prepare().then(() => {
             console.warn("⚠️ [Server] Fallo en dispatch: io o notification ausente", { hasIo: !!io, hasNotif: !!notification });
             throw new Error("IO no inicializado o faltan datos");
           }
-        } catch (e: any) {
-          console.error("❌ Error Dispatch:", e.message);
+        } catch (e: unknown) {
+          const message = e instanceof Error ? e.message : "Error desconocido";
+          console.error("❌ Error Dispatch:", message);
           res.statusCode = 400;
           res.end(JSON.stringify({ error: "Error en dispatch" }));
         }
@@ -117,8 +145,7 @@ app.prepare().then(() => {
   io.use(async (socket, next) => {
     try {
       const cookieHeader = socket.handshake.headers.cookie || "";
-      const cookies = parseCookie(cookieHeader);
-      const token = cookies[JWT_COOKIE_NAME];
+      const token = extractJwtFromCookies(cookieHeader);
 
       if (!token) {
         return next(new Error("Autenticación requerida"));

@@ -10,6 +10,9 @@ import { cn } from "@/lib/utils";
 import { SUBSCRIPTION_PLANS, SubscriptionPlan } from "@/constants/subscriptions";
 import { useDolarBlue } from "@/hooks/useDolarBlue";
 
+const ENABLED_PLAN_IDS = [2, 3] as const;
+const isEnabledPlan = (planId: number) => ENABLED_PLAN_IDS.includes(planId as (typeof ENABLED_PLAN_IDS)[number]);
+
 const ARSFormatter = new Intl.NumberFormat("es-AR", {
     style: "decimal",
     useGrouping: true,
@@ -148,7 +151,9 @@ function DowngradeWarningModal({ targetPlan, currentPlan, currency, onConfirm, o
 // ─── Main Component ──────────────────────────────────────────────────────────
 export function PricingTable({ onSelectPlan, currentPlanId }: PricingTableProps) {
     const [currency, setCurrency] = useState<"ARS" | "USD">("ARS");
-    const [plans, setPlans] = useState<SubscriptionPlan[]>(SUBSCRIPTION_PLANS);
+    const [plans, setPlans] = useState<SubscriptionPlan[]>(
+        SUBSCRIPTION_PLANS.filter((plan) => isEnabledPlan(plan.id))
+    );
     const { rate, isLoading } = useDolarBlue();
 
     // Downgrade warning state
@@ -161,7 +166,8 @@ export function PricingTable({ onSelectPlan, currentPlanId }: PricingTableProps)
                 const res = await fetch('/api/subscriptions/plans');
                 if (res.ok) {
                     const data = await res.json();
-                    const mergedPlans = SUBSCRIPTION_PLANS.map(basePlan => {
+                    const basePlans = SUBSCRIPTION_PLANS.filter((plan) => isEnabledPlan(plan.id));
+                    const mergedPlans = basePlans.map(basePlan => {
                         const dbPlan = data.plans.find((p: any) => p.id === basePlan.id);
                         if (dbPlan) {
                             return {
@@ -191,7 +197,7 @@ export function PricingTable({ onSelectPlan, currentPlanId }: PricingTableProps)
         }
     };
 
-    const currentPlan = SUBSCRIPTION_PLANS.find(p => p.id === currentPlanId);
+    const currentPlan = SUBSCRIPTION_PLANS.find((plan) => plan.id === currentPlanId);
 
     return (
         <>
@@ -261,7 +267,14 @@ export function PricingTable({ onSelectPlan, currentPlanId }: PricingTableProps)
                     </div>
                 </div>
 
-                <div className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3 max-w-7xl mx-auto items-stretch">
+                <div
+                    className={cn(
+                        "grid grid-cols-1 gap-8 mx-auto items-stretch",
+                        plans.length === 2
+                            ? "max-w-5xl md:grid-cols-2"
+                            : "max-w-7xl md:grid-cols-2 lg:grid-cols-3"
+                    )}
+                >
                     {plans.map((plan) => (
                         <motion.div
                             key={plan.id}
