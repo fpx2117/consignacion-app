@@ -28,13 +28,13 @@ export function GastosHeader({ onOpenCategories, onOpenNew }: GastosHeaderProps)
         <Button
           variant="outline"
           onClick={onOpenCategories}
-          className="flex-1 md:flex-none rounded-2xl h-12 md:h-14 font-semibold text-xs uppercase tracking-[0.12em] border-primary/20 hover:bg-primary/5 transition-all"
+          className="flex-1 md:flex-none rounded-2xl h-12 md:h-14 font-bold text-xs uppercase tracking-widest border-primary/20 hover:bg-primary/5 transition-all"
         >
           Categorias
         </Button>
         <Button
           onClick={onOpenNew}
-          className="flex-[1.5] md:flex-none bg-primary hover:bg-primary/90 text-primary-foreground rounded-2xl h-12 md:h-14 font-semibold text-xs uppercase tracking-[0.12em] gap-2 shadow-xl shadow-primary/20 active:scale-95 transition-all"
+          className="flex-[1.5] md:flex-none bg-primary hover:bg-primary/90 text-primary-foreground rounded-2xl h-12 md:h-14 font-bold text-xs uppercase tracking-widest gap-2 shadow-xl shadow-primary/20 active:scale-95 transition-all"
         >
           <Plus className="h-4 w-4" /> Nuevo Gasto
         </Button>

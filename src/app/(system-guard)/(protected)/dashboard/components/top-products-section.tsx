@@ -6,7 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatNumber, formatMoney } from "@/lib/utils-format";
 import { motion } from "framer-motion";
-import { TrendingUp, Package, ChevronRight } from "lucide-react";
+import { TrendingUp, Package } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 import { DashboardFilter } from "@/lib/types";
@@ -21,34 +21,36 @@ export function TopProductsSection({ top, loading, filter = "all" }: { top: any;
       transition={{ delay: index * 0.05 }}
     >
       <div
-        className="group flex items-center gap-4 p-3 pr-4 rounded-2xl bg-card/40 border border-border/50 hover:bg-card/60 transition-all duration-300 ease-out backdrop-blur-md"
+        className="group rounded-2xl border border-border/50 bg-card/40 p-3 sm:p-3.5 transition-all duration-300 ease-out hover:bg-card/60 backdrop-blur-md"
       >
-        {/* Ranking */}
-        <div className={cn(
-          "relative flex h-12 w-12 shrink-0 items-center justify-center rounded-xl text-lg font-black transition-colors shadow-inner",
-          index === 0 ? "bg-amber-100 text-amber-600 dark:bg-amber-900/20 dark:text-amber-400 ring-1 ring-amber-500/20" :
-            index === 1 ? "bg-slate-200 text-slate-600 dark:bg-slate-800 dark:text-slate-400" :
-              index === 2 ? "bg-orange-100 text-orange-700 dark:bg-orange-900/20 dark:text-orange-400" :
-                "bg-slate-50 text-slate-400 dark:bg-slate-900 dark:text-slate-600"
-        )}>
-          {rank}
-        </div>
-
-        <div className="flex-1 min-w-0">
-          <p className="truncate text-sm font-bold text-foreground/90 group-hover:text-primary transition-colors">
-            {name}
-          </p>
-          <div className="flex items-center gap-2 mt-0.5">
-            <span className="text-[10px] uppercase tracking-wider font-bold text-muted-foreground/60 bg-muted/50 px-1.5 rounded-sm">
-              Producto
-            </span>
+        <div className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-3 sm:gap-4">
+          {/* Ranking */}
+          <div className={cn(
+            "relative flex h-10 w-10 sm:h-12 sm:w-12 shrink-0 items-center justify-center rounded-xl text-sm sm:text-lg font-black transition-colors shadow-inner",
+            index === 0 ? "bg-amber-100 text-amber-600 dark:bg-amber-900/20 dark:text-amber-400 ring-1 ring-amber-500/20" :
+              index === 1 ? "bg-slate-200 text-slate-600 dark:bg-slate-800 dark:text-slate-400" :
+                index === 2 ? "bg-orange-100 text-orange-700 dark:bg-orange-900/20 dark:text-orange-400" :
+                  "bg-slate-50 text-slate-400 dark:bg-slate-900 dark:text-slate-600"
+          )}>
+            {rank}
           </div>
-        </div>
 
-        <div className="flex items-center gap-2 text-right">
-          <div className="flex flex-col items-end">
-            <p className="text-base font-black tabular-nums tracking-tight">{detailMain}</p>
-            <p className="text-[10px] font-medium text-muted-foreground">{detailSub}</p>
+          <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 sm:gap-3 min-w-0">
+            <div className="min-w-0">
+              <p className="truncate text-sm sm:text-[15px] font-bold text-foreground/90 group-hover:text-primary transition-colors">
+                {name}
+              </p>
+              <div className="flex items-center gap-2 mt-0.5">
+                <span className="text-[10px] uppercase tracking-wider font-bold text-muted-foreground/60 bg-muted/50 px-1.5 rounded-sm">
+                  Producto
+                </span>
+              </div>
+            </div>
+
+            <div className="text-right pl-1">
+              <p className="text-sm sm:text-base font-black tabular-nums tracking-tight leading-none">{detailMain}</p>
+              <p className="text-[10px] sm:text-[11px] font-medium text-muted-foreground whitespace-nowrap">{detailSub}</p>
+            </div>
           </div>
         </div>
       </div>
@@ -59,28 +61,28 @@ export function TopProductsSection({ top, loading, filter = "all" }: { top: any;
   const showConsignados = filter === "all" || filter === "consignacion";
 
   return (
-    <div className={`grid gap-8 ${showVentas && showConsignados ? "xl:grid-cols-2" : "grid-cols-1"}`}>
+    <div className={`grid gap-5 sm:gap-6 lg:gap-8 ${showVentas && showConsignados ? "lg:grid-cols-2" : "grid-cols-1"}`}>
       {/* SECCIÓN VENTAS */}
       {showVentas && (
-        <section className="space-y-4">
+        <section className="space-y-3 sm:space-y-4">
           <div className="flex items-center gap-2 px-1">
-            <div className="p-2 rounded-lg bg-orange-500/10">
-              <TrendingUp className="h-4 w-4 text-orange-600" />
+            <div className="p-2 rounded-lg bg-orange-500/10 shrink-0">
+              <TrendingUp className="h-4 w-4 sm:h-4.5 sm:w-4.5 text-orange-600" />
             </div>
-            <div>
-              <h3 className="text-sm font-bold">Top Vendidos</h3>
-              <p className="text-[12px] text-muted-foreground">Por volumen de facturación</p>
+            <div className="min-w-0">
+              <h3 className="text-sm sm:text-base font-bold truncate">Top Vendidos</h3>
+              <p className="text-[11px] sm:text-xs text-muted-foreground truncate">Por volumen de facturacion</p>
             </div>
           </div>
 
           <Card className="border-none shadow-[0_8px_30px_rgb(0,0,0,0.04)] bg-card/50 backdrop-blur-sm">
-            <CardContent className="p-2 space-y-1">
+            <CardContent className="p-2 sm:p-3 space-y-1.5">
               {loading ? (
                 Array.from({ length: 5 }).map((_, i) => (
-                  <div key={i} className="flex items-center gap-4 p-3">
-                    <Skeleton className="h-10 w-10 rounded-full" />
-                    <div className="space-y-2 flex-1"><Skeleton className="h-4 w-[60%]" /><Skeleton className="h-3 w-[40%]" /></div>
-                    <Skeleton className="h-4 w-12" />
+                  <div key={i} className="flex items-center gap-3 sm:gap-4 p-2.5 sm:p-3">
+                    <Skeleton className="h-9 w-9 sm:h-10 sm:w-10 rounded-full" />
+                    <div className="space-y-2 flex-1 min-w-0"><Skeleton className="h-4 w-[60%]" /><Skeleton className="h-3 w-[40%]" /></div>
+                    <Skeleton className="h-4 w-14" />
                   </div>
                 ))
               ) : (top?.topVendidos ?? []).length === 0 ? (
@@ -104,25 +106,25 @@ export function TopProductsSection({ top, loading, filter = "all" }: { top: any;
 
       {/* SECCIÓN CONSIGNADOS */}
       {showConsignados && (
-        <section className="space-y-4">
+        <section className="space-y-3 sm:space-y-4">
           <div className="flex items-center gap-2 px-1">
-            <div className="p-2 rounded-lg bg-blue-500/10">
-              <Package className="h-4 w-4 text-blue-600" />
+            <div className="p-2 rounded-lg bg-blue-500/10 shrink-0">
+              <Package className="h-4 w-4 sm:h-4.5 sm:w-4.5 text-blue-600" />
             </div>
-            <div>
-              <h3 className="text-sm font-bold">Más Consignados</h3>
-              <p className="text-[12px] text-muted-foreground">Flujo de salida de inventario</p>
+            <div className="min-w-0">
+              <h3 className="text-sm sm:text-base font-bold truncate">Mas Consignados</h3>
+              <p className="text-[11px] sm:text-xs text-muted-foreground truncate">Flujo de salida de inventario</p>
             </div>
           </div>
 
           <Card className="border-none shadow-[0_8px_30px_rgb(0,0,0,0.04)] bg-card/50 backdrop-blur-sm">
-            <CardContent className="p-2 space-y-1">
+            <CardContent className="p-2 sm:p-3 space-y-1.5">
               {loading ? (
                 Array.from({ length: 5 }).map((_, i) => (
-                  <div key={i} className="flex items-center gap-4 p-3">
-                    <Skeleton className="h-10 w-10 rounded-full" />
-                    <div className="space-y-2 flex-1"><Skeleton className="h-4 w-[60%]" /><Skeleton className="h-3 w-[40%]" /></div>
-                    <Skeleton className="h-4 w-12" />
+                  <div key={i} className="flex items-center gap-3 sm:gap-4 p-2.5 sm:p-3">
+                    <Skeleton className="h-9 w-9 sm:h-10 sm:w-10 rounded-full" />
+                    <div className="space-y-2 flex-1 min-w-0"><Skeleton className="h-4 w-[60%]" /><Skeleton className="h-3 w-[40%]" /></div>
+                    <Skeleton className="h-4 w-14" />
                   </div>
                 ))
               ) : (top?.topConsignados ?? []).length === 0 ? (
@@ -149,11 +151,11 @@ export function TopProductsSection({ top, loading, filter = "all" }: { top: any;
 
 function EmptyState({ message }: { message: string }) {
   return (
-    <div className="flex flex-col items-center justify-center py-12 px-4">
+    <div className="flex flex-col items-center justify-center py-10 sm:py-12 px-4 text-center">
       <div className="h-12 w-12 rounded-full bg-muted/30 flex items-center justify-center mb-3">
         <Package className="h-5 w-5 text-muted-foreground/50" />
       </div>
-      <p className="text-sm text-muted-foreground font-medium">{message}</p>
+      <p className="text-sm text-muted-foreground font-medium max-w-[22ch]">{message}</p>
     </div>
   );
 }
