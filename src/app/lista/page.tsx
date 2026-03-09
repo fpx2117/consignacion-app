@@ -293,9 +293,12 @@ function CatalogContent() {
 
             <div className="pb-8 sm:pb-10 px-4">
                 <div className="mx-auto max-w-3xl flex justify-center">
-                    <Button asChild variant="outline" className="rounded-xl px-5">
-                        <a href="/login">Ir al panel de login</a>
-                    </Button>
+                    <a
+                        href="/login"
+                        className="text-xs sm:text-sm text-muted-foreground/80 hover:text-foreground transition-colors underline underline-offset-4"
+                    >
+                        Panel Administrador
+                    </a>
                 </div>
             </div>
 

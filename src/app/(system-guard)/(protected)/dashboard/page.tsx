@@ -15,7 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import {
   Handshake, AlertTriangle, Boxes, Wallet,
   TrendingUp, Activity, Truck, Store,
-  Calendar, Receipt
+  Calendar, Receipt, Eye, EyeOff
 } from "lucide-react";
 
 import { formatNumber, formatMoney, formatDate } from "@/lib/utils-format";
@@ -37,7 +37,12 @@ interface KpiConfig {
 export default function DashboardPage() {
   const [period, setPeriod] = React.useState<DashboardPeriod>("month");
   const [filter, setFilter] = React.useState<DashboardFilter>("all");
+  const [showSensitiveData, setShowSensitiveData] = React.useState(false);
   const { kpis, consig, top, trend, loading, error, refresh } = useDashboard(period);
+
+  const maskMoney = React.useCallback((value: number) => {
+    return showSensitiveData ? formatMoney(value) : "••••••";
+  }, [showSensitiveData]);
 
   // --- CÁLCULOS AUXILIARES ---
   const gananciaTotal = kpis?.finanzas?.ganancia?.total ?? 0;
@@ -95,7 +100,7 @@ export default function DashboardPage() {
         {
           key: "saldo-global",
           title: "Saldo Global",
-          value: formatMoney(kpis?.finanzas?.saldoClientesTotal ?? 0),
+          value: maskMoney(kpis?.finanzas?.saldoClientesTotal ?? 0),
           subtitle: "Deuda acumulada",
           icon: Activity,
           loading,
@@ -115,7 +120,7 @@ export default function DashboardPage() {
     }
 
     return items;
-  }, [kpis, filter, loading]);
+  }, [kpis, filter, loading, maskMoney]);
 
   // --- KPIs RENTABILIDAD (array filtrado) ---
   const financeKpis: KpiConfig[] = React.useMemo(() => {
@@ -125,7 +130,7 @@ export default function DashboardPage() {
     items.push({
       key: "ganancia-neta",
       title: "Ganancia Neta",
-      value: formatMoney(displayedGanancia),
+      value: maskMoney(displayedGanancia),
       subtitle: "Utilidad final (Bruta - Gastos)",
       icon: TrendingUp,
       loading,
@@ -139,7 +144,7 @@ export default function DashboardPage() {
         {
           key: "ganancia-bruta",
           title: "Ganancia Bruta",
-          value: formatMoney(kpis?.finanzas?.ganancia?.bruta ?? 0),
+          value: maskMoney(kpis?.finanzas?.ganancia?.bruta ?? 0),
           subtitle: `Ventas - Costos`,
           icon: Activity,
           loading,
@@ -147,7 +152,7 @@ export default function DashboardPage() {
         {
           key: "gastos-totales",
           title: "Gastos Totales",
-          value: formatMoney(kpis?.finanzas?.ganancia?.gastos ?? 0),
+          value: maskMoney(kpis?.finanzas?.ganancia?.gastos ?? 0),
           subtitle: `${kpis?.gastos?.cantidad ?? 0} registros pagados`,
           icon: Wallet,
           loading,
@@ -177,8 +182,8 @@ export default function DashboardPage() {
       items.push({
         key: "movimiento-unificado",
         title: `Movimiento Total${titleSuffix}`,
-        value: formatMoney(displayedPagos),
-        subtitle: `Facturado: ${formatMoney(displayedVentas)}`,
+        value: maskMoney(displayedPagos),
+        subtitle: `Facturado: ${maskMoney(displayedVentas)}`,
         icon: Store,
         loading,
       });
@@ -198,7 +203,7 @@ export default function DashboardPage() {
       items.push({
         key: "ventas-solo",
         title: "Ventas",
-        value: formatMoney(displayedVentas),
+        value: maskMoney(displayedVentas),
         subtitle: `Facturación total${titleSuffix}`,
         icon: Activity,
         loading,
@@ -206,7 +211,7 @@ export default function DashboardPage() {
     }
 
     return items;
-  }, [kpis, filter, loading, displayedGanancia]);
+  }, [kpis, filter, loading, displayedGanancia, maskMoney]);
 
   // Grid adaptativo: las tarjetas siempre llenan todo el ancho
   const gridCols = (count: number) =>
@@ -233,6 +238,17 @@ export default function DashboardPage() {
           refresh={refresh}
           loading={loading}
         />
+
+        <div className="flex items-center justify-end">
+          <button
+            type="button"
+            onClick={() => setShowSensitiveData((prev) => !prev)}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-border/70 bg-background px-3 py-1.5 text-xs font-semibold text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
+          >
+            {showSensitiveData ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+            {showSensitiveData ? "Ocultar datos sensibles" : "Mostrar datos sensibles"}
+          </button>
+        </div>
 
         {error && (
           <div className="flex items-center gap-3 p-4 text-sm text-destructive bg-destructive/5 border border-destructive/10 rounded-xl animate-in fade-in slide-in-from-top-2">
@@ -318,7 +334,7 @@ export default function DashboardPage() {
                         </div>
                       </div>
                       <div className="text-right">
-                        <div className="font-black text-sm">{formatMoney(Number(g.monto))}</div>
+                        <div className="font-black text-sm">{maskMoney(Number(g.monto))}</div>
                         <Badge variant="outline" className="text-[9px] font-bold uppercase rounded-md py-0 h-4 border-orange-500/30 text-orange-600">
                           {g.categoria?.nombre}
                         </Badge>

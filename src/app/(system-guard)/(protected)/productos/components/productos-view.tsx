@@ -54,6 +54,8 @@ import {
   Image as ImageIcon,
   ExternalLink,
   MoreVertical,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import Link from "next/link";
 import {
@@ -107,6 +109,7 @@ export function ProductosView() {
   const [currentPage, setCurrentPage] = React.useState(1);
   const [itemsPerPage, setItemsPerPage] = React.useState(10);
   const [sortConfig, setSortConfig] = React.useState<SortConfig>({ key: "nombre", direction: "asc" });
+  const [showSensitiveData, setShowSensitiveData] = React.useState(false);
 
   const load = React.useCallback(async () => {
     setLoading(true);
@@ -314,12 +317,43 @@ export function ProductosView() {
       </header>
 
       {/* STATS */}
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground/80">
+          Indicadores del inventario
+        </p>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setShowSensitiveData((prev) => !prev)}
+          className="h-8 rounded-lg text-xs font-semibold"
+        >
+          {showSensitiveData ? (
+            <>
+              <EyeOff className="h-3.5 w-3.5 mr-1.5" /> Ocultar sensibles
+            </>
+          ) : (
+            <>
+              <Eye className="h-3.5 w-3.5 mr-1.5" /> Mostrar sensibles
+            </>
+          )}
+        </Button>
+      </div>
       <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
         <StatCard label="Total Items" value={stats.total} icon={LayoutGrid} color="default" />
         <StatCard label="Stock Bajo" value={stats.lowStock} icon={AlertCircle} color="orange" trend={stats.lowStock > 0 ? "Atención requerida" : "Todo en orden"} trendUp={stats.lowStock === 0} />
         <StatCard label="Agotados" value={stats.outOfStock} icon={Package} color="red" trend={stats.outOfStock > 0 ? "Reponer urgente" : "Stock saludable"} trendUp={stats.outOfStock === 0} />
-        <StatCard label="Valuación Total" value={formatMoney(stats.valorVenta)} icon={TrendingUp} color="emerald" />
-        <StatCard label="Utilidad Est." value={formatMoney(stats.utilidad)} icon={CircleDollarSign} color="blue" />
+        <StatCard
+          label="Valuación Total"
+          value={showSensitiveData ? formatMoney(stats.valorVenta) : "••••••"}
+          icon={TrendingUp}
+          color="emerald"
+        />
+        <StatCard
+          label="Utilidad Est."
+          value={showSensitiveData ? formatMoney(stats.utilidad) : "••••••"}
+          icon={CircleDollarSign}
+          color="blue"
+        />
       </div>
 
       <div className="space-y-4">

@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Sparkles, Smile, Smartphone, Bold, Italic, Phone } from "lucide-react";
+import { Sparkles, Smile, Bold, Italic, Phone } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -207,20 +207,30 @@ export function TemplateEditor({
 
                 {/* Variables section */}
                 <div className="border-t border-border/40 px-5 py-4">
-                    <p className="mb-2.5 text-xs font-medium text-muted-foreground">
-                        Variables dinámicas — click para insertar
-                    </p>
-                    <div className="flex flex-wrap gap-1.5">
+                    <div className="mb-3.5 flex items-center justify-between gap-2">
+                        <p className="text-sm font-semibold text-foreground">
+                            Variables dinamicas
+                        </p>
+                        <span className="text-xs text-muted-foreground">
+                            Tocá para insertar
+                        </span>
+                    </div>
+
+                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                         {variables.map((v) => (
                             <button
                                 key={v.value}
                                 onClick={() => insertText(v.value)}
-                                className="group inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-emerald-500/15 bg-emerald-500/[0.06] px-2.5 py-1.5 text-xs transition-all hover:border-emerald-500/30 hover:bg-emerald-500/10 active:scale-95"
+                                className="group cursor-pointer rounded-xl border border-emerald-500/20 bg-emerald-500/[0.06] p-3 text-left transition-all hover:border-emerald-500/35 hover:bg-emerald-500/10 active:scale-[0.99]"
                             >
-                                <code className="font-mono text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">
-                                    {v.value}
-                                </code>
-                                <span className="text-muted-foreground">{v.label}</span>
+                                <p className="text-sm font-semibold text-foreground">
+                                    {v.label}
+                                </p>
+                                <div className="mt-1 inline-flex rounded-md border border-emerald-500/25 bg-background/70 px-2 py-0.5">
+                                    <code className="font-mono text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+                                        {v.value}
+                                    </code>
+                                </div>
                             </button>
                         ))}
                     </div>
