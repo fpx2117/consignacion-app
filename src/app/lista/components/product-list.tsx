@@ -31,7 +31,7 @@ export function ProductList({ products, config, viewMode, isConsigne, onAddToCar
         <div className={cn(
             "grid animate-in fade-in duration-500",
             isGrid
-                ? "grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3 xl:grid-cols-4 lg:gap-6"
+                ? "grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3 xl:grid-cols-4 lg:gap-6"
                 : "grid-cols-1 gap-3 lg:grid-cols-2 lg:gap-4"
         )}>
             {products.map((product, idx) => (

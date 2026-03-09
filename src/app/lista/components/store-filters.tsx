@@ -87,13 +87,13 @@ export function StoreFilters({
                 </div>
 
                 {/* Herramientas (Vista y Orden) */}
-                <div className="flex items-center justify-between gap-3">
+                <div className="flex flex-wrap items-center gap-2 sm:gap-3">
 
                     {/* Ordenar Por (Dropdown Shadcn) */}
-                    <div className="flex-1 sm:flex-none">
+                    <div className="w-full sm:w-auto sm:flex-1 min-w-0">
                         <Select value={sortBy} onValueChange={setSortBy}>
                             <SelectTrigger className={cn(
-                                "h-10 sm:h-11 px-3 sm:px-4 shadow-sm min-w-0 flex items-center gap-2 text-neutral-900 border-neutral-200",
+                                "h-10 sm:h-11 w-full px-3 sm:px-4 shadow-sm min-w-0 flex items-center gap-2 text-neutral-900 border-neutral-200",
                                 cardBgClass,
                                 inputRadiusClass
                             )}>
@@ -112,7 +112,7 @@ export function StoreFilters({
 
                     {/* Toggle de Vista */}
                     <div className={cn(
-                        "flex items-center bg-neutral-900 p-1 shadow-sm shrink-0",
+                        "ml-auto flex items-center bg-neutral-900 p-1 shadow-sm shrink-0",
                         buttonRadiusClass
                     )}>
                         <Button

@@ -18,16 +18,14 @@ export function StoreHeader({ config, cartCount, onOpenCart }: StoreHeaderProps)
 
     return (
         <header className={cn(
-            // Cambiamos min-h-[4rem] por h-16 fijo para garantizar el centrado exacto
             "sticky top-0 z-40 backdrop-blur-xl border-b border-border/40 transition-all h-16 sm:h-20",
             headerBgClass,
             theme === 'minimal' || theme === 'luxury' || theme === 'tech' ? "border-none px-2 shadow-sm" : ""
         )}>
-            {/* Eliminamos el py-3. El h-full con items-center hace un centrado perfecto */}
-            <div className="container mx-auto px-3 sm:px-4 h-full flex items-center justify-center sm:justify-between relative">
+            <div className="container mx-auto px-3 sm:px-4 h-full flex items-center justify-between gap-2 relative">
 
                 {/* Logo y Nombre */}
-                <div className="flex items-center gap-2.5 sm:gap-3 max-w-[58vw] sm:max-w-none">
+                <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 max-w-[75vw] sm:max-w-none">
                     {config.logoData ? (
                         <img
                             src={`data:${config.logoMime};base64,${config.logoData}`}
@@ -43,21 +41,20 @@ export function StoreHeader({ config, cartCount, onOpenCart }: StoreHeaderProps)
                             <PackageOpen className="h-5 w-5 sm:h-6 sm:w-6 text-neutral-900" />
                         </div>
                     )}
-                    <div className="flex flex-col justify-center text-left">
+                    <div className="flex flex-col justify-center text-left min-w-0">
                         <h1 className={cn(
-                            "text-[15px] sm:text-lg font-black tracking-tight text-neutral-900 leading-none truncate",
+                            "text-[14px] sm:text-lg font-black tracking-tight text-neutral-900 leading-none truncate",
                             theme === 'minimal' || theme === 'luxury' ? "uppercase tracking-widest text-base" : ""
                         )}>
                             {config.businessName || "Nuestra Tienda"}
                         </h1>
-                        <p className="text-[9px] sm:text-[10px] uppercase tracking-widest text-neutral-500 font-bold mt-1">
+                        <p className="text-[8px] sm:text-[10px] uppercase tracking-widest text-neutral-500 font-bold mt-1 truncate">
                             Catálogo Oficial
                         </p>
                     </div>
                 </div>
 
-                {/* Botón Carrito: Centrado matemático absoluto en celular */}
-                <div className="absolute right-4 top-1/2 -translate-y-1/2 sm:static sm:translate-y-0 flex items-center">
+                <div className="flex items-center shrink-0">
                     {config.convertirTienda && (
                         <Button
                             variant="outline"

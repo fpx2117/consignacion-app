@@ -232,10 +232,10 @@ function CatalogContent() {
                 onOpenCart={() => setIsCartOpen(true)}
             />
 
-            <main className="container mx-auto px-3 sm:px-5 md:px-8 py-5 md:py-12 flex flex-col gap-5 sm:gap-8 min-h-[60vh]">
+            <main className="container mx-auto px-3 sm:px-5 md:px-8 py-5 md:py-10 flex flex-col gap-5 sm:gap-8 min-h-[60vh]">
                 <StoreBanner config={config} />
 
-                <div className="flex flex-col md:flex-row gap-6 md:gap-8 items-start relative w-full">
+                <div className="flex flex-col lg:flex-row gap-6 lg:gap-8 items-start relative w-full">
                     <StoreCategorySidebar
                         config={config}
                         categories={data?.categorias || []}

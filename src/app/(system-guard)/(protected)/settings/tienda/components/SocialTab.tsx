@@ -4,10 +4,10 @@ import * as React from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Share2, Instagram, Facebook, Phone, Pin, Youtube } from "lucide-react";
+import { Instagram, Facebook, Youtube, MapPin } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-// Validadores básicos
+// ── Validators ──
 const isValidUrl = (val: string) => {
     if (!val) return null;
     try { new URL(val); return true; } catch { return false; }
@@ -17,193 +17,305 @@ const isValidPhone = (val: string) => {
     return /^\d{10,15}$/.test(val.replace(/\s/g, ''));
 };
 
-function SocialRow({
-    id,
-    label,
-    icon,
-    iconBg,
-    value,
-    onChange,
-    placeholder,
-    validate,
-    hint,
-}: {
+// ── SVG Icons (inline) ──
+const TikTokIcon = ({ className }: { className?: string }) => (
+    <svg viewBox="0 0 24 24" fill="currentColor" className={cn("w-5 h-5", className)}>
+        <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5 20.1a6.34 6.34 0 0 0 10.86-4.43v-7a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1-.1z" />
+    </svg>
+);
+
+const WhatsAppIcon = ({ className }: { className?: string }) => (
+    <svg viewBox="0 0 24 24" fill="currentColor" className={cn("w-5 h-5", className)}>
+        <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" />
+    </svg>
+);
+
+// ── Channel config ──
+interface ChannelConfig {
     id: string;
     label: string;
     icon: React.ReactNode;
-    iconBg: string;
+    iconSmall: React.ReactNode;
+    brandColor: string;
+    bgClass: string;
+    textClass: string;
+    field: string;
+    placeholder: string;
+    validate: (v: string) => boolean | null;
+    hint?: string;
+    description?: string;
+}
+
+const SOCIAL_CHANNELS: ChannelConfig[] = [
+    {
+        id: "instagram",
+        label: "Instagram",
+        icon: <Instagram className="w-5 h-5" />,
+        iconSmall: <Instagram className="w-3.5 h-3.5" />,
+        brandColor: "#E1306C",
+        bgClass: "bg-[#E1306C]/10",
+        textClass: "text-[#E1306C]",
+        field: "instagramUrl",
+        placeholder: "instagram.com/tu_tienda",
+        validate: isValidUrl,
+    },
+    {
+        id: "tiktok",
+        label: "TikTok",
+        icon: <TikTokIcon />,
+        iconSmall: <TikTokIcon className="w-3.5 h-3.5" />,
+        brandColor: "#000000",
+        bgClass: "bg-black/8 dark:bg-white/10",
+        textClass: "text-black dark:text-white",
+        field: "tiktokUrl",
+        placeholder: "tiktok.com/@tu_tienda",
+        validate: isValidUrl,
+    },
+    {
+        id: "facebook",
+        label: "Facebook",
+        icon: <Facebook className="w-5 h-5" />,
+        iconSmall: <Facebook className="w-3.5 h-3.5" />,
+        brandColor: "#1877F2",
+        bgClass: "bg-[#1877F2]/10",
+        textClass: "text-[#1877F2]",
+        field: "facebookUrl",
+        placeholder: "facebook.com/tu_tienda",
+        validate: isValidUrl,
+    },
+    {
+        id: "youtube",
+        label: "YouTube",
+        icon: <Youtube className="w-5 h-5" />,
+        iconSmall: <Youtube className="w-3.5 h-3.5" />,
+        brandColor: "#FF0000",
+        bgClass: "bg-[#FF0000]/10",
+        textClass: "text-[#FF0000]",
+        field: "youtubeUrl",
+        placeholder: "youtube.com/@tu_canal",
+        validate: isValidUrl,
+    },
+];
+
+const CONTACT_CHANNELS: ChannelConfig[] = [
+    {
+        id: "whatsapp",
+        label: "WhatsApp",
+        icon: <WhatsAppIcon />,
+        iconSmall: <WhatsAppIcon className="w-3.5 h-3.5" />,
+        brandColor: "#25D366",
+        bgClass: "bg-[#25D366]/10",
+        textClass: "text-[#25D366]",
+        field: "whatsappNumber",
+        placeholder: "5491122334455",
+        validate: isValidPhone,
+        hint: "Sin + ni espacios",
+    },
+    {
+        id: "maps",
+        label: "Google Maps",
+        icon: <MapPin className="w-5 h-5" />,
+        iconSmall: <MapPin className="w-3.5 h-3.5" />,
+        brandColor: "hsl(var(--primary))",
+        bgClass: "bg-primary/10",
+        textClass: "text-primary",
+        field: "googleMapsUrl",
+        placeholder: "maps.app.goo.gl/tu-ubicacion",
+        validate: isValidUrl,
+        description: "Que tus clientes te encuentren",
+    },
+];
+
+// ── Social Card ──
+function SocialCard({
+    channel,
+    value,
+    onChange,
+}: {
+    channel: ChannelConfig;
     value: string;
     onChange: (v: string) => void;
-    placeholder: string;
-    validate?: (v: string) => boolean | null;
-    hint?: string;
 }) {
-    const status = validate ? validate(value) : null;
-    const hasValue = Boolean(value);
+    const status = channel.validate(value);
+    const isConnected = status === true;
+    const isError = status === false;
+    const [justConnected, setJustConnected] = React.useState(false);
+    const prevStatus = React.useRef<boolean | null>(null);
+
+    React.useEffect(() => {
+        if (prevStatus.current !== true && status === true) {
+            setJustConnected(true);
+            const t = setTimeout(() => setJustConnected(false), 600);
+            return () => clearTimeout(t);
+        }
+        prevStatus.current = status;
+    }, [status]);
 
     return (
-        <div className="px-5 py-4 flex items-start gap-3 group">
-            {/* Icon */}
-            <div className={cn(
-                "h-9 w-9 rounded-xl flex items-center justify-center shrink-0 mt-0.5 transition-all duration-200",
-                hasValue ? iconBg : "bg-muted"
-            )}>
-                <span className={cn("transition-opacity", hasValue ? "opacity-100" : "opacity-40")}>
-                    {icon}
-                </span>
-            </div>
-
-            {/* Content */}
-            <div className="flex-1 min-w-0">
-                <div className="flex items-center justify-between mb-1.5">
-                    <Label className="text-xs font-bold">{label}</Label>
-                    {status === true && (
-                        <Badge className="h-4 px-1.5 text-[9px] bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 border-none font-bold rounded-md hover:bg-emerald-100 dark:hover:bg-emerald-900/30 animate-in fade-in duration-200">
-                            ✓ Conectado
-                        </Badge>
-                    )}
-                    {status === false && (
-                        <Badge className="h-4 px-1.5 text-[9px] bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 border-none font-bold rounded-md hover:bg-red-100 dark:hover:bg-red-900/30 animate-in fade-in duration-200">
-                            URL inválida
-                        </Badge>
+        <div className={cn(
+            "group relative rounded-xl border bg-background p-4 transition-all duration-200",
+            isConnected
+                ? "border-emerald-200 dark:border-emerald-800/50 shadow-sm shadow-emerald-500/5"
+                : isError
+                    ? "border-red-200 dark:border-red-800/40"
+                    : "border-border hover:border-border/80 hover:shadow-sm",
+        )}>
+            <div className="flex items-center gap-3 mb-3">
+                {/* Icon with connected dot */}
+                <div className="relative">
+                    <div className={cn(
+                        "h-10 w-10 rounded-xl flex items-center justify-center transition-all duration-300",
+                        channel.bgClass,
+                        channel.textClass,
+                        justConnected && "scale-110",
+                    )}>
+                        {channel.icon}
+                    </div>
+                    {/* Connected dot */}
+                    {isConnected && (
+                        <span className="absolute -top-0.5 -right-0.5 flex h-3 w-3">
+                            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-50" />
+                            <span className="relative inline-flex h-3 w-3 rounded-full bg-emerald-500 border-2 border-background" />
+                        </span>
                     )}
                 </div>
-                <Input
-                    value={value}
-                    onChange={(e) => onChange(e.target.value)}
-                    placeholder={placeholder}
-                    className={cn(
-                        "h-9 rounded-lg text-sm transition-all border",
-                        "bg-muted/30 focus:bg-background",
-                        status === true && "border-emerald-300 dark:border-emerald-800 focus-visible:ring-emerald-500/30",
-                        status === false && value && "border-red-300 dark:border-red-800 focus-visible:ring-red-500/30"
+
+                {/* Label + description */}
+                <div className="flex-1 min-w-0">
+                    <Label className="text-sm font-semibold leading-none">{channel.label}</Label>
+                    {channel.description && (
+                        <p className="text-[11px] text-muted-foreground mt-0.5">{channel.description}</p>
                     )}
+                </div>
+            </div>
+
+            {/* Input */}
+            <Input
+                value={value}
+                onChange={(e) => onChange(e.target.value)}
+                placeholder={channel.placeholder}
+                className={cn(
+                    "h-9 rounded-lg text-sm transition-all duration-200",
+                    "bg-muted/40 border-transparent focus:bg-background focus:border-border",
+                    isConnected && "border-emerald-200/60 dark:border-emerald-800/40 focus-visible:ring-emerald-500/20",
+                    isError && "border-red-200/60 dark:border-red-800/40 focus-visible:ring-red-500/20",
+                )}
+            />
+
+            {/* Error message (only on error) */}
+            {isError && (
+                <p className="text-[11px] text-red-500 dark:text-red-400 mt-1.5 animate-in fade-in slide-in-from-top-1 duration-200">
+                    {channel.validate === isValidPhone
+                        ? "Numero invalido. Usa solo digitos (10-15)."
+                        : "URL invalida. Incluye https://"}
+                </p>
+            )}
+
+            {/* Hint */}
+            {channel.hint && !isError && (
+                <p className="text-[10px] text-muted-foreground/60 mt-1.5 font-mono">{channel.hint}</p>
+            )}
+        </div>
+    );
+}
+
+// ── Connected Summary Bar ──
+function ConnectedSummary({ branding }: { branding: any }) {
+    const allChannels = [...SOCIAL_CHANNELS, ...CONTACT_CHANNELS];
+    const connected = allChannels.filter(ch => {
+        const val = branding[ch.field];
+        return Boolean(val) && ch.validate(val) === true;
+    });
+    const total = allChannels.length;
+    const count = connected.length;
+    const percentage = Math.round((count / total) * 100);
+
+    if (count === 0) return null;
+
+    return (
+        <div className="bg-background border border-border rounded-xl p-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
+            {/* Top row: count + icons */}
+            <div className="flex items-center justify-between mb-2.5">
+                <span className="text-xs text-muted-foreground">
+                    <span className="font-bold text-foreground">{count}</span> de {total} canales
+                </span>
+                <div className="flex items-center gap-1">
+                    {connected.map(ch => (
+                        <div
+                            key={ch.id}
+                            title={ch.label}
+                            className={cn(
+                                "h-6 w-6 rounded-md flex items-center justify-center transition-all animate-in fade-in zoom-in-75 duration-300",
+                                ch.bgClass,
+                                ch.textClass,
+                            )}
+                        >
+                            {ch.iconSmall}
+                        </div>
+                    ))}
+                </div>
+            </div>
+            {/* Progress bar */}
+            <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden">
+                <div
+                    className="h-full rounded-full bg-emerald-500 transition-all duration-500 ease-out"
+                    style={{ width: `${percentage}%` }}
                 />
-                {hint && <p className="text-[10px] text-muted-foreground mt-1 font-mono">{hint}</p>}
             </div>
         </div>
     );
 }
 
-// TikTok SVG icon inline
-const TikTokIcon = () => (
-    <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
-        <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5 20.1a6.34 6.34 0 0 0 10.86-4.43v-7a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1-.1z" />
-    </svg>
-);
-
+// ── Main Export ──
 export function SocialTab({ branding, setBranding }: any) {
+    const handleChange = (field: string) => (value: string) => {
+        setBranding({ ...branding, [field]: value });
+    };
+
     return (
-        <div className="space-y-5">
-            {/* ── REDES SOCIALES ── */}
-            <section className="bg-background border border-border rounded-2xl overflow-hidden">
-                <div className="px-5 py-3.5 border-b border-border/60 bg-muted/20 flex items-center gap-2">
-                    <Share2 className="h-4 w-4 text-primary" />
-                    <h3 className="text-xs font-black uppercase tracking-wider">Presencia Digital</h3>
-                    <span className="text-[10px] text-muted-foreground ml-1">— Redes sociales</span>
+        <div className="space-y-6">
+            {/* Redes sociales */}
+            <div className="space-y-2">
+                <div className="flex items-center gap-2 px-1 mb-1">
+                    <h3 className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">
+                        Redes sociales
+                    </h3>
+                    <div className="flex-1 h-px bg-border/50" />
                 </div>
+                <div className="grid gap-2">
+                    {SOCIAL_CHANNELS.map(channel => (
+                        <SocialCard
+                            key={channel.id}
+                            channel={channel}
+                            value={branding[channel.field] || ""}
+                            onChange={handleChange(channel.field)}
+                        />
+                    ))}
+                </div>
+            </div>
 
-                <div className="divide-y divide-border/40">
-                    <SocialRow
-                        id="instagram"
-                        label="Instagram"
-                        icon={<Instagram className="w-4 h-4" />}
-                        iconBg="bg-[#E1306C]/10 text-[#E1306C]"
-                        value={branding.instagramUrl || ""}
-                        onChange={(v) => setBranding({ ...branding, instagramUrl: v })}
-                        placeholder="https://instagram.com/tu_tienda"
-                        validate={isValidUrl}
-                    />
-                    <SocialRow
-                        id="tiktok"
-                        label="TikTok"
-                        icon={<TikTokIcon />}
-                        iconBg="bg-black/10 dark:bg-white/10 text-black dark:text-white"
-                        value={branding.tiktokUrl || ""}
-                        onChange={(v) => setBranding({ ...branding, tiktokUrl: v })}
-                        placeholder="https://tiktok.com/@tu_tienda"
-                        validate={isValidUrl}
-                    />
-                    <SocialRow
-                        id="facebook"
-                        label="Facebook"
-                        icon={<Facebook className="w-4 h-4" />}
-                        iconBg="bg-[#1877F2]/10 text-[#1877F2]"
-                        value={branding.facebookUrl || ""}
-                        onChange={(v) => setBranding({ ...branding, facebookUrl: v })}
-                        placeholder="https://facebook.com/tu_tienda"
-                        validate={isValidUrl}
-                    />
-                    <SocialRow
-                        id="youtube"
-                        label="YouTube"
-                        icon={<Youtube className="w-4 h-4" />}
-                        iconBg="bg-[#FF0000]/10 text-[#FF0000]"
-                        value={branding.youtubeUrl || ""}
-                        onChange={(v) => setBranding({ ...branding, youtubeUrl: v })}
-                        placeholder="https://youtube.com/@tu_canal"
-                        validate={isValidUrl}
-                    />
+            {/* Contacto */}
+            <div className="space-y-2">
+                <div className="flex items-center gap-2 px-1 mb-1">
+                    <h3 className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">
+                        Contacto
+                    </h3>
+                    <div className="flex-1 h-px bg-border/50" />
                 </div>
-            </section>
+                <div className="grid gap-2">
+                    {CONTACT_CHANNELS.map(channel => (
+                        <SocialCard
+                            key={channel.id}
+                            channel={channel}
+                            value={branding[channel.field] || ""}
+                            onChange={handleChange(channel.field)}
+                        />
+                    ))}
+                </div>
+            </div>
 
-            {/* ── CONTACTO DIRECTO ── */}
-            <section className="bg-background border border-border rounded-2xl overflow-hidden">
-                <div className="px-5 py-3.5 border-b border-border/60 bg-muted/20 flex items-center gap-2">
-                    <Phone className="h-4 w-4 text-primary" />
-                    <h3 className="text-xs font-black uppercase tracking-wider">Contacto Directo</h3>
-                    <span className="text-[10px] text-muted-foreground ml-1">— WhatsApp y ubicación</span>
-                </div>
-
-                <div className="divide-y divide-border/40">
-                    <SocialRow
-                        id="whatsapp"
-                        label="WhatsApp"
-                        icon={
-                            <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
-                                <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" />
-                            </svg>
-                        }
-                        iconBg="bg-[#25D366]/10 text-[#25D366]"
-                        value={branding.whatsappNumber || ""}
-                        onChange={(v) => setBranding({ ...branding, whatsappNumber: v })}
-                        placeholder="5491122334455"
-                        validate={isValidPhone}
-                        hint="Sin + ni espacios · ej: 5491122334455"
-                    />
-                    <SocialRow
-                        id="maps"
-                        label="Google Maps"
-                        icon={<Pin className="w-4 h-4" />}
-                        iconBg="bg-primary/10 text-primary"
-                        value={branding.googleMapsUrl || ""}
-                        onChange={(v) => setBranding({ ...branding, googleMapsUrl: v })}
-                        placeholder="Enlace de tu ubicación en Google Maps"
-                        validate={isValidUrl}
-                        hint="Opcional · Permite que tus clientes encuentren tu local"
-                    />
-                </div>
-            </section>
-
-            {/* Resumen de redes conectadas */}
-            {[branding.instagramUrl, branding.tiktokUrl, branding.facebookUrl, branding.youtubeUrl, branding.whatsappNumber].filter(Boolean).length > 0 && (
-                <div className="flex items-center gap-2 px-4 py-3 bg-muted/40 border border-border rounded-xl animate-in fade-in duration-300">
-                    <span className="text-[11px] text-muted-foreground">
-                        <span className="font-black text-foreground">
-                            {[branding.instagramUrl, branding.tiktokUrl, branding.facebookUrl, branding.youtubeUrl, branding.whatsappNumber, branding.googleMapsUrl].filter(Boolean).length}
-                        </span>
-                        {" "}de 6 canales configurados
-                    </span>
-                    <div className="ml-auto flex gap-1">
-                        {branding.instagramUrl && <span title="Instagram" className="w-2 h-2 rounded-full bg-[#E1306C]" />}
-                        {branding.tiktokUrl && <span title="TikTok" className="w-2 h-2 rounded-full bg-black dark:bg-white" />}
-                        {branding.facebookUrl && <span title="Facebook" className="w-2 h-2 rounded-full bg-[#1877F2]" />}
-                        {branding.youtubeUrl && <span title="YouTube" className="w-2 h-2 rounded-full bg-[#FF0000]" />}
-                        {branding.whatsappNumber && <span title="WhatsApp" className="w-2 h-2 rounded-full bg-[#25D366]" />}
-                        {branding.googleMapsUrl && <span title="Maps" className="w-2 h-2 rounded-full bg-primary" />}
-                    </div>
-                </div>
-            )}
+            {/* Summary bar */}
+            <ConnectedSummary branding={branding} />
         </div>
     );
 }
