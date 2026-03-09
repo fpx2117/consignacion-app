@@ -18,7 +18,7 @@ export function GastosSummaryCards({ totalPagado, totalPendiente }: GastosSummar
         </CardHeader>
         <CardContent>
           <div className={`${gastosTypography.amount} text-emerald-700`}>{formatMoney(totalPagado)}</div>
-          <p className="text-xs text-emerald-600/70 mt-1">Suma de egresos efectivos del periodo</p>
+          <p className="text-xs font-bold uppercase tracking-wide text-emerald-600/70 mt-1">Suma de egresos efectivos del periodo</p>
         </CardContent>
       </Card>
 
@@ -28,7 +28,7 @@ export function GastosSummaryCards({ totalPagado, totalPendiente }: GastosSummar
         </CardHeader>
         <CardContent>
           <div className={`${gastosTypography.amount} text-orange-700`}>{formatMoney(totalPendiente)}</div>
-          <p className="text-xs text-orange-600/70 mt-1">Pagos futuros y vencimientos proximos</p>
+          <p className="text-xs font-bold uppercase tracking-wide text-orange-600/70 mt-1">Pagos futuros y vencimientos proximos</p>
         </CardContent>
       </Card>
     </div>

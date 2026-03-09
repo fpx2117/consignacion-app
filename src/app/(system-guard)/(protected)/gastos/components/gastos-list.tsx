@@ -76,7 +76,7 @@ export function GastosList({
         <div className="h-20 w-20 rounded-full bg-muted/50 flex items-center justify-center mb-4">
           <Receipt className="h-10 w-10 opacity-20" />
         </div>
-        <p className="text-lg font-semibold">No hay gastos registrados</p>
+        <p className="text-lg font-bold">No hay gastos registrados</p>
         <p className="text-sm mt-1">Los egresos del negocio apareceran aqui</p>
       </div>
     );
@@ -151,11 +151,11 @@ export function GastosList({
 
               <div className="flex items-center justify-between sm:justify-end gap-6 w-full sm:w-auto pt-4 sm:pt-0 border-t sm:border-t-0 border-white/5">
                 <div className="text-left sm:text-right">
-                  <div className="text-2xl md:text-3xl font-semibold tracking-tight leading-none mb-1">
+                  <div className="text-2xl md:text-3xl font-black tracking-tight leading-none mb-1">
                     {formatMoney(Number(g.monto))}
                   </div>
                   {g.esVistaCompartida && (
-                    <p className="text-[9px] font-semibold uppercase tracking-[0.12em] text-violet-500/70 mb-1">Tu parte</p>
+                    <p className="text-[9px] font-black uppercase tracking-[0.18em] text-violet-500/70 mb-1">Tu parte</p>
                   )}
                   <Badge
                     className={cn(
@@ -176,7 +176,7 @@ export function GastosList({
                   <DropdownMenuContent align="end" className="rounded-[1.5rem] border-none shadow-2xl p-2 w-56">
                     <DropdownMenuItem
                       onClick={() => onShare(g)}
-                      className="gap-3 py-3 rounded-xl font-semibold cursor-pointer focus:bg-emerald-500/10 focus:text-emerald-600 transition-colors"
+                      className="gap-3 py-3 rounded-xl font-bold cursor-pointer focus:bg-emerald-500/10 focus:text-emerald-600 transition-colors"
                     >
                       <div className="h-8 w-8 rounded-lg bg-emerald-500/10 flex items-center justify-center">
                         <Share2 className="h-4 w-4 text-emerald-500" />
@@ -188,7 +188,7 @@ export function GastosList({
                       <>
                         <DropdownMenuItem
                           onClick={() => onEdit(g)}
-                          className="gap-3 py-3 rounded-xl font-semibold cursor-pointer focus:bg-blue-500/10 focus:text-blue-600 transition-colors"
+                          className="gap-3 py-3 rounded-xl font-bold cursor-pointer focus:bg-blue-500/10 focus:text-blue-600 transition-colors"
                         >
                           <div className="h-8 w-8 rounded-lg bg-blue-500/10 flex items-center justify-center">
                             <Edit2 className="h-4 w-4 text-blue-500" />
@@ -200,7 +200,7 @@ export function GastosList({
 
                         <DropdownMenuItem
                           onClick={() => onDelete(g.id)}
-                          className="gap-3 py-3 rounded-xl font-semibold cursor-pointer text-destructive focus:bg-destructive/10 transition-colors"
+                          className="gap-3 py-3 rounded-xl font-bold cursor-pointer text-destructive focus:bg-destructive/10 transition-colors"
                         >
                           <div className="h-8 w-8 rounded-lg bg-destructive/10 flex items-center justify-center">
                             <Trash2 className="h-4 w-4" />
