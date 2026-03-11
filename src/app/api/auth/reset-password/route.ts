@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
+import crypto from "crypto";
 import { validatePasswordStrength } from "@/lib/validators/password";
 
 export async function POST(req: Request) {
@@ -23,9 +24,11 @@ export async function POST(req: Request) {
             );
         }
 
+        const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
+
         // Buscar token
         const tokenRecord = await prisma.resetPasswordToken.findUnique({
-            where: { token },
+            where: { token: tokenHash },
         });
 
         if (!tokenRecord) {
@@ -64,7 +67,7 @@ export async function POST(req: Request) {
                 data: { hash },
             }),
             prisma.resetPasswordToken.delete({
-                where: { token },
+                where: { token: tokenHash },
             }),
         ]);
 

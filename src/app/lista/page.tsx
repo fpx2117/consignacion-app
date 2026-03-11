@@ -5,7 +5,7 @@
 
 import * as React from "react";
 import { useSearchParams } from "next/navigation";
-import { Loader2, XCircle } from "lucide-react";
+import { CheckCircle2, Loader2, XCircle } from "lucide-react";
 import { motion } from "motion/react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -25,9 +25,25 @@ import { ProductModal } from "./components/product-modal";
 import { getThemeStyles } from "./lib/theme-utils";
 import { StoreCategorySidebar } from "./components/store-category-sidebar";
 
+const CHECKOUT_TOKEN_STORAGE_KEY = "public_checkout_token_v2";
+const CHECKOUT_POLL_INTERVAL_MS = 2000;
+const CHECKOUT_POLL_TIMEOUT_MS = 90000;
+
+type CheckoutFeedbackState = {
+    kind: "polling" | "success" | "error";
+    message: string;
+};
+
+type StoredCheckoutToken = {
+    token: string;
+    sucursalId: number;
+    createdAt: number;
+};
+
 function CatalogContent() {
     const searchParams = useSearchParams();
     const sucursalId = searchParams.get("sucursalId");
+    const checkoutReturnStatus = searchParams.get("status");
 
     // --- Estados de Datos ---
     const [data, setData] = React.useState<any>(null);
@@ -47,6 +63,51 @@ function CatalogContent() {
     const [cart, setCart] = React.useState<any[]>([]);
     const [isCartOpen, setIsCartOpen] = React.useState(false);
     const [checkoutLoading, setCheckoutLoading] = React.useState(false);
+    const [checkoutFeedback, setCheckoutFeedback] = React.useState<CheckoutFeedbackState | null>(null);
+
+    const handledReturnRef = React.useRef<string | null>(null);
+
+    const getSucursalIdForCheckout = React.useCallback(() => {
+        return sucursalId ? Number(sucursalId) : 1;
+    }, [sucursalId]);
+
+    const saveCheckoutToken = React.useCallback((token: string, storeSucursalId: number) => {
+        if (typeof window === "undefined") return;
+        const payload: StoredCheckoutToken = {
+            token,
+            sucursalId: storeSucursalId,
+            createdAt: Date.now(),
+        };
+        window.localStorage.setItem(CHECKOUT_TOKEN_STORAGE_KEY, JSON.stringify(payload));
+    }, []);
+
+    const clearCheckoutToken = React.useCallback(() => {
+        if (typeof window === "undefined") return;
+        window.localStorage.removeItem(CHECKOUT_TOKEN_STORAGE_KEY);
+    }, []);
+
+    const readCheckoutToken = React.useCallback((storeSucursalId: number): string | null => {
+        if (typeof window === "undefined") return null;
+
+        const raw = window.localStorage.getItem(CHECKOUT_TOKEN_STORAGE_KEY);
+        if (!raw) return null;
+
+        try {
+            const parsed = JSON.parse(raw) as StoredCheckoutToken;
+            const expired = Date.now() - Number(parsed.createdAt || 0) > 24 * 60 * 60 * 1000;
+            const mismatchedSucursal = Number(parsed.sucursalId) !== Number(storeSucursalId);
+
+            if (!parsed.token || expired || mismatchedSucursal) {
+                window.localStorage.removeItem(CHECKOUT_TOKEN_STORAGE_KEY);
+                return null;
+            }
+
+            return parsed.token;
+        } catch {
+            window.localStorage.removeItem(CHECKOUT_TOKEN_STORAGE_KEY);
+            return null;
+        }
+    }, []);
 
     // --- Fetch Data ---
     React.useEffect(() => {
@@ -134,12 +195,19 @@ function CatalogContent() {
     const handleCheckout = async (clienteData: any, envioData: any) => {
         setCheckoutLoading(true);
         try {
+            const targetSucursalId = getSucursalIdForCheckout();
             const res = await apiService.createPublicCheckout({
                 items: cart,
-                sucursalId: sucursalId ? Number(sucursalId) : 1,
+                sucursalId: targetSucursalId,
                 clienteData,
                 envioData
             });
+
+            const checkoutToken = res?.checkout_token ?? res?.data?.checkout_token;
+            if (checkoutToken) {
+                saveCheckoutToken(checkoutToken, targetSucursalId);
+            }
+
             if (res?.init_point) {
                 window.location.href = res.init_point;
             } else if (res?.data?.init_point) {
@@ -153,6 +221,72 @@ function CatalogContent() {
             setCheckoutLoading(false);
         }
     };
+
+    React.useEffect(() => {
+        if (!checkoutReturnStatus) return;
+
+        const targetSucursalId = getSucursalIdForCheckout();
+        const dedupeKey = `${checkoutReturnStatus}:${targetSucursalId}`;
+        if (handledReturnRef.current === dedupeKey) return;
+        handledReturnRef.current = dedupeKey;
+
+        const checkoutToken = readCheckoutToken(targetSucursalId);
+        if (!checkoutToken) return;
+
+        let cancelled = false;
+
+        const runStatusPolling = async () => {
+            setCheckoutFeedback({
+                kind: "polling",
+                message: "Estamos confirmando tu pago. Esto puede tardar unos segundos...",
+            });
+
+            const startTime = Date.now();
+            while (!cancelled && Date.now() - startTime < CHECKOUT_POLL_TIMEOUT_MS) {
+                try {
+                    const statusRes = await apiService.getPublicCheckoutStatus(checkoutToken);
+
+                    if (statusRes?.status === "PAID") {
+                        clearCheckoutToken();
+                        setCheckoutFeedback({
+                            kind: "success",
+                            message: "Pago confirmado. Tu compra fue procesada con exito.",
+                        });
+                        toast.success("Pago confirmado");
+                        return;
+                    }
+
+                    if (statusRes?.status === "FAILED") {
+                        clearCheckoutToken();
+                        setCheckoutFeedback({
+                            kind: "error",
+                            message: statusRes?.reason || "No se pudo confirmar el pago. Intenta nuevamente.",
+                        });
+                        toast.error("No se pudo confirmar el pago");
+                        return;
+                    }
+                } catch {
+                    // Seguimos reintentando hasta timeout para no cortar por errores transitorios.
+                }
+
+                await new Promise((resolve) => setTimeout(resolve, CHECKOUT_POLL_INTERVAL_MS));
+            }
+
+            if (!cancelled) {
+                setCheckoutFeedback({
+                    kind: "error",
+                    message: "La confirmacion esta demorando mas de lo esperado. Revisaremos el estado automaticamente.",
+                });
+                toast.message("Seguimos confirmando tu pago");
+            }
+        };
+
+        runStatusPolling();
+
+        return () => {
+            cancelled = true;
+        };
+    }, [checkoutReturnStatus, clearCheckoutToken, getSucursalIdForCheckout, readCheckoutToken]);
 
     // --- Render Loading/Error ---
     if (loading) {
@@ -233,6 +367,22 @@ function CatalogContent() {
             />
 
             <main className="container mx-auto px-3 sm:px-5 md:px-8 py-5 md:py-10 flex flex-col gap-5 sm:gap-8 min-h-[60vh]">
+                {checkoutFeedback ? (
+                    <div
+                        className={cn(
+                            "rounded-xl border px-4 py-3 text-sm flex items-center gap-3",
+                            checkoutFeedback.kind === "polling" && "bg-blue-50 border-blue-200 text-blue-800",
+                            checkoutFeedback.kind === "success" && "bg-emerald-50 border-emerald-200 text-emerald-800",
+                            checkoutFeedback.kind === "error" && "bg-red-50 border-red-200 text-red-800",
+                        )}
+                    >
+                        {checkoutFeedback.kind === "polling" && <Loader2 className="h-4 w-4 animate-spin" />}
+                        {checkoutFeedback.kind === "success" && <CheckCircle2 className="h-4 w-4" />}
+                        {checkoutFeedback.kind === "error" && <XCircle className="h-4 w-4" />}
+                        <span>{checkoutFeedback.message}</span>
+                    </div>
+                ) : null}
+
                 <StoreBanner config={config} />
 
                 <div className="flex flex-col lg:flex-row gap-6 lg:gap-8 items-start relative w-full">

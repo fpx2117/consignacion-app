@@ -33,9 +33,9 @@ export async function requireAuth() {
       select: { isActive: true }
     });
 
-    if (session && !session.isActive) {
+    if (!session || !session.isActive) {
       const response = NextResponse.json(
-        { error: "Tu sesión ha sido revocada por un administrador" },
+        { error: "Sesión inválida o revocada" },
         { status: 401 }
       );
 

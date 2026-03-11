@@ -7,7 +7,7 @@ import { requireAuth } from "@/lib/requireAuth";
 export const dynamic = "force-dynamic";
 
 export async function GET(
-    req: NextRequest,
+    _req: NextRequest,
     { params }: { params: Promise<{ id: string }> }
 ) {
     const auth = await requireAuth();
@@ -17,6 +17,21 @@ export async function GET(
     const id = Number(idParam);
 
     if (!id) return NextResponse.json({ error: "ID inválido" }, { status: 400 });
+
+    const gasto = await prisma.gasto.findFirst({
+        where: {
+            id,
+            OR: [
+                { sucursalId: auth.activeSucursalId },
+                { sucursalesCompartidas: { some: { sucursalId: auth.activeSucursalId } } },
+            ],
+        },
+        select: { id: true },
+    });
+
+    if (!gasto) {
+        return NextResponse.json({ error: "Gasto no encontrado" }, { status: 404 });
+    }
 
     // Reuse existing valid link
     const existing = await prisma.shareLink.findFirst({

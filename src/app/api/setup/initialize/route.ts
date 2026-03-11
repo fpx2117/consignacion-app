@@ -62,6 +62,10 @@ function requireEnv(name: string) {
     return v;
 }
 
+function normalizeEmail(email: string) {
+    return String(email).trim().toLowerCase();
+}
+
 export async function POST(req: Request) {
     try {
         // ✅ Hard fail early if DB is not configured
@@ -85,6 +89,8 @@ export async function POST(req: Request) {
         if (!admin?.nombre || !admin?.email || !admin?.password) {
             return jsonError(400, { message: "Faltan datos del administrador" });
         }
+
+        const adminEmail = normalizeEmail(admin.email);
 
         // --- VERIFICATION LOGIC (robusta) ---
         let verificationProvider: ProveedorSuscripcion;
@@ -374,7 +380,7 @@ export async function POST(req: Request) {
             const mainAdmin = await tx.usuario.create({
                 data: {
                     nombre: admin.nombre,
-                    email: admin.email,
+                    email: adminEmail,
                     hash: adminHash,
                     rol: RolUsuario.ADMIN,
                     activo: true,
@@ -417,7 +423,7 @@ export async function POST(req: Request) {
                     await tx.usuario.create({
                         data: {
                             nombre: member.nombre,
-                            email: member.email,
+                            email: normalizeEmail(member.email),
                             hash: staffHash,
                             rol: RolUsuario.EMPLEADO,
                             activo: true,

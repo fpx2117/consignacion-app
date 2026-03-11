@@ -6,8 +6,13 @@ import { obtenerConfiguracionGlobal } from "@/lib/config";
 
 // Auth: Requiere CRON_SECRET (igual que los demás cron endpoints)
 export async function GET(request: NextRequest) {
+    const cronSecret = process.env.CRON_SECRET;
+    if (!cronSecret || cronSecret.trim() === "") {
+        return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+    }
+
     const authHeader = request.headers.get("authorization");
-    if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+    if (authHeader !== `Bearer ${cronSecret}`) {
         return NextResponse.json({ error: "No autorizado" }, { status: 401 });
     }
 

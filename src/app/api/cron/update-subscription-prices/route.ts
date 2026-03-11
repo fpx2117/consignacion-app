@@ -10,8 +10,14 @@ export const dynamic = "force-dynamic";
 export async function GET(request: Request) {
     console.log("CRON INICIADO: Módulo update-subscription-prices");
 
+    const cronSecret = process.env.CRON_SECRET;
+    if (!cronSecret || cronSecret.trim() === "") {
+        console.error("CRON ERROR: CRON_SECRET no está configurado");
+        return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+    }
+
     const authHeader = request.headers.get('authorization');
-    if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+    if (authHeader !== `Bearer ${cronSecret}`) {
         console.error("CRON ERROR: No autorizado. Verifica tu CRON_SECRET");
         return NextResponse.json({ error: "No autorizado" }, { status: 401 });
     }

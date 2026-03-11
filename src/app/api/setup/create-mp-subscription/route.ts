@@ -15,7 +15,7 @@ const client = new MercadoPagoConfig({
 
 export async function POST(req: Request) {
     try {
-        const { planId } = await req.json();
+        const { planId, payerEmail } = await req.json();
 
         const basePlan = SUBSCRIPTION_PLANS.find(p => p.id === planId);
         if (!basePlan) {
@@ -32,6 +32,20 @@ export async function POST(req: Request) {
 
         if (!plan) {
             return NextResponse.json({ error: "Plan en BD no encontrado" }, { status: 404 });
+        }
+
+        let normalizedPayerEmail = String(payerEmail || "").trim().toLowerCase();
+        if (!normalizedPayerEmail) {
+            const admin = await prisma.usuario.findFirst({
+                where: { rol: "ADMIN", activo: true },
+                orderBy: { id: "asc" },
+                select: { email: true },
+            });
+            normalizedPayerEmail = String(admin?.email || "").trim().toLowerCase();
+        }
+
+        if (!normalizedPayerEmail) {
+            return NextResponse.json({ error: "No se pudo determinar email del pagador" }, { status: 400 });
         }
 
         const preApproval = new PreApproval(client);
@@ -53,7 +67,7 @@ export async function POST(req: Request) {
                 },
                 back_url: `${process.env.NEXT_PUBLIC_APP_URL}/setup?status=success`,
                 external_reference: JSON.stringify({ flow: "setup", planId: plan.id }),
-                payer_email: "test_user_123@testuser.com", // En MP Subscriptions el email es obligatorio
+                payer_email: normalizedPayerEmail,
                 status: "pending",
             },
             requestOptions: {

@@ -2,7 +2,7 @@
 // @ts-nocheck
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireAuth } from "@/lib/requireAuth";
+import { requireAuth, requireRole } from "@/lib/requireAuth";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -15,6 +15,9 @@ export async function POST(req: NextRequest) {
   // Auth: Solo ADMIN puede subir logo
   const auth = await requireAuth();
   if (!auth.ok) return auth.res;
+  if (!requireRole(auth.user, ["ADMIN"])) {
+    return NextResponse.json({ ok: false, error: "No autorizado" }, { status: 403 });
+  }
 
   try {
     const form = await req.formData();
@@ -41,8 +44,8 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const current = await prisma.branding.findFirst({
-      orderBy: { updatedAt: "desc" },
+    const current = await prisma.branding.findUnique({
+      where: { sucursalId: auth.activeSucursalId },
       select: { id: true },
     });
 
@@ -57,6 +60,7 @@ export async function POST(req: NextRequest) {
           primaryColor: "#111827",
           logoData: bytes,
           logoMime: file.type,
+          sucursalId: auth.activeSucursalId,
         },
       });
 

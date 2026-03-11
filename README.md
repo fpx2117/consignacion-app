@@ -4,6 +4,13 @@ Sistema de gestión comercial fullstack construido con **Next.js 16**, **React 1
 
 > Para documentación técnica detallada (rutas, modelos, enumeraciones) ver [DOCUMENTACION.md](./DOCUMENTACION.md).
 
+## Documentacion Tecnica (Indice Nuevo)
+
+- [Indice tecnico](./docs/INDEX.md)
+- [Guia tecnica del proyecto](./docs/GUIA_TECNICA_PROYECTO.md)
+- [Referencia API tecnica](./docs/API_REFERENCIA_TECNICA.md)
+- [ADR-0001: Servidor custom + Socket.io](./docs/ADR/0001-servidor-custom-next-socketio.md)
+
 ---
 
 ## Características Principales

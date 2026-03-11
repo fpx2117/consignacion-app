@@ -4,11 +4,25 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/requireAuth";
-import { TipoMovimientoStock, MotivoMovimientoStock, TipoVenta } from "@prisma/client";
+import { Prisma, TipoMovimientoStock, MotivoMovimientoStock, TipoVenta } from "@prisma/client";
 
 import { sendNotification } from "@/lib/socket-trigger";
 import { obtenerConfiguracionGlobal } from "@/lib/config";
 import { evaluateStockAlert, processNotificationQueue } from "@/lib/stock-alerts";
+
+const MAX_VENTA_RETRIES = 3;
+
+function isRetriableVentaError(error: any) {
+  if (error instanceof Prisma.PrismaClientKnownRequestError) {
+    return error.code === "P2002" || error.code === "P2034";
+  }
+  return false;
+}
+
+function getErrorMessage(error: unknown) {
+  if (error instanceof Error) return error.message;
+  return "";
+}
 
 export async function GET() {
   const auth = await requireAuth();
@@ -71,7 +85,7 @@ export async function POST(req: Request) {
       );
     }
 
-    const notificationsQueue: any[] = [];
+    let notificationsQueue: any[] = [];
 
     // Lógica de Cliente - Filtrado por sucursal
     let finalClienteId = clienteId;
@@ -89,123 +103,167 @@ export async function POST(req: Request) {
       })).id;
     }
 
-    // ✅ 3. TRANSACCIÓN DE VENTA ADAPTADA
-    const result = await prisma.$transaction(async (tx) => {
-      let totalVenta = 0;
-      const detallesData = [];
+    // ✅ 3. TRANSACCIÓN DE VENTA ADAPTADA (con reintento ante conflictos)
+    let result: { venta: any; pago: any; notificationsQueue: any[] } | null = null;
 
-      for (const item of items) {
-        const sucursalId = auth.activeSucursalId;
+    for (let attempt = 1; attempt <= MAX_VENTA_RETRIES; attempt++) {
+      try {
+        result = await prisma.$transaction(async (tx) => {
+          let totalVenta = 0;
+          const txNotificationsQueue: any[] = [];
+          const detallesData = [];
+          const sucursalId = auth.activeSucursalId;
 
-        // 1. Obtener stock de la sucursal específica
-        const stockSucursalAntes = await tx.stockSucursal.findUnique({
-          where: { productoId_sucursalId: { productoId: item.productoId, sucursalId } },
-          include: { producto: true }
-        });
+          for (const item of items) {
+            const stockSucursalInfo = await tx.stockSucursal.findUnique({
+              where: { productoId_sucursalId: { productoId: item.productoId, sucursalId } },
+              include: { producto: true }
+            });
 
-        if (!stockSucursalAntes) {
-          throw new Error(`El producto #${item.productoId} no está asignado a esta sucursal.`);
-        }
+            if (!stockSucursalInfo) {
+              throw new Error(`El producto #${item.productoId} no está asignado a esta sucursal.`);
+            }
 
-        if (stockSucursalAntes.stockDisponibleUnits < item.units) {
-          throw new Error(`Stock insuficiente para "${stockSucursalAntes.producto.nombre}". Disponibles: ${stockSucursalAntes.stockDisponibleUnits}`);
-        }
+            const affectedStockSucursal = await tx.stockSucursal.updateMany({
+              where: {
+                productoId: item.productoId,
+                sucursalId,
+                stockDisponibleUnits: { gte: item.units },
+              },
+              data: { stockDisponibleUnits: { decrement: item.units } },
+            });
 
-        // 2. Decrementar stock en la sucursal
-        const stockSucursalDespues = await tx.stockSucursal.update({
-          where: { id: stockSucursalAntes.id },
-          data: { stockDisponibleUnits: { decrement: item.units } },
-        });
+            if (affectedStockSucursal.count === 0) {
+              throw new Error(`Stock insuficiente para "${stockSucursalInfo.producto.nombre}".`);
+            }
 
-        // 3. Sincronizar stock global (opcional pero recomendado para consistencia legacy)
-        const productoDespues = await tx.producto.update({
-          where: { id: item.productoId },
-          data: { stockDisponibleUnits: { decrement: item.units } },
-        });
+            const stockSucursalDespues = await tx.stockSucursal.findUnique({
+              where: { productoId_sucursalId: { productoId: item.productoId, sucursalId } },
+              select: { stockDisponibleUnits: true }
+            });
 
-        // Auditoría adaptada al estado de la caja
-        await tx.movimientoStock.create({
-          data: {
-            productoId: item.productoId,
-            sucursalId,
-            tipo: TipoMovimientoStock.SALIDA,
-            motivo: MotivoMovimientoStock.VENTA,
-            cantidad: item.units,
-            stockPrevio: stockSucursalAntes.stockDisponibleUnits,
-            stockPosterior: stockSucursalDespues.stockDisponibleUnits,
-            observaciones: sesionActiva
-              ? `Venta POS - Sesión #${sesionActiva.id}`
-              : `Venta POS - Rápida (Sin Caja)`
+            if (!stockSucursalDespues) {
+              throw new Error(`No se pudo confirmar stock para el producto #${item.productoId}.`);
+            }
+
+            const affectedProducto = await tx.producto.updateMany({
+              where: {
+                id: item.productoId,
+                stockDisponibleUnits: { gte: item.units },
+              },
+              data: { stockDisponibleUnits: { decrement: item.units } },
+            });
+
+            if (affectedProducto.count === 0) {
+              throw new Error(`Inconsistencia de stock para "${stockSucursalInfo.producto.nombre}".`);
+            }
+
+            const productoDespues = await tx.producto.findUnique({
+              where: { id: item.productoId },
+            });
+
+            if (!productoDespues) {
+              throw new Error(`Producto #${item.productoId} no encontrado.`);
+            }
+
+            const stockPosterior = stockSucursalDespues.stockDisponibleUnits;
+            const stockPrevio = stockPosterior + item.units;
+
+            await tx.movimientoStock.create({
+              data: {
+                productoId: item.productoId,
+                sucursalId,
+                tipo: TipoMovimientoStock.SALIDA,
+                motivo: MotivoMovimientoStock.VENTA,
+                cantidad: item.units,
+                stockPrevio,
+                stockPosterior,
+                observaciones: sesionActiva
+                  ? `Venta POS - Sesión #${sesionActiva.id}`
+                  : `Venta POS - Rápida (Sin Caja)`
+              }
+            });
+
+            const alerta = evaluateStockAlert(productoDespues, configGlobal);
+            if (alerta) txNotificationsQueue.push(alerta);
+
+            const precioVenta = Number(stockSucursalInfo.precioVentaOverride ?? stockSucursalInfo.producto.precioVenta);
+            const descuento = Number(item.descuento || 0);
+            const subtotal = (precioVenta * item.units) - descuento;
+            totalVenta += subtotal;
+
+            detallesData.push({
+              productoId: item.productoId,
+              units: item.units,
+              precioUnitario: precioVenta,
+              descuento,
+              subtotal,
+            });
           }
+
+          await tx.$executeRaw`SELECT pg_advisory_xact_lock(${BigInt(1000000 + auth.activeSucursalId)})`;
+
+          const lastVenta = await tx.venta.findFirst({
+            where: { sucursalId: auth.activeSucursalId },
+            orderBy: { numeroVenta: "desc" },
+            select: { numeroVenta: true },
+          });
+          const nextNumeroVenta = (lastVenta?.numeroVenta || 0) + 1;
+
+          const descGlobalFinal = Number(descuentoGlobal) || 0;
+          let montoInteres = 0;
+          const porcentajeInteres = Number(configGlobal.porcentajeInteresTarjeta) || 0;
+
+          if (metodoPago === "TARJETA" && porcentajeInteres > 0) {
+            montoInteres = (totalVenta - descGlobalFinal) * (porcentajeInteres / 100);
+          }
+
+          const totalFinal = totalVenta - descGlobalFinal + montoInteres;
+
+          const nuevaVenta = await tx.venta.create({
+            data: {
+              tipo: TipoVenta.CASUAL,
+              clienteId: finalClienteId,
+              sucursalId: auth.activeSucursalId,
+              numeroVenta: nextNumeroVenta,
+              sesionCajaId: sesionActiva?.id || null,
+              fecha: new Date(),
+              total: totalFinal,
+              descuentoGlobal: descGlobalFinal,
+              detalles: { create: detallesData },
+            },
+            include: { detalles: true, cliente: true },
+          });
+
+          const nuevoPago = await tx.pago.create({
+            data: {
+              clienteId: finalClienteId,
+              sucursalId: auth.activeSucursalId,
+              tipo: "VENTA",
+              sesionCajaId: sesionActiva?.id || null,
+              fecha: new Date(),
+              monto: totalFinal,
+              metodo: metodoPago || "EFECTIVO",
+            },
+          });
+
+          return { venta: nuevaVenta, pago: nuevoPago, notificationsQueue: txNotificationsQueue };
+        }, {
+          isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
         });
 
-        const alerta = evaluateStockAlert(productoDespues, configGlobal);
-        if (alerta) notificationsQueue.push(alerta);
-
-        const precioVenta = Number(stockSucursalAntes.precioVentaOverride ?? stockSucursalAntes.producto.precioVenta);
-        const descuento = Number(item.descuento || 0);
-        const subtotal = (precioVenta * item.units) - descuento;
-        totalVenta += subtotal;
-
-        detallesData.push({
-          productoId: item.productoId,
-          units: item.units,
-          precioUnitario: precioVenta,
-          descuento: descuento,
-          subtotal: subtotal,
-        });
+        notificationsQueue = result.notificationsQueue;
+        break;
+      } catch (error: any) {
+        if (!isRetriableVentaError(error) || attempt === MAX_VENTA_RETRIES) {
+          throw error;
+        }
       }
+    }
 
-      // 4. Calcular el siguiente número de ticket para esta sucursal
-      const lastVenta = await tx.venta.findFirst({
-        where: { sucursalId: auth.activeSucursalId },
-        orderBy: { numeroVenta: "desc" },
-        select: { numeroVenta: true },
-      });
-      const nextNumeroVenta = (lastVenta?.numeroVenta || 0) + 1;
-
-      // 5. Calcular descuento global y posible interés si es tarjeta
-      const descGlobalFinal = Number(descuentoGlobal) || 0;
-      let montoInteres = 0;
-      const porcentajeInteres = Number(configGlobal.porcentajeInteresTarjeta) || 0;
-
-      if (metodoPago === "TARJETA" && porcentajeInteres > 0) {
-        montoInteres = (totalVenta - descGlobalFinal) * (porcentajeInteres / 100);
-      }
-
-      const totalFinal = totalVenta - descGlobalFinal + montoInteres;
-
-      // Crear Venta asignando null si no hay sesión
-      const nuevaVenta = await tx.venta.create({
-        data: {
-          tipo: TipoVenta.CASUAL,
-          clienteId: finalClienteId,
-          sucursalId: auth.activeSucursalId,
-          numeroVenta: nextNumeroVenta,
-          sesionCajaId: sesionActiva?.id || null, // <--- Aquí es clave el ?.
-          fecha: new Date(),
-          total: totalFinal,
-          descuentoGlobal: descGlobalFinal,
-          detalles: { create: detallesData },
-        },
-        include: { detalles: true, cliente: true },
-      });
-
-      // Registrar el pago
-      const nuevoPago = await tx.pago.create({
-        data: {
-          clienteId: finalClienteId,
-          sucursalId: auth.activeSucursalId, // <--- NUEVO
-          tipo: "VENTA",                     // <--- NUEVO
-          sesionCajaId: sesionActiva?.id || null,
-          fecha: new Date(),
-          monto: totalFinal,
-          metodo: metodoPago || "EFECTIVO",
-        },
-      });
-
-      return { venta: nuevaVenta, pago: nuevoPago };
-    });
+    if (!result) {
+      throw new Error("No se pudo registrar la venta por concurrencia");
+    }
 
     // Post-Procesamiento
     await processNotificationQueue(notificationsQueue, auth.activeSucursalId);
@@ -244,6 +302,14 @@ export async function POST(req: Request) {
 
   } catch (error: any) {
     console.error("Error POS:", error);
+    const msg = getErrorMessage(error);
+    if (
+      msg.includes("Stock insuficiente") ||
+      msg.includes("no está asignado") ||
+      msg.includes("Inconsistencia de stock")
+    ) {
+      return NextResponse.json({ error: msg }, { status: 409 });
+    }
     return NextResponse.json(
       { error: "Error al procesar la venta" },
       { status: 500 }
