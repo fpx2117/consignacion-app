@@ -619,22 +619,25 @@ export const apiService = {
   },
 
   /* ---------- LINKS PDF (CLIENT-SIDE) ---------- */
+  async getSharePdfUrl(path: string): Promise<string> {
+    const response = await apiRequest<{ url?: string }>(path);
+    const rawUrl = (response as { url?: string })?.url;
+    if (!rawUrl) {
+      throw new Error("No se pudo obtener la URL del PDF.");
+    }
+    return normalizeShareUrl(rawUrl);
+  },
+
   async getConsignacionPdfUrl(id: number): Promise<string> {
-    const res = await fetch(API_ROUTES.REMITO_LINK(id));
-    const data = await res.json();
-    return normalizeShareUrl(data.url);
+    return this.getSharePdfUrl(API_ROUTES.REMITO_LINK(id));
   },
 
   async getVentaPdfUrl(id: number): Promise<string> {
-    const res = await fetch(API_ROUTES.TICKET_LINK(id));
-    const data = await res.json();
-    return normalizeShareUrl(data.url);
+    return this.getSharePdfUrl(API_ROUTES.TICKET_LINK(id));
   },
 
   async getInventarioPdfUrl(sucursalId?: string | number): Promise<string> {
-    const res = await fetch(API_ROUTES.INVENTARIO_LINK(sucursalId));
-    const data = await res.json();
-    return normalizeShareUrl(data.url);
+    return this.getSharePdfUrl(API_ROUTES.INVENTARIO_LINK(sucursalId));
   },
 
   /* ---------- SEGURIDAD ---------- */
