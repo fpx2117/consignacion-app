@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { List, RefreshCw, Copy, ClipboardCheck, PackageSearch } from "lucide-react";
+import { RefreshCw, Copy, ClipboardCheck, PackageSearch } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -15,6 +15,14 @@ interface ProductListGeneratorProps {
     onChange: (val: string) => void;
 }
 
+type ProductForList = {
+    nombre: string;
+    precioVenta: number | string;
+    stockDisponibleUnits?: number;
+    categoria?: { nombre?: string | null } | null;
+    subcategoria?: { nombre?: string | null } | null;
+};
+
 export function ProductListGenerator({ value, onChange }: ProductListGeneratorProps) {
     const [fetching, setFetching] = React.useState(false);
     const [copied, setCopied] = React.useState(false);
@@ -22,13 +30,13 @@ export function ProductListGenerator({ value, onChange }: ProductListGeneratorPr
     const generateProductListText = async () => {
         setFetching(true);
         try {
-            const products = await apiService.getProductos() || [];
+            const products = (await apiService.getProductos()) as ProductForList[];
             const branding = await apiService.getBranding();
 
-            const availableProducts = products.filter((p: any) => p.stockDisponibleUnits > 0);
+            const availableProducts = products.filter((p) => (p.stockDisponibleUnits ?? 0) > 0);
 
-            const grouped: any = {};
-            availableProducts.forEach((p: any) => {
+            const grouped: Record<string, Record<string, ProductForList[]>> = {};
+            availableProducts.forEach((p) => {
                 const catName = p.categoria?.nombre || "Otros";
                 const subName = p.subcategoria?.nombre || "General";
 
@@ -53,14 +61,14 @@ export function ProductListGenerator({ value, onChange }: ProductListGeneratorPr
                         text += `  🔸 ${sub}\n\n`;
                     }
 
-                    grouped[cat][sub].forEach((p: any) => {
+                    grouped[cat][sub].forEach((p) => {
                         const priceFormatted = new Intl.NumberFormat("es-AR", {
                             style: "currency",
                             currency: "ARS",
                             maximumFractionDigits: 0,
                         })
-                            .format(p.precioVenta)
-                            .replace("$", "$ ");
+                            .format(Number(p.precioVenta))
+                            .replace(/\$\s+/u, "$");
 
                         text += `  ${p.nombre} — ${priceFormatted}\n`;
                     });
@@ -74,7 +82,7 @@ export function ProductListGenerator({ value, onChange }: ProductListGeneratorPr
 
             onChange(text);
             toast.success("Lista de productos generada");
-        } catch (e: any) {
+        } catch {
             toast.error("Error al generar la lista");
         } finally {
             setFetching(false);
