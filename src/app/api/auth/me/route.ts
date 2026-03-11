@@ -2,18 +2,14 @@
 // @ts-nocheck
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getAuthTokenFromCookies, verifyUserJwt } from "@/lib/auth";
+import { requireAuth } from "@/lib/requireAuth";
 
 export async function GET() {
-  const token = await getAuthTokenFromCookies();
-
-  if (!token) {
-    return NextResponse.json({ error: "No autenticado" }, { status: 401 });
-  }
+  const auth = await requireAuth();
+  if (!auth.ok) return auth.res;
 
   try {
-    const payload = await verifyUserJwt(token);
-    const userId = Number(payload.sub);
+    const userId = Number(auth.user.sub);
 
     if (!userId) {
       return NextResponse.json({ error: "Token inválido" }, { status: 401 });

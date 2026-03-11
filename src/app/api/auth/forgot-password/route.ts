@@ -33,6 +33,7 @@ export async function POST(req: Request) {
 
         // Generar token
         const token = crypto.randomBytes(32).toString("hex");
+        const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
         const expiresAt = new Date(Date.now() + 1000 * 60 * 60); // 1 hora de expiración
 
         // Guardar token y eliminar anteriores para ese email
@@ -43,7 +44,7 @@ export async function POST(req: Request) {
             prisma.resetPasswordToken.create({
                 data: {
                     email: cleanEmail,
-                    token,
+                    token: tokenHash,
                     expiresAt,
                 },
             }),

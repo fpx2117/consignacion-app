@@ -403,6 +403,30 @@ model LiquidacionItem {
   @@index([consignacionDetalleId])
 }
 
+model CheckoutIntent {
+  id                String                 @id @default(cuid())
+  cliente           Json
+  items             Json
+  envio             Json?
+  totals            Json
+  status            CheckoutIntentStatus   @default(INITIATED)
+  paymentProvider   CheckoutIntentProvider @default(MERCADOPAGO)
+  externalReference String                 @unique
+  mpPreferenceId    String?
+  mpPaymentId       String?                @unique
+  mpMerchantOrderId String?
+  failureReason     String?
+  processedAt       DateTime?
+  expiresAt         DateTime?
+  createdAt         DateTime               @default(now())
+  updatedAt         DateTime               @updatedAt
+  ventaId           Int?                   @unique
+  venta             Venta?                 @relation(fields: [ventaId], references: [id])
+
+  @@index([status])
+  @@index([createdAt])
+}
+
 model Venta {
   id            Int            @id @default(autoincrement())
   clienteId     Int
@@ -421,6 +445,7 @@ model Venta {
   sucursal      Sucursal       @relation(fields: [sucursalId], references: [id])
   detalles      VentaDetalle[]
   envio         Envio?
+  checkoutIntent CheckoutIntent?
 
   // Anulación
   anulada         Boolean   @default(false)
@@ -648,6 +673,19 @@ model CategoriaGasto {
 enum EstadoGasto {
   PENDIENTE
   PAGADO
+}
+
+enum CheckoutIntentStatus {
+  INITIATED
+  PENDING
+  PAID
+  FAILED
+  EXPIRED
+  CANCELLED
+}
+
+enum CheckoutIntentProvider {
+  MERCADOPAGO
 }
 
 enum FrecuenciaGasto {

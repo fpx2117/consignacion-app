@@ -5,8 +5,13 @@ import { sendNotification } from "@/lib/socket-trigger";
 import { NOTIFICATION_TYPE, NOTIFICATION_CONFIG } from "@/lib/notificationes/notificaciones-types";
 
 export async function GET(request: Request) {
+    const cronSecret = process.env.CRON_SECRET;
+    if (!cronSecret || cronSecret.trim() === "") {
+        return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+    }
+
     const authHeader = request.headers.get('authorization');
-    if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+    if (authHeader !== `Bearer ${cronSecret}`) {
         return NextResponse.json({ error: "No autorizado" }, { status: 401 });
     }
 

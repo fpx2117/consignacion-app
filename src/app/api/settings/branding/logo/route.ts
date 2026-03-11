@@ -3,7 +3,7 @@
 // src/app/api/settings/branding/logo/route.ts
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireAuth } from "@/lib/requireAuth";
+import { requireAuth, requireRole } from "@/lib/requireAuth";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -14,8 +14,8 @@ export async function GET() {
   if (!auth.ok) return auth.res;
 
   try {
-    const branding = await prisma.branding.findFirst({
-      orderBy: { updatedAt: "desc" },
+    const branding = await prisma.branding.findUnique({
+      where: { sucursalId: auth.activeSucursalId },
       select: { logoData: true, logoMime: true },
     });
 
@@ -39,11 +39,14 @@ export async function DELETE() {
   // Auth: Solo ADMIN puede eliminar el logo
   const auth = await requireAuth();
   if (!auth.ok) return auth.res;
+  if (!requireRole(auth.user, ["ADMIN"])) {
+    return NextResponse.json({ ok: false, error: "No autorizado" }, { status: 403 });
+  }
 
   try {
     // Buscamos el último branding (el que usás como vigente)
-    const branding = await prisma.branding.findFirst({
-      orderBy: { updatedAt: "desc" },
+    const branding = await prisma.branding.findUnique({
+      where: { sucursalId: auth.activeSucursalId },
       select: { id: true },
     });
 

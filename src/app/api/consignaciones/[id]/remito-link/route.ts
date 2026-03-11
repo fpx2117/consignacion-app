@@ -23,7 +23,13 @@ export async function GET(
   const expiresInDays = 7;
   const maxViews = 3;
 
-  const consignacion = await prisma.consignacion.findUnique({ where: { id } });
+  const consignacion = await prisma.consignacion.findFirst({
+    where: {
+      id,
+      sucursalId: auth.activeSucursalId,
+    },
+    select: { id: true },
+  });
   if (!consignacion) {
     return NextResponse.json({ error: "Consignación no encontrada" }, { status: 404 });
   }

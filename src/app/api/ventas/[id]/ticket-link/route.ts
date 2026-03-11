@@ -23,7 +23,13 @@ export async function GET(
   const expiresInDays = 7;
   const maxViews = 3;
 
-  const venta = await prisma.venta.findUnique({ where: { id } });
+  const venta = await prisma.venta.findFirst({
+    where: {
+      id,
+      sucursalId: auth.activeSucursalId,
+    },
+    select: { id: true },
+  });
   if (!venta) {
     return NextResponse.json({ error: "Venta no encontrada" }, { status: 404 });
   }

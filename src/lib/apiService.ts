@@ -215,6 +215,7 @@ export const API_ROUTES = {
   PUBLIC: {
     LISTA_PRECIOS: "/api/public/lista-precios",
     CHECKOUT: "/api/public/checkout",
+    CHECKOUT_STATUS: "/api/public/checkout/status",
   },
 } as const;
 
@@ -320,6 +321,13 @@ export const apiService = {
       method: "POST",
       body: JSON.stringify(payload),
     });
+  },
+
+  getPublicCheckoutStatus(token: string) {
+    const qs = new URLSearchParams({ token });
+    return apiData<{ status: "PENDING" | "PAID" | "FAILED"; ventaId?: number; reason?: string }>(
+      `${API_ROUTES.PUBLIC.CHECKOUT_STATUS}?${qs.toString()}`,
+    );
   },
 
   cotizarEnvioPublico(payload: { sucursalId: number, codigoPostal: string, subtotal: number, pesoKg?: number }) {

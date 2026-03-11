@@ -53,6 +53,8 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: false, error: "Faltan campos obligatorios" }, { status: 400 });
     }
 
+    const normalizedEmail = String(email).trim().toLowerCase();
+
     // Validate password strength server-side
     const pwCheck = validatePasswordStrength(password);
     if (!pwCheck.valid) {
@@ -65,7 +67,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: false, error: userCheck.message, limitReached: true }, { status: 403 });
     }
 
-    const existe = await prisma.usuario.findUnique({ where: { email } });
+    const existe = await prisma.usuario.findUnique({ where: { email: normalizedEmail } });
     if (existe) {
       return NextResponse.json({ ok: false, error: "Ya existe un usuario con este correo" }, { status: 400 });
     }
@@ -76,7 +78,7 @@ export async function POST(req: Request) {
     const nuevoUsuario = await prisma.usuario.create({
       data: {
         nombre,
-        email,
+        email: normalizedEmail,
         hash,
         rol,
         sucursalId: sucursalId ? Number(sucursalId) : 1,
@@ -108,14 +110,17 @@ export async function PUT(req: Request) {
       return NextResponse.json({ ok: false, error: "Faltan campos obligatorios" }, { status: 400 });
     }
 
-    const existe = await prisma.usuario.findUnique({ where: { email } });
-    if (existe && existe.id !== id) {
+    const normalizedEmail = String(email).trim().toLowerCase();
+    const numericId = Number(id);
+
+    const existe = await prisma.usuario.findUnique({ where: { email: normalizedEmail } });
+    if (existe && existe.id !== numericId) {
       return NextResponse.json({ ok: false, error: "El correo ya está en uso por otro usuario" }, { status: 400 });
     }
 
     const dataToUpdate: any = {
       nombre,
-      email,
+      email: normalizedEmail,
       rol,
       sucursalId: sucursalId ? Number(sucursalId) : null
     };
@@ -131,7 +136,7 @@ export async function PUT(req: Request) {
     }
 
     const usuarioActualizado = await prisma.usuario.update({
-      where: { id },
+      where: { id: numericId },
       data: dataToUpdate,
       select: { id: true, nombre: true, email: true, rol: true, sucursalId: true, activo: true, createdAt: true },
     });

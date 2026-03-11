@@ -2,7 +2,7 @@
 // @ts-nocheck
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireAuth } from "@/lib/requireAuth";
+import { requireAuth, requireRole } from "@/lib/requireAuth";
 
 // GET: Obtener branding de la sucursal activa
 export async function GET() {
@@ -46,6 +46,9 @@ export async function GET() {
 export async function PUT(req: Request) {
   const auth = await requireAuth();
   if (!auth.ok) return auth.res;
+  if (!requireRole(auth.user, ["ADMIN"])) {
+    return NextResponse.json({ error: "No autorizado" }, { status: 403 });
+  }
 
   try {
     const body = await req.json();

@@ -24,6 +24,11 @@ const paymentConfigSchema = z.object({
     business: z.object({
         defaultTrialDays: z.coerce.number().default(7),
     }),
+
+    // FEATURE FLAGS
+    featureFlags: z.object({
+        publicCheckoutV2: z.coerce.boolean().default(false),
+    }),
 });
 
 export type PaymentConfig = z.infer<typeof paymentConfigSchema>;
@@ -44,6 +49,9 @@ function loadPaymentConfig(): PaymentConfig {
         },
         business: {
             defaultTrialDays: process.env.DEFAULT_TRIAL_DAYS,
+        },
+        featureFlags: {
+            publicCheckoutV2: process.env.PUBLIC_CHECKOUT_V2,
         },
     });
 
