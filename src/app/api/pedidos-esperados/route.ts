@@ -105,6 +105,14 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ data });
   } catch (error) {
     console.error("Error al obtener pedidos esperados:", error);
+
+    if ((error as any)?.code === "P2021") {
+      return NextResponse.json({
+        data: [],
+        warning: "El modulo de pedidos esperados aun no esta inicializado en esta base de datos.",
+      });
+    }
+
     return NextResponse.json(
       { error: "Error interno al obtener pedidos" },
       { status: 500 }
@@ -199,6 +207,14 @@ export async function POST(req: Request) {
     return NextResponse.json({ data: pedido }, { status: 201 });
   } catch (error) {
     console.error("Error al crear pedido esperado:", error);
+
+    if ((error as any)?.code === "P2021") {
+      return NextResponse.json(
+        { error: "El modulo de pedidos esperados aun no esta inicializado en esta base de datos" },
+        { status: 503 }
+      );
+    }
+
     return NextResponse.json(
       { error: "Error interno al crear pedido" },
       { status: 500 }
