@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { LayoutGrid, Rows3, Store, Search, Tag, Percent, ExternalLink, CheckCircle2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useSucursalStore } from "@/store/useSucursalStore";
 
 /* ─── SVG Mockups ─── */
 
@@ -74,7 +75,9 @@ function ListMockup({ active }: { active?: boolean }) {
 /* ─── Main Component ─── */
 
 export function LayoutTab({ config, setConfig }: any) {
+    const activeSucursalId = useSucursalStore((s) => s.activeSucursalId);
     const isLive = config.convertirTienda;
+    const catalogoHref = activeSucursalId ? `/lista?sucursalId=${activeSucursalId}` : "/lista";
 
     return (
         <div className={cn(
@@ -133,7 +136,7 @@ export function LayoutTab({ config, setConfig }: any) {
                                 size="sm"
                                 className="rounded-lg text-xs font-bold h-8 border-emerald-300 dark:border-emerald-800 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-900/30 hidden sm:flex"
                             >
-                                <a href="/lista" target="_blank" rel="noopener noreferrer">
+                                <a href={catalogoHref} target="_blank" rel="noopener noreferrer">
                                     <ExternalLink className="h-3.5 w-3.5 mr-1.5" />
                                     Ver tienda
                                 </a>
