@@ -3,6 +3,7 @@ import { headers } from "next/headers";
 import { SidebarDock } from "@/components/sidebar-dock";
 import { SubscriptionGuard } from "@/components/SubscriptionGuard";
 import { TopBar } from "@/components/top-bar";
+import { GlobalReadonlyGuard } from "@/components/global-readonly-guard";
 
 export const dynamic = "force-dynamic";
 
@@ -77,6 +78,7 @@ export default async function ProtectedLayout({
       <div className="fixed inset-0 -z-10 h-full w-full bg-white dark:bg-transparent [background:radial-gradient(125%_125%_at_50%_10%,#fff_40%,#63e_100%)] dark:[background:radial-gradient(125%_125%_at_50%_10%,#000_40%,#63e_100%)] opacity-[0.15] pointer-events-none" />
 
       <SubscriptionGuard>
+        <GlobalReadonlyGuard />
         <SidebarDock />
         <TopBar />
         {/* Agregamos pt-28 y md:pt-28 para que el main no quede oculto detrás del TopBar (h-20) */}

@@ -55,6 +55,7 @@ const getInitials = (name: string) =>
 
 export function ClientesView() {
   const activeSucursalId = useSucursalStore((s) => s.activeSucursalId);
+  const isGlobalView = activeSucursalId === 0;
   const [items, setItems] = React.useState<Cliente[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [q, setQ] = React.useState("");
@@ -107,6 +108,13 @@ export function ClientesView() {
       return matchesSearch && matchesStatus;
     });
   }, [items, q, statusFilter]);
+
+  const getClienteLocationLabel = (cliente: Cliente) => {
+    if (isGlobalView && cliente.sucursal?.nombre) {
+      return `Sucursal: ${cliente.sucursal.nombre}`;
+    }
+    return cliente.direccion || "—";
+  };
 
   // --- GRID CARD COMPONENT ---
   const GridCard = ({ c }: { c: Cliente }) => (
@@ -165,7 +173,7 @@ export function ClientesView() {
             <div className="grid grid-cols-1 gap-2 text-sm">
               <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/40 text-muted-foreground">
                 <MapPin className="h-4 w-4 shrink-0" />
-                <span className="truncate">{c.direccion || "Sin dirección registrada"}</span>
+                <span className="truncate">{getClienteLocationLabel(c)}</span>
               </div>
               <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/40 text-muted-foreground">
                 <Phone className="h-4 w-4 shrink-0" />
@@ -316,7 +324,7 @@ export function ClientesView() {
                                 </div>
                                 <div className="text-[10px] text-muted-foreground flex items-center gap-1 mt-0.5">
                                   <MapPin className="h-3 w-3" />{" "}
-                                  {c.direccion || "—"}
+                                  {getClienteLocationLabel(c)}
                                 </div>
                               </div>
                             </div>

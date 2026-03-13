@@ -168,6 +168,8 @@ export type SesionCaja = {
 export type Cliente = {
   id: ID;
   nombre: string;
+  sucursalId?: ID;
+  sucursal?: { id: ID; nombre: string };
   telefono?: string | null;
   direccion?: string | null;
   activo: boolean;

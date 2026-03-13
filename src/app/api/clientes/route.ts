@@ -7,10 +7,18 @@ import { buildSucursalWhere, isGlobalSucursalView } from "@/lib/sucursalScope";
 export async function GET() {
   const auth = await requireAuth();
   if (!auth.ok) return auth.res;
+  const isGlobal = auth.user.rol === "ADMIN" && auth.activeSucursalId === 0;
 
   const clientes = await prisma.cliente.findMany({
     where: buildSucursalWhere(auth),
-    orderBy: { id: "desc" }
+    orderBy: isGlobal
+      ? [{ sucursalId: "asc" }, { id: "desc" }]
+      : [{ id: "desc" }],
+    include: {
+      sucursal: {
+        select: { id: true, nombre: true },
+      },
+    },
   });
   return NextResponse.json({ data: clientes });
 }
