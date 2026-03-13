@@ -48,7 +48,8 @@ import {
   LayoutGrid,
   Store,
   LogOut,
-  Wallet
+  Wallet,
+  ClipboardList,
 } from "lucide-react";
 
 
@@ -62,6 +63,7 @@ const NAV_CORE = [{ label: "Dashboard", href: "/dashboard", icon: LayoutDashboar
 const NAV_BUSINESS = [
   { label: "Clientes", href: "/clientes", icon: Users },
   { label: "Productos", href: "/productos", icon: Package },
+  { label: "Pedidos Esperados", href: "/pedidos-esperados", icon: ClipboardList },
   { label: "Consignaciones", href: "/consignaciones", icon: Handshake },
   { label: "Gastos", href: "/gastos", icon: Wallet },
 ];
@@ -97,7 +99,7 @@ export function SidebarDock() {
     }
   };
 
-  const { availableSucursales, activeSucursalId, setActiveSucursalId, setAvailableSucursales } = useSucursalStore();
+  const { availableSucursales, activeSucursalId, setActiveSucursalId, setAvailableSucursales, pedidosVencidosCount, setPedidosVencidosCount } = useSucursalStore();
 
 
   // Flag de hidratación: Vital para evitar fallos Next.js
@@ -139,6 +141,19 @@ export function SidebarDock() {
       } catch { /* silencioso */ }
     };
     fetchUserData();
+
+    // 1a. Cargar conteo de pedidos vencidos para badge en sidebar
+    const fetchPedidosVencidos = async () => {
+      try {
+        const res = await fetch("/api/pedidos-esperados?estado=VENCIDO");
+        if (res.ok) {
+          const json = await res.json();
+          const vencidos = (json?.data ?? []).filter((p: any) => p.estado === "VENCIDO");
+          setPedidosVencidosCount(vencidos.length);
+        }
+      } catch { /* silencioso */ }
+    };
+    fetchPedidosVencidos();
 
     // 1. Carga instántanea desde caché (evita flash visual)
     const cachedConfig = localStorage.getItem("usarControlDeCaja");
@@ -202,6 +217,9 @@ export function SidebarDock() {
   const renderItem = (item: any, isMobile: boolean) => {
     const active = isActive(item.href);
     const Icon = item.icon;
+    const isPedidos = item.href === "/pedidos-esperados";
+    const showBadge = isPedidos && pedidosVencidosCount > 0;
+
     return (
       <DockIcon key={item.href}>
         <TooltipProvider delayDuration={0}>
@@ -210,15 +228,23 @@ export function SidebarDock() {
               <Link
                 href={item.href}
                 className={cn(
-                  "flex items-center justify-center rounded-full transition-all duration-300",
+                  "relative flex items-center justify-center rounded-full transition-all duration-300",
                   isMobile ? "h-9 w-9" : "h-10 w-10",
                   active ? "bg-primary text-primary-foreground shadow-lg scale-110" : "text-muted-foreground hover:bg-muted"
                 )}
               >
                 <Icon className={isMobile ? "h-4 w-4" : "size-5"} />
+                {showBadge && (
+                  <span className="absolute -top-1 -right-1 min-w-[16px] h-4 px-[3px] rounded-full bg-destructive text-[9px] font-black text-destructive-foreground flex items-center justify-center leading-none animate-pulse">
+                    {pedidosVencidosCount > 9 ? "9+" : pedidosVencidosCount}
+                  </span>
+                )}
               </Link>
             </TooltipTrigger>
-            <TooltipContent side={isMobile ? "top" : "right"}>{item.label}</TooltipContent>
+            <TooltipContent side={isMobile ? "top" : "right"}>
+              {item.label}
+              {showBadge && ` (${pedidosVencidosCount} vencido${pedidosVencidosCount > 1 ? "s" : ""})`}
+            </TooltipContent>
           </Tooltip>
         </TooltipProvider>
       </DockIcon>

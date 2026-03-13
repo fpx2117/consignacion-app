@@ -11,8 +11,10 @@ export interface Sucursal {
 interface SucursalState {
     activeSucursalId: number;
     availableSucursales: Sucursal[];
+    pedidosVencidosCount: number;
     setActiveSucursalId: (id: number) => void;
     setAvailableSucursales: (sucursales: Sucursal[]) => void;
+    setPedidosVencidosCount: (count: number) => void;
 }
 
 export const useSucursalStore = create<SucursalState>()(
@@ -20,6 +22,7 @@ export const useSucursalStore = create<SucursalState>()(
         (set, get) => ({
             activeSucursalId: 1, // Default Sede Principal
             availableSucursales: [],
+            pedidosVencidosCount: 0,
             setActiveSucursalId: (id: number) => {
                 // Validar que la sucursal exista en las disponibles o sea 0 (Global)
                 const exists = id === 0 || get().availableSucursales.find(s => s.id === id);
@@ -35,6 +38,9 @@ export const useSucursalStore = create<SucursalState>()(
                     const defaultSucursal = sucursales.find(s => s.esPrincipal) || sucursales[0];
                     set({ activeSucursalId: defaultSucursal.id });
                 }
+            },
+            setPedidosVencidosCount: (count: number) => {
+                set({ pedidosVencidosCount: count });
             },
         }),
         {

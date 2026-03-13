@@ -1,0 +1,168 @@
+/* eslint-disable */
+// @ts-nocheck
+"use client";
+
+import * as React from "react";
+import { toast } from "sonner";
+import type { PedidoEsperado } from "@/types/pedidos-esperados";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { CalendarClock, Loader2, X } from "lucide-react";
+
+interface PostergarPedidoDialogProps {
+  pedido: PedidoEsperado | null;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onSuccess: () => void;
+}
+
+function getTomorrowStr() {
+  const d = new Date();
+  d.setDate(d.getDate() + 1);
+  return d.toISOString().split("T")[0];
+}
+
+function formatFechaCorta(fechaISO: string) {
+  if (!fechaISO) return "—";
+  const d = new Date(fechaISO);
+  return d.toLocaleDateString("es-AR", { day: "2-digit", month: "short", year: "numeric" });
+}
+
+export function PostergarPedidoDialog({
+  pedido,
+  open,
+  onOpenChange,
+  onSuccess,
+}: PostergarPedidoDialogProps) {
+  const [nuevaFecha, setNuevaFecha] = React.useState("");
+  const [motivo, setMotivo] = React.useState("");
+  const [saving, setSaving] = React.useState(false);
+
+  React.useEffect(() => {
+    if (!open) {
+      setNuevaFecha("");
+      setMotivo("");
+    }
+  }, [open]);
+
+  const minFecha = getTomorrowStr();
+  const canSubmit = nuevaFecha !== "" && nuevaFecha >= minFecha;
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!pedido || !canSubmit || saving) return;
+
+    setSaving(true);
+    try {
+      const res = await fetch(`/api/pedidos-esperados/${pedido.id}/postergar`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          nuevaFecha: new Date(nuevaFecha).toISOString(),
+          motivo: motivo.trim() || undefined,
+        }),
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || "Error al postergar pedido");
+      }
+
+      toast.success("Pedido postergado correctamente");
+      onOpenChange(false);
+      onSuccess();
+    } catch (err: any) {
+      toast.error(err.message || "Error al postergar el pedido");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  if (!pedido) return null;
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-[440px] p-0 overflow-hidden border-none shadow-2xl bg-background">
+        <DialogHeader className="p-6 pb-3 border-b bg-muted/20">
+          <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400">
+            <CalendarClock className="h-5 w-5" />
+            <DialogTitle className="text-xl font-bold italic tracking-tight">Postergar Pedido</DialogTitle>
+          </div>
+          <DialogDescription className="text-muted-foreground text-sm">
+            Fecha original: <span className="font-bold text-foreground">{formatFechaCorta(pedido.fechaEsperada)}</span>
+          </DialogDescription>
+        </DialogHeader>
+
+        <form onSubmit={handleSubmit} className="p-6 space-y-5">
+          {/* NUEVA FECHA */}
+          <div className="space-y-2">
+            <Label className="text-xs font-bold uppercase text-muted-foreground">
+              Nueva fecha estimada
+            </Label>
+            <Input
+              type="date"
+              min={minFecha}
+              value={nuevaFecha}
+              onChange={(e) => setNuevaFecha(e.target.value)}
+              className="h-11 bg-muted/30 border-transparent text-sm"
+            />
+            {nuevaFecha && nuevaFecha < minFecha && (
+              <p className="text-xs text-red-500 font-bold">La nueva fecha debe ser a partir de mañana</p>
+            )}
+          </div>
+
+          {/* MOTIVO */}
+          <div className="space-y-2">
+            <Label className="text-xs font-bold uppercase text-muted-foreground">
+              Motivo de postergación{" "}
+              <span className="normal-case font-normal text-muted-foreground/60">(opcional)</span>
+            </Label>
+            <Textarea
+              placeholder="Ej: El proveedor avisó retraso en entrega..."
+              value={motivo}
+              onChange={(e) => setMotivo(e.target.value)}
+              className="resize-none rounded-xl bg-muted/30 border-transparent min-h-[80px] text-sm focus:bg-background"
+            />
+          </div>
+
+          <DialogFooter className="pt-2 gap-3 flex-col sm:flex-row">
+            <Button
+              type="button"
+              variant="outline"
+              className="flex-1 h-11 rounded-xl gap-2"
+              onClick={() => onOpenChange(false)}
+              disabled={saving}
+            >
+              <X className="h-4 w-4" />
+              Cancelar
+            </Button>
+            <Button
+              type="submit"
+              className="flex-1 h-11 rounded-xl font-bold bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-500/20 gap-2"
+              disabled={!canSubmit || saving}
+            >
+              {saving ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <>
+                  <CalendarClock className="h-4 w-4" />
+                  Postergar
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}

@@ -6,6 +6,18 @@ import { TopBar } from "@/components/top-bar";
 
 export const dynamic = "force-dynamic";
 
+async function triggerCheckVencidos(origin: string, cookieHeader: string) {
+  try {
+    await fetch(`${origin}/api/pedidos-esperados/check-vencidos`, {
+      method: "POST",
+      cache: "no-store",
+      headers: { cookie: cookieHeader },
+    });
+  } catch {
+    // fire-and-forget: no bloquea el render si falla
+  }
+}
+
 async function checkAuth() {
   const h = await headers();
 
@@ -44,9 +56,20 @@ export default async function ProtectedLayout({
 }: {
   children: React.ReactNode;
 }) {
+  const h = await headers();
+  const cookieHeader = h.get("cookie") ?? "";
+  const host = h.get("x-forwarded-host") ?? h.get("host");
+  const proto = h.get("x-forwarded-proto") ?? (host?.includes("localhost") ? "http" : "https");
+  const origin = host ? `${proto}://${host}` : "";
+
   const ok = await checkAuth();
 
   if (!ok) redirect("/login");
+
+  // Check de pedidos vencidos: fire-and-forget, no bloquea el render
+  if (origin) {
+    triggerCheckVencidos(origin, cookieHeader).catch(() => {});
+  }
 
   return (
     <div className="min-h-screen bg-background text-foreground transition-colors duration-300 relative overflow-hidden">
