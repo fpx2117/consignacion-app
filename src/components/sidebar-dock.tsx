@@ -45,13 +45,11 @@ import {
   Settings,
   History,
   LayoutGrid,
-  Store,
   LogOut,
   Wallet,
   ClipboardList,
   Briefcase,
   Zap,
-  ChevronRight,
 } from "lucide-react";
 
 import { useNotifications } from "../hooks/useNotifications";
@@ -83,20 +81,35 @@ function useHoverPopover(delay = 100) {
   const [open, setOpen] = React.useState(false);
   const closeTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  const scheduleClose = () => {
+    closeTimer.current = setTimeout(() => setOpen(false), delay);
+  };
+
   const onMouseEnter = () => {
     if (closeTimer.current) clearTimeout(closeTimer.current);
     setOpen(true);
   };
 
   const onMouseLeave = () => {
-    closeTimer.current = setTimeout(() => setOpen(false), delay);
+    scheduleClose();
+  };
+
+  const onFocus = () => {
+    if (closeTimer.current) clearTimeout(closeTimer.current);
+    setOpen(true);
+  };
+
+  const onBlur = (e: React.FocusEvent<HTMLElement>) => {
+    if (!e.currentTarget.contains(e.relatedTarget as Node | null)) {
+      scheduleClose();
+    }
   };
 
   React.useEffect(() => () => {
     if (closeTimer.current) clearTimeout(closeTimer.current);
   }, []);
 
-  return { open, setOpen, onMouseEnter, onMouseLeave };
+  return { open, setOpen, onMouseEnter, onMouseLeave, onFocus, onBlur };
 }
 
 // --- COMPONENTE: Grupo de navegación con Popover hover ---
@@ -115,41 +128,37 @@ function NavGroup({
   renderSubItem: (item: any) => React.ReactNode;
   badge?: number;
 }) {
-  const { open, setOpen, onMouseEnter, onMouseLeave } = useHoverPopover(150);
+  const { open, setOpen, onMouseEnter, onMouseLeave, onFocus, onBlur } = useHoverPopover(150);
   const groupActive = items.some((i) => isActive(i.href));
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <div onMouseEnter={onMouseEnter} onMouseLeave={onMouseLeave}>
+        <div onMouseEnter={onMouseEnter} onMouseLeave={onMouseLeave} onFocus={onFocus} onBlur={onBlur}>
           <DockIcon>
-            <TooltipProvider delayDuration={0}>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <button
-                    className={cn(
-                      "relative flex items-center justify-center rounded-full transition-all duration-300 h-10 w-10",
-                      groupActive
-                        ? "bg-primary text-primary-foreground shadow-lg scale-110"
-                        : "text-muted-foreground hover:bg-muted"
-                    )}
-                  >
-                    <GroupIcon className="size-5" />
-                    {/* Badge de grupo activo */}
-                    {groupActive && !open && (
-                      <span className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-primary-foreground/70" />
-                    )}
-                    {/* Badge numérico externo */}
-                    {badge && badge > 0 && (
-                      <span className="absolute -top-1 -right-1 min-w-[16px] h-4 px-[3px] rounded-full bg-destructive text-[9px] font-black text-destructive-foreground flex items-center justify-center leading-none animate-pulse">
-                        {badge > 9 ? "9+" : badge}
-                      </span>
-                    )}
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent side="right">{label}</TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+            <button
+              aria-label={label}
+              aria-expanded={open}
+              aria-haspopup="menu"
+              className={cn(
+                "relative flex items-center justify-center rounded-full transition-all duration-300 h-10 w-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+                groupActive
+                  ? "bg-primary text-primary-foreground shadow-lg scale-110"
+                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
+              )}
+            >
+              <GroupIcon className="size-5" />
+              {/* Badge de grupo activo */}
+              {groupActive && !open && (
+                <span className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-primary-foreground/70" />
+              )}
+              {/* Badge numérico externo */}
+              {badge && badge > 0 && (
+                <span className="absolute -top-1 -right-1 min-w-[16px] h-4 px-[3px] rounded-full bg-destructive text-[9px] font-black text-destructive-foreground flex items-center justify-center leading-none animate-pulse">
+                  {badge > 9 ? "9+" : badge}
+                </span>
+              )}
+            </button>
           </DockIcon>
         </div>
       </PopoverTrigger>
@@ -157,14 +166,12 @@ function NavGroup({
         side="right"
         align="center"
         sideOffset={12}
-        className="p-2 w-auto min-w-[180px] rounded-2xl border bg-card/90 backdrop-blur-xl shadow-xl"
+        className="p-2.5 w-auto min-w-[210px] rounded-2xl border border-border/70 bg-background/95 backdrop-blur-xl shadow-2xl"
         onMouseEnter={onMouseEnter}
         onMouseLeave={onMouseLeave}
+        onFocus={onFocus}
+        onBlur={onBlur}
       >
-        {/* Label del grupo */}
-        <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60 px-2 pb-1.5 pt-0.5">
-          {label}
-        </p>
         <div className="flex flex-col gap-0.5">
           {items.map(renderSubItem)}
         </div>
@@ -324,8 +331,9 @@ export function SidebarDock() {
             <TooltipTrigger asChild>
               <Link
                 href={item.href}
+                aria-label={item.label}
                 className={cn(
-                  "relative flex items-center justify-center rounded-full transition-all duration-300",
+                  "relative flex items-center justify-center rounded-full transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
                   isMobile ? "h-9 w-9" : "h-10 w-10",
                   active ? "bg-primary text-primary-foreground shadow-lg scale-110" : "text-muted-foreground hover:bg-muted"
                 )}
@@ -359,11 +367,12 @@ export function SidebarDock() {
       <Link
         key={item.href}
         href={item.href}
+        aria-current={active ? "page" : undefined}
         className={cn(
-          "flex items-center gap-3 px-3 py-2 rounded-xl transition-all duration-200 group",
+          "flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
           active
-            ? "bg-primary text-primary-foreground font-semibold"
-            : "text-muted-foreground hover:bg-muted hover:text-foreground"
+            ? "bg-primary text-primary-foreground font-semibold shadow-sm"
+            : "text-muted-foreground hover:bg-muted/80 hover:text-foreground"
         )}
       >
         <div className="relative shrink-0">
@@ -393,9 +402,9 @@ export function SidebarDock() {
   }) => {
     const { hasUnread } = notificationsState;
     return (
-      <Sheet>
+        <Sheet>
         <SheetTrigger asChild>
-          <button className="relative flex h-9 w-9 md:h-10 md:w-10 items-center justify-center rounded-full text-muted-foreground hover:bg-muted transition-all">
+          <button aria-label="Notificaciones" className="relative flex h-9 w-9 md:h-10 md:w-10 items-center justify-center rounded-full text-muted-foreground hover:bg-muted transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70 focus-visible:ring-offset-2 focus-visible:ring-offset-background">
             <Bell className={isMobile ? "h-4 w-4" : "h-5 w-5"} />
             {hasUnread && <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-destructive animate-pulse" />}
           </button>
@@ -411,7 +420,7 @@ export function SidebarDock() {
   if (!mounted) return null;
 
   return (
-    <aside className="fixed bottom-0 left-0 z-50 w-full border-t bg-background/60 backdrop-blur-2xl md:top-0 md:h-screen md:w-[84px] md:border-r md:border-t-0">
+    <aside className="fixed bottom-0 left-0 z-50 w-full border-t border-border/60 bg-background/70 backdrop-blur-2xl md:top-0 md:h-screen md:w-[84px] md:border-r md:border-t-0">
 
       {/* ── MOBILE ── */}
       <div className="md:hidden flex justify-center py-2 pb-[max(env(safe-area-inset-bottom),0.5rem)]">
@@ -500,7 +509,7 @@ export function SidebarDock() {
 
         <div className="flex-1 flex flex-col items-center justify-center w-full">
           <div className="relative overflow-hidden rounded-3xl p-[1px]">
-            <Dock orientation="vertical" className="border bg-card/50 backdrop-blur-xl md:flex-col gap-1 p-1.5">
+            <Dock orientation="vertical" className="border border-border/70 bg-card/70 backdrop-blur-xl shadow-xl md:flex-col gap-1.5 p-2">
 
               {isEmpleado ? (
                 /* ── EMPLEADO: Solo Venta Casual ── */
@@ -552,7 +561,7 @@ export function SidebarDock() {
               <Separator className="w-8 mx-auto opacity-50" />
               <DockIcon><NotificationItem notificationsState={notificationsState} /></DockIcon>
               <DockIcon>
-                <button onClick={() => setTheme(isDark ? "light" : "dark")} className="h-10 w-10 flex items-center justify-center rounded-full text-muted-foreground hover:bg-muted transition-colors">
+                <button aria-label={isDark ? "Activar modo claro" : "Activar modo oscuro"} onClick={() => setTheme(isDark ? "light" : "dark")} className="h-10 w-10 flex items-center justify-center rounded-full text-muted-foreground hover:bg-muted transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70 focus-visible:ring-offset-2 focus-visible:ring-offset-background">
                   {isDark ? <Sun className="size-5" /> : <Moon className="size-5" />}
                 </button>
               </DockIcon>
@@ -567,7 +576,8 @@ export function SidebarDock() {
               <button
                 onClick={handleLogout}
                 disabled={loggingOut}
-                className="mt-auto mb-2 h-10 w-10 flex items-center justify-center rounded-full text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-all disabled:opacity-50"
+                aria-label={loggingOut ? "Cerrando sesion" : "Cerrar sesion"}
+                className="mt-auto mb-2 h-10 w-10 flex items-center justify-center rounded-full text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-all disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive/70 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
               >
                 <LogOut className="size-5" />
               </button>
