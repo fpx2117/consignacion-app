@@ -15,12 +15,19 @@ import { checkProductLimit } from "@/lib/requireSubscription";
  * GET: OBTENER PRODUCTOS
  * Trae todos los productos activos con sus categorías y subcategorías.
  */
-export async function GET() {
+export async function GET(req: Request) {
   try {
     const auth = await requireAuth();
     if (!auth.ok) return auth.res;
 
-    const sucursalId = auth.activeSucursalId;
+    const { searchParams } = new URL(req.url);
+    const sucursalParam = searchParams.get("sucursalId");
+    const sucursalParamNum = sucursalParam ? Number(sucursalParam) : NaN;
+
+    const sucursalId =
+      auth.user.rol === "ADMIN" && Number.isFinite(sucursalParamNum) && sucursalParamNum > 0
+        ? sucursalParamNum
+        : auth.activeSucursalId;
 
     const productos = await prisma.producto.findMany({
       where: {

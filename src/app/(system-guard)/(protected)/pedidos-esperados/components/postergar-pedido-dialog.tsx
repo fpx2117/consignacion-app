@@ -4,6 +4,7 @@
 
 import * as React from "react";
 import { toast } from "sonner";
+import { useSucursalStore } from "@/store/useSucursalStore";
 import type { PedidoEsperado } from "@/types/pedidos-esperados";
 import {
   Dialog,
@@ -44,6 +45,11 @@ export function PostergarPedidoDialog({
   onOpenChange,
   onSuccess,
 }: PostergarPedidoDialogProps) {
+  const activeSucursalId = useSucursalStore((s) => s.activeSucursalId);
+  const sucursalHeaders = React.useMemo(
+    () => (activeSucursalId ? { "x-sucursal-id": String(activeSucursalId) } : {}),
+    [activeSucursalId]
+  );
   const [nuevaFecha, setNuevaFecha] = React.useState("");
   const [motivo, setMotivo] = React.useState("");
   const [saving, setSaving] = React.useState(false);
@@ -66,7 +72,10 @@ export function PostergarPedidoDialog({
     try {
       const res = await fetch(`/api/pedidos-esperados/${pedido.id}/postergar`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...sucursalHeaders,
+        },
         body: JSON.stringify({
           nuevaFecha: new Date(nuevaFecha).toISOString(),
           motivo: motivo.trim() || undefined,

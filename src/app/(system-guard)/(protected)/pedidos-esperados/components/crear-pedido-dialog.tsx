@@ -57,6 +57,10 @@ function getTodayStr() {
 
 export function CrearPedidoDialog({ open, onOpenChange, onSuccess }: CrearPedidoDialogProps) {
   const activeSucursalId = useSucursalStore((s) => s.activeSucursalId);
+  const sucursalHeaders = React.useMemo(
+    () => (activeSucursalId ? { "x-sucursal-id": String(activeSucursalId) } : {}),
+    [activeSucursalId]
+  );
 
   const [productos, setProductos] = React.useState<ProductoBasico[]>([]);
   const [loadingProductos, setLoadingProductos] = React.useState(false);
@@ -81,18 +85,22 @@ export function CrearPedidoDialog({ open, onOpenChange, onSuccess }: CrearPedido
       ? `/api/productos?sucursalId=${activeSucursalId}`
       : "/api/productos";
 
-    fetch(url)
-      .then((r) => r.json())
+    fetch(url, { headers: sucursalHeaders })
+      .then(async (r) => {
+        const json = await r.json().catch(() => ({}));
+        if (!r.ok) throw new Error(json?.error || "Error interno al obtener productos");
+        return json;
+      })
       .then((data) => {
         const arr = Array.isArray(data) ? data : Array.isArray(data?.data) ? data.data : [];
         setProductos(arr.filter((p: any) => p.activo !== false));
       })
-      .catch(() => {
+      .catch((err: any) => {
         setProductos([]);
-        toast.error("No se pudieron cargar los productos");
+        toast.error(err?.message || "No se pudieron cargar los productos");
       })
       .finally(() => setLoadingProductos(false));
-  }, [open, activeSucursalId]);
+  }, [open, activeSucursalId, sucursalHeaders]);
 
   // Filtrado de productos por búsqueda
   const productosFiltrados = React.useMemo(() => {
@@ -153,7 +161,10 @@ export function CrearPedidoDialog({ open, onOpenChange, onSuccess }: CrearPedido
 
       const res = await fetch("/api/pedidos-esperados", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...sucursalHeaders,
+        },
         body: JSON.stringify(payload),
       });
 

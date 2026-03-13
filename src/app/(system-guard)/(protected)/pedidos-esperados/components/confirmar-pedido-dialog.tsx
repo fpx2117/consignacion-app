@@ -5,6 +5,7 @@
 import * as React from "react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { useSucursalStore } from "@/store/useSucursalStore";
 import type { PedidoEsperado } from "@/types/pedidos-esperados";
 import {
   Dialog,
@@ -50,6 +51,11 @@ export function ConfirmarPedidoDialog({
   onOpenChange,
   onSuccess,
 }: ConfirmarPedidoDialogProps) {
+  const activeSucursalId = useSucursalStore((s) => s.activeSucursalId);
+  const sucursalHeaders = React.useMemo(
+    () => (activeSucursalId ? { "x-sucursal-id": String(activeSucursalId) } : {}),
+    [activeSucursalId]
+  );
   const [cantidades, setCantidades] = React.useState<CantidadItem[]>([]);
   const [saving, setSaving] = React.useState(false);
 
@@ -93,7 +99,10 @@ export function ConfirmarPedidoDialog({
     try {
       const res = await fetch(`/api/pedidos-esperados/${pedido.id}/confirmar`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...sucursalHeaders,
+        },
         body: JSON.stringify({ items: cantidades }),
       });
 

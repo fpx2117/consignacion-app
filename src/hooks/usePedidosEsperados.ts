@@ -2,6 +2,7 @@
 "use client";
 
 import * as React from "react";
+import { useSucursalStore } from "@/store/useSucursalStore";
 import type {
   PedidoEsperado,
   CreatePedidoEsperadoRequest,
@@ -28,6 +29,11 @@ interface UsePedidosEsperadosReturn {
 }
 
 export function usePedidosEsperados(): UsePedidosEsperadosReturn {
+  const activeSucursalId = useSucursalStore((s) => s.activeSucursalId);
+  const sucursalHeaders = React.useMemo(
+    () => (activeSucursalId ? { "x-sucursal-id": String(activeSucursalId) } : {}),
+    [activeSucursalId]
+  );
   const [pedidos, setPedidos] = React.useState<PedidoEsperado[]>([]);
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
@@ -48,7 +54,9 @@ export function usePedidosEsperados(): UsePedidosEsperadosReturn {
       if (filtros.fechaDesde) params.append("fechaDesde", filtros.fechaDesde);
       if (filtros.fechaHasta) params.append("fechaHasta", filtros.fechaHasta);
 
-      const res = await fetch(`/api/pedidos-esperados?${params.toString()}`);
+      const res = await fetch(`/api/pedidos-esperados?${params.toString()}`, {
+        headers: sucursalHeaders,
+      });
       if (!res.ok) throw new Error("Error al cargar pedidos");
       const data = await res.json();
       const arr = Array.isArray(data) ? data : Array.isArray(data?.data) ? data.data : [];
@@ -59,12 +67,12 @@ export function usePedidosEsperados(): UsePedidosEsperadosReturn {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [sucursalHeaders]);
 
   const crearPedido = React.useCallback(async (input: CreatePedidoEsperadoRequest): Promise<PedidoEsperado> => {
     const res = await fetch("/api/pedidos-esperados", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...sucursalHeaders },
       body: JSON.stringify(input),
     });
     if (!res.ok) {
@@ -73,13 +81,13 @@ export function usePedidosEsperados(): UsePedidosEsperadosReturn {
     }
     const data = await res.json();
     return data?.data ?? data;
-  }, []);
+  }, [sucursalHeaders]);
 
   const confirmarPedido = React.useCallback(
     async (id: number, input: ConfirmarPedidoRequest): Promise<void> => {
       const res = await fetch(`/api/pedidos-esperados/${id}/confirmar`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...sucursalHeaders },
         body: JSON.stringify(input),
       });
       if (!res.ok) {
@@ -87,14 +95,14 @@ export function usePedidosEsperados(): UsePedidosEsperadosReturn {
         throw new Error(err.error || "Error al confirmar pedido");
       }
     },
-    []
+    [sucursalHeaders]
   );
 
   const postergarPedido = React.useCallback(
     async (id: number, input: PostergarPedidoRequest): Promise<void> => {
       const res = await fetch(`/api/pedidos-esperados/${id}/postergar`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...sucursalHeaders },
         body: JSON.stringify(input),
       });
       if (!res.ok) {
@@ -102,20 +110,20 @@ export function usePedidosEsperados(): UsePedidosEsperadosReturn {
         throw new Error(err.error || "Error al postergar pedido");
       }
     },
-    []
+    [sucursalHeaders]
   );
 
   const cancelarPedido = React.useCallback(async (id: number): Promise<void> => {
     const res = await fetch(`/api/pedidos-esperados/${id}`, {
       method: "PATCH",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...sucursalHeaders },
       body: JSON.stringify({ estado: "CANCELADO" } satisfies UpdatePedidoRequest),
     });
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
       throw new Error(err.error || "Error al cancelar pedido");
     }
-  }, []);
+  }, [sucursalHeaders]);
 
   return {
     pedidos,
