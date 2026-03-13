@@ -26,7 +26,7 @@ export async function GET(req: NextRequest) {
     const sucursalId = auth.activeSucursalId;
     const { searchParams } = new URL(req.url);
 
-    const estado = searchParams.get("estado") ?? undefined;
+    const estados = searchParams.getAll("estado").filter(Boolean);
     const fechaDesdeRaw = searchParams.get("fechaDesde") ?? undefined;
     const fechaHastaRaw = searchParams.get("fechaHasta") ?? undefined;
 
@@ -39,7 +39,11 @@ export async function GET(req: NextRequest) {
     const pedidos = await prisma.pedidoEsperado.findMany({
       where: {
         sucursalId,
-        ...(estado ? { estado } : {}),
+        ...(estados.length === 1
+          ? { estado: estados[0] }
+          : estados.length > 1
+          ? { estado: { in: estados } }
+          : {}),
         ...(fechaDesde || fechaHasta
           ? {
               fechaEsperada: {

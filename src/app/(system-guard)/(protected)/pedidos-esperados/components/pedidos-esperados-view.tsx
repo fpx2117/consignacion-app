@@ -105,6 +105,10 @@ const FILTROS_DEFECTO: Filtros = {
 
 export function PedidosEsperadosView() {
   const activeSucursalId = useSucursalStore((s) => s.activeSucursalId);
+  const sucursalHeaders = React.useMemo(
+    () => (activeSucursalId ? { "x-sucursal-id": String(activeSucursalId) } : {}),
+    [activeSucursalId]
+  );
 
   const [pedidos, setPedidos] = React.useState<PedidoEsperado[]>([]);
   const [loading, setLoading] = React.useState(true);
@@ -135,7 +139,9 @@ export function PedidosEsperadosView() {
       if (filtros.fechaDesde) params.append("fechaDesde", filtros.fechaDesde);
       if (filtros.fechaHasta) params.append("fechaHasta", filtros.fechaHasta);
 
-      const res = await fetch(`/api/pedidos-esperados?${params.toString()}`);
+      const res = await fetch(`/api/pedidos-esperados?${params.toString()}`, {
+        headers: sucursalHeaders,
+      });
       if (!res.ok) throw new Error("Error al cargar pedidos");
       const data = await res.json();
       const arr = Array.isArray(data) ? data : Array.isArray(data?.data) ? data.data : [];
@@ -146,7 +152,7 @@ export function PedidosEsperadosView() {
     } finally {
       setLoading(false);
     }
-  }, [filtros]);
+  }, [filtros, sucursalHeaders]);
 
   React.useEffect(() => {
     fetchPedidos();
@@ -164,7 +170,10 @@ export function PedidosEsperadosView() {
     try {
       const res = await fetch(`/api/pedidos-esperados/${selectedPedido.id}`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...sucursalHeaders,
+        },
         body: JSON.stringify({ estado: "CANCELADO" }),
       });
       if (!res.ok) throw new Error();
