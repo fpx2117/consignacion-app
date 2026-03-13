@@ -120,9 +120,9 @@ export function AjustarStockDialog({ producto, onUpdated, trigger }: Props) {
 
             <div className="flex flex-col items-center gap-1 opacity-60">
               {tipo === "entrada" ? (
-                <ArrowUpCircle className="h-5 w-5 text-emerald-500" />
+                <ArrowUpCircle className="h-5 w-5 text-[color:var(--status-success-strong)]" />
               ) : (
-                <ArrowDownCircle className="h-5 w-5 text-red-500" />
+                <ArrowDownCircle className="h-5 w-5 text-[color:var(--status-danger)]" />
               )}
               <span className="text-[10px] font-mono font-bold">
                 {cantidad > 0 ? (tipo === "entrada" ? `+${cantidad}` : `-${cantidad}`) : "---"}
@@ -133,7 +133,7 @@ export function AjustarStockDialog({ producto, onUpdated, trigger }: Props) {
               <p className="text-[9px] uppercase font-bold text-muted-foreground tracking-widest">Final</p>
               <p className={cn(
                 "text-2xl font-black transition-all tabular-nums",
-                cantidad > 0 ? (tipo === "entrada" ? "text-emerald-500 scale-110" : "text-red-500 scale-110") : "text-primary"
+                cantidad > 0 ? (tipo === "entrada" ? "text-[color:var(--status-success-strong)] scale-110" : "text-[color:var(--status-danger)] scale-110") : "text-primary"
               )}>
                 {stockFinal}
               </p>
@@ -155,8 +155,8 @@ export function AjustarStockDialog({ producto, onUpdated, trigger }: Props) {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent className="rounded-xl">
-                  <SelectItem value="entrada" className="text-emerald-600 font-bold focus:bg-emerald-50 focus:text-emerald-700">Entrada (+)</SelectItem>
-                  <SelectItem value="salida" className="text-red-600 font-bold focus:bg-red-50 focus:text-red-700">Salida (-)</SelectItem>
+                  <SelectItem value="entrada" className="text-[color:var(--status-success-strong)] font-bold focus:bg-[color:var(--status-success-strong)] focus:text-[color:var(--status-success-strong)]">Entrada (+)</SelectItem>
+                  <SelectItem value="salida" className="text-[color:var(--status-danger)] font-bold focus:bg-[color:var(--status-danger)] focus:text-[color:var(--status-danger)]">Salida (-)</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -193,7 +193,7 @@ export function AjustarStockDialog({ producto, onUpdated, trigger }: Props) {
             <div className="flex justify-between items-center ml-1">
               <Label htmlFor="cantidad" className="text-[10px] uppercase font-bold opacity-70">Unidades</Label>
               {tipo === "salida" && cantidad > producto.stockDisponibleUnits && (
-                <span className="text-[9px] text-red-500 font-bold flex items-center gap-1 animate-pulse">
+                <span className="text-[9px] text-[color:var(--status-danger)] font-bold flex items-center gap-1 animate-pulse">
                   <AlertTriangle className="h-3 w-3" /> STOCK INSUFICIENTE
                 </span>
               )}
@@ -228,10 +228,10 @@ export function AjustarStockDialog({ producto, onUpdated, trigger }: Props) {
             disabled={loading || cantidad <= 0}
             onClick={handleAjuste}
             className={cn(
-              "w-full h-12 rounded-xl text-white font-bold uppercase tracking-wider transition-all shadow-lg active:scale-95",
+              "w-full h-12 rounded-xl text-[color:var(--ui-fx-white)] font-bold uppercase tracking-wider transition-all shadow-lg active:scale-95",
               tipo === "entrada"
-                ? "bg-emerald-600 hover:bg-emerald-700 shadow-emerald-500/20"
-                : "bg-red-600 hover:bg-red-700 shadow-red-500/20"
+                ? "bg-[color:var(--status-success-strong)] hover:bg-[color:var(--status-success-strong)] shadow-emerald-500/20"
+                : "bg-[color:var(--status-danger)] hover:bg-[color:var(--status-danger)] shadow-red-500/20"
             )}
           >
             {loading ? (

@@ -503,7 +503,7 @@ export default function NuevaVentaPage() {
       />
 
       {activeSucursalId === 0 && (
-        <Alert variant="destructive" className="mx-4 mt-2 rounded-xl border-dashed bg-red-500/10 text-red-600">
+        <Alert variant="destructive" className="mx-4 mt-2 rounded-xl border-dashed bg-[color:var(--status-danger)]/10 text-[color:var(--status-danger)]">
           <AlertDescription className="flex items-center gap-2 font-bold text-center justify-center">
             <Lock className="h-4 w-4" aria-hidden="true" />
             Ventas deshabilitadas en &quot;Vista General&quot;. Selecciona una sucursal especifica arriba.
@@ -727,7 +727,7 @@ export default function NuevaVentaPage() {
               <Button
                 type="button"
                 variant="ghost"
-                className="w-full text-red-500 hover:text-red-600 hover:bg-red-500/10"
+                className="w-full text-[color:var(--status-danger)] hover:text-[color:var(--status-danger)] hover:bg-[color:var(--status-danger)]/10"
                 onClick={() => {
                   setDescuentoAplicado(null);
                   setDescuentoValor("");

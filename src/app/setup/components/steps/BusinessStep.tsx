@@ -16,18 +16,24 @@ interface BusinessStepProps {
   onBrandingChange: (value: BrandingData) => void;
 }
 
-const COLOR_PRESETS = [
-  "#6d28d9", // Violet
-  "#2563eb", // Blue
-  "#059669", // Emerald
-  "#dc2626", // Red
-  "#ea580c", // Orange
-  "#d97706", // Amber
-  "#0891b2", // Cyan
-  "#7c3aed", // Purple
-  "#db2777", // Pink
-  "#111827", // Dark
+const COLOR_PRESET_TOKENS = [
+  "--swatch-11",
+  "--swatch-7",
+  "--swatch-6",
+  "--swatch-4",
+  "--swatch-5",
+  "--swatch-9",
+  "--swatch-8",
+  "--theme-tech-primary",
+  "--swatch-10",
+  "--swatch-1",
 ];
+
+function resolveColor(token: string): string {
+  if (typeof window === "undefined") return "";
+  const styles = getComputedStyle(document.documentElement);
+  return styles.getPropertyValue(token).trim() || styles.getPropertyValue("--swatch-1").trim();
+}
 
 export function BusinessStep({
   businessName,
@@ -36,6 +42,7 @@ export function BusinessStep({
   onBrandingChange,
 }: BusinessStepProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const colorPresets = COLOR_PRESET_TOKENS.map((token) => resolveColor(token)).filter(Boolean);
 
   const handleLogoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -58,9 +65,9 @@ export function BusinessStep({
         <motion.div
           initial={{ scale: 0.8, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
-          className="w-16 h-16 rounded-2xl bg-violet-600/10 border border-violet-500/20 flex items-center justify-center mx-auto"
+          className="w-16 h-16 rounded-2xl bg-[color:var(--primary)]/10 border border-[color:var(--primary)]/20 flex items-center justify-center mx-auto"
         >
-          <Building2 className="w-8 h-8 text-violet-500" />
+          <Building2 className="w-8 h-8 text-[color:var(--primary)]" />
         </motion.div>
         <h2 className="text-3xl font-black tracking-tight">Construyamos tu marca</h2>
         <p className="text-muted-foreground text-lg">
@@ -70,19 +77,19 @@ export function BusinessStep({
 
       {/* Form */}
       <div className="space-y-6 bg-card/40 backdrop-blur-md p-8 rounded-[2.5rem] border border-border/50 shadow-2xl relative">
-        <div className="absolute inset-0 bg-violet-500/5 blur-3xl -z-10 rounded-full" />
+        <div className="absolute inset-0 bg-[color:var(--primary)]/5 blur-3xl -z-10 rounded-full" />
 
         {/* Business Name */}
         <div className="space-y-2">
           <Label className="text-xs font-bold uppercase tracking-widest text-foreground/80 pl-2">
-            Nombre del Negocio <span className="text-red-400">*</span>
+            Nombre del Negocio <span className="text-[color:var(--status-danger)]">*</span>
           </Label>
           <Input
             autoFocus
             value={businessName}
             onChange={(e) => onBusinessNameChange(e.target.value)}
             placeholder="Ej: Mega Store S.A."
-            className="h-14 rounded-2xl bg-background/50 border-border/50 focus:border-violet-500 focus:ring-4 focus:ring-violet-500/10 text-lg font-semibold"
+            className="h-14 rounded-2xl bg-background/50 border-border/50 focus:border-[color:var(--primary)] focus:ring-4 focus:ring-[color:var(--primary)]/10 text-lg font-semibold"
           />
         </div>
 
@@ -96,7 +103,7 @@ export function BusinessStep({
               value={branding.phone}
               onChange={(e) => onBrandingChange({ ...branding, phone: e.target.value })}
               placeholder="+54 351 123 4567"
-              className="h-12 rounded-xl bg-background/50 border-border/50 focus:border-violet-500 focus:ring-4 focus:ring-violet-500/10"
+              className="h-12 rounded-xl bg-background/50 border-border/50 focus:border-[color:var(--primary)] focus:ring-4 focus:ring-[color:var(--primary)]/10"
             />
           </div>
           <div className="space-y-2">
@@ -107,7 +114,7 @@ export function BusinessStep({
               value={branding.address}
               onChange={(e) => onBrandingChange({ ...branding, address: e.target.value })}
               placeholder="Av. Siempreviva 742"
-              className="h-12 rounded-xl bg-background/50 border-border/50 focus:border-violet-500 focus:ring-4 focus:ring-violet-500/10"
+              className="h-12 rounded-xl bg-background/50 border-border/50 focus:border-[color:var(--primary)] focus:ring-4 focus:ring-[color:var(--primary)]/10"
             />
           </div>
         </div>
@@ -135,7 +142,7 @@ export function BusinessStep({
                 />
                 <button
                   onClick={handleRemoveLogo}
-                  className="absolute top-2 right-2 h-7 w-7 rounded-full bg-red-500/80 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"
+                  className="absolute top-2 right-2 h-7 w-7 rounded-full bg-destructive/80 text-[color:var(--ui-fx-white)] flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-destructive"
                 >
                   <X className="h-3.5 w-3.5" />
                 </button>
@@ -145,7 +152,7 @@ export function BusinessStep({
                 type="button"
                 variant="outline"
                 onClick={() => fileInputRef.current?.click()}
-                className="w-full h-28 rounded-2xl border-dashed border-2 border-border/50 hover:border-violet-500/50 hover:bg-violet-500/5 flex flex-col items-center justify-center gap-2 transition-all"
+                className="w-full h-28 rounded-2xl border-dashed border-2 border-border/50 hover:border-[color:var(--primary)]/50 hover:bg-[color:var(--primary)]/5 flex flex-col items-center justify-center gap-2 transition-all"
               >
                 <Upload className="h-5 w-5 text-muted-foreground" />
                 <span className="text-xs text-muted-foreground font-medium">
@@ -162,7 +169,7 @@ export function BusinessStep({
             </Label>
             <div className="h-28 rounded-2xl border border-border/50 bg-background/30 p-4 flex flex-col justify-between">
               <div className="flex flex-wrap gap-2">
-                {COLOR_PRESETS.map((color) => (
+                {colorPresets.map((color) => (
                   <button
                     key={color}
                     type="button"

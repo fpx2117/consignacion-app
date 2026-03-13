@@ -1,22 +1,12 @@
 import { prisma } from "@/lib/prisma";
-
-export type BrandingDTO = {
-  businessName: string;
-  /** URL HTTP del logo — útil para el frontend pero NO para Puppeteer */
-  logoUrl: string | null;
-  /** data:image/...;base64,... — siempre funciona en Puppeteer (sin red) */
-  logoBase64: string | null;
-  primaryColor: string;
-  footerText: string | null;
-  phone: string | null;
-  address: string | null;
-};
+import { REPORT_COLORS } from "@/lib/reports/report-theme";
+import type { BrandingDTO } from "@/lib/reports/types";
 
 const DEFAULT_BRANDING: BrandingDTO = {
   businessName: "Consignación",
   logoUrl: null,
   logoBase64: null,
-  primaryColor: "#294c98",
+  primaryColor: REPORT_COLORS.brandDefault,
   footerText: null,
   phone: null,
   address: null,

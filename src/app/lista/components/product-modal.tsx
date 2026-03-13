@@ -46,7 +46,7 @@ export function ProductModal({ product, isOpen, onClose, config, isConsigne, onA
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
                         onClick={onClose}
-                        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 sm:p-6"
+                        className="fixed inset-0 bg-foreground/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 sm:p-6"
                     >
                         {/* Contenedor del Modal */}
                         <motion.div
@@ -65,8 +65,8 @@ export function ProductModal({ product, isOpen, onClose, config, isConsigne, onA
                                 variant="ghost"
                                 size="icon"
                                 className={cn(
-                                    "absolute top-3 right-3 sm:top-4 sm:right-4 z-10 backdrop-blur-md hover:bg-neutral-200 rounded-full h-9 w-9 sm:h-10 sm:w-10 text-neutral-900",
-                                    cardBgClass ? cardBgClass.split(" ")[0] + "/50" : "bg-white/50" // A bit hacky but works for bg-white -> bg-white/50
+                                    "absolute top-3 right-3 sm:top-4 sm:right-4 z-10 backdrop-blur-md hover:bg-muted rounded-full h-9 w-9 sm:h-10 sm:w-10 text-foreground",
+                                    "bg-[color:rgba(var(--store-surface-rgb),0.72)]"
                                 )}
                                 onClick={onClose}
                             >
@@ -74,7 +74,7 @@ export function ProductModal({ product, isOpen, onClose, config, isConsigne, onA
                             </Button>
 
                             {/* Lado Izquierdo: Imagen */}
-                            <div className="w-full md:w-1/2 bg-neutral-50 flex items-center justify-center p-4 sm:p-8 aspect-square md:aspect-auto">
+                            <div className="w-full md:w-1/2 bg-muted/40 flex items-center justify-center p-4 sm:p-8 aspect-square md:aspect-auto">
                                 {product.imagenUrl ? (
                                     <img
                                         src={product.imagenUrl}
@@ -89,32 +89,32 @@ export function ProductModal({ product, isOpen, onClose, config, isConsigne, onA
                             {/* Lado Derecho: Detalles */}
                             <div className="w-full md:w-1/2 p-4 sm:p-8 flex flex-col overflow-y-auto">
                                 <div>
-                                    <span className="text-xs font-black uppercase tracking-widest text-neutral-400 mb-2 block">
+                                    <span className="text-xs font-black uppercase tracking-widest text-muted-foreground/80 mb-2 block">
                                         {product.categoria?.nombre || "Sin Categoría"}
                                     </span>
-                                    <h2 className="text-xl sm:text-3xl font-black text-neutral-900 leading-tight mb-4">
+                                    <h2 className="text-xl sm:text-3xl font-black text-foreground leading-tight mb-4">
                                         {product.nombre}
                                     </h2>
 
                                     <div className="mb-6">
                                         {isAvailable ? (
-                                            <Badge className="bg-emerald-500 hover:bg-emerald-600 text-white border-transparent px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider">
+                                            <Badge className="bg-[color:var(--status-success-strong)] hover:bg-[color:var(--status-success-strong)] text-[color:var(--ui-fx-white)] border-transparent px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider">
                                                 <CheckCircle2 className="h-3 w-3 mr-1" /> EN STOCK ({product.stockDisponibleUnits})
                                             </Badge>
                                         ) : (
-                                            <Badge variant="destructive" className="bg-neutral-900 text-white border-transparent px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider">
+                                            <Badge variant="destructive" className="bg-foreground text-[color:var(--ui-fx-white)] border-transparent px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider">
                                                 AGOTADO
                                             </Badge>
                                         )}
                                     </div>
                                 </div>
 
-                                <div className="flex flex-col gap-1 mb-8 pb-8 border-b border-neutral-100">
-                                    <span className="text-3xl sm:text-4xl font-black text-neutral-900 tracking-tight">
+                                <div className="flex flex-col gap-1 mb-8 pb-8 border-b border-border/70">
+                                    <span className="text-3xl sm:text-4xl font-black text-foreground tracking-tight">
                                         ${displayedPrice.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
                                     </span>
                                     {isConsigne && (
-                                        <span className="text-sm font-semibold text-neutral-400 line-through">
+                                        <span className="text-sm font-semibold text-muted-foreground/80 line-through">
                                             Precio general: ${basePrice.toLocaleString('es-AR')}
                                         </span>
                                     )}
@@ -126,7 +126,7 @@ export function ProductModal({ product, isOpen, onClose, config, isConsigne, onA
                                     <Button
                                         variant="outline"
                                         className={cn(
-                                            "h-14 px-6 border-emerald-200 hover:bg-emerald-50 text-emerald-600 transition-all duration-300",
+                                            "h-14 px-6 border-[color:var(--status-success-strong)] hover:bg-[color:var(--status-success-strong)] text-[color:var(--status-success-strong)] transition-all duration-300",
                                             buttonRadiusClass
                                         )}
                                         onClick={() => {
@@ -149,7 +149,7 @@ export function ProductModal({ product, isOpen, onClose, config, isConsigne, onA
                                             "h-14 flex-1 text-base font-black shadow-xl transition-all duration-300",
                                             buttonRadiusClass,
                                             buttonHoverClass,
-                                            "bg-neutral-900 text-white hover:bg-neutral-800"
+                                            "bg-foreground text-[color:var(--ui-fx-white)] hover:bg-foreground/90"
                                         )}
                                         disabled={!isAvailable}
                                         onClick={() => {

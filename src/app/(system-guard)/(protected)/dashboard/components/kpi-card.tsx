@@ -31,14 +31,14 @@ export function KpiCard({
   const isDefault = !isDestructive && !isSuccess && !isWarning;
 
   const getGradient = () => {
-    if (isWarning) return "from-amber-500/10 via-amber-500/5 to-transparent border-amber-200/20 dark:border-amber-800/20";
+    if (isWarning) return "from-[color:var(--status-warning)]/10 via-[color:var(--status-warning)]/5 to-transparent border-[color:var(--status-warning)]/20 dark:border-[color:var(--status-warning)]/20";
     return "from-card/60 via-card/40 to-transparent border-border/50";
   };
 
   const getIconBg = () => {
-    if (isDestructive) return "bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400";
-    if (isSuccess) return "bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400";
-    if (isWarning) return "bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400";
+    if (isDestructive) return "bg-[color:var(--status-danger)] text-[color:var(--status-danger)] dark:bg-[color:var(--status-danger)]/30 dark:text-[color:var(--status-danger)]";
+    if (isSuccess) return "bg-[color:var(--status-success-strong)] text-[color:var(--status-success-strong)] dark:bg-[color:var(--status-success-strong)]/30 dark:text-[color:var(--status-success-strong)]";
+    if (isWarning) return "bg-[color:var(--status-warning)] text-[color:var(--status-warning)] dark:bg-[color:var(--status-warning)]/30 dark:text-[color:var(--status-warning)]";
     return "bg-secondary text-secondary-foreground";
   };
 
@@ -60,10 +60,10 @@ export function KpiCard({
         {/* Glow Effect */}
         <div className={cn(
           "absolute -right-10 -top-10 h-32 w-32 rounded-full blur-3xl opacity-20",
-          isDestructive && "bg-red-500",
-          isSuccess && "bg-emerald-500",
-          isWarning && "bg-amber-500",
-          isDefault && "bg-blue-500"
+          isDestructive && "bg-[color:var(--status-danger)]",
+          isSuccess && "bg-[color:var(--status-success-strong)]",
+          isWarning && "bg-[color:var(--status-warning)]",
+          isDefault && "bg-[color:var(--theme-ocean-primary)]"
         )} />
 
         <div className="relative z-10 flex h-full flex-col p-5">
@@ -88,8 +88,8 @@ export function KpiCard({
                 animate={{ opacity: 1, y: 0 }}
                 className={cn(
                   "text-xl sm:text-2xl md:text-3xl font-black tracking-tight tabular-nums truncate",
-                  isSuccess && "text-emerald-600 dark:text-emerald-400",
-                  isWarning && "text-amber-600 dark:text-amber-400",
+                  isSuccess && "text-[color:var(--status-success-strong)] dark:text-[color:var(--status-success-strong)]",
+                  isWarning && "text-[color:var(--status-warning)] dark:text-[color:var(--status-warning)]",
                   isDefault && "text-card-foreground"
                 )}
               >

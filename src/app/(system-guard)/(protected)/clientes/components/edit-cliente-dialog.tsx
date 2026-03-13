@@ -177,7 +177,7 @@ export function EditClienteDialog({
               <div className="flex items-center justify-between">
                 <div className="space-y-1">
                   <div className="flex items-center gap-2">
-                    <Power className={`h-4 w-4 ${activo ? "text-emerald-500" : "text-muted-foreground"}`} />
+                    <Power className={`h-4 w-4 ${activo ? "text-[color:var(--status-success-strong)]" : "text-muted-foreground"}`} />
                     <span className="font-semibold text-sm">Estado del Cliente</span>
                   </div>
                   <p className="text-xs text-muted-foreground max-w-[250px]">
@@ -190,7 +190,7 @@ export function EditClienteDialog({
                   variant={activo ? "outline" : "destructive"}
                   onClick={() => setActivo(!activo)}
                   size="sm"
-                  className={`min-w-[100px] h-9 gap-2 transition-all ${activo ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20 hover:text-emerald-700" : "bg-destructive/10 text-destructive hover:bg-destructive/20 border-destructive/20"}`}
+                  className={`min-w-[100px] h-9 gap-2 transition-all ${activo ? "border-[color:var(--status-success-strong)]/30 bg-[color:var(--status-success-strong)]/10 text-[color:var(--status-success-strong)] hover:bg-[color:var(--status-success-strong)]/20 hover:text-[color:var(--status-success-strong)]" : "bg-destructive/10 text-destructive hover:bg-destructive/20 border-destructive/20"}`}
                 >
                   {activo ? (
                     <>

@@ -112,7 +112,7 @@ export default function SessionsPage() {
                                             <div className="flex items-center gap-2">
                                                 <h3 className="font-bold text-lg">{session.user?.nombre || "Usuario"}</h3>
                                                 {session.isActive && (
-                                                    <div className="px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-500 text-[8px] font-black uppercase tracking-widest border border-emerald-500/20">En línea</div>
+                                                    <div className="px-2 py-0.5 rounded-full bg-[color:var(--status-success-strong)]/10 text-[color:var(--status-success-strong)] text-[8px] font-black uppercase tracking-widest border border-[color:var(--status-success-strong)]/20">En línea</div>
                                                 )}
                                             </div>
                                             <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground italic">
@@ -139,7 +139,7 @@ export default function SessionsPage() {
                                         size="sm"
                                         disabled={revoking === session.id}
                                         onClick={() => handleRevoke(session.id)}
-                                        className="mt-4 md:mt-0 rounded-xl text-red-500 hover:bg-red-500/10 hover:text-red-500 font-bold gap-2 px-4"
+                                        className="mt-4 md:mt-0 rounded-xl text-[color:var(--status-danger)] hover:bg-[color:var(--status-danger)]/10 hover:text-[color:var(--status-danger)] font-bold gap-2 px-4"
                                     >
                                         {revoking === session.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <LogOut className="h-4 w-4" />}
                                         Revocar Acceso

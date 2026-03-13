@@ -15,6 +15,12 @@ interface AdminStepProps {
 
 export function AdminStep({ data, onChange }: AdminStepProps) {
   const [showPassword, setShowPassword] = useState(false);
+  const strengthColor = (strength: number) => {
+    if (strength <= 1) return "var(--status-danger)";
+    if (strength <= 2) return "var(--status-warning)";
+    if (strength <= 3) return "var(--status-success)";
+    return "var(--status-success-strong)";
+  };
 
   return (
     <StepWrapper>
@@ -23,9 +29,9 @@ export function AdminStep({ data, onChange }: AdminStepProps) {
         <motion.div
           initial={{ scale: 0.8, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
-          className="w-16 h-16 rounded-2xl bg-indigo-600/10 border border-indigo-500/20 flex items-center justify-center mx-auto"
+          className="w-16 h-16 rounded-2xl bg-[color:var(--primary)]/10 border border-[color:var(--primary)]/20 flex items-center justify-center mx-auto"
         >
-          <UserCog className="w-8 h-8 text-indigo-500" />
+          <UserCog className="w-8 h-8 text-[color:var(--primary)]" />
         </motion.div>
         <h2 className="text-3xl font-black tracking-tight">Tu Perfil de Administrador</h2>
         <p className="text-muted-foreground text-lg">La llave maestra para controlar todo el ecosistema.</p>
@@ -33,38 +39,38 @@ export function AdminStep({ data, onChange }: AdminStepProps) {
 
       {/* Form */}
       <div className="space-y-6 bg-card/40 backdrop-blur-md p-8 rounded-[2.5rem] border border-border/50 shadow-2xl relative">
-        <div className="absolute inset-0 bg-indigo-500/5 blur-3xl -z-10 rounded-full" />
+        <div className="absolute inset-0 bg-[color:var(--primary)]/5 blur-3xl -z-10 rounded-full" />
 
         <div className="space-y-2">
           <Label className="text-xs font-bold uppercase tracking-widest text-foreground/80 pl-2">
-            Tu Nombre <span className="text-red-400">*</span>
+            Tu Nombre <span className="text-[color:var(--status-danger)]">*</span>
           </Label>
           <Input
             autoFocus
             value={data.nombre}
             onChange={(e) => onChange({ ...data, nombre: e.target.value })}
             placeholder="Ej: Juan Pérez"
-            className="h-14 rounded-2xl bg-background/50 border-border/50 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 text-lg"
+            className="h-14 rounded-2xl bg-background/50 border-border/50 focus:border-[color:var(--primary)] focus:ring-4 focus:ring-[color:var(--primary)]/10 text-lg"
           />
         </div>
 
         <div className="space-y-2">
           <Label className="text-xs font-bold uppercase tracking-widest text-foreground/80 pl-2">
-            Email Corporativo <span className="text-red-400">*</span>
+            Email Corporativo <span className="text-[color:var(--status-danger)]">*</span>
           </Label>
           <Input
             type="email"
             value={data.email}
             onChange={(e) => onChange({ ...data, email: e.target.value })}
             placeholder="john@empresa.com"
-            className="h-14 rounded-2xl bg-background/50 border-border/50 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 text-lg"
+            className="h-14 rounded-2xl bg-background/50 border-border/50 focus:border-[color:var(--primary)] focus:ring-4 focus:ring-[color:var(--primary)]/10 text-lg"
           />
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label className="text-xs font-bold uppercase tracking-widest text-foreground/80 pl-2">
-              Contraseña <span className="text-red-400">*</span>
+              Contraseña <span className="text-[color:var(--status-danger)]">*</span>
             </Label>
             <div className="relative">
               <Input
@@ -72,7 +78,7 @@ export function AdminStep({ data, onChange }: AdminStepProps) {
                 value={data.password}
                 onChange={(e) => onChange({ ...data, password: e.target.value })}
                 placeholder="Mínimo 6 caracteres"
-                className="h-14 rounded-2xl bg-background/50 border-border/50 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 pr-12"
+                className="h-14 rounded-2xl bg-background/50 border-border/50 focus:border-[color:var(--primary)] focus:ring-4 focus:ring-[color:var(--primary)]/10 pr-12"
               />
               <button
                 type="button"
@@ -85,14 +91,14 @@ export function AdminStep({ data, onChange }: AdminStepProps) {
           </div>
           <div className="space-y-2">
             <Label className="text-xs font-bold uppercase tracking-widest text-foreground/80 pl-2">
-              Confirmar <span className="text-red-400">*</span>
+              Confirmar <span className="text-[color:var(--status-danger)]">*</span>
             </Label>
             <Input
               type={showPassword ? "text" : "password"}
               value={data.confirmPassword}
               onChange={(e) => onChange({ ...data, confirmPassword: e.target.value })}
               placeholder="Repetí la contraseña"
-              className="h-14 rounded-2xl bg-background/50 border-border/50 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10"
+              className="h-14 rounded-2xl bg-background/50 border-border/50 focus:border-[color:var(--primary)] focus:ring-4 focus:ring-[color:var(--primary)]/10"
             />
           </div>
         </div>
@@ -110,14 +116,8 @@ export function AdminStep({ data, onChange }: AdminStepProps) {
                     style={{
                       backgroundColor:
                         level <= strength
-                          ? strength <= 1
-                            ? "#ef4444"
-                            : strength <= 2
-                            ? "#f59e0b"
-                            : strength <= 3
-                            ? "#22c55e"
-                            : "#10b981"
-                          : "rgba(255,255,255,0.1)",
+                          ? strengthColor(strength)
+                          : "hsl(var(--muted-foreground) / 0.25)",
                     }}
                   />
                 );
@@ -131,7 +131,7 @@ export function AdminStep({ data, onChange }: AdminStepProps) {
 
         {/* Mismatch warning */}
         {data.confirmPassword && data.password !== data.confirmPassword && (
-          <p className="text-xs text-red-400 font-medium pl-2">Las contraseñas no coinciden</p>
+          <p className="text-xs text-[color:var(--status-danger)] font-medium pl-2">Las contraseñas no coinciden</p>
         )}
       </div>
     </StepWrapper>

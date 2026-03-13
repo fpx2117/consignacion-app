@@ -126,18 +126,18 @@ export function PaymentStep({ plan, onPaymentSuccess, loading }: PaymentStepProp
         </div>
 
         <div className="p-8 rounded-[2.5rem] bg-card/40 backdrop-blur-xl border border-border/50 shadow-2xl relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-full h-full bg-gradient-to-br from-violet-500/5 to-transparent pointer-events-none" />
+          <div className="absolute top-0 right-0 w-full h-full bg-gradient-to-br from-[color:var(--primary)]/5 to-transparent pointer-events-none" />
 
           {/* Plan + Price */}
           <div className="flex items-center justify-between mb-8 relative z-10">
             <div>
-              <p className="text-xs font-bold uppercase tracking-widest text-violet-600 mb-1">
+              <p className="text-xs font-bold uppercase tracking-widest text-[color:var(--primary)] mb-1">
                 {promoApplied?.valid ? "Plan Licenciado" : "Plan Seleccionado"}
               </p>
               <div className="flex items-center gap-2">
                 <h3 className="text-2xl font-black">{activePlanName}</h3>
                 {promoApplied?.valid && (
-                  <span className="px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 text-[10px] font-bold uppercase">
+                  <span className="px-2 py-0.5 rounded-full bg-[color:var(--status-success-strong)]/10 border border-[color:var(--status-success-strong)]/20 text-[color:var(--status-success-strong)] text-[10px] font-bold uppercase">
                     Licencia OK
                   </span>
                 )}
@@ -145,7 +145,7 @@ export function PaymentStep({ plan, onPaymentSuccess, loading }: PaymentStepProp
             </div>
             <div className="text-right">
               <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-1">Costo</p>
-              <p className={`text-2xl font-black ${promoApplied?.valid ? "text-emerald-500" : "text-foreground"}`}>
+              <p className={`text-2xl font-black ${promoApplied?.valid ? "text-[color:var(--status-success-strong)]" : "text-foreground"}`}>
                 {promoApplied?.valid ? "Bonificado" : isLoadingDolar ? (
                   <span className="inline-block w-20 h-6 bg-muted/50 rounded animate-pulse" />
                 ) : `$${calculatedPrice.toLocaleString()}`}
@@ -165,15 +165,15 @@ export function PaymentStep({ plan, onPaymentSuccess, loading }: PaymentStepProp
                 value={promoCode}
                 onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
                 placeholder="TU-CODIGO-AQUI"
-                className="h-12 rounded-xl bg-background/50 border-border/50 focus:border-violet-500/50 uppercase font-bold tracking-widest"
+                className="h-12 rounded-xl bg-background/50 border-border/50 focus:border-[color:var(--primary)]/50 uppercase font-bold tracking-widest"
                 disabled={promoApplied?.valid || isValidatingPromo || loading || isRedirecting}
               />
               <Button
                 variant={promoApplied?.valid ? "outline" : "default"}
                 className={`h-12 px-6 rounded-xl font-bold tracking-widest ${
                   !promoApplied?.valid
-                    ? "bg-violet-600 hover:bg-violet-700 text-white"
-                    : "border-emerald-500 text-emerald-600 bg-emerald-500/10 hover:bg-emerald-500/20"
+                    ? "bg-[color:var(--primary)] hover:bg-[color:var(--primary)] text-[color:var(--ui-fx-white)]"
+                    : "border-[color:var(--status-success-strong)] text-[color:var(--status-success-strong)] bg-[color:var(--status-success-strong)]/10 hover:bg-[color:var(--status-success-strong)]/20"
                 }`}
                 onClick={promoApplied?.valid ? () => setPromoApplied(null) : handleApplyPromo}
                 disabled={!promoCode || isValidatingPromo || loading || isRedirecting}
@@ -197,7 +197,7 @@ export function PaymentStep({ plan, onPaymentSuccess, loading }: PaymentStepProp
           {/* Total */}
           <div className="flex items-center justify-between mb-8 relative z-10">
             <span className="text-lg font-black uppercase tracking-widest">A pagar hoy</span>
-            <span className="text-4xl font-black text-violet-600">
+            <span className="text-4xl font-black text-[color:var(--primary)]">
               {isLoadingDolar ? (
                 <span className="inline-block w-32 h-10 bg-muted/50 rounded animate-pulse" />
               ) : (
@@ -210,7 +210,7 @@ export function PaymentStep({ plan, onPaymentSuccess, loading }: PaymentStepProp
           <div className="relative z-10">
             {finalPrice === 0 ? (
               <Button
-                className="w-full h-16 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-sm uppercase tracking-[0.2em] transition-all shadow-xl hover:shadow-2xl hover:-translate-y-1"
+                className="w-full h-16 rounded-2xl bg-[color:var(--status-success-strong)] hover:bg-[color:var(--status-success-strong)] text-[color:var(--ui-fx-white)] font-black text-sm uppercase tracking-[0.2em] transition-all shadow-xl hover:shadow-2xl hover:-translate-y-1"
                 onClick={() => onPaymentSuccess(promoCode)}
                 disabled={loading || isRedirecting}
               >
@@ -224,7 +224,7 @@ export function PaymentStep({ plan, onPaymentSuccess, loading }: PaymentStepProp
             ) : (
               <div className="flex flex-col gap-4">
                 <Button
-                  className="w-full h-16 rounded-2xl bg-[#009EE3] hover:bg-[#008ACA] text-white font-black text-xs uppercase tracking-[0.2em] transition-all shadow-lg hover:shadow-xl hover:-translate-y-1 flex items-center justify-center gap-3"
+                  className="w-full h-16 rounded-2xl bg-[color:var(--provider-mercadopago)] hover:bg-[color:var(--provider-mercadopago-hover)] text-[color:var(--ui-fx-white)] font-black text-xs uppercase tracking-[0.2em] transition-all shadow-lg hover:shadow-xl hover:-translate-y-1 flex items-center justify-center gap-3"
                   onClick={handleMercadoPagoPayment}
                   disabled={loading || isRedirecting}
                 >
@@ -242,7 +242,7 @@ export function PaymentStep({ plan, onPaymentSuccess, loading }: PaymentStepProp
                   ó
                 </p>
                 <Button
-                  className="w-full h-16 rounded-2xl bg-[#ffc439] hover:bg-[#f2ba36] text-[#003087] font-black text-xs uppercase tracking-[0.2em] transition-all shadow-lg hover:shadow-xl hover:-translate-y-1 flex items-center justify-center gap-3"
+                  className="w-full h-16 rounded-2xl bg-[color:var(--provider-paypal)] hover:bg-[color:var(--provider-paypal-hover)] text-[color:var(--provider-paypal-foreground)] font-black text-xs uppercase tracking-[0.2em] transition-all shadow-lg hover:shadow-xl hover:-translate-y-1 flex items-center justify-center gap-3"
                   onClick={handlePayPalPayment}
                   disabled={loading || isRedirecting}
                 >

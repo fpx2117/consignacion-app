@@ -19,10 +19,10 @@ export function WelcomeStep({ onNext }: WelcomeStepProps) {
                 initial={{ scale: 0 }}
                 animate={{ scale: 1 }}
                 transition={{ type: "spring", stiffness: 200, damping: 20, delay: 0.2 }}
-                className="w-24 h-24 rounded-3xl bg-violet-600/10 border border-violet-500/20 flex items-center justify-center relative"
+                className="w-24 h-24 rounded-3xl bg-[color:var(--primary)]/10 border border-[color:var(--primary)]/20 flex items-center justify-center relative"
             >
-                <div className="absolute inset-0 bg-violet-500/20 blur-xl rounded-3xl" />
-                <Sparkles className="w-10 h-10 text-violet-500" />
+                <div className="absolute inset-0 bg-[color:var(--primary)]/20 blur-xl rounded-3xl" />
+                <Sparkles className="w-10 h-10 text-[color:var(--primary)]" />
             </motion.div>
 
             <div className="space-y-4 max-w-lg">
@@ -32,7 +32,7 @@ export function WelcomeStep({ onNext }: WelcomeStepProps) {
                     transition={{ delay: 0.4 }}
                     className="text-4xl md:text-5xl font-black tracking-tight"
                 >
-                    Bienvenido a tu <span className="text-violet-500">Nuevo Ecosistema</span>.
+                    Bienvenido a tu <span className="text-[color:var(--primary)]">Nuevo Ecosistema</span>.
                 </motion.h1>
                 <motion.p
                     initial={{ opacity: 0, y: 10 }}

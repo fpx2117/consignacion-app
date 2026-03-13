@@ -42,8 +42,8 @@ export function GastosFilters({
           </SelectTrigger>
           <SelectContent className="rounded-2xl border-none shadow-2xl">
             <SelectItem value="all" className="font-bold">Todos los estados</SelectItem>
-            <SelectItem value="PAGADO" className="font-bold text-emerald-600">Pagados</SelectItem>
-            <SelectItem value="PENDIENTE" className="font-bold text-orange-600">Pendientes</SelectItem>
+            <SelectItem value="PAGADO" className="font-bold text-[color:var(--status-success-strong)]">Pagados</SelectItem>
+            <SelectItem value="PENDIENTE" className="font-bold text-[color:var(--status-warning)]">Pendientes</SelectItem>
           </SelectContent>
         </Select>
 

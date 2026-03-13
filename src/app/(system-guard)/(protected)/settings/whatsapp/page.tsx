@@ -175,7 +175,7 @@ export default function WhatsAppSettingsPage() {
     if (type === "tienda") updateTemplateTienda(randomTemplate);
 
     toast.success("Mensaje sugerido aplicado", {
-      icon: <Sparkles className="h-4 w-4 text-amber-500" />,
+      icon: <Sparkles className="h-4 w-4 text-[color:var(--status-warning)]" />,
     });
   }, [updateTemplateConsignacion, updateTemplateTienda, updateTemplateVenta]);
 
@@ -229,7 +229,7 @@ export default function WhatsAppSettingsPage() {
             </p>
           </div>
           <div className="flex items-center gap-2">
-            {isDirty && <span className="text-xs font-semibold text-amber-600">Cambios sin guardar</span>}
+            {isDirty && <span className="text-xs font-semibold text-[color:var(--status-warning)]">Cambios sin guardar</span>}
             <Button variant="outline" size="sm" className="h-8 rounded-lg lg:hidden" onClick={() => setPreviewOpen(true)}>
               <Eye className="h-3.5 w-3.5 mr-1.5" /> Preview
             </Button>

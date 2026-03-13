@@ -176,7 +176,7 @@ export function LoginForm() {
             </div>
 
             {capsLockOn && (
-              <p className="text-xs text-amber-600">⚠️ Bloq Mayús activado</p>
+              <p className="text-xs text-[color:var(--status-warning)]">⚠️ Bloq Mayús activado</p>
             )}
           </div>
 

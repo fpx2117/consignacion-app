@@ -126,8 +126,8 @@ export function ConfirmarPedidoDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[580px] p-0 overflow-hidden border-none shadow-2xl bg-background">
-        <DialogHeader className="p-6 pb-3 border-b bg-emerald-500/5">
-          <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400">
+        <DialogHeader className="p-6 pb-3 border-b bg-[color:var(--status-success-strong)]/5">
+          <div className="flex items-center gap-2 text-[color:var(--status-success-strong)] dark:text-[color:var(--status-success-strong)]">
             <PackageCheck className="h-5 w-5" />
             <DialogTitle className="text-xl font-bold italic tracking-tight">Confirmar llegada del pedido</DialogTitle>
           </div>
@@ -139,7 +139,7 @@ export function ConfirmarPedidoDialog({
         <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
           {itemsPendientes.length === 0 ? (
             <div className="py-8 text-center text-muted-foreground">
-              <CheckCircle2 className="h-10 w-10 mx-auto mb-2 text-emerald-500" />
+              <CheckCircle2 className="h-10 w-10 mx-auto mb-2 text-[color:var(--status-success-strong)]" />
               <p className="font-medium">Todos los items ya fueron confirmados</p>
             </div>
           ) : (
@@ -178,10 +178,10 @@ export function ConfirmarPedidoDialog({
                               className={cn(
                                 "w-24 h-9 text-center font-bold rounded-lg text-sm mx-auto",
                                 recibida === 0
-                                  ? "bg-red-500/10 border-red-500/20 text-red-600"
+                                  ? "bg-[color:var(--status-danger)]/10 border-[color:var(--status-danger)]/20 text-[color:var(--status-danger)]"
                                   : recibida < it.cantidadEsperada
                                   ? "bg-yellow-500/10 border-yellow-500/20 text-yellow-700"
-                                  : "bg-emerald-500/10 border-emerald-500/20 text-emerald-700"
+                                  : "bg-[color:var(--status-success-strong)]/10 border-[color:var(--status-success-strong)]/20 text-[color:var(--status-success-strong)]"
                               )}
                             />
                           </TableCell>
@@ -216,10 +216,10 @@ export function ConfirmarPedidoDialog({
                           className={cn(
                             "w-20 h-9 text-center font-bold rounded-lg text-sm",
                             recibida === 0
-                              ? "bg-red-500/10 border-red-500/20 text-red-600"
+                              ? "bg-[color:var(--status-danger)]/10 border-[color:var(--status-danger)]/20 text-[color:var(--status-danger)]"
                               : recibida < it.cantidadEsperada
                               ? "bg-yellow-500/10 border-yellow-500/20 text-yellow-700"
-                              : "bg-emerald-500/10 border-emerald-500/20 text-emerald-700"
+                              : "bg-[color:var(--status-success-strong)]/10 border-[color:var(--status-success-strong)]/20 text-[color:var(--status-success-strong)]"
                           )}
                         />
                       </div>
@@ -229,7 +229,7 @@ export function ConfirmarPedidoDialog({
               </div>
 
               {todosEnCero && (
-                <p className="text-sm text-red-500 font-bold text-center">
+                <p className="text-sm text-[color:var(--status-danger)] font-bold text-center">
                   Ingresá al menos una cantidad recibida mayor a 0
                 </p>
               )}
@@ -251,7 +251,7 @@ export function ConfirmarPedidoDialog({
           <Button
             type="button"
             variant="outline"
-            className="flex-1 h-11 rounded-xl border-emerald-500/30 text-emerald-700 hover:bg-emerald-500/10 gap-2"
+            className="flex-1 h-11 rounded-xl border-[color:var(--status-success-strong)]/30 text-[color:var(--status-success-strong)] hover:bg-[color:var(--status-success-strong)]/10 gap-2"
             onClick={() => { confirmarTodo(); }}
             disabled={saving || itemsPendientes.length === 0}
           >
@@ -260,7 +260,7 @@ export function ConfirmarPedidoDialog({
           </Button>
           <Button
             type="button"
-            className="flex-1 h-11 rounded-xl font-bold bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg shadow-emerald-500/20 gap-2"
+            className="flex-1 h-11 rounded-xl font-bold bg-[color:var(--status-success-strong)] hover:bg-[color:var(--status-success-strong)] text-[color:var(--ui-fx-white)] shadow-lg shadow-emerald-500/20 gap-2"
             onClick={handleSubmit}
             disabled={saving || todosEnCero || itemsPendientes.length === 0}
           >

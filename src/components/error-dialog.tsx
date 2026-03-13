@@ -27,16 +27,16 @@ export function ErrorDialog({ open, onOpenChange, title, description }: ErrorDia
         translate-x-[-50%] translate-y-[-50%] 
         w-[90%] sm:max-w-[425px] 
         gap-0 p-0 
-        border border-red-200 dark:border-red-500/20 
-        bg-background/95 dark:bg-[#0a0a0a]/95 
+        border border-[color:var(--status-danger)] dark:border-[color:var(--status-danger)]/20 
+        bg-background/95 dark:bg-background/95 
         shadow-2xl backdrop-blur-xl rounded-2xl sm:rounded-3xl 
         overflow-hidden duration-200
       ">
         
         {/* Header con gradiente Rojo */}
-        <div className="bg-gradient-to-b from-red-500/5 to-transparent p-8 pb-6 flex flex-col items-center">
-          <div className="flex h-20 w-20 items-center justify-center rounded-full bg-red-100 dark:bg-red-500/10 ring-8 ring-red-500/5 dark:ring-red-500/10 mb-6 animate-in zoom-in-50 duration-300">
-            <AlertCircle className="h-10 w-10 text-red-600 dark:text-red-500" />
+        <div className="bg-gradient-to-b from-[color:var(--status-danger)]/5 to-transparent p-8 pb-6 flex flex-col items-center">
+          <div className="flex h-20 w-20 items-center justify-center rounded-full bg-[color:var(--status-danger)] dark:bg-[color:var(--status-danger)]/10 ring-8 ring-[color:var(--status-danger)]/5 dark:ring-[color:var(--status-danger)]/10 mb-6 animate-in zoom-in-50 duration-300">
+            <AlertCircle className="h-10 w-10 text-[color:var(--status-danger)] dark:text-[color:var(--status-danger)]" />
           </div>
           
           {/* AQUÍ ESTÁ EL CAMBIO: sm:text-center para forzarlo en desktop */}
@@ -53,7 +53,7 @@ export function ErrorDialog({ open, onOpenChange, title, description }: ErrorDia
         <AlertDialogFooter className="p-6 pt-2 w-full">
           <Button 
             onClick={() => onOpenChange(false)}
-            className="w-full h-12 rounded-xl bg-red-600 hover:bg-red-700 text-white font-semibold shadow-lg shadow-red-500/20 dark:shadow-red-900/20 transition-all"
+            className="w-full h-12 rounded-xl bg-[color:var(--status-danger)] hover:bg-[color:var(--status-danger)] text-[color:var(--ui-fx-white)] font-semibold shadow-lg shadow-red-500/20 dark:shadow-red-900/20 transition-all"
           >
             Entendido, voy a revisar
           </Button>

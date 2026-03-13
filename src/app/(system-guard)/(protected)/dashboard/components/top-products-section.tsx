@@ -27,10 +27,10 @@ export function TopProductsSection({ top, loading, filter = "all" }: { top: any;
           {/* Ranking */}
           <div className={cn(
             "relative flex h-10 w-10 sm:h-12 sm:w-12 shrink-0 items-center justify-center rounded-xl text-sm sm:text-lg font-black transition-colors shadow-inner",
-            index === 0 ? "bg-amber-100 text-amber-600 dark:bg-amber-900/20 dark:text-amber-400 ring-1 ring-amber-500/20" :
-              index === 1 ? "bg-slate-200 text-slate-600 dark:bg-slate-800 dark:text-slate-400" :
-                index === 2 ? "bg-orange-100 text-orange-700 dark:bg-orange-900/20 dark:text-orange-400" :
-                  "bg-slate-50 text-slate-400 dark:bg-slate-900 dark:text-slate-600"
+            index === 0 ? "bg-[color:var(--status-warning)] text-[color:var(--status-warning)] dark:bg-[color:var(--status-warning)]/20 dark:text-[color:var(--status-warning)] ring-1 ring-[color:var(--status-warning)]/20" :
+              index === 1 ? "bg-muted/60 text-muted-foreground dark:bg-muted dark:text-muted-foreground/80" :
+                index === 2 ? "bg-[color:var(--status-warning)] text-[color:var(--status-warning)] dark:bg-[color:var(--status-warning)]/20 dark:text-[color:var(--status-warning)]" :
+                  "bg-muted/35 text-muted-foreground/80 dark:bg-card dark:text-muted-foreground"
           )}>
             {rank}
           </div>
@@ -66,8 +66,8 @@ export function TopProductsSection({ top, loading, filter = "all" }: { top: any;
       {showVentas && (
         <section className="space-y-3 sm:space-y-4">
           <div className="flex items-center gap-2 px-1">
-            <div className="p-2 rounded-lg bg-orange-500/10 shrink-0">
-              <TrendingUp className="h-4 w-4 sm:h-4.5 sm:w-4.5 text-orange-600" />
+            <div className="p-2 rounded-lg bg-[color:var(--status-warning)]/10 shrink-0">
+              <TrendingUp className="h-4 w-4 sm:h-4.5 sm:w-4.5 text-[color:var(--status-warning)]" />
             </div>
             <div className="min-w-0">
               <h3 className="text-sm sm:text-base font-bold truncate">Top Vendidos</h3>
@@ -108,8 +108,8 @@ export function TopProductsSection({ top, loading, filter = "all" }: { top: any;
       {showConsignados && (
         <section className="space-y-3 sm:space-y-4">
           <div className="flex items-center gap-2 px-1">
-            <div className="p-2 rounded-lg bg-blue-500/10 shrink-0">
-              <Package className="h-4 w-4 sm:h-4.5 sm:w-4.5 text-blue-600" />
+            <div className="p-2 rounded-lg bg-[color:var(--theme-ocean-primary)]/10 shrink-0">
+              <Package className="h-4 w-4 sm:h-4.5 sm:w-4.5 text-[color:var(--theme-ocean-primary)]" />
             </div>
             <div className="min-w-0">
               <h3 className="text-sm sm:text-base font-bold truncate">Mas Consignados</h3>

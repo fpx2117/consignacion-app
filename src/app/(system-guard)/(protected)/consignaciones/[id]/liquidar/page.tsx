@@ -214,12 +214,12 @@ export default function LiquidarConsignacionPage() {
             <Badge variant="outline" className="font-semibold text-primary border-primary/20">
               <User className="h-3 w-3 mr-1" /> {consignacion?.cliente?.nombre || "Cargando..."}
             </Badge>
-            <Badge className={cn("uppercase text-[10px]", consignacion?.estado === "ABIERTA" ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20" : "")}>
+            <Badge className={cn("uppercase text-[10px]", consignacion?.estado === "ABIERTA" ? "bg-[color:var(--status-success-strong)]/10 text-[color:var(--status-success-strong)] border-[color:var(--status-success-strong)]/20" : "")}>
               {consignacion?.estado || "ESTADO"}
             </Badge>
 
             {porcentajeAumento > 0 && (
-              <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200 hover:bg-emerald-100 gap-1">
+              <Badge className="bg-[color:var(--status-success-strong)] text-[color:var(--status-success-strong)] border-[color:var(--status-success-strong)] hover:bg-[color:var(--status-success-strong)] gap-1">
                 <BadgePercent className="h-3 w-3" />
                 +{porcentajeAumento}% Aplicado
               </Badge>
@@ -256,7 +256,7 @@ export default function LiquidarConsignacionPage() {
                 </div>
               ) : actionableRows.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-12 text-center bg-muted/5 rounded-2xl border-2 border-dashed">
-                  <CheckCircle2 className="h-12 w-12 text-emerald-500 mb-4" />
+                  <CheckCircle2 className="h-12 w-12 text-[color:var(--status-success-strong)] mb-4" />
                   <p className="font-bold text-xl tracking-tight">No hay pendientes</p>
                   <p className="text-sm text-muted-foreground max-w-xs mx-auto">
                     Todos los productos de esta consignación ya han sido liquidados.
@@ -277,11 +277,11 @@ export default function LiquidarConsignacionPage() {
                           <div className="space-y-1 flex-1">
                             <h3 className="font-bold text-lg leading-none italic">{r.productoNombre}</h3>
                             <div className="flex items-center gap-3 text-xs text-muted-foreground pt-1">
-                              <span className="bg-muted px-2 py-0.5 rounded font-bold text-slate-700">
+                              <span className="bg-muted px-2 py-0.5 rounded font-bold text-foreground/90">
                                 Stock Disp: {r.maxPendiente}
                               </span>
                               <span>•</span>
-                              <span className="font-bold text-emerald-600">
+                              <span className="font-bold text-[color:var(--status-success-strong)]">
                                 {formatCurrency(r.precioFinal)} c/u
                               </span>
                             </div>
@@ -292,7 +292,7 @@ export default function LiquidarConsignacionPage() {
                             <span className="text-sm font-black tracking-tighter text-primary">
                               {r.unitsVendidas} VEND / {r.unitsDevueltas} DEV
                             </span>
-                            <Progress value={100} className="h-2 w-28 bg-amber-200 [&>div]:bg-emerald-500" />
+                            <Progress value={100} className="h-2 w-28 bg-[color:var(--status-warning)] [&>div]:bg-[color:var(--status-success-strong)]" />
                             {/* La barra de progreso aquí es conceptual: Verde es venta, el fondo (amber) es devolución */}
                           </div>
                         </div>
@@ -304,15 +304,15 @@ export default function LiquidarConsignacionPage() {
                           <div className="space-y-2">
                             <div className="flex justify-between items-end">
                               <Label className="text-[10px] uppercase font-black text-muted-foreground flex items-center gap-1.5">
-                                <TrendingUp className="h-3 w-3 text-emerald-500" /> Vendidas
+                                <TrendingUp className="h-3 w-3 text-[color:var(--status-success-strong)]" /> Vendidas
                               </Label>
                               {r.unitsVendidas > 0 && (
-                                <span className="text-[10px] font-bold text-emerald-600 animate-in fade-in">
+                                <span className="text-[10px] font-bold text-[color:var(--status-success-strong)] animate-in fade-in">
                                   Subt: {formatCurrency((r.unitsVendidas * r.precioFinal) - r.descuento)}
                                 </span>
                               )}
                               {r.descuento > 0 && (
-                                <span className="text-[10px] font-bold text-indigo-600 animate-in fade-in ml-2">
+                                <span className="text-[10px] font-bold text-[color:var(--primary)] animate-in fade-in ml-2">
                                   Desc: -{formatCurrency(r.descuento)}
                                 </span>
                               )}
@@ -320,7 +320,7 @@ export default function LiquidarConsignacionPage() {
 
                             <Input
                               type="number"
-                              className="h-12 text-lg font-bold bg-emerald-500/10 border-emerald-500/20 focus-visible:ring-emerald-500 text-emerald-700 placeholder:text-emerald-700/30"
+                              className="h-12 text-lg font-bold bg-[color:var(--status-success-strong)]/10 border-[color:var(--status-success-strong)]/20 focus-visible:ring-[color:var(--status-success-strong)] text-[color:var(--status-success-strong)] placeholder:text-[color:var(--status-success-strong)]/30"
                               placeholder="0"
                               min={0}
                               max={r.maxPendiente}
@@ -335,7 +335,7 @@ export default function LiquidarConsignacionPage() {
                           {/* COLUMNA 2: DEVUELTAS (AUTOMÁTICO / READONLY) */}
                           <div className="space-y-2">
                             <Label className="text-[10px] uppercase font-black text-muted-foreground flex items-center gap-1.5">
-                              <Undo2 className="h-3 w-3 text-amber-500" /> Devueltas
+                              <Undo2 className="h-3 w-3 text-[color:var(--status-warning)]" /> Devueltas
                             </Label>
                             <Input
                               type="number"
@@ -368,13 +368,13 @@ export default function LiquidarConsignacionPage() {
             </CardHeader>
             <CardContent className="pt-6 space-y-6">
               <div className="grid grid-cols-2 gap-4">
-                <div className="p-3 bg-emerald-50 rounded-lg text-center border border-emerald-100">
-                  <p className="text-[10px] uppercase font-bold text-emerald-600 mb-1">A Cobrar</p>
-                  <p className="text-xl font-black text-emerald-700">{totalVendidoUnits} u.</p>
+                <div className="p-3 bg-[color:var(--status-success-strong)] rounded-lg text-center border border-[color:var(--status-success-strong)]">
+                  <p className="text-[10px] uppercase font-bold text-[color:var(--status-success-strong)] mb-1">A Cobrar</p>
+                  <p className="text-xl font-black text-[color:var(--status-success-strong)]">{totalVendidoUnits} u.</p>
                 </div>
-                <div className="p-3 bg-amber-50 rounded-lg text-center border border-amber-100">
-                  <p className="text-[10px] uppercase font-bold text-amber-600 mb-1">A Stock</p>
-                  <p className="text-xl font-black text-amber-700">{totalDevueltoUnits} u.</p>
+                <div className="p-3 bg-[color:var(--status-warning)] rounded-lg text-center border border-[color:var(--status-warning)]">
+                  <p className="text-[10px] uppercase font-bold text-[color:var(--status-warning)] mb-1">A Stock</p>
+                  <p className="text-xl font-black text-[color:var(--status-warning)]">{totalDevueltoUnits} u.</p>
                 </div>
               </div>
 
@@ -383,7 +383,7 @@ export default function LiquidarConsignacionPage() {
                   <span>Subtotal bruto</span>
                   <span>{formatCurrency(totalDinero + totalDescuento)}</span>
                 </div>
-                <div className="flex justify-between text-sm text-indigo-600 font-bold px-1">
+                <div className="flex justify-between text-sm text-[color:var(--primary)] font-bold px-1">
                   <span>Descuentos</span>
                   <span>- {formatCurrency(totalDescuento)}</span>
                 </div>
@@ -400,7 +400,7 @@ export default function LiquidarConsignacionPage() {
                   {formatCurrency(totalDinero)}
                 </p>
                 {porcentajeAumento > 0 && (
-                  <p className="text-[10px] text-emerald-600 font-bold leading-tight pt-2 flex items-center gap-1">
+                  <p className="text-[10px] text-[color:var(--status-success-strong)] font-bold leading-tight pt-2 flex items-center gap-1">
                     <TrendingUp className="h-3 w-3" /> Incluye +{porcentajeAumento}% de aumento
                   </p>
                 )}

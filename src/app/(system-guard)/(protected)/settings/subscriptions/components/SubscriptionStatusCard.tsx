@@ -94,12 +94,12 @@ export function SubscriptionStatusCard({ onUpgrade }: { onUpgrade: () => void })
                                 {sub?.plan.nombre || "Sin Plan"}
                             </h2>
                             {sub?.status === "PRUEBA" && (
-                                <Badge className="bg-amber-500/10 text-amber-600 border-amber-500/20 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">
+                                <Badge className="bg-[color:var(--status-warning)]/10 text-[color:var(--status-warning)] border-[color:var(--status-warning)]/20 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">
                                     Trial Mode
                                 </Badge>
                             )}
                             {sub?.status === "ACTIVO" && (
-                                <Badge className="bg-emerald-500/10 text-emerald-600 border-emerald-500/20 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">
+                                <Badge className="bg-[color:var(--status-success-strong)]/10 text-[color:var(--status-success-strong)] border-[color:var(--status-success-strong)]/20 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">
                                     Premium Active
                                 </Badge>
                             )}
@@ -126,7 +126,7 @@ export function SubscriptionStatusCard({ onUpgrade }: { onUpgrade: () => void })
                     >
                         <Zap className="h-4 w-4 relative z-10 group-hover/btn:animate-pulse" />
                         <span className="relative z-10">{data?.hasSubscription ? "Ver Planes & Upgrade" : "Activar Ahora"}</span>
-                        <div className="absolute inset-0 bg-white/20 translate-y-full group-hover/btn:translate-y-0 transition-transform duration-300" />
+                        <div className="absolute inset-0 bg-card/20 translate-y-full group-hover/btn:translate-y-0 transition-transform duration-300" />
                     </button>
                 </div>
 
@@ -150,14 +150,14 @@ export function SubscriptionStatusCard({ onUpgrade }: { onUpgrade: () => void })
                             </div>
 
                             <div className="group/item flex items-center gap-4 p-5 md:p-6 bg-secondary/30 hover:bg-secondary/50 rounded-3xl border border-border/50 transition-all duration-300">
-                                <div className="h-12 w-12 rounded-2xl bg-orange-500/10 flex items-center justify-center group-hover/item:-rotate-12 transition-transform duration-500">
-                                    <RefreshCw className="h-6 w-6 text-orange-500" />
+                                <div className="h-12 w-12 rounded-2xl bg-[color:var(--status-warning)]/10 flex items-center justify-center group-hover/item:-rotate-12 transition-transform duration-500">
+                                    <RefreshCw className="h-6 w-6 text-[color:var(--status-warning)]" />
                                 </div>
                                 <div>
                                     <p className="text-[9px] uppercase font-black text-muted-foreground tracking-[0.15em] mb-0.5">Vigencia Restante</p>
                                     <p className="text-lg font-bold tracking-tight">
                                         <span className={cn(
-                                            sub?.daysRemaining && sub.daysRemaining <= 3 ? "text-orange-500" : "text-foreground"
+                                            sub?.daysRemaining && sub.daysRemaining <= 3 ? "text-[color:var(--status-warning)]" : "text-foreground"
                                         )}>
                                             {sub?.daysRemaining}
                                         </span>
@@ -200,7 +200,7 @@ export function SubscriptionStatusCard({ onUpgrade }: { onUpgrade: () => void })
 
             {/* Premium Decorative elements */}
             <div className="absolute top-0 right-0 w-64 h-64 bg-primary/10 rounded-full blur-[100px] -translate-y-1/2 translate-x-1/2 opacity-50 group-hover:opacity-80 transition-opacity duration-700" />
-            <div className="absolute bottom-0 left-0 w-48 h-48 bg-orange-500/10 rounded-full blur-[80px] translate-y-1/2 -translate-x-1/2 opacity-30 group-hover:opacity-50 transition-opacity duration-700" />
+            <div className="absolute bottom-0 left-0 w-48 h-48 bg-[color:var(--status-warning)]/10 rounded-full blur-[80px] translate-y-1/2 -translate-x-1/2 opacity-30 group-hover:opacity-50 transition-opacity duration-700" />
         </Card>
     );
 }

@@ -78,14 +78,14 @@ export function ClienteFilters({
             <DropdownMenuCheckboxItem
               checked={statusFilter === "active"}
               onCheckedChange={() => setStatusFilter("active")}
-              className="rounded-lg text-sm cursor-pointer text-emerald-600 focus:text-emerald-700"
+              className="rounded-lg text-sm cursor-pointer text-[color:var(--status-success-strong)] focus:text-[color:var(--status-success-strong)]"
             >
               Solo Activos
             </DropdownMenuCheckboxItem>
             <DropdownMenuCheckboxItem
               checked={statusFilter === "inactive"}
               onCheckedChange={() => setStatusFilter("inactive")}
-              className="rounded-lg text-sm cursor-pointer text-orange-600 focus:text-orange-700"
+              className="rounded-lg text-sm cursor-pointer text-[color:var(--status-warning)] focus:text-[color:var(--status-warning)]"
             >
               Solo Inactivos
             </DropdownMenuCheckboxItem>

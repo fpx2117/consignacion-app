@@ -49,7 +49,7 @@ export function ProductCard({
             <Card
                 onClick={() => onViewProduct?.(product)}
                 className={cn(
-                    "overflow-hidden border border-neutral-200/60 transition-all duration-500 h-full flex group cursor-pointer relative",
+                    "overflow-hidden border border-border/60 transition-all duration-500 h-full flex group cursor-pointer relative",
                     cardBgClass,
                     radiusClass,
                     isGrid
@@ -59,7 +59,7 @@ export function ProductCard({
             >
                 {/* Contenedor de la Imagen */}
                 <div className={cn(
-                    "relative overflow-hidden shrink-0 flex items-center justify-center bg-black/5",
+                    "relative overflow-hidden shrink-0 flex items-center justify-center bg-foreground/5",
                     isGrid
                         ? "w-full aspect-square border-b border-border/10"
                         : "w-full aspect-[4/3] sm:h-full sm:w-auto sm:aspect-square",
@@ -73,9 +73,9 @@ export function ProductCard({
                                 className="w-full h-full object-cover mix-blend-multiply transition-transform duration-700 group-hover:scale-110"
                             />
                             {/* Overlay "Ver detalle" */}
-                            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors duration-500 flex items-center justify-center">
+                            <div className="absolute inset-0 bg-foreground/0 group-hover:bg-foreground/5 transition-colors duration-500 flex items-center justify-center">
                                 <span className={cn(
-                                    "bg-white/95 text-neutral-900 text-[11px] uppercase tracking-widest font-bold px-5 py-2.5 opacity-0 group-hover:opacity-100 transition-all duration-500 transform translate-y-4 group-hover:translate-y-0 backdrop-blur-md shadow-lg hidden sm:flex items-center gap-2",
+                                    "bg-[color:rgba(var(--store-surface-rgb),0.95)] text-foreground text-[11px] uppercase tracking-widest font-bold px-5 py-2.5 opacity-0 group-hover:opacity-100 transition-all duration-500 transform translate-y-4 group-hover:translate-y-0 backdrop-blur-md shadow-lg hidden sm:flex items-center gap-2",
                                     radiusClass
                                 )}>
                                     <Eye className="h-3 w-3" /> Ver Detalle
@@ -92,11 +92,11 @@ export function ProductCard({
                     {isGrid && (
                         <div className="absolute top-4 left-4 flex flex-col gap-1.5 z-10">
                             {isAvailable ? (
-                                <Badge className="bg-emerald-500 text-white border-transparent px-3 py-1 rounded-full flex items-center gap-1.5 shadow-sm text-[10px] font-black uppercase tracking-wider">
+                                <Badge className="bg-[color:var(--status-success-strong)] text-[color:var(--ui-fx-white)] border-transparent px-3 py-1 rounded-full flex items-center gap-1.5 shadow-sm text-[10px] font-black uppercase tracking-wider">
                                     <CheckCircle2 className="h-3 w-3" /> STOCK
                                 </Badge>
                             ) : (
-                                <Badge variant="destructive" className="bg-neutral-900 text-white border-transparent px-3 py-1 rounded-full flex items-center gap-1.5 shadow-sm text-[10px] font-black uppercase tracking-wider">
+                                <Badge variant="destructive" className="bg-foreground text-[color:var(--ui-fx-white)] border-transparent px-3 py-1 rounded-full flex items-center gap-1.5 shadow-sm text-[10px] font-black uppercase tracking-wider">
                                     <XCircle className="h-3 w-3" /> AGOTADO
                                 </Badge>
                             )}
@@ -111,18 +111,18 @@ export function ProductCard({
                     cardBgClass
                 )}>
                     <div>
-                        <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-widest text-neutral-400 mb-1 block">
+                        <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-widest text-muted-foreground/80 mb-1 block">
                             {product.categoria?.nombre || "Sin Categoría"}
                         </span>
                         <h3 className={cn(
-                            "font-bold leading-snug text-neutral-900 group-hover:text-neutral-600 transition-colors",
+                            "font-bold leading-snug text-foreground group-hover:text-muted-foreground transition-colors",
                             isGrid ? "text-sm sm:text-base lg:text-lg line-clamp-2" : "text-base line-clamp-2 sm:line-clamp-1"
                         )}>
                             {product.nombre}
                         </h3>
 
                         {!isGrid && (
-                            <span className={cn("text-xs font-bold mt-1.5 block uppercase tracking-wider", isAvailable ? "text-emerald-500" : "text-neutral-400")}>
+                            <span className={cn("text-xs font-bold mt-1.5 block uppercase tracking-wider", isAvailable ? "text-[color:var(--status-success-strong)]" : "text-muted-foreground/80")}>
                                 {isAvailable ? "En stock" : "Agotado"}
                             </span>
                         )}
@@ -133,11 +133,11 @@ export function ProductCard({
                         isGrid ? "mt-2 sm:mt-4" : "mt-auto"
                     )}>
                         <div className="flex flex-col min-w-0">
-                            <span className="text-base sm:text-xl font-black text-neutral-900 tracking-tight truncate">
+                            <span className="text-base sm:text-xl font-black text-foreground tracking-tight truncate">
                                 ${displayedPrice.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
                             </span>
                             {isConsigne && (
-                                <span className="text-[10px] sm:text-xs font-semibold text-neutral-400 line-through">
+                                <span className="text-[10px] sm:text-xs font-semibold text-muted-foreground/80 line-through">
                                     ${basePrice.toLocaleString('es-AR')}
                                 </span>
                             )}
@@ -148,7 +148,7 @@ export function ProductCard({
                                 size="icon"
                                 variant="outline"
                                 className={cn(
-                                    "h-8 w-8 sm:h-10 sm:w-10 border-emerald-200 hover:bg-emerald-50 text-emerald-600 transition-all duration-300 shrink-0",
+                                    "h-8 w-8 sm:h-10 sm:w-10 border-[color:var(--status-success-strong)] hover:bg-[color:var(--status-success-strong)] text-[color:var(--status-success-strong)] transition-all duration-300 shrink-0",
                                     radiusClass
                                 )}
                                 onClick={(e) => {
@@ -173,8 +173,8 @@ export function ProductCard({
                                     radiusClass,
                                     buttonHoverClass,
                                     isGrid
-                                        ? "h-8 w-8 sm:h-10 sm:w-10 bg-neutral-900 text-white"
-                                        : "h-10 w-10 bg-neutral-900 text-white"
+                                        ? "h-8 w-8 sm:h-10 sm:w-10 bg-foreground text-[color:var(--ui-fx-white)]"
+                                        : "h-10 w-10 bg-foreground text-[color:var(--ui-fx-white)]"
                                 )}
                                 disabled={!isAvailable}
                                 onClick={(e) => {

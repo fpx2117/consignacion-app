@@ -53,13 +53,13 @@ const ITEMS_PER_PAGE = 7;
 
 // --- Utilidades de color para avatares ---
 const AVATAR_PALETTES = [
-  { bg: "bg-blue-500/15 dark:bg-blue-500/20", text: "text-blue-600 dark:text-blue-400", ring: "ring-blue-500/20" },
-  { bg: "bg-emerald-500/15 dark:bg-emerald-500/20", text: "text-emerald-600 dark:text-emerald-400", ring: "ring-emerald-500/20" },
-  { bg: "bg-amber-500/15 dark:bg-amber-500/20", text: "text-amber-600 dark:text-amber-400", ring: "ring-amber-500/20" },
+  { bg: "bg-[color:var(--theme-ocean-primary)]/15 dark:bg-[color:var(--theme-ocean-primary)]/20", text: "text-[color:var(--theme-ocean-primary)] dark:text-[color:var(--theme-ocean-primary)]", ring: "ring-[color:var(--theme-ocean-primary)]/20" },
+  { bg: "bg-[color:var(--status-success-strong)]/15 dark:bg-[color:var(--status-success-strong)]/20", text: "text-[color:var(--status-success-strong)] dark:text-[color:var(--status-success-strong)]", ring: "ring-[color:var(--status-success-strong)]/20" },
+  { bg: "bg-[color:var(--status-warning)]/15 dark:bg-[color:var(--status-warning)]/20", text: "text-[color:var(--status-warning)] dark:text-[color:var(--status-warning)]", ring: "ring-[color:var(--status-warning)]/20" },
   { bg: "bg-rose-500/15 dark:bg-rose-500/20", text: "text-rose-600 dark:text-rose-400", ring: "ring-rose-500/20" },
   { bg: "bg-cyan-500/15 dark:bg-cyan-500/20", text: "text-cyan-600 dark:text-cyan-400", ring: "ring-cyan-500/20" },
-  { bg: "bg-indigo-500/15 dark:bg-indigo-500/20", text: "text-indigo-600 dark:text-indigo-400", ring: "ring-indigo-500/20" },
-  { bg: "bg-pink-500/15 dark:bg-pink-500/20", text: "text-pink-600 dark:text-pink-400", ring: "ring-pink-500/20" },
+  { bg: "bg-[color:var(--primary)]/15 dark:bg-[color:var(--primary)]/20", text: "text-[color:var(--primary)] dark:text-[color:var(--primary)]", ring: "ring-[color:var(--primary)]/20" },
+  { bg: "bg-[color:var(--brand-instagram)]/15 dark:bg-[color:var(--brand-instagram)]/20", text: "text-[color:var(--brand-instagram)] dark:text-[color:var(--brand-instagram)]", ring: "ring-[color:var(--brand-instagram)]/20" },
   { bg: "bg-teal-500/15 dark:bg-teal-500/20", text: "text-teal-600 dark:text-teal-400", ring: "ring-teal-500/20" },
 ];
 
@@ -307,18 +307,18 @@ function StatCard({
 }) {
   const styles = {
     blue: {
-      icon: "text-blue-500",
-      iconBg: "bg-blue-500/10 dark:bg-blue-500/15",
+      icon: "text-[color:var(--theme-ocean-primary)]",
+      iconBg: "bg-[color:var(--theme-ocean-primary)]/10 dark:bg-[color:var(--theme-ocean-primary)]/15",
       glow: "group-hover:shadow-blue-500/5",
     },
     orange: {
-      icon: "text-orange-500",
-      iconBg: "bg-orange-500/10 dark:bg-orange-500/15",
+      icon: "text-[color:var(--status-warning)]",
+      iconBg: "bg-[color:var(--status-warning)]/10 dark:bg-[color:var(--status-warning)]/15",
       glow: "group-hover:shadow-orange-500/5",
     },
     emerald: {
-      icon: "text-emerald-500",
-      iconBg: "bg-emerald-500/10 dark:bg-emerald-500/15",
+      icon: "text-[color:var(--status-success-strong)]",
+      iconBg: "bg-[color:var(--status-success-strong)]/10 dark:bg-[color:var(--status-success-strong)]/15",
       glow: "group-hover:shadow-emerald-500/5",
     },
   };
@@ -409,12 +409,12 @@ function ClientFolder({ group }: { group: ClientGroup }) {
 
             <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
               {group.totalAbiertas > 0 ? (
-                <span className="inline-flex items-center gap-1 text-[10px] sm:text-xs font-bold text-orange-600 dark:text-orange-400 bg-orange-500/10 dark:bg-orange-500/15 px-1.5 py-0.5 rounded-md">
+                <span className="inline-flex items-center gap-1 text-[10px] sm:text-xs font-bold text-[color:var(--status-warning)] dark:text-[color:var(--status-warning)] bg-[color:var(--status-warning)]/10 dark:bg-[color:var(--status-warning)]/15 px-1.5 py-0.5 rounded-md">
                   <Clock className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
                   {group.totalAbiertas} {group.totalAbiertas === 1 ? "activa" : "activas"}
                 </span>
               ) : (
-                <span className="inline-flex items-center gap-1 text-[10px] sm:text-xs font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 dark:bg-emerald-500/15 px-1.5 py-0.5 rounded-md">
+                <span className="inline-flex items-center gap-1 text-[10px] sm:text-xs font-bold text-[color:var(--status-success-strong)] dark:text-[color:var(--status-success-strong)] bg-[color:var(--status-success-strong)]/10 dark:bg-[color:var(--status-success-strong)]/15 px-1.5 py-0.5 rounded-md">
                   <CheckCircle2 className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
                   Al día
                 </span>
@@ -489,15 +489,15 @@ function ConsignacionRowRemito({ c, index }: { c: Row; index: number }) {
   const theme = isAbierta
     ? {
       accent: "border-l-orange-500",
-      badge: "bg-orange-500/10 dark:bg-orange-500/15 text-orange-600 dark:text-orange-400",
-      dateText: "text-orange-600 dark:text-orange-400",
-      dateBg: "bg-orange-500/8 dark:bg-orange-500/10 border-orange-500/15",
+      badge: "bg-[color:var(--status-warning)]/10 dark:bg-[color:var(--status-warning)]/15 text-[color:var(--status-warning)] dark:text-[color:var(--status-warning)]",
+      dateText: "text-[color:var(--status-warning)] dark:text-[color:var(--status-warning)]",
+      dateBg: "bg-[color:var(--status-warning)]/8 dark:bg-[color:var(--status-warning)]/10 border-[color:var(--status-warning)]/15",
     }
     : {
       accent: "border-l-emerald-500",
-      badge: "bg-emerald-500/10 dark:bg-emerald-500/15 text-emerald-600 dark:text-emerald-400",
-      dateText: "text-emerald-600 dark:text-emerald-400",
-      dateBg: "bg-emerald-500/8 dark:bg-emerald-500/10 border-emerald-500/15",
+      badge: "bg-[color:var(--status-success-strong)]/10 dark:bg-[color:var(--status-success-strong)]/15 text-[color:var(--status-success-strong)] dark:text-[color:var(--status-success-strong)]",
+      dateText: "text-[color:var(--status-success-strong)] dark:text-[color:var(--status-success-strong)]",
+      dateBg: "bg-[color:var(--status-success-strong)]/8 dark:bg-[color:var(--status-success-strong)]/10 border-[color:var(--status-success-strong)]/15",
     };
 
   const dateObj = new Date(c.fecha);
@@ -541,7 +541,7 @@ function ConsignacionRowRemito({ c, index }: { c: Row; index: number }) {
               {isAbierta ? "Abierta" : "Cerrada"}
             </span>
             {!isAbierta && (
-              <span className="hidden sm:inline-flex items-center gap-1 text-[9px] text-emerald-600 dark:text-emerald-400 font-bold">
+              <span className="hidden sm:inline-flex items-center gap-1 text-[9px] text-[color:var(--status-success-strong)] dark:text-[color:var(--status-success-strong)] font-bold">
                 <CheckCircle2 className="h-3 w-3" /> Liquidado
               </span>
             )}

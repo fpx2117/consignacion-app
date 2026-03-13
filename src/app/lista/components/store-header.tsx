@@ -36,18 +36,18 @@ export function StoreHeader({ config, cartCount, onOpenCart }: StoreHeaderProps)
                             )}
                         />
                     ) : (
-                        <div className={cn("p-2 bg-neutral-100 shrink-0", radiusClass)}>
-                            <PackageOpen className="h-5 w-5 sm:h-6 sm:w-6 text-neutral-900" />
+                        <div className={cn("p-2 bg-muted/55 shrink-0", radiusClass)}>
+                            <PackageOpen className="h-5 w-5 sm:h-6 sm:w-6 text-foreground" />
                         </div>
                     )}
                     <div className="flex flex-col justify-center text-left min-w-0">
                         <h1 className={cn(
-                            "text-[14px] sm:text-lg font-black tracking-tight text-neutral-900 leading-none truncate",
+                            "text-[14px] sm:text-lg font-black tracking-tight text-foreground leading-none truncate",
                             theme === 'minimal' || theme === 'luxury' ? "uppercase tracking-widest text-base" : ""
                         )}>
                             {config.businessName || "Nuestra Tienda"}
                         </h1>
-                        <p className="text-[8px] sm:text-[10px] uppercase tracking-widest text-neutral-500 font-bold mt-1 truncate">
+                        <p className="text-[8px] sm:text-[10px] uppercase tracking-widest text-muted-foreground font-bold mt-1 truncate">
                             Catálogo Oficial
                         </p>
                     </div>

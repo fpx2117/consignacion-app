@@ -99,7 +99,7 @@ function ResetPasswordForm() {
             <CardContent className="space-y-5">
                 {success ? (
                     <div className="space-y-6 text-center">
-                        <div className="flex justify-center flex-col items-center space-y-3 p-4 bg-green-500/10 rounded-lg text-green-600 border border-green-500/20">
+                        <div className="flex justify-center flex-col items-center space-y-3 p-4 bg-[color:var(--status-success)]/10 rounded-lg text-[color:var(--status-success)] border border-[color:var(--status-success)]/20">
                             <CheckCircle2 className="h-8 w-8" />
                             <p className="text-sm font-medium">Contraseña actualizada</p>
                             <p className="text-xs text-muted-foreground">Tu contraseña ha sido cambiada con éxito. Serás redirigido al inicio de sesión.</p>
@@ -175,7 +175,7 @@ function ResetPasswordForm() {
                             </div>
 
                             {capsLockOn && (
-                                <p className="text-xs text-amber-600">⚠️ Bloq Mayús activado</p>
+                                <p className="text-xs text-[color:var(--status-warning)]">⚠️ Bloq Mayús activado</p>
                             )}
                         </div>
 

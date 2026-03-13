@@ -105,7 +105,7 @@ export default function NotificationSettingsPage() {
                     </Button>
                     <div className="flex-1">
                         <h1 className="text-xl md:text-2xl font-semibold tracking-tight flex items-center gap-2.5">
-                            <BellRing className="h-5 w-5 md:h-6 md:w-6 text-pink-500/80" />
+                            <BellRing className="h-5 w-5 md:h-6 md:w-6 text-[color:var(--brand-instagram)]/80" />
                             Notificaciones
                         </h1>
                         <p className="text-xs md:text-sm text-muted-foreground mt-0.5 md:mt-1">
@@ -191,8 +191,8 @@ export default function NotificationSettingsPage() {
                     {/* BLOQUE: FECHAS Y VENCIMIENTOS */}
                     <Card className="rounded-[20px] md:rounded-[24px] border-border/40 shadow-sm bg-card overflow-hidden">
                         <div className="p-4 md:p-6 md:px-8 border-b border-border/40 flex items-center gap-3 bg-muted/5">
-                            <div className="p-2 bg-amber-500/5 rounded-lg md:rounded-xl border border-amber-500/10">
-                                <CalendarClock className="w-5 h-5 text-amber-500" />
+                            <div className="p-2 bg-[color:var(--status-warning)]/5 rounded-lg md:rounded-xl border border-[color:var(--status-warning)]/10">
+                                <CalendarClock className="w-5 h-5 text-[color:var(--status-warning)]" />
                             </div>
                             <div>
                                 <h2 className="font-semibold text-base md:text-lg tracking-tight">Vencimientos</h2>
@@ -240,8 +240,8 @@ export default function NotificationSettingsPage() {
                     {/* BLOQUE: VENTAS Y ACTIVIDAD */}
                     <Card className="rounded-[20px] md:rounded-[24px] border-border/40 shadow-sm bg-card overflow-hidden">
                         <div className="p-4 md:p-6 md:px-8 border-b border-border/40 flex items-center gap-3 bg-muted/5">
-                            <div className="p-2 bg-emerald-500/5 rounded-lg md:rounded-xl border border-emerald-500/10">
-                                <Settings2 className="w-5 h-5 text-emerald-500" />
+                            <div className="p-2 bg-[color:var(--status-success-strong)]/5 rounded-lg md:rounded-xl border border-[color:var(--status-success-strong)]/10">
+                                <Settings2 className="w-5 h-5 text-[color:var(--status-success-strong)]" />
                             </div>
                             <div>
                                 <h2 className="font-semibold text-base md:text-lg tracking-tight">Actividad de Ventas</h2>
@@ -287,8 +287,8 @@ export default function NotificationSettingsPage() {
                     {/* BLOQUE: CONSIGNACIONES */}
                     <Card className="rounded-[20px] md:rounded-[24px] border-border/40 shadow-sm bg-card overflow-hidden">
                         <div className="p-4 md:p-6 md:px-8 border-b border-border/40 flex items-center gap-3 bg-muted/5">
-                            <div className="p-2 bg-indigo-500/5 rounded-lg md:rounded-xl border border-indigo-500/10">
-                                <PackageSearch className="w-5 h-5 text-indigo-500" />
+                            <div className="p-2 bg-[color:var(--primary)]/5 rounded-lg md:rounded-xl border border-[color:var(--primary)]/10">
+                                <PackageSearch className="w-5 h-5 text-[color:var(--primary)]" />
                             </div>
                             <div>
                                 <h2 className="font-semibold text-base md:text-lg tracking-tight">Consignaciones Activas</h2>

@@ -52,11 +52,16 @@ import {
   buildVentaHtml,
   type VentaReportDTO,
 } from "@/lib/reports/base/venta-report-template";
-import type { BrandingDTO } from "@/lib/reports/get-branding";
+import type { BrandingDTO } from "@/lib/reports/types";
 
 type BrandingFormDTO = Omit<BrandingDTO, "logoUrl" | "logoBase64"> & {
   logoUrl?: string | null;
   logoBase64?: string | null;
+};
+
+const getTokenColor = (token: string) => {
+  if (typeof window === "undefined") return "hsl(var(--primary))";
+  return getComputedStyle(document.documentElement).getPropertyValue(token).trim() || "hsl(var(--primary))";
 };
 
 export default function BrandingPage() {
@@ -67,7 +72,7 @@ export default function BrandingPage() {
 
   const [form, setForm] = React.useState<BrandingFormDTO>({
     businessName: "",
-    primaryColor: "#294c98",
+    primaryColor: "hsl(var(--primary))",
     footerText: null,
     phone: null,
     address: null,
@@ -97,7 +102,7 @@ export default function BrandingPage() {
 
       setForm({
         businessName: b?.businessName ?? "",
-        primaryColor: b?.primaryColor ?? "#294c98",
+        primaryColor: b?.primaryColor ?? getTokenColor("--brand-default-primary"),
         footerText: b?.footerText ?? null,
         phone: b?.phone ?? null,
         address: b?.address ?? null,
@@ -199,7 +204,7 @@ export default function BrandingPage() {
   const previewHtml = React.useMemo(() => {
     const brandingForPreview: BrandingDTO = {
       businessName: form.businessName || "Consignación",
-      primaryColor: form.primaryColor || "#294c98",
+      primaryColor: form.primaryColor || getTokenColor("--brand-default-primary"),
       footerText: form.footerText ?? null,
       phone: form.phone ?? null,
       address: form.address ?? null,
@@ -263,7 +268,7 @@ export default function BrandingPage() {
                     </div>
                     <div className="grid gap-3 w-full">
                       <input ref={fileInputRef} type="file" accept="image/*" disabled={uploading} className="block w-full text-xs text-foreground file:mr-3 file:rounded-xl file:border file:border-border/60 file:px-4 file:py-2 file:text-[10px] file:font-black file:uppercase file:bg-background/60 hover:file:bg-muted/80 cursor-pointer" onChange={(e) => { const f = e.target.files?.[0]; if (f) onUploadLogo(f); }} />
-                      <Button type="button" variant="ghost" size="sm" onClick={onDeleteLogo} disabled={deletingLogo} className="w-fit h-8 text-red-600 hover:text-white hover:bg-red-600/90 rounded-xl text-[10px] font-bold px-4">
+                      <Button type="button" variant="ghost" size="sm" onClick={onDeleteLogo} disabled={deletingLogo} className="w-fit h-8 text-[color:var(--status-danger)] hover:text-[color:var(--ui-fx-white)] hover:bg-[color:var(--status-danger)]/90 rounded-xl text-[10px] font-bold px-4">
                         <Trash2 className="h-3.5 w-3.5 mr-2" /> Eliminar logo
                       </Button>
                     </div>
@@ -349,7 +354,7 @@ function A4ScaledFrame({ html, heightPx }: { html: string; heightPx: number }) {
 
   return (
     <div ref={containerRef} className="w-full overflow-hidden" style={{ height: heightPx }}>
-      <div style={{ width: 794, height: 1123, transform: `scale(${scale})`, transformOrigin: "top left" }} className="bg-white border shadow-sm">
+      <div style={{ width: 794, height: 1123, transform: `scale(${scale})`, transformOrigin: "top left" }} className="bg-card border shadow-sm">
         <iframe title="Preview" srcDoc={html} className="w-full h-full" />
       </div>
     </div>
@@ -368,7 +373,7 @@ function FullViewer({ html }: { html: string }) {
         <Button variant="secondary" size="icon" className="h-8 w-8 rounded-lg" onClick={() => setZoom(z => clamp(z + 0.1))}><ZoomIn className="h-4 w-4" /></Button>
       </div>
       <div className="flex-1 overflow-auto bg-muted/20 p-8 flex justify-center items-start">
-        <div style={{ width: 794 * zoom, height: 1123 * zoom }} className="bg-white shadow-2xl origin-top-left transition-all duration-200">
+        <div style={{ width: 794 * zoom, height: 1123 * zoom }} className="bg-card shadow-2xl origin-top-left transition-all duration-200">
           <iframe title="Viewer" srcDoc={html} className="w-full h-full" style={{ transform: `scale(${zoom})`, transformOrigin: "top left", width: 794, height: 1123 }} />
         </div>
       </div>

@@ -7,10 +7,10 @@ export function SuccessStep() {
   return (
     <StepWrapper className="flex flex-col items-center justify-center text-center space-y-6 h-[50vh]">
       {/* Checkmark */}
-      <div className="w-24 h-24 rounded-full bg-green-500/20 flex items-center justify-center mb-4">
-        <div className="w-16 h-16 rounded-full bg-green-500 flex items-center justify-center shadow-[0_0_50px_10px_rgba(34,197,94,0.4)]">
+      <div className="w-24 h-24 rounded-full bg-[color:var(--status-success)]/20 flex items-center justify-center mb-4">
+        <div className="w-16 h-16 rounded-full bg-[color:var(--status-success)] flex items-center justify-center shadow-[0_0_50px_10px_rgba(34,197,94,0.4)]">
           <svg
-            className="w-8 h-8 text-white"
+            className="w-8 h-8 text-[color:var(--ui-fx-white)]"
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"

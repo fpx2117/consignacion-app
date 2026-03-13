@@ -119,11 +119,11 @@ export function ManageSubcategoriasDialog({ categoriaId, categoriaNombre, open, 
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="rounded-[2.5rem] bg-zinc-950 border-zinc-800 p-0 max-w-[450px] overflow-hidden">
-                <div className="p-6 pb-2 border-b border-white/5 bg-white/5">
+            <DialogContent className="rounded-[2.5rem] bg-background border-border p-0 max-w-[450px] overflow-hidden">
+                <div className="p-6 pb-2 border-b border-[color:var(--ui-fx-white)]/5 bg-card/5">
                     <div className="flex items-center gap-3 mb-2">
                         {mode !== "list" && (
-                            <Button variant="ghost" size="icon" onClick={() => setMode("list")} className="w-8 h-8 rounded-full text-zinc-400">
+                            <Button variant="ghost" size="icon" onClick={() => setMode("list")} className="w-8 h-8 rounded-full text-muted-foreground/80">
                                 <ChevronLeft className="w-4 h-4" />
                             </Button>
                         )}
@@ -147,22 +147,22 @@ export function ManageSubcategoriasDialog({ categoriaId, categoriaNombre, open, 
 
                             {loading ? (
                                 <div className="flex items-center justify-center p-8">
-                                    <Loader2 className="w-6 h-6 animate-spin text-zinc-500" />
+                                    <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
                                 </div>
                             ) : subcategorias.length === 0 ? (
-                                <div className="text-center p-8 text-zinc-500 text-sm italic">
+                                <div className="text-center p-8 text-muted-foreground text-sm italic">
                                     No hay subcategorías para esta categoría.
                                 </div>
                             ) : (
                                 <div className="space-y-2">
                                     {subcategorias.map(sub => (
-                                        <div key={sub.id} className="flex items-center justify-between p-3 rounded-xl border border-zinc-800/60 bg-zinc-900/30 hover:bg-zinc-900 transition-colors">
-                                            <span className="font-medium text-sm text-zinc-200">{sub.nombre}</span>
+                                        <div key={sub.id} className="flex items-center justify-between p-3 rounded-xl border border-border/60 bg-card/30 hover:bg-card transition-colors">
+                                            <span className="font-medium text-sm text-foreground/90">{sub.nombre}</span>
                                             <div className="flex gap-1">
                                                 <Button
                                                     variant="ghost"
                                                     size="icon"
-                                                    className="w-8 h-8 text-zinc-400 hover:text-white"
+                                                    className="w-8 h-8 text-muted-foreground/80 hover:text-[color:var(--ui-fx-white)]"
                                                     onClick={() => {
                                                         setCurrentId(sub.id);
                                                         setNombre(sub.nombre);
@@ -175,7 +175,7 @@ export function ManageSubcategoriasDialog({ categoriaId, categoriaNombre, open, 
                                                 <Button
                                                     variant="ghost"
                                                     size="icon"
-                                                    className="w-8 h-8 text-zinc-500 hover:text-red-400 hover:bg-red-500/10"
+                                                    className="w-8 h-8 text-muted-foreground hover:text-[color:var(--status-danger)] hover:bg-[color:var(--status-danger)]/10"
                                                     onClick={() => {
                                                         setSubToDelete(sub.id);
                                                         setDeleteConfirmOpen(true);
@@ -194,7 +194,7 @@ export function ManageSubcategoriasDialog({ categoriaId, categoriaNombre, open, 
                     {mode !== "list" && (
                         <div className="space-y-6">
                             <div className="space-y-3">
-                                <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400 ml-1">
+                                <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/80 ml-1">
                                     Nombre de Subcategoría
                                 </Label>
                                 <Input
@@ -202,20 +202,20 @@ export function ManageSubcategoriasDialog({ categoriaId, categoriaNombre, open, 
                                     onChange={(e) => setNombre(e.target.value)}
                                     placeholder="Ej: Gaseosas, Accesorios..."
                                     autoFocus
-                                    className="h-11 bg-zinc-900/50 border-zinc-800 rounded-xl focus-visible:ring-primary/20 focus-visible:border-primary/50 text-base"
+                                    className="h-11 bg-card/50 border-border rounded-xl focus-visible:ring-primary/20 focus-visible:border-primary/50 text-base"
                                 />
                             </div>
 
                             <div className="space-y-3">
-                                <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400 ml-1">
+                                <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/80 ml-1">
                                     Descuentos por Marca (Opcional)
                                 </Label>
-                                <div className="p-4 rounded-xl border border-zinc-800 bg-zinc-900/30">
+                                <div className="p-4 rounded-xl border border-border bg-card/30">
                                     <DiscountTiersInline descuentos={descuentos} onChange={setDescuentos} />
                                 </div>
                             </div>
 
-                            <div className="flex gap-3 pt-4 border-t border-zinc-800">
+                            <div className="flex gap-3 pt-4 border-t border-border">
                                 <Button
                                     variant="ghost"
                                     onClick={() => setMode("list")}
@@ -239,19 +239,19 @@ export function ManageSubcategoriasDialog({ categoriaId, categoriaNombre, open, 
             </DialogContent>
 
             <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
-                <AlertDialogContent className="bg-zinc-950 border-zinc-800 rounded-3xl">
+                <AlertDialogContent className="bg-background border-border rounded-3xl">
                     <AlertDialogHeader>
-                        <AlertDialogTitle className="text-white">¿Eliminar subcategoría?</AlertDialogTitle>
-                        <AlertDialogDescription className="text-zinc-400">
+                        <AlertDialogTitle className="text-[color:var(--ui-fx-white)]">¿Eliminar subcategoría?</AlertDialogTitle>
+                        <AlertDialogDescription className="text-muted-foreground/80">
                             Los productos asociados perderán esta etiqueta pero mantendrán su categoría principal.
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
-                        <AlertDialogCancel className="bg-transparent text-white border-zinc-800 hover:bg-zinc-900 rounded-xl">
+                        <AlertDialogCancel className="bg-transparent text-[color:var(--ui-fx-white)] border-border hover:bg-card rounded-xl">
                             Cancelar
                         </AlertDialogCancel>
                         <AlertDialogAction
-                            className="bg-red-500 hover:bg-red-600 text-white rounded-xl"
+                            className="bg-[color:var(--status-danger)] hover:bg-[color:var(--status-danger)] text-[color:var(--ui-fx-white)] rounded-xl"
                             onClick={() => subToDelete && handleDelete(subToDelete)}
                         >
                             Eliminar

@@ -235,11 +235,11 @@ export default function EditarConsignacionPage() {
       </div>
 
       {hasLiquidaciones && (
-        <Card className="border-blue-500/30 bg-blue-500/5">
+        <Card className="border-[color:var(--theme-ocean-primary)]/30 bg-[color:var(--theme-ocean-primary)]/5">
           <CardContent className="p-4 flex gap-4 items-start">
-            <Info className="text-blue-600 h-5 w-5 mt-0.5" />
+            <Info className="text-[color:var(--theme-ocean-primary)] h-5 w-5 mt-0.5" />
             <div className="text-sm">
-              <p className="font-bold text-blue-800">Detección de Movimientos</p>
+              <p className="font-bold text-[color:var(--theme-ocean-primary)]">Detección de Movimientos</p>
               <p className="text-muted-foreground">
                 Esta consignación ya tiene liquidaciones. Solo puedes editar las{" "}
                 <strong>unidades entregadas</strong> (estructura). Las ventas se corrigen en la liquidación.
@@ -253,7 +253,7 @@ export default function EditarConsignacionPage() {
         <div className="lg:col-span-8 space-y-6">
           <CardHeader className="px-0 pt-0 pb-2">
             <CardTitle className="text-lg font-bold flex items-center gap-2 text-foreground">
-              <Package className="h-5 w-5 text-indigo-500" /> Detalle de Mercadería
+              <Package className="h-5 w-5 text-[color:var(--primary)]" /> Detalle de Mercadería
             </CardTitle>
           </CardHeader>
 
@@ -282,19 +282,19 @@ export default function EditarConsignacionPage() {
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <div className="space-y-2">
-                    <Label className="text-[10px] font-black uppercase text-blue-600 flex items-center gap-1">
+                    <Label className="text-[10px] font-black uppercase text-[color:var(--theme-ocean-primary)] flex items-center gap-1">
                       <Archive className="h-3 w-3" /> Entregadas
                     </Label>
                     <Input
                       type="number"
                       value={item.unitsEntregadas}
                       onChange={(e) => handleUpdateItem(item.productoId, "unitsEntregadas", Number(e.target.value))}
-                      className="h-11 font-bold bg-blue-500/5 border-blue-100"
+                      className="h-11 font-bold bg-[color:var(--theme-ocean-primary)]/5 border-[color:var(--theme-ocean-primary)]"
                     />
                   </div>
 
                   <div className="space-y-2">
-                    <Label className="text-[10px] font-black uppercase text-emerald-600 flex items-center gap-1">
+                    <Label className="text-[10px] font-black uppercase text-[color:var(--status-success-strong)] flex items-center gap-1">
                       <TrendingUp className="h-3 w-3" /> Vendidas (Acum)
                     </Label>
                     <Input
@@ -302,12 +302,12 @@ export default function EditarConsignacionPage() {
                       disabled={hasLiquidaciones}
                       value={item.unitsVendidas}
                       onChange={(e) => handleUpdateItem(item.productoId, "unitsVendidas", Number(e.target.value))}
-                      className={cn("h-11 font-bold", hasLiquidaciones ? "bg-muted" : "bg-emerald-500/5 border-emerald-100")}
+                      className={cn("h-11 font-bold", hasLiquidaciones ? "bg-muted" : "bg-[color:var(--status-success-strong)]/5 border-[color:var(--status-success-strong)]")}
                     />
                   </div>
 
                   <div className="space-y-2">
-                    <Label className="text-[10px] font-black uppercase text-amber-600 flex items-center gap-1">
+                    <Label className="text-[10px] font-black uppercase text-[color:var(--status-warning)] flex items-center gap-1">
                       <Undo2 className="h-3 w-3" /> Devueltas (Acum)
                     </Label>
                     <Input
@@ -315,7 +315,7 @@ export default function EditarConsignacionPage() {
                       disabled={hasLiquidaciones}
                       value={item.unitsDevueltas}
                       onChange={(e) => handleUpdateItem(item.productoId, "unitsDevueltas", Number(e.target.value))}
-                      className={cn("h-11 font-bold", hasLiquidaciones ? "bg-muted" : "bg-amber-500/5 border-amber-100")}
+                      className={cn("h-11 font-bold", hasLiquidaciones ? "bg-muted" : "bg-[color:var(--status-warning)]/5 border-[color:var(--status-warning)]")}
                     />
                   </div>
                 </div>

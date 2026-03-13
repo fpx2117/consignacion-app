@@ -103,7 +103,7 @@ export function PostergarPedidoDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[440px] p-0 overflow-hidden border-none shadow-2xl bg-background">
         <DialogHeader className="p-6 pb-3 border-b bg-muted/20">
-          <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400">
+          <div className="flex items-center gap-2 text-[color:var(--theme-ocean-primary)] dark:text-[color:var(--theme-ocean-primary)]">
             <CalendarClock className="h-5 w-5" />
             <DialogTitle className="text-xl font-bold italic tracking-tight">Postergar Pedido</DialogTitle>
           </div>
@@ -126,7 +126,7 @@ export function PostergarPedidoDialog({
               className="h-11 bg-muted/30 border-transparent text-sm"
             />
             {nuevaFecha && nuevaFecha < minFecha && (
-              <p className="text-xs text-red-500 font-bold">La nueva fecha debe ser a partir de mañana</p>
+              <p className="text-xs text-[color:var(--status-danger)] font-bold">La nueva fecha debe ser a partir de mañana</p>
             )}
           </div>
 
@@ -157,7 +157,7 @@ export function PostergarPedidoDialog({
             </Button>
             <Button
               type="submit"
-              className="flex-1 h-11 rounded-xl font-bold bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-500/20 gap-2"
+              className="flex-1 h-11 rounded-xl font-bold bg-[color:var(--theme-ocean-primary)] hover:bg-[color:var(--theme-ocean-primary)] text-[color:var(--ui-fx-white)] shadow-lg shadow-blue-500/20 gap-2"
               disabled={!canSubmit || saving}
             >
               {saving ? (

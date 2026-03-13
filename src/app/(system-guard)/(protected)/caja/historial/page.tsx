@@ -126,24 +126,24 @@ export default function HistorialCajasPage() {
     if (loading) return (
         <div className="h-[100dvh] flex items-center justify-center bg-background">
             <div className="flex flex-col items-center gap-4">
-                <Loader2 className="animate-spin h-10 w-10 text-violet-500" />
+                <Loader2 className="animate-spin h-10 w-10 text-[color:var(--primary)]" />
                 <p className="text-sm font-bold text-muted-foreground animate-pulse tracking-widest uppercase">Consultando Auditoría...</p>
             </div>
         </div>
     );
 
     return (
-        <div className="p-4 md:p-10 max-w-7xl mx-auto space-y-10 pb-24 text-foreground selection:bg-violet-500/20">
+        <div className="p-4 md:p-10 max-w-7xl mx-auto space-y-10 pb-24 text-foreground selection:bg-[color:var(--primary)]/20">
 
             {/* HEADER */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
                 <div className="space-y-2">
-                    <div className="flex items-center gap-2 text-violet-600 dark:text-violet-400 font-black tracking-[0.2em] uppercase text-[10px] bg-violet-500/10 w-fit px-3 py-1.5 rounded-full border border-violet-500/20 shadow-sm">
+                    <div className="flex items-center gap-2 text-[color:var(--primary)] dark:text-[color:var(--primary)] font-black tracking-[0.2em] uppercase text-[10px] bg-[color:var(--primary)]/10 w-fit px-3 py-1.5 rounded-full border border-[color:var(--primary)]/20 shadow-sm">
                         <History className="h-3.5 w-3.5" />
                         Control de Jornadas
                     </div>
                     <h1 className="text-4xl md:text-5xl font-black tracking-tight">
-                        Historial de <span className="text-violet-600 dark:text-violet-500">Turnos</span>
+                        Historial de <span className="text-[color:var(--primary)] dark:text-[color:var(--primary)]">Turnos</span>
                     </h1>
                 </div>
                 <Button variant="outline" onClick={() => router.back()} className="rounded-2xl h-12 px-6 border-border/60 bg-card shadow-sm hover:bg-muted transition-all active:scale-95">
@@ -162,12 +162,12 @@ export default function HistorialCajasPage() {
             <div className="bg-card/50 border border-border/40 p-5 rounded-[2.5rem] shadow-sm space-y-4 backdrop-blur-sm">
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                     <div className="md:col-span-2 relative group">
-                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-focus-within:text-violet-500 transition-colors" />
+                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-focus-within:text-[color:var(--primary)] transition-colors" />
                         <Input
                             placeholder="Buscar por cajero o terminal..."
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
-                            className="pl-12 h-12 rounded-2xl bg-background border-border/60 focus:ring-violet-500/20"
+                            className="pl-12 h-12 rounded-2xl bg-background border-border/60 focus:ring-[color:var(--primary)]/20"
                         />
                     </div>
 
@@ -223,7 +223,7 @@ export default function HistorialCajasPage() {
                                             <div className="flex items-center gap-4">
                                                 <div className={cn(
                                                     "h-12 w-12 rounded-2xl flex items-center justify-center font-black text-xs shadow-inner uppercase border",
-                                                    hasExtensions ? "bg-amber-500/10 border-amber-500/20 text-amber-600" : "bg-violet-500/10 border-violet-500/20 text-violet-600"
+                                                    hasExtensions ? "bg-[color:var(--status-warning)]/10 border-[color:var(--status-warning)]/20 text-[color:var(--status-warning)]" : "bg-[color:var(--primary)]/10 border-[color:var(--primary)]/20 text-[color:var(--primary)]"
                                                 )}>
                                                     {s.usuario?.nombre.substring(0, 2)}
                                                 </div>
@@ -234,7 +234,7 @@ export default function HistorialCajasPage() {
                                                             {s.usuario?.nombre}
                                                         </span>
                                                         {hasExtensions && (
-                                                            <Badge className="h-4 text-[9px] bg-amber-500/10 text-amber-600 border-amber-500/20 px-1.5 font-black uppercase flex items-center gap-1">
+                                                            <Badge className="h-4 text-[9px] bg-[color:var(--status-warning)]/10 text-[color:var(--status-warning)] border-[color:var(--status-warning)]/20 px-1.5 font-black uppercase flex items-center gap-1">
                                                                 <Timer className="h-2.5 w-2.5" /> {extensions.length} Ext.
                                                             </Badge>
                                                         )}
@@ -250,9 +250,9 @@ export default function HistorialCajasPage() {
                                         <td className="p-6">
                                             <div className={cn(
                                                 "w-fit px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest flex items-center gap-2 border",
-                                                isClosed ? "bg-muted text-muted-foreground border-border/50" : "bg-emerald-500/10 text-emerald-600 border-emerald-500/20 animate-pulse"
+                                                isClosed ? "bg-muted text-muted-foreground border-border/50" : "bg-[color:var(--status-success-strong)]/10 text-[color:var(--status-success-strong)] border-[color:var(--status-success-strong)]/20 animate-pulse"
                                             )}>
-                                                <div className={cn("h-1.5 w-1.5 rounded-full", isClosed ? "bg-muted-foreground/50" : "bg-emerald-500")} />
+                                                <div className={cn("h-1.5 w-1.5 rounded-full", isClosed ? "bg-muted-foreground/50" : "bg-[color:var(--status-success-strong)]")} />
                                                 {s.estado}
                                             </div>
                                         </td>
@@ -263,7 +263,7 @@ export default function HistorialCajasPage() {
                                             {isClosed ? (
                                                 <div className={cn(
                                                     "inline-flex px-3 py-1 rounded-xl border shadow-sm font-black text-sm",
-                                                    dif < 0 ? "bg-red-500/10 text-red-600 border-red-500/20" : "bg-emerald-500/10 text-emerald-600 border-emerald-500/20"
+                                                    dif < 0 ? "bg-[color:var(--status-danger)]/10 text-[color:var(--status-danger)] border-[color:var(--status-danger)]/20" : "bg-[color:var(--status-success-strong)]/10 text-[color:var(--status-success-strong)] border-[color:var(--status-success-strong)]/20"
                                                 )}>
                                                     {formatARS(dif)}
                                                 </div>
@@ -272,14 +272,14 @@ export default function HistorialCajasPage() {
                                         <td className="p-6 text-center">
                                             <Dialog>
                                                 <DialogTrigger asChild>
-                                                    <Button variant="ghost" size="icon" className="rounded-xl hover:bg-violet-500/10 hover:text-violet-600 transition-all"><FileText className="h-5 w-5" /></Button>
+                                                    <Button variant="ghost" size="icon" className="rounded-xl hover:bg-[color:var(--primary)]/10 hover:text-[color:var(--primary)] transition-all"><FileText className="h-5 w-5" /></Button>
                                                 </DialogTrigger>
                                                 <DialogContent className="rounded-[2.5rem] sm:max-w-[500px] p-0 overflow-hidden border-border/40 shadow-2xl">
-                                                    <div className="bg-violet-600 p-8 text-white relative">
+                                                    <div className="bg-[color:var(--primary)] p-8 text-[color:var(--ui-fx-white)] relative">
                                                         <History className="absolute right-6 top-6 h-20 w-20 opacity-10 rotate-12" />
                                                         <DialogHeader>
                                                             <DialogTitle className="text-2xl font-black uppercase tracking-tight">Detalle de Auditoría</DialogTitle>
-                                                            <DialogDescription className="text-violet-100 font-medium opacity-80 italic">Turno #{s.id} • Terminal: {s.caja?.nombre}</DialogDescription>
+                                                            <DialogDescription className="text-[color:var(--primary)] font-medium opacity-80 italic">Turno #{s.id} • Terminal: {s.caja?.nombre}</DialogDescription>
                                                         </DialogHeader>
                                                     </div>
 
@@ -288,19 +288,19 @@ export default function HistorialCajasPage() {
                                                         {/* SECCIÓN DE EXTENSIONES DINÁMICAS */}
                                                         {hasExtensions && (
                                                             <div className="space-y-3">
-                                                                <p className="text-[10px] font-black text-amber-600 uppercase tracking-widest flex items-center gap-2">
+                                                                <p className="text-[10px] font-black text-[color:var(--status-warning)] uppercase tracking-widest flex items-center gap-2">
                                                                     <Timer className="h-3.5 w-3.5" /> Extensiones Solicitadas
                                                                 </p>
                                                                 <div className="grid grid-cols-1 gap-2">
                                                                     {extensions.map((ext, idx) => (
-                                                                        <div key={idx} className="flex items-center justify-between bg-amber-500/5 border border-amber-500/10 p-3 rounded-2xl animate-in slide-in-from-left-2 duration-300">
+                                                                        <div key={idx} className="flex items-center justify-between bg-[color:var(--status-warning)]/5 border border-[color:var(--status-warning)]/10 p-3 rounded-2xl animate-in slide-in-from-left-2 duration-300">
                                                                             <div className="flex items-center gap-3">
-                                                                                <div className="h-8 w-8 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-600">
+                                                                                <div className="h-8 w-8 rounded-xl bg-[color:var(--status-warning)]/10 flex items-center justify-center text-[color:var(--status-warning)]">
                                                                                     <ArrowUpRight className="h-4 w-4" />
                                                                                 </div>
                                                                                 <span className="text-sm font-bold text-foreground">+{ext.mins} Minutos extra</span>
                                                                             </div>
-                                                                            <span className="text-xs font-black text-amber-600 bg-amber-500/10 px-2 py-1 rounded-lg">{ext.time}</span>
+                                                                            <span className="text-xs font-black text-[color:var(--status-warning)] bg-[color:var(--status-warning)]/10 px-2 py-1 rounded-lg">{ext.time}</span>
                                                                         </div>
                                                                     ))}
                                                                 </div>
@@ -317,14 +317,14 @@ export default function HistorialCajasPage() {
                                                                 <span className="text-muted-foreground">Esperado en Caja:</span>
                                                                 <span className="font-bold">{formatARS(Number(s.montoFinalEsperado))}</span>
                                                             </div>
-                                                            <div className="flex justify-between items-center pt-3 border-t border-dashed text-lg font-black text-violet-600">
+                                                            <div className="flex justify-between items-center pt-3 border-t border-dashed text-lg font-black text-[color:var(--primary)]">
                                                                 <span>Real Declarado:</span>
                                                                 <span>{formatARS(Number(s.montoFinalReal))}</span>
                                                             </div>
                                                         </div>
 
-                                                        <div className="bg-violet-500/5 p-5 rounded-2xl border border-violet-500/10 space-y-2">
-                                                            <p className="text-[10px] font-black text-violet-600 uppercase tracking-widest flex items-center gap-2">
+                                                        <div className="bg-[color:var(--primary)]/5 p-5 rounded-2xl border border-[color:var(--primary)]/10 space-y-2">
+                                                            <p className="text-[10px] font-black text-[color:var(--primary)] uppercase tracking-widest flex items-center gap-2">
                                                                 <AlertTriangle className="h-3.5 w-3.5" /> Comentarios del Cajero
                                                             </p>
                                                             <p className="text-sm italic text-muted-foreground leading-relaxed font-medium">
@@ -350,11 +350,11 @@ export default function HistorialCajasPage() {
 
 function StatCard({ title, value, icon: Icon, color, smallValue, pulse }: any) {
     const colorConfigs: any = {
-        violet: "bg-violet-500/10 text-violet-600 border-violet-500/20 shadow-violet-500/5",
-        emerald: "bg-emerald-500/10 text-emerald-600 border-emerald-500/20 shadow-emerald-500/5",
-        red: "bg-red-500/10 text-red-600 border-red-500/20 shadow-red-500/5",
-        amber: "bg-amber-500/10 text-amber-600 border-amber-500/20 shadow-amber-500/5",
-        slate: "bg-slate-500/10 text-slate-600 border-slate-500/20 shadow-slate-500/5",
+        violet: "bg-[color:var(--primary)]/10 text-[color:var(--primary)] border-[color:var(--primary)]/20 shadow-violet-500/5",
+        emerald: "bg-[color:var(--status-success-strong)]/10 text-[color:var(--status-success-strong)] border-[color:var(--status-success-strong)]/20 shadow-emerald-500/5",
+        red: "bg-[color:var(--status-danger)]/10 text-[color:var(--status-danger)] border-[color:var(--status-danger)]/20 shadow-red-500/5",
+        amber: "bg-[color:var(--status-warning)]/10 text-[color:var(--status-warning)] border-[color:var(--status-warning)]/20 shadow-amber-500/5",
+        slate: "bg-muted/55 text-muted-foreground border-border shadow-slate-500/5",
     };
 
     return (

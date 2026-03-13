@@ -68,7 +68,7 @@ function TutorialModal({
          *   [header fijo] + [contenido scroll] + [footer fijo]
          */
         <div
-            className="fixed inset-0 z-[9999] bg-black/70 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4"
+            className="fixed inset-0 z-[9999] bg-foreground/70 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4"
             onClick={onClose}
             role="dialog"
             aria-modal="true"
@@ -134,7 +134,7 @@ function TutorialModal({
                         <div className="px-4 py-3 space-y-2.5">
                             {positiveLines.map((line, i) => (
                                 <div key={i} className="flex items-start gap-2.5">
-                                    <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0 mt-0.5" />
+                                    <CheckCircle2 className="h-4 w-4 text-[color:var(--status-success-strong)] shrink-0 mt-0.5" />
                                     <p className="text-sm leading-relaxed">{line}</p>
                                 </div>
                             ))}

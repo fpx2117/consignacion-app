@@ -102,14 +102,14 @@ export function ShiftEndAlert({ horaFin, onExtender }: ShiftEndAlertProps) {
         <AlertDialog open={showModal}>
             <AlertDialogContent className={cn(
                 "rounded-[2.5rem] border-2 shadow-2xl max-w-[440px] p-8 backdrop-blur-xl transition-colors duration-500",
-                isExpired ? "border-red-500/20 bg-background/95" : "border-violet-500/20 bg-background/95"
+                isExpired ? "border-[color:var(--status-danger)]/20 bg-background/95" : "border-[color:var(--primary)]/20 bg-background/95"
             )}>
                 <AlertDialogHeader className="flex flex-col items-center text-center space-y-4">
                     <div className={cn(
                         "h-20 w-20 rounded-3xl flex items-center justify-center shadow-lg transition-all duration-500",
                         isExpired
-                            ? "bg-red-500/10 text-red-600 animate-pulse shadow-red-500/10"
-                            : "bg-violet-500/10 text-violet-600 animate-bounce shadow-violet-500/10"
+                            ? "bg-[color:var(--status-danger)]/10 text-[color:var(--status-danger)] animate-pulse shadow-red-500/10"
+                            : "bg-[color:var(--primary)]/10 text-[color:var(--primary)] animate-bounce shadow-violet-500/10"
                     )}>
                         {isExpired ? <AlertOctagon className="h-10 w-10" /> : <Timer className="h-10 w-10" />}
                     </div>
@@ -117,7 +117,7 @@ export function ShiftEndAlert({ horaFin, onExtender }: ShiftEndAlertProps) {
                     <div className="space-y-2">
                         <AlertDialogTitle className={cn(
                             "text-3xl font-black tracking-tight",
-                            isExpired ? "text-red-600" : "text-foreground"
+                            isExpired ? "text-[color:var(--status-danger)]" : "text-foreground"
                         )}>
                             {isExpired ? "Turno Expirado" : "Fin de Jornada"}
                         </AlertDialogTitle>
@@ -153,7 +153,7 @@ export function ShiftEndAlert({ horaFin, onExtender }: ShiftEndAlertProps) {
                     <Button
                         variant="ghost"
                         onClick={() => router.push("/caja/cerrar")}
-                        className="h-14 rounded-2xl font-bold text-red-500 hover:bg-red-50 hover:text-red-600 transition-colors"
+                        className="h-14 rounded-2xl font-bold text-[color:var(--status-danger)] hover:bg-[color:var(--status-danger)] hover:text-[color:var(--status-danger)] transition-colors"
                     >
                         <XCircle className="h-5 w-5 mr-2" />
                         No extender, cerrar ahora
@@ -183,13 +183,13 @@ function ExtensionButton({ mins, loading, onClick }: { mins: number, loading: bo
             variant="outline"
             onClick={onClick}
             disabled={loading}
-            className="h-16 rounded-2xl border-2 border-border/40 hover:border-violet-500 hover:bg-violet-500/5 flex justify-between px-6 group transition-all active:scale-[0.98]"
+            className="h-16 rounded-2xl border-2 border-border/40 hover:border-[color:var(--primary)] hover:bg-[color:var(--primary)]/5 flex justify-between px-6 group transition-all active:scale-[0.98]"
         >
             <div className="flex items-center gap-4">
                 {loading ? (
-                    <Loader2 className="animate-spin h-5 w-5 text-violet-600" />
+                    <Loader2 className="animate-spin h-5 w-5 text-[color:var(--primary)]" />
                 ) : (
-                    <div className="h-10 w-10 rounded-xl bg-violet-500/10 flex items-center justify-center text-violet-600 group-hover:bg-violet-500 group-hover:text-white transition-colors shadow-inner">
+                    <div className="h-10 w-10 rounded-xl bg-[color:var(--primary)]/10 flex items-center justify-center text-[color:var(--primary)] group-hover:bg-[color:var(--primary)] group-hover:text-[color:var(--ui-fx-white)] transition-colors shadow-inner">
                         <Clock className="h-5 w-5" />
                     </div>
                 )}
@@ -197,7 +197,7 @@ function ExtensionButton({ mins, loading, onClick }: { mins: number, loading: bo
                     +{mins === 60 ? '1 Hora' : `${mins} Minutos`}
                 </span>
             </div>
-            <ChevronRight className="h-5 w-5 text-muted-foreground group-hover:text-violet-600 group-hover:translate-x-1 transition-all" />
+            <ChevronRight className="h-5 w-5 text-muted-foreground group-hover:text-[color:var(--primary)] group-hover:translate-x-1 transition-all" />
         </Button>
     );
 }

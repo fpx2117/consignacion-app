@@ -79,8 +79,8 @@ export async function GET(req: Request) {
                 categorias,
                 config: {
                     businessName: config.sucursal.branding?.businessName || config.sucursal.nombre,
-                    primaryColor: config.sucursal.branding?.primaryColor || "#111827",
-                    secondaryColor: config.sucursal.branding?.secondaryColor || "#3b82f6",
+                    primaryColor: config.sucursal.branding?.primaryColor || "var(--theme-modern-primary)",
+                    secondaryColor: config.sucursal.branding?.secondaryColor || "var(--theme-ocean-primary)",
                     logoMime: config.sucursal.branding?.logoMime,
                     logoData: config.sucursal.branding?.logoData ? Buffer.from(config.sucursal.branding.logoData).toString('base64') : null,
                     bannerMime: config.sucursal.branding?.bannerMime,

@@ -82,14 +82,14 @@ export default function AbrirCajaPage() {
     if (loadingData) {
         return (
             <div className="min-h-[100dvh] flex flex-col items-center justify-center bg-background space-y-4">
-                <Loader2 className="h-8 w-8 animate-spin text-violet-500" />
+                <Loader2 className="h-8 w-8 animate-spin text-[color:var(--primary)]" />
                 <p className="text-sm font-medium text-muted-foreground animate-pulse">Conectando con terminales...</p>
             </div>
         );
     }
 
     return (
-        <div className="min-h-[100dvh] flex flex-col bg-background selection:bg-violet-500/20">
+        <div className="min-h-[100dvh] flex flex-col bg-background selection:bg-[color:var(--primary)]/20">
 
             {/* HEADER MINIMALISTA */}
             <div className="sticky top-0 z-30 bg-background/80 backdrop-blur-xl border-b border-border/40 px-4 py-3 flex items-center gap-3">
@@ -114,10 +114,10 @@ export default function AbrirCajaPage() {
                     <div className="bg-card border border-border/40 shadow-xl shadow-violet-500/5 rounded-[2rem] p-6 md:p-8 space-y-8 relative overflow-hidden">
 
                         {/* DESTELLO DE FONDO (Opcional, le da un toque premium) */}
-                        <div className="absolute -top-12 -right-12 h-32 w-32 bg-violet-500/10 rounded-full blur-3xl" />
+                        <div className="absolute -top-12 -right-12 h-32 w-32 bg-[color:var(--primary)]/10 rounded-full blur-3xl" />
 
                         <div className="flex flex-col items-center text-center space-y-4 relative z-10">
-                            <div className="h-16 w-16 bg-violet-500/10 rounded-2xl flex items-center justify-center text-violet-600 dark:text-violet-400 shadow-inner rotate-3 transition-transform hover:rotate-0 duration-300">
+                            <div className="h-16 w-16 bg-[color:var(--primary)]/10 rounded-2xl flex items-center justify-center text-[color:var(--primary)] dark:text-[color:var(--primary)] shadow-inner rotate-3 transition-transform hover:rotate-0 duration-300">
                                 <Wallet className="h-8 w-8" />
                             </div>
                             <div>
@@ -129,7 +129,7 @@ export default function AbrirCajaPage() {
                         </div>
 
                         {error && (
-                            <Alert variant="destructive" className="rounded-xl border-red-500/20 bg-red-500/10 text-red-600 dark:text-red-400">
+                            <Alert variant="destructive" className="rounded-xl border-[color:var(--status-danger)]/20 bg-[color:var(--status-danger)]/10 text-[color:var(--status-danger)] dark:text-[color:var(--status-danger)]">
                                 <AlertDescription className="font-medium text-center">{error}</AlertDescription>
                             </Alert>
                         )}
@@ -146,7 +146,7 @@ export default function AbrirCajaPage() {
                                     <select
                                         value={selectedCajaId}
                                         onChange={(e) => setSelectedCajaId(e.target.value)}
-                                        className="appearance-none flex h-12 w-full rounded-xl border border-border/50 bg-background/50 px-4 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/20 focus-visible:border-violet-500/50 disabled:cursor-not-allowed disabled:opacity-50"
+                                        className="appearance-none flex h-12 w-full rounded-xl border border-border/50 bg-background/50 px-4 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--primary)]/20 focus-visible:border-[color:var(--primary)]/50 disabled:cursor-not-allowed disabled:opacity-50"
                                         disabled={cajas.length === 0}
                                     >
                                         {cajas.length === 0 && <option value="">No hay terminales disponibles</option>}
@@ -170,7 +170,7 @@ export default function AbrirCajaPage() {
                                     Fondo de Cambio (Efectivo)
                                 </label>
                                 <div className="relative group">
-                                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground font-black text-lg transition-colors group-focus-within:text-violet-500">
+                                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground font-black text-lg transition-colors group-focus-within:text-[color:var(--primary)]">
                                         $
                                     </span>
                                     <Input
@@ -178,7 +178,7 @@ export default function AbrirCajaPage() {
                                         inputMode="numeric"
                                         value={montoInicial ? new Intl.NumberFormat("es-AR").format(Number(montoInicial)) : ""}
                                         onChange={handleMontoChange}
-                                        className="pl-9 h-14 text-2xl font-black rounded-xl border-border/50 bg-background/50 focus-visible:ring-violet-500/20 focus-visible:border-violet-500/50 transition-all shadow-sm"
+                                        className="pl-9 h-14 text-2xl font-black rounded-xl border-border/50 bg-background/50 focus-visible:ring-[color:var(--primary)]/20 focus-visible:border-[color:var(--primary)]/50 transition-all shadow-sm"
                                         placeholder="0"
                                         required
                                     />
@@ -187,7 +187,7 @@ export default function AbrirCajaPage() {
 
                             <Button
                                 type="submit"
-                                className="w-full h-14 text-base font-black rounded-xl bg-violet-600 hover:bg-violet-700 text-white shadow-lg shadow-violet-500/25 transition-all active:scale-[0.98]"
+                                className="w-full h-14 text-base font-black rounded-xl bg-[color:var(--primary)] hover:bg-[color:var(--primary)] text-[color:var(--ui-fx-white)] shadow-lg shadow-violet-500/25 transition-all active:scale-[0.98]"
                                 disabled={loading || cajas.length === 0}
                             >
                                 {loading ? <Loader2 className="animate-spin h-5 w-5" /> : "Abrir Turno e Iniciar Ventas"}

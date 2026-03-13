@@ -61,17 +61,17 @@ export async function POST(req: Request) {
                 to: cleanEmail,
                 subject: "Recuperación de contraseña",
                 html: `
-          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;">
-            <div style="background-color: #f1f5f9; padding: 20px; text-align: center;">
-              <h1 style="color: #0f172a; margin: 0; font-size: 24px;">Recuperación de contraseña</h1>
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid hsl(var(--border)); border-radius: 8px; overflow: hidden;">
+            <div style="background-color: hsl(var(--secondary)); padding: 20px; text-align: center;">
+              <h1 style="color: hsl(var(--foreground)); margin: 0; font-size: 24px;">Recuperación de contraseña</h1>
             </div>
             <div style="padding: 20px;">
-              <p style="color: #334155; font-size: 16px;">Hola ${user.nombre},</p>
-              <p style="color: #334155; font-size: 16px;">Recibimos una solicitud para reestablecer tu contraseña. Haz clic en el siguiente botón para crear una nueva:</p>
+              <p style="color: hsl(var(--foreground)); font-size: 16px;">Hola ${user.nombre},</p>
+              <p style="color: hsl(var(--foreground)); font-size: 16px;">Recibimos una solicitud para reestablecer tu contraseña. Haz clic en el siguiente botón para crear una nueva:</p>
               <div style="text-align: center; margin: 30px 0;">
-                <a href="${resetLink}" style="background-color: #0f172a; color: #ffffff; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">Reestablecer contraseña</a>
+                <a href="${resetLink}" style="background-color: hsl(var(--primary)); color: hsl(var(--primary-foreground)); padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">Reestablecer contraseña</a>
               </div>
-              <p style="color: #64748b; font-size: 14px;">Si no solicitaste este cambio, puedes ignorar este correo sin problemas. El enlace expirará en 1 hora.</p>
+              <p style="color: hsl(var(--muted-foreground)); font-size: 14px;">Si no solicitaste este cambio, puedes ignorar este correo sin problemas. El enlace expirará en 1 hora.</p>
             </div>
           </div>
         `,

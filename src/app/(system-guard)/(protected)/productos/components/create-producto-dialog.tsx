@@ -274,13 +274,13 @@ export function CreateProductoDialog({
           </div>
 
           {(pv > 0 || pc > 0) && (
-            <div className={`rounded-xl border p-4 space-y-2 transition-all ${esGananciaNegativa ? 'bg-destructive/10 border-destructive/20' : 'bg-emerald-500/5 border-emerald-500/20'}`}>
+            <div className={`rounded-xl border p-4 space-y-2 transition-all ${esGananciaNegativa ? 'bg-destructive/10 border-destructive/20' : 'bg-[color:var(--status-success-strong)]/5 border-[color:var(--status-success-strong)]/20'}`}>
               <div className="flex justify-between items-center">
                 <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
-                  <TrendingUp className={`h-3.5 w-3.5 ${esGananciaNegativa ? 'text-destructive' : 'text-emerald-500'}`} />
+                  <TrendingUp className={`h-3.5 w-3.5 ${esGananciaNegativa ? 'text-destructive' : 'text-[color:var(--status-success-strong)]'}`} />
                   RENTABILIDAD ESTIMADA
                 </div>
-                <span className={`text-sm font-black ${esGananciaNegativa ? 'text-destructive' : 'text-emerald-500'}`}>
+                <span className={`text-sm font-black ${esGananciaNegativa ? 'text-destructive' : 'text-[color:var(--status-success-strong)]'}`}>
                   $${gananciaUnitaria.toLocaleString()} (${margenPorcentaje.toFixed(1)}%)
                 </span>
               </div>
@@ -304,8 +304,8 @@ export function CreateProductoDialog({
             <div className="space-y-2">
               <Label className="text-sm font-semibold opacity-80">Alerta Stock Bajo</Label>
               <div className="relative">
-                <Plus className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-orange-500" />
-                <Input value={stockMinUnits} onChange={(e) => setStockMinUnits(e.target.value)} className="pl-9 h-11 bg-orange-500/5 border-orange-500/20" placeholder="5" inputMode="numeric" />
+                <Plus className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[color:var(--status-warning)]" />
+                <Input value={stockMinUnits} onChange={(e) => setStockMinUnits(e.target.value)} className="pl-9 h-11 bg-[color:var(--status-warning)]/5 border-[color:var(--status-warning)]/20" placeholder="5" inputMode="numeric" />
               </div>
             </div>
           </div>

@@ -57,7 +57,7 @@ export async function POST(req: NextRequest) {
       : await prisma.branding.create({
         data: {
           businessName: "",
-          primaryColor: "#111827",
+          primaryColor: "var(--theme-modern-primary)",
           logoData: bytes,
           logoMime: file.type,
           sucursalId: auth.activeSucursalId,

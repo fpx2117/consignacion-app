@@ -123,7 +123,7 @@ export function ProductSelector({
                             )}
                             <span>{outOfStock ? "AGOTADO" : `Disp: ${stock}`}</span>
                             {discountLevels.length > 0 && (
-                              <span className="flex items-center gap-0.5 text-emerald-600 bg-emerald-50 px-1 rounded border border-emerald-200">
+                              <span className="flex items-center gap-0.5 text-[color:var(--status-success-strong)] bg-[color:var(--status-success-strong)] px-1 rounded border border-[color:var(--status-success-strong)]">
                                 <BadgePercent className="h-3 w-3" aria-hidden="true" /> {discountLevels.length} desc.
                               </span>
                             )}

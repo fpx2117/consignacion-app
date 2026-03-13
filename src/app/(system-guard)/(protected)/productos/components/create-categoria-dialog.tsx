@@ -129,26 +129,26 @@ export function CreateCategoriaDialog({ onCreated, trigger }: Props) {
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         {trigger || (
-          <Button variant="outline" className="rounded-2xl border-zinc-800 font-black uppercase text-[10px] tracking-widest h-12 px-6">
+          <Button variant="outline" className="rounded-2xl border-border font-black uppercase text-[10px] tracking-widest h-12 px-6">
             Administrar Categorías
           </Button>
         )}
       </DialogTrigger>
 
-      <DialogContent className="rounded-[2.5rem] bg-zinc-950 border-zinc-800 p-0 max-w-[500px] overflow-hidden">
-        <div className="p-6 pb-2 border-b border-white/5 bg-white/5">
+      <DialogContent className="rounded-[2.5rem] bg-background border-border p-0 max-w-[500px] overflow-hidden">
+        <div className="p-6 pb-2 border-b border-[color:var(--ui-fx-white)]/5 bg-card/5">
           <div className="flex items-center justify-between mb-2">
             <DialogTitle className="text-xl font-bold italic tracking-tight flex items-center gap-2">
               <Tag className="w-5 h-5 text-primary" />
               {mode === "list" ? "Administrar Categorías" : mode === "create" ? "Nueva Categoría" : "Editar Categoría"}
             </DialogTitle>
             {mode !== "list" && (
-              <Button variant="ghost" size="sm" onClick={() => setMode("list")} className="text-xs text-zinc-400 hover:text-white">
+              <Button variant="ghost" size="sm" onClick={() => setMode("list")} className="text-xs text-muted-foreground/80 hover:text-[color:var(--ui-fx-white)]">
                 Volver
               </Button>
             )}
           </div>
-          <p className="text-xs text-zinc-500 font-medium mb-4">
+          <p className="text-xs text-muted-foreground font-medium mb-4">
             {mode === "list"
               ? "Gestiona las categorías de esta sucursal."
               : "Asigna un nombre y color por defecto."}
@@ -168,10 +168,10 @@ export function CreateCategoriaDialog({ onCreated, trigger }: Props) {
 
               {loading ? (
                 <div className="flex items-center justify-center p-8">
-                  <Loader2 className="w-6 h-6 animate-spin text-zinc-500" />
+                  <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
                 </div>
               ) : categorias.length === 0 ? (
-                <div className="text-center p-8 text-zinc-500 text-sm">
+                <div className="text-center p-8 text-muted-foreground text-sm">
                   No hay categorías en esta sucursal.
                 </div>
               ) : (
@@ -179,7 +179,7 @@ export function CreateCategoriaDialog({ onCreated, trigger }: Props) {
                   {categorias.map(cat => {
                     const colorData = CATEGORY_PALETTE.find((c) => c.key === (cat.color || "sky")) || CATEGORY_PALETTE[0];
                     return (
-                      <div key={cat.id} className="flex items-center justify-between p-3 rounded-xl border border-zinc-800/60 bg-zinc-900/30 hover:bg-zinc-900 transition-colors">
+                      <div key={cat.id} className="flex items-center justify-between p-3 rounded-xl border border-border/60 bg-card/30 hover:bg-card transition-colors">
                         <div className="flex items-center gap-3">
                           <div className={cn("w-3 h-3 rounded-full shadow-sm", colorData.dot)} />
                           <span className="font-semibold text-sm">{cat.nombre}</span>
@@ -189,7 +189,7 @@ export function CreateCategoriaDialog({ onCreated, trigger }: Props) {
                             variant="ghost"
                             size="icon"
                             title="Gestionar Subcategorías"
-                            className="w-8 h-8 text-zinc-400 hover:text-primary hover:bg-primary/10"
+                            className="w-8 h-8 text-muted-foreground/80 hover:text-primary hover:bg-primary/10"
                             onClick={() => {
                               setSelectedCatForSub({ id: cat.id, nombre: cat.nombre });
                               setSubOpen(true);
@@ -200,7 +200,7 @@ export function CreateCategoriaDialog({ onCreated, trigger }: Props) {
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="w-8 h-8 text-zinc-400 hover:text-white"
+                            className="w-8 h-8 text-muted-foreground/80 hover:text-[color:var(--ui-fx-white)]"
                             onClick={() => {
                               setCurrentId(cat.id);
                               setNombre(cat.nombre);
@@ -213,7 +213,7 @@ export function CreateCategoriaDialog({ onCreated, trigger }: Props) {
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="w-8 h-8 text-zinc-500 hover:text-red-400 hover:bg-red-500/10"
+                            className="w-8 h-8 text-muted-foreground hover:text-[color:var(--status-danger)] hover:bg-[color:var(--status-danger)]/10"
                             onClick={() => {
                               setCategoryToDelete(cat.id);
                               setDeleteConfirmOpen(true);
@@ -233,7 +233,7 @@ export function CreateCategoriaDialog({ onCreated, trigger }: Props) {
           {mode !== "list" && (
             <div className="space-y-6">
               <div className="space-y-3">
-                <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400 ml-1">
+                <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/80 ml-1">
                   Nombre
                 </Label>
                 <div className="relative">
@@ -243,16 +243,16 @@ export function CreateCategoriaDialog({ onCreated, trigger }: Props) {
                     onChange={(e) => setNombre(e.target.value)}
                     placeholder="Ej: Accesorios..."
                     autoFocus
-                    className="pl-9 h-12 bg-zinc-900/50 border-zinc-800 rounded-xl focus-visible:ring-primary/20 focus-visible:border-primary/50 text-base"
+                    className="pl-9 h-12 bg-card/50 border-border rounded-xl focus-visible:ring-primary/20 focus-visible:border-primary/50 text-base"
                   />
                 </div>
               </div>
 
               <div className="space-y-3">
-                <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400 ml-1">
+                <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/80 ml-1">
                   Color Identificador
                 </Label>
-                <div className="grid grid-cols-6 gap-2 p-3 rounded-xl bg-zinc-900/50 border border-zinc-800">
+                <div className="grid grid-cols-6 gap-2 p-3 rounded-xl bg-card/50 border border-border">
                   {CATEGORY_PALETTE.map((c) => (
                     <button
                       key={c.key}
@@ -269,14 +269,14 @@ export function CreateCategoriaDialog({ onCreated, trigger }: Props) {
                       title={c.label}
                     >
                       {color === c.key && (
-                        <Check className="h-4 w-4 text-white drop-shadow-md" />
+                        <Check className="h-4 w-4 text-[color:var(--ui-fx-white)] drop-shadow-md" />
                       )}
                     </button>
                   ))}
                 </div>
               </div>
 
-              <div className="flex gap-3 pt-4 border-t border-zinc-800">
+              <div className="flex gap-3 pt-4 border-t border-border">
                 <Button
                   variant="ghost"
                   onClick={() => setMode("list")}
@@ -303,19 +303,19 @@ export function CreateCategoriaDialog({ onCreated, trigger }: Props) {
         setDeleteConfirmOpen(open);
         if (!open) setCategoryToDelete(null);
       }}>
-        <AlertDialogContent className="bg-zinc-950 border-zinc-800 rounded-3xl">
+        <AlertDialogContent className="bg-background border-border rounded-3xl">
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-white">¿Seguro que deseas eliminar esta categoría?</AlertDialogTitle>
-            <AlertDialogDescription className="text-zinc-400">
+            <AlertDialogTitle className="text-[color:var(--ui-fx-white)]">¿Seguro que deseas eliminar esta categoría?</AlertDialogTitle>
+            <AlertDialogDescription className="text-muted-foreground/80">
               Los productos asociados quedarán "Sin Categoría". Esta acción no se puede deshacer.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel className="bg-transparent text-white border-zinc-800 hover:bg-zinc-900 hover:text-white rounded-xl">
+            <AlertDialogCancel className="bg-transparent text-[color:var(--ui-fx-white)] border-border hover:bg-card hover:text-[color:var(--ui-fx-white)] rounded-xl">
               Cancelar
             </AlertDialogCancel>
             <AlertDialogAction
-              className="bg-red-500 hover:bg-red-600 text-white rounded-xl"
+              className="bg-[color:var(--status-danger)] hover:bg-[color:var(--status-danger)] text-[color:var(--ui-fx-white)] rounded-xl"
               onClick={() => {
                 if (categoryToDelete !== null) {
                   handleDelete(categoryToDelete);

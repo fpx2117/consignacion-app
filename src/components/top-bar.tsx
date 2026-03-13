@@ -44,7 +44,7 @@ export function TopBar() {
                     {activeSucursalId === 0 && (
                         <div
                             title="En vista global solo podés consultar. Seleccioná una sucursal para crear, editar o eliminar."
-                            className="inline-flex items-center gap-1.5 rounded-full border border-amber-400/35 bg-amber-500/10 px-2.5 py-1 text-[10px] font-semibold text-amber-700 dark:text-amber-300"
+                            className="inline-flex items-center gap-1.5 rounded-full border border-[color:var(--status-warning)]/35 bg-[color:var(--status-warning)]/10 px-2.5 py-1 text-[10px] font-semibold text-[color:var(--status-warning)] dark:text-[color:var(--status-warning)]"
                         >
                             <AlertTriangle className="h-3.5 w-3.5" />
                             <span className="hidden sm:inline">Vista global: solo lectura</span>

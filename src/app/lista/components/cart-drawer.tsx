@@ -121,7 +121,7 @@ export function CartDrawer({
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
                         onClick={onClose}
-                        className="fixed inset-0 bg-black/40 backdrop-blur-[8px] z-[60]"
+                        className="fixed inset-0 bg-foreground/40 backdrop-blur-[8px] z-[60]"
                     />
 
                     <motion.aside
@@ -133,12 +133,12 @@ export function CartDrawer({
                             "fixed top-0 right-0 bottom-0 w-full max-w-lg backdrop-blur-xl z-[70] shadow-[-20px_0_50px_rgba(0,0,0,0.1)] flex flex-col",
                             pageBgClass,
                             (theme === 'modern' || theme === 'barbie' || theme === 'ocean') ? "md:m-4 md:rounded-[2.5rem] md:h-[calc(100vh-2rem)]" :
-                                (theme === 'minimal' || theme === 'luxury') ? "md:border-l border-zinc-200" :
+                                (theme === 'minimal' || theme === 'luxury') ? "md:border-l border-border" :
                                     "md:m-4 md:rounded-2xl md:h-[calc(100vh-2rem)] shadow-2xl border"
                         )}
                     >
                         {/* Header */}
-                        <div className="px-4 sm:px-8 py-4 sm:py-6 flex items-center justify-between border-b border-zinc-200/50 gap-2">
+                        <div className="px-4 sm:px-8 py-4 sm:py-6 flex items-center justify-between border-b border-border/50 gap-2">
                             <div className="flex items-center gap-3">
                                 {step > 1 && (
                                     <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full" onClick={() => setStep(step - 1)}>
@@ -146,17 +146,17 @@ export function CartDrawer({
                                     </Button>
                                 )}
                                 <div className="flex flex-col">
-                                    <h2 className="text-lg sm:text-xl font-black tracking-tight flex items-center gap-2 text-zinc-900">
+                                    <h2 className="text-lg sm:text-xl font-black tracking-tight flex items-center gap-2 text-foreground">
                                         {step === 1 ? "TU CARRITO" : step === 2 ? "TUS DATOS" : "ENTREGA"}
                                         {step === 1 && <span className="text-primary bg-primary/10 px-2 py-0.5 rounded-full text-xs">{cart.length}</span>}
                                     </h2>
-                                    <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-tighter">
+                                    <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-tighter">
                                         Paso {step} de 3
                                     </p>
                                 </div>
                             </div>
                             <Button variant="ghost" size="icon" className="rounded-full hover:rotate-90 transition-transform duration-300" onClick={onClose}>
-                                <XCircle className="h-6 w-6 text-zinc-400" />
+                                <XCircle className="h-6 w-6 text-muted-foreground/80" />
                             </Button>
                         </div>
 
@@ -171,11 +171,11 @@ export function CartDrawer({
                                         animate={{ opacity: 1, y: 0 }}
                                         className="h-full flex flex-col items-center justify-center text-center p-10"
                                     >
-                                        <div className="w-24 h-24 bg-zinc-100 rounded-full flex items-center justify-center mb-6">
-                                            <ShoppingBag className="h-10 w-10 text-zinc-300" />
+                                        <div className="w-24 h-24 bg-muted/55 rounded-full flex items-center justify-center mb-6">
+                                            <ShoppingBag className="h-10 w-10 text-muted-foreground" />
                                         </div>
-                                        <p className="text-xl font-bold text-zinc-800">¿Aún no te decides?</p>
-                                        <p className="text-zinc-500 text-sm mt-2">Explora nuestros productos y llena tu carrito de estilo.</p>
+                                        <p className="text-xl font-bold text-foreground">¿Aún no te decides?</p>
+                                        <p className="text-muted-foreground text-sm mt-2">Explora nuestros productos y llena tu carrito de estilo.</p>
                                         <Button onClick={onClose} variant="outline" className={cn("mt-6 font-bold", buttonRadiusClass)}>VOLVER A LA TIENDA</Button>
                                     </motion.div>
                                 ) : (
@@ -186,12 +186,12 @@ export function CartDrawer({
                                             animate={{ opacity: 1, x: 0 }}
                                             transition={{ delay: index * 0.05 }}
                                             className={cn(
-                                                "relative group border border-zinc-100 p-3 shadow-sm hover:shadow-md transition-all flex gap-4",
+                                                "relative group border border-border/70 p-3 shadow-sm hover:shadow-md transition-all flex gap-4",
                                                 cardBgClass,
                                                 radiusClass
                                             )}
                                         >
-                                            <div className={cn("h-24 w-24 bg-black/5 overflow-hidden shrink-0 border border-zinc-100", radiusClass)}>
+                                            <div className={cn("h-24 w-24 bg-foreground/5 overflow-hidden shrink-0 border border-border/70", radiusClass)}>
                                                 {item.imagenUrl && (
                                                     <img src={item.imagenUrl} alt={item.nombre} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500 mix-blend-multiply" />
                                                 )}
@@ -200,27 +200,27 @@ export function CartDrawer({
                                             <div className="flex-1 flex flex-col justify-between">
                                                 <div className="flex justify-between items-start gap-2">
                                                     <div>
-                                                        <h4 className="font-bold text-sm text-zinc-800 line-clamp-2 leading-tight">{item.nombre}</h4>
+                                                        <h4 className="font-bold text-sm text-foreground line-clamp-2 leading-tight">{item.nombre}</h4>
                                                     </div>
                                                     <button
                                                         onClick={() => onRemove(item.id)}
-                                                        className={cn("p-1.5 text-zinc-300 hover:text-red-500 hover:bg-red-50 transition-colors", buttonRadiusClass)}
+                                                        className={cn("p-1.5 text-muted-foreground hover:text-[color:var(--status-danger)] hover:bg-[color:var(--status-danger)] transition-colors", buttonRadiusClass)}
                                                     >
                                                         <Trash2 className="h-4 w-4" />
                                                     </button>
                                                 </div>
 
                                                 <div className="flex items-end justify-between">
-                                                    <div className={cn("flex items-center gap-3 bg-zinc-50/50 p-1 border border-zinc-100", buttonRadiusClass)}>
-                                                        <button disabled={item.quantity <= 1} onClick={() => onUpdateQuantity(item.id, -1)} className={cn("h-8 w-8 flex items-center justify-center shadow-sm hover:bg-zinc-100 disabled:opacity-30 transition-all font-bold text-zinc-600", cardBgClass, buttonRadiusClass)}>-</button>
+                                                    <div className={cn("flex items-center gap-3 bg-muted/30 p-1 border border-border/70", buttonRadiusClass)}>
+                                                        <button disabled={item.quantity <= 1} onClick={() => onUpdateQuantity(item.id, -1)} className={cn("h-8 w-8 flex items-center justify-center shadow-sm hover:bg-muted/55 disabled:opacity-30 transition-all font-bold text-muted-foreground", cardBgClass, buttonRadiusClass)}>-</button>
                                                         <span className="text-xs font-black w-4 text-center">{item.quantity}</span>
-                                                        <button onClick={() => onUpdateQuantity(item.id, 1)} className={cn("h-8 w-8 flex items-center justify-center shadow-sm hover:bg-zinc-100 transition-all font-bold text-zinc-600", cardBgClass, buttonRadiusClass)}>+</button>
+                                                        <button onClick={() => onUpdateQuantity(item.id, 1)} className={cn("h-8 w-8 flex items-center justify-center shadow-sm hover:bg-muted/55 transition-all font-bold text-muted-foreground", cardBgClass, buttonRadiusClass)}>+</button>
                                                     </div>
                                                     <div className="text-right">
-                                                        <p className="text-xs text-zinc-500 line-through font-medium">
+                                                        <p className="text-xs text-muted-foreground line-through font-medium">
                                                             ${(Number(item.precioVenta)).toLocaleString('es-AR')} c/u
                                                         </p>
-                                                        <p className="font-black text-lg text-zinc-900">
+                                                        <p className="font-black text-lg text-foreground">
                                                             ${(Number(item.precioVenta) * item.quantity).toLocaleString('es-AR')}
                                                         </p>
                                                     </div>
@@ -253,8 +253,8 @@ export function CartDrawer({
                                         <Input name="telefono" value={clienteData.telefono} onChange={handleInputChange} placeholder="11 1234 5678" />
                                     </div>
 
-                                    <div className="pt-2 border-t border-zinc-100">
-                                        <h4 className="font-bold text-sm text-zinc-800 mb-2">Dirección de Entrega</h4>
+                                    <div className="pt-2 border-t border-border/70">
+                                        <h4 className="font-bold text-sm text-foreground mb-2">Dirección de Entrega</h4>
                                     </div>
                                     <div className="space-y-1">
                                         <Label>Provincia</Label>
@@ -280,12 +280,12 @@ export function CartDrawer({
                             {/* PASO 3: ENVÍO */}
                             {step === 3 && (
                                 <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4">
-                                    <h4 className="font-bold text-sm text-zinc-800 mb-2">Selecciona un método de entrega</h4>
+                                    <h4 className="font-bold text-sm text-foreground mb-2">Selecciona un método de entrega</h4>
 
                                     {cotizando ? (
                                         <div className="flex flex-col items-center justify-center p-8 border border-dashed rounded-xl">
                                             <Loader2 className="h-8 w-8 animate-spin text-primary mb-2" />
-                                            <p className="text-sm text-zinc-500">Cotizando con Andreani...</p>
+                                            <p className="text-sm text-muted-foreground">Cotizando con Andreani...</p>
                                         </div>
                                     ) : (
                                         <div className="space-y-3">
@@ -294,18 +294,18 @@ export function CartDrawer({
                                                 onClick={() => setEnvioData({ metodoEnvio: "RETIRO_LOCAL", costo: 0 })}
                                                 className={cn(
                                                     "p-4 border rounded-xl cursor-pointer flex items-center justify-between transition-all",
-                                                    envioData.metodoEnvio === "RETIRO_LOCAL" ? "border-primary bg-primary/5 ring-1 ring-primary/20" : "hover:border-zinc-300"
+                                                    envioData.metodoEnvio === "RETIRO_LOCAL" ? "border-primary bg-primary/5 ring-1 ring-primary/20" : "hover:border-border"
                                                 )}>
                                                 <div className="flex gap-4 items-center">
-                                                    <div className="bg-white p-2 border rounded-full shadow-sm">
-                                                        <Store className="h-5 w-5 text-zinc-600" />
+                                                    <div className="bg-[color:var(--store-surface)] p-2 border border-border rounded-full shadow-sm">
+                                                        <Store className="h-5 w-5 text-muted-foreground" />
                                                     </div>
                                                     <div>
-                                                        <p className="font-bold text-zinc-900">Retiro en Local</p>
-                                                        <p className="text-xs text-zinc-500">Pasas a buscarlo gratis</p>
+                                                        <p className="font-bold text-foreground">Retiro en Local</p>
+                                                        <p className="text-xs text-muted-foreground">Pasas a buscarlo gratis</p>
                                                     </div>
                                                 </div>
-                                                <div className="font-black text-emerald-600">Gratis</div>
+                                                <div className="font-black text-[color:var(--status-success-strong)]">Gratis</div>
                                             </div>
 
                                             {/* Andreani Domicilio */}
@@ -314,18 +314,18 @@ export function CartDrawer({
                                                     onClick={() => setEnvioData({ metodoEnvio: "DOMICILIO", costo: tarifas.domicilio })}
                                                     className={cn(
                                                         "p-4 border rounded-xl cursor-pointer flex items-center justify-between transition-all",
-                                                        envioData.metodoEnvio === "DOMICILIO" ? "border-primary bg-primary/5 ring-1 ring-primary/20" : "hover:border-zinc-300"
+                                                        envioData.metodoEnvio === "DOMICILIO" ? "border-primary bg-primary/5 ring-1 ring-primary/20" : "hover:border-border"
                                                     )}>
                                                     <div className="flex gap-4 items-center">
-                                                        <div className="bg-white p-2 border rounded-full shadow-sm text-blue-600 bg-blue-50">
+                                                        <div className="bg-[color:var(--theme-ocean-primary)]/80 p-2 border border-[color:var(--theme-ocean-primary)] rounded-full shadow-sm text-[color:var(--theme-ocean-primary)]">
                                                             <Truck className="h-5 w-5" />
                                                         </div>
                                                         <div>
-                                                            <p className="font-bold text-zinc-900">Envío a Domicilio</p>
-                                                            <p className="text-xs text-zinc-500">Andreani Clásico</p>
+                                                            <p className="font-bold text-foreground">Envío a Domicilio</p>
+                                                            <p className="text-xs text-muted-foreground">Andreani Clásico</p>
                                                         </div>
                                                     </div>
-                                                    <div className="font-black text-zinc-900">${tarifas.domicilio.toLocaleString('es-AR')}</div>
+                                                    <div className="font-black text-foreground">${tarifas.domicilio.toLocaleString('es-AR')}</div>
                                                 </div>
                                             )}
 
@@ -335,18 +335,18 @@ export function CartDrawer({
                                                     onClick={() => setEnvioData({ metodoEnvio: "SUCURSAL", costo: tarifas.sucursal })}
                                                     className={cn(
                                                         "p-4 border rounded-xl cursor-pointer flex items-center justify-between transition-all",
-                                                        envioData.metodoEnvio === "SUCURSAL" ? "border-primary bg-primary/5 ring-1 ring-primary/20" : "hover:border-zinc-300"
+                                                        envioData.metodoEnvio === "SUCURSAL" ? "border-primary bg-primary/5 ring-1 ring-primary/20" : "hover:border-border"
                                                     )}>
                                                     <div className="flex gap-4 items-center">
-                                                        <div className="bg-white p-2 border rounded-full shadow-sm text-blue-600 bg-blue-50">
+                                                        <div className="bg-[color:var(--theme-ocean-primary)]/80 p-2 border border-[color:var(--theme-ocean-primary)] rounded-full shadow-sm text-[color:var(--theme-ocean-primary)]">
                                                             <Store className="h-5 w-5" />
                                                         </div>
                                                         <div>
-                                                            <p className="font-bold text-zinc-900">Retiro en Suc. Andreani</p>
-                                                            <p className="text-xs text-zinc-500">Más económico</p>
+                                                            <p className="font-bold text-foreground">Retiro en Suc. Andreani</p>
+                                                            <p className="text-xs text-muted-foreground">Más económico</p>
                                                         </div>
                                                     </div>
-                                                    <div className="font-black text-zinc-900">${tarifas.sucursal.toLocaleString('es-AR')}</div>
+                                                    <div className="font-black text-foreground">${tarifas.sucursal.toLocaleString('es-AR')}</div>
                                                 </div>
                                             )}
 
@@ -364,28 +364,28 @@ export function CartDrawer({
 
                         {/* Footer / Resumen de Compra */}
                         {cart.length > 0 && (
-                            <div className={cn("p-4 sm:p-8 border-t border-zinc-100 space-y-4", cardBgClass)}>
+                            <div className={cn("p-4 sm:p-8 border-t border-border/70 space-y-4", cardBgClass)}>
                                 <div className="space-y-2.5">
-                                    <div className="flex justify-between text-sm text-zinc-500 font-medium">
+                                    <div className="flex justify-between text-sm text-muted-foreground font-medium">
                                         <span>Productos</span>
-                                        <span className="text-zinc-900">${subtotalProductos.toLocaleString('es-AR')}</span>
+                                        <span className="text-foreground">${subtotalProductos.toLocaleString('es-AR')}</span>
                                     </div>
                                     {config.convertirTienda && interest > 0 && (
-                                        <div className="flex justify-between text-sm text-zinc-500">
+                                        <div className="flex justify-between text-sm text-muted-foreground">
                                             <span className="flex items-center gap-1.5">Cargo tarjeta ({config.porcentajeInteresTarjeta}%) <Info className="h-3 w-3" /></span>
-                                            <span className="text-zinc-600">+${interest.toLocaleString('es-AR')}</span>
+                                            <span className="text-muted-foreground">+${interest.toLocaleString('es-AR')}</span>
                                         </div>
                                     )}
                                     {envioData.costo > 0 && (
-                                        <div className="flex justify-between text-sm text-blue-600">
+                                        <div className="flex justify-between text-sm text-[color:var(--theme-ocean-primary)]">
                                             <span>Envío</span>
                                             <span>+${envioData.costo.toLocaleString('es-AR')}</span>
                                         </div>
                                     )}
                                     <div className="pt-4 flex justify-between items-end">
                                         <div>
-                                            <p className="text-[10px] font-black text-zinc-600 uppercase tracking-widest">Total Estimado</p>
-                                            <p className="text-3xl font-black text-zinc-900 tracking-tighter">
+                                            <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Total Estimado</p>
+                                            <p className="text-3xl font-black text-foreground tracking-tighter">
                                                 ${totalFinal.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
                                             </p>
                                         </div>
@@ -413,11 +413,11 @@ export function CartDrawer({
                                 {/* Footer Security */}
                                 {step === 3 && (
                                     <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 pt-2">
-                                        <div className="flex items-center gap-1.5 text-zinc-600">
-                                            <ShieldCheck className="h-4 w-4 text-emerald-500" />
+                                        <div className="flex items-center gap-1.5 text-muted-foreground">
+                                            <ShieldCheck className="h-4 w-4 text-[color:var(--status-success-strong)]" />
                                             <span className="text-[9px] uppercase font-bold tracking-wider">Checkout Seguro</span>
                                         </div>
-                                        <div className="h-3 w-[1px] bg-zinc-200 hidden sm:block" />
+                                        <div className="h-3 w-[1px] bg-border hidden sm:block" />
                                         <img
                                             src="https://logodownload.org/wp-content/uploads/2019/06/mercado-pago-logo-0.png"
                                             alt="Mercado Pago"

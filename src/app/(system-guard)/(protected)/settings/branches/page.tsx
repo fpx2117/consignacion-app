@@ -30,7 +30,7 @@ export default async function BranchesPage() {
     return (
         <div className="max-w-5xl mx-auto space-y-8 p-4 md:p-10">
             <header className="space-y-3">
-                <div className="flex items-center gap-2 text-emerald-500 font-semibold tracking-wider text-[10px] bg-emerald-500/10 w-fit px-3 py-1 rounded-full border border-emerald-500/20">
+                <div className="flex items-center gap-2 text-[color:var(--status-success-strong)] font-semibold tracking-wider text-[10px] bg-[color:var(--status-success-strong)]/10 w-fit px-3 py-1 rounded-full border border-[color:var(--status-success-strong)]/20">
                     <Store className="h-3 w-3" />
                     SUCURSALES Y DEPÓSITOS
                 </div>

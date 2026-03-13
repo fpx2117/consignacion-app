@@ -54,7 +54,7 @@ export function StoreCategorySidebar({
 
     return (
         <aside className="hidden lg:flex w-64 xl:w-72 shrink-0 flex-col gap-4 sticky top-6 self-start">
-            <span className="text-sm font-black uppercase tracking-widest text-neutral-400">
+            <span className="text-sm font-black uppercase tracking-widest text-muted-foreground/80">
                 Categorías
             </span>
             <div className="flex flex-col gap-2">
@@ -63,8 +63,8 @@ export function StoreCategorySidebar({
                         "w-full text-left px-5 py-3.5 text-sm font-bold transition-all shadow-sm border group",
                         buttonRadiusClass,
                         selectedCategory === null
-                            ? "bg-neutral-900 text-white border-transparent"
-                            : cn(cardBgClass, "text-neutral-600 border-neutral-200 hover:bg-neutral-50 hover:text-neutral-900")
+                            ? "bg-foreground text-[color:var(--ui-fx-white)] border-transparent"
+                            : cn(cardBgClass, "text-muted-foreground border-border hover:bg-muted/40 hover:text-foreground")
                     )}
                     onClick={() => {
                         setSelectedCategory(null);
@@ -89,8 +89,8 @@ export function StoreCategorySidebar({
                                     "w-full text-left px-5 py-3.5 text-sm font-bold transition-all shadow-sm border group flex items-center justify-between",
                                     buttonRadiusClass,
                                     isSelected
-                                        ? "bg-neutral-900 text-white border-transparent"
-                                        : cn(cardBgClass, "text-neutral-600 border-neutral-200 hover:bg-neutral-50 hover:text-neutral-900")
+                                        ? "bg-foreground text-[color:var(--ui-fx-white)] border-transparent"
+                                        : cn(cardBgClass, "text-muted-foreground border-border hover:bg-muted/40 hover:text-foreground")
                                 )}
                                 onClick={() => setSelectedCategory(cat.id)}
                             >
@@ -117,7 +117,7 @@ export function StoreCategorySidebar({
                                         animate={{ height: "auto", opacity: 1 }}
                                         exit={{ height: 0, opacity: 0 }}
                                         transition={{ duration: 0.3, ease: "easeInOut" }}
-                                        className="overflow-hidden flex flex-col gap-1 ml-4 border-l-2 border-neutral-100 pl-3 py-1"
+                                        className="overflow-hidden flex flex-col gap-1 ml-4 border-l-2 border-border/70 pl-3 py-1"
                                     >
                                         {cat.subcategorias.map((sub: any) => {
                                             const subCount = subcategoryCounts[sub.id] || 0;
@@ -133,8 +133,8 @@ export function StoreCategorySidebar({
                                                         "text-left px-3 py-2 text-xs font-bold transition-all flex items-center gap-2",
                                                         buttonRadiusClass,
                                                         isSubSelected
-                                                            ? "bg-neutral-100 text-neutral-900"
-                                                            : "text-neutral-500 hover:text-neutral-900 hover:bg-neutral-50"
+                                                            ? "bg-muted/55 text-foreground"
+                                                            : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
                                                     )}
                                                 >
                                                     <span className="line-clamp-1">{sub.nombre}</span>

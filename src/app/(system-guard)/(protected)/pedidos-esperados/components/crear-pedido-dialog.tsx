@@ -254,7 +254,7 @@ export function CrearPedidoDialog({ open, onOpenChange, onSuccess }: CrearPedido
                             Stock: {p.stockDisponibleUnits}
                           </span>
                           {selected ? (
-                            <span className="text-[10px] font-bold text-emerald-600 bg-emerald-500/10 px-1.5 py-0.5 rounded-md">Agregado</span>
+                            <span className="text-[10px] font-bold text-[color:var(--status-success-strong)] bg-[color:var(--status-success-strong)]/10 px-1.5 py-0.5 rounded-md">Agregado</span>
                           ) : (
                             <Plus className="h-4 w-4 text-primary" />
                           )}
@@ -300,7 +300,7 @@ export function CrearPedidoDialog({ open, onOpenChange, onSuccess }: CrearPedido
                         type="button"
                         variant="ghost"
                         size="icon"
-                        className="h-8 w-8 text-red-500 hover:bg-red-500/10 rounded-lg shrink-0"
+                        className="h-8 w-8 text-[color:var(--status-danger)] hover:bg-[color:var(--status-danger)]/10 rounded-lg shrink-0"
                         onClick={() => quitarProducto(item.productoId)}
                       >
                         <X className="h-4 w-4" />
@@ -328,7 +328,7 @@ export function CrearPedidoDialog({ open, onOpenChange, onSuccess }: CrearPedido
               />
             </div>
             {fechaEsperada && fechaEsperada < getTodayStr() && (
-              <p className="text-xs text-red-500 font-bold">La fecha debe ser hoy o en el futuro</p>
+              <p className="text-xs text-[color:var(--status-danger)] font-bold">La fecha debe ser hoy o en el futuro</p>
             )}
           </div>
 

@@ -14,10 +14,10 @@ interface WhatsAppHeaderProps {
 
 export function WhatsAppHeader({ onSave, saving }: WhatsAppHeaderProps) {
     return (
-        <header className="relative overflow-hidden rounded-3xl border border-border/60 bg-gradient-to-br from-card via-card to-emerald-500/[0.03] p-6 md:p-8">
+        <header className="relative overflow-hidden rounded-3xl border border-border/60 bg-gradient-to-br from-card via-card to-[color:var(--status-success-strong)]/[0.03] p-6 md:p-8">
             {/* Decorative gradient orb */}
-            <div className="pointer-events-none absolute -right-20 -top-20 h-64 w-64 rounded-full bg-emerald-500/[0.07] blur-3xl" />
-            <div className="pointer-events-none absolute -bottom-16 -left-16 h-48 w-48 rounded-full bg-emerald-500/[0.04] blur-3xl" />
+            <div className="pointer-events-none absolute -right-20 -top-20 h-64 w-64 rounded-full bg-[color:var(--status-success-strong)]/[0.07] blur-3xl" />
+            <div className="pointer-events-none absolute -bottom-16 -left-16 h-48 w-48 rounded-full bg-[color:var(--status-success-strong)]/[0.04] blur-3xl" />
 
             <div className="relative z-10 flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
                 {/* Left side */}
@@ -31,8 +31,8 @@ export function WhatsAppHeader({ onSave, saving }: WhatsAppHeaderProps) {
                     </Link>
 
                     <div className="flex items-center gap-4">
-                        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-500/10 ring-1 ring-emerald-500/20">
-                            <MessageCircle className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
+                        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[color:var(--status-success-strong)]/10 ring-1 ring-[color:var(--status-success-strong)]/20">
+                            <MessageCircle className="h-6 w-6 text-[color:var(--status-success-strong)] dark:text-[color:var(--status-success-strong)]" />
                         </div>
                         <div>
                             <div className="flex items-center gap-2">
@@ -52,7 +52,7 @@ export function WhatsAppHeader({ onSave, saving }: WhatsAppHeaderProps) {
                 <Button
                     onClick={onSave}
                     disabled={saving}
-                    className="h-11 cursor-pointer gap-2 rounded-xl bg-emerald-600 px-6 font-semibold text-white shadow-lg shadow-emerald-600/20 transition-all hover:bg-emerald-700 hover:shadow-emerald-600/30 active:scale-[0.97] disabled:opacity-60"
+                    className="h-11 cursor-pointer gap-2 rounded-xl bg-[color:var(--status-success-strong)] px-6 font-semibold text-[color:var(--ui-fx-white)] shadow-lg shadow-emerald-600/20 transition-all hover:bg-[color:var(--status-success-strong)] hover:shadow-emerald-600/30 active:scale-[0.97] disabled:opacity-60"
                 >
                     {saving ? (
                         <>

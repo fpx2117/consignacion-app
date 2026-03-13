@@ -66,7 +66,7 @@ function StatusBadge({ active }: { active: boolean }) {
         <span className={cn(
             "text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full transition-all duration-300 shrink-0",
             active
-                ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20"
+                ? "bg-[color:var(--status-success-strong)]/15 text-[color:var(--status-success-strong)] dark:text-[color:var(--status-success-strong)] border border-[color:var(--status-success-strong)]/20"
                 : "bg-muted text-muted-foreground border border-border/40"
         )}>
             {active ? "✓ Activo" : "Inactivo"}
@@ -84,7 +84,7 @@ function PercentagePreview({ value, baseAmount = 1000, label }: { value: number;
             <Info className="h-3.5 w-3.5 shrink-0 text-primary/60" />
             <span>
                 {label}: ${baseAmount.toLocaleString("es-AR")}{" → "}
-                <span className="font-bold text-emerald-600 dark:text-emerald-400">
+                <span className="font-bold text-[color:var(--status-success-strong)] dark:text-[color:var(--status-success-strong)]">
                     ${result.toLocaleString("es-AR", { maximumFractionDigits: 0 })}
                 </span>{" "}
                 <span className="text-muted-foreground/70">(+${diff.toLocaleString("es-AR", { maximumFractionDigits: 0 })})</span>
@@ -244,8 +244,8 @@ export default function PosSettingsPage() {
                     <Card className="rounded-[24px] border-border/40 shadow-sm bg-card overflow-hidden">
                         <div className="p-6 md:px-8 border-b border-border/40 flex items-center gap-3 bg-muted/5">
                             <SectionBadge number="01" />
-                            <div className="p-2 bg-blue-500/5 rounded-xl border border-blue-500/15">
-                                <Settings2 className="w-5 h-5 text-blue-500" />
+                            <div className="p-2 bg-[color:var(--theme-ocean-primary)]/5 rounded-xl border border-[color:var(--theme-ocean-primary)]/15">
+                                <Settings2 className="w-5 h-5 text-[color:var(--theme-ocean-primary)]" />
                             </div>
                             <div className="flex-1 min-w-0">
                                 <h2 className="font-semibold text-base sm:text-lg tracking-tight">Reglas de Operación</h2>
@@ -293,7 +293,7 @@ export default function PosSettingsPage() {
                                 <div className="flex items-start sm:items-center gap-3 sm:gap-4">
                                     <div className={cn(
                                         "mt-1 sm:mt-0 p-2.5 rounded-xl transition-colors shrink-0",
-                                        usarControlDeCaja ? "bg-muted group-hover:bg-amber-500/10 group-hover:text-amber-500" : "bg-muted/50 text-muted-foreground"
+                                        usarControlDeCaja ? "bg-muted group-hover:bg-[color:var(--status-warning)]/10 group-hover:text-[color:var(--status-warning)]" : "bg-muted/50 text-muted-foreground"
                                     )}>
                                         <Clock className="h-4 w-4" />
                                     </div>
@@ -301,7 +301,7 @@ export default function PosSettingsPage() {
                                         <div className="flex items-center gap-2 flex-wrap">
                                             <h3 className={cn(
                                                 "font-medium text-sm sm:text-base transition-colors",
-                                                usarControlDeCaja ? "text-foreground group-hover:text-amber-600 dark:group-hover:text-amber-400" : "text-muted-foreground"
+                                                usarControlDeCaja ? "text-foreground group-hover:text-[color:var(--status-warning)] dark:group-hover:text-[color:var(--status-warning)]" : "text-muted-foreground"
                                             )}>
                                                 Control de Horarios
                                             </h3>
@@ -318,7 +318,7 @@ export default function PosSettingsPage() {
                                 </div>
                                 {usarControlDeCaja && (
                                     <div className="h-8 w-8 rounded-full flex items-center justify-center group-hover:translate-x-1 transition-transform shrink-0 self-center">
-                                        <ChevronRight className="h-5 w-5 text-muted-foreground group-hover:text-amber-500" />
+                                        <ChevronRight className="h-5 w-5 text-muted-foreground group-hover:text-[color:var(--status-warning)]" />
                                     </div>
                                 )}
                             </div>
@@ -394,8 +394,8 @@ export default function PosSettingsPage() {
                     <Card className="rounded-[24px] border-border/40 shadow-sm bg-card overflow-hidden">
                         <div className="p-6 md:px-8 border-b border-border/40 flex items-center gap-3 bg-muted/5">
                             <SectionBadge number="02" />
-                            <div className="p-2 bg-violet-500/5 rounded-xl border border-violet-500/15">
-                                <Store className="w-5 h-5 text-violet-500" />
+                            <div className="p-2 bg-[color:var(--primary)]/5 rounded-xl border border-[color:var(--primary)]/15">
+                                <Store className="w-5 h-5 text-[color:var(--primary)]" />
                             </div>
                             <div className="flex-1 min-w-0">
                                 <h2 className="font-semibold text-base sm:text-lg tracking-tight">Tienda Online / Catálogo</h2>
@@ -463,7 +463,7 @@ export default function PosSettingsPage() {
                             {convertirTienda && (
                                 <div className="p-4 sm:p-6 md:px-8 bg-muted/5 space-y-4 animate-in fade-in slide-in-from-top-2 duration-300">
                                     <div className="flex items-center gap-2 mb-2">
-                                        <BookMarked className="h-4 w-4 text-violet-500" />
+                                        <BookMarked className="h-4 w-4 text-[color:var(--primary)]" />
                                         <span className="text-sm font-semibold text-foreground">Credenciales de Mercado Pago</span>
                                         <HelpTip text="Obtenelas en developers.mercadopago.com → Tu aplicación → Credenciales de producción." />
                                     </div>
@@ -503,7 +503,7 @@ export default function PosSettingsPage() {
                             {mostrarListaPrecios && (
                                 <div className="p-4 sm:p-5 md:px-8 flex items-center justify-between bg-primary/5 border-t border-primary/10 gap-3 flex-wrap">
                                     <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-                                        <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+                                        <div className="h-2 w-2 rounded-full bg-[color:var(--status-success-strong)] animate-pulse shrink-0" />
                                         <p className="text-xs sm:text-sm font-medium text-primary/80 truncate">
                                             Activo en: <code className="bg-primary/10 px-1.5 py-0.5 rounded text-primary text-xs">/lista</code>
                                         </p>
@@ -529,8 +529,8 @@ export default function PosSettingsPage() {
                     <Card className="rounded-[24px] border-border/40 shadow-sm bg-card overflow-hidden">
                         <div className="p-6 md:px-8 border-b border-border/40 flex items-center gap-3 bg-muted/5">
                             <SectionBadge number="03" />
-                            <div className="p-2 bg-sky-500/5 rounded-xl border border-sky-500/15">
-                                <TerminalSquare className="w-5 h-5 text-sky-500" />
+                            <div className="p-2 bg-[color:var(--theme-ocean-primary)]/5 rounded-xl border border-[color:var(--theme-ocean-primary)]/15">
+                                <TerminalSquare className="w-5 h-5 text-[color:var(--theme-ocean-primary)]" />
                             </div>
                             <div className="flex-1 min-w-0">
                                 <h2 className="font-semibold text-base sm:text-lg tracking-tight">Terminales Físicas</h2>
@@ -540,9 +540,9 @@ export default function PosSettingsPage() {
                         </div>
 
                         <div className="p-4 sm:p-6 md:p-8 space-y-5 bg-muted/5">
-                            <div className="flex items-start gap-2.5 rounded-xl bg-sky-500/5 border border-sky-500/15 px-4 py-3">
-                                <Info className="h-4 w-4 text-sky-500 shrink-0 mt-0.5" />
-                                <p className="text-xs sm:text-sm text-sky-600 dark:text-sky-400 leading-relaxed">
+                            <div className="flex items-start gap-2.5 rounded-xl bg-[color:var(--theme-ocean-primary)]/5 border border-[color:var(--theme-ocean-primary)]/15 px-4 py-3">
+                                <Info className="h-4 w-4 text-[color:var(--theme-ocean-primary)] shrink-0 mt-0.5" />
+                                <p className="text-xs sm:text-sm text-[color:var(--theme-ocean-primary)] dark:text-[color:var(--theme-ocean-primary)] leading-relaxed">
                                     Nombre descriptivo para cada terminal. Ej: <strong>Caja Mostrador 1</strong>, <strong>Planta Alta</strong>.
                                 </p>
                             </div>
@@ -577,7 +577,7 @@ export default function PosSettingsPage() {
                                         {cajas.map((caja, index) => (
                                             <li key={caja.id} className="flex items-center justify-between p-3 sm:p-4 sm:px-6 hover:bg-muted/30 transition-colors">
                                                 <div className="flex items-center gap-3 sm:gap-4 min-w-0">
-                                                    <div className="h-9 w-9 sm:h-10 sm:w-10 rounded-xl bg-sky-500/10 border border-sky-500/20 flex items-center justify-center shrink-0 text-sky-500 font-black text-sm">
+                                                    <div className="h-9 w-9 sm:h-10 sm:w-10 rounded-xl bg-[color:var(--theme-ocean-primary)]/10 border border-[color:var(--theme-ocean-primary)]/20 flex items-center justify-center shrink-0 text-[color:var(--theme-ocean-primary)] font-black text-sm">
                                                         {index + 1}
                                                     </div>
                                                     <div className="flex flex-col min-w-0">
@@ -585,8 +585,8 @@ export default function PosSettingsPage() {
                                                         <span className="text-[11px] text-muted-foreground font-mono mt-0.5 opacity-80">REF-{caja.id.toString().padStart(4, "0")}</span>
                                                     </div>
                                                 </div>
-                                                <div className="flex items-center gap-1.5 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 dark:bg-emerald-500/20 px-2 sm:px-3 py-1 rounded-full border border-emerald-500/20 shrink-0">
-                                                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                                                <div className="flex items-center gap-1.5 text-[11px] font-semibold text-[color:var(--status-success-strong)] dark:text-[color:var(--status-success-strong)] bg-[color:var(--status-success-strong)]/10 dark:bg-[color:var(--status-success-strong)]/20 px-2 sm:px-3 py-1 rounded-full border border-[color:var(--status-success-strong)]/20 shrink-0">
+                                                    <span className="h-1.5 w-1.5 rounded-full bg-[color:var(--status-success-strong)] animate-pulse" />
                                                     Operativa
                                                 </div>
                                             </li>

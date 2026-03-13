@@ -256,7 +256,7 @@ export function PedidosEsperadosView() {
             <ClipboardList className="h-8 w-8 md:h-10 md:w-10 text-primary" />
             Pedidos Esperados
             {vencidos > 0 && (
-              <Badge className="bg-red-600 text-white font-black text-sm px-2.5 py-1 rounded-xl animate-pulse">
+              <Badge className="bg-[color:var(--status-danger)] text-[color:var(--ui-fx-white)] font-black text-sm px-2.5 py-1 rounded-xl animate-pulse">
                 {vencidos} vencido{vencidos > 1 ? "s" : ""}
               </Badge>
             )}
@@ -464,8 +464,8 @@ export function PedidosEsperadosView() {
       <AlertDialog open={dialogCancelar} onOpenChange={setDialogCancelar}>
         <AlertDialogContent className="rounded-2xl border-none shadow-2xl">
           <AlertDialogHeader>
-            <div className="mx-auto bg-red-100 dark:bg-red-900/30 p-3 rounded-full w-fit mb-2">
-              <AlertCircle className="h-8 w-8 text-red-600" />
+            <div className="mx-auto bg-[color:var(--status-danger)] dark:bg-[color:var(--status-danger)]/30 p-3 rounded-full w-fit mb-2">
+              <AlertCircle className="h-8 w-8 text-[color:var(--status-danger)]" />
             </div>
             <AlertDialogTitle className="text-xl font-bold text-center">¿Cancelar pedido?</AlertDialogTitle>
             <AlertDialogDescription className="text-center text-muted-foreground">
@@ -477,7 +477,7 @@ export function PedidosEsperadosView() {
               Volver
             </AlertDialogCancel>
             <AlertDialogAction
-              className="h-11 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold"
+              className="h-11 rounded-xl bg-[color:var(--status-danger)] hover:bg-[color:var(--status-danger)] text-[color:var(--ui-fx-white)] font-bold"
               onClick={(e) => { e.preventDefault(); confirmCancelar(); }}
               disabled={cancelandoId !== null}
             >
@@ -490,8 +490,8 @@ export function PedidosEsperadosView() {
       <AlertDialog open={dialogEliminar} onOpenChange={setDialogEliminar}>
         <AlertDialogContent className="rounded-2xl border-none shadow-2xl">
           <AlertDialogHeader>
-            <div className="mx-auto bg-red-100 dark:bg-red-900/30 p-3 rounded-full w-fit mb-2">
-              <Trash2 className="h-8 w-8 text-red-600" />
+            <div className="mx-auto bg-[color:var(--status-danger)] dark:bg-[color:var(--status-danger)]/30 p-3 rounded-full w-fit mb-2">
+              <Trash2 className="h-8 w-8 text-[color:var(--status-danger)]" />
             </div>
             <AlertDialogTitle className="text-xl font-bold text-center">¿Eliminar pedido cancelado?</AlertDialogTitle>
             <AlertDialogDescription className="text-center text-muted-foreground">
@@ -503,7 +503,7 @@ export function PedidosEsperadosView() {
               Volver
             </AlertDialogCancel>
             <AlertDialogAction
-              className="h-11 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold"
+              className="h-11 rounded-xl bg-[color:var(--status-danger)] hover:bg-[color:var(--status-danger)] text-[color:var(--ui-fx-white)] font-bold"
               onClick={(e) => { e.preventDefault(); confirmEliminar(); }}
               disabled={eliminandoId !== null}
             >
@@ -608,7 +608,7 @@ function PedidoRow({
       transition={{ delay: idx * 0.03 }}
       className={cn(
         "group border-b border-border/40 hover:bg-muted/30 transition-colors",
-        isVencido && "bg-red-500/5"
+        isVencido && "bg-[color:var(--status-danger)]/5"
       )}
     >
       <TableCell className="pl-6 py-4">
@@ -616,7 +616,7 @@ function PedidoRow({
           <p className="font-bold text-sm text-foreground tabular-nums">{formatFecha(pedido.fechaEsperada)}</p>
           <p className={cn(
             "text-[10px] font-bold",
-            isVencido ? "text-red-500" : "text-muted-foreground"
+            isVencido ? "text-[color:var(--status-danger)]" : "text-muted-foreground"
           )}>
             {formatFechaRelativa(pedido.fechaEsperada)}
           </p>
@@ -663,7 +663,7 @@ function PedidoRow({
             <Button
               variant="ghost"
               size="sm"
-              className="h-8 px-3 rounded-lg text-xs font-bold text-emerald-600 hover:bg-emerald-500/10"
+              className="h-8 px-3 rounded-lg text-xs font-bold text-[color:var(--status-success-strong)] hover:bg-[color:var(--status-success-strong)]/10"
               onClick={onConfirmar}
             >
               <PackageCheck className="h-3.5 w-3.5 mr-1" />
@@ -672,7 +672,7 @@ function PedidoRow({
             <Button
               variant="ghost"
               size="sm"
-              className="h-8 px-3 rounded-lg text-xs font-bold text-blue-600 hover:bg-blue-500/10"
+              className="h-8 px-3 rounded-lg text-xs font-bold text-[color:var(--theme-ocean-primary)] hover:bg-[color:var(--theme-ocean-primary)]/10"
               onClick={onPostergar}
             >
               <CalendarClock className="h-3.5 w-3.5 mr-1" />
@@ -681,7 +681,7 @@ function PedidoRow({
             <Button
               variant="ghost"
               size="sm"
-              className="h-8 px-3 rounded-lg text-xs font-bold text-red-500 hover:bg-red-500/10"
+              className="h-8 px-3 rounded-lg text-xs font-bold text-[color:var(--status-danger)] hover:bg-[color:var(--status-danger)]/10"
               onClick={onCancelar}
             >
               <XCircle className="h-3.5 w-3.5 mr-1" />
@@ -693,7 +693,7 @@ function PedidoRow({
             <Button
               variant="ghost"
               size="sm"
-              className="h-8 px-3 rounded-lg text-xs font-bold text-red-600 hover:bg-red-500/10"
+              className="h-8 px-3 rounded-lg text-xs font-bold text-[color:var(--status-danger)] hover:bg-[color:var(--status-danger)]/10"
               onClick={onEliminar}
             >
               <Trash2 className="h-3.5 w-3.5 mr-1" />
@@ -736,14 +736,14 @@ function MobilePedidoCard({
     >
       <Card className={cn(
         "p-4 border-border/50 shadow-sm rounded-2xl relative overflow-hidden space-y-3",
-        isVencido && "border-red-500/30 bg-red-500/5"
+        isVencido && "border-[color:var(--status-danger)]/30 bg-[color:var(--status-danger)]/5"
       )}>
         <div className={cn(
           "absolute left-0 top-0 bottom-0 w-1.5",
-          pedido.estado === "VENCIDO" ? "bg-red-500" :
-          pedido.estado === "PROGRAMADO" ? "bg-blue-500" :
+          pedido.estado === "VENCIDO" ? "bg-[color:var(--status-danger)]" :
+          pedido.estado === "PROGRAMADO" ? "bg-[color:var(--theme-ocean-primary)]" :
           pedido.estado === "PARCIAL" ? "bg-yellow-500" :
-          pedido.estado === "CONFIRMADO" ? "bg-emerald-500" :
+          pedido.estado === "CONFIRMADO" ? "bg-[color:var(--status-success-strong)]" :
           "bg-muted-foreground"
         )} />
 
@@ -753,7 +753,7 @@ function MobilePedidoCard({
               <PedidoEstadoBadge estado={pedido.estado} size="sm" />
               <span className={cn(
                 "text-[10px] font-bold",
-                isVencido ? "text-red-500" : "text-muted-foreground"
+                isVencido ? "text-[color:var(--status-danger)]" : "text-muted-foreground"
               )}>
                 {formatFechaRelativa(pedido.fechaEsperada)}
               </span>
@@ -784,14 +784,14 @@ function MobilePedidoCard({
                     <>
                       <DropdownMenuSeparator />
                   <DropdownMenuItem
-                    className="flex items-center gap-2.5 font-semibold text-emerald-600 cursor-pointer rounded-lg focus:text-emerald-600 focus:bg-emerald-50 dark:focus:bg-emerald-950/40"
+                    className="flex items-center gap-2.5 font-semibold text-[color:var(--status-success-strong)] cursor-pointer rounded-lg focus:text-[color:var(--status-success-strong)] focus:bg-[color:var(--status-success-strong)] dark:focus:bg-[color:var(--status-success-strong)]/40"
                     onClick={onConfirmar}
                   >
                     <PackageCheck className="h-4 w-4" />
                     {pedido.estado === "PARCIAL" ? "Completar" : "Confirmar"}
                   </DropdownMenuItem>
                   <DropdownMenuItem
-                    className="flex items-center gap-2.5 font-semibold text-blue-600 cursor-pointer rounded-lg focus:text-blue-600 focus:bg-blue-50 dark:focus:bg-blue-950/40"
+                    className="flex items-center gap-2.5 font-semibold text-[color:var(--theme-ocean-primary)] cursor-pointer rounded-lg focus:text-[color:var(--theme-ocean-primary)] focus:bg-[color:var(--theme-ocean-primary)] dark:focus:bg-[color:var(--theme-ocean-primary)]/40"
                     onClick={onPostergar}
                   >
                     <CalendarClock className="h-4 w-4" />
@@ -799,7 +799,7 @@ function MobilePedidoCard({
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
-                    className="flex items-center gap-2.5 font-semibold text-red-600 cursor-pointer rounded-lg focus:text-red-600 focus:bg-red-50 dark:focus:bg-red-950/40"
+                    className="flex items-center gap-2.5 font-semibold text-[color:var(--status-danger)] cursor-pointer rounded-lg focus:text-[color:var(--status-danger)] focus:bg-[color:var(--status-danger)] dark:focus:bg-[color:var(--status-danger)]/40"
                     onClick={onCancelar}
                   >
                     <XCircle className="h-4 w-4" />
@@ -811,7 +811,7 @@ function MobilePedidoCard({
                     <>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem
-                        className="flex items-center gap-2.5 font-semibold text-red-600 cursor-pointer rounded-lg focus:text-red-600 focus:bg-red-50 dark:focus:bg-red-950/40"
+                        className="flex items-center gap-2.5 font-semibold text-[color:var(--status-danger)] cursor-pointer rounded-lg focus:text-[color:var(--status-danger)] focus:bg-[color:var(--status-danger)] dark:focus:bg-[color:var(--status-danger)]/40"
                         onClick={onEliminar}
                       >
                         <Trash2 className="h-4 w-4" />
@@ -847,9 +847,9 @@ function QuickStat({
 }) {
   const colors = {
     default: "bg-primary/5 text-primary",
-    blue: "bg-blue-500/10 text-blue-600",
-    emerald: "bg-emerald-500/10 text-emerald-600",
-    red: "bg-red-500/10 text-red-600",
+    blue: "bg-[color:var(--theme-ocean-primary)]/10 text-[color:var(--theme-ocean-primary)]",
+    emerald: "bg-[color:var(--status-success-strong)]/10 text-[color:var(--status-success-strong)]",
+    red: "bg-[color:var(--status-danger)]/10 text-[color:var(--status-danger)]",
   };
 
   return (

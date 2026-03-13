@@ -35,7 +35,7 @@ export const DEFAULT_FORM_DATA: SetupFormData = {
   branding: {
     phone: "",
     address: "",
-    primaryColor: "#6d28d9",
+    primaryColor: "var(--swatch-11)",
     logoFile: null,
     logoPreview: null,
   },

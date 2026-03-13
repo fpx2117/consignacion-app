@@ -240,7 +240,7 @@ export default function EmployeesSettingsPage() {
                                                     "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border",
                                                     user.rol === "ADMIN"
                                                         ? "bg-purple-500/10 text-purple-500 border-purple-500/20"
-                                                        : "bg-blue-500/10 text-blue-500 border-blue-500/20"
+                                                        : "bg-[color:var(--theme-ocean-primary)]/10 text-[color:var(--theme-ocean-primary)] border-[color:var(--theme-ocean-primary)]/20"
                                                 )}>
                                                     {user.rol === "ADMIN" ? <ShieldAlert className="h-3 w-3" /> : <User className="h-3 w-3" />}
                                                     {user.rol}
@@ -248,7 +248,7 @@ export default function EmployeesSettingsPage() {
                                             </td>
                                             <td className="px-6 py-4">
                                                 <div className="flex items-center gap-2">
-                                                    <div className={cn("h-2 w-2 rounded-full", user.activo ? "bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]" : "bg-red-500")} />
+                                                    <div className={cn("h-2 w-2 rounded-full", user.activo ? "bg-[color:var(--status-success-strong)] shadow-[0_0_10px_rgba(16,185,129,0.5)]" : "bg-[color:var(--status-danger)]")} />
                                                     <span className="text-xs font-semibold text-muted-foreground">
                                                         {user.activo ? "Activo" : "Inactivo"}
                                                     </span>
@@ -269,7 +269,7 @@ export default function EmployeesSettingsPage() {
                                                         variant="ghost"
                                                         size="icon"
                                                         onClick={() => setUserToDelete(user)}
-                                                        className="rounded-xl text-muted-foreground hover:text-red-500 hover:bg-red-500/10 transition-colors"
+                                                        className="rounded-xl text-muted-foreground hover:text-[color:var(--status-danger)] hover:bg-[color:var(--status-danger)]/10 transition-colors"
                                                         title="Eliminar usuario"
                                                     >
                                                         <Trash2 className="h-4 w-4" />
@@ -313,7 +313,7 @@ export default function EmployeesSettingsPage() {
                                                 variant="ghost"
                                                 size="icon"
                                                 onClick={() => setUserToDelete(user)}
-                                                className="h-8 w-8 rounded-xl text-muted-foreground hover:text-red-500 hover:bg-red-500/10 transition-colors"
+                                                className="h-8 w-8 rounded-xl text-muted-foreground hover:text-[color:var(--status-danger)] hover:bg-[color:var(--status-danger)]/10 transition-colors"
                                             >
                                                 <Trash2 className="h-4 w-4" />
                                             </Button>
@@ -327,14 +327,14 @@ export default function EmployeesSettingsPage() {
                                             "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border",
                                             user.rol === "ADMIN"
                                                 ? "bg-purple-500/10 text-purple-500 border-purple-500/20"
-                                                : "bg-blue-500/10 text-blue-500 border-blue-500/20"
+                                                : "bg-[color:var(--theme-ocean-primary)]/10 text-[color:var(--theme-ocean-primary)] border-[color:var(--theme-ocean-primary)]/20"
                                         )}>
                                             {user.rol === "ADMIN" ? <ShieldAlert className="h-3 w-3" /> : <User className="h-3 w-3" />}
                                             {user.rol}
                                         </div>
 
                                         <div className="flex items-center gap-2">
-                                            <div className={cn("h-2 w-2 rounded-full", user.activo ? "bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]" : "bg-red-500")} />
+                                            <div className={cn("h-2 w-2 rounded-full", user.activo ? "bg-[color:var(--status-success-strong)] shadow-[0_0_10px_rgba(16,185,129,0.5)]" : "bg-[color:var(--status-danger)]")} />
                                             <span className="text-xs font-semibold text-muted-foreground">
                                                 {user.activo ? "Activo" : "Inactivo"}
                                             </span>
@@ -457,7 +457,7 @@ export default function EmployeesSettingsPage() {
             <AlertDialog open={!!userToDelete} onOpenChange={(open) => !open && setUserToDelete(null)}>
                 <AlertDialogContent className="rounded-3xl w-[95vw] sm:max-w-lg border-border/50 bg-background/90 backdrop-blur-xl">
                     <AlertDialogHeader>
-                        <AlertDialogTitle className="text-xl font-extrabold tracking-tight text-red-500">
+                        <AlertDialogTitle className="text-xl font-extrabold tracking-tight text-[color:var(--status-danger)]">
                             ¿Eliminar usuario?
                         </AlertDialogTitle>
                         <AlertDialogDescription className="text-sm text-muted-foreground">
@@ -472,7 +472,7 @@ export default function EmployeesSettingsPage() {
                                 handleDeleteUser();
                             }}
                             disabled={deleting}
-                            className="rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold"
+                            className="rounded-xl bg-[color:var(--status-danger)] hover:bg-[color:var(--status-danger)] text-[color:var(--ui-fx-white)] font-bold"
                         >
                             {deleting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Trash2 className="h-4 w-4 mr-2" />}
                             {deleting ? "Eliminando..." : "Sí, eliminar"}

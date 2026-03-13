@@ -35,10 +35,10 @@ export function LoadingStep() {
                 transition={{ repeat: Infinity, duration: 3, ease: "linear" }}
                 className="relative w-24 h-24"
             >
-                <div className="absolute inset-0 rounded-full border-t-4 border-violet-500 opacity-20" />
-                <div className="absolute inset-0 rounded-full border-t-4 border-violet-500 blur-sm" />
+                <div className="absolute inset-0 rounded-full border-t-4 border-[color:var(--primary)] opacity-20" />
+                <div className="absolute inset-0 rounded-full border-t-4 border-[color:var(--primary)] blur-sm" />
                 <div className="absolute inset-0 flex items-center justify-center">
-                    <Loader2 className="w-8 h-8 text-violet-400 animate-spin" />
+                    <Loader2 className="w-8 h-8 text-[color:var(--primary)] animate-spin" />
                 </div>
             </motion.div>
 
@@ -62,7 +62,7 @@ export function LoadingStep() {
                     initial={{ x: "-100%" }}
                     animate={{ x: "100%" }}
                     transition={{ repeat: Infinity, duration: 1.5, ease: "easeInOut" }}
-                    className="h-full w-1/2 bg-gradient-to-r from-transparent via-violet-500 to-transparent"
+                    className="h-full w-1/2 bg-gradient-to-r from-transparent via-[color:var(--primary)] to-transparent"
                 />
             </div>
         </motion.div>

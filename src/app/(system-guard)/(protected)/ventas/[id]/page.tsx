@@ -182,7 +182,7 @@ export default function VentaDetailPage() {
               size="sm"
               disabled={loading || !venta}
               onClick={() => { setVoidMotivo(""); setBrokenItems([]); setVoidOpen(true); }}
-              className="border-red-200 text-red-700 bg-red-50 hover:bg-red-100 hover:text-red-800 dark:border-red-500/20 dark:bg-red-500/10 dark:text-red-400"
+              className="border-[color:var(--status-danger)] text-[color:var(--status-danger)] bg-[color:var(--status-danger)] hover:bg-[color:var(--status-danger)] hover:text-[color:var(--status-danger)] dark:border-[color:var(--status-danger)]/20 dark:bg-[color:var(--status-danger)]/10 dark:text-[color:var(--status-danger)]"
             >
               <Trash2 className="h-4 w-4 mr-2" />
               Anular Venta
@@ -199,7 +199,7 @@ export default function VentaDetailPage() {
             disabled={loading || isAnulada}
             title={isAnulada ? "No se puede imprimir una venta anulada" : undefined}
           >
-            <Printer className="h-4 w-4 mr-2 text-indigo-500" />
+            <Printer className="h-4 w-4 mr-2 text-[color:var(--primary)]" />
             Imprimir Ticket
           </Button>
         </div>
@@ -209,7 +209,7 @@ export default function VentaDetailPage() {
       <Dialog open={voidOpen} onOpenChange={setVoidOpen}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-red-600">
+            <DialogTitle className="flex items-center gap-2 text-[color:var(--status-danger)]">
               <AlertTriangle className="h-5 w-5" /> Anular Venta #{ticketNumber}
             </DialogTitle>
             <DialogDescription>
@@ -238,7 +238,7 @@ export default function VentaDetailPage() {
             {detalles.length > 0 && (
               <div className="space-y-2">
                 <Label className="flex items-center gap-2">
-                  <Flame className="h-4 w-4 text-red-500" />
+                  <Flame className="h-4 w-4 text-[color:var(--status-danger)]" />
                   Marcar ítems dañados (no se devolverá su stock)
                 </Label>
                 <div className="border rounded-lg divide-y">
@@ -263,7 +263,7 @@ export default function VentaDetailPage() {
                   ))}
                 </div>
                 {brokenItems.length > 0 && (
-                  <p className="text-xs text-red-600 font-medium">
+                  <p className="text-xs text-[color:var(--status-danger)] font-medium">
                     Pérdida estimada por rotura:{" "}
                     {formatCurrency(
                       detalles
@@ -283,7 +283,7 @@ export default function VentaDetailPage() {
             <Button
               onClick={handleAnular}
               disabled={isDeleting || !voidMotivo}
-              className="bg-red-600 hover:bg-red-700 text-white"
+              className="bg-[color:var(--status-danger)] hover:bg-[color:var(--status-danger)] text-[color:var(--ui-fx-white)]"
             >
               {isDeleting ? "Anulando…" : "Confirmar Anulación"}
             </Button>
@@ -294,27 +294,27 @@ export default function VentaDetailPage() {
       {/* Header Profile (Card Principal) */}
       <div className={cn(
         "flex flex-col md:flex-row md:items-center justify-between gap-6 border rounded-2xl p-6 shadow-sm relative overflow-hidden",
-        isAnulada ? "bg-red-50/50 dark:bg-red-950/20 border-red-200 dark:border-red-800/40" : "bg-card"
+        isAnulada ? "bg-[color:var(--status-danger)]/50 dark:bg-[color:var(--status-danger)]/20 border-[color:var(--status-danger)] dark:border-[color:var(--status-danger)]/40" : "bg-card"
       )}>
         {/* Decoración de fondo */}
         <div className={cn(
           "absolute top-0 right-0 w-32 h-32 rounded-full blur-3xl -mr-10 -mt-10",
-          isAnulada ? "bg-red-500/10" : "bg-indigo-500/5"
+          isAnulada ? "bg-[color:var(--status-danger)]/10" : "bg-[color:var(--primary)]/5"
         )} />
 
         <div className="flex items-center gap-4 relative z-10">
           <div className={cn(
             "p-4 rounded-2xl hidden sm:block font-bold",
-            isAnulada ? "bg-red-500/10" : "bg-indigo-500/10"
+            isAnulada ? "bg-[color:var(--status-danger)]/10" : "bg-[color:var(--primary)]/10"
           )}>
             {isAnulada
-              ? <Ban className="h-8 w-8 text-red-500" />
-              : <ShoppingCart className="h-8 w-8 text-indigo-600 dark:text-indigo-400" />
+              ? <Ban className="h-8 w-8 text-[color:var(--status-danger)]" />
+              : <ShoppingCart className="h-8 w-8 text-[color:var(--primary)] dark:text-[color:var(--primary)]" />
             }
           </div>
           <div>
             <div className="flex items-center gap-2 mb-1 flex-wrap">
-              <Badge variant="outline" className="font-mono text-[10px] border-indigo-500/30 text-indigo-600 dark:text-indigo-400">
+              <Badge variant="outline" className="font-mono text-[10px] border-[color:var(--primary)]/30 text-[color:var(--primary)] dark:text-[color:var(--primary)]">
                 TICKET #{ticketNumber}
               </Badge>
               {isAnulada ? (
@@ -322,7 +322,7 @@ export default function VentaDetailPage() {
                   ✕ ANULADA
                 </Badge>
               ) : (
-                <Badge variant="outline" className="px-3 py-0.5 font-bold uppercase text-[9px] tracking-tighter rounded-full border-emerald-500/50 text-emerald-600 bg-emerald-500/10">
+                <Badge variant="outline" className="px-3 py-0.5 font-bold uppercase text-[9px] tracking-tighter rounded-full border-[color:var(--status-success-strong)]/50 text-[color:var(--status-success-strong)] bg-[color:var(--status-success-strong)]/10">
                   ● Confirmada
                 </Badge>
               )}
@@ -335,7 +335,7 @@ export default function VentaDetailPage() {
               {venta?.fecha ? formatDate(venta.fecha) : "-"} hs
             </p>
             {isAnulada && venta?.motivoAnulacion && (
-              <p className="text-xs text-red-600 font-medium mt-1 flex items-center gap-1">
+              <p className="text-xs text-[color:var(--status-danger)] font-medium mt-1 flex items-center gap-1">
                 <AlertTriangle className="h-3 w-3" />
                 Motivo: {venta.motivoAnulacion}
                 {venta.fechaAnulacion && (
@@ -346,7 +346,7 @@ export default function VentaDetailPage() {
               </p>
             )}
             {isAnulada && perdidaRotura > 0 && (
-              <p className="text-xs text-red-700 font-bold mt-0.5 flex items-center gap-1">
+              <p className="text-xs text-[color:var(--status-danger)] font-bold mt-0.5 flex items-center gap-1">
                 <Flame className="h-3 w-3" />
                 Pérdida por rotura: {formatCurrency(perdidaRotura)}
               </p>
@@ -357,7 +357,7 @@ export default function VentaDetailPage() {
         {/* Total Gigante en el Header */}
         <div className="text-right relative z-10 flex flex-col items-end">
           {descuentoGlobal > 0 && !loading && (
-            <Badge variant="outline" className="mb-2 bg-emerald-50 text-emerald-600 border-emerald-200">
+            <Badge variant="outline" className="mb-2 bg-[color:var(--status-success-strong)] text-[color:var(--status-success-strong)] border-[color:var(--status-success-strong)]">
               Descuento General: -{formatCurrency(descuentoGlobal)}
             </Badge>
           )}
@@ -376,20 +376,20 @@ export default function VentaDetailPage() {
       {/* KPI Section */}
       <div className="grid gap-4 grid-cols-2 md:grid-cols-3 animate-in fade-in slide-in-from-bottom-4 duration-700">
         <KpiCard
-          icon={<Package className="text-indigo-500" />}
+          icon={<Package className="text-[color:var(--primary)]" />}
           title="Total Productos"
           value={`${totalItems} u.`}
           loading={loading}
         />
         <KpiCard
-          icon={<CreditCard className="text-emerald-500" />}
+          icon={<CreditCard className="text-[color:var(--status-success-strong)]" />}
           title="Método de Pago"
           value={metodoPago}
           loading={loading}
           textTransform="uppercase"
         />
         <KpiCard
-          icon={<User className="text-amber-500" />}
+          icon={<User className="text-[color:var(--status-warning)]" />}
           title="Tipo de Cliente"
           value={venta?.cliente ? "Registrado" : "Casual"}
           loading={loading}
@@ -404,7 +404,7 @@ export default function VentaDetailPage() {
           <Card className="shadow-lg border-border bg-card/40 backdrop-blur">
             <CardHeader>
               <CardTitle className="text-xl font-bold flex items-center gap-2 text-foreground">
-                <FileText className="h-5 w-5 text-indigo-500" /> Items Vendidos
+                <FileText className="h-5 w-5 text-[color:var(--primary)]" /> Items Vendidos
               </CardTitle>
               <CardDescription className="text-muted-foreground">Productos incluidos en el ticket.</CardDescription>
             </CardHeader>
@@ -425,17 +425,17 @@ export default function VentaDetailPage() {
         {/* Columna Derecha (4): Acciones */}
         < div className="lg:col-span-4 space-y-6" >
           {isAnulada ? (
-            <Card className="border-red-200 dark:border-red-800/40 bg-red-50/50 dark:bg-red-950/20 shadow-none">
+            <Card className="border-[color:var(--status-danger)] dark:border-[color:var(--status-danger)]/40 bg-[color:var(--status-danger)]/50 dark:bg-[color:var(--status-danger)]/20 shadow-none">
               <CardContent className="p-5 flex items-start gap-3">
-                <Ban className="h-5 w-5 text-red-500 mt-0.5 shrink-0" />
+                <Ban className="h-5 w-5 text-[color:var(--status-danger)] mt-0.5 shrink-0" />
                 <div className="text-sm space-y-1">
-                  <p className="font-bold text-red-700 dark:text-red-400">Venta Anulada</p>
+                  <p className="font-bold text-[color:var(--status-danger)] dark:text-[color:var(--status-danger)]">Venta Anulada</p>
                   <p className="text-muted-foreground text-xs">
                     El stock fue devuelto al inventario para los ítems no dañados.
                     Los ítems marcados como rotura no recuperaron stock.
                   </p>
                   {perdidaRotura > 0 && (
-                    <p className="text-xs text-red-700 font-semibold pt-1">
+                    <p className="text-xs text-[color:var(--status-danger)] font-semibold pt-1">
                       Pérdida registrada: {formatCurrency(perdidaRotura)}
                     </p>
                   )}
@@ -444,10 +444,10 @@ export default function VentaDetailPage() {
             </Card>
           ) : (
             <>
-              <Card className="shadow-xl border-indigo-500/20 bg-indigo-500/5 dark:bg-indigo-500/10 overflow-hidden">
+              <Card className="shadow-xl border-[color:var(--primary)]/20 bg-[color:var(--primary)]/5 dark:bg-[color:var(--primary)]/10 overflow-hidden">
                 <CardHeader className="pb-3">
                   <CardTitle className="text-lg font-bold flex items-center gap-2">
-                    <Share2 className="h-5 w-5 text-indigo-500" /> Comprobante
+                    <Share2 className="h-5 w-5 text-[color:var(--primary)]" /> Comprobante
                   </CardTitle>
                   <CardDescription>Opciones del documento digital.</CardDescription>
                 </CardHeader>
@@ -458,7 +458,7 @@ export default function VentaDetailPage() {
                     className="w-full justify-start bg-background hover:bg-muted shadow-sm h-12"
                     disabled={loading}
                   >
-                    <Download className="h-4 w-4 mr-3 text-indigo-500" />
+                    <Download className="h-4 w-4 mr-3 text-[color:var(--primary)]" />
                     Descargar Ticket PDF
                   </Button>
 
@@ -469,10 +469,10 @@ export default function VentaDetailPage() {
                       window.open(`/ticket-loading/${venta?.id}?mode=whatsapp&phone=${encodeURIComponent(phone)}&name=${encodeURIComponent(name)}`, '_blank');
                     }}
                     variant="outline"
-                    className="w-full justify-start bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/20 shadow-sm h-12"
+                    className="w-full justify-start bg-[color:var(--status-success-strong)] text-[color:var(--status-success-strong)] border-[color:var(--status-success-strong)] hover:bg-[color:var(--status-success-strong)] dark:bg-[color:var(--status-success-strong)]/10 dark:text-[color:var(--status-success-strong)] dark:border-[color:var(--status-success-strong)]/20 shadow-sm h-12"
                     disabled={loading}
                   >
-                    <MessageCircle className="h-4 w-4 mr-3 text-emerald-500" />
+                    <MessageCircle className="h-4 w-4 mr-3 text-[color:var(--status-success-strong)]" />
                     Compartir por WhatsApp
                   </Button>
                 </CardContent>
@@ -480,7 +480,7 @@ export default function VentaDetailPage() {
 
               <Card className="border-dashed bg-muted/30 shadow-none">
                 <CardContent className="p-4 flex items-start gap-3">
-                  <CheckCircle2 className="h-5 w-5 text-emerald-500 mt-0.5" />
+                  <CheckCircle2 className="h-5 w-5 text-[color:var(--status-success-strong)] mt-0.5" />
                   <div className="text-xs text-muted-foreground space-y-1">
                     <p className="font-medium text-foreground">Stock Actualizado</p>
                     <p>Las unidades se descontaron automáticamente del inventario al momento de la venta.</p>
@@ -530,8 +530,8 @@ function ProductRowVenta({ d }: { d: any }) {
     <div className={cn(
       "group rounded-xl border p-4 transition-all",
       esRotura
-        ? "border-red-200 bg-red-50/50 dark:bg-red-950/20 dark:border-red-800/40"
-        : "border-border bg-background hover:bg-indigo-50/50 hover:border-indigo-200 dark:hover:bg-indigo-900/10 dark:hover:border-indigo-800"
+        ? "border-[color:var(--status-danger)] bg-[color:var(--status-danger)]/50 dark:bg-[color:var(--status-danger)]/20 dark:border-[color:var(--status-danger)]/40"
+        : "border-border bg-background hover:bg-[color:var(--primary)]/50 hover:border-[color:var(--primary)] dark:hover:bg-[color:var(--primary)]/10 dark:hover:border-[color:var(--primary)]"
     )}>
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
 
@@ -540,7 +540,7 @@ function ProductRowVenta({ d }: { d: any }) {
           <div className="flex items-center gap-2 flex-wrap">
             <p className={cn(
               "font-bold text-lg tracking-tight italic",
-              esRotura ? "line-through text-red-500" : "text-foreground group-hover:text-indigo-600 transition-colors"
+              esRotura ? "line-through text-[color:var(--status-danger)]" : "text-foreground group-hover:text-[color:var(--primary)] transition-colors"
             )}>
               {d.producto?.nombre ?? `Producto #${d.productoId}`}
             </p>
@@ -560,7 +560,7 @@ function ProductRowVenta({ d }: { d: any }) {
               className={cn(
                 "text-[10px] uppercase font-bold tracking-tight",
                 descuento > 0
-                  ? "border-emerald-200 text-emerald-600 bg-emerald-50 dark:bg-emerald-950/30 dark:border-emerald-800/50 dark:text-emerald-400"
+                  ? "border-[color:var(--status-success-strong)] text-[color:var(--status-success-strong)] bg-[color:var(--status-success-strong)] dark:bg-[color:var(--status-success-strong)]/30 dark:border-[color:var(--status-success-strong)]/50 dark:text-[color:var(--status-success-strong)]"
                   : "border-muted-foreground/20 text-muted-foreground bg-muted/30"
               )}
             >
@@ -575,16 +575,16 @@ function ProductRowVenta({ d }: { d: any }) {
         <div className="text-right flex items-center gap-6 sm:gap-10">
           <div className="flex flex-col items-end">
             <span className="text-[9px] font-black text-muted-foreground uppercase mb-0.5">Cantidad</span>
-            <span className={cn("text-xl font-black", esRotura ? "text-red-500" : "text-foreground")}>{d.units}</span>
+            <span className={cn("text-xl font-black", esRotura ? "text-[color:var(--status-danger)]" : "text-foreground")}>{d.units}</span>
           </div>
 
           <div className="h-8 w-px bg-border" />
 
           <div className="flex flex-col items-end min-w-[80px]">
-            <span className={cn("text-[9px] font-black uppercase mb-0.5", esRotura ? "text-red-500" : "text-indigo-500")}>
+            <span className={cn("text-[9px] font-black uppercase mb-0.5", esRotura ? "text-[color:var(--status-danger)]" : "text-[color:var(--primary)]")}>
               {esRotura ? "Perdido" : "Subtotal"}
             </span>
-            <span className={cn("text-xl font-black", esRotura ? "line-through text-red-400" : "text-foreground")}>
+            <span className={cn("text-xl font-black", esRotura ? "line-through text-[color:var(--status-danger)]" : "text-foreground")}>
               {formatCurrency(subtotal)}
             </span>
           </div>

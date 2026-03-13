@@ -118,7 +118,7 @@ export function ClientHistoryTabs({ consignaciones, pagos, ventas }: HistoryProp
                                         <TableRow key={p.id}>
                                             <TableCell>{formatDate(p.fecha)}</TableCell>
                                             <TableCell className="capitalize flex items-center gap-2"><Receipt className="h-3 w-3" /> {(p as any).metodoPago || "Efectivo"}</TableCell>
-                                            <TableCell className="text-right font-bold text-emerald-600">+ {formatCurrency(p.monto)}</TableCell>
+                                            <TableCell className="text-right font-bold text-[color:var(--status-success-strong)]">+ {formatCurrency(p.monto)}</TableCell>
                                         </TableRow>
                                     ))}
                                 </TableBody>
@@ -182,7 +182,7 @@ function MobileCard({ title, date, status, statusColor, amount, subtitle, link }
             </div>
             <div className="text-right">
                 {amount !== undefined && (
-                    <span className="block font-bold text-emerald-600">{formatCurrency(amount)}</span>
+                    <span className="block font-bold text-[color:var(--status-success-strong)]">{formatCurrency(amount)}</span>
                 )}
                 {link && <ArrowRight className="h-4 w-4 text-muted-foreground ml-auto mt-1" />}
             </div>

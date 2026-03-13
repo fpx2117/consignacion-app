@@ -208,7 +208,7 @@ function KpiToggleMenuItem({
       onClick={() => onChange(!checked)}
       className={cn(
         "flex w-full items-center justify-between gap-2 rounded-lg px-2.5 py-2 text-left text-xs font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-primary/30",
-        checked ? "bg-emerald-500/10" : "bg-transparent"
+        checked ? "bg-[color:var(--status-success-strong)]/10" : "bg-transparent"
       )}
     >
       <span className="truncate">{label}</span>
@@ -216,7 +216,7 @@ function KpiToggleMenuItem({
         className={cn(
           "inline-flex items-center gap-1 rounded-full border px-1.5 py-0.5 text-[10px] font-semibold",
           checked
-            ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-600"
+            ? "border-[color:var(--status-success-strong)]/30 bg-[color:var(--status-success-strong)]/10 text-[color:var(--status-success-strong)]"
             : "border-border bg-muted/50 text-muted-foreground"
         )}
       >
@@ -727,8 +727,8 @@ export default function DashboardPage() {
               <Card className="rounded-[2rem] border-border/50 bg-card shadow-xl overflow-hidden">
                 <CardHeader className="flex flex-row items-center justify-between pb-2">
                   <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-2xl bg-orange-500/10 flex items-center justify-center">
-                      <Calendar className="h-5 w-5 text-orange-600" />
+                    <div className="h-10 w-10 rounded-2xl bg-[color:var(--status-warning)]/10 flex items-center justify-center">
+                      <Calendar className="h-5 w-5 text-[color:var(--status-warning)]" />
                     </div>
                     <div>
                       <CardTitle className="text-xl font-black">Próximos Vencimientos</CardTitle>
@@ -738,21 +738,21 @@ export default function DashboardPage() {
                 </CardHeader>
                 <CardContent className="pt-4 space-y-3">
                   {kpis?.proximosVencimientos.map((g: any) => (
-                    <div key={g.id} className="flex items-center justify-between p-3.5 bg-muted/30 rounded-2xl border border-transparent hover:border-orange-500/20 transition-all">
+                    <div key={g.id} className="flex items-center justify-between p-3.5 bg-muted/30 rounded-2xl border border-transparent hover:border-[color:var(--status-warning)]/20 transition-all">
                       <div className="flex items-center gap-4">
                         <div className="h-10 w-10 rounded-xl bg-background flex items-center justify-center shadow-sm">
                           <Receipt className="h-5 w-5 text-muted-foreground" />
                         </div>
                         <div>
                           <div className="font-bold text-sm tracking-tight">{g.motivo}</div>
-                          <div className="flex items-center gap-2 text-[10px] font-bold text-orange-600 uppercase">
+                          <div className="flex items-center gap-2 text-[10px] font-bold text-[color:var(--status-warning)] uppercase">
                             <Calendar className="h-3 w-3" /> {formatDate(g.fechaVencimiento)}
                           </div>
                         </div>
                       </div>
                       <div className="text-right">
                         <div className="font-black text-sm">{maskMoney(Number(g.monto))}</div>
-                        <Badge variant="outline" className="text-[9px] font-bold uppercase rounded-md py-0 h-4 border-orange-500/30 text-orange-600">
+                        <Badge variant="outline" className="text-[9px] font-bold uppercase rounded-md py-0 h-4 border-[color:var(--status-warning)]/30 text-[color:var(--status-warning)]">
                           {g.categoria?.nombre}
                         </Badge>
                       </div>

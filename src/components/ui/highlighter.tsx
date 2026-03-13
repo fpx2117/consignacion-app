@@ -30,7 +30,7 @@ interface HighlighterProps {
 export function Highlighter({
   children,
   action = "highlight",
-  color = "#ffd1dc",
+  color = "var(--ui-fx-soft-pink)",
   strokeWidth = 1.5,
   animationDuration = 600,
   iterations = 2,

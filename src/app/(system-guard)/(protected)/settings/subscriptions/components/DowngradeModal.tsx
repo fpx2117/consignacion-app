@@ -25,12 +25,12 @@ export function DowngradeModal({ isOpen, onClose, onConfirm, newPlanName }: Down
                         className="relative w-full max-w-lg bg-card border border-border/50 shadow-2xl rounded-[2.5rem] overflow-hidden"
                     >
                         {/* Header Decorative */}
-                        <div className="absolute top-0 inset-x-0 h-2 bg-gradient-to-r from-orange-500 via-amber-500 to-orange-500" />
+                        <div className="absolute top-0 inset-x-0 h-2 bg-gradient-to-r from-[color:var(--status-warning)] via-[color:var(--status-warning)] to-[color:var(--status-warning)]" />
 
                         <div className="p-8 md:p-10 space-y-6">
                             <div className="flex items-center justify-between">
-                                <div className="h-14 w-14 rounded-2xl bg-orange-500/10 flex items-center justify-center">
-                                    <ShieldAlert className="h-8 w-8 text-orange-500" />
+                                <div className="h-14 w-14 rounded-2xl bg-[color:var(--status-warning)]/10 flex items-center justify-center">
+                                    <ShieldAlert className="h-8 w-8 text-[color:var(--status-warning)]" />
                                 </div>
                                 <button
                                     onClick={onClose}
@@ -50,31 +50,31 @@ export function DowngradeModal({ isOpen, onClose, onConfirm, newPlanName }: Down
                             </div>
 
                             <div className="space-y-4 py-4">
-                                <div className="flex items-start gap-4 p-4 rounded-2xl bg-orange-500/5 border border-orange-500/10">
-                                    <PackageMinus className="h-5 w-5 text-orange-600 mt-1 flex-shrink-0" />
+                                <div className="flex items-start gap-4 p-4 rounded-2xl bg-[color:var(--status-warning)]/5 border border-[color:var(--status-warning)]/10">
+                                    <PackageMinus className="h-5 w-5 text-[color:var(--status-warning)] mt-1 flex-shrink-0" />
                                     <div>
-                                        <p className="text-sm font-bold text-orange-950">Reducción de productos</p>
-                                        <p className="text-xs text-orange-900/70 font-medium">
+                                        <p className="text-sm font-bold text-[color:var(--status-warning)]">Reducción de productos</p>
+                                        <p className="text-xs text-[color:var(--status-warning)]/70 font-medium">
                                             Si excedés el nuevo límite, los productos más antiguos se **ocultarán automáticamente**. No se borrarán, pero no podrás verlos ni venderlos.
                                         </p>
                                     </div>
                                 </div>
 
-                                <div className="flex items-start gap-4 p-4 rounded-2xl bg-orange-500/5 border border-orange-500/10">
-                                    <UserMinus className="h-5 w-5 text-orange-600 mt-1 flex-shrink-0" />
+                                <div className="flex items-start gap-4 p-4 rounded-2xl bg-[color:var(--status-warning)]/5 border border-[color:var(--status-warning)]/10">
+                                    <UserMinus className="h-5 w-5 text-[color:var(--status-warning)] mt-1 flex-shrink-0" />
                                     <div>
-                                        <p className="text-sm font-bold text-orange-950">Límite de usuarios</p>
-                                        <p className="text-xs text-orange-900/70 font-medium">
+                                        <p className="text-sm font-bold text-[color:var(--status-warning)]">Límite de usuarios</p>
+                                        <p className="text-xs text-[color:var(--status-warning)]/70 font-medium">
                                             Si tenés más empleados de los permitidos, los últimos creados quedarán desactivados temporalmente.
                                         </p>
                                     </div>
                                 </div>
 
-                                <div className="flex items-start gap-4 p-4 rounded-2xl bg-orange-500/5 border border-orange-500/10">
-                                    <AlertTriangle className="h-5 w-5 text-orange-600 mt-1 flex-shrink-0" />
+                                <div className="flex items-start gap-4 p-4 rounded-2xl bg-[color:var(--status-warning)]/5 border border-[color:var(--status-warning)]/10">
+                                    <AlertTriangle className="h-5 w-5 text-[color:var(--status-warning)] mt-1 flex-shrink-0" />
                                     <div>
-                                        <p className="text-sm font-bold text-orange-950">Funcionalidades</p>
-                                        <p className="text-xs text-orange-900/70 font-medium">
+                                        <p className="text-sm font-bold text-[color:var(--status-warning)]">Funcionalidades</p>
+                                        <p className="text-xs text-[color:var(--status-warning)]/70 font-medium">
                                             Podrías perder acceso a la gestión de consignaciones o múltiples sucursales según el nuevo plan.
                                         </p>
                                     </div>
@@ -84,7 +84,7 @@ export function DowngradeModal({ isOpen, onClose, onConfirm, newPlanName }: Down
                             <div className="flex flex-col sm:flex-row gap-3 pt-2">
                                 <button
                                     onClick={onConfirm}
-                                    className="flex-1 h-14 bg-orange-500 hover:bg-orange-600 text-white font-black rounded-2xl transition-all shadow-lg shadow-orange-500/20 active:scale-[0.98] flex items-center justify-center gap-2"
+                                    className="flex-1 h-14 bg-[color:var(--status-warning)] hover:bg-[color:var(--status-warning)] text-[color:var(--ui-fx-white)] font-black rounded-2xl transition-all shadow-lg shadow-orange-500/20 active:scale-[0.98] flex items-center justify-center gap-2"
                                 >
                                     Entiendo, proceder al Downgrade
                                     <ChevronRight className="h-4 w-4" />
