@@ -1,5 +1,3 @@
-/* eslint-disable */
-// @ts-nocheck
 "use client";
 
 import * as React from "react";
@@ -7,61 +5,57 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
 
-import { cn } from "@/lib/utils";
 import { Separator } from "@/components/ui/separator";
+import { Dock, DockIcon } from "@/components/ui/dock";
+import { BorderBeam } from "@/components/ui/border-beam";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Dock, DockIcon } from "@/components/ui/dock";
-import { BorderBeam } from "@/components/ui/border-beam";
-import {
-  Sheet,
-  SheetContent,
-  SheetTrigger,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuLabel,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 
+import { BrandLogo } from "@/components/brand-logo";
+import { NotificationsAnimatedPanel } from "@/components/notifications-panel";
+import { SidebarDropdownGroup } from "@/components/sidebar/sidebar-dropdown-group";
+import { SidebarIconLink } from "@/components/sidebar/sidebar-icon-link";
+import type { SidebarNavItem } from "@/components/sidebar/types";
+
+import { useNotifications } from "@/hooks/useNotifications";
 import { useSucursalStore } from "@/store/useSucursalStore";
+import { apiService } from "@/lib/apiService";
 
 import {
-  LayoutDashboard,
-  Users,
-  Package,
-  Handshake,
   Bell,
-  Sun,
-  Moon,
-  ShoppingCart,
-  Settings,
-  History,
-  LayoutGrid,
-  Store,
-  LogOut,
-  Wallet,
   ClipboardList,
+  Handshake,
+  History,
+  LayoutDashboard,
+  LayoutGrid,
+  LogOut,
+  Moon,
+  Package,
+  Settings,
+  ShoppingCart,
+  Store,
+  Sun,
+  Users,
+  Wallet,
   Zap,
 } from "lucide-react";
 
-import { useNotifications } from "../hooks/useNotifications";
-import { NotificationsAnimatedPanel } from "@/components/notifications-panel";
-import { apiService } from "@/lib/apiService";
+const NAV_CORE: SidebarNavItem[] = [
+  { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+];
 
-// --- CONFIGURACIÓN DE NAVEGACIÓN ---
-const NAV_CORE = [{ label: "Dashboard", href: "/dashboard", icon: LayoutDashboard }];
-
-const NAV_BUSINESS = [
+const NAV_BUSINESS: SidebarNavItem[] = [
   { label: "Clientes", href: "/clientes", icon: Users },
   { label: "Productos", href: "/productos", icon: Package },
   { label: "Pedidos Esperados", href: "/pedidos-esperados", icon: ClipboardList },
@@ -69,95 +63,48 @@ const NAV_BUSINESS = [
   { label: "Gastos", href: "/gastos", icon: Wallet },
 ];
 
-const NAV_ADMIN = [{ label: "Ajustes", href: "/settings", icon: Settings }];
+const NAV_ADMIN: SidebarNavItem[] = [
+  { label: "Ajustes", href: "/settings", icon: Settings },
+];
 
-const MOBILE_PRIMARY = [
+const MOBILE_PRIMARY: SidebarNavItem[] = [
   { label: "Inicio", href: "/dashboard", icon: LayoutDashboard },
   { label: "Vender", href: "/ventas/nueva", icon: ShoppingCart },
 ];
 
-import { BrandLogo } from "@/components/brand-logo";
+const QUICK_SALE: SidebarNavItem = {
+  label: "Venta Casual",
+  href: "/ventas/nueva",
+  icon: ShoppingCart,
+};
 
-// --- COMPONENTE: Grupo de navegación con Dropdown ---
-function NavDropdown({
-  label,
-  icon: GroupIcon,
-  items,
-  isActive,
-  onNavigate,
-  badge,
+function NotificationButton({
+  isMobile = false,
+  notificationsState,
 }: {
-  label: string;
-  icon: React.ElementType;
-  items: any[];
-  isActive: (href: string) => boolean;
-  onNavigate: (href: string) => void;
-  badge?: number;
+  isMobile?: boolean;
+  notificationsState: ReturnType<typeof useNotifications>;
 }) {
-  const groupActive = items.some((i) => isActive(i.href));
+  const { hasUnread } = notificationsState;
 
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <DockIcon>
-          <button
-            aria-label={label}
-            aria-haspopup="menu"
-            className={cn(
-              "relative flex items-center justify-center rounded-full transition-all duration-300 h-10 w-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
-              groupActive
-                ? "bg-primary text-primary-foreground shadow-lg scale-110"
-                : "text-muted-foreground hover:bg-muted hover:text-foreground"
-            )}
-          >
-            <GroupIcon className="size-5" />
-            {badge && badge > 0 && (
-              <span className="absolute -top-1 -right-1 min-w-[16px] h-4 px-[3px] rounded-full bg-destructive text-[9px] font-black text-destructive-foreground flex items-center justify-center leading-none animate-pulse">
-                {badge > 9 ? "9+" : badge}
-              </span>
-            )}
-          </button>
-        </DockIcon>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent
-        side="right"
-        align="center"
-        sideOffset={12}
-        className="w-[224px] rounded-2xl border border-border/70 bg-background/95 p-1.5 shadow-2xl"
-      >
-        <DropdownMenuLabel className="px-3 py-1 text-[11px] uppercase tracking-wider text-muted-foreground/80">
-          {label}
-        </DropdownMenuLabel>
-        <DropdownMenuSeparator className="mx-2 my-1" />
-        {items.map((item) => {
-          const ItemIcon = item.icon;
-          const active = isActive(item.href);
-          const isPedidos = item.href === "/pedidos-esperados";
-          const showBadge = isPedidos && badge && badge > 0;
-
-          return (
-            <DropdownMenuItem
-              key={item.href}
-              onSelect={() => {
-                onNavigate(item.href);
-              }}
-              className={cn(
-                "cursor-pointer rounded-xl px-3 py-2.5 data-[highlighted]:bg-muted data-[highlighted]:text-foreground",
-                active && "bg-primary/10 text-primary"
-              )}
-            >
-              <ItemIcon className={cn("h-4 w-4", active ? "text-primary" : "text-muted-foreground")} />
-              <span className="flex-1 text-sm font-medium">{item.label}</span>
-              {showBadge && (
-                <span className="inline-flex min-w-[18px] h-[18px] items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-black leading-none text-destructive-foreground">
-                  {badge > 9 ? "9+" : badge}
-                </span>
-              )}
-            </DropdownMenuItem>
-          );
-        })}
-      </DropdownMenuContent>
-    </DropdownMenu>
+    <Sheet>
+      <SheetTrigger asChild>
+        <button
+          aria-label="Notificaciones"
+          className="relative flex h-9 w-9 md:h-10 md:w-10 items-center justify-center rounded-full text-muted-foreground hover:bg-muted transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+        >
+          <Bell className={isMobile ? "h-4 w-4" : "h-5 w-5"} />
+          {hasUnread && (
+            <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-destructive animate-pulse" />
+          )}
+        </button>
+      </SheetTrigger>
+      <SheetContent side="right" className="p-0" showCloseButton={false}>
+        <SheetTitle className="sr-only">Notificaciones</SheetTitle>
+        <NotificationsAnimatedPanel notificationsState={notificationsState} />
+      </SheetContent>
+    </Sheet>
   );
 }
 
@@ -165,13 +112,30 @@ export function SidebarDock() {
   const pathname = usePathname() ?? "";
   const router = useRouter();
   const { setTheme, resolvedTheme } = useTheme();
-  const [loggingOut, setLoggingOut] = React.useState(false);
-  const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
 
-  // Hook unificado de notificaciones para evitar múltiples polling
+  const [mounted, setMounted] = React.useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
+  const [loggingOut, setLoggingOut] = React.useState(false);
+  const [userRole, setUserRole] = React.useState<"ADMIN" | "EMPLEADO" | null>(null);
+  const [usarControlDeCaja, setUsarControlDeCaja] = React.useState(false);
+  const [allowConsignaciones, setAllowConsignaciones] = React.useState(true);
+
   const notificationsState = useNotifications({ limit: 50 });
 
-  const handleLogout = async () => {
+  const activeSucursalId = useSucursalStore((s) => s.activeSucursalId);
+  const setAvailableSucursales = useSucursalStore((s) => s.setAvailableSucursales);
+  const pedidosVencidosCount = useSucursalStore((s) => s.pedidosVencidosCount);
+  const setPedidosVencidosCount = useSucursalStore((s) => s.setPedidosVencidosCount);
+
+  const isDark = mounted && resolvedTheme === "dark";
+  const isEmpleado = userRole === "EMPLEADO";
+
+  const isActive = React.useCallback(
+    (href: string) => (href === "/dashboard" ? pathname === href : pathname.startsWith(href)),
+    [pathname]
+  );
+
+  const handleLogout = React.useCallback(async () => {
     if (loggingOut) return;
     setLoggingOut(true);
     try {
@@ -180,243 +144,203 @@ export function SidebarDock() {
     } catch {
       setLoggingOut(false);
     }
-  };
+  }, [loggingOut, router]);
 
-  const { availableSucursales, activeSucursalId, setActiveSucursalId, setAvailableSucursales, pedidosVencidosCount, setPedidosVencidosCount } = useSucursalStore();
+  const handleNavigate = React.useCallback(
+    (href: string) => {
+      router.push(href);
+      setMobileMenuOpen(false);
+    },
+    [router]
+  );
 
-  // Flag de hidratación: Vital para evitar fallos Next.js
-  const [mounted, setMounted] = React.useState(false);
+  const filteredBusiness = React.useMemo(() => {
+    return NAV_BUSINESS.filter((item) => {
+      if (item.href === "/consignaciones" && !allowConsignaciones) return false;
+      return true;
+    });
+  }, [allowConsignaciones]);
 
-  // Rol del usuario autenticado
-  const [userRole, setUserRole] = React.useState<"ADMIN" | "EMPLEADO" | null>(null);
-  const isEmpleado = userRole === "EMPLEADO";
+  const operationsItems = React.useMemo(() => {
+    const items: SidebarNavItem[] = [];
+    if (usarControlDeCaja) {
+      items.push({ label: "Historial", href: "/caja/historial", icon: History });
+    }
+    return items;
+  }, [usarControlDeCaja]);
 
-  // Inicia explícitamente en falso para que NUNCA aparezca por error al inicio.
-  const [usarControlDeCaja, setUsarControlDeCaja] = React.useState<boolean>(false);
-
-  // Permisos de suscripción
-  const [allowConsignaciones, setAllowConsignaciones] = React.useState<boolean>(true);
+  const mobileMenuItems = React.useMemo(() => {
+    const items: SidebarNavItem[] = [...filteredBusiness, QUICK_SALE];
+    if (usarControlDeCaja) {
+      items.push({ label: "Historial de Caja", href: "/caja/historial", icon: History });
+    }
+    items.push(...NAV_ADMIN);
+    return items;
+  }, [filteredBusiness, usarControlDeCaja]);
 
   React.useEffect(() => {
     setMounted(true);
 
-    // 0. Obtener rol y permisos del usuario autenticado
-    const fetchUserData = async () => {
+    const loadUserData = async () => {
       try {
         const res = await fetch("/api/auth/me");
-        if (res.ok) {
-          const json = await res.json();
-          const userData = json?.data;
-          setUserRole(userData?.rol ?? "ADMIN");
+        if (!res.ok) return;
 
-          // Sincronizar sucursales
-          if (userData?.sucursalesPermitidas && Array.isArray(userData.sucursalesPermitidas)) {
-            setAvailableSucursales(userData.sucursalesPermitidas);
-          }
+        const json = await res.json();
+        const userData = json?.data;
+        setUserRole(userData?.rol ?? "ADMIN");
 
-          // Extraer límite de consignaciones del plan
-          const limits = userData?.subscription?.plan?.limits;
-          if (limits) {
-            setAllowConsignaciones(limits.allowConsignaciones !== false);
-          }
+        if (Array.isArray(userData?.sucursalesPermitidas)) {
+          setAvailableSucursales(userData.sucursalesPermitidas);
         }
-      } catch { /* silencioso */ }
-    };
-    fetchUserData();
 
-    // 1a. Cargar conteo de pedidos vencidos para badge en sidebar
-    const fetchPedidosVencidos = async () => {
+        const limits = userData?.subscription?.plan?.limits;
+        if (limits) {
+          setAllowConsignaciones(limits.allowConsignaciones !== false);
+        }
+      } catch {
+      }
+    };
+
+    const loadPedidosVencidos = async () => {
       try {
         const res = await fetch("/api/pedidos-esperados?estado=VENCIDO", {
           headers: activeSucursalId
             ? { "x-sucursal-id": String(activeSucursalId) }
             : undefined,
         });
-        if (res.ok) {
-          const json = await res.json();
-          const vencidos = (json?.data ?? []).filter((p: any) => p.estado === "VENCIDO");
-          setPedidosVencidosCount(vencidos.length);
-        }
-      } catch { /* silencioso */ }
-    };
-    fetchPedidosVencidos();
 
-    // 1. Carga instántanea desde caché (evita flash visual)
+        if (!res.ok) return;
+
+        const json = await res.json();
+        const vencidos = (json?.data ?? []).filter((pedido: { estado: string }) => pedido.estado === "VENCIDO");
+        setPedidosVencidosCount(vencidos.length);
+      } catch {
+      }
+    };
+
     const cachedConfig = localStorage.getItem("usarControlDeCaja");
     if (cachedConfig !== null) {
       setUsarControlDeCaja(cachedConfig === "true");
     }
 
-    // 2. Consulta al servidor como fuente de verdad
-    const fetchConfig = async () => {
+    const loadConfig = async () => {
       try {
         const res = await apiService.getConfiguracionGeneral();
         const value = res?.usarControlDeCaja ?? res?.data?.usarControlDeCaja ?? true;
         setUsarControlDeCaja(value);
         localStorage.setItem("usarControlDeCaja", String(value));
-      } catch (e) {
-        console.error("Error Sidebar:", e);
+      } catch {
       }
     };
-    fetchConfig();
 
-    // 3. Listener para cambios en vivo desde PosSettingsPage
-    const handleConfigChange = (e: any) => {
-      const newValue = e.detail.usarControlDeCaja;
-      setUsarControlDeCaja(newValue);
+    const handleConfigChange = (event: Event) => {
+      const customEvent = event as CustomEvent<{ usarControlDeCaja: boolean }>;
+      setUsarControlDeCaja(Boolean(customEvent.detail?.usarControlDeCaja));
     };
 
-    window.addEventListener("config-updated", handleConfigChange);
-    return () => window.removeEventListener("config-updated", handleConfigChange);
+    loadUserData();
+    loadPedidosVencidos();
+    loadConfig();
+
+    window.addEventListener("config-updated", handleConfigChange as EventListener);
+    return () => window.removeEventListener("config-updated", handleConfigChange as EventListener);
   }, [activeSucursalId, setAvailableSucursales, setPedidosVencidosCount]);
-
-  const isDark = mounted && resolvedTheme === "dark";
-  const isActive = (href: string) => href === "/dashboard" ? pathname === href : pathname.startsWith(href);
-
-  // ✅ FILTRADO DINÁMICO REFINADO
-  const filteredBusiness = React.useMemo(() => {
-    return NAV_BUSINESS.filter(item => {
-      if (item.href === "/consignaciones" && !allowConsignaciones) return false;
-      return true;
-    });
-  }, [allowConsignaciones]);
-
-  const filteredOperations = React.useMemo(() => {
-    const ops: Array<{ label: string; href: string; icon: React.ElementType }> = [];
-    if (usarControlDeCaja) {
-      ops.push({ label: "Historial", href: "/caja/historial", icon: History });
-    }
-    return ops;
-  }, [usarControlDeCaja]);
-
-  const filteredMobileMenu = React.useMemo(() => {
-    const items = [...filteredBusiness];
-    if (usarControlDeCaja) {
-      items.push({ label: "Historial de Caja", href: "/caja/historial", icon: History });
-    }
-    items.push({ label: "Configuración", href: "/settings", icon: Settings });
-    return items;
-  }, [usarControlDeCaja, filteredBusiness]);
-
-  // --- RENDER: Ítem simple (dock) ---
-  const renderItem = (item: any, isMobile: boolean) => {
-    const active = isActive(item.href);
-    const Icon = item.icon;
-    const isPedidos = item.href === "/pedidos-esperados";
-    const showBadge = isPedidos && pedidosVencidosCount > 0;
-
-    return (
-      <DockIcon key={item.href}>
-        <TooltipProvider delayDuration={0}>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Link
-                href={item.href}
-                aria-label={item.label}
-                className={cn(
-                  "relative flex items-center justify-center rounded-full transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
-                  isMobile ? "h-9 w-9" : "h-10 w-10",
-                  active ? "bg-primary text-primary-foreground shadow-lg scale-110" : "text-muted-foreground hover:bg-muted"
-                )}
-              >
-                <Icon className={isMobile ? "h-4 w-4" : "size-5"} />
-                {showBadge && (
-                  <span className="absolute -top-1 -right-1 min-w-[16px] h-4 px-[3px] rounded-full bg-destructive text-[9px] font-black text-destructive-foreground flex items-center justify-center leading-none animate-pulse">
-                    {pedidosVencidosCount > 9 ? "9+" : pedidosVencidosCount}
-                  </span>
-                )}
-              </Link>
-            </TooltipTrigger>
-            <TooltipContent side={isMobile ? "top" : "right"}>
-              {item.label}
-              {showBadge && ` (${pedidosVencidosCount} vencido${pedidosVencidosCount > 1 ? "s" : ""})`}
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
-      </DockIcon>
-    );
-  };
-
-  const NotificationItem = ({
-    isMobile = false,
-    notificationsState
-  }: {
-    isMobile?: boolean;
-    notificationsState: ReturnType<typeof useNotifications>
-  }) => {
-    const { hasUnread } = notificationsState;
-    return (
-        <Sheet>
-        <SheetTrigger asChild>
-          <button aria-label="Notificaciones" className="relative flex h-9 w-9 md:h-10 md:w-10 items-center justify-center rounded-full text-muted-foreground hover:bg-muted transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70 focus-visible:ring-offset-2 focus-visible:ring-offset-background">
-            <Bell className={isMobile ? "h-4 w-4" : "h-5 w-5"} />
-            {hasUnread && <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-destructive animate-pulse" />}
-          </button>
-        </SheetTrigger>
-        <SheetContent side="right" className="p-0" showCloseButton={false}>
-          <SheetTitle className="sr-only">Notificaciones</SheetTitle>
-          <NotificationsAnimatedPanel notificationsState={notificationsState} />
-        </SheetContent>
-      </Sheet>
-    );
-  };
 
   if (!mounted) return null;
 
   return (
-    <aside className="fixed bottom-0 left-0 z-50 w-full border-t border-border/60 bg-background/70 backdrop-blur-2xl md:top-0 md:h-screen md:w-[84px] md:border-r md:border-t-0">
-
-      {/* ── MOBILE ── */}
+    <aside className="fixed bottom-0 left-0 z-50 w-full border-t border-border/60 bg-background/75 backdrop-blur-2xl md:top-0 md:h-screen md:w-[88px] md:border-r md:border-t-0">
       <div className="md:hidden flex justify-center py-2 pb-[max(env(safe-area-inset-bottom),0.5rem)]">
         <div className="relative overflow-hidden rounded-2xl p-[1px]">
-          <Dock orientation="horizontal" className="border bg-card/50 backdrop-blur-xl gap-2 px-3">
-            {/* EMPLEADO: solo Vender */}
+          <Dock orientation="horizontal" className="border border-border/70 bg-card/70 backdrop-blur-xl gap-2 px-3">
             {isEmpleado
-              ? renderItem({ label: "Vender", href: "/ventas/nueva", icon: ShoppingCart }, true)
-              : MOBILE_PRIMARY.map(item => renderItem(item, true))
-            }
-            {/* Menú expandido: solo para ADMIN */}
+              ? <SidebarIconLink item={QUICK_SALE} active={isActive(QUICK_SALE.href)} isMobile tooltipSide="top" />
+              : MOBILE_PRIMARY.map((item) => (
+                  <SidebarIconLink key={item.href} item={item} active={isActive(item.href)} isMobile tooltipSide="top" />
+                ))}
+
             {!isEmpleado && (
               <>
                 <Separator orientation="vertical" className="h-5 mx-1 opacity-50" />
                 <DockIcon>
                   <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
                     <SheetTrigger asChild>
-                      <button className="flex h-9 w-9 items-center justify-center rounded-full text-muted-foreground hover:bg-muted"><LayoutGrid className="h-4 w-4" /></button>
+                      <button
+                        aria-label="Abrir menu principal"
+                        className="flex h-9 w-9 items-center justify-center rounded-full text-muted-foreground hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                      >
+                        <LayoutGrid className="h-4 w-4" />
+                      </button>
                     </SheetTrigger>
-                    <SheetContent side="bottom" className="rounded-t-[2.5rem] p-6 pb-12 border-t">
-                      <SheetHeader className="mb-6"><SheetTitle className="text-left text-2xl font-black">Menú Principal</SheetTitle></SheetHeader>
-                      <div className="grid grid-cols-3 gap-4">
-                        {filteredMobileMenu.map((item) => (
-                          <Link key={item.href} href={item.href} onClick={() => setMobileMenuOpen(false)} className="flex flex-col items-center gap-2 p-4 rounded-3xl bg-muted/40 active:scale-95 transition-all">
-                            <div className="h-12 w-12 rounded-2xl bg-background flex items-center justify-center shadow-sm"><item.icon className="h-6 w-6 text-primary" /></div>
-                            <span className="text-[10px] font-bold text-center uppercase tracking-tighter">{item.label}</span>
-                          </Link>
-                        ))}
+
+                    <SheetContent side="bottom" className="rounded-t-[2.5rem] border-t p-6 pb-12">
+                      <SheetHeader className="mb-6">
+                        <SheetTitle className="text-left text-xl font-semibold tracking-tight">
+                          Menu Principal
+                        </SheetTitle>
+                      </SheetHeader>
+
+                      <div className="grid grid-cols-3 gap-3">
+                        {mobileMenuItems.map((item) => {
+                          const Icon = item.icon;
+                          const active = isActive(item.href);
+                          const isPedidos = item.href === "/pedidos-esperados";
+                          const badgeCount = isPedidos ? pedidosVencidosCount : 0;
+
+                          return (
+                            <button
+                              key={item.href}
+                              onClick={() => handleNavigate(item.href)}
+                              className="flex flex-col items-center gap-2 rounded-3xl bg-muted/35 p-3 transition-all active:scale-95"
+                            >
+                              <div className={`relative flex h-11 w-11 items-center justify-center rounded-2xl ${active ? "bg-primary text-primary-foreground" : "bg-background text-foreground"}`}>
+                                <Icon className="h-5 w-5" />
+                                {badgeCount > 0 && (
+                                  <span className="absolute -top-1 -right-1 min-w-[16px] h-4 px-[3px] rounded-full bg-destructive text-[9px] font-black text-destructive-foreground flex items-center justify-center leading-none">
+                                    {badgeCount > 9 ? "9+" : badgeCount}
+                                  </span>
+                                )}
+                              </div>
+                              <span className="text-[10px] font-semibold uppercase tracking-wide text-center">
+                                {item.label}
+                              </span>
+                            </button>
+                          );
+                        })}
                       </div>
+
                       <Separator className="my-4 opacity-50" />
+
                       <button
                         onClick={handleLogout}
                         disabled={loggingOut}
-                        className="flex w-full items-center gap-3 p-4 rounded-2xl text-destructive hover:bg-destructive/10 active:scale-[0.98] transition-all disabled:opacity-50"
+                        className="flex w-full items-center gap-3 rounded-2xl p-4 text-destructive transition-all hover:bg-destructive/10 active:scale-[0.98] disabled:opacity-50"
                       >
-                        <div className="h-10 w-10 rounded-xl bg-destructive/10 flex items-center justify-center">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-destructive/10">
                           <LogOut className="h-5 w-5" />
                         </div>
-                        <span className="text-sm font-bold">{loggingOut ? "Cerrando..." : "Cerrar Sesión"}</span>
+                        <span className="text-sm font-semibold">{loggingOut ? "Cerrando..." : "Cerrar Sesion"}</span>
                       </button>
                     </SheetContent>
                   </Sheet>
                 </DockIcon>
               </>
             )}
+
             <Separator orientation="vertical" className="h-5 mx-1 opacity-50" />
-            <DockIcon><NotificationItem isMobile notificationsState={notificationsState} /></DockIcon>
+            <DockIcon><NotificationButton isMobile notificationsState={notificationsState} /></DockIcon>
+
             <DockIcon>
-              <button onClick={() => setTheme(isDark ? "light" : "dark")} className="h-9 w-9 flex items-center justify-center rounded-full text-muted-foreground">
+              <button
+                aria-label={isDark ? "Activar modo claro" : "Activar modo oscuro"}
+                onClick={() => setTheme(isDark ? "light" : "dark")}
+                className="h-9 w-9 flex items-center justify-center rounded-full text-muted-foreground hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+              >
                 {isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
               </button>
             </DockIcon>
+
             {isEmpleado && (
               <>
                 <Separator orientation="vertical" className="h-5 mx-1 opacity-50" />
@@ -432,7 +356,7 @@ export function SidebarDock() {
                           <LogOut className="h-4 w-4" />
                         </button>
                       </TooltipTrigger>
-                      <TooltipContent side="top">{loggingOut ? "Cerrando..." : "Cerrar Sesión"}</TooltipContent>
+                      <TooltipContent side="top">{loggingOut ? "Cerrando..." : "Cerrar Sesion"}</TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
                 </DockIcon>
@@ -443,68 +367,67 @@ export function SidebarDock() {
         </div>
       </div>
 
-      {/* ── DESKTOP ── */}
       <div className="hidden h-full w-full md:flex md:flex-col md:items-center md:py-6">
-
-        {/* LOGO POS PRINCIPAL */}
-        <Link href="/dashboard" className="transition-transform active:scale-95 mb-8">
+        <Link href="/dashboard" className="mb-8 transition-transform active:scale-95" aria-label="Ir al dashboard">
           <BrandLogo size="md" />
         </Link>
 
-        <div className="flex-1 flex flex-col items-center justify-center w-full">
+        <div className="flex w-full flex-1 flex-col items-center justify-center">
           <div className="relative overflow-hidden rounded-3xl p-[1px]">
-            <Dock orientation="vertical" className="border border-border/70 bg-card/70 backdrop-blur-xl shadow-xl md:flex-col gap-1.5 p-2">
-
+            <Dock orientation="vertical" className="border border-border/70 bg-card/75 shadow-xl backdrop-blur-xl md:flex-col gap-1.5 p-2">
               {isEmpleado ? (
-                /* ── EMPLEADO: Solo Venta Casual ── */
-                <>{renderItem({ label: "Venta Casual", href: "/ventas/nueva", icon: ShoppingCart }, false)}</>
+                <SidebarIconLink item={QUICK_SALE} active={isActive(QUICK_SALE.href)} />
               ) : (
-                /* ── ADMIN: Navegación agrupada ── */
                 <>
-                  {/* Dashboard — siempre individual */}
-                  {NAV_CORE.map(item => renderItem(item, false))}
+                  {NAV_CORE.map((item) => (
+                    <SidebarIconLink key={item.href} item={item} active={isActive(item.href)} />
+                  ))}
 
                   <Separator className="w-8 mx-auto opacity-50" />
 
-                  {/* GRUPO: Negocio */}
-                  <NavDropdown
+                  <SidebarDropdownGroup
                     label="Negocio"
                     icon={Store}
                     items={filteredBusiness}
                     isActive={isActive}
-                    onNavigate={(href) => router.push(href)}
-                    badge={pedidosVencidosCount}
+                    onNavigate={handleNavigate}
+                    getBadgeCount={(item) => (item.href === "/pedidos-esperados" ? pedidosVencidosCount : 0)}
                   />
 
-                  {/* ACCION RAPIDA: Venta Casual */}
-                  {renderItem({ label: "Venta Casual", href: "/ventas/nueva", icon: ShoppingCart }, false)}
+                  <SidebarIconLink item={QUICK_SALE} active={isActive(QUICK_SALE.href)} />
 
-                  {/* GRUPO: Operaciones */}
-                  {filteredOperations.length > 0 && (
-                    <NavDropdown
+                  {operationsItems.length > 0 && (
+                    <SidebarDropdownGroup
                       label="Operaciones"
                       icon={Zap}
-                      items={filteredOperations}
+                      items={operationsItems}
                       isActive={isActive}
-                      onNavigate={(href) => router.push(href)}
+                      onNavigate={handleNavigate}
                     />
                   )}
 
                   <Separator className="w-8 mx-auto opacity-50" />
 
-                  {/* Ajustes — siempre individual */}
-                  {NAV_ADMIN.map(item => renderItem(item, false))}
+                  {NAV_ADMIN.map((item) => (
+                    <SidebarIconLink key={item.href} item={item} active={isActive(item.href)} />
+                  ))}
                 </>
               )}
 
               <Separator className="w-8 mx-auto opacity-50" />
-              <DockIcon><NotificationItem notificationsState={notificationsState} /></DockIcon>
+              <DockIcon><NotificationButton notificationsState={notificationsState} /></DockIcon>
+
               <DockIcon>
-                <button aria-label={isDark ? "Activar modo claro" : "Activar modo oscuro"} onClick={() => setTheme(isDark ? "light" : "dark")} className="h-10 w-10 flex items-center justify-center rounded-full text-muted-foreground hover:bg-muted transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70 focus-visible:ring-offset-2 focus-visible:ring-offset-background">
+                <button
+                  aria-label={isDark ? "Activar modo claro" : "Activar modo oscuro"}
+                  onClick={() => setTheme(isDark ? "light" : "dark")}
+                  className="h-10 w-10 flex items-center justify-center rounded-full text-muted-foreground hover:bg-muted transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                >
                   {isDark ? <Sun className="size-5" /> : <Moon className="size-5" />}
                 </button>
               </DockIcon>
             </Dock>
+
             <BorderBeam size={80} duration={15} colorFrom="var(--primary)" colorTo="#3b82f6" />
           </div>
         </div>
@@ -521,10 +444,11 @@ export function SidebarDock() {
                 <LogOut className="size-5" />
               </button>
             </TooltipTrigger>
-            <TooltipContent side="right">{loggingOut ? "Cerrando..." : "Cerrar Sesión"}</TooltipContent>
+            <TooltipContent side="right">{loggingOut ? "Cerrando..." : "Cerrar Sesion"}</TooltipContent>
           </Tooltip>
         </TooltipProvider>
-        <div className="text-[10px] font-bold text-muted-foreground/20 mb-4">v1.2</div>
+
+        <div className="mb-4 text-[10px] font-semibold tracking-wide text-muted-foreground/30">v1.2</div>
       </div>
     </aside>
   );
