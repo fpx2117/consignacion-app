@@ -20,7 +20,7 @@ export async function getDashboardKpis(sucursalId: number, period: DashboardPeri
     // Si sucursalId es 0 y es admin, no filtramos por sucursal (Vista Global)
     const isGlobal = sucursalId === 0 && isAdmin;
     const sucursalWhere = isGlobal ? {} : { sucursalId };
-    const [branchConfig, principalConfig] = await Promise.all([
+    const [branchConfig, principalConfig, sharedCatalogConfig] = await Promise.all([
         prisma.configuracion.findFirst({
             where: isGlobal ? { sucursalId: 1 } : { sucursalId },
             select: { usarControlDeCaja: true, separarListaPorSucursal: true },
@@ -29,9 +29,20 @@ export async function getDashboardKpis(sucursalId: number, period: DashboardPeri
             where: { sucursalId: 1 },
             select: { usarControlDeCaja: true, separarListaPorSucursal: true },
         }),
+        prisma.configuracion.findFirst({
+            where: {
+                mostrarListaPrecios: true,
+                separarListaPorSucursal: false,
+            },
+            select: { sucursalId: true },
+        }),
     ]);
     const dashboardConfig = branchConfig ?? principalConfig;
-    const catalogUsesSucursalScope = !isGlobal && (dashboardConfig?.separarListaPorSucursal ?? true);
+    const hasSharedCatalogEnabled = Boolean(sharedCatalogConfig);
+    const catalogUsesSucursalScope =
+        !isGlobal &&
+        !hasSharedCatalogEnabled &&
+        (dashboardConfig?.separarListaPorSucursal ?? true);
     const catalogVisitWhere = {
         ...(catalogUsesSucursalScope ? sucursalWhere : {}),
         ...(dateWhere ? { visitedAt: dateWhere } : {}),
