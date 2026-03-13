@@ -86,9 +86,10 @@ function NotificationButton({
   notificationsState: ReturnType<typeof useNotifications>;
 }) {
   const { hasUnread } = notificationsState;
+  const [open, setOpen] = React.useState(false);
 
   return (
-    <Sheet>
+    <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger asChild>
         <button
           aria-label="Notificaciones"
@@ -102,7 +103,7 @@ function NotificationButton({
       </SheetTrigger>
       <SheetContent side="right" className="p-0" showCloseButton={false}>
         <SheetTitle className="sr-only">Notificaciones</SheetTitle>
-        <NotificationsAnimatedPanel notificationsState={notificationsState} />
+        <NotificationsAnimatedPanel notificationsState={notificationsState} open={open} />
       </SheetContent>
     </Sheet>
   );
