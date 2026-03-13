@@ -59,38 +59,47 @@ export async function GET(req: NextRequest) {
           : {}),
       },
       include: {
-        items: {
-          include: {
-            producto: {
-              select: {
-                id: true,
-                nombre: true,
-                sku: true,
-                stockSucursals: {
-                  where: { sucursalId },
-                  select: { stockDisponibleUnits: true },
-                },
-              },
-            },
-          },
-        },
+        items: true,
       },
       orderBy: { fechaEsperada: "asc" },
     });
 
+    const productoIds = Array.from(
+      new Set(pedidos.flatMap((pedido) => pedido.items.map((item) => item.productoId)))
+    );
+
+    const productos = productoIds.length
+      ? await prisma.producto.findMany({
+          where: { id: { in: productoIds } },
+          select: {
+            id: true,
+            nombre: true,
+            sku: true,
+            stockSucursals: {
+              where: { sucursalId },
+              select: { stockDisponibleUnits: true },
+            },
+          },
+        })
+      : [];
+
+    const productoMap = new Map(productos.map((p) => [p.id, p]));
+
     // Aplanar stockDisponibleUnits del producto
     const data = pedidos.map((pedido) => ({
       ...pedido,
-      items: pedido.items.map((item) => ({
-        ...item,
-        producto: {
-          id: item.producto.id,
-          nombre: item.producto.nombre,
-          sku: item.producto.sku,
-          stockDisponibleUnits:
-            item.producto.stockSucursals[0]?.stockDisponibleUnits ?? 0,
-        },
-      })),
+      items: pedido.items.map((item) => {
+        const producto = productoMap.get(item.productoId);
+        return {
+          ...item,
+          producto: {
+            id: item.productoId,
+            nombre: producto?.nombre ?? "Producto eliminado",
+            sku: producto?.sku ?? null,
+            stockDisponibleUnits: producto?.stockSucursals?.[0]?.stockDisponibleUnits ?? 0,
+          },
+        };
+      }),
     }));
 
     return NextResponse.json({ data });

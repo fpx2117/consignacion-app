@@ -69,10 +69,6 @@ export function useNotifications({ limit = 50, onlyUnreadOnLoad = false }: UseNo
         setUnreadCount(data.unreadCount || 0);
       }
 
-      // ✅ Disparamos el chequeo silencioso de consignaciones activas
-      // (Para simular un cron job sin servicios externos)
-      fetch("/api/cron/consignaciones").catch(() => null);
-
     } catch (error) {
       console.error("Error cargando notificaciones:", error);
     } finally {
