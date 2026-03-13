@@ -38,6 +38,13 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 // Icons
 import {
@@ -53,6 +60,7 @@ import {
   CalendarX2,
   CheckCheck,
   PackageSearch,
+  Trash2,
 } from "lucide-react";
 
 // Sub-components
@@ -117,10 +125,15 @@ export function PedidosEsperadosView() {
   // Dialogs
   const [dialogCrear, setDialogCrear] = React.useState(false);
   const [selectedPedido, setSelectedPedido] = React.useState<PedidoEsperado | null>(null);
+  const [detallePedido, setDetallePedido] = React.useState<PedidoEsperado | null>(null);
   const [dialogConfirmar, setDialogConfirmar] = React.useState(false);
   const [dialogPostergar, setDialogPostergar] = React.useState(false);
   const [dialogCancelar, setDialogCancelar] = React.useState(false);
+  const [dialogEliminar, setDialogEliminar] = React.useState(false);
   const [cancelandoId, setCancelandoId] = React.useState<number | null>(null);
+  const [eliminandoId, setEliminandoId] = React.useState<number | null>(null);
+  const [currentPage, setCurrentPage] = React.useState(1);
+  const [itemsPerPage, setItemsPerPage] = React.useState(25);
 
   // ── Carga de datos ──────────────────────────────────────────────────────────
   const fetchPedidos = React.useCallback(async () => {
@@ -158,10 +171,30 @@ export function PedidosEsperadosView() {
     fetchPedidos();
   }, [fetchPedidos, activeSucursalId]);
 
+  React.useEffect(() => {
+    setCurrentPage(1);
+  }, [filtros.estado, filtros.fechaDesde, filtros.fechaHasta, activeSucursalId]);
+
+  const totalPages = Math.max(1, Math.ceil(pedidos.length / Math.max(1, itemsPerPage)));
+  const pageStart = (currentPage - 1) * itemsPerPage;
+  const pagedPedidos = React.useMemo(
+    () => pedidos.slice(pageStart, pageStart + itemsPerPage),
+    [pedidos, pageStart, itemsPerPage]
+  );
+
+  React.useEffect(() => {
+    if (currentPage > totalPages) setCurrentPage(totalPages);
+  }, [currentPage, totalPages]);
+
   // ── Cancelar pedido ─────────────────────────────────────────────────────────
   async function handleCancelar(pedido: PedidoEsperado) {
     setSelectedPedido(pedido);
     setDialogCancelar(true);
+  }
+
+  async function handleEliminar(pedido: PedidoEsperado) {
+    setSelectedPedido(pedido);
+    setDialogEliminar(true);
   }
 
   async function confirmCancelar() {
@@ -184,6 +217,27 @@ export function PedidosEsperadosView() {
       toast.error("Error al cancelar el pedido");
     } finally {
       setCancelandoId(null);
+    }
+  }
+
+  async function confirmEliminar() {
+    if (!selectedPedido || selectedPedido.estado !== "CANCELADO") return;
+    setEliminandoId(selectedPedido.id);
+    try {
+      const res = await fetch(`/api/pedidos-esperados/${selectedPedido.id}`, {
+        method: "DELETE",
+        headers: sucursalHeaders,
+      });
+      const payload = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(payload?.error || "Error al eliminar pedido");
+      toast.success("Pedido cancelado eliminado");
+      setDialogEliminar(false);
+      setSelectedPedido(null);
+      fetchPedidos();
+    } catch (err: any) {
+      toast.error(err?.message || "No se pudo eliminar el pedido");
+    } finally {
+      setEliminandoId(null);
     }
   }
 
@@ -275,63 +329,108 @@ export function PedidosEsperadosView() {
         {/* CONTENIDO */}
         {!loading && (
           <>
-            {/* --- TABLA DESKTOP --- */}
-            <div className="hidden md:block">
-              <Card className="border-border/60 bg-card/40 backdrop-blur-xl shadow-sm rounded-2xl overflow-hidden">
-                <Table>
-                  <TableHeader className="bg-muted/30">
-                    <TableRow className="hover:bg-transparent border-b border-border/60">
-                      <TableHead className="pl-6 font-bold text-xs uppercase tracking-wider text-muted-foreground/70">Fecha esperada</TableHead>
-                      <TableHead className="font-bold text-xs uppercase tracking-wider text-muted-foreground/70">Estado</TableHead>
-                      <TableHead className="font-bold text-xs uppercase tracking-wider text-muted-foreground/70 text-center">Items</TableHead>
-                      <TableHead className="font-bold text-xs uppercase tracking-wider text-muted-foreground/70">Productos</TableHead>
-                      <TableHead className="font-bold text-xs uppercase tracking-wider text-muted-foreground/70">Observaciones</TableHead>
-                      <TableHead className="font-bold text-xs uppercase tracking-wider text-muted-foreground/70 text-right pr-6">Acciones</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {pedidos.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={6} className="h-[250px] text-center">
-                          <EmptyState onCrear={() => setDialogCrear(true)} />
-                        </TableCell>
-                      </TableRow>
-                    ) : (
-                      pedidos.map((pedido, idx) => (
-                        <PedidoRow
-                          key={pedido.id}
-                          pedido={pedido}
-                          idx={idx}
-                          onConfirmar={() => { setSelectedPedido(pedido); setDialogConfirmar(true); }}
-                          onPostergar={() => { setSelectedPedido(pedido); setDialogPostergar(true); }}
-                          onCancelar={() => handleCancelar(pedido)}
-                        />
-                      ))
-                    )}
-                  </TableBody>
-                </Table>
-              </Card>
-            </div>
+            {pedidos.length === 0 ? (
+              <div className="py-20">
+                <EmptyState onCrear={() => setDialogCrear(true)} />
+              </div>
+            ) : (
+              <>
+                <Card className="border-border/60 bg-card/40 backdrop-blur-xl shadow-sm rounded-2xl overflow-hidden">
+                  <div className="hidden md:block">
+                    <Table>
+                      <TableHeader className="bg-muted/30">
+                        <TableRow className="hover:bg-transparent border-b border-border/60">
+                          <TableHead className="pl-6 font-bold text-xs uppercase tracking-wider text-muted-foreground/70">Fecha esperada</TableHead>
+                          <TableHead className="font-bold text-xs uppercase tracking-wider text-muted-foreground/70">Estado</TableHead>
+                          <TableHead className="font-bold text-xs uppercase tracking-wider text-muted-foreground/70 text-center">Items</TableHead>
+                          <TableHead className="font-bold text-xs uppercase tracking-wider text-muted-foreground/70">Productos</TableHead>
+                          <TableHead className="font-bold text-xs uppercase tracking-wider text-muted-foreground/70">Observaciones</TableHead>
+                          <TableHead className="font-bold text-xs uppercase tracking-wider text-muted-foreground/70 text-right pr-6">Acciones</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {pagedPedidos.map((pedido, idx) => (
+                          <PedidoRow
+                            key={pedido.id}
+                            pedido={pedido}
+                            idx={idx}
+                            onVer={() => setDetallePedido(pedido)}
+                            onConfirmar={() => { setSelectedPedido(pedido); setDialogConfirmar(true); }}
+                            onPostergar={() => { setSelectedPedido(pedido); setDialogPostergar(true); }}
+                            onCancelar={() => handleCancelar(pedido)}
+                            onEliminar={() => handleEliminar(pedido)}
+                          />
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
 
-            {/* --- CARDS MOBILE --- */}
-            <div className="md:hidden space-y-4">
-              {pedidos.length === 0 ? (
-                <div className="py-20">
-                  <EmptyState onCrear={() => setDialogCrear(true)} />
-                </div>
-              ) : (
-                pedidos.map((pedido, idx) => (
-                  <MobilePedidoCard
-                    key={pedido.id}
-                    pedido={pedido}
-                    idx={idx}
-                    onConfirmar={() => { setSelectedPedido(pedido); setDialogConfirmar(true); }}
-                    onPostergar={() => { setSelectedPedido(pedido); setDialogPostergar(true); }}
-                    onCancelar={() => handleCancelar(pedido)}
-                  />
-                ))
-              )}
-            </div>
+                  <div className="md:hidden space-y-4 p-4">
+                    {pagedPedidos.map((pedido, idx) => (
+                      <MobilePedidoCard
+                        key={pedido.id}
+                        pedido={pedido}
+                        idx={idx}
+                        onVer={() => setDetallePedido(pedido)}
+                        onConfirmar={() => { setSelectedPedido(pedido); setDialogConfirmar(true); }}
+                        onPostergar={() => { setSelectedPedido(pedido); setDialogPostergar(true); }}
+                        onCancelar={() => handleCancelar(pedido)}
+                        onEliminar={() => handleEliminar(pedido)}
+                      />
+                    ))}
+                  </div>
+                </Card>
+
+                <Card className="p-3 sm:p-4 border-border/60 bg-card/40 backdrop-blur-xl rounded-2xl">
+                  <div className="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
+                    <p className="text-xs sm:text-sm text-muted-foreground">
+                      Mostrando <span className="font-bold text-foreground">{pagedPedidos.length}</span> de <span className="font-bold text-foreground">{pedidos.length}</span> pedidos
+                    </p>
+
+                    <div className="flex items-center gap-2">
+                      <label className="text-xs text-muted-foreground">Por pagina</label>
+                      <select
+                        value={String(itemsPerPage)}
+                        onChange={(e) => {
+                          const value = Number(e.target.value);
+                          setItemsPerPage(Number.isFinite(value) && value > 0 ? value : 25);
+                          setCurrentPage(1);
+                        }}
+                        className="h-9 rounded-lg border border-border bg-background px-2 text-sm"
+                      >
+                        {[10, 25, 50, 100, pedidos.length].filter((v, i, arr) => v > 0 && arr.indexOf(v) === i).sort((a, b) => a - b).map((size) => (
+                          <option key={size} value={size}>
+                            {size === pedidos.length ? `Maximo (${size})` : size}
+                          </option>
+                        ))}
+                      </select>
+
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="rounded-lg"
+                        disabled={currentPage <= 1}
+                        onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                      >
+                        Anterior
+                      </Button>
+                      <span className="text-xs font-bold min-w-[72px] text-center">
+                        {currentPage} / {totalPages}
+                      </span>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="rounded-lg"
+                        disabled={currentPage >= totalPages}
+                        onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                      >
+                        Siguiente
+                      </Button>
+                    </div>
+                  </div>
+                </Card>
+              </>
+            )}
           </>
         )}
       </div>
@@ -353,6 +452,12 @@ export function PedidosEsperadosView() {
         open={dialogPostergar}
         onOpenChange={setDialogPostergar}
         onSuccess={() => { fetchPedidos(); setSelectedPedido(null); }}
+      />
+
+      <PedidoDetalleDialog
+        pedido={detallePedido}
+        open={!!detallePedido}
+        onOpenChange={(open) => !open && setDetallePedido(null)}
       />
 
       {/* DIALOG CANCELAR */}
@@ -381,27 +486,119 @@ export function PedidosEsperadosView() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <AlertDialog open={dialogEliminar} onOpenChange={setDialogEliminar}>
+        <AlertDialogContent className="rounded-2xl border-none shadow-2xl">
+          <AlertDialogHeader>
+            <div className="mx-auto bg-red-100 dark:bg-red-900/30 p-3 rounded-full w-fit mb-2">
+              <Trash2 className="h-8 w-8 text-red-600" />
+            </div>
+            <AlertDialogTitle className="text-xl font-bold text-center">¿Eliminar pedido cancelado?</AlertDialogTitle>
+            <AlertDialogDescription className="text-center text-muted-foreground">
+              Se eliminará de forma permanente y no se podrá recuperar.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="grid grid-cols-2 gap-3 sm:flex sm:justify-center pt-2">
+            <AlertDialogCancel className="h-11 rounded-xl mt-0" onClick={() => setDialogEliminar(false)}>
+              Volver
+            </AlertDialogCancel>
+            <AlertDialogAction
+              className="h-11 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold"
+              onClick={(e) => { e.preventDefault(); confirmEliminar(); }}
+              disabled={eliminandoId !== null}
+            >
+              {eliminandoId !== null ? <Loader2 className="h-4 w-4 animate-spin" /> : "Sí, eliminar"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
 
 // ─── SUB-COMPONENTS ───────────────────────────────────────────────────────────
 
+function PedidoDetalleDialog({
+  pedido,
+  open,
+  onOpenChange,
+}: {
+  pedido: PedidoEsperado | null;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}) {
+  if (!pedido) return null;
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-[700px] rounded-2xl">
+        <DialogHeader>
+          <DialogTitle className="text-xl font-black">Detalle del pedido #{pedido.id}</DialogTitle>
+          <DialogDescription>
+            Fecha esperada: {formatFecha(pedido.fechaEsperada)} - Estado: {pedido.estado}
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-4 max-h-[65vh] overflow-y-auto">
+          <div className="rounded-xl border border-border/60 overflow-hidden">
+            <Table>
+              <TableHeader className="bg-muted/30">
+                <TableRow>
+                  <TableHead>Producto</TableHead>
+                  <TableHead>SKU</TableHead>
+                  <TableHead className="text-center">Esperada</TableHead>
+                  <TableHead className="text-center">Recibida</TableHead>
+                  <TableHead>Estado</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {pedido.items.map((item) => (
+                  <TableRow key={item.id}>
+                    <TableCell className="font-medium">{item.producto.nombre}</TableCell>
+                    <TableCell className="text-xs text-muted-foreground">{item.producto.sku ?? "-"}</TableCell>
+                    <TableCell className="text-center font-bold tabular-nums">{item.cantidadEsperada}</TableCell>
+                    <TableCell className="text-center font-bold tabular-nums">{item.cantidadRecibida}</TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className="font-semibold">{item.estado}</Badge>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+
+          {pedido.observaciones && (
+            <div className="rounded-xl border border-border/60 p-3 bg-muted/20">
+              <p className="text-xs uppercase font-bold text-muted-foreground mb-1">Observaciones</p>
+              <p className="text-sm">{pedido.observaciones}</p>
+            </div>
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 function PedidoRow({
   pedido,
   idx,
+  onVer,
   onConfirmar,
   onPostergar,
   onCancelar,
+  onEliminar,
 }: {
   pedido: PedidoEsperado;
   idx: number;
+  onVer: () => void;
   onConfirmar: () => void;
   onPostergar: () => void;
   onCancelar: () => void;
+  onEliminar: () => void;
 }) {
   const isVencido = pedido.estado === "VENCIDO";
   const soloVer = ESTADOS_SOLO_VER.includes(pedido.estado);
+  const canDelete = pedido.estado === "CANCELADO";
   const productosNombres = pedido.items.map((it) => it.producto.nombre).join(", ");
 
   return (
@@ -451,13 +648,18 @@ function PedidoRow({
       </TableCell>
 
       <TableCell className="text-right pr-4">
-        {soloVer ? (
-          <Button variant="ghost" size="sm" className="h-8 rounded-lg text-xs font-bold text-muted-foreground">
+        <div className="flex items-center justify-end gap-1 opacity-80 group-hover:opacity-100">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 px-3 rounded-lg text-xs font-bold text-muted-foreground hover:bg-muted"
+            onClick={onVer}
+          >
             <Eye className="h-3.5 w-3.5 mr-1" />
             Ver
           </Button>
-        ) : (
-          <div className="flex items-center justify-end gap-1 opacity-80 group-hover:opacity-100">
+          {!soloVer && (
+            <>
             <Button
               variant="ghost"
               size="sm"
@@ -485,8 +687,20 @@ function PedidoRow({
               <XCircle className="h-3.5 w-3.5 mr-1" />
               Cancelar
             </Button>
-          </div>
-        )}
+            </>
+          )}
+          {canDelete && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 px-3 rounded-lg text-xs font-bold text-red-600 hover:bg-red-500/10"
+              onClick={onEliminar}
+            >
+              <Trash2 className="h-3.5 w-3.5 mr-1" />
+              Eliminar
+            </Button>
+          )}
+        </div>
       </TableCell>
     </motion.tr>
   );
@@ -495,18 +709,23 @@ function PedidoRow({
 function MobilePedidoCard({
   pedido,
   idx,
+  onVer,
   onConfirmar,
   onPostergar,
   onCancelar,
+  onEliminar,
 }: {
   pedido: PedidoEsperado;
   idx: number;
+  onVer: () => void;
   onConfirmar: () => void;
   onPostergar: () => void;
   onCancelar: () => void;
+  onEliminar: () => void;
 }) {
   const isVencido = pedido.estado === "VENCIDO";
   const soloVer = ESTADOS_SOLO_VER.includes(pedido.estado);
+  const canDelete = pedido.estado === "CANCELADO";
   const productosNombres = pedido.items.map((it) => it.producto.nombre).join(", ");
 
   return (
@@ -547,14 +766,23 @@ function MobilePedidoCard({
             <Badge variant="outline" className="text-xs font-bold tabular-nums">
               {pedido.items.length} {pedido.items.length === 1 ? "item" : "items"}
             </Badge>
-            {!soloVer && (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="icon" className="h-9 w-9 rounded-xl border-border/60">
-                    <MoreVertical className="h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-48 rounded-xl border-border/60 shadow-xl">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="icon" className="h-9 w-9 rounded-xl border-border/60">
+                  <MoreVertical className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48 rounded-xl border-border/60 shadow-xl">
+                  <DropdownMenuItem
+                    className="flex items-center gap-2.5 font-semibold cursor-pointer rounded-lg"
+                    onClick={onVer}
+                  >
+                    <Eye className="h-4 w-4" />
+                    Ver detalle
+                  </DropdownMenuItem>
+                  {!soloVer && (
+                    <>
+                      <DropdownMenuSeparator />
                   <DropdownMenuItem
                     className="flex items-center gap-2.5 font-semibold text-emerald-600 cursor-pointer rounded-lg focus:text-emerald-600 focus:bg-emerald-50 dark:focus:bg-emerald-950/40"
                     onClick={onConfirmar}
@@ -577,9 +805,22 @@ function MobilePedidoCard({
                     <XCircle className="h-4 w-4" />
                     Cancelar
                   </DropdownMenuItem>
+                    </>
+                  )}
+                  {canDelete && (
+                    <>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem
+                        className="flex items-center gap-2.5 font-semibold text-red-600 cursor-pointer rounded-lg focus:text-red-600 focus:bg-red-50 dark:focus:bg-red-950/40"
+                        onClick={onEliminar}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                        Eliminar
+                      </DropdownMenuItem>
+                    </>
+                  )}
                 </DropdownMenuContent>
               </DropdownMenu>
-            )}
           </div>
         </div>
 

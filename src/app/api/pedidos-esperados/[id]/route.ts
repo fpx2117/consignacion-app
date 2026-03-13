@@ -165,3 +165,56 @@ export async function PATCH(req: Request, { params }: RouteParams) {
     return NextResponse.json({ error: "Error interno" }, { status: 500 });
   }
 }
+
+/**
+ * DELETE /api/pedidos-esperados/[id]
+ * Elimina de forma permanente un pedido en estado CANCELADO.
+ */
+export async function DELETE(_: Request, { params }: RouteParams) {
+  const auth = await requireAuth();
+  if (!auth.ok) return auth.res;
+
+  if (!requireRole(auth.user, ["ADMIN"])) {
+    return NextResponse.json(
+      { error: "No tienes permisos (Admin requerido)" },
+      { status: 403 }
+    );
+  }
+
+  try {
+    const { id: rawId } = await params;
+    const id = Number(rawId);
+    const sucursalId = auth.activeSucursalId;
+
+    if (isNaN(id)) {
+      return NextResponse.json({ error: "ID inválido" }, { status: 400 });
+    }
+
+    const pedido = await prisma.pedidoEsperado.findUnique({
+      where: { id },
+      select: { id: true, sucursalId: true, estado: true },
+    });
+
+    if (!pedido) {
+      return NextResponse.json({ error: "Pedido no encontrado" }, { status: 404 });
+    }
+
+    if (pedido.sucursalId !== sucursalId) {
+      return NextResponse.json({ error: "No autorizado" }, { status: 403 });
+    }
+
+    if (pedido.estado !== "CANCELADO") {
+      return NextResponse.json(
+        { error: "Solo se pueden eliminar pedidos cancelados" },
+        { status: 400 }
+      );
+    }
+
+    await prisma.pedidoEsperado.delete({ where: { id } });
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error("Error al eliminar pedido:", error);
+    return NextResponse.json({ error: "Error interno" }, { status: 500 });
+  }
+}

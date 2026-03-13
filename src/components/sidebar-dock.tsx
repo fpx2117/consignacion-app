@@ -111,9 +111,6 @@ function NavDropdown({
             )}
           >
             <GroupIcon className="size-5" />
-            {groupActive && (
-              <span className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-primary-foreground/70" />
-            )}
             {badge && badge > 0 && (
               <span className="absolute -top-1 -right-1 min-w-[16px] h-4 px-[3px] rounded-full bg-destructive text-[9px] font-black text-destructive-foreground flex items-center justify-center leading-none animate-pulse">
                 {badge > 9 ? "9+" : badge}
@@ -141,8 +138,7 @@ function NavDropdown({
           return (
             <DropdownMenuItem
               key={item.href}
-              onSelect={(e) => {
-                e.preventDefault();
+              onSelect={() => {
                 onNavigate(item.href);
               }}
               className={cn(
@@ -303,12 +299,11 @@ export function SidebarDock() {
   }, [usarControlDeCaja, filteredBusiness]);
 
   // --- RENDER: Ítem simple (dock) ---
-  const renderItem = (item: any, isMobile: boolean, variant: "default" | "quick" = "default") => {
+  const renderItem = (item: any, isMobile: boolean) => {
     const active = isActive(item.href);
     const Icon = item.icon;
     const isPedidos = item.href === "/pedidos-esperados";
     const showBadge = isPedidos && pedidosVencidosCount > 0;
-    const isQuick = variant === "quick";
 
     return (
       <DockIcon key={item.href}>
@@ -321,17 +316,10 @@ export function SidebarDock() {
                 className={cn(
                   "relative flex items-center justify-center rounded-full transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
                   isMobile ? "h-9 w-9" : "h-10 w-10",
-                  active
-                    ? "bg-primary text-primary-foreground shadow-lg scale-110"
-                    : isQuick
-                      ? "text-emerald-500 hover:bg-emerald-500/12"
-                      : "text-muted-foreground hover:bg-muted"
+                  active ? "bg-primary text-primary-foreground shadow-lg scale-110" : "text-muted-foreground hover:bg-muted"
                 )}
               >
                 <Icon className={isMobile ? "h-4 w-4" : "size-5"} />
-                {isQuick && !active && !isMobile && (
-                  <span className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-emerald-500/90" />
-                )}
                 {showBadge && (
                   <span className="absolute -top-1 -right-1 min-w-[16px] h-4 px-[3px] rounded-full bg-destructive text-[9px] font-black text-destructive-foreground flex items-center justify-center leading-none animate-pulse">
                     {pedidosVencidosCount > 9 ? "9+" : pedidosVencidosCount}
@@ -340,7 +328,7 @@ export function SidebarDock() {
               </Link>
             </TooltipTrigger>
             <TooltipContent side={isMobile ? "top" : "right"}>
-              {isQuick ? "Venta Casual (Acceso rapido)" : item.label}
+              {item.label}
               {showBadge && ` (${pedidosVencidosCount} vencido${pedidosVencidosCount > 1 ? "s" : ""})`}
             </TooltipContent>
           </Tooltip>
@@ -489,7 +477,7 @@ export function SidebarDock() {
                   />
 
                   {/* ACCION RAPIDA: Venta Casual */}
-                  {renderItem({ label: "Venta Casual", href: "/ventas/nueva", icon: ShoppingCart }, false, "quick")}
+                  {renderItem({ label: "Venta Casual", href: "/ventas/nueva", icon: ShoppingCart }, false)}
 
                   {/* GRUPO: Operaciones */}
                   {filteredOperations.length > 0 && (
