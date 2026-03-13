@@ -145,7 +145,11 @@ export function SidebarDock() {
     // 1a. Cargar conteo de pedidos vencidos para badge en sidebar
     const fetchPedidosVencidos = async () => {
       try {
-        const res = await fetch("/api/pedidos-esperados?estado=VENCIDO");
+        const res = await fetch("/api/pedidos-esperados?estado=VENCIDO", {
+          headers: activeSucursalId
+            ? { "x-sucursal-id": String(activeSucursalId) }
+            : undefined,
+        });
         if (res.ok) {
           const json = await res.json();
           const vencidos = (json?.data ?? []).filter((p: any) => p.estado === "VENCIDO");
@@ -183,7 +187,7 @@ export function SidebarDock() {
 
     window.addEventListener("config-updated", handleConfigChange);
     return () => window.removeEventListener("config-updated", handleConfigChange);
-  }, []);
+  }, [activeSucursalId, setAvailableSucursales, setPedidosVencidosCount]);
 
   const isDark = mounted && resolvedTheme === "dark";
   const isActive = (href: string) => href === "/dashboard" ? pathname === href : pathname.startsWith(href);

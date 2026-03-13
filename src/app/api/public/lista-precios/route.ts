@@ -7,7 +7,13 @@ import { registerCatalogVisit } from "@/lib/analytics/catalog-visit";
 export async function GET(req: Request) {
     const { searchParams } = new URL(req.url);
     const sucursalIdParam = searchParams.get("sucursalId");
-    const sucursalId = sucursalIdParam ? Number(sucursalIdParam) : null;
+    const sucursalIdParsed = sucursalIdParam ? Number(sucursalIdParam) : null;
+
+    if (sucursalIdParam && (!Number.isFinite(sucursalIdParsed) || sucursalIdParsed <= 0)) {
+        return NextResponse.json({ error: "sucursalId inválido" }, { status: 400 });
+    }
+
+    const sucursalId = sucursalIdParsed;
 
     try {
         // Encontrar la configuración de la sucursal solicitada o la principal

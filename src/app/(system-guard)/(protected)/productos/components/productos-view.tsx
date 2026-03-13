@@ -94,6 +94,7 @@ interface SortConfig {
 
 export function ProductosView() {
   const activeSucursalId = useSucursalStore((s) => s.activeSucursalId);
+  const catalogoHref = activeSucursalId ? `/lista?sucursalId=${activeSucursalId}` : "/lista";
   const [items, setItems] = React.useState<Producto[]>([]);
   const [allCategories, setAllCategories] = React.useState<Categoria[]>([]);
   const [loading, setLoading] = React.useState(true);
@@ -256,7 +257,7 @@ export function ProductosView() {
               <HistoryReportDialog />
               <DownloadInventoryButton />
               <Button asChild variant="ghost" size="sm" className="h-9 px-3 rounded-lg font-bold text-sm hover:bg-background hover:text-primary transition-all">
-                <Link href="/lista" target="_blank" rel="noopener noreferrer">
+                <Link href={catalogoHref} target="_blank" rel="noopener noreferrer">
                   <ExternalLink className="h-3.5 w-3.5 mr-1.5" />
                   Catálogo
                 </Link>
@@ -304,7 +305,7 @@ export function ProductosView() {
                 </div>
                 <DropdownMenuSeparator className="my-1" />
                 <DropdownMenuItem asChild className="rounded-lg font-semibold cursor-pointer h-10">
-                  <Link href="/lista" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2.5">
+                  <Link href={catalogoHref} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2.5">
                     <ExternalLink className="h-4 w-4 text-primary" />
                     Ver Catálogo público
                   </Link>

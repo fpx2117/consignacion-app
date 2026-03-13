@@ -16,6 +16,7 @@ import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { apiService } from "@/lib/apiService";
 import { cn } from "@/lib/utils";
+import { useSucursalStore } from "@/store/useSucursalStore";
 
 // ─── Tutorial compartido ───────────────────────────────────────────────────────
 import { TutorialButton } from "@/components/ui/tutorial-button";
@@ -104,6 +105,7 @@ function SectionBadge({ number }: { number: string }) {
 // ─── Main Page ────────────────────────────────────────────────────────────────
 export default function PosSettingsPage() {
     const router = useRouter();
+    const activeSucursalId = useSucursalStore((s) => s.activeSucursalId);
 
     const [cajas, setCajas] = React.useState<any[]>([]);
     const [nombreNuevaCaja, setNombreNuevaCaja] = React.useState("");
@@ -511,7 +513,7 @@ export default function PosSettingsPage() {
                                         size="sm"
                                         className="text-primary hover:text-primary hover:bg-primary/10 font-bold rounded-xl shrink-0"
                                         onClick={() => {
-                                            const url = `${window.location.origin}/lista${separarListaPorSucursal ? "?sucursalId=" + localStorage.getItem("activeSucursalId") : ""}`;
+                                            const url = `${window.location.origin}/lista${separarListaPorSucursal && activeSucursalId ? `?sucursalId=${activeSucursalId}` : ""}`;
                                             navigator.clipboard.writeText(url);
                                             toast.success("Link copiado al portapapeles");
                                         }}

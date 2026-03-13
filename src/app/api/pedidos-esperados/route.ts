@@ -31,7 +31,12 @@ export async function GET(req: NextRequest) {
     const fechaHastaRaw = searchParams.get("fechaHasta") ?? undefined;
 
     // Lazy check: actualizar pedidos vencidos antes de retornar la lista
-    await checkAndUpdateVencidos(sucursalId);
+    // Si falla la notificacion/actualizacion no debe romper el listado.
+    try {
+      await checkAndUpdateVencidos(sucursalId);
+    } catch (lazyCheckError) {
+      console.error("Error en checkAndUpdateVencidos (continuando listado):", lazyCheckError);
+    }
 
     const fechaDesde = fechaDesdeRaw ? new Date(fechaDesdeRaw) : undefined;
     const fechaHasta = fechaHastaRaw ? new Date(fechaHastaRaw) : undefined;
