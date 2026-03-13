@@ -26,11 +26,10 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 
 import { useSucursalStore } from "@/store/useSucursalStore";
 
@@ -50,8 +49,10 @@ import {
   LogOut,
   Wallet,
   ClipboardList,
+  Briefcase,
+  Zap,
+  ChevronRight,
 } from "lucide-react";
-
 
 import { useNotifications } from "../hooks/useNotifications";
 import { NotificationsAnimatedPanel } from "@/components/notifications-panel";
@@ -68,7 +69,6 @@ const NAV_BUSINESS = [
   { label: "Gastos", href: "/gastos", icon: Wallet },
 ];
 
-
 const NAV_ADMIN = [{ label: "Ajustes", href: "/settings", icon: Settings }];
 
 const MOBILE_PRIMARY = [
@@ -77,6 +77,101 @@ const MOBILE_PRIMARY = [
 ];
 
 import { BrandLogo } from "@/components/brand-logo";
+
+// --- HOOK: Popover controlado por hover ---
+function useHoverPopover(delay = 100) {
+  const [open, setOpen] = React.useState(false);
+  const closeTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const onMouseEnter = () => {
+    if (closeTimer.current) clearTimeout(closeTimer.current);
+    setOpen(true);
+  };
+
+  const onMouseLeave = () => {
+    closeTimer.current = setTimeout(() => setOpen(false), delay);
+  };
+
+  React.useEffect(() => () => {
+    if (closeTimer.current) clearTimeout(closeTimer.current);
+  }, []);
+
+  return { open, setOpen, onMouseEnter, onMouseLeave };
+}
+
+// --- COMPONENTE: Grupo de navegación con Popover hover ---
+function NavGroup({
+  label,
+  icon: GroupIcon,
+  items,
+  isActive,
+  renderSubItem,
+  badge,
+}: {
+  label: string;
+  icon: React.ElementType;
+  items: any[];
+  isActive: (href: string) => boolean;
+  renderSubItem: (item: any) => React.ReactNode;
+  badge?: number;
+}) {
+  const { open, setOpen, onMouseEnter, onMouseLeave } = useHoverPopover(150);
+  const groupActive = items.some((i) => isActive(i.href));
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <div onMouseEnter={onMouseEnter} onMouseLeave={onMouseLeave}>
+          <DockIcon>
+            <TooltipProvider delayDuration={0}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    className={cn(
+                      "relative flex items-center justify-center rounded-full transition-all duration-300 h-10 w-10",
+                      groupActive
+                        ? "bg-primary text-primary-foreground shadow-lg scale-110"
+                        : "text-muted-foreground hover:bg-muted"
+                    )}
+                  >
+                    <GroupIcon className="size-5" />
+                    {/* Badge de grupo activo */}
+                    {groupActive && !open && (
+                      <span className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-primary-foreground/70" />
+                    )}
+                    {/* Badge numérico externo */}
+                    {badge && badge > 0 && (
+                      <span className="absolute -top-1 -right-1 min-w-[16px] h-4 px-[3px] rounded-full bg-destructive text-[9px] font-black text-destructive-foreground flex items-center justify-center leading-none animate-pulse">
+                        {badge > 9 ? "9+" : badge}
+                      </span>
+                    )}
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="right">{label}</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </DockIcon>
+        </div>
+      </PopoverTrigger>
+      <PopoverContent
+        side="right"
+        align="center"
+        sideOffset={12}
+        className="p-2 w-auto min-w-[180px] rounded-2xl border bg-card/90 backdrop-blur-xl shadow-xl"
+        onMouseEnter={onMouseEnter}
+        onMouseLeave={onMouseLeave}
+      >
+        {/* Label del grupo */}
+        <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60 px-2 pb-1.5 pt-0.5">
+          {label}
+        </p>
+        <div className="flex flex-col gap-0.5">
+          {items.map(renderSubItem)}
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}
 
 export function SidebarDock() {
   const pathname = usePathname() ?? "";
@@ -100,7 +195,6 @@ export function SidebarDock() {
   };
 
   const { availableSucursales, activeSucursalId, setActiveSucursalId, setAvailableSucursales, pedidosVencidosCount, setPedidosVencidosCount } = useSucursalStore();
-
 
   // Flag de hidratación: Vital para evitar fallos Next.js
   const [mounted, setMounted] = React.useState(false);
@@ -169,7 +263,6 @@ export function SidebarDock() {
     const fetchConfig = async () => {
       try {
         const res = await apiService.getConfiguracionGeneral();
-        // Priorities: Direct property > Nested data property > Default true
         const value = res?.usarControlDeCaja ?? res?.data?.usarControlDeCaja ?? true;
         setUsarControlDeCaja(value);
         localStorage.setItem("usarControlDeCaja", String(value));
@@ -202,7 +295,6 @@ export function SidebarDock() {
 
   const filteredOperations = React.useMemo(() => {
     const ops = [{ label: "Venta Casual", href: "/ventas/nueva", icon: ShoppingCart }];
-    // Solo agregamos Historial si está estrictamente activo
     if (usarControlDeCaja) {
       ops.push({ label: "Historial", href: "/caja/historial", icon: History });
     }
@@ -218,6 +310,7 @@ export function SidebarDock() {
     return items;
   }, [usarControlDeCaja, filteredBusiness]);
 
+  // --- RENDER: Ítem simple (dock) ---
   const renderItem = (item: any, isMobile: boolean) => {
     const active = isActive(item.href);
     const Icon = item.icon;
@@ -255,6 +348,42 @@ export function SidebarDock() {
     );
   };
 
+  // --- RENDER: Subítem dentro del popover ---
+  const renderSubItem = (item: any) => {
+    const active = isActive(item.href);
+    const Icon = item.icon;
+    const isPedidos = item.href === "/pedidos-esperados";
+    const showBadge = isPedidos && pedidosVencidosCount > 0;
+
+    return (
+      <Link
+        key={item.href}
+        href={item.href}
+        className={cn(
+          "flex items-center gap-3 px-3 py-2 rounded-xl transition-all duration-200 group",
+          active
+            ? "bg-primary text-primary-foreground font-semibold"
+            : "text-muted-foreground hover:bg-muted hover:text-foreground"
+        )}
+      >
+        <div className="relative shrink-0">
+          <Icon className="h-4 w-4" />
+          {showBadge && (
+            <span className="absolute -top-1.5 -right-1.5 min-w-[14px] h-3.5 px-[2px] rounded-full bg-destructive text-[8px] font-black text-destructive-foreground flex items-center justify-center leading-none animate-pulse">
+              {pedidosVencidosCount > 9 ? "9+" : pedidosVencidosCount}
+            </span>
+          )}
+        </div>
+        <span className="text-sm whitespace-nowrap">{item.label}</span>
+        {showBadge && (
+          <span className="ml-auto text-[10px] font-bold text-destructive">
+            {pedidosVencidosCount}
+          </span>
+        )}
+      </Link>
+    );
+  };
+
   const NotificationItem = ({
     isMobile = false,
     notificationsState
@@ -284,7 +413,7 @@ export function SidebarDock() {
   return (
     <aside className="fixed bottom-0 left-0 z-50 w-full border-t bg-background/60 backdrop-blur-2xl md:top-0 md:h-screen md:w-[84px] md:border-r md:border-t-0">
 
-      {/* MOBILE */}
+      {/* ── MOBILE ── */}
       <div className="md:hidden flex justify-center py-2 pb-[max(env(safe-area-inset-bottom),0.5rem)]">
         <div className="relative overflow-hidden rounded-2xl p-[1px]">
           <Dock orientation="horizontal" className="border bg-card/50 backdrop-blur-xl gap-2 px-3">
@@ -361,7 +490,7 @@ export function SidebarDock() {
         </div>
       </div>
 
-      {/* DESKTOP */}
+      {/* ── DESKTOP ── */}
       <div className="hidden h-full w-full md:flex md:flex-col md:items-center md:py-6">
 
         {/* LOGO POS PRINCIPAL */}
@@ -377,29 +506,45 @@ export function SidebarDock() {
                 /* ── EMPLEADO: Solo Venta Casual ── */
                 <>{renderItem({ label: "Venta Casual", href: "/ventas/nueva", icon: ShoppingCart }, false)}</>
               ) : (
-                /* ── ADMIN: Navegación completa ── */
+                /* ── ADMIN: Navegación agrupada ── */
                 <>
+                  {/* Dashboard — siempre individual */}
                   {NAV_CORE.map(item => renderItem(item, false))}
-                  <Separator className="w-8 mx-auto opacity-50" />
-                  {filteredBusiness.map(item => renderItem(item, false))}
+
                   <Separator className="w-8 mx-auto opacity-50" />
 
-                  {/* ANIMACIÓN DE OPERACIONES */}
+                  {/* GRUPO: Negocio */}
+                  <NavGroup
+                    label="Negocio"
+                    icon={Briefcase}
+                    items={filteredBusiness}
+                    isActive={isActive}
+                    renderSubItem={renderSubItem}
+                    badge={pedidosVencidosCount}
+                  />
+
+                  {/* GRUPO: Operaciones (animado) */}
                   <AnimatePresence mode="popLayout" initial={false}>
-                    {filteredOperations.map(item => (
-                      <motion.div
-                        key={item.href}
-                        initial={{ opacity: 0, scale: 0, height: 0 }}
-                        animate={{ opacity: 1, scale: 1, height: "auto" }}
-                        exit={{ opacity: 0, scale: 0, height: 0 }}
-                        transition={{ type: "spring", stiffness: 300, damping: 25 }}
-                      >
-                        {renderItem(item, false)}
-                      </motion.div>
-                    ))}
+                    <motion.div
+                      key="ops-group"
+                      initial={{ opacity: 0, scale: 0, height: 0 }}
+                      animate={{ opacity: 1, scale: 1, height: "auto" }}
+                      exit={{ opacity: 0, scale: 0, height: 0 }}
+                      transition={{ type: "spring", stiffness: 300, damping: 25 }}
+                    >
+                      <NavGroup
+                        label="Operaciones"
+                        icon={Zap}
+                        items={filteredOperations}
+                        isActive={isActive}
+                        renderSubItem={renderSubItem}
+                      />
+                    </motion.div>
                   </AnimatePresence>
 
                   <Separator className="w-8 mx-auto opacity-50" />
+
+                  {/* Ajustes — siempre individual */}
                   {NAV_ADMIN.map(item => renderItem(item, false))}
                 </>
               )}
@@ -415,6 +560,7 @@ export function SidebarDock() {
             <BorderBeam size={80} duration={15} colorFrom="var(--primary)" colorTo="#3b82f6" />
           </div>
         </div>
+
         <TooltipProvider delayDuration={0}>
           <Tooltip>
             <TooltipTrigger asChild>
