@@ -242,6 +242,7 @@ model Producto {
   sucursal             Sucursal?             @relation(fields: [sucursalId], references: [id])
   stockSucursals       StockSucursal[]
   ventaDetalles        VentaDetalle[]
+  pedidoItems          PedidoEsperadoItem[]
 
   @@unique([codigoBarra, sucursalId])
   @@unique([sku, sucursalId])
@@ -335,6 +336,19 @@ model ShareLink {
   codeEnc      String
 
   @@index([type, targetId, expiresAt])
+}
+
+model CatalogVisit {
+  id          Int      @id @default(autoincrement())
+  sucursalId  Int
+  visitorHash String
+  bucketStart DateTime
+  visitedAt   DateTime @default(now())
+  source      String   @default("public_lista")
+  sucursal    Sucursal @relation(fields: [sucursalId], references: [id], onDelete: Cascade)
+
+  @@unique([sucursalId, visitorHash, bucketStart])
+  @@index([sucursalId, visitedAt])
 }
 
 model Consignacion {
@@ -598,6 +612,8 @@ model Sucursal {
   categorias        Categoria[]
   pagos             Pago[]
   gastosCompartidos GastoSucursal[]
+  pedidosEsperados  PedidoEsperado[]
+  catalogVisits     CatalogVisit[]
 }
 
 model StockSucursal {
@@ -758,6 +774,7 @@ enum NotificationType {
   EXPORT_READY
   CLIENT_REGISTERED
   CONSIGNMENT_ALERT
+  PEDIDO_VENCIDO
 }
 
 enum EstadoConsignacion {
@@ -785,4 +802,53 @@ enum MetodoPago {
   TRANSFERENCIA
   TARJETA
   OTRO
+}
+
+enum EstadoPedidoEsperado {
+  PROGRAMADO
+  VENCIDO
+  PARCIAL
+  CONFIRMADO
+  POSTERGADO
+  CANCELADO
+}
+
+enum EstadoItemPedido {
+  PENDIENTE
+  CONFIRMADO
+  PARCIAL
+  CANCELADO
+}
+
+model PedidoEsperado {
+  id            Int                    @id @default(autoincrement())
+  sucursalId    Int
+  fechaEsperada DateTime
+  observaciones String?
+  estado        EstadoPedidoEsperado   @default(PROGRAMADO)
+  creadoPor     Int
+  createdAt     DateTime               @default(now())
+  updatedAt     DateTime               @updatedAt
+
+  sucursal      Sucursal               @relation(fields: [sucursalId], references: [id])
+  items         PedidoEsperadoItem[]
+
+  @@index([sucursalId])
+  @@index([estado])
+  @@index([fechaEsperada])
+}
+
+model PedidoEsperadoItem {
+  id               Int               @id @default(autoincrement())
+  pedidoId         Int
+  productoId       Int
+  cantidadEsperada Int
+  cantidadRecibida Int               @default(0)
+  estado           EstadoItemPedido  @default(PENDIENTE)
+
+  pedido           PedidoEsperado    @relation(fields: [pedidoId], references: [id], onDelete: Cascade)
+  producto         Producto          @relation(fields: [productoId], references: [id])
+
+  @@index([pedidoId])
+  @@index([productoId])
 }

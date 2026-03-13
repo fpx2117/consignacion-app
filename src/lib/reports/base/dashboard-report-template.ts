@@ -17,6 +17,10 @@ export type DashboardReportData = {
     cantidadVentas: number;
     cantidadPagos: number;
 
+    // Catalogo publico
+    catalogoVisitas: number;
+    catalogoVisitantesUnicos: number;
+
     // Stock
     stockDisponible: number;
     stockConsignado: number;
@@ -120,6 +124,12 @@ export function buildDashboardReportHtml(data: DashboardReportData, branding: Br
     ${kpiBox("Por Consignación", fmt(data.gananciaConsignacion), "#0ea5e9", `${pctConsig}% de bruta`)}
     ${kpiBox("Ventas Directas", fmt(data.gananciaDirecta), "#d97706", `${pctDirecta}% de bruta`)}
     ${kpiBox("Ventas Registradas", fmtN(data.cantidadVentas), color, "Operaciones en el período")}
+  </div>
+
+  ${sectionTitle("Canal Digital", color)}
+  <div class="kpi-row">
+    ${kpiBox("Visitas de Catalogo", fmtN(data.catalogoVisitas), "#2563eb", "Catalogo publico")}
+    ${kpiBox("Visitantes Unicos", fmtN(data.catalogoVisitantesUnicos), "#0ea5e9", "Estimado deduplicado")}
   </div>
 
   ${data.gastosDetalle.length > 0 ? `
