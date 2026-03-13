@@ -20,8 +20,13 @@ export async function getDashboardKpis(sucursalId: number, period: DashboardPeri
     // Si sucursalId es 0 y es admin, no filtramos por sucursal (Vista Global)
     const isGlobal = sucursalId === 0 && isAdmin;
     const sucursalWhere = isGlobal ? {} : { sucursalId };
+    const dashboardConfig = await prisma.configuracion.findFirst({
+        where: isGlobal ? { sucursalId: 1 } : { sucursalId },
+        select: { usarControlDeCaja: true, separarListaPorSucursal: true },
+    });
+    const catalogUsesSucursalScope = !isGlobal && (dashboardConfig?.separarListaPorSucursal ?? true);
     const catalogVisitWhere = {
-        ...sucursalWhere,
+        ...(catalogUsesSucursalScope ? sucursalWhere : {}),
         ...(dateWhere ? { visitedAt: dateWhere } : {}),
     };
 
@@ -36,7 +41,6 @@ export async function getDashboardKpis(sucursalId: number, period: DashboardPeri
         gastosLinksData,
         proximosVencimientosOwn,
         proximosVencimientosLinks,
-        config,
         saldoClientesAgg,
         roturasData,
         catalogVisitsCount,
@@ -125,11 +129,6 @@ export async function getDashboardKpis(sucursalId: number, period: DashboardPeri
                     gasto: { include: { categoria: true } }
                 }
             }),
-        // 11. Configuración de Caja
-        prisma.configuracion.findFirst({
-            where: sucursalWhere.sucursalId ? { sucursalId: sucursalWhere.sucursalId } : { sucursalId: 1 },
-            select: { usarControlDeCaja: true }
-        }),
         // 12. Saldo Clientes
         prisma.cliente.aggregate({
             where: sucursalWhere,
@@ -216,7 +215,7 @@ export async function getDashboardKpis(sucursalId: number, period: DashboardPeri
         period,
         isGlobal,
         counts,
-        usarControlDeCaja: config?.usarControlDeCaja ?? true,
+        usarControlDeCaja: dashboardConfig?.usarControlDeCaja ?? true,
         stock: {
             disponible: stockAgg._sum?.stockDisponibleUnits || 0,
             consignado: stockAgg._sum?.stockConsignadoUnits || 0,
