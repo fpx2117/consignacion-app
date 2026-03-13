@@ -3,6 +3,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/requireAuth";
+import { canAccessSucursalResource, isGlobalSucursalView } from "@/lib/sucursalScope";
 
 export async function GET(
     req: Request,
@@ -25,7 +26,7 @@ export async function GET(
             }
         });
 
-        if (!gasto || gasto.sucursalId !== auth.activeSucursalId) {
+        if (!gasto || !canAccessSucursalResource(auth, gasto.sucursalId)) {
             return NextResponse.json({ error: "Gasto no encontrado" }, { status: 404 });
         }
 
@@ -44,6 +45,9 @@ export async function PUT(
 ) {
     const auth = await requireAuth();
     if (!auth.ok) return auth.res;
+    if (isGlobalSucursalView(auth)) {
+        return NextResponse.json({ error: "Vista global en modo solo lectura. Selecciona una sucursal para editar gastos." }, { status: 409 });
+    }
 
     if (auth.user?.rol !== "ADMIN") {
         return NextResponse.json({ error: "No autorizado" }, { status: 403 });
@@ -138,6 +142,9 @@ export async function DELETE(
 ) {
     const auth = await requireAuth();
     if (!auth.ok) return auth.res;
+    if (isGlobalSucursalView(auth)) {
+        return NextResponse.json({ error: "Vista global en modo solo lectura. Selecciona una sucursal para eliminar gastos." }, { status: 409 });
+    }
 
     if (auth.user?.rol !== "ADMIN") {
         return NextResponse.json({ error: "No autorizado" }, { status: 403 });

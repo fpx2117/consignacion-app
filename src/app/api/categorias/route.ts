@@ -3,6 +3,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/requireAuth";
+import { buildSucursalWhere, isGlobalSucursalView } from "@/lib/sucursalScope";
 
 // GET: Obtener todas las categorías ordenadas por nombre (por sucursal)
 export async function GET(req: NextRequest) {
@@ -11,9 +12,9 @@ export async function GET(req: NextRequest) {
   if (!auth.ok) return auth.res;
 
   try {
-    const sucursalId = auth.activeSucursalId;
+    const sucursalWhere = buildSucursalWhere(auth);
     const categorias = await prisma.categoria.findMany({
-      where: { sucursalId },
+      where: sucursalWhere,
       orderBy: { nombre: "asc" },
     });
     return NextResponse.json(categorias);
@@ -31,6 +32,9 @@ export async function POST(req: NextRequest) {
   // Auth: Requiere usuario autenticado
   const auth = await requireAuth();
   if (!auth.ok) return auth.res;
+  if (isGlobalSucursalView(auth)) {
+    return NextResponse.json({ error: "Vista global en modo solo lectura. Selecciona una sucursal para crear categorías." }, { status: 409 });
+  }
 
   try {
     const body = await req.json();

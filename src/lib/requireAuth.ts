@@ -57,7 +57,7 @@ export async function requireAuth() {
 
     if (user.rol === "ADMIN") {
       const parsedHeader = reqHeader ? parseInt(reqHeader, 10) : NaN;
-      activeSucursalId = Number.isFinite(parsedHeader) && parsedHeader > 0
+      activeSucursalId = Number.isFinite(parsedHeader) && parsedHeader >= 0
         ? parsedHeader
         : (user.sucursalId || 1);
     } else {

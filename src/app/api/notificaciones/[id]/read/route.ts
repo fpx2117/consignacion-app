@@ -5,6 +5,7 @@
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 import { requireAuth } from "@/lib/requireAuth";
+import { isGlobalSucursalView } from "@/lib/sucursalScope";
 
 interface RouteContext {
   params: Promise<{ id: string }>;
@@ -17,6 +18,9 @@ export async function PATCH(
   // Auth: Requiere usuario autenticado
   const auth = await requireAuth();
   if (!auth.ok) return auth.res;
+  if (isGlobalSucursalView(auth)) {
+    return NextResponse.json({ error: "Vista global en modo solo lectura. Selecciona una sucursal para actualizar notificaciones." }, { status: 409 });
+  }
 
   try {
     const { id: rawId } = await params;

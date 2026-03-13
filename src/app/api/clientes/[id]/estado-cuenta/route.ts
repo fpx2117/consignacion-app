@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/requireAuth";
+import { buildSucursalWhere } from "@/lib/sucursalScope";
 
 // Definimos la interfaz para los params como una Promesa
 interface RouteContext {
@@ -19,16 +20,20 @@ export async function GET(_: Request, { params }: RouteContext) {
     return NextResponse.json({ error: "ID inválido" }, { status: 400 });
   }
 
+  const sucursalWhere = buildSucursalWhere(auth);
+  const pagosWhere = Object.keys(sucursalWhere).length > 0 ? sucursalWhere : undefined;
+  const ventasWhere = Object.keys(sucursalWhere).length > 0 ? sucursalWhere : undefined;
+
   const cliente = await prisma.cliente.findFirst({
-    where: { id, sucursalId: auth.activeSucursalId },
+    where: { id, ...sucursalWhere },
     include: {
       pagos: {
-        where: { sucursalId: auth.activeSucursalId },
+        where: pagosWhere,
         orderBy: { fecha: "desc" },
         take: 50,
       },
       ventas: {
-        where: { sucursalId: auth.activeSucursalId },
+        where: ventasWhere,
         orderBy: { fecha: "desc" },
         take: 50,
         include: { detalles: true },

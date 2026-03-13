@@ -12,6 +12,7 @@ import { deleteFileSystemImage } from "@/lib/file-utils";
 import { sendNotification } from "@/lib/socket-trigger";
 import { NOTIFICATION_TYPE } from "@/lib/notificationes/notificaciones-types";
 import { obtenerConfiguracionGlobal } from "@/lib/config";
+import { canAccessSucursalResource, isGlobalSucursalView } from "@/lib/sucursalScope";
 
 type RouteParams = { params: Promise<{ id: string }> };
 
@@ -26,29 +27,42 @@ export async function GET(_: Request, { params }: RouteParams) {
     const { id: rawId } = await params;
     const id = Number(rawId);
     const sucursalId = auth.activeSucursalId;
+    const isGlobal = isGlobalSucursalView(auth);
 
     if (isNaN(id)) return NextResponse.json({ error: "ID inválido" }, { status: 400 });
 
     const producto = await prisma.producto.findUnique({
-      where: { id, sucursalId },
+      where: { id },
       include: {
         categoria: true,
         subcategoria: true, // Incluimos subcategoría
         stockSucursals: {
-          where: { sucursalId }
+          ...(isGlobal ? {} : { where: { sucursalId } })
         }
       }
     });
 
-    if (!producto) return NextResponse.json({ error: "Producto no encontrado" }, { status: 404 });
+    if (!producto || !canAccessSucursalResource(auth, producto.sucursalId)) {
+      return NextResponse.json({ error: "Producto no encontrado" }, { status: 404 });
+    }
 
     // Mapeamos para devolver el stock de la sucursal activa
     const branchStock = producto.stockSucursals[0];
+    const stockDisponibleGlobal = producto.stockSucursals.reduce((acc, s) => acc + (s.stockDisponibleUnits || 0), 0);
+    const stockConsignadoGlobal = producto.stockSucursals.reduce((acc, s) => acc + (s.stockConsignadoUnits || 0), 0);
+    const stockMinGlobal = producto.stockSucursals.reduce((acc, s) => acc + (s.stockMinUnits || 0), 0);
+
     const data = {
       ...producto,
-      stockDisponibleUnits: branchStock?.stockDisponibleUnits ?? producto.stockDisponibleUnits ?? 0,
-      stockConsignadoUnits: branchStock?.stockConsignadoUnits ?? producto.stockConsignadoUnits ?? 0,
-      stockMinUnits: branchStock?.stockMinUnits ?? producto.stockMinUnits,
+      stockDisponibleUnits: isGlobal
+        ? stockDisponibleGlobal
+        : (branchStock?.stockDisponibleUnits ?? producto.stockDisponibleUnits ?? 0),
+      stockConsignadoUnits: isGlobal
+        ? stockConsignadoGlobal
+        : (branchStock?.stockConsignadoUnits ?? producto.stockConsignadoUnits ?? 0),
+      stockMinUnits: isGlobal
+        ? stockMinGlobal
+        : (branchStock?.stockMinUnits ?? producto.stockMinUnits),
     };
 
     return NextResponse.json({ data });
@@ -64,6 +78,9 @@ export async function GET(_: Request, { params }: RouteParams) {
 export async function PUT(req: Request, { params }: RouteParams) {
   const auth = await requireAuth();
   if (!auth.ok) return auth.res;
+  if (isGlobalSucursalView(auth)) {
+    return NextResponse.json({ error: "Vista global en modo solo lectura. Selecciona una sucursal para editar productos." }, { status: 409 });
+  }
 
   // Solo ADMIN puede editar productos
   if (!requireRole(auth.user, ["ADMIN"])) {
@@ -217,6 +234,9 @@ export async function PUT(req: Request, { params }: RouteParams) {
 export async function DELETE(_: Request, { params }: RouteParams) {
   const auth = await requireAuth();
   if (!auth.ok) return auth.res;
+  if (isGlobalSucursalView(auth)) {
+    return NextResponse.json({ error: "Vista global en modo solo lectura. Selecciona una sucursal para eliminar productos." }, { status: 409 });
+  }
   if (!requireRole(auth.user, ["ADMIN"])) return NextResponse.json({ error: "No autorizado" }, { status: 403 });
 
   const { id: rawId } = await params;

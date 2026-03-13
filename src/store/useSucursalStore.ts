@@ -32,8 +32,12 @@ export const useSucursalStore = create<SucursalState>()(
             },
             setAvailableSucursales: (sucursales: Sucursal[]) => {
                 set({ availableSucursales: sucursales });
+                const activeSucursalId = get().activeSucursalId;
+                // Mantener vista global (0) como selección válida
+                if (activeSucursalId === 0) return;
+
                 // Si la sucursal activa actual no está en la nueva lista, fallback a la primera o la principal
-                const currentActiveInfo = sucursales.find(s => s.id === get().activeSucursalId);
+                const currentActiveInfo = sucursales.find(s => s.id === activeSucursalId);
                 if (!currentActiveInfo && sucursales.length > 0) {
                     const defaultSucursal = sucursales.find(s => s.esPrincipal) || sucursales[0];
                     set({ activeSucursalId: defaultSucursal.id });

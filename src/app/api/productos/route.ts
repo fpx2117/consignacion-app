@@ -10,6 +10,7 @@ import { sendNotification } from "@/lib/socket-trigger";
 import { NOTIFICATION_TYPE } from "@/lib/notificationes/notificaciones-types";
 import { obtenerConfiguracionGlobal } from "@/lib/config";
 import { checkProductLimit } from "@/lib/requireSubscription";
+import { buildSucursalWhere, isGlobalSucursalView } from "@/lib/sucursalScope";
 
 /**
  * GET: OBTENER PRODUCTOS
@@ -24,21 +25,24 @@ export async function GET(req: Request) {
     const sucursalParam = searchParams.get("sucursalId");
     const sucursalParamNum = sucursalParam ? Number(sucursalParam) : NaN;
 
-    const sucursalId =
+    const requestedSucursalId =
       auth.user.rol === "ADMIN" && Number.isFinite(sucursalParamNum) && sucursalParamNum > 0
         ? sucursalParamNum
         : auth.activeSucursalId;
+    const requestedAuth = { ...auth, activeSucursalId: requestedSucursalId };
+    const isGlobal = isGlobalSucursalView(requestedAuth);
+    const sucursalWhere = buildSucursalWhere(requestedAuth);
 
     const productos = await prisma.producto.findMany({
       where: {
         activo: true,
-        sucursalId
+        ...sucursalWhere,
       },
       include: {
         categoria: true,
         subcategoria: true,
         stockSucursals: {
-          where: { sucursalId }
+          ...(isGlobal ? {} : { where: { sucursalId: requestedSucursalId } })
         }
       },
       orderBy: { id: "desc" },
@@ -47,11 +51,21 @@ export async function GET(req: Request) {
     // Mapeamos para que el frontend reciba el stock de la sucursal activa
     const mapped = productos.map(p => {
       const branchStock = p.stockSucursals[0];
+      const stockDisponibleGlobal = p.stockSucursals.reduce((acc, s) => acc + (s.stockDisponibleUnits || 0), 0);
+      const stockConsignadoGlobal = p.stockSucursals.reduce((acc, s) => acc + (s.stockConsignadoUnits || 0), 0);
+      const stockMinGlobal = p.stockSucursals.reduce((acc, s) => acc + (s.stockMinUnits || 0), 0);
+
       return {
         ...p,
-        stockDisponibleUnits: branchStock?.stockDisponibleUnits ?? p.stockDisponibleUnits ?? 0,
-        stockConsignadoUnits: branchStock?.stockConsignadoUnits ?? p.stockConsignadoUnits ?? 0,
-        stockMinUnits: branchStock?.stockMinUnits ?? p.stockMinUnits,
+        stockDisponibleUnits: isGlobal
+          ? stockDisponibleGlobal
+          : (branchStock?.stockDisponibleUnits ?? p.stockDisponibleUnits ?? 0),
+        stockConsignadoUnits: isGlobal
+          ? stockConsignadoGlobal
+          : (branchStock?.stockConsignadoUnits ?? p.stockConsignadoUnits ?? 0),
+        stockMinUnits: isGlobal
+          ? stockMinGlobal
+          : (branchStock?.stockMinUnits ?? p.stockMinUnits),
       };
     });
 
@@ -73,6 +87,9 @@ export async function POST(req: Request) {
   try {
     const auth = await requireAuth();
     if (!auth.ok) return auth.res;
+    if (isGlobalSucursalView(auth)) {
+      return NextResponse.json({ error: "Vista global en modo solo lectura. Selecciona una sucursal para crear productos." }, { status: 409 });
+    }
 
     if (!requireRole(auth.user, ["ADMIN"])) {
       return NextResponse.json({ error: "No tienes permisos (Admin requerido)" }, { status: 403 });

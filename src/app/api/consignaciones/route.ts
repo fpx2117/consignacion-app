@@ -6,6 +6,7 @@ import { requireAuth } from "@/lib/requireAuth";
 import { createConsignacionSchema } from "@/lib/validators/consignacion";
 import { TipoMovimientoStock, MotivoMovimientoStock } from "@prisma/client";
 import { checkFeature } from "@/lib/requireSubscription";
+import { buildSucursalWhere, isGlobalSucursalView } from "@/lib/sucursalScope";
 
 // âœ… Imports Centralizados de Config y Notificaciones
 import { obtenerConfiguracionGlobal } from "@/lib/config";
@@ -15,9 +16,10 @@ import { evaluateStockAlert, processNotificationQueue } from "@/lib/stock-alerts
 export async function GET() {
   const auth = await requireAuth();
   if (!auth.ok) return auth.res;
+  const sucursalWhere = buildSucursalWhere(auth);
 
   const consignaciones = await prisma.consignacion.findMany({
-    where: { sucursalId: auth.activeSucursalId },
+    where: sucursalWhere,
     orderBy: { id: "desc" },
     include: {
       cliente: true,
@@ -32,6 +34,9 @@ export async function GET() {
 export async function POST(req: Request) {
   const auth = await requireAuth();
   if (!auth.ok) return auth.res;
+  if (isGlobalSucursalView(auth)) {
+    return NextResponse.json({ error: "Vista global en modo solo lectura. Selecciona una sucursal para crear consignaciones." }, { status: 409 });
+  }
 
   // Guard: Verificar que el plan permite consignaciones
   const featureCheck = await checkFeature("consignaciones");

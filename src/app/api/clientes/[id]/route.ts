@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/requireAuth";
+import { canAccessSucursalResource, isGlobalSucursalView } from "@/lib/sucursalScope";
 
 type RouteContext = {
   params: Promise<{ id: string }>;
@@ -25,7 +26,7 @@ export async function GET(request: Request, { params }: RouteContext) {
       where: { id },
     });
 
-    if (!cliente || cliente.sucursalId !== auth.activeSucursalId) {
+    if (!cliente || !canAccessSucursalResource(auth, cliente.sucursalId)) {
       return NextResponse.json({ error: "Cliente no encontrado" }, { status: 404 });
     }
 
@@ -45,6 +46,9 @@ export async function PUT(request: Request, { params }: RouteContext) {
   try {
     const auth = await requireAuth();
     if (!auth.ok) return auth.res;
+    if (isGlobalSucursalView(auth)) {
+      return NextResponse.json({ error: "Vista global en modo solo lectura. Selecciona una sucursal para editar clientes." }, { status: 409 });
+    }
 
     const { id: idString } = await params;
     const id = Number(idString);
@@ -88,6 +92,9 @@ export async function DELETE(request: Request, { params }: RouteContext) {
   try {
     const auth = await requireAuth();
     if (!auth.ok) return auth.res;
+    if (isGlobalSucursalView(auth)) {
+      return NextResponse.json({ error: "Vista global en modo solo lectura. Selecciona una sucursal para eliminar clientes." }, { status: 409 });
+    }
 
     const { id: idString } = await params;
     const id = Number(idString);

@@ -3,10 +3,13 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/requireAuth";
+import { buildSucursalWhere } from "@/lib/sucursalScope";
+import { Prisma } from "@prisma/client";
 
 export async function GET(req: Request) {
   const auth = await requireAuth();
   if (!auth.ok) return auth.res;
+  const sucursalWhere = buildSucursalWhere(auth);
 
   const { searchParams } = new URL(req.url);
   const clienteIdRaw = searchParams.get("clienteId");
@@ -17,9 +20,9 @@ export async function GET(req: Request) {
   }
 
   try {
-    const where: any = {
+    const where: Prisma.LiquidacionWhereInput = {
       consignacion: {
-        sucursalId: auth.activeSucursalId,
+        ...sucursalWhere,
         ...(clienteId ? { clienteId } : {}),
       },
     };

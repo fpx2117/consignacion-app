@@ -52,12 +52,16 @@ async function apiRequest<T>(path: string, init?: RequestInit): Promise<ApiRespo
   }
 
   let sucursalHeader = "";
+  const method = (init?.method ?? "GET").toUpperCase();
+  const isReadRequest = method === "GET";
+  const isApiEndpoint = path.startsWith("/api/");
   if (typeof window !== "undefined") {
     try {
       // Lazy import para evitar errores SSR
       const { useSucursalStore } = require("@/store/useSucursalStore");
       const sid = useSucursalStore.getState().activeSucursalId;
-      if (sid) sucursalHeader = String(sid);
+      const shouldAttachHeader = Number.isFinite(sid) && (sid > 0 || (sid === 0 && isApiEndpoint && isReadRequest));
+      if (shouldAttachHeader) sucursalHeader = String(sid);
     } catch { /* silently ignore store errors */ }
   }
 
@@ -560,9 +564,8 @@ export const apiService = {
   },
 
   async getDashboardReporteUrl(period: DashboardPeriod = "month", type: "general" | "pos" | "consignacion" = "general"): Promise<string> {
-    const res = await fetch(`${API_ROUTES.DASHBOARD.REPORTE_LINK(period)}&type=${type}`);
-    const data = await res.json();
-    return normalizeShareUrl(data.url);
+    const data = await apiRequest<{ url?: string }>(`${API_ROUTES.DASHBOARD.REPORTE_LINK(period)}&type=${type}`);
+    return normalizeShareUrl((data as any)?.url);
   },
 
   getPosReporteUrl(period: DashboardPeriod = "month"): Promise<string> {

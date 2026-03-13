@@ -2,13 +2,14 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/requireAuth";
 import { createClienteSchema } from "@/lib/validators/cliente";
+import { buildSucursalWhere, isGlobalSucursalView } from "@/lib/sucursalScope";
 
 export async function GET() {
   const auth = await requireAuth();
   if (!auth.ok) return auth.res;
 
   const clientes = await prisma.cliente.findMany({
-    where: { sucursalId: auth.activeSucursalId },
+    where: buildSucursalWhere(auth),
     orderBy: { id: "desc" }
   });
   return NextResponse.json({ data: clientes });
@@ -17,6 +18,9 @@ export async function GET() {
 export async function POST(req: Request) {
   const auth = await requireAuth();
   if (!auth.ok) return auth.res;
+  if (isGlobalSucursalView(auth)) {
+    return NextResponse.json({ error: "Vista global en modo solo lectura. Selecciona una sucursal para crear clientes." }, { status: 409 });
+  }
 
   const body = await req.json().catch(() => null);
   const parsed = createClienteSchema.safeParse(body);

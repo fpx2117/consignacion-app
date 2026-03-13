@@ -3,6 +3,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/requireAuth";
+import { buildSucursalWhere, isGlobalSucursalView } from "@/lib/sucursalScope";
 
 // GET: Obtener detalle de una venta
 export async function GET(
@@ -11,6 +12,7 @@ export async function GET(
 ) {
   const auth = await requireAuth();
   if (!auth.ok) return auth.res;
+  const sucursalWhere = buildSucursalWhere(auth);
 
   // 👈 Cambio 2: Await params
   const { id: idParam } = await params;
@@ -21,7 +23,7 @@ export async function GET(
   }
 
   const venta = await prisma.venta.findFirst({
-    where: { id, sucursalId: auth.activeSucursalId },
+    where: { id, ...sucursalWhere },
     include: {
       cliente: true,
       detalles: { include: { producto: { include: { categoria: true } } } },
@@ -43,6 +45,9 @@ export async function DELETE(
 ) {
   const auth = await requireAuth();
   if (!auth.ok) return auth.res;
+  if (isGlobalSucursalView(auth)) {
+    return NextResponse.json({ error: "Vista global en modo solo lectura. Selecciona una sucursal para anular ventas." }, { status: 409 });
+  }
 
   const { id: idParam } = await params;
   const id = Number(idParam);
