@@ -129,6 +129,7 @@ export function SidebarDock() {
 
   const isDark = mounted && resolvedTheme === "dark";
   const isEmpleado = userRole === "EMPLEADO";
+  const isGlobalView = activeSucursalId === 0;
 
   const isActive = React.useCallback(
     (href: string) => (href === "/dashboard" ? pathname === href : pathname.startsWith(href)),
@@ -170,13 +171,16 @@ export function SidebarDock() {
   }, [usarControlDeCaja]);
 
   const mobileMenuItems = React.useMemo(() => {
-    const items: SidebarNavItem[] = [...filteredBusiness, QUICK_SALE];
+    const items: SidebarNavItem[] = [...filteredBusiness];
+    if (!isGlobalView) {
+      items.push(QUICK_SALE);
+    }
     if (usarControlDeCaja) {
       items.push({ label: "Historial de Caja", href: "/caja/historial", icon: History });
     }
     items.push(...NAV_ADMIN);
     return items;
-  }, [filteredBusiness, usarControlDeCaja]);
+  }, [filteredBusiness, isGlobalView, usarControlDeCaja]);
 
   React.useEffect(() => {
     setMounted(true);
@@ -255,10 +259,10 @@ export function SidebarDock() {
         <div className="relative overflow-hidden rounded-2xl p-[1px]">
           <Dock orientation="horizontal" className="border border-border/70 bg-card/70 backdrop-blur-xl gap-2 px-3">
             {isEmpleado
-              ? <SidebarIconLink item={QUICK_SALE} active={isActive(QUICK_SALE.href)} isMobile tooltipSide="top" />
-              : MOBILE_PRIMARY.map((item) => (
-                  <SidebarIconLink key={item.href} item={item} active={isActive(item.href)} isMobile tooltipSide="top" />
-                ))}
+              ? (!isGlobalView ? <SidebarIconLink item={QUICK_SALE} active={isActive(QUICK_SALE.href)} isMobile tooltipSide="top" /> : null)
+              : MOBILE_PRIMARY.filter((item) => !(isGlobalView && item.href === QUICK_SALE.href)).map((item) => (
+                   <SidebarIconLink key={item.href} item={item} active={isActive(item.href)} isMobile tooltipSide="top" />
+                 ))}
 
             {!isEmpleado && (
               <>
@@ -376,7 +380,7 @@ export function SidebarDock() {
           <div className="relative overflow-hidden rounded-3xl p-[1px]">
             <Dock orientation="vertical" className="border border-border/70 bg-card/75 shadow-xl backdrop-blur-xl md:flex-col gap-1.5 p-2">
               {isEmpleado ? (
-                <SidebarIconLink item={QUICK_SALE} active={isActive(QUICK_SALE.href)} />
+                !isGlobalView ? <SidebarIconLink item={QUICK_SALE} active={isActive(QUICK_SALE.href)} /> : null
               ) : (
                 <>
                   {NAV_CORE.map((item) => (
@@ -394,7 +398,7 @@ export function SidebarDock() {
                     getBadgeCount={(item) => (item.href === "/pedidos-esperados" ? pedidosVencidosCount : 0)}
                   />
 
-                  <SidebarIconLink item={QUICK_SALE} active={isActive(QUICK_SALE.href)} />
+                  {!isGlobalView ? <SidebarIconLink item={QUICK_SALE} active={isActive(QUICK_SALE.href)} /> : null}
 
                   {operationsItems.length > 0 && (
                     <SidebarDropdownGroup
