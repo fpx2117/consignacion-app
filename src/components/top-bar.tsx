@@ -41,6 +41,17 @@ export function TopBar() {
                 </div>
 
                 <div className="flex items-center gap-4 ml-auto">
+                    {activeSucursalId === 0 && (
+                        <div
+                            title="En vista global solo podés consultar. Seleccioná una sucursal para crear, editar o eliminar."
+                            className="inline-flex items-center gap-1.5 rounded-full border border-amber-400/35 bg-amber-500/10 px-2.5 py-1 text-[10px] font-semibold text-amber-700 dark:text-amber-300"
+                        >
+                            <AlertTriangle className="h-3.5 w-3.5" />
+                            <span className="hidden sm:inline">Vista global: solo lectura</span>
+                            <span className="sm:hidden">Solo lectura</span>
+                        </div>
+                    )}
+
                     {availableSucursales.length > 1 ? (
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
@@ -101,15 +112,6 @@ export function TopBar() {
                     )}
                 </div>
             </div>
-
-            {activeSucursalId === 0 && (
-                <div className="pb-3 flex justify-end">
-                    <div className="inline-flex items-center gap-2 rounded-full border border-amber-400/40 bg-amber-500/10 px-3 py-1 text-[11px] font-semibold text-amber-700 dark:text-amber-300">
-                        <AlertTriangle className="h-3.5 w-3.5" />
-                        Vista global: solo lectura. Selecciona una sucursal para operar.
-                    </div>
-                </div>
-            )}
         </div>
     );
 }
