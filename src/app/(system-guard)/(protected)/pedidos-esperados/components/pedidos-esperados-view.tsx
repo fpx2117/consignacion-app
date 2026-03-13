@@ -1,0 +1,636 @@
+/* eslint-disable */
+// @ts-nocheck
+"use client";
+
+import * as React from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { toast } from "sonner";
+import { cn } from "@/lib/utils";
+import { useSucursalStore } from "@/store/useSucursalStore";
+import type { PedidoEsperado, EstadoPedidoEsperado } from "@/types/pedidos-esperados";
+
+// UI
+import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+
+// Icons
+import {
+  ClipboardList,
+  Plus,
+  Loader2,
+  PackageCheck,
+  CalendarClock,
+  XCircle,
+  Eye,
+  AlertCircle,
+  MoreVertical,
+  CalendarX2,
+  CheckCheck,
+  PackageSearch,
+} from "lucide-react";
+
+// Sub-components
+import { PedidoEstadoBadge } from "./pedido-estado-badge";
+import { PedidosFilters } from "./pedidos-filters";
+import { CrearPedidoDialog } from "./crear-pedido-dialog";
+import { ConfirmarPedidoDialog } from "./confirmar-pedido-dialog";
+import { PostergarPedidoDialog } from "./postergar-pedido-dialog";
+
+// ─── HELPERS ─────────────────────────────────────────────────────────────────
+
+function formatFecha(fechaISO: string) {
+  if (!fechaISO) return "—";
+  const d = new Date(fechaISO);
+  return d.toLocaleDateString("es-AR", { day: "2-digit", month: "short", year: "numeric" });
+}
+
+function formatFechaRelativa(fechaISO: string) {
+  if (!fechaISO) return "";
+  const hoy = new Date();
+  hoy.setHours(0, 0, 0, 0);
+  const fecha = new Date(fechaISO);
+  fecha.setHours(0, 0, 0, 0);
+  const diff = Math.round((fecha.getTime() - hoy.getTime()) / (1000 * 60 * 60 * 24));
+  if (diff === 0) return "hoy";
+  if (diff === 1) return "mañana";
+  if (diff === -1) return "ayer";
+  if (diff < 0) return `hace ${Math.abs(diff)} días`;
+  return `en ${diff} días`;
+}
+
+const ESTADOS_ACTIVOS: EstadoPedidoEsperado[] = ["PROGRAMADO", "VENCIDO", "PARCIAL", "POSTERGADO"];
+const ESTADOS_SOLO_VER: EstadoPedidoEsperado[] = ["CONFIRMADO", "CANCELADO"];
+
+// ─── TIPOS DE FILTROS ─────────────────────────────────────────────────────────
+
+interface Filtros {
+  estado: string;
+  fechaDesde: string;
+  fechaHasta: string;
+}
+
+const FILTROS_DEFECTO: Filtros = {
+  estado: "all",
+  fechaDesde: "",
+  fechaHasta: "",
+};
+
+// ─── COMPONENTE PRINCIPAL ────────────────────────────────────────────────────
+
+export function PedidosEsperadosView() {
+  const activeSucursalId = useSucursalStore((s) => s.activeSucursalId);
+
+  const [pedidos, setPedidos] = React.useState<PedidoEsperado[]>([]);
+  const [loading, setLoading] = React.useState(true);
+  const [filtros, setFiltros] = React.useState<Filtros>(FILTROS_DEFECTO);
+
+  // Dialogs
+  const [dialogCrear, setDialogCrear] = React.useState(false);
+  const [selectedPedido, setSelectedPedido] = React.useState<PedidoEsperado | null>(null);
+  const [dialogConfirmar, setDialogConfirmar] = React.useState(false);
+  const [dialogPostergar, setDialogPostergar] = React.useState(false);
+  const [dialogCancelar, setDialogCancelar] = React.useState(false);
+  const [cancelandoId, setCancelandoId] = React.useState<number | null>(null);
+
+  // ── Carga de datos ──────────────────────────────────────────────────────────
+  const fetchPedidos = React.useCallback(async () => {
+    setLoading(true);
+    try {
+      const params = new URLSearchParams();
+      if (filtros.estado !== "all") {
+        if (filtros.estado === "pendientes") {
+          // filtro especial: dos estados
+          params.append("estado", "PROGRAMADO");
+          params.append("estado", "VENCIDO");
+        } else {
+          params.append("estado", filtros.estado);
+        }
+      }
+      if (filtros.fechaDesde) params.append("fechaDesde", filtros.fechaDesde);
+      if (filtros.fechaHasta) params.append("fechaHasta", filtros.fechaHasta);
+
+      const res = await fetch(`/api/pedidos-esperados?${params.toString()}`);
+      if (!res.ok) throw new Error("Error al cargar pedidos");
+      const data = await res.json();
+      const arr = Array.isArray(data) ? data : Array.isArray(data?.data) ? data.data : [];
+      setPedidos(arr);
+    } catch (err: any) {
+      toast.error("No se pudieron cargar los pedidos");
+      setPedidos([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [filtros]);
+
+  React.useEffect(() => {
+    fetchPedidos();
+  }, [fetchPedidos, activeSucursalId]);
+
+  // ── Cancelar pedido ─────────────────────────────────────────────────────────
+  async function handleCancelar(pedido: PedidoEsperado) {
+    setSelectedPedido(pedido);
+    setDialogCancelar(true);
+  }
+
+  async function confirmCancelar() {
+    if (!selectedPedido) return;
+    setCancelandoId(selectedPedido.id);
+    try {
+      const res = await fetch(`/api/pedidos-esperados/${selectedPedido.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ estado: "CANCELADO" }),
+      });
+      if (!res.ok) throw new Error();
+      toast.success("Pedido cancelado");
+      setDialogCancelar(false);
+      fetchPedidos();
+    } catch {
+      toast.error("Error al cancelar el pedido");
+    } finally {
+      setCancelandoId(null);
+    }
+  }
+
+  // ── Stats ───────────────────────────────────────────────────────────────────
+  const vencidos = pedidos.filter((p) => p.estado === "VENCIDO").length;
+  const activos = pedidos.filter((p) => ESTADOS_ACTIVOS.includes(p.estado)).length;
+
+  // ─────────────────────────────────────────────────────────────────────────
+  return (
+    <div className="max-w-[1400px] mx-auto space-y-8 p-6 md:p-10 pb-20 text-foreground font-sans">
+
+      {/* HEADER */}
+      <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-border/40">
+        <div className="space-y-1.5">
+          <h1 className="text-3xl md:text-4xl font-black tracking-tight text-foreground flex items-center gap-3">
+            <ClipboardList className="h-8 w-8 md:h-10 md:w-10 text-primary" />
+            Pedidos Esperados
+            {vencidos > 0 && (
+              <Badge className="bg-red-600 text-white font-black text-sm px-2.5 py-1 rounded-xl animate-pulse">
+                {vencidos} vencido{vencidos > 1 ? "s" : ""}
+              </Badge>
+            )}
+          </h1>
+          <p className="text-muted-foreground text-sm md:text-base max-w-2xl">
+            Programá y confirmá la llegada de stock al inventario.
+          </p>
+        </div>
+
+        <Button
+          size="lg"
+          className="h-10 px-5 rounded-xl font-bold shadow-lg shadow-primary/20 hover:shadow-primary/40 transition-all hover:scale-[1.02]"
+          onClick={() => setDialogCrear(true)}
+        >
+          <Plus className="h-4 w-4 mr-2 stroke-[3px]" />
+          Nuevo Pedido
+        </Button>
+      </header>
+
+      {/* STATS RÁPIDOS */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <QuickStat
+          label="Total pedidos"
+          value={pedidos.length}
+          color="default"
+          icon={ClipboardList}
+        />
+        <QuickStat
+          label="Activos"
+          value={activos}
+          color="blue"
+          icon={PackageSearch}
+        />
+        <QuickStat
+          label="Vencidos"
+          value={vencidos}
+          color={vencidos > 0 ? "red" : "default"}
+          icon={CalendarX2}
+        />
+        <QuickStat
+          label="Confirmados"
+          value={pedidos.filter((p) => p.estado === "CONFIRMADO").length}
+          color="emerald"
+          icon={CheckCheck}
+        />
+      </div>
+
+      <div className="space-y-4">
+        {/* FILTROS */}
+        <Card className="p-1 bg-card/50 backdrop-blur-sm border-border/60 shadow-sm rounded-2xl">
+          <PedidosFilters
+            estado={filtros.estado}
+            fechaDesde={filtros.fechaDesde}
+            fechaHasta={filtros.fechaHasta}
+            onEstadoChange={(v) => setFiltros((f) => ({ ...f, estado: v }))}
+            onFechaDesdeChange={(v) => setFiltros((f) => ({ ...f, fechaDesde: v }))}
+            onFechaHastaChange={(v) => setFiltros((f) => ({ ...f, fechaHasta: v }))}
+            onLimpiar={() => setFiltros(FILTROS_DEFECTO)}
+          />
+        </Card>
+
+        {/* LOADING */}
+        {loading && (
+          <div className="h-[300px] flex flex-col items-center justify-center gap-4 bg-card/30 rounded-2xl border border-border/50">
+            <Loader2 className="h-12 w-12 animate-spin text-primary opacity-50" />
+            <span className="text-sm font-medium text-muted-foreground animate-pulse">Cargando pedidos...</span>
+          </div>
+        )}
+
+        {/* CONTENIDO */}
+        {!loading && (
+          <>
+            {/* --- TABLA DESKTOP --- */}
+            <div className="hidden md:block">
+              <Card className="border-border/60 bg-card/40 backdrop-blur-xl shadow-sm rounded-2xl overflow-hidden">
+                <Table>
+                  <TableHeader className="bg-muted/30">
+                    <TableRow className="hover:bg-transparent border-b border-border/60">
+                      <TableHead className="pl-6 font-bold text-xs uppercase tracking-wider text-muted-foreground/70">Fecha esperada</TableHead>
+                      <TableHead className="font-bold text-xs uppercase tracking-wider text-muted-foreground/70">Estado</TableHead>
+                      <TableHead className="font-bold text-xs uppercase tracking-wider text-muted-foreground/70 text-center">Items</TableHead>
+                      <TableHead className="font-bold text-xs uppercase tracking-wider text-muted-foreground/70">Productos</TableHead>
+                      <TableHead className="font-bold text-xs uppercase tracking-wider text-muted-foreground/70">Observaciones</TableHead>
+                      <TableHead className="font-bold text-xs uppercase tracking-wider text-muted-foreground/70 text-right pr-6">Acciones</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {pedidos.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={6} className="h-[250px] text-center">
+                          <EmptyState onCrear={() => setDialogCrear(true)} />
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      pedidos.map((pedido, idx) => (
+                        <PedidoRow
+                          key={pedido.id}
+                          pedido={pedido}
+                          idx={idx}
+                          onConfirmar={() => { setSelectedPedido(pedido); setDialogConfirmar(true); }}
+                          onPostergar={() => { setSelectedPedido(pedido); setDialogPostergar(true); }}
+                          onCancelar={() => handleCancelar(pedido)}
+                        />
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </Card>
+            </div>
+
+            {/* --- CARDS MOBILE --- */}
+            <div className="md:hidden space-y-4">
+              {pedidos.length === 0 ? (
+                <div className="py-20">
+                  <EmptyState onCrear={() => setDialogCrear(true)} />
+                </div>
+              ) : (
+                pedidos.map((pedido, idx) => (
+                  <MobilePedidoCard
+                    key={pedido.id}
+                    pedido={pedido}
+                    idx={idx}
+                    onConfirmar={() => { setSelectedPedido(pedido); setDialogConfirmar(true); }}
+                    onPostergar={() => { setSelectedPedido(pedido); setDialogPostergar(true); }}
+                    onCancelar={() => handleCancelar(pedido)}
+                  />
+                ))
+              )}
+            </div>
+          </>
+        )}
+      </div>
+
+      {/* DIALOGS */}
+      <CrearPedidoDialog
+        open={dialogCrear}
+        onOpenChange={setDialogCrear}
+        onSuccess={fetchPedidos}
+      />
+      <ConfirmarPedidoDialog
+        pedido={selectedPedido}
+        open={dialogConfirmar}
+        onOpenChange={setDialogConfirmar}
+        onSuccess={() => { fetchPedidos(); setSelectedPedido(null); }}
+      />
+      <PostergarPedidoDialog
+        pedido={selectedPedido}
+        open={dialogPostergar}
+        onOpenChange={setDialogPostergar}
+        onSuccess={() => { fetchPedidos(); setSelectedPedido(null); }}
+      />
+
+      {/* DIALOG CANCELAR */}
+      <AlertDialog open={dialogCancelar} onOpenChange={setDialogCancelar}>
+        <AlertDialogContent className="rounded-2xl border-none shadow-2xl">
+          <AlertDialogHeader>
+            <div className="mx-auto bg-red-100 dark:bg-red-900/30 p-3 rounded-full w-fit mb-2">
+              <AlertCircle className="h-8 w-8 text-red-600" />
+            </div>
+            <AlertDialogTitle className="text-xl font-bold text-center">¿Cancelar pedido?</AlertDialogTitle>
+            <AlertDialogDescription className="text-center text-muted-foreground">
+              Esta acción no se puede deshacer. El pedido quedará marcado como cancelado y no podrá confirmarse.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="grid grid-cols-2 gap-3 sm:flex sm:justify-center pt-2">
+            <AlertDialogCancel className="h-11 rounded-xl mt-0" onClick={() => setDialogCancelar(false)}>
+              Volver
+            </AlertDialogCancel>
+            <AlertDialogAction
+              className="h-11 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold"
+              onClick={(e) => { e.preventDefault(); confirmCancelar(); }}
+              disabled={cancelandoId !== null}
+            >
+              {cancelandoId !== null ? <Loader2 className="h-4 w-4 animate-spin" /> : "Sí, cancelar"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
+  );
+}
+
+// ─── SUB-COMPONENTS ───────────────────────────────────────────────────────────
+
+function PedidoRow({
+  pedido,
+  idx,
+  onConfirmar,
+  onPostergar,
+  onCancelar,
+}: {
+  pedido: PedidoEsperado;
+  idx: number;
+  onConfirmar: () => void;
+  onPostergar: () => void;
+  onCancelar: () => void;
+}) {
+  const isVencido = pedido.estado === "VENCIDO";
+  const soloVer = ESTADOS_SOLO_VER.includes(pedido.estado);
+  const productosNombres = pedido.items.map((it) => it.producto.nombre).join(", ");
+
+  return (
+    <motion.tr
+      initial={{ opacity: 0, y: 5 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: idx * 0.03 }}
+      className={cn(
+        "group border-b border-border/40 hover:bg-muted/30 transition-colors",
+        isVencido && "bg-red-500/5"
+      )}
+    >
+      <TableCell className="pl-6 py-4">
+        <div className="space-y-0.5">
+          <p className="font-bold text-sm text-foreground tabular-nums">{formatFecha(pedido.fechaEsperada)}</p>
+          <p className={cn(
+            "text-[10px] font-bold",
+            isVencido ? "text-red-500" : "text-muted-foreground"
+          )}>
+            {formatFechaRelativa(pedido.fechaEsperada)}
+          </p>
+        </div>
+      </TableCell>
+
+      <TableCell>
+        <PedidoEstadoBadge estado={pedido.estado} />
+      </TableCell>
+
+      <TableCell className="text-center">
+        <span className="font-bold text-foreground tabular-nums">{pedido.items.length}</span>
+      </TableCell>
+
+      <TableCell className="max-w-[200px]">
+        <p className="text-sm text-muted-foreground truncate" title={productosNombres}>
+          {productosNombres || "—"}
+        </p>
+      </TableCell>
+
+      <TableCell className="max-w-[160px]">
+        {pedido.observaciones ? (
+          <p className="text-xs text-muted-foreground truncate italic" title={pedido.observaciones}>
+            {pedido.observaciones}
+          </p>
+        ) : (
+          <span className="text-xs text-muted-foreground/40 italic">Sin observaciones</span>
+        )}
+      </TableCell>
+
+      <TableCell className="text-right pr-4">
+        {soloVer ? (
+          <Button variant="ghost" size="sm" className="h-8 rounded-lg text-xs font-bold text-muted-foreground">
+            <Eye className="h-3.5 w-3.5 mr-1" />
+            Ver
+          </Button>
+        ) : (
+          <div className="flex items-center justify-end gap-1 opacity-80 group-hover:opacity-100">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 px-3 rounded-lg text-xs font-bold text-emerald-600 hover:bg-emerald-500/10"
+              onClick={onConfirmar}
+            >
+              <PackageCheck className="h-3.5 w-3.5 mr-1" />
+              {pedido.estado === "PARCIAL" ? "Completar" : "Confirmar"}
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 px-3 rounded-lg text-xs font-bold text-blue-600 hover:bg-blue-500/10"
+              onClick={onPostergar}
+            >
+              <CalendarClock className="h-3.5 w-3.5 mr-1" />
+              Postergar
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 px-3 rounded-lg text-xs font-bold text-red-500 hover:bg-red-500/10"
+              onClick={onCancelar}
+            >
+              <XCircle className="h-3.5 w-3.5 mr-1" />
+              Cancelar
+            </Button>
+          </div>
+        )}
+      </TableCell>
+    </motion.tr>
+  );
+}
+
+function MobilePedidoCard({
+  pedido,
+  idx,
+  onConfirmar,
+  onPostergar,
+  onCancelar,
+}: {
+  pedido: PedidoEsperado;
+  idx: number;
+  onConfirmar: () => void;
+  onPostergar: () => void;
+  onCancelar: () => void;
+}) {
+  const isVencido = pedido.estado === "VENCIDO";
+  const soloVer = ESTADOS_SOLO_VER.includes(pedido.estado);
+  const productosNombres = pedido.items.map((it) => it.producto.nombre).join(", ");
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: idx * 0.05 }}
+    >
+      <Card className={cn(
+        "p-4 border-border/50 shadow-sm rounded-2xl relative overflow-hidden space-y-3",
+        isVencido && "border-red-500/30 bg-red-500/5"
+      )}>
+        <div className={cn(
+          "absolute left-0 top-0 bottom-0 w-1.5",
+          pedido.estado === "VENCIDO" ? "bg-red-500" :
+          pedido.estado === "PROGRAMADO" ? "bg-blue-500" :
+          pedido.estado === "PARCIAL" ? "bg-yellow-500" :
+          pedido.estado === "CONFIRMADO" ? "bg-emerald-500" :
+          "bg-muted-foreground"
+        )} />
+
+        <div className="flex items-start justify-between pl-3 gap-3">
+          <div className="space-y-1 flex-1">
+            <div className="flex items-center gap-2">
+              <PedidoEstadoBadge estado={pedido.estado} size="sm" />
+              <span className={cn(
+                "text-[10px] font-bold",
+                isVencido ? "text-red-500" : "text-muted-foreground"
+              )}>
+                {formatFechaRelativa(pedido.fechaEsperada)}
+              </span>
+            </div>
+            <p className="font-bold text-foreground text-sm">{formatFecha(pedido.fechaEsperada)}</p>
+            <p className="text-xs text-muted-foreground truncate">{productosNombres}</p>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <Badge variant="outline" className="text-xs font-bold tabular-nums">
+              {pedido.items.length} {pedido.items.length === 1 ? "item" : "items"}
+            </Badge>
+            {!soloVer && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="icon" className="h-9 w-9 rounded-xl border-border/60">
+                    <MoreVertical className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-48 rounded-xl border-border/60 shadow-xl">
+                  <DropdownMenuItem
+                    className="flex items-center gap-2.5 font-semibold text-emerald-600 cursor-pointer rounded-lg focus:text-emerald-600 focus:bg-emerald-50 dark:focus:bg-emerald-950/40"
+                    onClick={onConfirmar}
+                  >
+                    <PackageCheck className="h-4 w-4" />
+                    {pedido.estado === "PARCIAL" ? "Completar" : "Confirmar"}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    className="flex items-center gap-2.5 font-semibold text-blue-600 cursor-pointer rounded-lg focus:text-blue-600 focus:bg-blue-50 dark:focus:bg-blue-950/40"
+                    onClick={onPostergar}
+                  >
+                    <CalendarClock className="h-4 w-4" />
+                    Postergar
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    className="flex items-center gap-2.5 font-semibold text-red-600 cursor-pointer rounded-lg focus:text-red-600 focus:bg-red-50 dark:focus:bg-red-950/40"
+                    onClick={onCancelar}
+                  >
+                    <XCircle className="h-4 w-4" />
+                    Cancelar
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
+          </div>
+        </div>
+
+        {pedido.observaciones && (
+          <p className="pl-3 text-xs text-muted-foreground italic truncate">
+            {pedido.observaciones}
+          </p>
+        )}
+      </Card>
+    </motion.div>
+  );
+}
+
+function QuickStat({
+  label,
+  value,
+  color,
+  icon: Icon,
+}: {
+  label: string;
+  value: number;
+  color: "default" | "blue" | "emerald" | "red";
+  icon: React.ElementType;
+}) {
+  const colors = {
+    default: "bg-primary/5 text-primary",
+    blue: "bg-blue-500/10 text-blue-600",
+    emerald: "bg-emerald-500/10 text-emerald-600",
+    red: "bg-red-500/10 text-red-600",
+  };
+
+  return (
+    <Card className="p-4 border-border/50 shadow-sm bg-card/50 backdrop-blur-sm hover:bg-card/80 transition-all">
+      <div className="flex items-center gap-3">
+        <div className={cn("p-2.5 rounded-xl", colors[color])}>
+          <Icon className="h-5 w-5" />
+        </div>
+        <div>
+          <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground/80">{label}</p>
+          <h3 className="text-2xl font-black tracking-tight text-foreground tabular-nums">{value}</h3>
+        </div>
+      </div>
+    </Card>
+  );
+}
+
+function EmptyState({ onCrear }: { onCrear: () => void }) {
+  return (
+    <div className="flex flex-col items-center justify-center gap-4 text-muted-foreground py-10">
+      <div className="p-4 rounded-2xl bg-muted/30">
+        <PackageSearch className="h-12 w-12 opacity-40" />
+      </div>
+      <div className="space-y-1 text-center">
+        <p className="text-lg font-bold text-foreground">No hay pedidos programados</p>
+        <p className="text-sm text-muted-foreground">Creá un pedido para empezar a hacer seguimiento del stock entrante.</p>
+      </div>
+      <Button onClick={onCrear} className="mt-2 rounded-xl font-bold shadow-lg shadow-primary/20">
+        <Plus className="h-4 w-4 mr-2" />
+        Crear primer pedido
+      </Button>
+    </div>
+  );
+}

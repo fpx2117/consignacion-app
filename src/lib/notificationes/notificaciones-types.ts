@@ -22,7 +22,8 @@ export enum NOTIFICATION_TYPE {
   PAYMENT_FAILED = "PAYMENT_FAILED",     // Error en pago
   EXPORT_READY = "EXPORT_READY",     // "Tu reporte PDF está listo"
   CLIENT_REGISTERED = "CLIENT_REGISTERED", // Nuevo cliente
-  CONSIGNMENT_ALERT = "CONSIGNMENT_ALERT" // Alerta de tiempo en consignación
+  CONSIGNMENT_ALERT = "CONSIGNMENT_ALERT", // Alerta de tiempo en consignación
+  PEDIDO_VENCIDO = "PEDIDO_VENCIDO"         // Pedido de reposicion con fecha vencida
 }
 
 // 2. Configuración visual (Opcional, pero muy útil para el Frontend)
@@ -82,6 +83,10 @@ export const NOTIFICATION_CONFIG: Record<NOTIFICATION_TYPE, { label: string; sev
   },
   [NOTIFICATION_TYPE.CONSIGNMENT_ALERT]: {
     label: "Atención",
+    severity: "warning",
+  },
+  [NOTIFICATION_TYPE.PEDIDO_VENCIDO]: {
+    label: "Pedido Vencido",
     severity: "warning",
   },
 };
