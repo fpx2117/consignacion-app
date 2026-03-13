@@ -6,7 +6,6 @@ import * as React from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
-import { AnimatePresence, motion } from "framer-motion";
 
 import { cn } from "@/lib/utils";
 import { Separator } from "@/components/ui/separator";
@@ -26,10 +25,13 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 import { useSucursalStore } from "@/store/useSucursalStore";
 
@@ -45,10 +47,10 @@ import {
   Settings,
   History,
   LayoutGrid,
+  Store,
   LogOut,
   Wallet,
   ClipboardList,
-  Briefcase,
   Zap,
 } from "lucide-react";
 
@@ -76,107 +78,90 @@ const MOBILE_PRIMARY = [
 
 import { BrandLogo } from "@/components/brand-logo";
 
-// --- HOOK: Popover controlado por hover ---
-function useHoverPopover(delay = 100) {
-  const [open, setOpen] = React.useState(false);
-  const closeTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const scheduleClose = () => {
-    closeTimer.current = setTimeout(() => setOpen(false), delay);
-  };
-
-  const onMouseEnter = () => {
-    if (closeTimer.current) clearTimeout(closeTimer.current);
-    setOpen(true);
-  };
-
-  const onMouseLeave = () => {
-    scheduleClose();
-  };
-
-  const onFocus = () => {
-    if (closeTimer.current) clearTimeout(closeTimer.current);
-    setOpen(true);
-  };
-
-  const onBlur = (e: React.FocusEvent<HTMLElement>) => {
-    if (!e.currentTarget.contains(e.relatedTarget as Node | null)) {
-      scheduleClose();
-    }
-  };
-
-  React.useEffect(() => () => {
-    if (closeTimer.current) clearTimeout(closeTimer.current);
-  }, []);
-
-  return { open, setOpen, onMouseEnter, onMouseLeave, onFocus, onBlur };
-}
-
-// --- COMPONENTE: Grupo de navegación con Popover hover ---
-function NavGroup({
+// --- COMPONENTE: Grupo de navegación con Dropdown ---
+function NavDropdown({
   label,
   icon: GroupIcon,
   items,
   isActive,
-  renderSubItem,
+  onNavigate,
   badge,
 }: {
   label: string;
   icon: React.ElementType;
   items: any[];
   isActive: (href: string) => boolean;
-  renderSubItem: (item: any) => React.ReactNode;
+  onNavigate: (href: string) => void;
   badge?: number;
 }) {
-  const { open, setOpen, onMouseEnter, onMouseLeave, onFocus, onBlur } = useHoverPopover(150);
   const groupActive = items.some((i) => isActive(i.href));
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <div onMouseEnter={onMouseEnter} onMouseLeave={onMouseLeave} onFocus={onFocus} onBlur={onBlur}>
-          <DockIcon>
-            <button
-              aria-label={label}
-              aria-expanded={open}
-              aria-haspopup="menu"
-              className={cn(
-                "relative flex items-center justify-center rounded-full transition-all duration-300 h-10 w-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
-                groupActive
-                  ? "bg-primary text-primary-foreground shadow-lg scale-110"
-                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
-              )}
-            >
-              <GroupIcon className="size-5" />
-              {/* Badge de grupo activo */}
-              {groupActive && !open && (
-                <span className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-primary-foreground/70" />
-              )}
-              {/* Badge numérico externo */}
-              {badge && badge > 0 && (
-                <span className="absolute -top-1 -right-1 min-w-[16px] h-4 px-[3px] rounded-full bg-destructive text-[9px] font-black text-destructive-foreground flex items-center justify-center leading-none animate-pulse">
-                  {badge > 9 ? "9+" : badge}
-                </span>
-              )}
-            </button>
-          </DockIcon>
-        </div>
-      </PopoverTrigger>
-      <PopoverContent
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <DockIcon>
+          <button
+            aria-label={label}
+            aria-haspopup="menu"
+            className={cn(
+              "relative flex items-center justify-center rounded-full transition-all duration-300 h-10 w-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+              groupActive
+                ? "bg-primary text-primary-foreground shadow-lg scale-110"
+                : "text-muted-foreground hover:bg-muted hover:text-foreground"
+            )}
+          >
+            <GroupIcon className="size-5" />
+            {groupActive && (
+              <span className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-primary-foreground/70" />
+            )}
+            {badge && badge > 0 && (
+              <span className="absolute -top-1 -right-1 min-w-[16px] h-4 px-[3px] rounded-full bg-destructive text-[9px] font-black text-destructive-foreground flex items-center justify-center leading-none animate-pulse">
+                {badge > 9 ? "9+" : badge}
+              </span>
+            )}
+          </button>
+        </DockIcon>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent
         side="right"
         align="center"
         sideOffset={12}
-        className="p-2.5 w-auto min-w-[210px] rounded-2xl border border-border/70 bg-background/95 backdrop-blur-xl shadow-2xl"
-        onMouseEnter={onMouseEnter}
-        onMouseLeave={onMouseLeave}
-        onFocus={onFocus}
-        onBlur={onBlur}
+        className="w-[224px] rounded-2xl border border-border/70 bg-background/95 p-1.5 shadow-2xl"
       >
-        <div className="flex flex-col gap-0.5">
-          {items.map(renderSubItem)}
-        </div>
-      </PopoverContent>
-    </Popover>
+        <DropdownMenuLabel className="px-3 py-1 text-[11px] uppercase tracking-wider text-muted-foreground/80">
+          {label}
+        </DropdownMenuLabel>
+        <DropdownMenuSeparator className="mx-2 my-1" />
+        {items.map((item) => {
+          const ItemIcon = item.icon;
+          const active = isActive(item.href);
+          const isPedidos = item.href === "/pedidos-esperados";
+          const showBadge = isPedidos && badge && badge > 0;
+
+          return (
+            <DropdownMenuItem
+              key={item.href}
+              onSelect={(e) => {
+                e.preventDefault();
+                onNavigate(item.href);
+              }}
+              className={cn(
+                "cursor-pointer rounded-xl px-3 py-2.5 data-[highlighted]:bg-muted data-[highlighted]:text-foreground",
+                active && "bg-primary/10 text-primary"
+              )}
+            >
+              <ItemIcon className={cn("h-4 w-4", active ? "text-primary" : "text-muted-foreground")} />
+              <span className="flex-1 text-sm font-medium">{item.label}</span>
+              {showBadge && (
+                <span className="inline-flex min-w-[18px] h-[18px] items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-black leading-none text-destructive-foreground">
+                  {badge > 9 ? "9+" : badge}
+                </span>
+              )}
+            </DropdownMenuItem>
+          );
+        })}
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
 
@@ -301,7 +286,7 @@ export function SidebarDock() {
   }, [allowConsignaciones]);
 
   const filteredOperations = React.useMemo(() => {
-    const ops = [{ label: "Venta Casual", href: "/ventas/nueva", icon: ShoppingCart }];
+    const ops: Array<{ label: string; href: string; icon: React.ElementType }> = [];
     if (usarControlDeCaja) {
       ops.push({ label: "Historial", href: "/caja/historial", icon: History });
     }
@@ -318,11 +303,12 @@ export function SidebarDock() {
   }, [usarControlDeCaja, filteredBusiness]);
 
   // --- RENDER: Ítem simple (dock) ---
-  const renderItem = (item: any, isMobile: boolean) => {
+  const renderItem = (item: any, isMobile: boolean, variant: "default" | "quick" = "default") => {
     const active = isActive(item.href);
     const Icon = item.icon;
     const isPedidos = item.href === "/pedidos-esperados";
     const showBadge = isPedidos && pedidosVencidosCount > 0;
+    const isQuick = variant === "quick";
 
     return (
       <DockIcon key={item.href}>
@@ -335,10 +321,17 @@ export function SidebarDock() {
                 className={cn(
                   "relative flex items-center justify-center rounded-full transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
                   isMobile ? "h-9 w-9" : "h-10 w-10",
-                  active ? "bg-primary text-primary-foreground shadow-lg scale-110" : "text-muted-foreground hover:bg-muted"
+                  active
+                    ? "bg-primary text-primary-foreground shadow-lg scale-110"
+                    : isQuick
+                      ? "text-emerald-500 hover:bg-emerald-500/12"
+                      : "text-muted-foreground hover:bg-muted"
                 )}
               >
                 <Icon className={isMobile ? "h-4 w-4" : "size-5"} />
+                {isQuick && !active && !isMobile && (
+                  <span className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-emerald-500/90" />
+                )}
                 {showBadge && (
                   <span className="absolute -top-1 -right-1 min-w-[16px] h-4 px-[3px] rounded-full bg-destructive text-[9px] font-black text-destructive-foreground flex items-center justify-center leading-none animate-pulse">
                     {pedidosVencidosCount > 9 ? "9+" : pedidosVencidosCount}
@@ -347,49 +340,12 @@ export function SidebarDock() {
               </Link>
             </TooltipTrigger>
             <TooltipContent side={isMobile ? "top" : "right"}>
-              {item.label}
+              {isQuick ? "Venta Casual (Acceso rapido)" : item.label}
               {showBadge && ` (${pedidosVencidosCount} vencido${pedidosVencidosCount > 1 ? "s" : ""})`}
             </TooltipContent>
           </Tooltip>
         </TooltipProvider>
       </DockIcon>
-    );
-  };
-
-  // --- RENDER: Subítem dentro del popover ---
-  const renderSubItem = (item: any) => {
-    const active = isActive(item.href);
-    const Icon = item.icon;
-    const isPedidos = item.href === "/pedidos-esperados";
-    const showBadge = isPedidos && pedidosVencidosCount > 0;
-
-    return (
-      <Link
-        key={item.href}
-        href={item.href}
-        aria-current={active ? "page" : undefined}
-        className={cn(
-          "flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
-          active
-            ? "bg-primary text-primary-foreground font-semibold shadow-sm"
-            : "text-muted-foreground hover:bg-muted/80 hover:text-foreground"
-        )}
-      >
-        <div className="relative shrink-0">
-          <Icon className="h-4 w-4" />
-          {showBadge && (
-            <span className="absolute -top-1.5 -right-1.5 min-w-[14px] h-3.5 px-[2px] rounded-full bg-destructive text-[8px] font-black text-destructive-foreground flex items-center justify-center leading-none animate-pulse">
-              {pedidosVencidosCount > 9 ? "9+" : pedidosVencidosCount}
-            </span>
-          )}
-        </div>
-        <span className="text-sm whitespace-nowrap">{item.label}</span>
-        {showBadge && (
-          <span className="ml-auto text-[10px] font-bold text-destructive">
-            {pedidosVencidosCount}
-          </span>
-        )}
-      </Link>
     );
   };
 
@@ -523,33 +479,28 @@ export function SidebarDock() {
                   <Separator className="w-8 mx-auto opacity-50" />
 
                   {/* GRUPO: Negocio */}
-                  <NavGroup
+                  <NavDropdown
                     label="Negocio"
-                    icon={Briefcase}
+                    icon={Store}
                     items={filteredBusiness}
                     isActive={isActive}
-                    renderSubItem={renderSubItem}
+                    onNavigate={(href) => router.push(href)}
                     badge={pedidosVencidosCount}
                   />
 
-                  {/* GRUPO: Operaciones (animado) */}
-                  <AnimatePresence mode="popLayout" initial={false}>
-                    <motion.div
-                      key="ops-group"
-                      initial={{ opacity: 0, scale: 0, height: 0 }}
-                      animate={{ opacity: 1, scale: 1, height: "auto" }}
-                      exit={{ opacity: 0, scale: 0, height: 0 }}
-                      transition={{ type: "spring", stiffness: 300, damping: 25 }}
-                    >
-                      <NavGroup
-                        label="Operaciones"
-                        icon={Zap}
-                        items={filteredOperations}
-                        isActive={isActive}
-                        renderSubItem={renderSubItem}
-                      />
-                    </motion.div>
-                  </AnimatePresence>
+                  {/* ACCION RAPIDA: Venta Casual */}
+                  {renderItem({ label: "Venta Casual", href: "/ventas/nueva", icon: ShoppingCart }, false, "quick")}
+
+                  {/* GRUPO: Operaciones */}
+                  {filteredOperations.length > 0 && (
+                    <NavDropdown
+                      label="Operaciones"
+                      icon={Zap}
+                      items={filteredOperations}
+                      isActive={isActive}
+                      onNavigate={(href) => router.push(href)}
+                    />
+                  )}
 
                   <Separator className="w-8 mx-auto opacity-50" />
 
