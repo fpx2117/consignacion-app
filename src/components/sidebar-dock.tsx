@@ -164,18 +164,18 @@ export function SidebarDock() {
 
   const operationsItems = React.useMemo(() => {
     const items: SidebarNavItem[] = [];
-    if (usarControlDeCaja) {
+    if (usarControlDeCaja && !isGlobalView) {
       items.push({ label: "Historial", href: "/caja/historial", icon: History });
     }
     return items;
-  }, [usarControlDeCaja]);
+  }, [isGlobalView, usarControlDeCaja]);
 
   const mobileMenuItems = React.useMemo(() => {
     const items: SidebarNavItem[] = [...filteredBusiness];
     if (!isGlobalView) {
       items.push(QUICK_SALE);
     }
-    if (usarControlDeCaja) {
+    if (usarControlDeCaja && !isGlobalView) {
       items.push({ label: "Historial de Caja", href: "/caja/historial", icon: History });
     }
     items.push(...NAV_ADMIN);
