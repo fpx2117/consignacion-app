@@ -8,6 +8,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth, requireRole } from "@/lib/requireAuth";
 import { updatePedidoSchema } from "@/lib/validators/pedidos-esperados";
+import { isGlobalSucursalView } from "@/lib/sucursalScope";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -26,6 +27,7 @@ export async function GET(_: Request, { params }: RouteParams) {
     const { id: rawId } = await params;
     const id = Number(rawId);
     const sucursalId = auth.activeSucursalId;
+    const isGlobal = isGlobalSucursalView(auth);
 
     if (isNaN(id)) {
       return NextResponse.json({ error: "ID inválido" }, { status: 400 });
@@ -42,7 +44,7 @@ export async function GET(_: Request, { params }: RouteParams) {
                 nombre: true,
                 sku: true,
                 stockSucursals: {
-                  where: { sucursalId },
+                  ...(isGlobal ? {} : { where: { sucursalId } }),
                   select: { stockDisponibleUnits: true },
                 },
               },
@@ -57,7 +59,7 @@ export async function GET(_: Request, { params }: RouteParams) {
     }
 
     // Verificar que el pedido pertenece a la sucursal activa
-    if (pedido.sucursalId !== sucursalId) {
+    if (!isGlobal && pedido.sucursalId !== sucursalId) {
       return NextResponse.json({ error: "No autorizado" }, { status: 403 });
     }
 
@@ -70,8 +72,9 @@ export async function GET(_: Request, { params }: RouteParams) {
           id: item.producto.id,
           nombre: item.producto.nombre,
           sku: item.producto.sku,
-          stockDisponibleUnits:
-            item.producto.stockSucursals[0]?.stockDisponibleUnits ?? 0,
+          stockDisponibleUnits: isGlobal
+            ? item.producto.stockSucursals.reduce((acc, s) => acc + (s.stockDisponibleUnits || 0), 0)
+            : (item.producto.stockSucursals[0]?.stockDisponibleUnits ?? 0),
         },
       })),
     };
@@ -91,6 +94,9 @@ export async function GET(_: Request, { params }: RouteParams) {
 export async function PATCH(req: Request, { params }: RouteParams) {
   const auth = await requireAuth();
   if (!auth.ok) return auth.res;
+  if (isGlobalSucursalView(auth)) {
+    return NextResponse.json({ error: "Vista global en modo solo lectura. Selecciona una sucursal para editar pedidos esperados." }, { status: 409 });
+  }
 
   if (!requireRole(auth.user, ["ADMIN"])) {
     return NextResponse.json(
@@ -173,6 +179,9 @@ export async function PATCH(req: Request, { params }: RouteParams) {
 export async function DELETE(_: Request, { params }: RouteParams) {
   const auth = await requireAuth();
   if (!auth.ok) return auth.res;
+  if (isGlobalSucursalView(auth)) {
+    return NextResponse.json({ error: "Vista global en modo solo lectura. Selecciona una sucursal para eliminar pedidos esperados." }, { status: 409 });
+  }
 
   if (!requireRole(auth.user, ["ADMIN"])) {
     return NextResponse.json(

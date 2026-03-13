@@ -4,6 +4,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/requireAuth";
+import { isGlobalSucursalView } from "@/lib/sucursalScope";
 
 export async function POST(
     req: NextRequest,
@@ -11,6 +12,9 @@ export async function POST(
 ) {
     const auth = await requireAuth();
     if (!auth.ok) return auth.res;
+    if (isGlobalSucursalView(auth)) {
+        return NextResponse.json({ error: "Vista global en modo solo lectura. Selecciona una sucursal para registrar pagos." }, { status: 409 });
+    }
 
     const usuarioId = Number((auth.user as any).id);
 

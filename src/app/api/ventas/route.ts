@@ -9,6 +9,7 @@ import { Prisma, TipoMovimientoStock, MotivoMovimientoStock, TipoVenta } from "@
 import { sendNotification } from "@/lib/socket-trigger";
 import { obtenerConfiguracionGlobal } from "@/lib/config";
 import { evaluateStockAlert, processNotificationQueue } from "@/lib/stock-alerts";
+import { buildSucursalWhere, isGlobalSucursalView } from "@/lib/sucursalScope";
 
 const MAX_VENTA_RETRIES = 3;
 
@@ -27,9 +28,10 @@ function getErrorMessage(error: unknown) {
 export async function GET() {
   const auth = await requireAuth();
   if (!auth.ok) return auth.res;
+  const sucursalWhere = buildSucursalWhere(auth);
 
   const ventas = await prisma.venta.findMany({
-    where: { sucursalId: auth.activeSucursalId },
+    where: sucursalWhere,
     orderBy: { id: "desc" },
     include: { cliente: true, detalles: { include: { producto: true } } },
     take: 200,
@@ -41,6 +43,9 @@ export async function GET() {
 export async function POST(req: Request) {
   const auth = await requireAuth();
   if (!auth.ok) return auth.res;
+  if (isGlobalSucursalView(auth)) {
+    return NextResponse.json({ error: "Vista global en modo solo lectura. Selecciona una sucursal para registrar ventas." }, { status: 409 });
+  }
 
   const payload = auth.user as any;
   const rawId = payload.id || payload.userId || payload.usuarioId || payload.sub;

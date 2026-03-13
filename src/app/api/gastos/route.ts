@@ -3,6 +3,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/requireAuth";
+import { isGlobalSucursalView } from "@/lib/sucursalScope";
 
 export async function GET(req: Request) {
     const auth = await requireAuth();
@@ -13,6 +14,25 @@ export async function GET(req: Request) {
     const categoriaId = searchParams.get("categoriaId");
 
     try {
+        const isGlobal = isGlobalSucursalView(auth);
+
+        if (isGlobal) {
+            const gastosGlobales = await prisma.gasto.findMany({
+                where: {
+                    ...(estado && { estado: estado as any }),
+                    ...(categoriaId && { categoriaGastoId: Number(categoriaId) }),
+                },
+                include: {
+                    categoria: true,
+                    user: { select: { id: true, nombre: true } },
+                    sucursalesCompartidas: true,
+                },
+                orderBy: { fecha: "desc" },
+            });
+
+            return NextResponse.json({ data: gastosGlobales });
+        }
+
         // Gastos propios de esta sucursal
         const ownGastos = await prisma.gasto.findMany({
             where: {
@@ -85,6 +105,9 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
     const auth = await requireAuth();
     if (!auth.ok) return auth.res;
+    if (isGlobalSucursalView(auth)) {
+        return NextResponse.json({ error: "Vista global en modo solo lectura. Selecciona una sucursal para crear gastos." }, { status: 409 });
+    }
 
     if (auth.user?.rol !== "ADMIN") {
         return NextResponse.json({ error: "No autorizado" }, { status: 403 });

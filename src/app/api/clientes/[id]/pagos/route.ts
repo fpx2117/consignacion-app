@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/requireAuth";
 import { createPagoSchema } from "@/lib/validators/cliente";
+import { isGlobalSucursalView } from "@/lib/sucursalScope";
 
 // Definimos la interfaz para Next.js 15+
 interface RouteContext {
@@ -11,6 +12,9 @@ interface RouteContext {
 export async function POST(req: Request, { params }: RouteContext) {
   const auth = await requireAuth();
   if (!auth.ok) return auth.res;
+  if (isGlobalSucursalView(auth)) {
+    return NextResponse.json({ error: "Vista global en modo solo lectura. Selecciona una sucursal para registrar pagos." }, { status: 409 });
+  }
 
   // Resolvemos los params de forma asíncrona
   const { id: rawId } = await params;

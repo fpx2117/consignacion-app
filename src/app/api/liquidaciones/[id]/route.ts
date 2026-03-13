@@ -9,6 +9,7 @@ import { TipoMovimientoStock, MotivoMovimientoStock } from "@prisma/client";
 // ✅ Imports Centralizados de Config y Notificaciones
 import { obtenerConfiguracionGlobal } from "@/lib/config";
 import { evaluateStockAlert, processNotificationQueue } from "@/lib/stock-alerts";
+import { buildSucursalWhere, isGlobalSucursalView } from "@/lib/sucursalScope";
 
 type RouteParams = {
   params: Promise<{ id: string }>;
@@ -20,6 +21,7 @@ type RouteParams = {
 export async function GET(_: Request, { params }: RouteParams) {
   const auth = await requireAuth();
   if (!auth.ok) return auth.res;
+  const sucursalWhere = buildSucursalWhere(auth);
 
   const { id: rawId } = await params;
   const liquidacionId = Number(rawId);
@@ -31,7 +33,7 @@ export async function GET(_: Request, { params }: RouteParams) {
   const liq = await prisma.liquidacion.findFirst({
     where: {
       id: liquidacionId,
-      consignacion: { sucursalId: auth.activeSucursalId },
+      consignacion: sucursalWhere,
     },
     include: {
       items: { include: { detalle: { include: { producto: true } } } },
@@ -57,6 +59,9 @@ export async function GET(_: Request, { params }: RouteParams) {
 export async function PUT(req: Request, { params }: RouteParams) {
   const auth = await requireAuth();
   if (!auth.ok) return auth.res;
+  if (isGlobalSucursalView(auth)) {
+    return NextResponse.json({ error: "Vista global en modo solo lectura. Selecciona una sucursal para editar liquidaciones." }, { status: 409 });
+  }
 
   const { id: rawId } = await params;
   const liquidacionId = Number(rawId);

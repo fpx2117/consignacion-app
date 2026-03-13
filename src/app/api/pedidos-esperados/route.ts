@@ -9,6 +9,7 @@ import { prisma } from "@/lib/prisma";
 import { requireAuth, requireRole } from "@/lib/requireAuth";
 import { createPedidoSchema } from "@/lib/validators/pedidos-esperados";
 import { checkAndUpdateVencidos } from "@/lib/pedidos-esperados";
+import { buildSucursalWhere, isGlobalSucursalView } from "@/lib/sucursalScope";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -24,6 +25,8 @@ export async function GET(req: NextRequest) {
 
   try {
     const sucursalId = auth.activeSucursalId;
+    const isGlobal = isGlobalSucursalView(auth);
+    const sucursalWhere = buildSucursalWhere(auth);
     const { searchParams } = new URL(req.url);
 
     const estados = searchParams.getAll("estado").filter(Boolean);
@@ -33,7 +36,9 @@ export async function GET(req: NextRequest) {
     // Lazy check: actualizar pedidos vencidos antes de retornar la lista
     // Si falla la notificacion/actualizacion no debe romper el listado.
     try {
-      await checkAndUpdateVencidos(sucursalId);
+      if (!isGlobal) {
+        await checkAndUpdateVencidos(sucursalId);
+      }
     } catch (lazyCheckError) {
       console.error("Error en checkAndUpdateVencidos (continuando listado):", lazyCheckError);
     }
@@ -43,7 +48,7 @@ export async function GET(req: NextRequest) {
 
     const pedidos = await prisma.pedidoEsperado.findMany({
       where: {
-        sucursalId,
+        ...sucursalWhere,
         ...(estados.length === 1
           ? { estado: estados[0] }
           : estados.length > 1
@@ -76,7 +81,7 @@ export async function GET(req: NextRequest) {
             nombre: true,
             sku: true,
             stockSucursals: {
-              where: { sucursalId },
+              ...(isGlobal ? {} : { where: { sucursalId } }),
               select: { stockDisponibleUnits: true },
             },
           },
@@ -96,7 +101,9 @@ export async function GET(req: NextRequest) {
             id: item.productoId,
             nombre: producto?.nombre ?? "Producto eliminado",
             sku: producto?.sku ?? null,
-            stockDisponibleUnits: producto?.stockSucursals?.[0]?.stockDisponibleUnits ?? 0,
+            stockDisponibleUnits: isGlobal
+              ? (producto?.stockSucursals?.reduce((acc, s) => acc + (s.stockDisponibleUnits || 0), 0) ?? 0)
+              : (producto?.stockSucursals?.[0]?.stockDisponibleUnits ?? 0),
           },
         };
       }),
@@ -127,6 +134,9 @@ export async function GET(req: NextRequest) {
 export async function POST(req: Request) {
   const auth = await requireAuth();
   if (!auth.ok) return auth.res;
+  if (isGlobalSucursalView(auth)) {
+    return NextResponse.json({ error: "Vista global en modo solo lectura. Selecciona una sucursal para crear pedidos esperados." }, { status: 409 });
+  }
 
   if (!requireRole(auth.user, ["ADMIN"])) {
     return NextResponse.json(

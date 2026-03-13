@@ -9,10 +9,12 @@ export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const limit = Math.min(Number(searchParams.get("limit") ?? 10) || 10, 50);
   const sucursalId = auth.activeSucursalId;
+  const isGlobal = auth.user.rol === "ADMIN" && sucursalId === 0;
+  const sucursalWhere = isGlobal ? {} : { sucursalId };
 
   // Traemos consignaciones ABIERTAS con detalles + cliente
   const abiertas = await prisma.consignacion.findMany({
-    where: { estado: "ABIERTA", sucursalId },
+    where: { estado: "ABIERTA", ...sucursalWhere },
     orderBy: { fecha: "asc" }, // más viejas primero
     include: {
       cliente: true,
@@ -38,7 +40,7 @@ export async function GET(req: Request) {
 
   // Últimas consignaciones (creadas)
   const ultimasConsignaciones = await prisma.consignacion.findMany({
-    where: { sucursalId },
+    where: sucursalWhere,
     orderBy: { id: "desc" },
     take: limit,
     include: {
@@ -49,7 +51,7 @@ export async function GET(req: Request) {
 
   // Últimas liquidaciones (para ver actividad)
   const ultimasLiquidaciones = await prisma.liquidacion.findMany({
-    where: { consignacion: { sucursalId } },
+    where: { consignacion: sucursalWhere },
     orderBy: { id: "desc" },
     take: limit,
     include: {

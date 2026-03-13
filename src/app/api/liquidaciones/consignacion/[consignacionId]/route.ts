@@ -11,6 +11,7 @@ import { TipoMovimientoStock, MotivoMovimientoStock, TipoVenta } from "@prisma/c
 import { obtenerConfiguracionGlobal } from "@/lib/config";
 import { evaluateStockAlert, processNotificationQueue } from "@/lib/stock-alerts";
 import { sendNotification } from "@/lib/socket-trigger";
+import { isGlobalSucursalView } from "@/lib/sucursalScope";
 
 type RouteParams = {
   params: Promise<{ consignacionId: string }>;
@@ -19,6 +20,9 @@ type RouteParams = {
 export async function POST(req: Request, { params }: RouteParams) {
   const auth = await requireAuth();
   if (!auth.ok) return auth.res;
+  if (isGlobalSucursalView(auth)) {
+    return NextResponse.json({ error: "Vista global en modo solo lectura. Selecciona una sucursal para crear liquidaciones." }, { status: 409 });
+  }
 
   // 1. 👇 EXTRACCIÓN SEGURA DEL ID (Evita errores de sesión o tipos) 👇
   const payload = auth.user as any;

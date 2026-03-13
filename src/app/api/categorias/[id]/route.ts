@@ -3,6 +3,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/requireAuth";
+import { isGlobalSucursalView } from "@/lib/sucursalScope";
 
 // PATCH: Actualizar nombre y/o color de una categoría
 export async function PATCH(
@@ -12,6 +13,9 @@ export async function PATCH(
   // Auth: Requiere usuario autenticado
   const auth = await requireAuth();
   if (!auth.ok) return auth.res;
+  if (isGlobalSucursalView(auth)) {
+    return NextResponse.json({ error: "Vista global en modo solo lectura. Selecciona una sucursal para editar categorías." }, { status: 409 });
+  }
 
   try {
     const { id } = await params;
@@ -51,6 +55,9 @@ export async function DELETE(
   // Auth: Requiere usuario autenticado
   const auth = await requireAuth();
   if (!auth.ok) return auth.res;
+  if (isGlobalSucursalView(auth)) {
+    return NextResponse.json({ error: "Vista global en modo solo lectura. Selecciona una sucursal para eliminar categorías." }, { status: 409 });
+  }
 
   try {
     const { id } = await params;

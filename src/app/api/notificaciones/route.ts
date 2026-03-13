@@ -3,6 +3,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/requireAuth"; // 🔒 Seguridad
+import { buildSucursalWhere, isGlobalSucursalView } from "@/lib/sucursalScope";
 
 // --- GET: Obtener lista y contador ---
 export async function GET(req: Request) {
@@ -11,14 +12,14 @@ export async function GET(req: Request) {
     const auth = await requireAuth();
     if (!auth.ok) return auth.res;
 
-    const sucursalId = auth.activeSucursalId;
+    const sucursalWhere = buildSucursalWhere(auth);
     const { searchParams } = new URL(req.url);
     const onlyUnread = searchParams.get("onlyUnread") === "true";
     const limit = Number(searchParams.get("limit") || 50);
 
     // 2. Query filtrada por sucursal
     const baseWhere = {
-      sucursalId,
+      ...sucursalWhere,
       ...(onlyUnread ? { read: false } : {}),
     };
 
@@ -35,7 +36,7 @@ export async function GET(req: Request) {
 
     // 3. Contador de no leídas solo de esta sucursal
     const unreadCount = await prisma.notification.count({
-      where: { sucursalId, read: false }
+      where: { ...sucursalWhere, read: false }
     });
 
     return NextResponse.json({
@@ -57,6 +58,9 @@ export async function PATCH(req: Request) {
   try {
     const auth = await requireAuth();
     if (!auth.ok) return auth.res;
+    if (isGlobalSucursalView(auth)) {
+      return NextResponse.json({ error: "Vista global en modo solo lectura. Selecciona una sucursal para actualizar notificaciones." }, { status: 409 });
+    }
 
     const sucursalId = auth.activeSucursalId;
     const body = await req.json();

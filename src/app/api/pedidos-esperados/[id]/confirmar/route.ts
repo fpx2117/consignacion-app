@@ -7,6 +7,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth, requireRole } from "@/lib/requireAuth";
 import { confirmarPedidoSchema } from "@/lib/validators/pedidos-esperados";
+import { isGlobalSucursalView } from "@/lib/sucursalScope";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -25,6 +26,9 @@ type RouteParams = { params: Promise<{ id: string }> };
 export async function POST(req: Request, { params }: RouteParams) {
   const auth = await requireAuth();
   if (!auth.ok) return auth.res;
+  if (isGlobalSucursalView(auth)) {
+    return NextResponse.json({ error: "Vista global en modo solo lectura. Selecciona una sucursal para confirmar pedidos." }, { status: 409 });
+  }
 
   if (!requireRole(auth.user, ["ADMIN"])) {
     return NextResponse.json(

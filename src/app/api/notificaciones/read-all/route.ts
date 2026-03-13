@@ -3,11 +3,15 @@
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 import { requireAuth } from "@/lib/requireAuth"; // 🔒 Importante
+import { isGlobalSucursalView } from "@/lib/sucursalScope";
 
 export async function PATCH(req: Request) {
   try {
     const auth = await requireAuth();
     if (!auth.ok) return auth.res;
+    if (isGlobalSucursalView(auth)) {
+      return NextResponse.json({ error: "Vista global en modo solo lectura. Selecciona una sucursal para actualizar notificaciones." }, { status: 409 });
+    }
 
     const sucursalId = auth.activeSucursalId;
 

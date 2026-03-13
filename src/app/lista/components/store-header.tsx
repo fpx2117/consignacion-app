@@ -2,8 +2,7 @@
 // @ts-nocheck
 "use client";
 
-import { PackageOpen, ShoppingCart } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { PackageOpen } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getThemeStyles } from "../lib/theme-utils";
 
@@ -14,7 +13,7 @@ interface StoreHeaderProps {
 }
 
 export function StoreHeader({ config, cartCount, onOpenCart }: StoreHeaderProps) {
-    const { theme, radiusClass, buttonRadiusClass, buttonHoverClass, headerBgClass } = getThemeStyles(config.themeIdentifier);
+    const { theme, radiusClass, headerBgClass } = getThemeStyles(config.themeIdentifier);
 
     return (
         <header className={cn(
@@ -54,32 +53,7 @@ export function StoreHeader({ config, cartCount, onOpenCart }: StoreHeaderProps)
                     </div>
                 </div>
 
-                <div className="flex items-center shrink-0">
-                    {config.convertirTienda && (
-                        <Button
-                            variant="outline"
-                            className={cn(
-                                "relative h-10 w-10 sm:w-auto px-0 sm:px-5 sm:h-11 border-neutral-200 hover:border-neutral-300 bg-white/80 transition-all shadow-sm group",
-                                buttonRadiusClass,
-                                buttonHoverClass,
-                                theme === 'barbie' || theme === 'ocean' || theme === 'sunset' || theme === 'nature' ? "border-primary text-primary" : ""
-                            )}
-                            onClick={onOpenCart}
-                        >
-                            <ShoppingCart className="h-4 w-4 sm:h-5 sm:w-5 sm:mr-2 text-neutral-900 group-hover:scale-110 transition-transform" />
-                            <span className="hidden sm:inline font-semibold text-neutral-900">Carrito</span>
-
-                            {cartCount > 0 && (
-                                <span className={cn(
-                                    "absolute -top-1 -right-1 sm:top-0 sm:-right-1 h-5 w-5 bg-neutral-900 text-[10px] text-white font-bold flex items-center justify-center animate-in zoom-in shadow-md border-2 border-white",
-                                    buttonRadiusClass
-                                )}>
-                                    {cartCount}
-                                </span>
-                            )}
-                        </Button>
-                    )}
-                </div>
+                <div className="flex items-center shrink-0" />
             </div>
         </header>
     );

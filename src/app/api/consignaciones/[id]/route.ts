@@ -6,6 +6,7 @@ import { requireAuth } from "@/lib/requireAuth";
 import { createLiquidacionSchema } from "@/lib/validators/consignacion";
 import { z } from "zod";
 import { TipoMovimientoStock, MotivoMovimientoStock } from "@prisma/client";
+import { buildSucursalWhere, isGlobalSucursalView } from "@/lib/sucursalScope";
 
 // âœ… Imports Centralizados de Config y Notificaciones
 import { obtenerConfiguracionGlobal } from "@/lib/config";
@@ -28,6 +29,7 @@ const updateConsignacionSchema = z.object({
 export async function GET(_: Request, { params }: RouteParams) {
   const auth = await requireAuth();
   if (!auth.ok) return auth.res;
+  const sucursalWhere = buildSucursalWhere(auth);
 
   const { id: rawId } = await params;
   const id = Number(rawId);
@@ -35,7 +37,7 @@ export async function GET(_: Request, { params }: RouteParams) {
   if (!Number.isFinite(id)) return NextResponse.json({ error: "ID invÃ¡lido" }, { status: 400 });
 
   const consignacion = await prisma.consignacion.findFirst({
-    where: { id, sucursalId: auth.activeSucursalId },
+    where: { id, ...sucursalWhere },
     include: {
       cliente: true,
       detalles: { include: { producto: { include: { subcategoria: true } } } },
@@ -62,6 +64,9 @@ export async function GET(_: Request, { params }: RouteParams) {
 export async function PUT(req: Request, { params }: RouteParams) {
   const auth = await requireAuth();
   if (!auth.ok) return auth.res;
+  if (isGlobalSucursalView(auth)) {
+    return NextResponse.json({ error: "Vista global en modo solo lectura. Selecciona una sucursal para editar consignaciones." }, { status: 409 });
+  }
 
   const { id: rawId } = await params;
   const consignacionId = Number(rawId);
@@ -246,6 +251,9 @@ export async function PUT(req: Request, { params }: RouteParams) {
 export async function POST(req: Request, { params }: RouteParams) {
   const auth = await requireAuth();
   if (!auth.ok) return auth.res;
+  if (isGlobalSucursalView(auth)) {
+    return NextResponse.json({ error: "Vista global en modo solo lectura. Selecciona una sucursal para liquidar consignaciones." }, { status: 409 });
+  }
 
   const { id: rawId } = await params;
   const consignacionId = Number(rawId);

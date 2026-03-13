@@ -3,6 +3,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/requireAuth";
+import { isGlobalSucursalView } from "@/lib/sucursalScope";
 
 export async function PATCH(
   req: NextRequest,
@@ -11,6 +12,9 @@ export async function PATCH(
   // Auth: Requiere usuario autenticado
   const auth = await requireAuth();
   if (!auth.ok) return auth.res;
+  if (isGlobalSucursalView(auth)) {
+    return NextResponse.json({ error: "Vista global en modo solo lectura. Selecciona una sucursal para editar subcategorías." }, { status: 409 });
+  }
 
   try {
     const { id: rawId } = await params;
@@ -49,6 +53,9 @@ export async function DELETE(
   // Auth: Requiere usuario autenticado
   const auth = await requireAuth();
   if (!auth.ok) return auth.res;
+  if (isGlobalSucursalView(auth)) {
+    return NextResponse.json({ error: "Vista global en modo solo lectura. Selecciona una sucursal para eliminar subcategorías." }, { status: 409 });
+  }
 
   try {
     const { id: rawId } = await params;
