@@ -17,13 +17,13 @@ const ESTADO_CONFIG: Record<
 > = {
   PROGRAMADO: {
     label: "Programado",
-    className: "bg-blue-500/10 text-blue-600 border-blue-500/20 dark:text-blue-400",
-    dot: "bg-blue-500",
+    className: "bg-[color:var(--theme-ocean-primary)]/10 text-[color:var(--theme-ocean-primary)] border-[color:var(--theme-ocean-primary)]/20 dark:text-[color:var(--theme-ocean-primary)]",
+    dot: "bg-[color:var(--theme-ocean-primary)]",
   },
   VENCIDO: {
     label: "Vencido",
-    className: "bg-red-500/10 text-red-600 border-red-500/20 dark:text-red-400 animate-pulse",
-    dot: "bg-red-500",
+    className: "bg-[color:var(--status-danger)]/10 text-[color:var(--status-danger)] border-[color:var(--status-danger)]/20 dark:text-[color:var(--status-danger)] animate-pulse",
+    dot: "bg-[color:var(--status-danger)]",
   },
   PARCIAL: {
     label: "Parcial",
@@ -32,8 +32,8 @@ const ESTADO_CONFIG: Record<
   },
   CONFIRMADO: {
     label: "Confirmado",
-    className: "bg-emerald-500/10 text-emerald-700 border-emerald-500/20 dark:text-emerald-400",
-    dot: "bg-emerald-500",
+    className: "bg-[color:var(--status-success-strong)]/10 text-[color:var(--status-success-strong)] border-[color:var(--status-success-strong)]/20 dark:text-[color:var(--status-success-strong)]",
+    dot: "bg-[color:var(--status-success-strong)]",
   },
   POSTERGADO: {
     label: "Postergado",
@@ -42,8 +42,8 @@ const ESTADO_CONFIG: Record<
   },
   CANCELADO: {
     label: "Cancelado",
-    className: "bg-zinc-500/10 text-zinc-500 border-zinc-500/20 line-through",
-    dot: "bg-zinc-400",
+    className: "bg-muted/35 text-muted-foreground border-background0/20 line-through",
+    dot: "bg-muted-foreground/70",
   },
 };
 

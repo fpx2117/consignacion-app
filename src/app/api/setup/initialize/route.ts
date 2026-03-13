@@ -320,7 +320,7 @@ export async function POST(req: Request) {
                     businessName: businessName && businessName.trim() ? businessName : "Mi Negocio",
                     phone: brandingData.phone || null,
                     address: brandingData.address || null,
-                    primaryColor: brandingData.primaryColor || "#111827",
+                    primaryColor: brandingData.primaryColor || "var(--theme-modern-primary)",
                     logoData: logoBuffer,
                     logoMime: brandingData.logoMime || null,
                     sucursalId: sucursalId,

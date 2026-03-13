@@ -20,9 +20,9 @@ export function BranchStep({ data, onChange }: BranchStepProps) {
         <motion.div
           initial={{ scale: 0.8, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
-          className="w-16 h-16 rounded-2xl bg-emerald-600/10 border border-emerald-500/20 flex items-center justify-center mx-auto"
+          className="w-16 h-16 rounded-2xl bg-[color:var(--status-success-strong)]/10 border border-[color:var(--status-success-strong)]/20 flex items-center justify-center mx-auto"
         >
-          <Store className="w-8 h-8 text-emerald-500" />
+          <Store className="w-8 h-8 text-[color:var(--status-success-strong)]" />
         </motion.div>
         <h2 className="text-3xl font-black tracking-tight">Tu Primera Sucursal</h2>
         <p className="text-muted-foreground text-lg">
@@ -32,20 +32,20 @@ export function BranchStep({ data, onChange }: BranchStepProps) {
 
       {/* Form */}
       <div className="space-y-6 bg-card/40 backdrop-blur-md p-8 rounded-[2.5rem] border border-border/50 shadow-2xl relative">
-        <div className="absolute inset-0 bg-emerald-500/5 blur-3xl -z-10 rounded-full" />
+        <div className="absolute inset-0 bg-[color:var(--status-success-strong)]/5 blur-3xl -z-10 rounded-full" />
 
         {/* Sucursal */}
         <div className="space-y-2">
           <Label className="text-xs font-bold uppercase tracking-widest text-foreground/80 pl-2 flex items-center gap-1.5">
             <Store className="h-3 w-3" />
-            Nombre de la Sucursal <span className="text-red-400">*</span>
+            Nombre de la Sucursal <span className="text-[color:var(--status-danger)]">*</span>
           </Label>
           <Input
             autoFocus
             value={data.nombre}
             onChange={(e) => onChange({ ...data, nombre: e.target.value })}
             placeholder="Ej: Casa Central, Local Shopping Norte..."
-            className="h-14 rounded-2xl bg-background/50 border-border/50 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 text-lg font-semibold"
+            className="h-14 rounded-2xl bg-background/50 border-border/50 focus:border-[color:var(--status-success-strong)] focus:ring-4 focus:ring-[color:var(--status-success-strong)]/10 text-lg font-semibold"
           />
           <p className="text-xs text-muted-foreground/60 pl-2">
             Si tenés un solo local, podés dejarlo como "Sucursal Principal".
@@ -65,13 +65,13 @@ export function BranchStep({ data, onChange }: BranchStepProps) {
         <div className="space-y-2">
           <Label className="text-xs font-bold uppercase tracking-widest text-foreground/80 pl-2 flex items-center gap-1.5">
             <Monitor className="h-3 w-3" />
-            Nombre de la Terminal <span className="text-red-400">*</span>
+            Nombre de la Terminal <span className="text-[color:var(--status-danger)]">*</span>
           </Label>
           <Input
             value={data.terminalNombre}
             onChange={(e) => onChange({ ...data, terminalNombre: e.target.value })}
             placeholder="Ej: Caja Mostrador 1, Planta Alta..."
-            className="h-14 rounded-2xl bg-background/50 border-border/50 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 text-lg font-semibold"
+            className="h-14 rounded-2xl bg-background/50 border-border/50 focus:border-[color:var(--status-success-strong)] focus:ring-4 focus:ring-[color:var(--status-success-strong)]/10 text-lg font-semibold"
           />
           <p className="text-xs text-muted-foreground/60 pl-2">
             La terminal representa un punto de cobro físico. Podés agregar más después.
@@ -79,12 +79,12 @@ export function BranchStep({ data, onChange }: BranchStepProps) {
         </div>
 
         {/* Visual hint */}
-        <div className="mt-4 flex items-center gap-3 p-4 rounded-2xl bg-emerald-500/5 border border-emerald-500/10">
-          <div className="h-10 w-10 rounded-xl bg-emerald-500/10 flex items-center justify-center shrink-0">
-            <Monitor className="h-5 w-5 text-emerald-500" />
+        <div className="mt-4 flex items-center gap-3 p-4 rounded-2xl bg-[color:var(--status-success-strong)]/5 border border-[color:var(--status-success-strong)]/10">
+          <div className="h-10 w-10 rounded-xl bg-[color:var(--status-success-strong)]/10 flex items-center justify-center shrink-0">
+            <Monitor className="h-5 w-5 text-[color:var(--status-success-strong)]" />
           </div>
           <div>
-            <p className="text-xs font-bold text-emerald-400">Vista Previa</p>
+            <p className="text-xs font-bold text-[color:var(--status-success-strong)]">Vista Previa</p>
             <p className="text-sm text-muted-foreground">
               <span className="font-semibold text-foreground">{data.nombre || "Mi Sucursal"}</span>
               {" → "}

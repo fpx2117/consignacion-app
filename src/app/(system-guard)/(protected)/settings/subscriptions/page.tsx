@@ -50,7 +50,7 @@ export default function SubscriptionsPage() {
         if (status === "success") {
             toast.success("¡Suscripción iniciada!", {
                 description: "Tu pago está siendo procesado por PayPal.",
-                icon: <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                icon: <CheckCircle2 className="h-4 w-4 text-[color:var(--status-success-strong)]" />
             });
             router.replace("/settings/subscriptions");
         } else if (status === "cancel") {
@@ -103,7 +103,7 @@ export default function SubscriptionsPage() {
 
             toast.success("¡Código canjeado!", {
                 description: data.message,
-                icon: <Gift className="h-4 w-4 text-emerald-500" />,
+                icon: <Gift className="h-4 w-4 text-[color:var(--status-success-strong)]" />,
             });
 
             setPromoCode("");

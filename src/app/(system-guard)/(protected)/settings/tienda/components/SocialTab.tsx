@@ -52,9 +52,9 @@ const SOCIAL_CHANNELS: ChannelConfig[] = [
         label: "Instagram",
         icon: <Instagram className="w-5 h-5" />,
         iconSmall: <Instagram className="w-3.5 h-3.5" />,
-        brandColor: "#E1306C",
-        bgClass: "bg-[#E1306C]/10",
-        textClass: "text-[#E1306C]",
+        brandColor: "var(--brand-instagram)",
+        bgClass: "bg-[color:var(--brand-instagram)]/10",
+        textClass: "text-[color:var(--brand-instagram)]",
         field: "instagramUrl",
         placeholder: "instagram.com/tu_tienda",
         validate: isValidUrl,
@@ -64,9 +64,9 @@ const SOCIAL_CHANNELS: ChannelConfig[] = [
         label: "TikTok",
         icon: <TikTokIcon />,
         iconSmall: <TikTokIcon className="w-3.5 h-3.5" />,
-        brandColor: "#000000",
-        bgClass: "bg-black/8 dark:bg-white/10",
-        textClass: "text-black dark:text-white",
+        brandColor: "var(--brand-tiktok)",
+        bgClass: "bg-foreground/8 dark:bg-card/10",
+        textClass: "text-foreground dark:text-[color:var(--ui-fx-white)]",
         field: "tiktokUrl",
         placeholder: "tiktok.com/@tu_tienda",
         validate: isValidUrl,
@@ -76,9 +76,9 @@ const SOCIAL_CHANNELS: ChannelConfig[] = [
         label: "Facebook",
         icon: <Facebook className="w-5 h-5" />,
         iconSmall: <Facebook className="w-3.5 h-3.5" />,
-        brandColor: "#1877F2",
-        bgClass: "bg-[#1877F2]/10",
-        textClass: "text-[#1877F2]",
+        brandColor: "var(--brand-facebook)",
+        bgClass: "bg-[color:var(--brand-facebook)]/10",
+        textClass: "text-[color:var(--brand-facebook)]",
         field: "facebookUrl",
         placeholder: "facebook.com/tu_tienda",
         validate: isValidUrl,
@@ -88,9 +88,9 @@ const SOCIAL_CHANNELS: ChannelConfig[] = [
         label: "YouTube",
         icon: <Youtube className="w-5 h-5" />,
         iconSmall: <Youtube className="w-3.5 h-3.5" />,
-        brandColor: "#FF0000",
-        bgClass: "bg-[#FF0000]/10",
-        textClass: "text-[#FF0000]",
+        brandColor: "var(--brand-youtube)",
+        bgClass: "bg-[color:var(--brand-youtube)]/10",
+        textClass: "text-[color:var(--brand-youtube)]",
         field: "youtubeUrl",
         placeholder: "youtube.com/@tu_canal",
         validate: isValidUrl,
@@ -103,9 +103,9 @@ const CONTACT_CHANNELS: ChannelConfig[] = [
         label: "WhatsApp",
         icon: <WhatsAppIcon />,
         iconSmall: <WhatsAppIcon className="w-3.5 h-3.5" />,
-        brandColor: "#25D366",
-        bgClass: "bg-[#25D366]/10",
-        textClass: "text-[#25D366]",
+        brandColor: "var(--brand-whatsapp)",
+        bgClass: "bg-[color:var(--brand-whatsapp)]/10",
+        textClass: "text-[color:var(--brand-whatsapp)]",
         field: "whatsappNumber",
         placeholder: "5491122334455",
         validate: isValidPhone,
@@ -155,9 +155,9 @@ function SocialCard({
         <div className={cn(
             "group relative rounded-xl border bg-background p-4 transition-all duration-200",
             isConnected
-                ? "border-emerald-200 dark:border-emerald-800/50 shadow-sm shadow-emerald-500/5"
+                ? "border-[color:var(--status-success-strong)] dark:border-[color:var(--status-success-strong)]/50 shadow-sm shadow-emerald-500/5"
                 : isError
-                    ? "border-red-200 dark:border-red-800/40"
+                    ? "border-[color:var(--status-danger)] dark:border-[color:var(--status-danger)]/40"
                     : "border-border hover:border-border/80 hover:shadow-sm",
         )}>
             <div className="flex items-center gap-3 mb-3">
@@ -174,8 +174,8 @@ function SocialCard({
                     {/* Connected dot */}
                     {isConnected && (
                         <span className="absolute -top-0.5 -right-0.5 flex h-3 w-3">
-                            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-50" />
-                            <span className="relative inline-flex h-3 w-3 rounded-full bg-emerald-500 border-2 border-background" />
+                            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[color:var(--status-success-strong)] opacity-50" />
+                            <span className="relative inline-flex h-3 w-3 rounded-full bg-[color:var(--status-success-strong)] border-2 border-background" />
                         </span>
                     )}
                 </div>
@@ -197,14 +197,14 @@ function SocialCard({
                 className={cn(
                     "h-9 rounded-lg text-sm transition-all duration-200",
                     "bg-muted/40 border-transparent focus:bg-background focus:border-border",
-                    isConnected && "border-emerald-200/60 dark:border-emerald-800/40 focus-visible:ring-emerald-500/20",
-                    isError && "border-red-200/60 dark:border-red-800/40 focus-visible:ring-red-500/20",
+                    isConnected && "border-[color:var(--status-success-strong)]/60 dark:border-[color:var(--status-success-strong)]/40 focus-visible:ring-[color:var(--status-success-strong)]/20",
+                    isError && "border-[color:var(--status-danger)]/60 dark:border-[color:var(--status-danger)]/40 focus-visible:ring-[color:var(--status-danger)]/20",
                 )}
             />
 
             {/* Error message (only on error) */}
             {isError && (
-                <p className="text-[11px] text-red-500 dark:text-red-400 mt-1.5 animate-in fade-in slide-in-from-top-1 duration-200">
+                <p className="text-[11px] text-[color:var(--status-danger)] dark:text-[color:var(--status-danger)] mt-1.5 animate-in fade-in slide-in-from-top-1 duration-200">
                     {channel.validate === isValidPhone
                         ? "Numero invalido. Usa solo digitos (10-15)."
                         : "URL invalida. Incluye https://"}
@@ -258,7 +258,7 @@ function ConnectedSummary({ branding }: { branding: any }) {
             {/* Progress bar */}
             <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden">
                 <div
-                    className="h-full rounded-full bg-emerald-500 transition-all duration-500 ease-out"
+                    className="h-full rounded-full bg-[color:var(--status-success-strong)] transition-all duration-500 ease-out"
                     style={{ width: `${percentage}%` }}
                 />
             </div>

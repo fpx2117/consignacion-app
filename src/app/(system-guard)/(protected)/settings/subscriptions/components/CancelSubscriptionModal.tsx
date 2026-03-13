@@ -25,7 +25,7 @@ export function CancelSubscriptionModal({ isOpen, onClose, onConfirm, loading }:
                         className="relative w-full max-w-lg bg-card border border-border/50 shadow-2xl rounded-[2.5rem] overflow-hidden"
                     >
                         {/* Header Decorative */}
-                        <div className="absolute top-0 inset-x-0 h-2 bg-gradient-to-r from-destructive via-red-500 to-destructive" />
+                        <div className="absolute top-0 inset-x-0 h-2 bg-gradient-to-r from-destructive via-[color:var(--status-danger)] to-destructive" />
 
                         <div className="p-8 md:p-10 space-y-6">
                             <div className="flex items-center justify-between">
@@ -53,8 +53,8 @@ export function CancelSubscriptionModal({ isOpen, onClose, onConfirm, loading }:
                                 <div className="flex items-start gap-4 p-4 rounded-2xl bg-destructive/5 border border-destructive/10">
                                     <Clock className="h-5 w-5 text-destructive mt-1 flex-shrink-0" />
                                     <div>
-                                        <p className="text-sm font-bold text-red-950">Acceso hasta el final</p>
-                                        <p className="text-xs text-red-900/70 font-medium">
+                                        <p className="text-sm font-bold text-[color:var(--status-danger)]">Acceso hasta el final</p>
+                                        <p className="text-xs text-[color:var(--status-danger)]/70 font-medium">
                                             Seguirás teniendo acceso a todas tus funciones premium hasta que termine el periodo de facturación actual.
                                         </p>
                                     </div>
@@ -63,8 +63,8 @@ export function CancelSubscriptionModal({ isOpen, onClose, onConfirm, loading }:
                                 <div className="flex items-start gap-4 p-4 rounded-2xl bg-destructive/5 border border-destructive/10">
                                     <Ban className="h-5 w-5 text-destructive mt-1 flex-shrink-0" />
                                     <div>
-                                        <p className="text-sm font-bold text-red-950">Sin cargos adicionales</p>
-                                        <p className="text-xs text-red-900/70 font-medium">
+                                        <p className="text-sm font-bold text-[color:var(--status-danger)]">Sin cargos adicionales</p>
+                                        <p className="text-xs text-[color:var(--status-danger)]/70 font-medium">
                                             No se te cobrará nada más a partir de este momento. El pago por renovación automática se detendrá.
                                         </p>
                                     </div>
@@ -73,8 +73,8 @@ export function CancelSubscriptionModal({ isOpen, onClose, onConfirm, loading }:
                                 <div className="flex items-start gap-4 p-4 rounded-2xl bg-destructive/5 border border-destructive/10">
                                     <AlertCircle className="h-5 w-5 text-destructive mt-1 flex-shrink-0" />
                                     <div>
-                                        <p className="text-sm font-bold text-red-950">Gestión de datos</p>
-                                        <p className="text-xs text-red-900/70 font-medium">
+                                        <p className="text-sm font-bold text-[color:var(--status-danger)]">Gestión de datos</p>
+                                        <p className="text-xs text-[color:var(--status-danger)]/70 font-medium">
                                             Tus productos y consignaciones no se borrarán, pero el acceso a las funciones avanzadas se bloqueará al vencer el plan.
                                         </p>
                                     </div>
@@ -85,7 +85,7 @@ export function CancelSubscriptionModal({ isOpen, onClose, onConfirm, loading }:
                                 <button
                                     onClick={onConfirm}
                                     disabled={loading}
-                                    className="flex-1 h-14 bg-destructive hover:bg-destructive/90 text-white font-black rounded-2xl transition-all shadow-lg shadow-destructive/20 active:scale-[0.98] flex items-center justify-center gap-2 disabled:opacity-50"
+                                    className="flex-1 h-14 bg-destructive hover:bg-destructive/90 text-[color:var(--ui-fx-white)] font-black rounded-2xl transition-all shadow-lg shadow-destructive/20 active:scale-[0.98] flex items-center justify-center gap-2 disabled:opacity-50"
                                 >
                                     {loading ? "Cancelando..." : "Confirmar Cancelación"}
                                     {!loading && <ChevronRight className="h-4 w-4" />}

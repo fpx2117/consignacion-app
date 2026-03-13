@@ -137,7 +137,7 @@ function CatalogContent() {
         const getContrastColor = (hex: string) => {
             const rgb = hexToRgb(hex).split(',').map(n => parseInt(n));
             const brightness = (rgb[0] * 299 + rgb[1] * 587 + rgb[2] * 114) / 1000;
-            return brightness > 155 ? '#000000' : '#ffffff';
+            return brightness > 155 ? 'hsl(var(--foreground))' : 'hsl(var(--background))';
         };
 
         if (config.primaryColor) {
@@ -291,24 +291,24 @@ function CatalogContent() {
     // --- Render Loading/Error ---
     if (loading) {
         return (
-            <div className="min-h-screen flex flex-col items-center justify-center bg-white p-6">
+            <div className="min-h-screen flex flex-col items-center justify-center bg-[color:var(--store-canvas)] text-foreground p-6">
                 <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 2, ease: "linear" }}>
-                    <Loader2 className="h-10 w-10 text-neutral-900" />
+                    <Loader2 className="h-10 w-10 text-foreground" />
                 </motion.div>
-                <p className="mt-4 text-neutral-500 animate-pulse font-medium">Cargando catálogo exclusivo...</p>
+                <p className="mt-4 text-muted-foreground animate-pulse font-medium">Cargando catálogo exclusivo...</p>
             </div>
         );
     }
 
     if (error) {
         return (
-            <div className="min-h-screen flex flex-col items-center justify-center bg-white p-6 text-center text-neutral-900">
+            <div className="min-h-screen flex flex-col items-center justify-center bg-[color:var(--store-canvas)] p-6 text-center text-foreground">
                 <div className="bg-destructive/10 p-4 rounded-full mb-4">
                     <XCircle className="h-12 w-12 text-destructive" />
                 </div>
                 <h1 className="text-2xl font-bold mb-2">Ops!</h1>
-                <p className="text-neutral-500 max-w-md">{error}</p>
-                <Button variant="outline" className="mt-6 border-neutral-200" onClick={() => window.location.reload()}>Reintentar</Button>
+                <p className="text-muted-foreground max-w-md">{error}</p>
+                <Button variant="outline" className="mt-6 border-border" onClick={() => window.location.reload()}>Reintentar</Button>
             </div>
         );
     }
@@ -355,7 +355,7 @@ function CatalogContent() {
     return (
         <div
             className={cn(
-                "min-h-screen selection:bg-neutral-900 selection:text-white transition-colors duration-500 store-theme-root",
+                "min-h-screen selection:bg-foreground selection:text-[color:var(--ui-fx-white)] transition-colors duration-500 store-theme-root",
                 pageBgClass
             )}
             style={{ fontFamily: config.typography ? `"${config.typography}", sans-serif` : undefined }}
@@ -371,9 +371,9 @@ function CatalogContent() {
                     <div
                         className={cn(
                             "rounded-xl border px-4 py-3 text-sm flex items-center gap-3",
-                            checkoutFeedback.kind === "polling" && "bg-blue-50 border-blue-200 text-blue-800",
-                            checkoutFeedback.kind === "success" && "bg-emerald-50 border-emerald-200 text-emerald-800",
-                            checkoutFeedback.kind === "error" && "bg-red-50 border-red-200 text-red-800",
+                            checkoutFeedback.kind === "polling" && "bg-[color:var(--theme-ocean-primary)] border-[color:var(--theme-ocean-primary)] text-[color:var(--theme-ocean-primary)]",
+                            checkoutFeedback.kind === "success" && "bg-[color:var(--status-success-strong)] border-[color:var(--status-success-strong)] text-[color:var(--status-success-strong)]",
+                            checkoutFeedback.kind === "error" && "bg-[color:var(--status-danger)] border-[color:var(--status-danger)] text-[color:var(--status-danger)]",
                         )}
                     >
                         {checkoutFeedback.kind === "polling" && <Loader2 className="h-4 w-4 animate-spin" />}
@@ -479,8 +479,8 @@ function CatalogContent() {
 export default function PublicCatalogPage() {
     return (
         <React.Suspense fallback={
-            <div className="min-h-screen flex items-center justify-center bg-white p-6">
-                <Loader2 className="h-10 w-10 text-neutral-900 animate-spin" />
+            <div className="min-h-screen flex items-center justify-center bg-[color:var(--store-canvas)] p-6">
+                <Loader2 className="h-10 w-10 text-foreground animate-spin" />
             </div>
         }>
             <CatalogContent />

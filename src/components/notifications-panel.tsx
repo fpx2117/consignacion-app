@@ -39,28 +39,28 @@ const ICON_MAP: Record<string, LucideIcon> = {
 
 const SEVERITY_STYLES = {
   warning: {
-    card: "border-amber-300/40 dark:border-amber-700/40",
-    bar: "bg-amber-500",
-    icon: "bg-amber-500/15 text-amber-600 dark:text-amber-400 ring-amber-500/20",
-    badge: "bg-amber-500/10 text-amber-700 dark:text-amber-300",
+    card: "border-[color:var(--status-warning)]/40 dark:border-[color:var(--status-warning)]/40",
+    bar: "bg-[color:var(--status-warning)]",
+    icon: "bg-[color:var(--status-warning)]/15 text-[color:var(--status-warning)] dark:text-[color:var(--status-warning)] ring-[color:var(--status-warning)]/20",
+    badge: "bg-[color:var(--status-warning)]/10 text-[color:var(--status-warning)] dark:text-[color:var(--status-warning)]",
   },
   error: {
-    card: "border-red-300/40 dark:border-red-700/40",
-    bar: "bg-red-500",
-    icon: "bg-red-500/15 text-red-600 dark:text-red-400 ring-red-500/20",
-    badge: "bg-red-500/10 text-red-700 dark:text-red-300",
+    card: "border-[color:var(--status-danger)]/40 dark:border-[color:var(--status-danger)]/40",
+    bar: "bg-[color:var(--status-danger)]",
+    icon: "bg-[color:var(--status-danger)]/15 text-[color:var(--status-danger)] dark:text-[color:var(--status-danger)] ring-[color:var(--status-danger)]/20",
+    badge: "bg-[color:var(--status-danger)]/10 text-[color:var(--status-danger)] dark:text-[color:var(--status-danger)]",
   },
   success: {
-    card: "border-emerald-300/40 dark:border-emerald-700/40",
-    bar: "bg-emerald-500",
-    icon: "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 ring-emerald-500/20",
-    badge: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300",
+    card: "border-[color:var(--status-success-strong)]/40 dark:border-[color:var(--status-success-strong)]/40",
+    bar: "bg-[color:var(--status-success-strong)]",
+    icon: "bg-[color:var(--status-success-strong)]/15 text-[color:var(--status-success-strong)] dark:text-[color:var(--status-success-strong)] ring-[color:var(--status-success-strong)]/20",
+    badge: "bg-[color:var(--status-success-strong)]/10 text-[color:var(--status-success-strong)] dark:text-[color:var(--status-success-strong)]",
   },
   info: {
-    card: "border-sky-300/40 dark:border-sky-700/40",
-    bar: "bg-sky-500",
-    icon: "bg-sky-500/15 text-sky-600 dark:text-sky-400 ring-sky-500/20",
-    badge: "bg-sky-500/10 text-sky-700 dark:text-sky-300",
+    card: "border-[color:var(--theme-ocean-primary)]/40 dark:border-[color:var(--theme-ocean-primary)]/40",
+    bar: "bg-[color:var(--theme-ocean-primary)]",
+    icon: "bg-[color:var(--theme-ocean-primary)]/15 text-[color:var(--theme-ocean-primary)] dark:text-[color:var(--theme-ocean-primary)] ring-[color:var(--theme-ocean-primary)]/20",
+    badge: "bg-[color:var(--theme-ocean-primary)]/10 text-[color:var(--theme-ocean-primary)] dark:text-[color:var(--theme-ocean-primary)]",
   },
 } as const;
 
@@ -158,7 +158,7 @@ function NotificationItem({
             <Button
               variant="secondary"
               size="sm"
-              className="h-7 text-[10px] px-3 font-semibold rounded-md bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20 dark:text-emerald-400 dark:hover:bg-emerald-500/30 transition-colors"
+              className="h-7 text-[10px] px-3 font-semibold rounded-md bg-[color:var(--status-success-strong)]/10 text-[color:var(--status-success-strong)] hover:bg-[color:var(--status-success-strong)]/20 dark:text-[color:var(--status-success-strong)] dark:hover:bg-[color:var(--status-success-strong)]/30 transition-colors"
               onClick={() => window.open(`/ticket-loading/${ventaId}`, '_blank')}
             >
               Ver Ticket
@@ -171,7 +171,7 @@ function NotificationItem({
             <Button
               variant="secondary"
               size="sm"
-              className="h-7 text-[10px] px-3 font-semibold rounded-md bg-indigo-500/10 text-indigo-600 hover:bg-indigo-500/20 dark:text-indigo-400 dark:hover:bg-indigo-500/30 transition-colors"
+              className="h-7 text-[10px] px-3 font-semibold rounded-md bg-[color:var(--primary)]/10 text-[color:var(--primary)] hover:bg-[color:var(--primary)]/20 dark:text-[color:var(--primary)] dark:hover:bg-[color:var(--primary)]/30 transition-colors"
               onClick={() => window.open(`/dashboard/consignaciones/${consignacionId}`, '_blank')}
             >
               Ver Consignación

@@ -219,12 +219,12 @@ export default function EditarLiquidacionPage() {
 
         <div className="flex items-center gap-3">
           <h1 className="text-3xl font-black">Corregir Liquidación</h1>
-          <Badge variant="outline" className="border-amber-500/30 text-amber-600">
+          <Badge variant="outline" className="border-[color:var(--status-warning)]/30 text-[color:var(--status-warning)]">
             #{liquidacionId}
           </Badge>
           {/* BADGE DE AUMENTO */}
           {porcentajeAumento > 0 && (
-            <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200 hover:bg-emerald-100 gap-1">
+            <Badge className="bg-[color:var(--status-success-strong)] text-[color:var(--status-success-strong)] border-[color:var(--status-success-strong)] hover:bg-[color:var(--status-success-strong)] gap-1">
               <BadgePercent className="h-3 w-3" />
               +{porcentajeAumento}% Aumento
             </Badge>
@@ -248,15 +248,15 @@ export default function EditarLiquidacionPage() {
                       <div className="text-[10px] text-muted-foreground line-through">
                         Base: {formatMoney(item.precioUnitario)}
                       </div>
-                      <div className="text-sm font-bold text-emerald-600">
-                        {formatMoney(precioFinal)} <span className="text-[10px] text-emerald-400 font-normal">/u</span>
+                      <div className="text-sm font-bold text-[color:var(--status-success-strong)]">
+                        {formatMoney(precioFinal)} <span className="text-[10px] text-[color:var(--status-success-strong)] font-normal">/u</span>
                       </div>
                     </div>
                   </div>
 
                   <div className="grid grid-cols-2 gap-6">
                     <div className="space-y-2">
-                      <Label className="text-xs font-bold text-emerald-600 uppercase flex items-center gap-2">
+                      <Label className="text-xs font-bold text-[color:var(--status-success-strong)] uppercase flex items-center gap-2">
                         <TrendingUp className="h-4 w-4" /> Vendidas
                       </Label>
                       <div className="relative">
@@ -267,16 +267,16 @@ export default function EditarLiquidacionPage() {
                           onChange={(e) =>
                             handleUpdate(item.consignacionDetalleId, "unitsVendidas", Number(e.target.value))
                           }
-                          className="h-12 text-lg font-bold bg-emerald-500/5 border-emerald-200"
+                          className="h-12 text-lg font-bold bg-[color:var(--status-success-strong)]/5 border-[color:var(--status-success-strong)]"
                         />
-                        <div className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-medium text-emerald-700">
+                        <div className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-medium text-[color:var(--status-success-strong)]">
                           {formatMoney(item.unitsVendidas * precioFinal)}
                         </div>
                       </div>
                     </div>
 
                     <div className="space-y-2">
-                      <Label className="text-xs font-bold text-amber-600 uppercase flex items-center gap-2">
+                      <Label className="text-xs font-bold text-[color:var(--status-warning)] uppercase flex items-center gap-2">
                         <Undo2 className="h-4 w-4" /> Devueltas
                       </Label>
                       <Input
@@ -286,7 +286,7 @@ export default function EditarLiquidacionPage() {
                         onChange={(e) =>
                           handleUpdate(item.consignacionDetalleId, "unitsDevueltas", Number(e.target.value))
                         }
-                        className="h-12 text-lg font-bold bg-amber-500/5 border-amber-200"
+                        className="h-12 text-lg font-bold bg-[color:var(--status-warning)]/5 border-[color:var(--status-warning)]"
                       />
                     </div>
                   </div>
@@ -313,14 +313,14 @@ export default function EditarLiquidacionPage() {
               <div className="flex justify-between items-center">
                 <div className="flex flex-col">
                   <span className="text-sm text-muted-foreground">Nuevo Total</span>
-                  {porcentajeAumento > 0 && <span className="text-[10px] text-emerald-500 font-bold">Incluye +{porcentajeAumento}%</span>}
+                  {porcentajeAumento > 0 && <span className="text-[10px] text-[color:var(--status-success-strong)] font-bold">Incluye +{porcentajeAumento}%</span>}
                 </div>
                 <span className="text-3xl font-black">{formatMoney(totalVenta)}</span>
               </div>
 
               <Separator />
 
-              <p className="text-[11px] text-muted-foreground italic bg-amber-500/5 p-3 border border-amber-200/30 rounded-lg text-center">
+              <p className="text-[11px] text-muted-foreground italic bg-[color:var(--status-warning)]/5 p-3 border border-[color:var(--status-warning)]/30 rounded-lg text-center">
                 Al guardar, se recalculará el saldo del cliente usando los precios con el aumento aplicado.
               </p>
 

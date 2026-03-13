@@ -104,8 +104,8 @@ const CATEGORIES: Array<{
 
 const DEFAULT_BRANDING: BrandingSettings = {
   businessName: "",
-  primaryColor: "#111827",
-  secondaryColor: "#e2e8f0",
+  primaryColor: "var(--theme-modern-primary)",
+  secondaryColor: "var(--theme-modern-secondary)",
   footerText: "",
   phone: "",
   address: "",
@@ -359,14 +359,14 @@ export default function TiendaSettingsPage() {
 
             <div className="shrink-0 flex items-center gap-1.5 sm:gap-2">
               {isDirty && (
-                <span className="hidden md:flex items-center gap-1 text-[11px] text-amber-600 dark:text-amber-400 font-medium">
-                  <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse" />
+                <span className="hidden md:flex items-center gap-1 text-[11px] text-[color:var(--status-warning)] dark:text-[color:var(--status-warning)] font-medium">
+                  <span className="h-1.5 w-1.5 rounded-full bg-[color:var(--status-warning)] animate-pulse" />
                   Cambios pendientes
                 </span>
               )}
 
               {showSavedCheck && !isDirty && (
-                <span className="hidden md:flex items-center gap-1 text-[11px] text-emerald-600 dark:text-emerald-400 font-medium">
+                <span className="hidden md:flex items-center gap-1 text-[11px] text-[color:var(--status-success-strong)] dark:text-[color:var(--status-success-strong)] font-medium">
                   <Check className="h-3.5 w-3.5" />
                   Guardado
                 </span>
@@ -461,7 +461,7 @@ export default function TiendaSettingsPage() {
                   <span
                     className={cn(
                       "h-2 w-2 rounded-full",
-                      hasMercadoPagoCredentials ? "bg-emerald-500" : "bg-amber-500",
+                      hasMercadoPagoCredentials ? "bg-[color:var(--status-success-strong)]" : "bg-[color:var(--status-warning)]",
                     )}
                   />
                   <p className="text-sm font-medium">{storeModeLabel}</p>
@@ -628,10 +628,10 @@ export default function TiendaSettingsPage() {
                   </div>
                 </div>
 
-                <div className="relative flex-1 p-3 sm:p-6 bg-gradient-to-br from-slate-100 via-zinc-50 to-stone-100 dark:from-zinc-950 dark:via-zinc-900 dark:to-zinc-950 flex items-center justify-center overflow-hidden">
+                <div className="relative flex-1 p-3 sm:p-6 bg-gradient-to-br from-background via-muted/35 to-muted/55 dark:from-background dark:via-card dark:to-background flex items-center justify-center overflow-hidden">
                   <div
                     className={cn(
-                      "bg-white ring-1 ring-black/5 shadow-[0_20px_80px_-30px_rgba(0,0,0,0.45)] transform-gpu transition-all duration-500",
+                      "bg-card ring-1 ring-border/60 shadow-2xl transform-gpu transition-all duration-500",
                       previewMode === "mobile"
                         ? "w-[350px] h-[740px] max-h-full rounded-[2.5rem]"
                         : "w-[min(1450px,95vw)] h-[min(820px,88vh)] rounded-2xl",

@@ -87,57 +87,57 @@ const HOVERS: Record<StoreTheme, string> = {
   ocean: "hover:scale-[1.05]",
   sunset: "hover:scale-[1.05]",
   barbie: "hover:scale-[1.05]",
-  minimal: "hover:bg-neutral-800 transition-colors",
+  minimal: "hover:bg-foreground/90 transition-colors",
   luxury: "hover:bg-transparent hover:text-primary border-2 border-primary transition-all",
   tech: "hover:shadow-[0_0_15px_rgba(var(--primary-rgb),0.5)] transition-shadow",
 };
 
 const SURFACES: Record<StoreTheme, Pick<ThemeStyles, "pageBgClass" | "cardBgClass" | "headerBgClass">> = {
   modern: {
-    pageBgClass: "bg-[linear-gradient(180deg,var(--secondary)_0%,#ffffff_65%)]",
-    cardBgClass: "bg-white",
-    headerBgClass: "bg-white/90",
+    pageBgClass: "bg-[linear-gradient(180deg,var(--secondary)_0%,var(--store-canvas)_65%)]",
+    cardBgClass: "bg-[color:var(--store-surface)]",
+    headerBgClass: "bg-[color:rgba(var(--store-surface-rgb),0.9)]",
   },
   nature: {
     pageBgClass:
-      "bg-[radial-gradient(circle_at_top_right,rgba(var(--primary-rgb),0.14),transparent_42%),linear-gradient(180deg,var(--secondary)_0%,#ffffff_72%)]",
-    cardBgClass: "bg-white",
-    headerBgClass: "bg-[linear-gradient(180deg,var(--secondary)_0%,rgba(255,255,255,0.95)_100%)]",
+      "bg-[radial-gradient(circle_at_top_right,rgba(var(--primary-rgb),0.14),transparent_42%),linear-gradient(180deg,var(--secondary)_0%,var(--store-canvas)_72%)]",
+    cardBgClass: "bg-[color:var(--store-surface)]",
+    headerBgClass: "bg-[linear-gradient(180deg,var(--secondary)_0%,rgba(var(--store-surface-rgb),0.95)_100%)]",
   },
   ocean: {
     pageBgClass:
-      "bg-[radial-gradient(circle_at_top_right,rgba(var(--primary-rgb),0.16),transparent_44%),linear-gradient(180deg,var(--secondary)_0%,#ffffff_70%)]",
-    cardBgClass: "bg-white",
-    headerBgClass: "bg-[linear-gradient(180deg,var(--secondary)_0%,rgba(255,255,255,0.95)_100%)]",
+      "bg-[radial-gradient(circle_at_top_right,rgba(var(--primary-rgb),0.16),transparent_44%),linear-gradient(180deg,var(--secondary)_0%,var(--store-canvas)_70%)]",
+    cardBgClass: "bg-[color:var(--store-surface)]",
+    headerBgClass: "bg-[linear-gradient(180deg,var(--secondary)_0%,rgba(var(--store-surface-rgb),0.95)_100%)]",
   },
   sunset: {
     pageBgClass:
-      "bg-[radial-gradient(circle_at_top_right,rgba(var(--primary-rgb),0.15),transparent_45%),linear-gradient(180deg,var(--secondary)_0%,#ffffff_74%)]",
-    cardBgClass: "bg-white",
-    headerBgClass: "bg-[linear-gradient(180deg,var(--secondary)_0%,rgba(255,255,255,0.95)_100%)]",
+      "bg-[radial-gradient(circle_at_top_right,rgba(var(--primary-rgb),0.15),transparent_45%),linear-gradient(180deg,var(--secondary)_0%,var(--store-canvas)_74%)]",
+    cardBgClass: "bg-[color:var(--store-surface)]",
+    headerBgClass: "bg-[linear-gradient(180deg,var(--secondary)_0%,rgba(var(--store-surface-rgb),0.95)_100%)]",
   },
   luxury: {
     pageBgClass:
-      "bg-[linear-gradient(180deg,var(--secondary)_0%,#ffffff_55%),radial-gradient(circle_at_top,rgba(var(--primary-rgb),0.08),transparent_55%)]",
-    cardBgClass: "bg-white",
-    headerBgClass: "bg-white/95",
+      "bg-[linear-gradient(180deg,var(--secondary)_0%,var(--store-canvas)_55%),radial-gradient(circle_at_top,rgba(var(--primary-rgb),0.08),transparent_55%)]",
+    cardBgClass: "bg-[color:var(--store-surface)]",
+    headerBgClass: "bg-[color:rgba(var(--store-surface-rgb),0.95)]",
   },
   minimal: {
-    pageBgClass: "bg-white",
-    cardBgClass: "bg-white",
-    headerBgClass: "bg-white/95",
+    pageBgClass: "bg-[color:var(--store-canvas)]",
+    cardBgClass: "bg-[color:var(--store-surface)]",
+    headerBgClass: "bg-[color:rgba(var(--store-surface-rgb),0.95)]",
   },
   barbie: {
     pageBgClass:
-      "bg-[radial-gradient(circle_at_top_right,rgba(var(--primary-rgb),0.14),transparent_40%),linear-gradient(180deg,var(--secondary)_0%,#ffffff_70%)]",
-    cardBgClass: "bg-white",
-    headerBgClass: "bg-[linear-gradient(180deg,var(--secondary)_0%,rgba(255,255,255,0.95)_100%)]",
+      "bg-[radial-gradient(circle_at_top_right,rgba(var(--primary-rgb),0.14),transparent_40%),linear-gradient(180deg,var(--secondary)_0%,var(--store-canvas)_70%)]",
+    cardBgClass: "bg-[color:var(--store-surface)]",
+    headerBgClass: "bg-[linear-gradient(180deg,var(--secondary)_0%,rgba(var(--store-surface-rgb),0.95)_100%)]",
   },
   tech: {
     pageBgClass:
-      "bg-[radial-gradient(circle_at_top_right,rgba(var(--primary-rgb),0.18),transparent_48%),linear-gradient(180deg,var(--secondary)_0%,#ffffff_75%)]",
-    cardBgClass: "bg-white",
-    headerBgClass: "bg-[linear-gradient(180deg,var(--secondary)_0%,rgba(255,255,255,0.94)_100%)]",
+      "bg-[radial-gradient(circle_at_top_right,rgba(var(--primary-rgb),0.18),transparent_48%),linear-gradient(180deg,var(--secondary)_0%,var(--store-canvas)_75%)]",
+    cardBgClass: "bg-[color:var(--store-surface)]",
+    headerBgClass: "bg-[linear-gradient(180deg,var(--secondary)_0%,rgba(var(--store-surface-rgb),0.94)_100%)]",
   },
 };
 

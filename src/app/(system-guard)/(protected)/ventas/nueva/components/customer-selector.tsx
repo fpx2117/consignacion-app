@@ -50,7 +50,7 @@ export function CustomerSelector({
             aria-label="Seleccionar cliente"
             className={cn(
               "w-full justify-between h-10 text-[11px] sm:text-xs px-2 truncate rounded-xl transition-all focus-visible:ring-2",
-              isClienteRegistrado && "border-indigo-400 bg-indigo-50 text-indigo-600 font-bold",
+              isClienteRegistrado && "border-[color:var(--primary)] bg-[color:var(--primary)] text-[color:var(--primary)] font-bold",
             )}
           >
             <span className="truncate">{selectedClienteId === "" ? "Cons. Final" : selectedLabel}</span>

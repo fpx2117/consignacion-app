@@ -40,19 +40,25 @@ const GOOGLE_FONTS = [
 ];
 
 const COLOR_SWATCHES = [
-    { hex: "#000000", name: "Negro" },
-    { hex: "#171717", name: "Carbón" },
-    { hex: "#1e293b", name: "Pizarra" },
-    { hex: "#dc2626", name: "Rojo" },
-    { hex: "#ea580c", name: "Naranja" },
-    { hex: "#16a34a", name: "Verde" },
-    { hex: "#0284c7", name: "Azul" },
-    { hex: "#0891b2", name: "Cyan" },
-    { hex: "#854d0e", name: "Bronce" },
-    { hex: "#db2777", name: "Rosa" },
-    { hex: "#7c3aed", name: "Violeta" },
-    { hex: "#4f46e5", name: "Índigo" },
+    { token: "--swatch-1", name: "Negro" },
+    { token: "--swatch-2", name: "Carbón" },
+    { token: "--swatch-3", name: "Pizarra" },
+    { token: "--swatch-4", name: "Rojo" },
+    { token: "--swatch-5", name: "Naranja" },
+    { token: "--swatch-6", name: "Verde" },
+    { token: "--swatch-7", name: "Azul" },
+    { token: "--swatch-8", name: "Cyan" },
+    { token: "--swatch-9", name: "Bronce" },
+    { token: "--swatch-10", name: "Rosa" },
+    { token: "--swatch-11", name: "Violeta" },
+    { token: "--swatch-12", name: "Índigo" },
 ];
+
+function resolveColorToken(token: string): string {
+    if (typeof window === "undefined") return "";
+    const styles = getComputedStyle(document.documentElement);
+    return styles.getPropertyValue(token).trim() || styles.getPropertyValue("--swatch-1").trim();
+}
 
 /* ─── Font Groups ──────────────────────────────────────────── */
 
@@ -78,6 +84,11 @@ function ColorPalette({
     label: string;
     hint: string;
 }) {
+    const swatches = React.useMemo(
+        () => COLOR_SWATCHES.map((swatch) => ({ ...swatch, hex: resolveColorToken(swatch.token) })),
+        [],
+    );
+
     return (
         <div className="space-y-3">
             <div className="flex items-center justify-between">
@@ -107,9 +118,9 @@ function ColorPalette({
                 </div>
             </div>
             <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
-                {COLOR_SWATCHES.map((swatch) => (
+                {swatches.map((swatch) => (
                     <button
-                        key={swatch.hex}
+                        key={swatch.token}
                         type="button"
                         onClick={() => onChange(swatch.hex)}
                         className={cn(
@@ -122,7 +133,7 @@ function ColorPalette({
                         title={swatch.name}
                     >
                         {value === swatch.hex && (
-                            <Check className="h-3.5 w-3.5 text-white absolute inset-0 m-auto drop-shadow-md" />
+                            <Check className="h-3.5 w-3.5 text-[color:var(--ui-fx-white)] absolute inset-0 m-auto drop-shadow-md" />
                         )}
                         <span className="absolute -top-7 left-1/2 -translate-x-1/2 bg-foreground text-background text-[10px] px-1.5 py-0.5 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap font-medium">
                             {swatch.name}
@@ -200,9 +211,9 @@ export function BrandingTab({ branding, setBranding, handleImageUpload }: any) {
                                 <ImageIcon className="h-8 w-8 text-muted-foreground/25" />
                             )}
                             {/* Hover overlay */}
-                            <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex flex-col items-center justify-center gap-1 rounded-2xl">
-                                <Camera className="h-5 w-5 text-white" />
-                                <span className="text-[10px] text-white/80 font-medium">
+                            <div className="absolute inset-0 bg-foreground/50 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex flex-col items-center justify-center gap-1 rounded-2xl">
+                                <Camera className="h-5 w-5 text-[color:var(--ui-fx-white)]" />
+                                <span className="text-[10px] text-[color:var(--ui-fx-white)]/80 font-medium">
                                     {branding.logoData ? "Cambiar" : "Subir"}
                                 </span>
                             </div>
@@ -283,7 +294,7 @@ export function BrandingTab({ branding, setBranding, handleImageUpload }: any) {
                                                 alt="Banner"
                                                 className="w-full h-full object-cover"
                                             />
-                                            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors duration-200 flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100">
+                                            <div className="absolute inset-0 bg-foreground/0 group-hover:bg-foreground/30 transition-colors duration-200 flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100">
                                                 <Button
                                                     type="button"
                                                     size="sm"
@@ -388,22 +399,22 @@ export function BrandingTab({ branding, setBranding, handleImageUpload }: any) {
                                                 className="w-full h-full object-cover"
                                             />
                                             {/* Overlay on hover */}
-                                            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors duration-200">
+                                            <div className="absolute inset-0 bg-foreground/0 group-hover:bg-foreground/40 transition-colors duration-200">
                                                 {/* Number badge */}
-                                                <span className="absolute top-2 left-2 text-[10px] font-bold text-white/0 group-hover:text-white bg-black/0 group-hover:bg-black/50 rounded-md px-1.5 py-0.5 transition-all font-mono">
+                                                <span className="absolute top-2 left-2 text-[10px] font-bold text-[color:var(--ui-fx-white)]/0 group-hover:text-[color:var(--ui-fx-white)] bg-foreground/0 group-hover:bg-foreground/50 rounded-md px-1.5 py-0.5 transition-all font-mono">
                                                     {index + 1}
                                                 </span>
                                                 {/* Delete button */}
                                                 <button
                                                     type="button"
-                                                    className="absolute top-2 right-2 h-6 w-6 bg-black/0 group-hover:bg-red-500/90 rounded-lg flex items-center justify-center transition-all opacity-0 group-hover:opacity-100 hover:bg-red-600"
+                                                    className="absolute top-2 right-2 h-6 w-6 bg-foreground/0 group-hover:bg-[color:var(--status-danger)]/90 rounded-lg flex items-center justify-center transition-all opacity-0 group-hover:opacity-100 hover:bg-[color:var(--status-danger)]"
                                                     onClick={() => {
                                                         const newBanners = [...branding.banners];
                                                         newBanners.splice(index, 1);
                                                         setBranding({ ...branding, banners: newBanners });
                                                     }}
                                                 >
-                                                    <X className="h-3.5 w-3.5 text-white" />
+                                                    <X className="h-3.5 w-3.5 text-[color:var(--ui-fx-white)]" />
                                                 </button>
                                             </div>
                                         </div>

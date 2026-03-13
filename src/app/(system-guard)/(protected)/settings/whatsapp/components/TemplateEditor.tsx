@@ -100,13 +100,13 @@ export function TemplateEditor({
                 <div className="flex items-center gap-3">
                     <Badge
                         variant="secondary"
-                        className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20 font-semibold text-xs"
+                        className="bg-[color:var(--status-success-strong)]/10 text-[color:var(--status-success-strong)] dark:text-[color:var(--status-success-strong)] border-[color:var(--status-success-strong)]/20 font-semibold text-xs"
                     >
                         {label}
                     </Badge>
                     <span className={cn(
                         "text-xs tabular-nums",
-                        charCount > maxRecommended ? "text-amber-500 font-medium" : "text-muted-foreground"
+                        charCount > maxRecommended ? "text-[color:var(--status-warning)] font-medium" : "text-muted-foreground"
                     )}>
                         {charCount} / {maxRecommended}
                     </span>
@@ -117,7 +117,7 @@ export function TemplateEditor({
                         variant="ghost"
                         size="sm"
                         onClick={onMagicMessage}
-                        className="h-8 cursor-pointer gap-1.5 rounded-lg text-amber-600 hover:bg-amber-500/10 hover:text-amber-600 transition-colors"
+                        className="h-8 cursor-pointer gap-1.5 rounded-lg text-[color:var(--status-warning)] hover:bg-[color:var(--status-warning)]/10 hover:text-[color:var(--status-warning)] transition-colors"
                     >
                         <Sparkles className="h-3.5 w-3.5" />
                         <span className="text-xs font-semibold">Generar mensaje</span>
@@ -185,7 +185,7 @@ export function TemplateEditor({
                                         <button
                                             key={emoji}
                                             onClick={() => insertText(emoji)}
-                                            className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-lg text-lg transition-colors hover:bg-emerald-500/10 active:scale-90"
+                                            className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-lg text-lg transition-colors hover:bg-[color:var(--status-success-strong)]/10 active:scale-90"
                                         >
                                             {emoji}
                                         </button>
@@ -221,13 +221,13 @@ export function TemplateEditor({
                             <button
                                 key={v.value}
                                 onClick={() => insertText(v.value)}
-                                className="group cursor-pointer rounded-xl border border-emerald-500/20 bg-emerald-500/[0.06] p-3 text-left transition-all hover:border-emerald-500/35 hover:bg-emerald-500/10 active:scale-[0.99]"
+                                className="group cursor-pointer rounded-xl border border-[color:var(--status-success-strong)]/20 bg-[color:var(--status-success-strong)]/[0.06] p-3 text-left transition-all hover:border-[color:var(--status-success-strong)]/35 hover:bg-[color:var(--status-success-strong)]/10 active:scale-[0.99]"
                             >
                                 <p className="text-sm font-semibold text-foreground">
                                     {v.label}
                                 </p>
-                                <div className="mt-1 inline-flex rounded-md border border-emerald-500/25 bg-background/70 px-2 py-0.5">
-                                    <code className="font-mono text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+                                <div className="mt-1 inline-flex rounded-md border border-[color:var(--status-success-strong)]/25 bg-background/70 px-2 py-0.5">
+                                    <code className="font-mono text-xs font-semibold text-[color:var(--status-success-strong)] dark:text-[color:var(--status-success-strong)]">
                                         {v.value}
                                     </code>
                                 </div>
@@ -240,7 +240,7 @@ export function TemplateEditor({
                 {showWhatsappNumber && onWhatsappNumberChange && (
                     <div className="border-t border-border/40 px-5 py-4">
                         <label className="mb-2.5 flex items-center gap-2 text-xs font-medium text-muted-foreground">
-                            <Phone className="h-3.5 w-3.5 text-emerald-500" />
+                            <Phone className="h-3.5 w-3.5 text-[color:var(--status-success-strong)]" />
                             Número de WhatsApp para pedidos
                         </label>
                         <div className="flex items-center gap-3">

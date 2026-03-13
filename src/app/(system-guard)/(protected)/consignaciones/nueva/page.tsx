@@ -282,11 +282,11 @@ export default function NuevaConsignacionPage() {
         {/* LEFT COLUMN: INPUTS */}
         <div className="lg:col-span-7 space-y-6">
           {/* CLIENTE CARD */}
-          <Card className="border-border/50 bg-card/50 backdrop-blur-sm shadow-sm dark:bg-zinc-900/50">
+          <Card className="border-border/50 bg-card/50 backdrop-blur-sm shadow-sm dark:bg-card/50">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <div className="space-y-1">
                 <CardTitle className="text-lg flex items-center gap-2 text-foreground">
-                  <User className="h-5 w-5 text-indigo-500 dark:text-indigo-400" /> Cliente
+                  <User className="h-5 w-5 text-[color:var(--primary)] dark:text-[color:var(--primary)]" /> Cliente
                 </CardTitle>
               </div>
 
@@ -296,7 +296,7 @@ export default function NuevaConsignacionPage() {
                   <Button
                     variant="outline"
                     size="sm"
-                    className="gap-2 border-indigo-200 text-indigo-700 bg-indigo-50 hover:bg-indigo-100 dark:border-indigo-500/30 dark:text-indigo-400 dark:bg-transparent dark:hover:bg-indigo-500/10"
+                    className="gap-2 border-[color:var(--primary)] text-[color:var(--primary)] bg-[color:var(--primary)] hover:bg-[color:var(--primary)] dark:border-[color:var(--primary)]/30 dark:text-[color:var(--primary)] dark:bg-transparent dark:hover:bg-[color:var(--primary)]/10"
                   >
                     <UserPlus className="h-4 w-4" /> Crear Nuevo
                   </Button>
@@ -307,7 +307,7 @@ export default function NuevaConsignacionPage() {
             <CardContent>
               <div className="relative">
                 <select
-                  className="flex h-12 w-full rounded-xl border border-input bg-background px-3 py-2 text-sm text-foreground focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none appearance-none dark:bg-black/40"
+                  className="flex h-12 w-full rounded-xl border border-input bg-background px-3 py-2 text-sm text-foreground focus:border-[color:var(--primary)] focus:ring-1 focus:ring-[color:var(--primary)] outline-none appearance-none dark:bg-foreground/40"
                   value={clienteId}
                   onChange={(e) => setClienteId(e.target.value ? Number(e.target.value) : "")}
                 >
@@ -315,7 +315,7 @@ export default function NuevaConsignacionPage() {
                     Seleccionar destinatario...
                   </option>
                   {clientes.map((c) => (
-                    <option key={c.id} value={c.id} className="text-foreground bg-background dark:bg-zinc-900">
+                    <option key={c.id} value={c.id} className="text-foreground bg-background dark:bg-card">
                       {c.nombre}
                     </option>
                   ))}
@@ -329,10 +329,10 @@ export default function NuevaConsignacionPage() {
           </Card>
 
           {/* AJUSTE DE PRECIOS CARD */}
-          <Card className="border-border/50 bg-card/50 backdrop-blur-sm shadow-sm border-l-4 border-l-emerald-500 dark:bg-zinc-900/50">
+          <Card className="border-border/50 bg-card/50 backdrop-blur-sm shadow-sm border-l-4 border-l-emerald-500 dark:bg-card/50">
             <CardHeader className="pb-2">
               <CardTitle className="text-lg flex items-center gap-2 text-foreground">
-                <BadgePercent className="h-5 w-5 text-emerald-500" /> Ajuste de Precios
+                <BadgePercent className="h-5 w-5 text-[color:var(--status-success-strong)]" /> Ajuste de Precios
               </CardTitle>
             </CardHeader>
 
@@ -340,10 +340,10 @@ export default function NuevaConsignacionPage() {
               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
                 <div className="space-y-1">
                   <div className="flex items-center gap-2">
-                    <span className="text-4xl font-black text-emerald-600 dark:text-emerald-400">
+                    <span className="text-4xl font-black text-[color:var(--status-success-strong)] dark:text-[color:var(--status-success-strong)]">
                       {porcentajeAumento}%
                     </span>
-                    <Badge variant="outline" className="bg-emerald-500/10 text-emerald-600 border-emerald-500/20 uppercase text-[10px] font-bold">
+                    <Badge variant="outline" className="bg-[color:var(--status-success-strong)]/10 text-[color:var(--status-success-strong)] border-[color:var(--status-success-strong)]/20 uppercase text-[10px] font-bold">
                       Configurado
                     </Badge>
                   </div>
@@ -356,7 +356,7 @@ export default function NuevaConsignacionPage() {
                   variant="outline"
                   size="sm"
                   onClick={() => router.push("/settings/pos")}
-                  className="shrink-0 gap-2 border-emerald-200 text-emerald-700 hover:bg-emerald-50 dark:border-emerald-500/30 dark:text-emerald-400 dark:hover:bg-emerald-500/10"
+                  className="shrink-0 gap-2 border-[color:var(--status-success-strong)] text-[color:var(--status-success-strong)] hover:bg-[color:var(--status-success-strong)] dark:border-[color:var(--status-success-strong)]/30 dark:text-[color:var(--status-success-strong)] dark:hover:bg-[color:var(--status-success-strong)]/10"
                 >
                   <Settings2 className="h-4 w-4" /> Cambiar en Ajustes
                 </Button>
@@ -365,10 +365,10 @@ export default function NuevaConsignacionPage() {
           </Card>
 
           {/* PRODUCTO CARD */}
-          <Card className="border-border/50 bg-card/50 backdrop-blur-sm shadow-sm dark:bg-zinc-900/50">
+          <Card className="border-border/50 bg-card/50 backdrop-blur-sm shadow-sm dark:bg-card/50">
             <CardHeader>
               <CardTitle className="text-lg flex items-center gap-2 text-foreground">
-                <Package className="h-5 w-5 text-indigo-500 dark:text-indigo-400" /> Agregar Productos
+                <Package className="h-5 w-5 text-[color:var(--primary)] dark:text-[color:var(--primary)]" /> Agregar Productos
               </CardTitle>
             </CardHeader>
 
@@ -384,7 +384,7 @@ export default function NuevaConsignacionPage() {
                       <Button
                         variant="outline"
                         role="combobox"
-                        className={`w-full justify-between h-12 border-input bg-background text-left font-normal text-foreground hover:bg-muted dark:bg-black/40 dark:hover:bg-black/60 ${isAgotado ? "border-red-300 dark:border-red-800 bg-red-50/50 dark:bg-red-900/10" : ""
+                        className={`w-full justify-between h-12 border-input bg-background text-left font-normal text-foreground hover:bg-muted dark:bg-foreground/40 dark:hover:bg-foreground/60 ${isAgotado ? "border-[color:var(--status-danger)] dark:border-[color:var(--status-danger)] bg-[color:var(--status-danger)]/50 dark:bg-[color:var(--status-danger)]/10" : ""
                           }`}
                         disabled={loading}
                       >
@@ -429,7 +429,7 @@ export default function NuevaConsignacionPage() {
                                       {p.nombre}
                                     </span>
                                     <span
-                                      className={`text-[10px] ${agotado ? "text-red-500 font-bold" : "text-muted-foreground"
+                                      className={`text-[10px] ${agotado ? "text-[color:var(--status-danger)] font-bold" : "text-muted-foreground"
                                         }`}
                                     >
                                       {agotado ? "SIN STOCK" : `Stock: ${p.stockDisponibleUnits ?? 0}`}
@@ -439,8 +439,8 @@ export default function NuevaConsignacionPage() {
                                     variant={agotado ? "outline" : "secondary"}
                                     className={
                                       agotado
-                                        ? "border-red-200 text-red-300"
-                                        : "bg-indigo-100 text-indigo-700 dark:bg-indigo-500/10 dark:text-indigo-300 border-none"
+                                        ? "border-[color:var(--status-danger)] text-[color:var(--status-danger)]"
+                                        : "bg-[color:var(--primary)] text-[color:var(--primary)] dark:bg-[color:var(--primary)]/10 dark:text-[color:var(--primary)] border-none"
                                     }
                                   >
                                     {formatCurrency(p.precioVenta)}
@@ -466,13 +466,13 @@ export default function NuevaConsignacionPage() {
                     value={units}
                     onChange={(e) => setUnits(Number(e.target.value))}
                     disabled={isAgotado}
-                    className="h-12 border-input bg-background text-center font-bold text-foreground focus-visible:ring-indigo-500 dark:bg-black/40 disabled:opacity-50"
+                    className="h-12 border-input bg-background text-center font-bold text-foreground focus-visible:ring-[color:var(--primary)] dark:bg-foreground/40 disabled:opacity-50"
                   />
                 </div>
               </div>
 
               {isAgotado && (
-                <div className="rounded-lg bg-red-50 border border-red-100 p-3 flex items-center gap-3 text-red-700 dark:bg-red-900/20 dark:border-red-900/50 dark:text-red-400">
+                <div className="rounded-lg bg-[color:var(--status-danger)] border border-[color:var(--status-danger)] p-3 flex items-center gap-3 text-[color:var(--status-danger)] dark:bg-[color:var(--status-danger)]/20 dark:border-[color:var(--status-danger)]/50 dark:text-[color:var(--status-danger)]">
                   <AlertTriangle className="h-5 w-5" />
                   <span className="text-sm font-medium">Producto agotado. No se puede agregar.</span>
                 </div>
@@ -493,13 +493,13 @@ export default function NuevaConsignacionPage() {
         {/* RIGHT COLUMN: SUMMARY */}
         <div className="lg:col-span-5">
           <div className="sticky top-6 space-y-6">
-            <Card className="border-border/50 bg-card shadow-lg overflow-hidden rounded-2xl dark:bg-black/60 dark:border-white/10">
-              <CardHeader className="bg-muted/30 border-b border-border/50 pb-4 dark:bg-white/5">
+            <Card className="border-border/50 bg-card shadow-lg overflow-hidden rounded-2xl dark:bg-foreground/60 dark:border-[color:var(--ui-fx-white)]/10">
+              <CardHeader className="bg-muted/30 border-b border-border/50 pb-4 dark:bg-card/5">
                 <div className="flex justify-between items-center">
                   <CardTitle className="text-lg flex items-center gap-2 text-foreground">
-                    <ShoppingCart className="h-5 w-5 text-indigo-500 dark:text-indigo-400" /> Resumen
+                    <ShoppingCart className="h-5 w-5 text-[color:var(--primary)] dark:text-[color:var(--primary)]" /> Resumen
                   </CardTitle>
-                  <Badge variant="outline" className="border-indigo-200 text-indigo-700 dark:border-indigo-500/30 dark:text-indigo-400">
+                  <Badge variant="outline" className="border-[color:var(--primary)] text-[color:var(--primary)] dark:border-[color:var(--primary)]/30 dark:text-[color:var(--primary)]">
                     {items.length} Ítems
                   </Badge>
                 </div>
@@ -529,17 +529,17 @@ export default function NuevaConsignacionPage() {
                             initial={{ opacity: 0, scale: 0.95 }}
                             animate={{ opacity: 1, scale: 1 }}
                             exit={{ opacity: 0, scale: 0.95 }}
-                            className="group flex items-center justify-between p-3 rounded-xl bg-muted/40 hover:bg-muted/70 transition-colors border border-transparent hover:border-border/50 dark:bg-white/5 dark:hover:bg-white/10"
+                            className="group flex items-center justify-between p-3 rounded-xl bg-muted/40 hover:bg-muted/70 transition-colors border border-transparent hover:border-border/50 dark:bg-card/5 dark:hover:bg-card/10"
                           >
                             <div className="flex items-center gap-3 overflow-hidden">
-                              <div className="h-10 w-10 rounded-lg bg-indigo-100 flex items-center justify-center text-indigo-600 font-bold text-xs shrink-0 dark:bg-indigo-500/10 dark:text-indigo-400">
+                              <div className="h-10 w-10 rounded-lg bg-[color:var(--primary)] flex items-center justify-center text-[color:var(--primary)] font-bold text-xs shrink-0 dark:bg-[color:var(--primary)]/10 dark:text-[color:var(--primary)]">
                                 x{i.unitsEntregadas}
                               </div>
                               <div className="min-w-0">
                                 <p className="font-medium text-sm text-foreground truncate">{i.producto?.nombre}</p>
                                 <div className="flex items-center gap-2">
                                   <p className="text-[10px] text-muted-foreground line-through">{formatCurrency(precioBase)}</p>
-                                  <p className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400">
+                                  <p className="text-[11px] font-bold text-[color:var(--status-success-strong)] dark:text-[color:var(--status-success-strong)]">
                                     Final: {formatCurrency(precioFinal)}
                                   </p>
                                 </div>
@@ -552,7 +552,7 @@ export default function NuevaConsignacionPage() {
                               </span>
                               <button
                                 onClick={() => removeItem(i.productoId)}
-                                className="p-2 rounded-lg text-muted-foreground hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors"
+                                className="p-2 rounded-lg text-muted-foreground hover:text-[color:var(--status-danger)] hover:bg-[color:var(--status-danger)] dark:hover:bg-[color:var(--status-danger)]/10 transition-colors"
                                 disabled={saving}
                               >
                                 <Trash2 className="h-4 w-4" />
@@ -566,14 +566,14 @@ export default function NuevaConsignacionPage() {
                 </div>
 
                 {items.length > 0 && (
-                  <div className="bg-muted/30 border-t border-border/50 p-6 space-y-6 dark:bg-white/5">
+                  <div className="bg-muted/30 border-t border-border/50 p-6 space-y-6 dark:bg-card/5">
                     <div className="space-y-3">
                       <div className="flex justify-between text-sm text-muted-foreground">
                         <span>Cantidad Total</span>
                         <span className="text-foreground font-medium">{totalUnits} u.</span>
                       </div>
                       <div className="flex justify-between items-baseline">
-                        <span className="text-sm font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400">
+                        <span className="text-sm font-bold uppercase tracking-wider text-[color:var(--primary)] dark:text-[color:var(--primary)]">
                           Valor Total
                         </span>
                         <span className="text-3xl font-black text-foreground tracking-tight">{formatCurrency(totalAmount)}</span>
@@ -583,7 +583,7 @@ export default function NuevaConsignacionPage() {
                     <Button
                       onClick={submit}
                       disabled={saving}
-                      className="w-full h-14 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold text-lg shadow-lg shadow-indigo-500/20 dark:shadow-indigo-900/20 transition-all hover:scale-[1.02] active:scale-[0.98]"
+                      className="w-full h-14 bg-[color:var(--primary)] hover:bg-[color:var(--primary)] text-[color:var(--ui-fx-white)] rounded-xl font-bold text-lg shadow-lg shadow-indigo-500/20 dark:shadow-indigo-900/20 transition-all hover:scale-[1.02] active:scale-[0.98]"
                     >
                       {saving ? <Loader2 className="animate-spin h-6 w-6" /> : "Confirmar Consignación"}
                     </Button>
@@ -609,7 +609,7 @@ export default function NuevaConsignacionPage() {
         description={
           <span>
             La operación{" "}
-            <span className="text-emerald-600 dark:text-emerald-400 font-mono font-bold">#{createdId}</span>{" "}
+            <span className="text-[color:var(--status-success-strong)] dark:text-[color:var(--status-success-strong)] font-mono font-bold">#{createdId}</span>{" "}
             se ha registrado correctamente.
             <br />
             ¿Deseas descargar el remito?

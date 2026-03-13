@@ -26,8 +26,8 @@ const SECURITY_MODULES = [
         description: "Revisá las acciones realizadas por los usuarios en el sistema.",
         href: "/settings/security/activity",
         icon: Activity,
-        color: "text-blue-500",
-        bg: "bg-blue-500/10",
+        color: "text-[color:var(--theme-ocean-primary)]",
+        bg: "bg-[color:var(--theme-ocean-primary)]/10",
     },
     {
         title: "Registro de Empleados",
@@ -42,16 +42,16 @@ const SECURITY_MODULES = [
         description: "Controlá los dispositivos que tienen acceso actual al sistema.",
         href: "/settings/security/sessions",
         icon: Fingerprint,
-        color: "text-emerald-500",
-        bg: "bg-emerald-500/10",
+        color: "text-[color:var(--status-success-strong)]",
+        bg: "bg-[color:var(--status-success-strong)]/10",
     },
     {
         title: "Alertas del Sistema",
         description: "Configurá avisos de stock bajo, vencimientos y actividad de ventas.",
         href: "/settings/notifications",
         icon: BellRing,
-        color: "text-pink-500",
-        bg: "bg-pink-500/10",
+        color: "text-[color:var(--brand-instagram)]",
+        bg: "bg-[color:var(--brand-instagram)]/10",
     },
 ];
 

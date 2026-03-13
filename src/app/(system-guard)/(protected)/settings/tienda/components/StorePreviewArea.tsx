@@ -27,7 +27,7 @@ function MobileStatusBar() {
     }, []);
 
     return (
-        <div className="relative z-20 flex items-center justify-between px-7 pt-[14px] pb-1 text-[11px] font-semibold text-black/80 select-none"
+        <div className="relative z-20 flex items-center justify-between px-7 pt-[14px] pb-1 text-[11px] font-semibold text-foreground/80 select-none"
             style={{ fontFamily: '-apple-system, "SF Pro Text", sans-serif' }}
         >
             <span className="w-14 text-left tracking-tight">{time}</span>
@@ -71,23 +71,23 @@ function DesktopBrowserBar({ storeName }: { storeName?: string }) {
         .replace(/[^a-z0-9-]/g, "");
 
     return (
-        <div className="relative z-20 flex items-center gap-2.5 px-3.5 py-2 bg-zinc-100/90 border-b border-zinc-200/60 select-none shrink-0">
+        <div className="relative z-20 flex items-center gap-2.5 px-3.5 py-2 bg-muted/90 border-b border-border/60 select-none shrink-0">
             {/* Traffic lights */}
             <div className="flex items-center gap-[6px] shrink-0">
-                <span className="h-[10px] w-[10px] rounded-full bg-[#FF5F57] shadow-[inset_0_-0.5px_0.5px_rgba(0,0,0,0.1)]" />
-                <span className="h-[10px] w-[10px] rounded-full bg-[#FEBC2E] shadow-[inset_0_-0.5px_0.5px_rgba(0,0,0,0.1)]" />
-                <span className="h-[10px] w-[10px] rounded-full bg-[#28C840] shadow-[inset_0_-0.5px_0.5px_rgba(0,0,0,0.1)]" />
+                <span className="h-[10px] w-[10px] rounded-full bg-[color:var(--traffic-red)] shadow-sm" />
+                <span className="h-[10px] w-[10px] rounded-full bg-[color:var(--traffic-yellow)] shadow-sm" />
+                <span className="h-[10px] w-[10px] rounded-full bg-[color:var(--traffic-green)] shadow-sm" />
             </div>
 
             {/* URL bar */}
             <div className="flex-1 flex items-center justify-center">
-                <div className="flex items-center gap-1.5 bg-white/80 border border-zinc-200/80 rounded-md px-3 py-[3px] text-[11px] max-w-[260px] w-full justify-center">
+                <div className="flex items-center gap-1.5 bg-card/80 border border-border/80 rounded-md px-3 py-[3px] text-[11px] max-w-[260px] w-full justify-center">
                     {/* Lock icon */}
-                    <svg width="9" height="10" viewBox="0 0 9 10" fill="none" className="text-zinc-400 shrink-0">
+                    <svg width="9" height="10" viewBox="0 0 9 10" fill="none" className="text-muted-foreground/80 shrink-0">
                         <rect x="0.5" y="4" width="8" height="5.5" rx="1.2" stroke="currentColor" strokeWidth="1" />
                         <path d="M2.5 4V2.8a2 2 0 014 0V4" stroke="currentColor" strokeWidth="1" strokeLinecap="round" />
                     </svg>
-                    <span className="text-zinc-500 truncate">{slug}.consignacion.app</span>
+                    <span className="text-muted-foreground truncate">{slug}.consignacion.app</span>
                 </div>
             </div>
 
@@ -106,23 +106,30 @@ export function StorePreviewArea({ branding, config, mode }: any) {
     const theme = mergedConfig.themeIdentifier || "modern";
 
     // 2. Scoped CSS variables
-    const hexToRgb = (hex: string) => {
-        const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex || "#000000");
-        return result ? `${parseInt(result[1], 16)}, ${parseInt(result[2], 16)}, ${parseInt(result[3], 16)}` : "0, 0, 0";
+    const cssColorToRgb = (color: string) => {
+        if (typeof window === "undefined") return "0, 0, 0";
+        const probe = document.createElement("span");
+        probe.style.color = color || "hsl(var(--foreground))";
+        document.body.appendChild(probe);
+        const computed = getComputedStyle(probe).color;
+        document.body.removeChild(probe);
+        const matches = computed.match(/\d+/g);
+        if (!matches || matches.length < 3) return "0, 0, 0";
+        return `${matches[0]}, ${matches[1]}, ${matches[2]}`;
     };
 
-    const getContrastColor = (hex: string) => {
-        const rgb = hexToRgb(hex).split(",").map((n) => parseInt(n));
+    const getContrastColor = (color: string) => {
+        const rgb = cssColorToRgb(color).split(",").map((n) => parseInt(n));
         const brightness = (rgb[0] * 299 + rgb[1] * 587 + rgb[2] * 114) / 1000;
-        return brightness > 155 ? "#000000" : "#ffffff";
+        return brightness > 155 ? "hsl(var(--foreground))" : "hsl(var(--background))";
     };
 
     const blockStyles = {
-        "--primary": mergedConfig.primaryColor || "#000000",
-        "--primary-rgb": hexToRgb(mergedConfig.primaryColor || "#000000"),
-        "--primary-foreground": getContrastColor(mergedConfig.primaryColor || "#000000"),
-        "--secondary": mergedConfig.secondaryColor || "#3b82f6",
-        "--secondary-foreground": getContrastColor(mergedConfig.secondaryColor || "#3b82f6"),
+        "--primary": mergedConfig.primaryColor || "hsl(var(--primary))",
+        "--primary-rgb": cssColorToRgb(mergedConfig.primaryColor || "hsl(var(--primary))"),
+        "--primary-foreground": getContrastColor(mergedConfig.primaryColor || "hsl(var(--primary))"),
+        "--secondary": mergedConfig.secondaryColor || "hsl(var(--secondary))",
+        "--secondary-foreground": getContrastColor(mergedConfig.secondaryColor || "hsl(var(--secondary))"),
     } as React.CSSProperties;
 
     // 3. Interactive simulated states
@@ -201,10 +208,7 @@ export function StorePreviewArea({ branding, config, mode }: any) {
         }
     }, [mergedConfig.typography]);
 
-    const pageBgClass = cn(
-        theme === "minimal" ? "bg-white" : "bg-neutral-50",
-        mergedConfig.primaryColor === "#ffffff" || mergedConfig.primaryColor === "white" ? "bg-white" : ""
-    );
+    const pageBgClass = theme === "minimal" ? "bg-card" : "bg-muted/40";
 
     return (
         <div
@@ -221,7 +225,7 @@ export function StorePreviewArea({ branding, config, mode }: any) {
 
             {/* Mobile: Status bar (renders above content, below the parent's notch) */}
             {isMobile && (
-                <div className={cn("shrink-0 bg-white/95 backdrop-blur-sm", pageBgClass)}>
+                <div className={cn("shrink-0 bg-card/95 backdrop-blur-sm", pageBgClass)}>
                     <MobileStatusBar />
                 </div>
             )}
@@ -292,8 +296,8 @@ export function StorePreviewArea({ branding, config, mode }: any) {
                 className={cn(
                     "pointer-events-none absolute inset-0 z-50",
                     isMobile
-                        ? "rounded-[2.5rem] ring-1 ring-inset ring-black/[0.08] shadow-[inset_0_0_0_1.5px_rgba(0,0,0,0.04)]"
-                        : "rounded-xl ring-1 ring-inset ring-black/[0.06]"
+                        ? "rounded-[2.5rem] ring-1 ring-inset ring-border/60 shadow-inner"
+                        : "rounded-xl ring-1 ring-inset ring-border/50"
                 )}
             />
 

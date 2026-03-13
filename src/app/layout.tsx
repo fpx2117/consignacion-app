@@ -4,6 +4,7 @@ import "./globals.css";
 
 import { ThemeProvider } from "@/components/theme-provider";
 import { SocketProvider } from "@/providers/socket-provider";
+import { rootCssVariablesStyle } from "@/lib/theme/color-tokens";
 
 import { Toaster } from "sonner";
 import { SocketToaster } from "../providers/socket-toaster";
@@ -35,6 +36,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="es" suppressHydrationWarning>
+      <head>
+        <style>{rootCssVariablesStyle()}</style>
+      </head>
       <body
         suppressHydrationWarning
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}

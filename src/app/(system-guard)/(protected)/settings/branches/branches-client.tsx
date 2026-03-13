@@ -130,7 +130,7 @@ export default function BranchesClient() {
             <div className="flex items-center justify-between bg-card border border-border/50 rounded-2xl p-4 shadow-sm">
                 <div className="flex items-center gap-4">
                     <div className="flex gap-2">
-                        <Badge variant="outline" className="gap-1 bg-emerald-500/10 text-emerald-600 border-emerald-500/20">
+                        <Badge variant="outline" className="gap-1 bg-[color:var(--status-success-strong)]/10 text-[color:var(--status-success-strong)] border-[color:var(--status-success-strong)]/20">
                             <Store className="h-3 w-3" />
                             {branches.length} Total
                         </Badge>
@@ -154,11 +154,11 @@ export default function BranchesClient() {
                         className="group relative overflow-hidden border border-border/50 bg-card/60 hover:bg-card hover:shadow-xl hover:border-border transition-all duration-300 rounded-[2rem] p-6 flex flex-col gap-4"
                     >
                         {/* Background Accent */}
-                        <div className={`absolute -right-10 -top-10 h-32 w-32 rounded-full blur-3xl opacity-0 group-hover:opacity-20 transition-opacity duration-500 ${branch.esPrincipal ? 'bg-primary' : 'bg-emerald-500'}`} />
+                        <div className={`absolute -right-10 -top-10 h-32 w-32 rounded-full blur-3xl opacity-0 group-hover:opacity-20 transition-opacity duration-500 ${branch.esPrincipal ? 'bg-primary' : 'bg-[color:var(--status-success-strong)]'}`} />
 
                         <div className="relative z-10 flex items-start justify-between">
                             <div className="flex items-center gap-3">
-                                <div className={`p-3 rounded-2xl border ${branch.esPrincipal ? 'bg-primary/10 border-primary/20 text-primary' : 'bg-emerald-500/10 border-emerald-500/20 text-emerald-600'}`}>
+                                <div className={`p-3 rounded-2xl border ${branch.esPrincipal ? 'bg-primary/10 border-primary/20 text-primary' : 'bg-[color:var(--status-success-strong)]/10 border-[color:var(--status-success-strong)]/20 text-[color:var(--status-success-strong)]'}`}>
                                     {branch.esPrincipal ? <BriefcaseBusiness className="h-6 w-6" /> : <Navigation className="h-6 w-6" />}
                                 </div>
                                 <div>
@@ -167,7 +167,7 @@ export default function BranchesClient() {
                                         {branch.esPrincipal && (
                                             <Badge variant="secondary" className="text-[10px] uppercase font-bold tracking-wider">Sede Principal</Badge>
                                         )}
-                                        <Badge variant="outline" className={`text-[10px] uppercase font-bold tracking-wider ${branch.activa ? 'text-green-500 border-green-500/30' : 'text-muted-foreground'}`}>
+                                        <Badge variant="outline" className={`text-[10px] uppercase font-bold tracking-wider ${branch.activa ? 'text-[color:var(--status-success)] border-[color:var(--status-success)]/30' : 'text-muted-foreground'}`}>
                                             {branch.activa ? 'Activa' : 'Inactiva'}
                                         </Badge>
                                     </div>
@@ -237,7 +237,7 @@ export default function BranchesClient() {
                                     <Switch
                                         checked={activa}
                                         onCheckedChange={setActiva}
-                                        className="data-[state=checked]:bg-emerald-500"
+                                        className="data-[state=checked]:bg-[color:var(--status-success-strong)]"
                                     />
                                 </div>
                             </div>

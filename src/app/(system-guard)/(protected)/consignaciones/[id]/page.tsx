@@ -191,7 +191,7 @@ export default function ConsignacionDetailPage() {
               if (tieneLiquidaciones) return goEditLastLiquidacion();
               return goEditConsignacion();
             }}
-            className="border-amber-200 text-amber-700 bg-amber-50 hover:bg-amber-100 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-400"
+            className="border-[color:var(--status-warning)] text-[color:var(--status-warning)] bg-[color:var(--status-warning)] hover:bg-[color:var(--status-warning)] dark:border-[color:var(--status-warning)]/20 dark:bg-[color:var(--status-warning)]/10 dark:text-[color:var(--status-warning)]"
           >
             <Pencil className="h-4 w-4 mr-2" />
             {tieneLiquidaciones ? "Corregir Liquidación" : "Editar Consignación"}
@@ -215,7 +215,7 @@ export default function ConsignacionDetailPage() {
         {/* FONDO DECORATIVO SI HAY AUMENTO */}
         {porcentajeAumento > 0 && (
           <div className="absolute top-0 right-0 p-4 opacity-5 pointer-events-none">
-            <TrendingUp className="w-32 h-32 text-emerald-500" />
+            <TrendingUp className="w-32 h-32 text-[color:var(--status-success-strong)]" />
           </div>
         )}
 
@@ -229,7 +229,7 @@ export default function ConsignacionDetailPage() {
 
               {/* 👈 BADGE DE AUMENTO */}
               {porcentajeAumento > 0 && (
-                <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200 hover:bg-emerald-100 gap-1 text-[10px] px-2">
+                <Badge className="bg-[color:var(--status-success-strong)] text-[color:var(--status-success-strong)] border-[color:var(--status-success-strong)] hover:bg-[color:var(--status-success-strong)] gap-1 text-[10px] px-2">
                   <BadgePercent className="h-3 w-3" />
                   +{porcentajeAumento}% Aplicado
                 </Badge>
@@ -258,7 +258,7 @@ export default function ConsignacionDetailPage() {
       <Card className={cn(
         "shadow-lg border-border overflow-hidden animate-in fade-in slide-in-from-bottom-2 duration-500",
         tieneLiquidaciones
-          ? "bg-emerald-50/50 border-emerald-200 dark:bg-emerald-950/20 dark:border-emerald-500/20"
+          ? "bg-[color:var(--status-success-strong)]/50 border-[color:var(--status-success-strong)] dark:bg-[color:var(--status-success-strong)]/20 dark:border-[color:var(--status-success-strong)]/20"
           : "bg-card"
       )}>
         <CardContent className="flex flex-col sm:flex-row items-center justify-between gap-4 py-5 px-6">
@@ -266,12 +266,12 @@ export default function ConsignacionDetailPage() {
             <div className={cn(
               "h-12 w-12 rounded-xl flex items-center justify-center shrink-0",
               tieneLiquidaciones
-                ? "bg-emerald-100 dark:bg-emerald-500/20"
+                ? "bg-[color:var(--status-success-strong)] dark:bg-[color:var(--status-success-strong)]/20"
                 : "bg-primary/10"
             )}>
               <DollarSign className={cn(
                 "h-6 w-6",
-                tieneLiquidaciones ? "text-emerald-600 dark:text-emerald-400" : "text-primary"
+                tieneLiquidaciones ? "text-[color:var(--status-success-strong)] dark:text-[color:var(--status-success-strong)]" : "text-primary"
               )} />
             </div>
             <div>
@@ -292,7 +292,7 @@ export default function ConsignacionDetailPage() {
             <p className={cn(
               "text-4xl font-black tracking-tight",
               tieneLiquidaciones
-                ? "text-emerald-600 dark:text-emerald-400"
+                ? "text-[color:var(--status-success-strong)] dark:text-[color:var(--status-success-strong)]"
                 : "text-foreground"
             )}>
               {formatMoney(precioFinalConsignacion)}
@@ -303,9 +303,9 @@ export default function ConsignacionDetailPage() {
 
       {/* KPI Section */}
       <div className="grid gap-4 grid-cols-2 md:grid-cols-4 animate-in fade-in slide-in-from-bottom-4 duration-700">
-        <KpiCard icon={<Package className="text-blue-500" />} title="Entregadas" value={entregadas} loading={loading} />
-        <KpiCard icon={<ShoppingCart className="text-emerald-500" />} title="Vendidas" value={vendidas} loading={loading} />
-        <KpiCard icon={<Undo2 className="text-amber-500" />} title="Devueltas" value={devueltas} loading={loading} />
+        <KpiCard icon={<Package className="text-[color:var(--theme-ocean-primary)]" />} title="Entregadas" value={entregadas} loading={loading} />
+        <KpiCard icon={<ShoppingCart className="text-[color:var(--status-success-strong)]" />} title="Vendidas" value={vendidas} loading={loading} />
+        <KpiCard icon={<Undo2 className="text-[color:var(--status-warning)]" />} title="Devueltas" value={devueltas} loading={loading} />
         <KpiCard
           icon={<AlertCircle className={pendientes > 0 ? "text-destructive" : "text-muted-foreground"} />}
           title="Pendientes"
@@ -352,9 +352,9 @@ export default function ConsignacionDetailPage() {
             </CardHeader>
             <CardContent className="space-y-3">
               <Button onClick={() => handlePdfAction("view")} variant="outline" className="w-full justify-start bg-background hover:bg-muted shadow-sm h-12" disabled={loading}>
-                <Download className="h-4 w-4 mr-3 text-blue-500" /> Descargar PDF
+                <Download className="h-4 w-4 mr-3 text-[color:var(--theme-ocean-primary)]" /> Descargar PDF
               </Button>
-              <Button onClick={() => handlePdfAction("whatsapp")} className="w-full justify-start bg-emerald-600 hover:bg-emerald-700 text-white border-none h-12 shadow-emerald-900/10" disabled={loading}>
+              <Button onClick={() => handlePdfAction("whatsapp")} className="w-full justify-start bg-[color:var(--status-success-strong)] hover:bg-[color:var(--status-success-strong)] text-[color:var(--ui-fx-white)] border-none h-12 shadow-emerald-900/10" disabled={loading}>
                 <MessageCircle className="h-4 w-4 mr-3" /> Enviar por WhatsApp
               </Button>
             </CardContent>
@@ -380,7 +380,7 @@ export default function ConsignacionDetailPage() {
 function EstadoBadge({ estado }: { estado: EstadoConsignacion }) {
   const isAbierta = estado === "ABIERTA";
   return (
-    <Badge variant="outline" className={cn("px-3 py-0.5 font-bold uppercase text-[9px] tracking-tighter rounded-full", isAbierta ? "border-emerald-500/50 text-emerald-600 bg-emerald-500/10" : "bg-slate-100 text-slate-500 border-slate-200 shadow-none")}>
+    <Badge variant="outline" className={cn("px-3 py-0.5 font-bold uppercase text-[9px] tracking-tighter rounded-full", isAbierta ? "border-[color:var(--status-success-strong)]/50 text-[color:var(--status-success-strong)] bg-[color:var(--status-success-strong)]/10" : "bg-muted/55 text-muted-foreground border-border shadow-none")}>
       {isAbierta ? "● Abierta" : "Finalizada"}
     </Badge>
   );
@@ -432,7 +432,7 @@ function ProductRow({ d, porcentajeAumento }: { d: any; porcentajeAumento: numbe
               {d.unitsEntregadas} entregadas
             </Badge>
             {Number(d.descuento) > 0 && (
-              <Badge variant="outline" className="text-[10px] border-indigo-200 text-indigo-500 bg-indigo-50 dark:bg-indigo-950/30">
+              <Badge variant="outline" className="text-[10px] border-[color:var(--primary)] text-[color:var(--primary)] bg-[color:var(--primary)] dark:bg-[color:var(--primary)]/30">
                 - {formatMoney(Number(d.descuento))} Descuento
               </Badge>
             )}
@@ -447,7 +447,7 @@ function ProductRow({ d, porcentajeAumento }: { d: any; porcentajeAumento: numbe
           <div className="pt-2 flex flex-col gap-0.5">
             <div className="text-[10px] text-muted-foreground">Precio Unitario</div>
             <div className="flex items-baseline gap-2">
-              <span className="text-lg font-black text-emerald-600 dark:text-emerald-400">
+              <span className="text-lg font-black text-[color:var(--status-success-strong)] dark:text-[color:var(--status-success-strong)]">
                 {formatMoney(precioFinal)}
               </span>
               {porcentajeAumento > 0 && (
@@ -464,7 +464,7 @@ function ProductRow({ d, porcentajeAumento }: { d: any; porcentajeAumento: numbe
           <span className="text-[10px] font-black text-muted-foreground uppercase mb-1">
             {Math.round(percentVendido)}% Liquidado
           </span>
-          <Progress value={percentVendido} className="h-2 w-28 bg-muted [&>div]:bg-emerald-500 shadow-sm" />
+          <Progress value={percentVendido} className="h-2 w-28 bg-muted [&>div]:bg-[color:var(--status-success-strong)] shadow-sm" />
 
           <div className="mt-2 text-xs text-muted-foreground text-right">
             <span className="block font-bold text-foreground">Total Pendiente:</span>
@@ -474,8 +474,8 @@ function ProductRow({ d, porcentajeAumento }: { d: any; porcentajeAumento: numbe
       </div>
 
       <div className="grid grid-cols-3 gap-2 mt-4 pt-4 border-t border-border/60">
-        <StatItem label="Ventas" value={d.unitsVendidasAcum ?? 0} color="text-emerald-500" />
-        <StatItem label="Devoluciones" value={d.unitsDevueltasAcum ?? 0} color="text-amber-500" border />
+        <StatItem label="Ventas" value={d.unitsVendidasAcum ?? 0} color="text-[color:var(--status-success-strong)]" />
+        <StatItem label="Devoluciones" value={d.unitsDevueltasAcum ?? 0} color="text-[color:var(--status-warning)]" border />
         <StatItem label="Pendiente" value={pend} color={pend > 0 ? "text-destructive" : "text-muted-foreground"} border />
       </div>
     </div>

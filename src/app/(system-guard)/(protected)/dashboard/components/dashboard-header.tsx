@@ -118,10 +118,10 @@ export function DashboardHeader({
             <Filter className="h-3.5 w-3.5" />
           </div>
           <Select value={filter} onValueChange={(v) => setFilter(v as DashboardFilter)}>
-            <SelectTrigger className="h-10 w-full pl-9 bg-transparent border-none hover:bg-black/5 dark:hover:bg-white/5 transition-all rounded-xl focus:ring-0">
+            <SelectTrigger className="h-10 w-full pl-9 bg-transparent border-none hover:bg-foreground/5 dark:hover:bg-card/5 transition-all rounded-xl focus:ring-0">
               <SelectValue placeholder="Filtrar por..." />
             </SelectTrigger>
-            <SelectContent className="rounded-xl border-none shadow-xl backdrop-blur-xl bg-white/90 dark:bg-black/90 ring-1 ring-black/5">
+            <SelectContent className="rounded-xl border-none shadow-xl backdrop-blur-xl bg-card/90 dark:bg-foreground/90 ring-1 ring-black/5">
               <SelectItem value="all">Vista General</SelectItem>
               <SelectItem value="consignacion">Consignaciones</SelectItem>
               <SelectItem value="pos">Ventas (POS)</SelectItem>
@@ -137,10 +137,10 @@ export function DashboardHeader({
             <CalendarDays className="h-3.5 w-3.5" />
           </div>
           <Select value={period} onValueChange={(v) => setPeriod(v as DashboardPeriod)}>
-            <SelectTrigger className="h-10 w-full pl-9 bg-transparent border-none hover:bg-black/5 dark:hover:bg-white/5 transition-all rounded-xl focus:ring-0">
+            <SelectTrigger className="h-10 w-full pl-9 bg-transparent border-none hover:bg-foreground/5 dark:hover:bg-card/5 transition-all rounded-xl focus:ring-0">
               <SelectValue placeholder="Período" />
             </SelectTrigger>
-            <SelectContent className="rounded-xl border-none shadow-xl backdrop-blur-xl bg-white/90 dark:bg-black/90 ring-1 ring-black/5">
+            <SelectContent className="rounded-xl border-none shadow-xl backdrop-blur-xl bg-card/90 dark:bg-foreground/90 ring-1 ring-black/5">
               <SelectItem value="today">Hoy</SelectItem>
               <SelectItem value="week">Esta semana</SelectItem>
               <SelectItem value="month">Este mes</SelectItem>
@@ -161,7 +161,7 @@ export function DashboardHeader({
                 size="sm"
                 disabled={!!downloading}
                 className={cn(
-                  "flex-1 sm:flex-none h-10 px-3 rounded-xl hover:bg-primary/10 hover:text-primary transition-all gap-1.5 bg-black/5 dark:bg-white/5 sm:bg-transparent",
+                  "flex-1 sm:flex-none h-10 px-3 rounded-xl hover:bg-primary/10 hover:text-primary transition-all gap-1.5 bg-foreground/5 dark:bg-card/5 sm:bg-transparent",
                   downloading && "opacity-80"
                 )}
               >
@@ -178,10 +178,10 @@ export function DashboardHeader({
             </DropdownMenuTrigger>
             <DropdownMenuContent
               align="end"
-              className="w-60 rounded-xl border-none shadow-xl backdrop-blur-xl bg-white/95 dark:bg-zinc-900/95 ring-1 ring-black/5"
+              className="w-60 rounded-xl border-none shadow-xl backdrop-blur-xl bg-card/95 dark:bg-card/95 ring-1 ring-black/5"
             >
               {/* ━━ POS ━━ */}
-              <DropdownMenuLabel className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-sky-600 px-3 py-2">
+              <DropdownMenuLabel className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-[color:var(--theme-ocean-primary)] px-3 py-2">
                 <ShoppingCart className="h-3 w-3" /> Ventas · POS
               </DropdownMenuLabel>
               {(["today", "week", "month", "all"] as DashboardPeriod[]).map((p) => (
@@ -191,14 +191,14 @@ export function DashboardHeader({
                   disabled={!!downloading}
                   className={cn(
                     "flex items-center gap-2.5 rounded-lg mx-1 cursor-pointer transition-colors",
-                    p === period && "bg-sky-50 dark:bg-sky-950/30 text-sky-700 font-semibold"
+                    p === period && "bg-[color:var(--theme-ocean-primary)] dark:bg-[color:var(--theme-ocean-primary)]/30 text-[color:var(--theme-ocean-primary)] font-semibold"
                   )}
                 >
                   <FileText className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
                   <span className="text-sm">{PERIOD_LABELS[p]}</span>
                   {isDownloading("pos", p) && <Loader2 className="h-3 w-3 animate-spin ml-auto" />}
                   {p === period && !isDownloading("pos", p) && (
-                    <span className="ml-auto text-[9px] font-bold uppercase tracking-wide text-sky-600 opacity-70">Actual</span>
+                    <span className="ml-auto text-[9px] font-bold uppercase tracking-wide text-[color:var(--theme-ocean-primary)] opacity-70">Actual</span>
                   )}
                 </DropdownMenuItem>
               ))}
@@ -206,7 +206,7 @@ export function DashboardHeader({
               <DropdownMenuSeparator className="my-1" />
 
               {/* ━━ CONSIGNACIÓN ━━ */}
-              <DropdownMenuLabel className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-indigo-600 px-3 py-2">
+              <DropdownMenuLabel className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-[color:var(--primary)] px-3 py-2">
                 <Handshake className="h-3 w-3" /> Consignaciones
               </DropdownMenuLabel>
               {(["today", "week", "month", "all"] as DashboardPeriod[]).map((p) => (
@@ -216,14 +216,14 @@ export function DashboardHeader({
                   disabled={!!downloading}
                   className={cn(
                     "flex items-center gap-2.5 rounded-lg mx-1 cursor-pointer transition-colors",
-                    p === period && "bg-indigo-50 dark:bg-indigo-950/30 text-indigo-700 font-semibold"
+                    p === period && "bg-[color:var(--primary)] dark:bg-[color:var(--primary)]/30 text-[color:var(--primary)] font-semibold"
                   )}
                 >
                   <FileText className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
                   <span className="text-sm">{PERIOD_LABELS[p]}</span>
                   {isDownloading("consignacion", p) && <Loader2 className="h-3 w-3 animate-spin ml-auto" />}
                   {p === period && !isDownloading("consignacion", p) && (
-                    <span className="ml-auto text-[9px] font-bold uppercase tracking-wide text-indigo-600 opacity-70">Actual</span>
+                    <span className="ml-auto text-[9px] font-bold uppercase tracking-wide text-[color:var(--primary)] opacity-70">Actual</span>
                   )}
                 </DropdownMenuItem>
               ))}
@@ -239,7 +239,7 @@ export function DashboardHeader({
             onClick={refresh}
             disabled={loading}
             className={cn(
-              "flex-1 sm:flex-none h-10 px-4 rounded-xl hover:bg-primary/10 hover:text-primary transition-all gap-2 bg-black/5 dark:bg-white/5 sm:bg-transparent",
+              "flex-1 sm:flex-none h-10 px-4 rounded-xl hover:bg-primary/10 hover:text-primary transition-all gap-2 bg-foreground/5 dark:bg-card/5 sm:bg-transparent",
               loading && "opacity-80"
             )}
           >

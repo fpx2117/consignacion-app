@@ -60,7 +60,7 @@ export function StoreBanner({ config }: { config: any }) {
                 </div>
 
                 {/* Overlay Area with Animated Text */}
-                <div className="absolute inset-0 bg-black/40 flex flex-col items-center justify-center p-4 sm:p-8 md:p-16 text-center text-white backdrop-blur-[2px]">
+                <div className="absolute inset-0 bg-foreground/40 flex flex-col items-center justify-center p-4 sm:p-8 md:p-16 text-center text-[color:var(--ui-fx-white)] backdrop-blur-[2px]">
                     <motion.h2
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
@@ -72,7 +72,7 @@ export function StoreBanner({ config }: { config: any }) {
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         transition={{ delay: 0.5 }}
-                        className="text-[10px] sm:text-sm font-bold uppercase tracking-[0.2em] sm:tracking-[0.3em] bg-white/10 backdrop-blur-md px-4 sm:px-6 py-2 rounded-full border border-white/20"
+                        className="text-[10px] sm:text-sm font-bold uppercase tracking-[0.2em] sm:tracking-[0.3em] bg-foreground/35 backdrop-blur-md px-4 sm:px-6 py-2 rounded-full border border-[color:var(--ui-fx-white)]/15"
                     >
                         Explorá nuestra selección exclusiva
                     </motion.p>
@@ -87,7 +87,9 @@ export function StoreBanner({ config }: { config: any }) {
                                 onClick={() => setCurrentSlide(idx)}
                                 className={cn(
                                     "w-2 h-2 rounded-full transition-all duration-300",
-                                    currentSlide === idx ? "bg-white w-6" : "bg-white/50 hover:bg-white/80"
+                                    currentSlide === idx
+                                        ? "bg-[color:var(--store-surface)] w-6"
+                                        : "bg-[color:rgba(var(--store-surface-rgb),0.55)] hover:bg-[color:rgba(var(--store-surface-rgb),0.8)]"
                                 )}
                             />
                         ))}

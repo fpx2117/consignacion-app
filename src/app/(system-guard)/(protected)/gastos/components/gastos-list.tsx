@@ -94,16 +94,16 @@ export function GastosList({
             className={cn(
               "group p-1 rounded-[2rem] transition-all hover:scale-[1.01] active:scale-[0.99]",
               g.estado === "PENDIENTE"
-                ? "bg-gradient-to-br from-orange-500/20 to-transparent"
-                : "bg-gradient-to-br from-emerald-500/20 to-transparent",
+                ? "bg-gradient-to-br from-[color:var(--status-warning)]/20 to-transparent"
+                : "bg-gradient-to-br from-[color:var(--status-success-strong)]/20 to-transparent",
             )}
           >
-            <div className="bg-card border border-white/10 rounded-[1.8rem] p-4 md:p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 shadow-sm group-hover:shadow-xl transition-all">
+            <div className="bg-card border border-[color:var(--ui-fx-white)]/10 rounded-[1.8rem] p-4 md:p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 shadow-sm group-hover:shadow-xl transition-all">
               <div className="flex items-center gap-4 w-full sm:w-auto">
                 <div
                   className={cn(
                     "h-14 w-14 rounded-2xl flex items-center justify-center shrink-0 shadow-inner transition-transform group-hover:rotate-12",
-                    g.estado === "PENDIENTE" ? "bg-orange-500/10 text-orange-500" : "bg-emerald-500/10 text-emerald-500",
+                    g.estado === "PENDIENTE" ? "bg-[color:var(--status-warning)]/10 text-[color:var(--status-warning)]" : "bg-[color:var(--status-success-strong)]/10 text-[color:var(--status-success-strong)]",
                   )}
                 >
                   {g.esRecurrente ? <Repeat className="h-7 w-7" /> : <Receipt className="h-7 w-7" />}
@@ -124,7 +124,7 @@ export function GastosList({
                     </Badge>
 
                     {(g.esCompartido || g.esVistaCompartida) && (
-                      <Badge variant="outline" className={`${gastosTypography.badge} px-2 py-0.5 rounded-full border-violet-400/40 bg-violet-500/10 text-violet-600 flex items-center gap-1`}>
+                      <Badge variant="outline" className={`${gastosTypography.badge} px-2 py-0.5 rounded-full border-[color:var(--primary)]/40 bg-[color:var(--primary)]/10 text-[color:var(--primary)] flex items-center gap-1`}>
                         <GitFork className="h-2.5 w-2.5" /> Compartido
                       </Badge>
                     )}
@@ -139,7 +139,7 @@ export function GastosList({
                       <span
                         className={cn(
                           `${gastosTypography.meta} flex items-center gap-1.5`,
-                          isOverdue ? "text-destructive" : "text-orange-500/80",
+                          isOverdue ? "text-destructive" : "text-[color:var(--status-warning)]/80",
                         )}
                       >
                         <AlertTriangle className="h-3 w-3" /> Vence: {formatDate(g.fechaVencimiento)}
@@ -149,18 +149,18 @@ export function GastosList({
                 </div>
               </div>
 
-              <div className="flex items-center justify-between sm:justify-end gap-6 w-full sm:w-auto pt-4 sm:pt-0 border-t sm:border-t-0 border-white/5">
+              <div className="flex items-center justify-between sm:justify-end gap-6 w-full sm:w-auto pt-4 sm:pt-0 border-t sm:border-t-0 border-[color:var(--ui-fx-white)]/5">
                 <div className="text-left sm:text-right">
                   <div className="text-2xl md:text-3xl font-black tracking-tight leading-none mb-1">
                     {formatMoney(Number(g.monto))}
                   </div>
                   {g.esVistaCompartida && (
-                    <p className="text-[9px] font-black uppercase tracking-[0.18em] text-violet-500/70 mb-1">Tu parte</p>
+                    <p className="text-[9px] font-black uppercase tracking-[0.18em] text-[color:var(--primary)]/70 mb-1">Tu parte</p>
                   )}
                   <Badge
                     className={cn(
                       `${gastosTypography.badge} px-3 py-1 rounded-full`,
-                      g.estado === "PENDIENTE" ? "bg-orange-500 text-white" : "bg-emerald-500 text-white",
+                      g.estado === "PENDIENTE" ? "bg-[color:var(--status-warning)] text-[color:var(--ui-fx-white)]" : "bg-[color:var(--status-success-strong)] text-[color:var(--ui-fx-white)]",
                     )}
                   >
                     {g.estado}
@@ -176,10 +176,10 @@ export function GastosList({
                   <DropdownMenuContent align="end" className="rounded-[1.5rem] border-none shadow-2xl p-2 w-56">
                     <DropdownMenuItem
                       onClick={() => onShare(g)}
-                      className="gap-3 py-3 rounded-xl font-bold cursor-pointer focus:bg-emerald-500/10 focus:text-emerald-600 transition-colors"
+                      className="gap-3 py-3 rounded-xl font-bold cursor-pointer focus:bg-[color:var(--status-success-strong)]/10 focus:text-[color:var(--status-success-strong)] transition-colors"
                     >
-                      <div className="h-8 w-8 rounded-lg bg-emerald-500/10 flex items-center justify-center">
-                        <Share2 className="h-4 w-4 text-emerald-500" />
+                      <div className="h-8 w-8 rounded-lg bg-[color:var(--status-success-strong)]/10 flex items-center justify-center">
+                        <Share2 className="h-4 w-4 text-[color:var(--status-success-strong)]" />
                       </div>
                       Compartir Voucher
                     </DropdownMenuItem>
@@ -188,10 +188,10 @@ export function GastosList({
                       <>
                         <DropdownMenuItem
                           onClick={() => onEdit(g)}
-                          className="gap-3 py-3 rounded-xl font-bold cursor-pointer focus:bg-blue-500/10 focus:text-blue-600 transition-colors"
+                          className="gap-3 py-3 rounded-xl font-bold cursor-pointer focus:bg-[color:var(--theme-ocean-primary)]/10 focus:text-[color:var(--theme-ocean-primary)] transition-colors"
                         >
-                          <div className="h-8 w-8 rounded-lg bg-blue-500/10 flex items-center justify-center">
-                            <Edit2 className="h-4 w-4 text-blue-500" />
+                          <div className="h-8 w-8 rounded-lg bg-[color:var(--theme-ocean-primary)]/10 flex items-center justify-center">
+                            <Edit2 className="h-4 w-4 text-[color:var(--theme-ocean-primary)]" />
                           </div>
                           Editar Gasto
                         </DropdownMenuItem>

@@ -189,11 +189,11 @@ export default function ClienteDetailPage() {
 
                   <div className="flex flex-wrap gap-2 mt-2">
                     <Badge className={cn("border-none text-[9px] font-black px-3 rounded-full",
-                      cliente.activo ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400" : "bg-muted text-muted-foreground")}>
+                      cliente.activo ? "bg-[color:var(--status-success-strong)]/10 text-[color:var(--status-success-strong)] dark:text-[color:var(--status-success-strong)]" : "bg-muted text-muted-foreground")}>
                       {cliente.activo ? "ACTIVO" : "INACTIVO"}
                     </Badge>
                     {(cliente.nombre.toLowerCase().includes("consumidor") || cliente.nombre.toLowerCase().includes("final")) && (
-                      <Badge variant="outline" className="text-[9px] font-bold border-indigo-200 text-indigo-500 whitespace-nowrap">
+                      <Badge variant="outline" className="text-[9px] font-bold border-[color:var(--primary)] text-[color:var(--primary)] whitespace-nowrap">
                         VENTA CASUAL
                       </Badge>
                     )}
@@ -235,8 +235,8 @@ export default function ClienteDetailPage() {
                 <Select value={estadoFiltro} onValueChange={(v) => { setEstadoFiltro(v as any); setCurrentPage(1); }}>
                   <SelectTrigger className={cn(
                     "h-12 md:h-14 w-full sm:w-[140px] font-bold rounded-xl md:rounded-2xl border-border bg-muted/30 text-[10px] md:text-[11px] tracking-widest uppercase shrink-0",
-                    estadoFiltro === "anuladas" && "border-red-300 bg-red-50/50 text-red-600 dark:bg-red-950/20 dark:border-red-800/50 dark:text-red-400",
-                    estadoFiltro === "activas" && "border-emerald-300 bg-emerald-50/50 text-emerald-600 dark:bg-emerald-950/20 dark:border-emerald-800/50 dark:text-emerald-400"
+                    estadoFiltro === "anuladas" && "border-[color:var(--status-danger)] bg-[color:var(--status-danger)]/50 text-[color:var(--status-danger)] dark:bg-[color:var(--status-danger)]/20 dark:border-[color:var(--status-danger)]/50 dark:text-[color:var(--status-danger)]",
+                    estadoFiltro === "activas" && "border-[color:var(--status-success-strong)] bg-[color:var(--status-success-strong)]/50 text-[color:var(--status-success-strong)] dark:bg-[color:var(--status-success-strong)]/20 dark:border-[color:var(--status-success-strong)]/50 dark:text-[color:var(--status-success-strong)]"
                   )}>
                     <SelectValue />
                   </SelectTrigger>
@@ -288,7 +288,7 @@ export default function ClienteDetailPage() {
                     className={cn(
                       "group relative flex items-center justify-between p-3 md:p-5 border rounded-[1.5rem] md:rounded-[1.8rem] cursor-pointer transition-all duration-300",
                       isAnulada
-                        ? "bg-red-50/40 hover:bg-red-50/80 border-red-200/70 hover:border-red-300 dark:bg-red-950/20 dark:hover:bg-red-950/40 dark:border-red-800/40"
+                        ? "bg-[color:var(--status-danger)]/40 hover:bg-[color:var(--status-danger)]/80 border-[color:var(--status-danger)]/70 hover:border-[color:var(--status-danger)] dark:bg-[color:var(--status-danger)]/20 dark:hover:bg-[color:var(--status-danger)]/40 dark:border-[color:var(--status-danger)]/40"
                         : "bg-card/30 hover:bg-card border-border/50 hover:border-primary/30"
                     )}
                   >
@@ -298,20 +298,20 @@ export default function ClienteDetailPage() {
                       <div className={cn(
                         "flex flex-col items-center justify-center h-12 w-12 md:h-14 md:w-14 rounded-xl md:rounded-2xl border transition-colors shrink-0",
                         isAnulada
-                          ? "bg-red-100/80 border-red-200 dark:bg-red-900/30 dark:border-red-800"
+                          ? "bg-[color:var(--status-danger)]/80 border-[color:var(--status-danger)] dark:bg-[color:var(--status-danger)]/30 dark:border-[color:var(--status-danger)]"
                           : isPOS
-                            ? "bg-indigo-50 border-indigo-100 dark:bg-indigo-900/20 dark:border-indigo-800"
-                            : "bg-orange-50 border-orange-100 dark:bg-orange-900/20 dark:border-orange-800"
+                            ? "bg-[color:var(--primary)] border-[color:var(--primary)] dark:bg-[color:var(--primary)]/20 dark:border-[color:var(--primary)]"
+                            : "bg-[color:var(--status-warning)] border-[color:var(--status-warning)] dark:bg-[color:var(--status-warning)]/20 dark:border-[color:var(--status-warning)]"
                       )}>
                         {isAnulada ? (
-                          <Ban className="h-5 w-5 text-red-500 dark:text-red-400" />
+                          <Ban className="h-5 w-5 text-[color:var(--status-danger)] dark:text-[color:var(--status-danger)]" />
                         ) : (
                           <>
                             <span className="text-[7px] md:text-[8px] font-black text-muted-foreground uppercase leading-none">
                               {dateObj.toLocaleString('es-AR', { month: 'short' }).toUpperCase()}
                             </span>
                             <span className={cn("text-base md:text-xl font-black leading-none mt-0.5 md:mt-1",
-                              isPOS ? "text-indigo-600 dark:text-indigo-400" : "text-orange-600 dark:text-orange-400"
+                              isPOS ? "text-[color:var(--primary)] dark:text-[color:var(--primary)]" : "text-[color:var(--status-warning)] dark:text-[color:var(--status-warning)]"
                             )}>
                               {dateObj.getDate()}
                             </span>
@@ -324,10 +324,10 @@ export default function ClienteDetailPage() {
                           <Badge variant="outline" className={cn(
                             "text-[8px] md:text-[9px] font-black border-none px-2 py-0.5 whitespace-nowrap",
                             isAnulada
-                              ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300"
+                              ? "bg-[color:var(--status-danger)] text-[color:var(--status-danger)] dark:bg-[color:var(--status-danger)]/30 dark:text-[color:var(--status-danger)]"
                               : isPOS
-                                ? "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300"
-                                : "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300"
+                                ? "bg-[color:var(--primary)] text-[color:var(--primary)] dark:bg-[color:var(--primary)]/30 dark:text-[color:var(--primary)]"
+                                : "bg-[color:var(--status-warning)] text-[color:var(--status-warning)] dark:bg-[color:var(--status-warning)]/30 dark:text-[color:var(--status-warning)]"
                           )}>
                             {isPOS ? "VENTA POS" : "CONSIGNACIÓN"}
                           </Badge>
@@ -339,21 +339,21 @@ export default function ClienteDetailPage() {
                           )}
 
                           {!isPOS && op.estado === "ABIERTA" && (
-                            <Badge className="text-[8px] h-4 bg-emerald-500/10 text-emerald-600 border-none px-1.5">ABIERTA</Badge>
+                            <Badge className="text-[8px] h-4 bg-[color:var(--status-success-strong)]/10 text-[color:var(--status-success-strong)] border-none px-1.5">ABIERTA</Badge>
                           )}
                         </div>
 
                         <span className={cn(
                           "text-sm md:text-lg font-black tracking-tighter transition-colors uppercase block truncate",
                           isAnulada
-                            ? "line-through text-red-400 dark:text-red-500"
+                            ? "line-through text-[color:var(--status-danger)] dark:text-[color:var(--status-danger)]"
                             : "text-foreground group-hover:text-primary"
                         )}>
                           {op.referencia}
                         </span>
 
                         {isAnulada && op.motivoAnulacion && (
-                          <p className="text-[9px] md:text-[10px] font-bold text-red-500/80 dark:text-red-400/70 uppercase tracking-tight truncate">
+                          <p className="text-[9px] md:text-[10px] font-bold text-[color:var(--status-danger)]/80 dark:text-[color:var(--status-danger)]/70 uppercase tracking-tight truncate">
                             Motivo: {op.motivoAnulacion}
                           </p>
                         )}
@@ -367,7 +367,7 @@ export default function ClienteDetailPage() {
                           {isPOS && op.total !== undefined && (
                             <div className={cn(
                               "flex items-center gap-1.5 text-[9px] md:text-[10px] font-bold uppercase tracking-tight shrink-0",
-                              isAnulada ? "line-through text-red-400/60" : "text-indigo-600 dark:text-indigo-400"
+                              isAnulada ? "line-through text-[color:var(--status-danger)]/60" : "text-[color:var(--primary)] dark:text-[color:var(--primary)]"
                             )}>
                               <ShoppingCart className="h-3 w-3 opacity-50" />
                               <span>$ {op.total.toLocaleString("es-AR")}</span>
@@ -380,11 +380,11 @@ export default function ClienteDetailPage() {
                     <div className={cn(
                       "h-8 w-8 md:h-10 md:w-10 ml-2 rounded-full flex items-center justify-center transition-all duration-500 shadow-sm shrink-0",
                       isAnulada
-                        ? "bg-red-100 dark:bg-red-900/30"
+                        ? "bg-[color:var(--status-danger)] dark:bg-[color:var(--status-danger)]/30"
                         : "bg-muted group-hover:bg-primary"
                     )}>
                       {isAnulada
-                        ? <Ban className="h-3 w-3 md:h-4 md:w-4 text-red-400" />
+                        ? <Ban className="h-3 w-3 md:h-4 md:w-4 text-[color:var(--status-danger)]" />
                         : <ArrowUpRight className="h-3 w-3 md:h-4 md:w-4 text-muted-foreground group-hover:text-primary-foreground transition-colors" />
                       }
                     </div>

@@ -78,7 +78,7 @@ export function DesktopSummary({
             <span>{formatCurrency(totalSinInteres)}</span>
           </div>
           {isTarjeta && porcentajeInteresTarjeta > 0 && (
-            <div className="flex justify-between text-sm text-indigo-600 font-bold">
+            <div className="flex justify-between text-sm text-[color:var(--primary)] font-bold">
               <span>Interes Tarjeta ({porcentajeInteresTarjeta}%)</span>
               <span>+ {formatCurrency(montoInteres)}</span>
             </div>
@@ -86,11 +86,11 @@ export function DesktopSummary({
           {totalDescuento > 0 && (
             <div className="flex justify-between text-sm text-muted-foreground font-medium">
               <span>Desc. x Producto</span>
-              <span className="text-emerald-600 font-bold">- {formatCurrency(totalDescuento)}</span>
+              <span className="text-[color:var(--status-success-strong)] font-bold">- {formatCurrency(totalDescuento)}</span>
             </div>
           )}
           {montoDescuentoGlobal > 0 && (
-            <div className="flex justify-between text-sm text-emerald-600 font-bold">
+            <div className="flex justify-between text-sm text-[color:var(--status-success-strong)] font-bold">
               <span>
                 Desc. General {descuentoTipo === "PORCENTAJE" ? `(${descuentoValor ?? 0}%)` : ""}
               </span>

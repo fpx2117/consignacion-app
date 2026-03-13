@@ -94,7 +94,7 @@ export function SubscriptionCheckout({ planId, amount, currency, onClose, basePr
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
-                    className="fixed inset-0 z-[999] flex items-center justify-center p-4 bg-black/70 backdrop-blur-md"
+                    className="fixed inset-0 z-[999] flex items-center justify-center p-4 bg-foreground/70 backdrop-blur-md"
                 >
                     <motion.div
                         initial={{ opacity: 0, scale: 0.9, y: 20 }}
@@ -156,7 +156,7 @@ export function SubscriptionCheckout({ planId, amount, currency, onClose, basePr
                                         <button
                                             onClick={handleMercadoPagoRedirect}
                                             disabled={loading}
-                                            className="w-full py-3.5 bg-[#009EE3] text-white font-black text-[10px] uppercase tracking-[0.2em] rounded-xl hover:brightness-110 active:scale-[0.98] transition-all shadow-lg shadow-[#009EE3]/20 disabled:opacity-50 flex items-center justify-center gap-2"
+                                            className="w-full py-3.5 bg-[color:var(--provider-mercadopago)] text-[color:var(--ui-fx-white)] font-black text-[10px] uppercase tracking-[0.2em] rounded-xl hover:bg-[color:var(--provider-mercadopago-hover)] active:scale-[0.98] transition-all shadow-lg shadow-primary/20 disabled:opacity-50 flex items-center justify-center gap-2"
                                         >
                                             {loading ? (
                                                 <Loader2 className="h-4 w-4 animate-spin" />
@@ -169,17 +169,17 @@ export function SubscriptionCheckout({ planId, amount, currency, onClose, basePr
                             ) : (
                                 <div className="space-y-4">
                                     <div className="flex items-center gap-2">
-                                        <div className="h-0.5 w-3 bg-[#0070ba] rounded-full" />
+                                        <div className="h-0.5 w-3 bg-[color:var(--provider-paypal-foreground)] rounded-full" />
                                         <h4 className="text-[9px] font-black text-muted-foreground uppercase tracking-[0.2em]">Pasarela PayPal Global</h4>
                                     </div>
-                                    <div className="bg-secondary/10 p-6 rounded-[1.5rem] border border-border/40 flex flex-col items-center justify-center gap-6 group hover:border-[#0070ba]/20 transition-all duration-500 overflow-hidden relative">
+                                    <div className="bg-secondary/10 p-6 rounded-[1.5rem] border border-border/40 flex flex-col items-center justify-center gap-6 group hover:border-[color:var(--provider-paypal-foreground)]/20 transition-all duration-500 overflow-hidden relative">
                                         {/* Botón PayPal Personalizado */}
                                         <button
                                             onClick={handlePayPalRedirect}
                                             disabled={loading}
                                             className={cn(
                                                 "w-full py-4 rounded-xl font-black text-[10px] uppercase tracking-[0.2em] transition-all duration-300 flex items-center justify-center gap-2 relative z-10 shadow-lg",
-                                                "bg-[#ffc439] text-[#003087] hover:bg-[#f2ba36] active:scale-[0.97] disabled:opacity-50"
+                                                "bg-[color:var(--provider-paypal)] text-[color:var(--provider-paypal-foreground)] hover:bg-[color:var(--provider-paypal-hover)] active:scale-[0.97] disabled:opacity-50"
                                             )}
                                         >
                                             {loading ? (
@@ -210,8 +210,8 @@ export function SubscriptionCheckout({ planId, amount, currency, onClose, basePr
                         {/* Footer Actions */}
                         <div className="p-6 md:p-8 bg-secondary/30 flex flex-col gap-5">
                             <div className="flex items-center justify-center gap-5 text-[9px] font-black text-muted-foreground/40 uppercase tracking-[0.15em]">
-                                <div className="flex items-center gap-2"><div className="w-1.5 h-1.5 bg-emerald-500/60 rounded-full animate-pulse" /> 256-bit SSL</div>
-                                <div className="flex items-center gap-2"><div className="w-1.5 h-1.5 bg-emerald-500/60 rounded-full animate-pulse" /> Sin Permanencia</div>
+                                <div className="flex items-center gap-2"><div className="w-1.5 h-1.5 bg-[color:var(--status-success-strong)]/60 rounded-full animate-pulse" /> 256-bit SSL</div>
+                                <div className="flex items-center gap-2"><div className="w-1.5 h-1.5 bg-[color:var(--status-success-strong)]/60 rounded-full animate-pulse" /> Sin Permanencia</div>
                             </div>
                             <button
                                 onClick={onClose}

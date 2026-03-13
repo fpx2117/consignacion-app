@@ -4,75 +4,92 @@ import * as React from "react";
 import { Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-const THEMES = [
+const THEME_PRESETS = [
     {
         id: "modern",
         name: "Moderno",
         tagline: "Elegante y atemporal",
-        primary: "#000000",
-        secondary: "#f3f4f6",
-        accent: "#374151"
+        primaryToken: "--theme-modern-primary",
+        secondaryToken: "--theme-modern-secondary",
+        accentToken: "--theme-modern-accent",
     },
     {
         id: "nature",
         name: "Natural",
         tagline: "Fresco y orgánico",
-        primary: "#16a34a",
-        secondary: "#dcfce7",
-        accent: "#86efac"
+        primaryToken: "--theme-nature-primary",
+        secondaryToken: "--theme-nature-secondary",
+        accentToken: "--theme-nature-accent",
     },
     {
         id: "ocean",
         name: "Océano",
         tagline: "Sereno y confiable",
-        primary: "#0284c7",
-        secondary: "#e0f2fe",
-        accent: "#7dd3fc"
+        primaryToken: "--theme-ocean-primary",
+        secondaryToken: "--theme-ocean-secondary",
+        accentToken: "--theme-ocean-accent",
     },
     {
         id: "sunset",
         name: "Atardecer",
         tagline: "Cálido y dinámico",
-        primary: "#ea580c",
-        secondary: "#ffedd5",
-        accent: "#fdba74"
+        primaryToken: "--theme-sunset-primary",
+        secondaryToken: "--theme-sunset-secondary",
+        accentToken: "--theme-sunset-accent",
     },
     {
         id: "luxury",
         name: "Lujo",
         tagline: "Premium y sofisticado",
-        primary: "#854d0e",
-        secondary: "#fefce8",
-        accent: "#d97706"
+        primaryToken: "--theme-luxury-primary",
+        secondaryToken: "--theme-luxury-secondary",
+        accentToken: "--theme-luxury-accent",
     },
     {
         id: "minimal",
         name: "Minimalista",
         tagline: "Simple y claro",
-        primary: "#171717",
-        secondary: "#ffffff",
-        accent: "#a3a3a3"
+        primaryToken: "--theme-minimal-primary",
+        secondaryToken: "--theme-minimal-secondary",
+        accentToken: "--theme-minimal-accent",
     },
     {
         id: "barbie",
         name: "Pop",
         tagline: "Vibrante y divertido",
-        primary: "#db2777",
-        secondary: "#fce7f3",
-        accent: "#f9a8d4"
+        primaryToken: "--theme-barbie-primary",
+        secondaryToken: "--theme-barbie-secondary",
+        accentToken: "--theme-barbie-accent",
     },
     {
         id: "tech",
         name: "Tech",
         tagline: "Moderno y digital",
-        primary: "#4f46e5",
-        secondary: "#e0e7ff",
-        accent: "#a5b4fc"
+        primaryToken: "--theme-tech-primary",
+        secondaryToken: "--theme-tech-secondary",
+        accentToken: "--theme-tech-accent",
     },
 ];
 
+function resolveToken(token: string): string {
+    if (typeof window === "undefined") return "hsl(var(--primary))";
+    const value = getComputedStyle(document.documentElement).getPropertyValue(token).trim();
+    return value || "hsl(var(--primary))";
+}
+
 export function ThemesTab({ branding, setBranding }: any) {
-    const handleThemeSelect = (theme: typeof THEMES[0]) => {
+    const themes = React.useMemo(
+        () =>
+            THEME_PRESETS.map((theme) => ({
+                ...theme,
+                primary: resolveToken(theme.primaryToken),
+                secondary: resolveToken(theme.secondaryToken),
+                accent: resolveToken(theme.accentToken),
+            })),
+        [],
+    );
+
+    const handleThemeSelect = (theme: (typeof themes)[0]) => {
         setBranding({
             ...branding,
             themeIdentifier: theme.id,
@@ -91,7 +108,7 @@ export function ThemesTab({ branding, setBranding }: any) {
 
             {/* Theme grid — 2 cols mobile, 4 cols desktop */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-                {THEMES.map((theme) => {
+                {themes.map((theme) => {
                     const isActive = branding.themeIdentifier === theme.id;
 
                     return (
@@ -134,8 +151,8 @@ export function ThemesTab({ branding, setBranding }: any) {
                                         "absolute top-2 right-2 h-5 w-5 rounded-full flex items-center justify-center",
                                         "transition-all duration-200",
                                         isActive
-                                            ? "bg-white scale-100 opacity-100"
-                                            : "bg-white/0 scale-75 opacity-0 group-hover:bg-white/20 group-hover:scale-100 group-hover:opacity-100"
+                                            ? "bg-card scale-100 opacity-100"
+                                            : "bg-card/0 scale-75 opacity-0 group-hover:bg-card/20 group-hover:scale-100 group-hover:opacity-100"
                                     )}
                                 >
                                     {isActive && (

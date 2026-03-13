@@ -368,7 +368,7 @@ export function SidebarDock() {
               </>
             )}
           </Dock>
-          <BorderBeam size={50} duration={10} colorFrom="var(--primary)" colorTo="#3b82f6" />
+          <BorderBeam size={50} duration={10} colorFrom="var(--primary)" colorTo="var(--ui-fx-cyan)" />
         </div>
       </div>
 
@@ -433,7 +433,7 @@ export function SidebarDock() {
               </DockIcon>
             </Dock>
 
-            <BorderBeam size={80} duration={15} colorFrom="var(--primary)" colorTo="#3b82f6" />
+            <BorderBeam size={80} duration={15} colorFrom="var(--primary)" colorTo="var(--ui-fx-cyan)" />
           </div>
         </div>
 

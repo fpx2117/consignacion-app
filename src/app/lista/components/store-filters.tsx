@@ -71,11 +71,11 @@ export function StoreFilters({
 
                 {/* Buscador E-commerce */}
                 <div className="relative w-full group">
-                    <Search className="absolute left-3.5 sm:left-4 top-1/2 -translate-y-1/2 h-4 w-4 sm:h-5 sm:w-5 text-neutral-400 group-focus-within:text-neutral-900 transition-colors" />
+                    <Search className="absolute left-3.5 sm:left-4 top-1/2 -translate-y-1/2 h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground/80 group-focus-within:text-foreground transition-colors" />
                     <Input
                         placeholder="Buscar producto..."
                         className={cn(
-                            "pl-10 sm:pl-12 h-11 sm:h-14 text-sm sm:text-base text-neutral-900 border-neutral-200 shadow-sm focus-visible:ring-0 focus-visible:border-neutral-900 transition-all",
+                            "pl-10 sm:pl-12 h-11 sm:h-14 text-sm sm:text-base text-foreground border-border shadow-sm focus-visible:ring-0 focus-visible:border-foreground transition-all",
                             cardBgClass,
                             config.themeIdentifier === "minimal" || config.themeIdentifier === "luxury"
                                 ? "border-x-0 border-t-0 border-b-2 rounded-none bg-transparent px-0 pl-10"
@@ -93,12 +93,12 @@ export function StoreFilters({
                     <div className="w-full sm:w-auto sm:flex-1 min-w-0">
                         <Select value={sortBy} onValueChange={setSortBy}>
                             <SelectTrigger className={cn(
-                                "h-10 sm:h-11 w-full px-3 sm:px-4 shadow-sm min-w-0 flex items-center gap-2 text-neutral-900 border-neutral-200",
+                                "h-10 sm:h-11 w-full px-3 sm:px-4 shadow-sm min-w-0 flex items-center gap-2 text-foreground border-border",
                                 cardBgClass,
                                 inputRadiusClass
                             )}>
-                                <SlidersHorizontal className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-neutral-500 shrink-0" />
-                                <SelectValue placeholder="Ordenar por" className="font-semibold text-neutral-900 text-xs sm:text-sm mr-auto block" />
+                                <SlidersHorizontal className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground shrink-0" />
+                                <SelectValue placeholder="Ordenar por" className="font-semibold text-foreground text-xs sm:text-sm mr-auto block" />
                             </SelectTrigger>
                             <SelectContent className="rounded-xl overflow-hidden">
                                 <SelectItem value="relevance" className="text-xs sm:text-sm font-semibold">Relevancia</SelectItem>
@@ -112,7 +112,7 @@ export function StoreFilters({
 
                     {/* Toggle de Vista */}
                     <div className={cn(
-                        "ml-auto flex items-center bg-neutral-900 p-1 shadow-sm shrink-0",
+                        "ml-auto flex items-center bg-foreground p-1 shadow-sm shrink-0",
                         buttonRadiusClass
                     )}>
                         <Button
@@ -121,7 +121,7 @@ export function StoreFilters({
                             className={cn(
                                 "h-8 w-9 sm:h-9 sm:w-10 transition-all",
                                 buttonRadiusClass,
-                                viewMode === "grid" ? cn(cardBgClass, "text-neutral-900 shadow-sm") : "text-neutral-400 hover:text-white"
+                                viewMode === "grid" ? cn(cardBgClass, "text-foreground shadow-sm") : "text-muted-foreground/80 hover:text-[color:var(--ui-fx-white)]"
                             )}
                             onClick={() => setViewMode("grid")}
                             title="Vista Cuadrícula"
@@ -134,7 +134,7 @@ export function StoreFilters({
                             className={cn(
                                 "h-8 w-9 sm:h-9 sm:w-10 transition-all",
                                 buttonRadiusClass,
-                                viewMode === "list" ? cn(cardBgClass, "text-neutral-900 shadow-sm") : "text-neutral-400 hover:text-white"
+                                viewMode === "list" ? cn(cardBgClass, "text-foreground shadow-sm") : "text-muted-foreground/80 hover:text-[color:var(--ui-fx-white)]"
                             )}
                             onClick={() => setViewMode("list")}
                             title="Vista Lista"
@@ -147,8 +147,8 @@ export function StoreFilters({
 
             {/* Fila 2: Categorías Dinámicas (Sólo Mobile) - MEJORADO con Subcategorías */}
             {config.mostrarCategoriasEnHeader && (
-                <div className="flex md:hidden flex-col gap-3 pb-4 border-b border-neutral-100/50">
-                    <span className="text-xs font-bold uppercase tracking-widest text-neutral-500">
+                <div className="flex md:hidden flex-col gap-3 pb-4 border-b border-border/40">
+                    <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
                         Categorías
                     </span>
 
@@ -163,12 +163,12 @@ export function StoreFilters({
                                 "flex items-center justify-between px-4 py-3 text-sm font-bold border transition-all shadow-sm",
                                 inputRadiusClass,
                                 selectedCategory === null
-                                    ? "bg-neutral-900 text-white border-transparent"
-                                    : cn(cardBgClass, "text-neutral-900 border-neutral-200")
+                                    ? "bg-foreground text-[color:var(--ui-fx-white)] border-transparent"
+                                    : cn(cardBgClass, "text-foreground border-border")
                             )}
                         >
                             <span>Todas las categorías</span>
-                            <Badge variant="secondary" className="bg-neutral-100 text-neutral-600 border-none">{products.length}</Badge>
+                            <Badge variant="secondary" className="bg-muted/55 text-muted-foreground border-none">{products.length}</Badge>
                         </button>
 
                         {/* Lista de Categorías con Acordeón para Subcategorías */}
@@ -187,13 +187,13 @@ export function StoreFilters({
                                             "flex items-center justify-between px-4 py-3 text-sm font-bold border transition-all shadow-sm",
                                             inputRadiusClass,
                                             isSelected
-                                                ? "bg-neutral-900 text-white border-transparent"
-                                                : cn(cardBgClass, "text-neutral-900 border-neutral-200")
+                                                ? "bg-foreground text-[color:var(--ui-fx-white)] border-transparent"
+                                                : cn(cardBgClass, "text-foreground border-border")
                                         )}
                                     >
                                         <div className="flex items-center gap-2">
                                             <span>{cat.nombre}</span>
-                                            <span className={cn("text-[10px] font-normal opacity-60", isSelected ? "text-white/70" : "text-neutral-500")}>({count})</span>
+                                            <span className={cn("text-[10px] font-normal opacity-60", isSelected ? "text-[color:var(--ui-fx-white)]/70" : "text-muted-foreground")}>({count})</span>
                                         </div>
                                         {hasSubcategories && (
                                             <ChevronDown className={cn("h-4 w-4 transition-transform", isSelected ? "rotate-180" : "")} />
@@ -206,7 +206,7 @@ export function StoreFilters({
                                                 initial={{ height: 0, opacity: 0 }}
                                                 animate={{ height: "auto", opacity: 1 }}
                                                 exit={{ height: 0, opacity: 0 }}
-                                                className="overflow-hidden bg-neutral-50/50 rounded-2xl p-1 flex flex-wrap gap-1 mt-1 border border-neutral-100"
+                                                className="overflow-hidden bg-muted/30 rounded-2xl p-1 flex flex-wrap gap-1 mt-1 border border-border/70"
                                             >
                                                 {/* Opción de "Ver Todo de [Categoría]" */}
                                                 <button
@@ -214,8 +214,8 @@ export function StoreFilters({
                                                     className={cn(
                                                         "px-3 py-1.5 text-xs font-bold rounded-xl transition-all border",
                                                         selectedSubcategory === null
-                                                            ? "bg-white text-neutral-900 border-neutral-200 shadow-sm"
-                                                            : "text-neutral-400 border-transparent hover:text-neutral-600"
+                                                            ? "bg-[color:var(--store-surface)] text-foreground border-border shadow-sm"
+                                                            : "text-muted-foreground/80 border-transparent hover:text-muted-foreground"
                                                     )}
                                                 >
                                                     Todo {cat.nombre}
@@ -233,8 +233,8 @@ export function StoreFilters({
                                                             className={cn(
                                                                 "px-3 py-1.5 text-xs font-bold rounded-xl transition-all border",
                                                                 isSubSelected
-                                                                    ? "bg-white text-neutral-900 border-neutral-200 shadow-sm"
-                                                                    : "text-neutral-400 border-transparent hover:text-neutral-600"
+                                                                    ? "bg-[color:var(--store-surface)] text-foreground border-border shadow-sm"
+                                                                    : "text-muted-foreground/80 border-transparent hover:text-muted-foreground"
                                                             )}
                                                         >
                                                             {sub.nombre} ({subCount})
@@ -255,7 +255,7 @@ export function StoreFilters({
             {config.mostrarPreciosConsignacion && config.porcentajeAumentoConsignacion > 0 && (
                 <div className="flex justify-start w-full mt-2">
                     <div className={cn(
-                        "flex p-1 w-full md:max-w-[400px] border border-neutral-200 shadow-inner backdrop-blur-sm",
+                        "flex p-1 w-full md:max-w-[400px] border border-border shadow-inner backdrop-blur-sm",
                         cardBgClass,
                         inputRadiusClass
                     )}>
@@ -265,8 +265,8 @@ export function StoreFilters({
                                 "flex-1 py-2 px-4 text-xs sm:text-sm font-black tracking-tight transition-all duration-300 flex items-center justify-center gap-2",
                                 inputRadiusClass,
                                 !isConsigne
-                                    ? "bg-white text-neutral-900 shadow-sm border border-neutral-200/50 scale-[1.02]"
-                                    : "text-neutral-400 hover:text-neutral-800 hover:bg-neutral-200/50"
+                                    ? "bg-[color:var(--store-surface)] text-foreground shadow-sm border border-border/50 scale-[1.02]"
+                                    : "text-muted-foreground/80 hover:text-foreground hover:bg-muted/70"
                             )}
                         >
                             <PackageOpen className="h-4 w-4" />
@@ -278,8 +278,8 @@ export function StoreFilters({
                                 "flex-1 py-2 px-4 text-xs sm:text-sm font-black tracking-tight transition-all duration-300 flex items-center justify-center gap-2",
                                 inputRadiusClass,
                                 isConsigne
-                                    ? "bg-neutral-900 text-white shadow-sm scale-[1.02]"
-                                    : "text-neutral-400 hover:text-neutral-800 hover:bg-neutral-200/50"
+                                    ? "bg-foreground text-[color:var(--ui-fx-white)] shadow-sm scale-[1.02]"
+                                    : "text-muted-foreground/80 hover:text-foreground hover:bg-muted/70"
                             )}
                         >
                             <Zap className="h-4 w-4" />

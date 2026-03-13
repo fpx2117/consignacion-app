@@ -24,7 +24,7 @@ export function ClientProfileHeader({ cliente }: { cliente: Cliente }) {
   return (
     <Card className="group overflow-hidden border-border/60 bg-card shadow-sm relative">
       {/* Banner */}
-      <div className="h-24 md:h-32 bg-gradient-to-r from-violet-600/20 via-primary/10 to-background" />
+      <div className="h-24 md:h-32 bg-gradient-to-r from-[color:var(--primary)]/20 via-primary/10 to-background" />
       
       <div className="px-4 md:px-8 pb-6 relative">
         <div className="flex flex-col md:flex-row gap-4 md:gap-6 items-center md:items-end -mt-10 md:-mt-12">
@@ -37,7 +37,7 @@ export function ClientProfileHeader({ cliente }: { cliente: Cliente }) {
                     </AvatarFallback>
                 </Avatar>
                 {/* Indicador estado (Visible solo desktop) */}
-                <div className={`hidden md:block absolute bottom-1 right-1 h-5 w-5 rounded-full border-4 border-card ${cliente.activo ? 'bg-emerald-500' : 'bg-destructive'}`} />
+                <div className={`hidden md:block absolute bottom-1 right-1 h-5 w-5 rounded-full border-4 border-card ${cliente.activo ? 'bg-[color:var(--status-success-strong)]' : 'bg-destructive'}`} />
             </div>
 
             {/* DATOS PRINCIPALES */}
@@ -57,7 +57,7 @@ export function ClientProfileHeader({ cliente }: { cliente: Cliente }) {
                         <Button 
                             asChild 
                             variant="outline" 
-                            className="w-full md:w-auto gap-2 border-emerald-500/30 text-emerald-700 bg-emerald-500/5 hover:bg-emerald-500/15 h-9"
+                            className="w-full md:w-auto gap-2 border-[color:var(--status-success-strong)]/30 text-[color:var(--status-success-strong)] bg-[color:var(--status-success-strong)]/5 hover:bg-[color:var(--status-success-strong)]/15 h-9"
                         >
                            <a href={whatsappLink} target="_blank" rel="noopener noreferrer">
                               <MessageCircle className="h-4 w-4" />
@@ -81,7 +81,7 @@ export function ClientProfileHeader({ cliente }: { cliente: Cliente }) {
                     {formatCurrency(cliente.saldoCuenta)}
                 </div>
                 <div className="flex items-center gap-2 mt-1">
-                     <span className={`flex items-center gap-1.5 text-[10px] font-bold uppercase px-2 py-0.5 rounded-full border ${cliente.activo ? 'border-emerald-500/20 bg-emerald-500/10 text-emerald-600' : 'border-destructive/20 bg-destructive/10 text-destructive'}`}>
+                     <span className={`flex items-center gap-1.5 text-[10px] font-bold uppercase px-2 py-0.5 rounded-full border ${cliente.activo ? 'border-[color:var(--status-success-strong)]/20 bg-[color:var(--status-success-strong)]/10 text-[color:var(--status-success-strong)]' : 'border-destructive/20 bg-destructive/10 text-destructive'}`}>
                         {cliente.activo ? (
                             <><CheckCircle2 className="h-3 w-3" /> Activa</>
                         ) : (

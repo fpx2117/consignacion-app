@@ -335,8 +335,8 @@ function GastoModal({ open, onOpenChange, onSuccess, categorias, editingGasto, a
                                     <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="PAGADO" className="font-bold text-emerald-600">PAGADO</SelectItem>
-                                    <SelectItem value="PENDIENTE" className="font-bold text-orange-600">PENDIENTE</SelectItem>
+                                    <SelectItem value="PAGADO" className="font-bold text-[color:var(--status-success-strong)]">PAGADO</SelectItem>
+                                    <SelectItem value="PENDIENTE" className="font-bold text-[color:var(--status-warning)]">PENDIENTE</SelectItem>
                                 </SelectContent>
                             </Select>
                         </div>
@@ -402,17 +402,17 @@ function GastoModal({ open, onOpenChange, onSuccess, categorias, editingGasto, a
                                             setSelectedSucursales([activeSucursalId]);
                                         }
                                     }}
-                                    className="rounded border-border text-violet-600 focus:ring-violet-500 h-4 w-4"
+                                    className="rounded border-border text-[color:var(--primary)] focus:ring-[color:var(--primary)] h-4 w-4"
                                 />
-                                <label htmlFor="esCompartido" className="text-sm font-bold flex items-center gap-1.5 select-none cursor-pointer text-violet-700">
+                                <label htmlFor="esCompartido" className="text-sm font-bold flex items-center gap-1.5 select-none cursor-pointer text-[color:var(--primary)]">
                                     <GitFork className="h-3.5 w-3.5" />
                                     Dividir entre sucursales
                                 </label>
                             </div>
 
                             {esCompartido && (
-                                <div className="rounded-2xl bg-violet-500/5 border border-violet-400/20 p-4 space-y-3">
-                                    <p className="text-[10px] font-black uppercase tracking-widest text-violet-600/70">Seleccionar sucursales</p>
+                                <div className="rounded-2xl bg-[color:var(--primary)]/5 border border-[color:var(--primary)]/20 p-4 space-y-3">
+                                    <p className="text-[10px] font-black uppercase tracking-widest text-[color:var(--primary)]/70">Seleccionar sucursales</p>
                                     <div className="space-y-2">
                                         {sucursales.map((s: any) => (
                                             <label key={s.id} className="flex items-center gap-3 cursor-pointer group">
@@ -421,28 +421,28 @@ function GastoModal({ open, onOpenChange, onSuccess, categorias, editingGasto, a
                                                     checked={selectedSucursales.includes(s.id)}
                                                     onChange={() => toggleSucursal(s.id)}
                                                     disabled={s.id === activeSucursalId} // La sucursal creadora siempre incluida
-                                                    className="rounded border-border text-violet-600 focus:ring-violet-500 h-4 w-4"
+                                                    className="rounded border-border text-[color:var(--primary)] focus:ring-[color:var(--primary)] h-4 w-4"
                                                 />
                                                 <span className={cn(
                                                     "text-sm font-bold",
-                                                    s.id === activeSucursalId ? "text-violet-700" : "text-foreground"
+                                                    s.id === activeSucursalId ? "text-[color:var(--primary)]" : "text-foreground"
                                                 )}>
                                                     {s.nombre}
                                                     {s.id === activeSucursalId && (
-                                                        <span className="ml-1.5 text-[9px] font-black uppercase tracking-widest text-violet-500/70">(esta sucursal)</span>
+                                                        <span className="ml-1.5 text-[9px] font-black uppercase tracking-widest text-[color:var(--primary)]/70">(esta sucursal)</span>
                                                     )}
                                                 </span>
                                             </label>
                                         ))}
                                     </div>
                                     {montoProporcional !== null && (
-                                        <div className="flex items-center justify-between pt-2 border-t border-violet-400/20">
-                                            <span className="text-[10px] font-black uppercase tracking-widest text-violet-600/70">Cada sucursal pagará:</span>
-                                            <span className="text-lg font-black text-violet-700">{formatMoney(montoProporcional)}</span>
+                                        <div className="flex items-center justify-between pt-2 border-t border-[color:var(--primary)]/20">
+                                            <span className="text-[10px] font-black uppercase tracking-widest text-[color:var(--primary)]/70">Cada sucursal pagará:</span>
+                                            <span className="text-lg font-black text-[color:var(--primary)]">{formatMoney(montoProporcional)}</span>
                                         </div>
                                     )}
                                     {esCompartido && selectedSucursales.length < 2 && (
-                                        <p className="text-[10px] font-bold text-orange-500/80 italic">
+                                        <p className="text-[10px] font-bold text-[color:var(--status-warning)]/80 italic">
                                             * Seleccioná al menos 2 sucursales para dividir el gasto.
                                         </p>
                                     )}
@@ -621,24 +621,24 @@ function ShareGastoModal({ open, onOpenChange, gasto }: any) {
             <DialogContent className="sm:max-w-[450px] rounded-[2.5rem] p-0 overflow-hidden border-none shadow-2xl animate-in zoom-in-95 duration-200">
                 {/* Premium Gradient Header */}
                 <div className="bg-gradient-to-br from-primary via-primary/90 to-primary/80 p-8 pb-14 text-primary-foreground relative">
-                    <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16 blur-3xl" />
-                    <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/5 rounded-full -ml-12 -mb-12 blur-2xl" />
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-card/10 rounded-full -mr-16 -mt-16 blur-3xl" />
+                    <div className="absolute bottom-0 left-0 w-24 h-24 bg-card/5 rounded-full -ml-12 -mb-12 blur-2xl" />
 
                     <DialogHeader className="relative z-10">
-                        <DialogTitle className="text-3xl font-black tracking-tighter flex items-center gap-4 text-white">
-                            <div className="h-12 w-12 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center shadow-lg shadow-black/10">
-                                <Share2 className="h-6 w-6 text-white" />
+                        <DialogTitle className="text-3xl font-black tracking-tighter flex items-center gap-4 text-[color:var(--ui-fx-white)]">
+                            <div className="h-12 w-12 rounded-2xl bg-card/20 backdrop-blur-md flex items-center justify-center shadow-lg shadow-black/10">
+                                <Share2 className="h-6 w-6 text-[color:var(--ui-fx-white)]" />
                             </div>
                             Compartir Comprobante
                         </DialogTitle>
                     </DialogHeader>
                     <div className="mt-4 relative z-10">
-                        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 backdrop-blur-sm border border-white/10 text-[10px] font-black uppercase tracking-[0.15em] text-white/90">
+                        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-card/10 backdrop-blur-sm border border-[color:var(--ui-fx-white)]/10 text-[10px] font-black uppercase tracking-[0.15em] text-[color:var(--ui-fx-white)]/90">
                             Detalles del Gasto
                         </div>
-                        <div className="mt-2 text-xl font-bold text-white tracking-tight">
+                        <div className="mt-2 text-xl font-bold text-[color:var(--ui-fx-white)] tracking-tight">
                             {gasto.motivo}
-                            <span className="ml-2 text-white/60 font-medium">({formatMoney(Number(gasto.monto))})</span>
+                            <span className="ml-2 text-[color:var(--ui-fx-white)]/60 font-medium">({formatMoney(Number(gasto.monto))})</span>
                         </div>
                     </div>
                 </div>
@@ -668,7 +668,7 @@ function ShareGastoModal({ open, onOpenChange, gasto }: any) {
                             </div>
                             <Button
                                 onClick={() => handleWhatsApp(manualNumber)}
-                                className="w-full bg-[#25D366] hover:bg-[#20bd5a] text-white rounded-2xl h-16 font-black text-sm tracking-widest uppercase flex items-center justify-center gap-3 shadow-xl shadow-emerald-500/30 active:scale-[0.98] transition-all"
+                                className="w-full bg-[color:var(--brand-whatsapp)] hover:brightness-95 text-[color:var(--ui-fx-white)] rounded-2xl h-16 font-black text-sm tracking-widest uppercase flex items-center justify-center gap-3 shadow-xl shadow-emerald-500/30 active:scale-[0.98] transition-all"
                             >
                                 <MessageSquare className="h-5 w-5 fill-current" />
                                 Enviar WhatsApp
@@ -702,7 +702,7 @@ function ShareGastoModal({ open, onOpenChange, gasto }: any) {
                                             className="w-full flex items-center justify-between p-4 bg-muted/20 border border-transparent rounded-2xl hover:bg-primary/5 hover:border-primary/10 transition-all group relative overflow-hidden active:scale-[0.99]"
                                         >
                                             <div className="flex items-center gap-4 relative z-10">
-                                                <div className="h-12 w-12 rounded-xl bg-card border text-primary flex items-center justify-center shadow-sm group-hover:scale-110 group-hover:bg-primary group-hover:text-white transition-all duration-300">
+                                                <div className="h-12 w-12 rounded-xl bg-card border text-primary flex items-center justify-center shadow-sm group-hover:scale-110 group-hover:bg-primary group-hover:text-[color:var(--ui-fx-white)] transition-all duration-300">
                                                     <User className="h-6 w-6" />
                                                 </div>
                                                 <div className="text-left">
@@ -710,7 +710,7 @@ function ShareGastoModal({ open, onOpenChange, gasto }: any) {
                                                     <div className="text-xs text-muted-foreground font-bold opacity-70 italic">{c.telefono}</div>
                                                 </div>
                                             </div>
-                                            <div className="h-8 w-8 rounded-full bg-emerald-500/10 text-emerald-600 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all scale-75 group-hover:scale-100">
+                                            <div className="h-8 w-8 rounded-full bg-[color:var(--status-success-strong)]/10 text-[color:var(--status-success-strong)] flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all scale-75 group-hover:scale-100">
                                                 <MessageSquare className="h-4 w-4" />
                                             </div>
                                         </button>
@@ -735,7 +735,7 @@ function ShareGastoModal({ open, onOpenChange, gasto }: any) {
                         <Button
                             variant="ghost"
                             onClick={handleOpen}
-                            className="h-20 flex-col gap-2 rounded-2xl bg-muted/20 hover:bg-blue-500/5 hover:text-blue-600 transition-all font-black text-[10px] uppercase tracking-[0.15em] active:scale-[0.98]"
+                            className="h-20 flex-col gap-2 rounded-2xl bg-muted/20 hover:bg-[color:var(--theme-ocean-primary)]/5 hover:text-[color:var(--theme-ocean-primary)] transition-all font-black text-[10px] uppercase tracking-[0.15em] active:scale-[0.98]"
                         >
                             <div className="h-8 w-8 rounded-xl bg-card border flex items-center justify-center shadow-sm">
                                 <ExternalLink className="h-4 w-4" />

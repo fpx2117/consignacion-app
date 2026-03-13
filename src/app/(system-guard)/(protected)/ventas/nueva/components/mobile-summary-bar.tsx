@@ -50,7 +50,7 @@ export function MobileSummaryBar({
               <Loader2 className="animate-spin h-5 w-5" aria-hidden="true" />
             ) : (
               <div className="flex justify-between w-full px-2 md:px-4 items-center">
-                <span className="text-[10px] md:text-xs font-bold tracking-widest opacity-80 uppercase bg-black/10 px-2 py-1 rounded-md">
+                <span className="text-[10px] md:text-xs font-bold tracking-widest opacity-80 uppercase bg-foreground/10 px-2 py-1 rounded-md">
                   {cartLength} ITEMS
                 </span>
                 <span className="text-lg md:text-xl tracking-tight">COBRAR {formatCurrency(totalAmount)}</span>

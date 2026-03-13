@@ -53,7 +53,7 @@ export function CartItemCard({
           </p>
 
           {bestDiscountPct && (
-            <div className="flex items-center gap-1 mt-1 text-[10px] font-bold text-emerald-600">
+            <div className="flex items-center gap-1 mt-1 text-[10px] font-bold text-[color:var(--status-success-strong)]">
               <BadgePercent className="h-3 w-3" aria-hidden="true" />
               {`-${bestDiscountPct}% (${totalSubQty} de ${subcategoriaNombre})`}
             </div>
@@ -80,7 +80,7 @@ export function CartItemCard({
           type="button"
           variant="ghost"
           size="icon"
-          className="h-7 w-7 text-muted-foreground/30 hover:text-red-500 rounded-lg transition-colors mt-1 focus-visible:ring-2"
+          className="h-7 w-7 text-muted-foreground/30 hover:text-[color:var(--status-danger)] rounded-lg transition-colors mt-1 focus-visible:ring-2"
           onClick={() => onRemove(item.producto.id)}
           aria-label={`Quitar ${item.producto.nombre} del carrito`}
         >

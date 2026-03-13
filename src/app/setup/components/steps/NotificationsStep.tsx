@@ -20,9 +20,9 @@ export function NotificationsStep({ data, onChange }: NotificationsStepProps) {
         <motion.div
           initial={{ scale: 0.8, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
-          className="w-16 h-16 rounded-2xl bg-pink-600/10 border border-pink-500/20 flex items-center justify-center mx-auto"
+          className="w-16 h-16 rounded-2xl bg-[color:var(--brand-instagram)]/10 border border-[color:var(--brand-instagram)]/20 flex items-center justify-center mx-auto"
         >
-          <BellRing className="w-8 h-8 text-pink-500" />
+          <BellRing className="w-8 h-8 text-[color:var(--brand-instagram)]" />
         </motion.div>
         <h2 className="text-3xl font-black tracking-tight">Alertas y Notificaciones</h2>
         <p className="text-muted-foreground text-lg">
@@ -32,13 +32,13 @@ export function NotificationsStep({ data, onChange }: NotificationsStepProps) {
 
       {/* Form */}
       <div className="space-y-1 bg-card/40 backdrop-blur-md rounded-[2.5rem] border border-border/50 shadow-2xl relative overflow-hidden">
-        <div className="absolute inset-0 bg-pink-500/5 blur-3xl -z-10 rounded-full" />
+        <div className="absolute inset-0 bg-[color:var(--brand-instagram)]/5 blur-3xl -z-10 rounded-full" />
 
         {/* Stock Bajo */}
         <div className="p-5 sm:p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-center gap-3">
-            <div className="h-9 w-9 rounded-lg bg-red-500/10 flex items-center justify-center shrink-0">
-              <PackageSearch className="h-4 w-4 text-red-400" />
+            <div className="h-9 w-9 rounded-lg bg-[color:var(--status-danger)]/10 flex items-center justify-center shrink-0">
+              <PackageSearch className="h-4 w-4 text-[color:var(--status-danger)]" />
             </div>
             <div>
               <h3 className="font-bold text-sm text-foreground">Stock Bajo</h3>
@@ -59,7 +59,7 @@ export function NotificationsStep({ data, onChange }: NotificationsStepProps) {
             <Switch
               checked={data.notificarStockBajo}
               onCheckedChange={(v) => onChange({ ...data, notificarStockBajo: v })}
-              className="data-[state=checked]:bg-pink-500"
+              className="data-[state=checked]:bg-[color:var(--brand-instagram)]"
             />
           </div>
         </div>
@@ -69,8 +69,8 @@ export function NotificationsStep({ data, onChange }: NotificationsStepProps) {
         {/* Vencimientos */}
         <div className="p-5 sm:p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-center gap-3">
-            <div className="h-9 w-9 rounded-lg bg-amber-500/10 flex items-center justify-center shrink-0">
-              <CalendarClock className="h-4 w-4 text-amber-400" />
+            <div className="h-9 w-9 rounded-lg bg-[color:var(--status-warning)]/10 flex items-center justify-center shrink-0">
+              <CalendarClock className="h-4 w-4 text-[color:var(--status-warning)]" />
             </div>
             <div>
               <h3 className="font-bold text-sm text-foreground">Vencimientos</h3>
@@ -91,7 +91,7 @@ export function NotificationsStep({ data, onChange }: NotificationsStepProps) {
             <Switch
               checked={data.notificarVencimientos}
               onCheckedChange={(v) => onChange({ ...data, notificarVencimientos: v })}
-              className="data-[state=checked]:bg-pink-500"
+              className="data-[state=checked]:bg-[color:var(--brand-instagram)]"
             />
           </div>
         </div>
@@ -101,8 +101,8 @@ export function NotificationsStep({ data, onChange }: NotificationsStepProps) {
         {/* Ventas */}
         <div className="p-5 sm:p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-center gap-3">
-            <div className="h-9 w-9 rounded-lg bg-emerald-500/10 flex items-center justify-center shrink-0">
-              <ShoppingCart className="h-4 w-4 text-emerald-400" />
+            <div className="h-9 w-9 rounded-lg bg-[color:var(--status-success-strong)]/10 flex items-center justify-center shrink-0">
+              <ShoppingCart className="h-4 w-4 text-[color:var(--status-success-strong)]" />
             </div>
             <div>
               <h3 className="font-bold text-sm text-foreground">Confirmación de Ventas</h3>
@@ -112,7 +112,7 @@ export function NotificationsStep({ data, onChange }: NotificationsStepProps) {
           <Switch
             checked={data.notificarVentas}
             onCheckedChange={(v) => onChange({ ...data, notificarVentas: v })}
-            className="data-[state=checked]:bg-pink-500"
+            className="data-[state=checked]:bg-[color:var(--brand-instagram)]"
           />
         </div>
 
@@ -121,8 +121,8 @@ export function NotificationsStep({ data, onChange }: NotificationsStepProps) {
         {/* Consignaciones activas */}
         <div className="p-5 sm:p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-center gap-3">
-            <div className="h-9 w-9 rounded-lg bg-indigo-500/10 flex items-center justify-center shrink-0">
-              <Package className="h-4 w-4 text-indigo-400" />
+            <div className="h-9 w-9 rounded-lg bg-[color:var(--primary)]/10 flex items-center justify-center shrink-0">
+              <Package className="h-4 w-4 text-[color:var(--primary)]" />
             </div>
             <div>
               <h3 className="font-bold text-sm text-foreground">Consignaciones Activas</h3>
@@ -143,7 +143,7 @@ export function NotificationsStep({ data, onChange }: NotificationsStepProps) {
             <Switch
               checked={data.notificarConsignacionesActivas}
               onCheckedChange={(v) => onChange({ ...data, notificarConsignacionesActivas: v })}
-              className="data-[state=checked]:bg-pink-500"
+              className="data-[state=checked]:bg-[color:var(--brand-instagram)]"
             />
           </div>
         </div>

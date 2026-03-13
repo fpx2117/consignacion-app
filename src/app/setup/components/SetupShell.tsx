@@ -39,10 +39,10 @@ export function SetupShell({
     : 0;
 
   return (
-    <div className="min-h-screen bg-[#0A0A0B] text-foreground flex flex-col items-center justify-center relative overflow-hidden font-sans">
+    <div className="min-h-screen bg-background text-foreground flex flex-col items-center justify-center relative overflow-hidden font-sans">
       {/* Background effects */}
-      <div className="fixed top-[-20%] left-[-10%] w-[50%] h-[50%] bg-violet-600/10 blur-[150px] rounded-full pointer-events-none" />
-      <div className="fixed bottom-[-20%] right-[-10%] w-[50%] h-[50%] bg-indigo-900/10 blur-[150px] rounded-full pointer-events-none" />
+      <div className="fixed top-[-20%] left-[-10%] w-[50%] h-[50%] bg-[color:var(--primary)]/10 blur-[150px] rounded-full pointer-events-none" />
+      <div className="fixed bottom-[-20%] right-[-10%] w-[50%] h-[50%] bg-[color:var(--primary)]/10 blur-[150px] rounded-full pointer-events-none" />
 
       {/* Top Progress Bar */}
       {config?.showProgress && (
@@ -53,7 +53,7 @@ export function SetupShell({
               initial={{ width: 0 }}
               animate={{ width: `${progressPercentage}%` }}
               transition={{ duration: 0.6, ease: "easeInOut" }}
-              className="h-full bg-gradient-to-r from-indigo-500 to-violet-500 shadow-[0_0_12px_2px_rgba(139,92,246,0.4)]"
+              className="h-full bg-gradient-to-r from-primary to-accent shadow-[0_0_12px_2px_hsl(var(--primary)/0.35)]"
             />
           </div>
 
@@ -69,17 +69,17 @@ export function SetupShell({
                   <div
                     className={cn(
                       "flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all duration-300",
-                      isCurrent && "bg-violet-500/20 text-violet-300 border border-violet-500/30 scale-105",
-                      isPast && "bg-white/5 text-white/40",
-                      !isCurrent && !isPast && "bg-white/[0.02] text-white/15",
-                      isSkippable && !isCurrent && !isPast && "border border-dashed border-white/10"
+                      isCurrent && "bg-[color:var(--primary)]/20 text-[color:var(--primary)] border border-[color:var(--primary)]/30 scale-105",
+                      isPast && "bg-card/5 text-foreground/40",
+                      !isCurrent && !isPast && "bg-card/[0.02] text-foreground/20",
+                      isSkippable && !isCurrent && !isPast && "border border-dashed border-border/40"
                     )}
                   >
                     <span className={cn(
                       "h-1.5 w-1.5 rounded-full",
-                      isCurrent && "bg-violet-400",
-                      isPast && "bg-white/30",
-                      !isCurrent && !isPast && "bg-white/10"
+                      isCurrent && "bg-[color:var(--primary)]",
+                      isPast && "bg-card/30",
+                      !isCurrent && !isPast && "bg-card/10"
                     )} />
                     <span className="hidden sm:inline">{step.label}</span>
                   </div>
@@ -88,7 +88,7 @@ export function SetupShell({
                   {i < NAVIGABLE_STEPS.length - 1 && (
                     <div className={cn(
                       "h-px w-4 transition-colors duration-300",
-                      isPast ? "bg-white/20" : "bg-white/5"
+                      isPast ? "bg-card/20" : "bg-card/5"
                     )} />
                   )}
                 </div>
@@ -115,7 +115,7 @@ export function SetupShell({
             <Button
               variant="ghost"
               onClick={onBack}
-              className="h-12 px-4 rounded-full text-muted-foreground hover:text-foreground hover:bg-white/5 transition-all"
+              className="h-12 px-4 rounded-full text-muted-foreground hover:text-foreground hover:bg-card/5 transition-all"
             >
               <ArrowLeft className="w-4 h-4 mr-2" />
               <span className="text-xs font-bold uppercase tracking-widest hidden sm:inline">Atrás</span>
@@ -128,7 +128,7 @@ export function SetupShell({
               <Button
                 variant="ghost"
                 onClick={onSkip}
-                className="h-12 px-4 rounded-full text-muted-foreground/60 hover:text-muted-foreground hover:bg-white/5 transition-all"
+                className="h-12 px-4 rounded-full text-muted-foreground/60 hover:text-muted-foreground hover:bg-card/5 transition-all"
               >
                 <span className="text-xs font-bold uppercase tracking-widest">Omitir</span>
                 <SkipForward className="w-4 h-4 ml-2" />

@@ -79,14 +79,14 @@ export default function HorariosPosPage() {
     if (loading) {
         return (
             <div className="h-[100dvh] flex flex-col items-center justify-center bg-background space-y-4">
-                <Loader2 className="animate-spin h-8 w-8 text-violet-500" />
+                <Loader2 className="animate-spin h-8 w-8 text-[color:var(--primary)]" />
                 <p className="text-sm font-medium text-muted-foreground animate-pulse">Cargando staff...</p>
             </div>
         );
     }
 
     return (
-        <div className="min-h-[100dvh] bg-background text-foreground pb-20 selection:bg-violet-500/20">
+        <div className="min-h-[100dvh] bg-background text-foreground pb-20 selection:bg-[color:var(--primary)]/20">
 
             {/* HEADER FIJO */}
             <div className="sticky top-0 z-30 bg-background/80 backdrop-blur-xl border-b border-border/40 p-4">
@@ -97,14 +97,14 @@ export default function HorariosPosPage() {
                         </Button>
                         <div>
                             <h1 className="text-xl font-bold tracking-tight leading-none flex items-center gap-2">
-                                <Clock className="h-5 w-5 text-violet-500 hidden sm:block" />
+                                <Clock className="h-5 w-5 text-[color:var(--primary)] hidden sm:block" />
                                 Control de Horarios
                             </h1>
                             <p className="text-[11px] text-muted-foreground font-semibold uppercase tracking-wider mt-1">Configuración POS</p>
                         </div>
                     </div>
                     {selectedUser && (
-                        <Button onClick={handleSave} disabled={saving} className="rounded-xl bg-violet-600 hover:bg-violet-700 text-white font-bold shadow-sm px-6 h-10 transition-all">
+                        <Button onClick={handleSave} disabled={saving} className="rounded-xl bg-[color:var(--primary)] hover:bg-[color:var(--primary)] text-[color:var(--ui-fx-white)] font-bold shadow-sm px-6 h-10 transition-all">
                             {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
                             <span className="hidden sm:inline">Guardar Cambios</span>
                             <span className="sm:hidden">Guardar</span>
@@ -138,13 +138,13 @@ export default function HorariosPosPage() {
                                         className={cn(
                                             "flex items-center gap-3 p-3 rounded-2xl border transition-all shrink-0 min-w-[180px] lg:min-w-full text-left",
                                             selectedUser?.id === u.id
-                                                ? "bg-violet-500/10 border-violet-500/30 text-violet-600 dark:text-violet-400"
+                                                ? "bg-[color:var(--primary)]/10 border-[color:var(--primary)]/30 text-[color:var(--primary)] dark:text-[color:var(--primary)]"
                                                 : "bg-card border-border/40 hover:bg-muted/50 text-foreground"
                                         )}
                                     >
                                         <div className={cn(
                                             "h-10 w-10 rounded-xl flex items-center justify-center font-black text-xs shrink-0",
-                                            selectedUser?.id === u.id ? "bg-violet-600 text-white shadow-md shadow-violet-500/20" : "bg-muted text-muted-foreground"
+                                            selectedUser?.id === u.id ? "bg-[color:var(--primary)] text-[color:var(--ui-fx-white)] shadow-md shadow-violet-500/20" : "bg-muted text-muted-foreground"
                                         )}>
                                             {u.nombre.substring(0, 2).toUpperCase()}
                                         </div>
@@ -169,7 +169,7 @@ export default function HorariosPosPage() {
                                     <div className="p-6 border-b border-border/40 flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-muted/5">
                                         <div>
                                             <h2 className="text-lg font-bold flex items-center gap-2">
-                                                <CalendarDays className="h-5 w-5 text-violet-500" />
+                                                <CalendarDays className="h-5 w-5 text-[color:var(--primary)]" />
                                                 Planificador Semanal
                                             </h2>
                                             <p className="text-sm text-muted-foreground mt-1">
@@ -177,7 +177,7 @@ export default function HorariosPosPage() {
                                             </p>
                                         </div>
                                         <Button variant="outline" size="sm" onClick={copyToAll} className="h-9 rounded-xl border-border/50 hover:bg-muted/50">
-                                            <Copy className="h-4 w-4 mr-2 text-violet-500" />
+                                            <Copy className="h-4 w-4 mr-2 text-[color:var(--primary)]" />
                                             Replicar a toda la semana
                                         </Button>
                                     </div>
@@ -200,7 +200,7 @@ export default function HorariosPosPage() {
                                                 >
                                                     <span className="text-[11px] md:text-xs font-bold uppercase">{dia}</span>
                                                     {horariosTemp[idx]?.activo ? (
-                                                        <div className={cn("h-1.5 w-1.5 rounded-full", activeDay === idx ? "bg-background" : "bg-emerald-500")} />
+                                                        <div className={cn("h-1.5 w-1.5 rounded-full", activeDay === idx ? "bg-background" : "bg-[color:var(--status-success-strong)]")} />
                                                     ) : (
                                                         <Ban className="h-3 w-3 opacity-50" />
                                                     )}
@@ -224,7 +224,7 @@ export default function HorariosPosPage() {
                                                             newArr[activeDay].activo = val;
                                                             setHorariosTemp(newArr);
                                                         }}
-                                                        className="data-[state=checked]:bg-emerald-500"
+                                                        className="data-[state=checked]:bg-[color:var(--status-success-strong)]"
                                                     />
                                                     <span className="text-sm font-medium text-muted-foreground">
                                                         {horariosTemp[activeDay]?.activo ? "Turno Habilitado" : "Acceso Restringido"}
@@ -245,7 +245,7 @@ export default function HorariosPosPage() {
                                                                 newArr[activeDay].horaInicio = e.target.value;
                                                                 setHorariosTemp(newArr);
                                                             }}
-                                                            className="bg-transparent text-lg font-bold outline-none cursor-pointer w-[90px] text-center focus:text-violet-600 transition-colors"
+                                                            className="bg-transparent text-lg font-bold outline-none cursor-pointer w-[90px] text-center focus:text-[color:var(--primary)] transition-colors"
                                                         />
                                                     </div>
                                                     <div className="h-10 w-[1px] bg-border" />
@@ -259,7 +259,7 @@ export default function HorariosPosPage() {
                                                                 newArr[activeDay].horaFin = e.target.value;
                                                                 setHorariosTemp(newArr);
                                                             }}
-                                                            className="bg-transparent text-lg font-bold outline-none cursor-pointer w-[90px] text-center focus:text-violet-600 transition-colors"
+                                                            className="bg-transparent text-lg font-bold outline-none cursor-pointer w-[90px] text-center focus:text-[color:var(--primary)] transition-colors"
                                                         />
                                                     </div>
                                                 </div>
@@ -269,9 +269,9 @@ export default function HorariosPosPage() {
                                 </Card>
 
                                 {/* NOTA DE SEGURIDAD */}
-                                <div className="bg-violet-500/10 border border-violet-500/20 rounded-2xl p-4 flex gap-4 items-start shadow-sm">
-                                    <ShieldCheck className="h-5 w-5 text-violet-500 shrink-0 mt-0.5" />
-                                    <p className="text-sm text-violet-700 dark:text-violet-400 font-medium leading-relaxed">
+                                <div className="bg-[color:var(--primary)]/10 border border-[color:var(--primary)]/20 rounded-2xl p-4 flex gap-4 items-start shadow-sm">
+                                    <ShieldCheck className="h-5 w-5 text-[color:var(--primary)] shrink-0 mt-0.5" />
+                                    <p className="text-sm text-[color:var(--primary)] dark:text-[color:var(--primary)] font-medium leading-relaxed">
                                         <b>Nota de Seguridad:</b> Si {selectedUser.nombre} intenta abrir una sesión de caja fuera del rango establecido para este día, el sistema bloqueará la operación automáticamente.
                                     </p>
                                 </div>

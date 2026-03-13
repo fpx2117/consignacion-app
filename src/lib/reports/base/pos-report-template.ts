@@ -1,6 +1,7 @@
 // src/lib/reports/base/pos-report-template.ts
 // Reporte de Ventas Directas (POS) - diseño premium con Tailwind
-import type { BrandingDTO } from "@/lib/reports/get-branding";
+import { reportThemeCss } from "@/lib/reports/report-theme";
+import type { BrandingDTO } from "@/lib/reports/types";
 
 // ─────────────────────────────────────────────
 // DATA TYPES
@@ -129,6 +130,7 @@ export function buildPosReportHtml(data: PosReportData, branding: BrandingDTO): 
   <meta charset="utf-8" />
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
+    ${reportThemeCss(branding.primaryColor)}
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap');
     body { font-family: 'Inter', sans-serif; -webkit-print-color-adjust: exact; }
     .money { font-feature-settings: "tnum"; font-variant-numeric: tabular-nums; }

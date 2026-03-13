@@ -22,10 +22,10 @@ export function WelcomeStep({ onNext }: WelcomeStepProps) {
         initial={{ scale: 0 }}
         animate={{ scale: 1 }}
         transition={{ type: "spring", stiffness: 200, damping: 20, delay: 0.2 }}
-        className="w-24 h-24 rounded-3xl bg-violet-600/10 border border-violet-500/20 flex items-center justify-center relative"
+        className="w-24 h-24 rounded-3xl bg-[color:var(--primary)]/10 border border-[color:var(--primary)]/20 flex items-center justify-center relative"
       >
-        <div className="absolute inset-0 bg-violet-500/20 blur-xl rounded-3xl" />
-        <Sparkles className="w-10 h-10 text-violet-500 relative z-10" />
+        <div className="absolute inset-0 bg-[color:var(--primary)]/20 blur-xl rounded-3xl" />
+        <Sparkles className="w-10 h-10 text-[color:var(--primary)] relative z-10" />
       </motion.div>
 
       {/* Title */}
@@ -37,7 +37,7 @@ export function WelcomeStep({ onNext }: WelcomeStepProps) {
           className="text-4xl md:text-5xl font-black tracking-tight"
         >
           Bienvenido a tu{" "}
-          <span className="bg-gradient-to-r from-violet-400 to-indigo-400 bg-clip-text text-transparent">
+          <span className="bg-gradient-to-r from-[color:var(--primary)] to-[color:var(--primary)] bg-clip-text text-transparent">
             Nuevo Ecosistema
           </span>
         </motion.h1>
@@ -64,10 +64,10 @@ export function WelcomeStep({ onNext }: WelcomeStepProps) {
             initial={{ opacity: 0, scale: 0.8 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: 0.7 + i * 0.1 }}
-            className="flex items-center gap-2.5 px-4 py-2.5 rounded-2xl bg-white/[0.04] border border-white/[0.06] backdrop-blur-sm"
+            className="flex items-center gap-2.5 px-4 py-2.5 rounded-2xl bg-card/[0.04] border border-[color:var(--ui-fx-white)]/[0.06] backdrop-blur-sm"
           >
-            <div className="h-8 w-8 rounded-lg bg-violet-500/10 flex items-center justify-center">
-              <f.icon className="h-4 w-4 text-violet-400" />
+            <div className="h-8 w-8 rounded-lg bg-[color:var(--primary)]/10 flex items-center justify-center">
+              <f.icon className="h-4 w-4 text-[color:var(--primary)]" />
             </div>
             <div className="text-left">
               <p className="text-xs font-bold text-foreground/90">{f.label}</p>

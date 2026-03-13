@@ -26,7 +26,7 @@ export function PaymentSelector({
               key="descuento"
               type="button"
               onClick={onOpenDescuento}
-              className="flex flex-col items-center justify-center rounded-xl font-bold border transition-all h-[52px] md:h-[64px] bg-card border-border hover:bg-emerald-50 text-emerald-600 focus-visible:ring-2"
+              className="flex flex-col items-center justify-center rounded-xl font-bold border transition-all h-[52px] md:h-[64px] bg-card border-border hover:bg-[color:var(--status-success-strong)] text-[color:var(--status-success-strong)] focus-visible:ring-2"
               aria-label="Aplicar descuento general"
             >
               <BadgePercent className="h-5 w-5 md:h-6 md:w-6 mb-1 opacity-80" aria-hidden="true" />

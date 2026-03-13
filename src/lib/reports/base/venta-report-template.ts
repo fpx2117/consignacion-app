@@ -1,4 +1,5 @@
-import type { BrandingDTO } from "@/lib/reports/get-branding";
+import { reportThemeCss } from "@/lib/reports/report-theme";
+import type { BrandingDTO } from "@/lib/reports/types";
 
 export interface VentaReportDTO {
   id: number;
@@ -97,6 +98,7 @@ export function buildVentaHtml(data: VentaReportDTO, branding: BrandingDTO) {
         <meta charset="utf-8" />
         <script src="https://cdn.tailwindcss.com"></script>
         <style>
+          ${reportThemeCss(branding.primaryColor)}
           @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&display=swap');
           body { font-family: 'Inter', sans-serif; -webkit-print-color-adjust: exact; }
           .money { font-feature-settings: "tnum"; font-variant-numeric: tabular-nums; }

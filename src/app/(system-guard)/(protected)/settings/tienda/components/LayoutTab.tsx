@@ -87,12 +87,12 @@ export function LayoutTab({ config, setConfig }: any) {
             <section className={cn(
                 "relative rounded-2xl border-2 overflow-hidden transition-all duration-500",
                 isLive
-                    ? "border-emerald-400/60 dark:border-emerald-500/40 bg-gradient-to-br from-emerald-50 via-emerald-50/50 to-background dark:from-emerald-950/30 dark:via-emerald-950/10 dark:to-background"
+                    ? "border-[color:var(--status-success-strong)]/60 dark:border-[color:var(--status-success-strong)]/40 bg-gradient-to-br from-[color:var(--status-success-strong)] via-[color:var(--status-success-strong)]/50 to-background dark:from-[color:var(--status-success-strong)]/30 dark:via-[color:var(--status-success-strong)]/10 dark:to-background"
                     : "border-border bg-muted/30"
             )}>
                 {/* Glow effect when live */}
                 {isLive && (
-                    <div className="absolute inset-0 bg-gradient-to-r from-emerald-400/5 via-transparent to-emerald-400/5 pointer-events-none" />
+                    <div className="absolute inset-0 bg-gradient-to-r from-[color:var(--status-success-strong)]/5 via-transparent to-[color:var(--status-success-strong)]/5 pointer-events-none" />
                 )}
 
                 <div className="relative p-5 flex items-center justify-between gap-4">
@@ -100,7 +100,7 @@ export function LayoutTab({ config, setConfig }: any) {
                         <div className={cn(
                             "h-11 w-11 rounded-xl flex items-center justify-center shrink-0 transition-all duration-500",
                             isLive
-                                ? "bg-emerald-500 text-white shadow-md shadow-emerald-500/25"
+                                ? "bg-[color:var(--status-success-strong)] text-[color:var(--ui-fx-white)] shadow-md shadow-emerald-500/25"
                                 : "bg-muted text-muted-foreground"
                         )}>
                             <Store className="h-5 w-5" />
@@ -111,10 +111,10 @@ export function LayoutTab({ config, setConfig }: any) {
                                 {isLive ? (
                                     <span className="flex items-center gap-1">
                                         <span className="relative flex h-2 w-2">
-                                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-                                            <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
+                                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[color:var(--status-success-strong)] opacity-75" />
+                                            <span className="relative inline-flex rounded-full h-2 w-2 bg-[color:var(--status-success-strong)]" />
                                         </span>
-                                        <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400">En línea</span>
+                                        <span className="text-[10px] font-bold text-[color:var(--status-success-strong)] dark:text-[color:var(--status-success-strong)]">En línea</span>
                                     </span>
                                 ) : (
                                     <span className="text-[10px] font-bold text-muted-foreground/60">Offline</span>
@@ -134,7 +134,7 @@ export function LayoutTab({ config, setConfig }: any) {
                                 asChild
                                 variant="outline"
                                 size="sm"
-                                className="rounded-lg text-xs font-bold h-8 border-emerald-300 dark:border-emerald-800 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-900/30 hidden sm:flex"
+                                className="rounded-lg text-xs font-bold h-8 border-[color:var(--status-success-strong)] dark:border-[color:var(--status-success-strong)] text-[color:var(--status-success-strong)] dark:text-[color:var(--status-success-strong)] hover:bg-[color:var(--status-success-strong)] dark:hover:bg-[color:var(--status-success-strong)]/30 hidden sm:flex"
                             >
                                 <a href={catalogoHref} target="_blank" rel="noopener noreferrer">
                                     <ExternalLink className="h-3.5 w-3.5 mr-1.5" />
@@ -147,7 +147,7 @@ export function LayoutTab({ config, setConfig }: any) {
                             onCheckedChange={(checked) => setConfig({ ...config, convertirTienda: checked })}
                             className={cn(
                                 "scale-110 origin-center",
-                                isLive && "data-[state=checked]:bg-emerald-500"
+                                isLive && "data-[state=checked]:bg-[color:var(--status-success-strong)]"
                             )}
                         />
                     </div>
@@ -300,7 +300,7 @@ export function LayoutTab({ config, setConfig }: any) {
                             <div className={cn(
                                 "h-8 w-8 rounded-lg flex items-center justify-center shrink-0 transition-all duration-200",
                                 config.mostrarPreciosConsignacion
-                                    ? "bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400"
+                                    ? "bg-[color:var(--status-warning)] dark:bg-[color:var(--status-warning)]/30 text-[color:var(--status-warning)] dark:text-[color:var(--status-warning)]"
                                     : "bg-muted text-muted-foreground/40"
                             )}>
                                 <Percent className="h-4 w-4" />
@@ -312,7 +312,7 @@ export function LayoutTab({ config, setConfig }: any) {
                                         !config.mostrarPreciosConsignacion && "text-muted-foreground"
                                     )}>Costo de Consignación</Label>
                                     {config.mostrarPreciosConsignacion && (
-                                        <Badge variant="secondary" className="text-[9px] bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 border-none h-4 px-1.5 rounded-md font-bold">Público</Badge>
+                                        <Badge variant="secondary" className="text-[9px] bg-[color:var(--status-warning)] dark:bg-[color:var(--status-warning)]/30 text-[color:var(--status-warning)] dark:text-[color:var(--status-warning)] border-none h-4 px-1.5 rounded-md font-bold">Público</Badge>
                                     )}
                                 </div>
                                 <p className="text-[11px] text-muted-foreground/70">Comisiones visibles a todos</p>

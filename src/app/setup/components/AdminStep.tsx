@@ -32,16 +32,16 @@ export function AdminStep({ data, onChange, onNext }: AdminStepProps) {
                 <motion.div
                     initial={{ scale: 0.8, opacity: 0 }}
                     animate={{ scale: 1, opacity: 1 }}
-                    className="w-16 h-16 rounded-2xl bg-indigo-600/10 border border-indigo-500/20 flex items-center justify-center mx-auto mb-6"
+                    className="w-16 h-16 rounded-2xl bg-[color:var(--primary)]/10 border border-[color:var(--primary)]/20 flex items-center justify-center mx-auto mb-6"
                 >
-                    <UserCog className="w-8 h-8 text-indigo-500" />
+                    <UserCog className="w-8 h-8 text-[color:var(--primary)]" />
                 </motion.div>
                 <h2 className="text-3xl font-black tracking-tight">Tu Perfil de Administrador</h2>
                 <p className="text-muted-foreground text-lg">La llave maestra para controlar todo el ecosistema.</p>
             </div>
 
             <div className="space-y-6 bg-card/40 backdrop-blur-md p-8 rounded-[2.5rem] border border-border/50 shadow-2xl relative">
-                <div className="absolute inset-0 bg-indigo-500/5 blur-3xl -z-10 rounded-full" />
+                <div className="absolute inset-0 bg-[color:var(--primary)]/5 blur-3xl -z-10 rounded-full" />
 
                 <div className="space-y-2">
                     <Label className="text-xs font-bold uppercase tracking-widest text-foreground/80 pl-2">Tu Nombre</Label>
@@ -51,7 +51,7 @@ export function AdminStep({ data, onChange, onNext }: AdminStepProps) {
                         onChange={(e) => onChange({ ...data, nombre: e.target.value })}
                         onKeyDown={handleKeyDown}
                         placeholder="Ej: John Doe"
-                        className="h-14 rounded-2xl bg-background/50 border-border/50 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 text-lg"
+                        className="h-14 rounded-2xl bg-background/50 border-border/50 focus:border-[color:var(--primary)] focus:ring-4 focus:ring-[color:var(--primary)]/10 text-lg"
                     />
                 </div>
 
@@ -63,7 +63,7 @@ export function AdminStep({ data, onChange, onNext }: AdminStepProps) {
                         onChange={(e) => onChange({ ...data, email: e.target.value })}
                         onKeyDown={handleKeyDown}
                         placeholder="john@empresa.com"
-                        className="h-14 rounded-2xl bg-background/50 border-border/50 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 text-lg"
+                        className="h-14 rounded-2xl bg-background/50 border-border/50 focus:border-[color:var(--primary)] focus:ring-4 focus:ring-[color:var(--primary)]/10 text-lg"
                     />
                 </div>
 
@@ -75,7 +75,7 @@ export function AdminStep({ data, onChange, onNext }: AdminStepProps) {
                             value={data.password}
                             onChange={(e) => onChange({ ...data, password: e.target.value })}
                             onKeyDown={handleKeyDown}
-                            className="h-14 rounded-2xl bg-background/50 border-border/50 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10"
+                            className="h-14 rounded-2xl bg-background/50 border-border/50 focus:border-[color:var(--primary)] focus:ring-4 focus:ring-[color:var(--primary)]/10"
                         />
                     </div>
                     <div className="space-y-2">
@@ -85,7 +85,7 @@ export function AdminStep({ data, onChange, onNext }: AdminStepProps) {
                             value={data.confirmPassword}
                             onChange={(e) => onChange({ ...data, confirmPassword: e.target.value })}
                             onKeyDown={handleKeyDown}
-                            className="h-14 rounded-2xl bg-background/50 border-border/50 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10"
+                            className="h-14 rounded-2xl bg-background/50 border-border/50 focus:border-[color:var(--primary)] focus:ring-4 focus:ring-[color:var(--primary)]/10"
                         />
                     </div>
                 </div>

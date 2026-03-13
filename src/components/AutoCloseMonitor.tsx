@@ -45,16 +45,16 @@ export function AutoCloseMonitor({ horaFin }: { horaFin: string | undefined }) {
 
     return (
         <AlertDialog open={showGracePeriod}>
-            <AlertDialogContent className="border-red-500 bg-red-50 dark:bg-red-950/20 border-2 rounded-[2.5rem] max-w-[400px]">
+            <AlertDialogContent className="border-[color:var(--status-danger)] bg-[color:var(--status-danger)] dark:bg-[color:var(--status-danger)]/20 border-2 rounded-[2.5rem] max-w-[400px]">
                 <AlertDialogHeader className="items-center text-center space-y-4">
-                    <div className="h-20 w-20 rounded-full bg-red-500 flex items-center justify-center animate-pulse shadow-lg shadow-red-500/40">
-                        <AlertOctagon className="h-10 w-10 text-white" />
+                    <div className="h-20 w-20 rounded-full bg-[color:var(--status-danger)] flex items-center justify-center animate-pulse shadow-lg shadow-red-500/40">
+                        <AlertOctagon className="h-10 w-10 text-[color:var(--ui-fx-white)]" />
                     </div>
                     <div className="space-y-2">
-                        <AlertDialogTitle className="text-2xl font-black text-red-600 dark:text-red-500">
+                        <AlertDialogTitle className="text-2xl font-black text-[color:var(--status-danger)] dark:text-[color:var(--status-danger)]">
                             ¡CIERRE AUTOMÁTICO!
                         </AlertDialogTitle>
-                        <AlertDialogDescription className="text-red-700 dark:text-red-400 font-bold text-base leading-tight">
+                        <AlertDialogDescription className="text-[color:var(--status-danger)] dark:text-[color:var(--status-danger)] font-bold text-base leading-tight">
                             Tu tiempo de extensión ha agotado. <br />
                             La terminal se bloqueará en:
                         </AlertDialogDescription>
@@ -62,14 +62,14 @@ export function AutoCloseMonitor({ horaFin }: { horaFin: string | undefined }) {
                 </AlertDialogHeader>
 
                 <div className="flex justify-center py-4">
-                    <span className="text-6xl font-black tabular-nums text-red-600 tracking-tighter">
+                    <span className="text-6xl font-black tabular-nums text-[color:var(--status-danger)] tracking-tighter">
                         00:{timeLeft?.toString().padStart(2, '0')}
                     </span>
                 </div>
 
                 <AlertDialogFooter>
                     <Button
-                        className="w-full h-14 rounded-2xl bg-red-600 hover:bg-red-700 text-white font-black text-lg gap-2"
+                        className="w-full h-14 rounded-2xl bg-[color:var(--status-danger)] hover:bg-[color:var(--status-danger)] text-[color:var(--ui-fx-white)] font-black text-lg gap-2"
                         onClick={() => router.push("/caja/cerrar")}
                     >
                         Realizar Arqueo Ahora <ArrowRight className="h-5 w-5" />

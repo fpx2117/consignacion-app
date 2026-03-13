@@ -48,7 +48,7 @@ export function VentaHeader({
           variant="outline"
           size="sm"
           type="button"
-          className="text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700 font-semibold text-xs h-8 rounded-lg focus-visible:ring-2"
+          className="text-[color:var(--status-danger)] border-[color:var(--status-danger)] hover:bg-[color:var(--status-danger)] hover:text-[color:var(--status-danger)] font-semibold text-xs h-8 rounded-lg focus-visible:ring-2"
           onClick={onCloseShift}
           aria-label="Cerrar turno de caja"
         >

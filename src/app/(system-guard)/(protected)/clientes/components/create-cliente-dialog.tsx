@@ -98,7 +98,7 @@ export function CreateClienteDialog({ onCreated, trigger }: CreateClienteDialogP
 
               <div className="space-y-2 group">
                 <Label htmlFor="nombre" className="text-xs font-medium ml-1 group-focus-within:text-primary transition-colors">
-                  Nombre Completo <span className="text-red-500">*</span>
+                  Nombre Completo <span className="text-[color:var(--status-danger)]">*</span>
                 </Label>
                 <div className="relative">
                   <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
@@ -109,7 +109,7 @@ export function CreateClienteDialog({ onCreated, trigger }: CreateClienteDialogP
                     className="pl-10 h-11 bg-muted/40 border-border/50 hover:bg-muted/70 focus:bg-background transition-all rounded-xl focus-visible:ring-primary/20 focus-visible:border-primary/50"
                   />
                 </div>
-                {errors.nombre && <span className="text-xs text-red-500 ml-1 font-medium">{errors.nombre.message as string}</span>}
+                {errors.nombre && <span className="text-xs text-[color:var(--status-danger)] ml-1 font-medium">{errors.nombre.message as string}</span>}
               </div>
             </div>
 

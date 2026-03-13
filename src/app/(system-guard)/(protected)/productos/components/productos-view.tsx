@@ -575,7 +575,7 @@ function ProductoRow({ p, idx, load, isLow, isOut }: { p: Producto; idx: number;
             );
           })()}
           {p.subcategoria && (
-            <span className="text-[10px] text-zinc-500 font-medium ml-1">
+            <span className="text-[10px] text-muted-foreground font-medium ml-1">
               {p.subcategoria.nombre}
             </span>
           )}
@@ -586,10 +586,10 @@ function ProductoRow({ p, idx, load, isLow, isOut }: { p: Producto; idx: number;
         {isOut ? (
           <Badge variant="destructive" className="rounded-full px-2 py-0 text-[10px] font-black uppercase">Agotado</Badge>
         ) : isLow ? (
-          <Badge className="bg-orange-500 hover:bg-orange-600 rounded-full px-2 py-0 text-[10px] font-black uppercase">Bajo Stock</Badge>
+          <Badge className="bg-[color:var(--status-warning)] hover:bg-[color:var(--status-warning)] rounded-full px-2 py-0 text-[10px] font-black uppercase">Bajo Stock</Badge>
         ) : (
-          <div className="flex items-center justify-center gap-1.5 text-emerald-600 dark:text-emerald-400">
-            <div className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+          <div className="flex items-center justify-center gap-1.5 text-[color:var(--status-success-strong)] dark:text-[color:var(--status-success-strong)]">
+            <div className="h-1.5 w-1.5 rounded-full bg-[color:var(--status-success-strong)] animate-pulse" />
             <span className="text-[10px] font-bold uppercase tracking-tight">Disponible</span>
           </div>
         )}
@@ -598,7 +598,7 @@ function ProductoRow({ p, idx, load, isLow, isOut }: { p: Producto; idx: number;
       <TableCell className="text-center">
         <span className={cn(
           "text-sm font-bold tabular-nums",
-          isOut ? "text-destructive" : isLow ? "text-orange-500" : "text-foreground"
+          isOut ? "text-destructive" : isLow ? "text-[color:var(--status-warning)]" : "text-foreground"
         )}>
           {p.stockDisponibleUnits}
         </span>
@@ -613,13 +613,13 @@ function ProductoRow({ p, idx, load, isLow, isOut }: { p: Producto; idx: number;
             <div className="flex flex-col items-center gap-0.5">
               <span className={cn(
                 "text-xs font-bold tabular-nums flex items-center gap-1",
-                expired ? "text-red-600" : soon ? "text-orange-500" : "text-muted-foreground"
+                expired ? "text-[color:var(--status-danger)]" : soon ? "text-[color:var(--status-warning)]" : "text-muted-foreground"
               )}>
                 <Calendar className="h-3 w-3" />
                 {formatDateSafe(p.fechaVencimiento)}
               </span>
-              {expired && <span className="text-[9px] font-black text-red-600 uppercase">Vencido</span>}
-              {soon && <span className="text-[9px] font-black text-orange-500 uppercase">Pronto</span>}
+              {expired && <span className="text-[9px] font-black text-[color:var(--status-danger)] uppercase">Vencido</span>}
+              {soon && <span className="text-[9px] font-black text-[color:var(--status-warning)] uppercase">Pronto</span>}
             </div>
           );
         })()}
@@ -628,7 +628,7 @@ function ProductoRow({ p, idx, load, isLow, isOut }: { p: Producto; idx: number;
       <TableCell className="text-right pr-6">
         <div className="flex flex-col items-end gap-0.5">
           <span className="font-black text-foreground text-sm tabular-nums">{formatMoney(p.precioVenta)}</span>
-          <span className="text-[10px] font-medium text-emerald-600 dark:text-emerald-500 bg-emerald-500/10 px-1.5 rounded-md tabular-nums">
+          <span className="text-[10px] font-medium text-[color:var(--status-success-strong)] dark:text-[color:var(--status-success-strong)] bg-[color:var(--status-success-strong)]/10 px-1.5 rounded-md tabular-nums">
             Margen: {formatMoney(Number(p.precioVenta) - Number(p.precioCosto))}
           </span>
         </div>
@@ -641,7 +641,7 @@ function ProductoRow({ p, idx, load, isLow, isOut }: { p: Producto; idx: number;
             producto={p}
             onUpdated={load}
             trigger={
-              <Button variant="ghost" size="icon" className="h-8 w-8 text-amber-600 hover:bg-amber-100 dark:hover:bg-amber-900/30 rounded-lg" title="Ajustar Stock">
+              <Button variant="ghost" size="icon" className="h-8 w-8 text-[color:var(--status-warning)] hover:bg-[color:var(--status-warning)] dark:hover:bg-[color:var(--status-warning)]/30 rounded-lg" title="Ajustar Stock">
                 <ArrowRightLeft className="h-4 w-4" />
               </Button>
             }
@@ -650,7 +650,7 @@ function ProductoRow({ p, idx, load, isLow, isOut }: { p: Producto; idx: number;
             producto={p}
             onUpdated={load}
             trigger={
-              <Button variant="ghost" size="icon" className="h-8 w-8 text-blue-600 hover:bg-blue-100 dark:hover:bg-blue-900/30 rounded-lg" title="Editar">
+              <Button variant="ghost" size="icon" className="h-8 w-8 text-[color:var(--theme-ocean-primary)] hover:bg-[color:var(--theme-ocean-primary)] dark:hover:bg-[color:var(--theme-ocean-primary)]/30 rounded-lg" title="Editar">
                 <Pencil className="h-4 w-4" />
               </Button>
             }
@@ -660,7 +660,7 @@ function ProductoRow({ p, idx, load, isLow, isOut }: { p: Producto; idx: number;
             nombre={p.nombre}
             onDeleted={load}
             trigger={
-              <Button variant="ghost" size="icon" className="h-8 w-8 text-red-600 hover:bg-red-100 dark:hover:bg-red-900/30 rounded-lg" title="Eliminar">
+              <Button variant="ghost" size="icon" className="h-8 w-8 text-[color:var(--status-danger)] hover:bg-[color:var(--status-danger)] dark:hover:bg-[color:var(--status-danger)]/30 rounded-lg" title="Eliminar">
                 <Trash2 className="h-4 w-4" />
               </Button>
             }
@@ -675,7 +675,7 @@ function MobileProductCard({ p, idx, load, isLow, isOut }: { p: Producto; idx: n
   return (
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: idx * 0.05 }}>
       <Card className="p-4 bg-card border-border/50 shadow-sm rounded-2xl relative overflow-hidden space-y-3">
-        <div className={cn("absolute left-0 top-0 bottom-0 w-1.5", isOut ? "bg-red-500" : isLow ? "bg-orange-500" : "bg-emerald-500")} />
+        <div className={cn("absolute left-0 top-0 bottom-0 w-1.5", isOut ? "bg-[color:var(--status-danger)]" : isLow ? "bg-[color:var(--status-warning)]" : "bg-[color:var(--status-success-strong)]")} />
 
         <div className="flex justify-between items-start pl-3 gap-3">
           <div className="h-14 w-14 rounded-xl bg-muted/50 border border-border/60 overflow-hidden flex items-center justify-center shrink-0">
@@ -698,7 +698,7 @@ function MobileProductCard({ p, idx, load, isLow, isOut }: { p: Producto; idx: n
                       {catName}
                     </Badge>
                     {p.subcategoria && (
-                      <span className="text-[10px] text-zinc-500 font-medium ml-1">
+                      <span className="text-[10px] text-muted-foreground font-medium ml-1">
                         {p.subcategoria.nombre}
                       </span>
                     )}
@@ -721,12 +721,12 @@ function MobileProductCard({ p, idx, load, isLow, isOut }: { p: Producto; idx: n
           return (
             <div className={cn(
               "flex items-center gap-1.5 pl-3 text-[11px] font-bold",
-              expired ? "text-red-600" : soon ? "text-orange-500" : "text-muted-foreground"
+              expired ? "text-[color:var(--status-danger)]" : soon ? "text-[color:var(--status-warning)]" : "text-muted-foreground"
             )}>
               <Calendar className="h-3 w-3" />
               Vence: {formatDateSafe(p.fechaVencimiento)}
               {expired && <Badge variant="destructive" className="text-[9px] h-4 px-1 rounded-md ml-1">Vencido</Badge>}
-              {soon && <Badge className="bg-orange-500 text-[9px] h-4 px-1 rounded-md ml-1">Pronto</Badge>}
+              {soon && <Badge className="bg-[color:var(--status-warning)] text-[9px] h-4 px-1 rounded-md ml-1">Pronto</Badge>}
             </div>
           );
         })()}
@@ -735,7 +735,7 @@ function MobileProductCard({ p, idx, load, isLow, isOut }: { p: Producto; idx: n
           <div className="flex items-center gap-2">
             <span className={cn(
               "text-xs font-bold px-2 py-1 rounded-md flex items-center gap-1",
-              isOut ? "bg-red-500/10 text-red-600" : isLow ? "bg-orange-500/10 text-orange-600" : "bg-emerald-500/10 text-emerald-600"
+              isOut ? "bg-[color:var(--status-danger)]/10 text-[color:var(--status-danger)]" : isLow ? "bg-[color:var(--status-warning)]/10 text-[color:var(--status-warning)]" : "bg-[color:var(--status-success-strong)]/10 text-[color:var(--status-success-strong)]"
             )}>
               <Package className="h-3.5 w-3.5" />
               {p.stockDisponibleUnits} uds.
@@ -756,7 +756,7 @@ function MobileProductCard({ p, idx, load, isLow, isOut }: { p: Producto; idx: n
                 onUpdated={load}
                 trigger={
                   <DropdownMenuItem
-                    className="flex items-center gap-2.5 font-semibold text-amber-600 dark:text-amber-400 cursor-pointer rounded-lg focus:text-amber-600 focus:bg-amber-50 dark:focus:bg-amber-950/40"
+                    className="flex items-center gap-2.5 font-semibold text-[color:var(--status-warning)] dark:text-[color:var(--status-warning)] cursor-pointer rounded-lg focus:text-[color:var(--status-warning)] focus:bg-[color:var(--status-warning)] dark:focus:bg-[color:var(--status-warning)]/40"
                     onSelect={(e) => e.preventDefault()}
                   >
                     <ArrowRightLeft className="h-4 w-4" />
@@ -770,7 +770,7 @@ function MobileProductCard({ p, idx, load, isLow, isOut }: { p: Producto; idx: n
                 onUpdated={load}
                 trigger={
                   <DropdownMenuItem
-                    className="flex items-center gap-2.5 font-semibold text-blue-600 dark:text-blue-400 cursor-pointer rounded-lg focus:text-blue-600 focus:bg-blue-50 dark:focus:bg-blue-950/40"
+                    className="flex items-center gap-2.5 font-semibold text-[color:var(--theme-ocean-primary)] dark:text-[color:var(--theme-ocean-primary)] cursor-pointer rounded-lg focus:text-[color:var(--theme-ocean-primary)] focus:bg-[color:var(--theme-ocean-primary)] dark:focus:bg-[color:var(--theme-ocean-primary)]/40"
                     onSelect={(e) => e.preventDefault()}
                   >
                     <Pencil className="h-4 w-4" />
@@ -786,7 +786,7 @@ function MobileProductCard({ p, idx, load, isLow, isOut }: { p: Producto; idx: n
                 onDeleted={load}
                 trigger={
                   <DropdownMenuItem
-                    className="flex items-center gap-2.5 font-semibold text-red-600 dark:text-red-400 cursor-pointer rounded-lg focus:text-red-600 focus:bg-red-50 dark:focus:bg-red-950/40"
+                    className="flex items-center gap-2.5 font-semibold text-[color:var(--status-danger)] dark:text-[color:var(--status-danger)] cursor-pointer rounded-lg focus:text-[color:var(--status-danger)] focus:bg-[color:var(--status-danger)] dark:focus:bg-[color:var(--status-danger)]/40"
                     onSelect={(e) => e.preventDefault()}
                   >
                     <Trash2 className="h-4 w-4" />
@@ -805,10 +805,10 @@ function MobileProductCard({ p, idx, load, isLow, isOut }: { p: Producto; idx: n
 function StatCard({ label, value, icon: Icon, color = "default", trend, trendUp }: StatCardProps) {
   const colors = {
     default: "bg-primary/5 text-primary",
-    blue: "bg-blue-500/10 text-blue-600",
-    emerald: "bg-emerald-500/10 text-emerald-600",
-    orange: "bg-orange-500/10 text-orange-600",
-    red: "bg-red-500/10 text-red-600",
+    blue: "bg-[color:var(--theme-ocean-primary)]/10 text-[color:var(--theme-ocean-primary)]",
+    emerald: "bg-[color:var(--status-success-strong)]/10 text-[color:var(--status-success-strong)]",
+    orange: "bg-[color:var(--status-warning)]/10 text-[color:var(--status-warning)]",
+    red: "bg-[color:var(--status-danger)]/10 text-[color:var(--status-danger)]",
   };
 
   return (
@@ -828,7 +828,7 @@ function StatCard({ label, value, icon: Icon, color = "default", trend, trendUp 
             <h3 className="text-2xl font-black tracking-tight text-foreground">{value}</h3>
           </div>
           {trend && (
-            <p className={cn("text-[10px] font-bold flex items-center gap-1", trendUp ? "text-emerald-600" : "text-red-500")}>
+            <p className={cn("text-[10px] font-bold flex items-center gap-1", trendUp ? "text-[color:var(--status-success-strong)]" : "text-[color:var(--status-danger)]")}>
               {trendUp ? <TrendingUp className="h-3 w-3" /> : <AlertCircle className="h-3 w-3" />}
               {trend}
             </p>
@@ -873,8 +873,8 @@ function DeleteButton({ id, nombre, onDeleted, trigger }: { id: number; nombre: 
       <AlertDialog open={open} onOpenChange={setOpen}>
         <AlertDialogContent className="rounded-2xl border-none shadow-2xl">
           <AlertDialogHeader>
-            <div className="mx-auto bg-red-100 dark:bg-red-900/30 p-3 rounded-full w-fit mb-2">
-              <AlertCircle className="h-8 w-8 text-red-600" />
+            <div className="mx-auto bg-[color:var(--status-danger)] dark:bg-[color:var(--status-danger)]/30 p-3 rounded-full w-fit mb-2">
+              <AlertCircle className="h-8 w-8 text-[color:var(--status-danger)]" />
             </div>
             <AlertDialogTitle className="text-xl font-bold text-center">Â¿Eliminar producto?</AlertDialogTitle>
             <AlertDialogDescription className="text-center text-muted-foreground">
@@ -884,7 +884,7 @@ function DeleteButton({ id, nombre, onDeleted, trigger }: { id: number; nombre: 
           <AlertDialogFooter className="grid grid-cols-2 gap-3 sm:flex-row sm:justify-center pt-2">
             <AlertDialogCancel className="h-11 rounded-xl mt-0" onClick={() => setOpen(false)}>Cancelar</AlertDialogCancel>
             <AlertDialogAction
-              className="h-11 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold"
+              className="h-11 rounded-xl bg-[color:var(--status-danger)] hover:bg-[color:var(--status-danger)] text-[color:var(--ui-fx-white)] font-bold"
               onClick={(e) => {
                 e.preventDefault();
                 handleDelete();

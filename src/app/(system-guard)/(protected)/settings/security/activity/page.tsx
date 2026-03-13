@@ -56,37 +56,37 @@ function LogDetailFormatter({ log }: { log: any }) {
         case "LOGIN":
             summary = `Sesión iniciada: ${details.email || "usuario"}`;
             Icon = LogIn;
-            iconColor = "text-emerald-500";
+            iconColor = "text-[color:var(--status-success-strong)]";
             break;
         case "LOGOUT":
             summary = "Sesión cerrada";
             Icon = LogOut;
-            iconColor = "text-amber-500";
+            iconColor = "text-[color:var(--status-warning)]";
             break;
         case "REVOKE_SESSION":
             summary = "Sesión revocada forzosamente";
             Icon = Shield;
-            iconColor = "text-red-500";
+            iconColor = "text-[color:var(--status-danger)]";
             break;
         case "STOCK_ADJUSTMENT":
             summary = `Ajuste stock (${details.cantidad > 0 ? "+" : ""}${details.cantidad})`;
             Icon = RefreshCcw;
-            iconColor = "text-blue-500";
+            iconColor = "text-[color:var(--theme-ocean-primary)]";
             break;
         case "CREATE_PRODUCT":
             summary = `Producto nuevo: ${details.nombre}`;
             Icon = PlusCircle;
-            iconColor = "text-emerald-500";
+            iconColor = "text-[color:var(--status-success-strong)]";
             break;
         case "UPDATE_PRODUCT":
             summary = `Edición: ${details.nombre}`;
             Icon = RefreshCcw;
-            iconColor = "text-sky-500";
+            iconColor = "text-[color:var(--theme-ocean-primary)]";
             break;
         case "DELETE_PRODUCT":
             summary = `Eliminado: ${details.nombre}`;
             Icon = Trash2;
-            iconColor = "text-red-500";
+            iconColor = "text-[color:var(--status-danger)]";
             break;
         default:
             summary = "Ver detalles técnicos";
@@ -125,7 +125,7 @@ function LogDetailFormatter({ log }: { log: any }) {
                     <div className="p-8 pt-10 space-y-8 relative">
                         <DialogHeader className="space-y-4">
                             <div className="flex items-center gap-4">
-                                <div className={cn("h-14 w-14 rounded-[1.25rem] flex items-center justify-center shadow-lg border border-white/10", iconColor.replace("text-", "bg-").replace("-500", "-500/20"))}>
+                                <div className={cn("h-14 w-14 rounded-[1.25rem] flex items-center justify-center shadow-lg border border-[color:var(--ui-fx-white)]/10", iconColor.replace("text-", "bg-").replace("-500", "-500/20"))}>
                                     <Icon className={cn("h-7 w-7", iconColor)} />
                                 </div>
                                 <div className="space-y-1 text-left">
@@ -315,9 +315,9 @@ export default function ActivityLogPage() {
                                         <td className="px-6 py-4">
                                             <span className={cn(
                                                 "px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest border",
-                                                log.action === "LOGIN" ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/20" :
-                                                    log.action === "DELETE" ? "bg-red-500/10 text-red-500 border-red-500/20" :
-                                                        "bg-blue-500/10 text-blue-500 border-blue-500/20"
+                                                log.action === "LOGIN" ? "bg-[color:var(--status-success-strong)]/10 text-[color:var(--status-success-strong)] border-[color:var(--status-success-strong)]/20" :
+                                                    log.action === "DELETE" ? "bg-[color:var(--status-danger)]/10 text-[color:var(--status-danger)] border-[color:var(--status-danger)]/20" :
+                                                        "bg-[color:var(--theme-ocean-primary)]/10 text-[color:var(--theme-ocean-primary)] border-[color:var(--theme-ocean-primary)]/20"
                                             )}>
                                                 {log.action}
                                             </span>

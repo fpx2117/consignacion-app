@@ -1,4 +1,5 @@
-import type { BrandingDTO } from "./get-branding";
+import { REPORT_COLORS } from "./report-theme";
+import type { BrandingDTO } from "./types";
 
 /**
  * Header HTML reutilizable para todos los reportes.
@@ -10,7 +11,7 @@ export function brandingHeaderHtml(b: BrandingDTO) {
     .map(escapeHtml)
     .join(" · ");
 
-  const color = safeCssColor(b.primaryColor, "#111827");
+  const color = safeCssColor(b.primaryColor, REPORT_COLORS.text);
 
   // ✅ Por seguridad/consistencia con Puppeteer: logoUrl debe ser absoluta (http/https)
   const logo =
@@ -19,13 +20,13 @@ export function brandingHeaderHtml(b: BrandingDTO) {
       : "";
 
   return `
-  <div style="display:flex; align-items:center; gap:12px; padding-bottom:10px; border-bottom:1px solid #e5e7eb;">
+  <div style="display:flex; align-items:center; gap:12px; padding-bottom:10px; border-bottom:1px solid ${REPORT_COLORS.line};">
     ${logo}
     <div>
       <div style="font-size:18px; font-weight:700; color:${color}; line-height:1.1;">
         ${escapeHtml(b.businessName)}
       </div>
-      ${metaLine ? `<div style="font-size:12px; color:#6b7280;">${metaLine}</div>` : ""}
+      ${metaLine ? `<div style="font-size:12px; color:${REPORT_COLORS.textMuted};">${metaLine}</div>` : ""}
     </div>
   </div>
   `;
@@ -41,7 +42,7 @@ export function brandingFooterHtml(b: BrandingDTO) {
   if (!txt) return "";
 
   return `
-    <div style="margin-top:14px; font-size:11px; color:#6b7280;">
+    <div style="margin-top:14px; font-size:11px; color:${REPORT_COLORS.textMuted};">
       ${escapeHtml(txt)}
     </div>
   `;
@@ -78,8 +79,9 @@ function safeCssColor(input: unknown, fallback: string) {
   const hex = /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/;
   const rgb = /^rgba?\(\s*\d{1,3}\s*,\s*\d{1,3}\s*,\s*\d{1,3}(\s*,\s*(0|1|0?\.\d+))?\s*\)$/;
   const hsl = /^hsla?\(\s*\d{1,3}\s*,\s*\d{1,3}%\s*,\s*\d{1,3}%(\s*,\s*(0|1|0?\.\d+))?\s*\)$/;
+  const cssVar = /^var\(\s*--[a-zA-Z0-9-_]+\s*\)$/;
 
-  if (hex.test(v) || rgb.test(v) || hsl.test(v)) return v;
+  if (hex.test(v) || rgb.test(v) || hsl.test(v) || cssVar.test(v)) return v;
   return fallback;
 }
 

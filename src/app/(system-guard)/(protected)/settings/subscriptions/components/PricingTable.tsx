@@ -48,7 +48,7 @@ function DowngradeWarningModal({ targetPlan, currentPlan, currency, onConfirm, o
                 onClick={onCancel}
             >
                 {/* Backdrop */}
-                <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" />
+                <div className="absolute inset-0 bg-foreground/70 backdrop-blur-sm" />
 
                 {/* Modal */}
                 <motion.div
@@ -60,7 +60,7 @@ function DowngradeWarningModal({ targetPlan, currentPlan, currency, onConfirm, o
                     onClick={(e) => e.stopPropagation()}
                 >
                     {/* Warning Header */}
-                    <div className="relative px-8 pt-8 pb-6 bg-gradient-to-br from-amber-500/10 via-orange-500/5 to-transparent border-b border-border/50">
+                    <div className="relative px-8 pt-8 pb-6 bg-gradient-to-br from-[color:var(--status-warning)]/10 via-[color:var(--status-warning)]/5 to-transparent border-b border-border/50">
                         <button
                             onClick={onCancel}
                             className="absolute top-5 right-5 p-1.5 rounded-full hover:bg-muted/80 text-muted-foreground transition-colors"
@@ -69,11 +69,11 @@ function DowngradeWarningModal({ targetPlan, currentPlan, currency, onConfirm, o
                         </button>
 
                         <div className="flex items-center gap-4">
-                            <div className="h-14 w-14 rounded-2xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center flex-shrink-0">
-                                <AlertTriangle className="h-7 w-7 text-amber-500" />
+                            <div className="h-14 w-14 rounded-2xl bg-[color:var(--status-warning)]/15 border border-[color:var(--status-warning)]/30 flex items-center justify-center flex-shrink-0">
+                                <AlertTriangle className="h-7 w-7 text-[color:var(--status-warning)]" />
                             </div>
                             <div>
-                                <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-500 text-[10px] font-black uppercase tracking-widest mb-1">
+                                <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[color:var(--status-warning)]/10 border border-[color:var(--status-warning)]/20 text-[color:var(--status-warning)] text-[10px] font-black uppercase tracking-widest mb-1">
                                     <TrendingDown className="h-3 w-3" />
                                     Bajada de plan
                                 </div>
@@ -95,12 +95,12 @@ function DowngradeWarningModal({ targetPlan, currentPlan, currency, onConfirm, o
                         </p>
 
                         {/* Lost features */}
-                        <div className="rounded-2xl border border-amber-500/20 bg-amber-500/5 p-4 space-y-3">
+                        <div className="rounded-2xl border border-[color:var(--status-warning)]/20 bg-[color:var(--status-warning)]/5 p-4 space-y-3">
                             {lostFeatures.length > 0 ? (
                                 lostFeatures.map((feature, i) => (
                                     <div key={i} className="flex items-center gap-3">
-                                        <div className="h-5 w-5 rounded-full bg-red-500/15 border border-red-500/20 flex items-center justify-center flex-shrink-0">
-                                            <X className="h-3 w-3 text-red-500" />
+                                        <div className="h-5 w-5 rounded-full bg-[color:var(--status-danger)]/15 border border-[color:var(--status-danger)]/20 flex items-center justify-center flex-shrink-0">
+                                            <X className="h-3 w-3 text-[color:var(--status-danger)]" />
                                         </div>
                                         <span className="text-sm font-semibold text-foreground/80 line-through decoration-red-500/50">
                                             {feature}
@@ -111,8 +111,8 @@ function DowngradeWarningModal({ targetPlan, currentPlan, currency, onConfirm, o
                                 // Fallback: show current plan features as lost
                                 currentPlan.features.map((feature, i) => (
                                     <div key={i} className="flex items-center gap-3">
-                                        <div className="h-5 w-5 rounded-full bg-red-500/15 border border-red-500/20 flex items-center justify-center flex-shrink-0">
-                                            <X className="h-3 w-3 text-red-500" />
+                                        <div className="h-5 w-5 rounded-full bg-[color:var(--status-danger)]/15 border border-[color:var(--status-danger)]/20 flex items-center justify-center flex-shrink-0">
+                                            <X className="h-3 w-3 text-[color:var(--status-danger)]" />
                                         </div>
                                         <span className="text-sm font-semibold text-foreground/80">
                                             {feature}
@@ -137,7 +137,7 @@ function DowngradeWarningModal({ targetPlan, currentPlan, currency, onConfirm, o
                         </button>
                         <button
                             onClick={onConfirm}
-                            className="flex-1 py-3.5 px-4 rounded-2xl bg-amber-500 hover:bg-amber-400 text-white font-black text-xs uppercase tracking-widest transition-all duration-200 shadow-lg shadow-amber-500/20 hover:shadow-amber-500/40 active:scale-[0.97]"
+                            className="flex-1 py-3.5 px-4 rounded-2xl bg-[color:var(--status-warning)] hover:bg-[color:var(--status-warning)] text-[color:var(--ui-fx-white)] font-black text-xs uppercase tracking-widest transition-all duration-200 shadow-lg shadow-amber-500/20 hover:shadow-amber-500/40 active:scale-[0.97]"
                         >
                             Sí, bajar plan
                         </button>
@@ -218,7 +218,7 @@ export function PricingTable({ onSelectPlan, currentPlanId }: PricingTableProps)
             <div className="py-20 px-4 sm:px-6 lg:px-8 relative overflow-hidden">
                 {/* Background Accents */}
                 <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-primary/5 rounded-full blur-[120px] -z-10 animate-pulse" />
-                <div className="absolute bottom-0 right-1/4 w-[400px] h-[400px] bg-indigo-500/5 rounded-full blur-[100px] -z-10" />
+                <div className="absolute bottom-0 right-1/4 w-[400px] h-[400px] bg-[color:var(--primary)]/5 rounded-full blur-[100px] -z-10" />
 
                 <div className="text-center mb-20 space-y-4">
                     <motion.div
@@ -291,7 +291,7 @@ export function PricingTable({ onSelectPlan, currentPlanId }: PricingTableProps)
                         >
                             {plan.popular && (
                                 <div className="absolute top-0 right-10 -translate-y-1/2">
-                                    <span className="inline-flex items-center px-4 py-1.5 rounded-full text-[10px] font-black bg-white text-primary uppercase tracking-widest shadow-lg">
+                                    <span className="inline-flex items-center px-4 py-1.5 rounded-full text-[10px] font-black bg-card text-primary uppercase tracking-widest shadow-lg">
                                         Recomendado
                                     </span>
                                 </div>
@@ -300,11 +300,11 @@ export function PricingTable({ onSelectPlan, currentPlanId }: PricingTableProps)
                             <div className="mb-10">
                                 <h3 className={cn(
                                     "text-2xl font-black tracking-tight mb-2",
-                                    plan.popular ? "text-white" : "text-foreground group-hover/card:text-primary transition-colors"
+                                    plan.popular ? "text-[color:var(--ui-fx-white)]" : "text-foreground group-hover/card:text-primary transition-colors"
                                 )}>{plan.nombre}</h3>
                                 <p className={cn(
                                     "text-sm font-medium leading-relaxed",
-                                    plan.popular ? "text-white/80" : "text-muted-foreground"
+                                    plan.popular ? "text-[color:var(--ui-fx-white)]/80" : "text-muted-foreground"
                                 )}>{plan.descripcion}</p>
                             </div>
 
@@ -312,7 +312,7 @@ export function PricingTable({ onSelectPlan, currentPlanId }: PricingTableProps)
                                 <div className="flex items-baseline gap-1">
                                     <span className={cn(
                                         "text-5xl font-black tracking-tighter",
-                                        plan.popular ? "text-white" : "text-foreground"
+                                        plan.popular ? "text-[color:var(--ui-fx-white)]" : "text-foreground"
                                     )}>
                                         {currency === "ARS" ? "$" : "U$D"}
                                         {currency === "ARS" ?
@@ -323,7 +323,7 @@ export function PricingTable({ onSelectPlan, currentPlanId }: PricingTableProps)
                                     </span>
                                     <span className={cn(
                                         "text-sm font-bold uppercase tracking-widest",
-                                        plan.popular ? "text-white/60" : "text-muted-foreground"
+                                        plan.popular ? "text-[color:var(--ui-fx-white)]/60" : "text-muted-foreground"
                                     )}>/ mes</span>
                                 </div>
                             </div>
@@ -333,13 +333,13 @@ export function PricingTable({ onSelectPlan, currentPlanId }: PricingTableProps)
                                     <li key={index} className="flex items-start gap-4 group/feat">
                                         <div className={cn(
                                             "h-5 w-5 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 transition-transform group-hover/feat:scale-110",
-                                            plan.popular ? "bg-white/20" : "bg-primary/10"
+                                            plan.popular ? "bg-card/20" : "bg-primary/10"
                                         )}>
-                                            <Check className={cn("h-3 w-3", plan.popular ? "text-white" : "text-primary")} />
+                                            <Check className={cn("h-3 w-3", plan.popular ? "text-[color:var(--ui-fx-white)]" : "text-primary")} />
                                         </div>
                                         <span className={cn(
                                             "text-sm font-medium",
-                                            plan.popular ? "text-white/90" : "text-foreground/80"
+                                            plan.popular ? "text-[color:var(--ui-fx-white)]/90" : "text-foreground/80"
                                         )}>{feature}</span>
                                     </li>
                                 ))}
@@ -353,7 +353,7 @@ export function PricingTable({ onSelectPlan, currentPlanId }: PricingTableProps)
                                     plan.id === currentPlanId
                                         ? "bg-secondary text-muted-foreground border border-border cursor-default"
                                         : plan.popular
-                                            ? "bg-white text-primary hover:bg-opacity-90 shadow-xl"
+                                            ? "bg-card text-primary hover:bg-opacity-90 shadow-xl"
                                             : "bg-primary text-primary-foreground hover:shadow-[0_10px_20px_-10px_rgba(var(--primary),0.5)]"
                                 )}
                             >

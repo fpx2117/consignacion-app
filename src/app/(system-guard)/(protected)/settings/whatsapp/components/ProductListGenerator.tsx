@@ -106,7 +106,7 @@ export function ProductListGenerator({ value, onChange }: ProductListGeneratorPr
                 <div className="flex items-center gap-3">
                     <Badge
                         variant="secondary"
-                        className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20 font-semibold text-xs"
+                        className="bg-[color:var(--status-success-strong)]/10 text-[color:var(--status-success-strong)] dark:text-[color:var(--status-success-strong)] border-[color:var(--status-success-strong)]/20 font-semibold text-xs"
                     >
                         Generador de lista
                     </Badge>
@@ -123,7 +123,7 @@ export function ProductListGenerator({ value, onChange }: ProductListGeneratorPr
                         size="sm"
                         onClick={generateProductListText}
                         disabled={fetching}
-                        className="h-8 cursor-pointer gap-1.5 rounded-lg text-emerald-600 hover:bg-emerald-500/10 hover:text-emerald-600 transition-colors"
+                        className="h-8 cursor-pointer gap-1.5 rounded-lg text-[color:var(--status-success-strong)] hover:bg-[color:var(--status-success-strong)]/10 hover:text-[color:var(--status-success-strong)] transition-colors"
                     >
                         <RefreshCw className={cn("h-3.5 w-3.5", fetching && "animate-spin")} />
                         <span className="text-xs font-semibold">{fetching ? "Generando…" : "Generar"}</span>
@@ -136,7 +136,7 @@ export function ProductListGenerator({ value, onChange }: ProductListGeneratorPr
                         className="h-8 cursor-pointer gap-1.5 rounded-lg text-muted-foreground hover:bg-foreground/5 hover:text-foreground transition-colors"
                     >
                         {copied ? (
-                            <ClipboardCheck className="h-3.5 w-3.5 text-emerald-500" />
+                            <ClipboardCheck className="h-3.5 w-3.5 text-[color:var(--status-success-strong)]" />
                         ) : (
                             <Copy className="h-3.5 w-3.5" />
                         )}
@@ -161,7 +161,7 @@ export function ProductListGenerator({ value, onChange }: ProductListGeneratorPr
                         <Button
                             onClick={generateProductListText}
                             disabled={fetching}
-                            className="mt-2 h-9 cursor-pointer gap-2 rounded-lg bg-emerald-600 px-4 text-xs font-semibold text-white hover:bg-emerald-700 transition-colors"
+                            className="mt-2 h-9 cursor-pointer gap-2 rounded-lg bg-[color:var(--status-success-strong)] px-4 text-xs font-semibold text-[color:var(--ui-fx-white)] hover:bg-[color:var(--status-success-strong)] transition-colors"
                         >
                             <RefreshCw className={cn("h-3.5 w-3.5", fetching && "animate-spin")} />
                             Generar lista de productos
