@@ -2,6 +2,7 @@
 // @ts-nocheck
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { registerCatalogVisit } from "@/lib/analytics/catalog-visit";
 
 export async function GET(req: Request) {
     const { searchParams } = new URL(req.url);
@@ -29,6 +30,15 @@ export async function GET(req: Request) {
 
         if (!config || !config.mostrarListaPrecios) {
             return NextResponse.json({ error: "La lista de precios no está habilitada" }, { status: 403 });
+        }
+
+        try {
+            await registerCatalogVisit({
+                sucursalId: config.sucursalId,
+                headers: req.headers,
+            });
+        } catch (visitError) {
+            console.warn("Catalog visit tracking failed:", visitError);
         }
 
         const where: any = { activo: true };

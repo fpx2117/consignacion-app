@@ -77,6 +77,8 @@ export async function GET(
             tendenciaSeries,
             gastosPropiosAgg,
             gastosLinksData,
+            catalogoVisitas,
+            catalogoVisitantes,
         ] = await Promise.all([
             // Stock
             prisma.stockSucursal.aggregate({ where: sucursalWhere, _sum: { stockDisponibleUnits: true, stockConsignadoUnits: true } }),
@@ -175,6 +177,21 @@ export async function GET(
                 },
                 orderBy: { gasto: { fecha: "asc" } },
             }),
+
+            // Catalogo (visitas)
+            (prisma as any).catalogVisit.count({
+                where: {
+                    sucursalId,
+                    ...(dateWhere ? { visitedAt: dateWhere } : {}),
+                },
+            }),
+            (prisma as any).catalogVisit.groupBy({
+                by: ["visitorHash"],
+                where: {
+                    sucursalId,
+                    ...(dateWhere ? { visitedAt: dateWhere } : {}),
+                },
+            }),
         ]);
 
         // 2. Calculations
@@ -269,6 +286,8 @@ export async function GET(
             ingresosCaja: Number(pagosAgg._sum?.monto ?? 0),
             cantidadVentas: ventasAgg._count?._all ?? 0,
             cantidadPagos: pagosAgg._count?._all ?? 0,
+            catalogoVisitas,
+            catalogoVisitantesUnicos: catalogoVisitantes.length,
             stockDisponible: stockAgg._sum?.stockDisponibleUnits ?? 0,
             stockConsignado: stockAgg._sum?.stockConsignadoUnits ?? 0,
             consignacionesAbiertas: consigAbiertas,

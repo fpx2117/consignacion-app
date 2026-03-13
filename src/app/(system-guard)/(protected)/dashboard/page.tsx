@@ -66,7 +66,16 @@ export default function DashboardPage() {
 
   // --- KPIs OPERATIVOS (array filtrado) ---
   const operativeKpis: KpiConfig[] = React.useMemo(() => {
-    const items: KpiConfig[] = [];
+    const items: KpiConfig[] = [
+      {
+        key: "catalogo-visitas",
+        title: "Visitas Catalogo",
+        value: formatNumber(kpis?.catalogo?.visitas ?? 0),
+        subtitle: `${formatNumber(kpis?.catalogo?.visitantesUnicos ?? 0)} visitantes unicos`,
+        icon: Store,
+        loading,
+      },
+    ];
 
     if (filter === "all" || filter === "consignacion") {
       items.push(

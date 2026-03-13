@@ -20,6 +20,10 @@ export async function getDashboardKpis(sucursalId: number, period: DashboardPeri
     // Si sucursalId es 0 y es admin, no filtramos por sucursal (Vista Global)
     const isGlobal = sucursalId === 0 && isAdmin;
     const sucursalWhere = isGlobal ? {} : { sucursalId };
+    const catalogVisitWhere = {
+        ...sucursalWhere,
+        ...(dateWhere ? { visitedAt: dateWhere } : {}),
+    };
 
     const [
         counts,
@@ -34,7 +38,9 @@ export async function getDashboardKpis(sucursalId: number, period: DashboardPeri
         proximosVencimientosLinks,
         config,
         saldoClientesAgg,
-        roturasData
+        roturasData,
+        catalogVisitsCount,
+        catalogVisitorsUnique
     ] = await Promise.all([
         // 1. Conteos de Consignaciones
         prisma.consignacion.count({ where: sucursalWhere }),
@@ -139,6 +145,14 @@ export async function getDashboardKpis(sucursalId: number, period: DashboardPeri
                 units: true,
                 producto: { select: { precioCosto: true } }
             }
+        }),
+        // 14. Visitas catalogo (dedupe por bucket)
+        (prisma as any).catalogVisit.count({
+            where: catalogVisitWhere,
+        }),
+        (prisma as any).catalogVisit.groupBy({
+            by: ["visitorHash"],
+            where: catalogVisitWhere,
         })
     ]);
 
@@ -163,7 +177,7 @@ export async function getDashboardKpis(sucursalId: number, period: DashboardPeri
     }
 
     // Pérdida por roturas: costo de productos dañados en ventas anuladas del período
-    const perdidaRotura = roturasData.reduce((acc, det) => {
+    const perdidaRotura = roturasData.reduce((acc: number, det: any) => {
         return acc + (Number(det.producto?.precioCosto || 0) * det.units);
     }, 0);
 
@@ -209,14 +223,14 @@ export async function getDashboardKpis(sucursalId: number, period: DashboardPeri
         },
         finanzas: {
             ventas: {
-                total: ventasAgg.reduce((acc, v) => acc + Number(v._sum?.total || 0), 0),
-                cantidad: ventasAgg.reduce((acc, v) => acc + (v._count?._all || 0), 0),
-                porTipo: ventasAgg.reduce((acc, v) => ({ ...acc, [v.tipo]: Number(v._sum?.total || 0) }), {} as any)
+                total: ventasAgg.reduce((acc: number, v: any) => acc + Number(v._sum?.total || 0), 0),
+                cantidad: ventasAgg.reduce((acc: number, v: any) => acc + (v._count?._all || 0), 0),
+                porTipo: ventasAgg.reduce((acc: any, v: any) => ({ ...acc, [v.tipo]: Number(v._sum?.total || 0) }), {} as any)
             },
             pagos: {
                 total: Number(pagosAgg._sum?.monto || 0),
                 cantidad: pagosAgg._count?._all || 0,
-                porTipo: pagosPorTipo.reduce((acc, p) => ({ ...acc, [p.tipo]: Number(p._sum?.monto || 0) }), {} as any)
+                porTipo: pagosPorTipo.reduce((acc: any, p: any) => ({ ...acc, [p.tipo]: Number(p._sum?.monto || 0) }), {} as any)
             },
             ganancia: {
                 bruta: gananciaBruta,
@@ -232,6 +246,10 @@ export async function getDashboardKpis(sucursalId: number, period: DashboardPeri
         gastos: {
             cantidad: cantidadGastos,
             total: totalGastos
+        },
+        catalogo: {
+            visitas: catalogVisitsCount,
+            visitantesUnicos: catalogVisitorsUnique.length,
         },
         proximosVencimientos: allPendientes.map((g: any) => ({
             ...g,

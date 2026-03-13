@@ -540,6 +540,12 @@ export type DashboardKpis = {
     cantidad: number;
     total: number;
   };
+
+  catalogo: {
+    visitas: number;
+    visitantesUnicos: number;
+  };
+
   proximosVencimientos: Gasto[];
 };
 

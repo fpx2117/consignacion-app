@@ -80,6 +80,10 @@ export async function GET(req: Request) {
         cantidad: stats.gastos.cantidad,
         total: stats.gastos.total,
       },
+      catalogo: {
+        visitas: stats.catalogo?.visitas || 0,
+        visitantesUnicos: stats.catalogo?.visitantesUnicos || 0,
+      },
       proximosVencimientos: stats.proximosVencimientos
     },
   });
