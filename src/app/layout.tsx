@@ -3,20 +3,20 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
 import { ThemeProvider } from "@/components/theme-provider";
-import { SocketProvider } from "@/providers/socket-provider";
-import { rootCssVariablesStyle } from "@/lib/theme/color-tokens";
+import { PerformanceVitals } from "@/components/performance-vitals";
 
 import { Toaster } from "sonner";
-import { SocketToaster } from "../providers/socket-toaster";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
+  display: "swap",
 });
 
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
+  display: "swap",
 });
 
 export const metadata: Metadata = {
@@ -36,9 +36,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="es" suppressHydrationWarning>
-      <head>
-        <style>{rootCssVariablesStyle()}</style>
-      </head>
+      <head />
       <body
         suppressHydrationWarning
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
@@ -49,18 +47,9 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          {/* El Provider envuelve todo */}
-          <SocketProvider>
-
-            {/* ✅ 2. Colocamos el "Escucha" DENTRO del provider para que acceda al socket */}
-            <SocketToaster />
-
-            {children}
-
-            {/* ✅ 3. Colocamos el contenedor visual de las alertas */}
-            <Toaster richColors position="top-right" />
-
-          </SocketProvider>
+          <PerformanceVitals />
+          {children}
+          <Toaster richColors position="top-right" />
         </ThemeProvider>
       </body>
     </html>

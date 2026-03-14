@@ -1,8 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { Loader2 } from "lucide-react";
 
 interface SubscriptionResponse {
     hasSubscription: boolean;
@@ -12,54 +11,54 @@ interface SubscriptionResponse {
     };
 }
 
+const EXEMPT_PATHS = ["/settings/subscriptions", "/login"];
+// TTL de 5 minutos para no re-verificar en cada navegación
+const CACHE_TTL_MS = 5 * 60 * 1000;
+
+let cachedResult: { hasSubscription: boolean; timestamp: number } | null = null;
+
 export function SubscriptionGuard({ children }: { children: React.ReactNode }) {
-    const [loading, setLoading] = useState(true);
-    const [hasSubscription, setHasSubscription] = useState<boolean | null>(null);
     const pathname = usePathname();
     const router = useRouter();
+    const checkedRef = useRef(false);
 
     useEffect(() => {
-        async function checkSubscription() {
-            // Si ya está en la página de suscripciones o en el login, no hace falta checkear/redireccionar
-            if (pathname === "/settings/subscriptions" || pathname === "/login") {
-                setLoading(false);
-                return;
-            }
+        if (EXEMPT_PATHS.includes(pathname)) return;
 
+        // Si ya tenemos resultado reciente en caché, no bloqueamos ni re-verificamos
+        const now = Date.now();
+        if (cachedResult && now - cachedResult.timestamp < CACHE_TTL_MS) {
+            if (!cachedResult.hasSubscription) {
+                router.push("/settings/subscriptions");
+            }
+            return;
+        }
+
+        // Verificación en background — NO bloquea el render del contenido
+        if (checkedRef.current) return;
+        checkedRef.current = true;
+
+        async function checkSubscription() {
             try {
                 const res = await fetch("/api/subscriptions/current", { cache: "no-store" });
                 if (res.ok) {
                     const data: SubscriptionResponse = await res.json();
-                    setHasSubscription(data.hasSubscription);
+                    cachedResult = { hasSubscription: data.hasSubscription, timestamp: Date.now() };
 
                     if (!data.hasSubscription) {
                         router.push("/settings/subscriptions");
                     }
                 }
-            } catch (error) {
-                console.error("Error checking subscription:", error);
+            } catch {
+                // Silently ignore — no interrumpir la experiencia por un error de red
             } finally {
-                setLoading(false);
+                checkedRef.current = false;
             }
         }
 
         checkSubscription();
     }, [pathname, router]);
 
-    // Mientras carga o si no tiene suscripción y no está en la página permitida, mostramos un loader
-    // para evitar que se vea el contenido protegido por un instante.
-    if (loading || (hasSubscription === false && pathname !== "/settings/subscriptions")) {
-        return (
-            <div className="flex h-screen w-full items-center justify-center bg-background/50 backdrop-blur-sm">
-                <div className="flex flex-col items-center gap-4">
-                    <Loader2 className="h-10 w-10 animate-spin text-primary" />
-                    <p className="text-sm font-medium text-muted-foreground animate-pulse">
-                        Verificando acceso...
-                    </p>
-                </div>
-            </div>
-        );
-    }
-
+    // ✅ Render inmediato — sin spinner bloqueante. La verificación es en background.
     return <>{children}</>;
 }

@@ -2,7 +2,7 @@
 // @ts-nocheck
 "use client";
 
-import { motion } from "framer-motion";
+import { motion } from "motion/react";
 import { CreditCard, CheckCircle2, Loader2, Tag, ArrowRight, ExternalLink, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";

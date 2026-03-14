@@ -2,6 +2,7 @@
 // @ts-nocheck
 "use client";
 
+import Image from "next/image";
 import { PackageOpen } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getThemeStyles } from "../lib/theme-utils";
@@ -14,6 +15,7 @@ interface StoreHeaderProps {
 
 export function StoreHeader({ config, cartCount, onOpenCart }: StoreHeaderProps) {
     const { theme, radiusClass, headerBgClass } = getThemeStyles(config.themeIdentifier);
+    const logoSrc = config.logoUrl || (config.logoData ? `data:${config.logoMime};base64,${config.logoData}` : null);
 
     return (
         <header className={cn(
@@ -25,16 +27,19 @@ export function StoreHeader({ config, cartCount, onOpenCart }: StoreHeaderProps)
 
                 {/* Logo y Nombre */}
                 <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 max-w-[75vw] sm:max-w-none">
-                    {config.logoData ? (
-                        <img
-                            src={`data:${config.logoMime};base64,${config.logoData}`}
-                            alt={config.businessName || "Logo"}
-                            className={cn(
-                                "h-9 sm:h-10 w-auto object-contain shrink-0",
-                                radiusClass,
-                                theme !== 'minimal' && theme !== 'luxury' ? "shadow-sm" : ""
-                            )}
-                        />
+                    {logoSrc ? (
+                        <div className={cn("relative h-9 sm:h-10 w-20 sm:w-24 shrink-0 overflow-hidden", radiusClass)}>
+                            <Image
+                                src={logoSrc}
+                                alt={config.businessName || "Logo"}
+                                fill
+                                sizes="(max-width: 640px) 80px, 96px"
+                                className={cn(
+                                    "object-contain",
+                                    theme !== 'minimal' && theme !== 'luxury' ? "shadow-sm" : ""
+                                )}
+                            />
+                        </div>
                     ) : (
                         <div className={cn("p-2 bg-muted/55 shrink-0", radiusClass)}>
                             <PackageOpen className="h-5 w-5 sm:h-6 sm:w-6 text-foreground" />

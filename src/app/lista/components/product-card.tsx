@@ -2,6 +2,7 @@
 // @ts-nocheck
 "use client";
 
+import Image from "next/image";
 import { ShoppingCart, CheckCircle2, XCircle, PackageOpen, Eye } from "lucide-react";
 import { motion } from "motion/react";
 import { Card } from "@/components/ui/card";
@@ -67,10 +68,12 @@ export function ProductCard({
                 )}>
                     {product.imagenUrl ? (
                         <>
-                            <img
+                            <Image
                                 src={product.imagenUrl}
                                 alt={product.nombre}
-                                className="w-full h-full object-cover mix-blend-multiply transition-transform duration-700 group-hover:scale-110"
+                                fill
+                                sizes={isGrid ? "(max-width: 1024px) 50vw, 25vw" : "(max-width: 1024px) 100vw, 33vw"}
+                                className="object-cover mix-blend-multiply transition-transform duration-700 group-hover:scale-110"
                             />
                             {/* Overlay "Ver detalle" */}
                             <div className="absolute inset-0 bg-foreground/0 group-hover:bg-foreground/5 transition-colors duration-500 flex items-center justify-center">

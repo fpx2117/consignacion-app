@@ -66,7 +66,12 @@ export async function GET() {
         ...user,
         sucursalesPermitidas
       }
-    }, { status: 200 });
+    }, {
+      status: 200,
+      headers: {
+        "Cache-Control": "private, max-age=30, stale-while-revalidate=90",
+      },
+    });
   } catch {
     return NextResponse.json({ error: "Token inválido" }, { status: 401 });
   }

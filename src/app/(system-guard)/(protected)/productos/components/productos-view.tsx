@@ -3,7 +3,7 @@
 "use client";
 
 import * as React from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence } from "motion/react";
 import { toast } from "sonner";
 import type { Producto, Categoria } from "@/lib/types";
 import { apiService } from "@/lib/apiService";
@@ -58,6 +58,7 @@ import {
   EyeOff,
 } from "lucide-react";
 import Link from "next/link";
+import Image from "next/image";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -101,39 +102,89 @@ export function ProductosView() {
 
   // Estados para Filtros
   const [q, setQ] = React.useState("");
+  const [debouncedQ, setDebouncedQ] = React.useState("");
   const [stockFilter, setStockFilter] = React.useState("all");
   const [categoryFilter, setCategoryFilter] = React.useState("all");
   const [subCategoryFilter, setSubCategoryFilter] = React.useState("all");
   const [expiryFilter, setExpiryFilter] = React.useState("all");
 
-  // Paginación y Ordenamiento
+  // Paginación server-side
+  const [serverPage, setServerPage] = React.useState(1);
+  const [serverTotal, setServerTotal] = React.useState(0);
+  const [serverTotalPages, setServerTotalPages] = React.useState(1);
+  const SERVER_LIMIT = 30;
+
+  // Paginación client-side y ordenamiento (sobre los datos del servidor)
   const [currentPage, setCurrentPage] = React.useState(1);
   const [itemsPerPage, setItemsPerPage] = React.useState(10);
   const [sortConfig, setSortConfig] = React.useState<SortConfig>({ key: "nombre", direction: "asc" });
   const [showSensitiveData, setShowSensitiveData] = React.useState(false);
 
-  const load = React.useCallback(async () => {
+  // Debounce de búsqueda (400ms)
+  React.useEffect(() => {
+    const timer = setTimeout(() => setDebouncedQ(q), 400);
+    return () => clearTimeout(timer);
+  }, [q]);
+
+  // Obtener categoriaId para enviar al servidor
+  const serverCategoriaId = React.useMemo(() => {
+    if (categoryFilter === "all") return null;
+    const cat = allCategories.find(c => c.nombre === categoryFilter);
+    return cat?.id ?? null;
+  }, [categoryFilter, allCategories]);
+
+  const load = React.useCallback(async (page: number = 1, search: string = "", categoriaId: number | null = null) => {
     setLoading(true);
     try {
       const [resProductos, resCategorias] = await Promise.all([
-        apiService.getProductos(),
-        apiService.getCategorias()
+        apiService.getProductosPaginados({
+          page,
+          limit: SERVER_LIMIT,
+          search,
+          categoriaId,
+        }),
+        allCategories.length > 0 ? Promise.resolve(null) : apiService.getCategorias(),
       ]);
 
-      const activos = Array.isArray(resProductos) ? resProductos.filter((p: Producto) => p.activo !== false) : [];
+      const payload = resProductos as any;
+      const activos = Array.isArray(payload.data) ? payload.data.filter((p: Producto) => p.activo !== false) : [];
       setItems(activos);
-      setAllCategories(Array.isArray(resCategorias) ? resCategorias : []);
+      setServerTotal(payload.total ?? 0);
+      setServerTotalPages(payload.totalPages ?? 1);
+      setServerPage(payload.page ?? page);
+
+      if (resCategorias !== null) {
+        setAllCategories(Array.isArray(resCategorias) ? resCategorias : []);
+      }
     } catch (e) {
       console.error("Error loading data:", e);
       toast.error("Error al sincronizar datos");
       setItems([]);
-      setAllCategories([]);
     } finally {
       setLoading(false);
     }
+  }, [allCategories.length]);
+
+  // Carga de categorías independiente (una sola vez)
+  React.useEffect(() => {
+    if (allCategories.length === 0) {
+      apiService.getCategorias()
+        .then(res => setAllCategories(Array.isArray(res) ? res : []))
+        .catch(() => {});
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  React.useEffect(() => { load(); }, [load, activeSucursalId]);
+  React.useEffect(() => {
+    load(1, debouncedQ, serverCategoriaId);
+    setCurrentPage(1);
+    setServerPage(1);
+  }, [activeSucursalId, debouncedQ, serverCategoriaId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Wrapper sin argumentos para subcomponentes (reload de la página actual)
+  const reload = React.useCallback(() => {
+    load(serverPage, debouncedQ, serverCategoriaId);
+  }, [load, serverPage, debouncedQ, serverCategoriaId]);
 
   // --- Lógica de Negocio ---
   const isLowStock = React.useCallback((p: Producto) => {
@@ -225,12 +276,13 @@ export function ProductosView() {
   };
 
   const stats = React.useMemo(() => ({
-    total: items?.length || 0,
+    // total usa el count del servidor (más preciso que items.length que es la página actual)
+    total: serverTotal || items?.length || 0,
     lowStock: items?.filter(i => isLowStock(i)).length || 0,
     outOfStock: items?.filter(i => isOutOfStock(i)).length || 0,
     valorVenta: items?.reduce((acc, i) => acc + (Number(i.precioVenta) * i.stockDisponibleUnits), 0) || 0,
     utilidad: items?.reduce((acc, i) => acc + ((Number(i.precioVenta) - Number(i.precioCosto)) * i.stockDisponibleUnits), 0) || 0
-  }), [items, isLowStock, isOutOfStock]);
+  }), [items, serverTotal, isLowStock, isOutOfStock]);
 
   return (
     <div className="max-w-[1600px] mx-auto space-y-8 p-6 md:p-10 pb-20 text-foreground selection:bg-primary/20 font-sans">
@@ -265,7 +317,7 @@ export function ProductosView() {
             </div>
             {/* CTA principal */}
             <CreateProductoDialog
-              onCreated={load}
+              onCreated={reload}
               trigger={
                 <Button size="lg" className="h-10 px-5 rounded-xl font-bold shadow-lg shadow-primary/20 hover:shadow-primary/40 transition-all hover:scale-[1.02]">
                   <Plus className="h-4 w-4 mr-2 stroke-[3px]" />
@@ -279,7 +331,7 @@ export function ProductosView() {
           <div className="flex sm:hidden items-center justify-between w-full">
             {/* CTA principal siempre visible */}
             <CreateProductoDialog
-              onCreated={load}
+              onCreated={reload}
               trigger={
                 <Button size="default" className="h-10 px-4 rounded-xl font-bold shadow-lg shadow-primary/20">
                   <Plus className="h-4 w-4 mr-1.5 stroke-[3px]" />
@@ -398,7 +450,7 @@ export function ProductosView() {
                   </TableHeader>
                   <TableBody>
                     {paginatedItems.map((p, idx) => (
-                      <ProductoRow key={p.id} p={p} idx={idx} load={load} isLow={isLowStock(p)} isOut={isOutOfStock(p)} />
+                      <ProductoRow key={p.id} p={p} idx={idx} load={reload} isLow={isLowStock(p)} isOut={isOutOfStock(p)} />
                     ))}
                     {paginatedItems.length === 0 && (
                       <TableRow>
@@ -424,8 +476,12 @@ export function ProductosView() {
                     itemsPerPage={itemsPerPage}
                     setItemsPerPage={setItemsPerPage}
                     setCurrentPage={setCurrentPage}
-                    totalItems={filtered.length}
+                    totalItems={serverTotal || filtered.length}
                     currentItems={paginatedItems.length}
+                    serverPage={serverPage}
+                    serverTotalPages={serverTotalPages}
+                    onServerPrev={() => { load(Math.max(1, serverPage - 1), debouncedQ, serverCategoriaId); setCurrentPage(1); }}
+                    onServerNext={() => { load(Math.min(serverTotalPages, serverPage + 1), debouncedQ, serverCategoriaId); setCurrentPage(1); }}
                   />
                 )}
               </Card>
@@ -434,7 +490,7 @@ export function ProductosView() {
             {/* --- VISTA MOBILE (CARDS) --- */}
             <div className="md:hidden space-y-4">
               {paginatedItems.map((p, idx) => (
-                <MobileProductCard key={p.id} p={p} idx={idx} load={load} isLow={isLowStock(p)} isOut={isOutOfStock(p)} />
+                <MobileProductCard key={p.id} p={p} idx={idx} load={reload} isLow={isLowStock(p)} isOut={isOutOfStock(p)} />
               ))}
 
               {paginatedItems.length === 0 && (
@@ -455,9 +511,13 @@ export function ProductosView() {
                   itemsPerPage={itemsPerPage}
                   setItemsPerPage={setItemsPerPage}
                   setCurrentPage={setCurrentPage}
-                  totalItems={filtered.length}
+                  totalItems={serverTotal || filtered.length}
                   currentItems={paginatedItems.length}
                   isMobile
+                  serverPage={serverPage}
+                  serverTotalPages={serverTotalPages}
+                  onServerPrev={() => { load(Math.max(1, serverPage - 1), debouncedQ, serverCategoriaId); setCurrentPage(1); }}
+                  onServerNext={() => { load(Math.min(serverTotalPages, serverPage + 1), debouncedQ, serverCategoriaId); setCurrentPage(1); }}
                 />
               )}
             </div>
@@ -471,49 +531,84 @@ export function ProductosView() {
 // --- SUB COMPONENTS ---
 
 function PaginationControls({
-  currentPage, totalPages, itemsPerPage, setItemsPerPage, setCurrentPage, totalItems, currentItems, isMobile = false
+  currentPage, totalPages, itemsPerPage, setItemsPerPage, setCurrentPage,
+  totalItems, currentItems, isMobile = false,
+  serverPage, serverTotalPages, onServerPrev, onServerNext,
 }: {
-  currentPage: number, totalPages: number, itemsPerPage: number, setItemsPerPage: (v: number) => void, setCurrentPage: React.Dispatch<React.SetStateAction<number>>, totalItems: number, currentItems: number, isMobile?: boolean
+  currentPage: number;
+  totalPages: number;
+  itemsPerPage: number;
+  setItemsPerPage: (v: number) => void;
+  setCurrentPage: React.Dispatch<React.SetStateAction<number>>;
+  totalItems: number;
+  currentItems: number;
+  isMobile?: boolean;
+  serverPage?: number;
+  serverTotalPages?: number;
+  onServerPrev?: () => void;
+  onServerNext?: () => void;
 }) {
+  const hasServerPages = serverTotalPages !== undefined && serverTotalPages > 1;
+
   return (
-    <div className={cn("flex items-center justify-between gap-4 p-4 border-t border-border/60 bg-muted/20", isMobile && "flex-col border rounded-xl bg-card")}>
-      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-        <span>Mostrando {currentItems} de <span className="font-bold text-foreground">{totalItems}</span></span>
-      </div>
+    <div className={cn("flex flex-col gap-2 p-4 border-t border-border/60 bg-muted/20", isMobile && "border rounded-xl bg-card")}>
+      {/* Fila principal de paginación */}
+      <div className={cn("flex items-center justify-between gap-4", isMobile && "flex-col")}>
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <span>Mostrando {currentItems} de <span className="font-bold text-foreground">{totalItems}</span></span>
+        </div>
 
-      <div className={cn("flex items-center gap-4", isMobile && "w-full justify-between")}>
-        {!isMobile && (
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-muted-foreground">Filas:</span>
-            <Select value={itemsPerPage.toString()} onValueChange={(v) => setItemsPerPage(Number(v))}>
-              <SelectTrigger className="h-8 w-[70px] text-xs font-bold">
-                <SelectValue placeholder="10" />
-              </SelectTrigger>
-              <SelectContent side="top">
-                <SelectItem value="5">5</SelectItem>
-                <SelectItem value="10">10</SelectItem>
-                <SelectItem value="20">20</SelectItem>
-                <SelectItem value="50">50</SelectItem>
-                <SelectItem value="100">100</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        )}
+        <div className={cn("flex items-center gap-4", isMobile && "w-full justify-between")}>
+          {!isMobile && (
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-muted-foreground">Filas:</span>
+              <Select value={itemsPerPage.toString()} onValueChange={(v) => setItemsPerPage(Number(v))}>
+                <SelectTrigger className="h-8 w-[70px] text-xs font-bold">
+                  <SelectValue placeholder="10" />
+                </SelectTrigger>
+                <SelectContent side="top">
+                  <SelectItem value="5">5</SelectItem>
+                  <SelectItem value="10">10</SelectItem>
+                  <SelectItem value="20">20</SelectItem>
+                  <SelectItem value="50">50</SelectItem>
+                  <SelectItem value="100">100</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          )}
 
-        <div className="flex items-center gap-1">
-          <Button variant="outline" size="icon" className="h-8 w-8 rounded-lg" onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1}>
-            <ChevronLeft className="h-4 w-4" />
-          </Button>
-          <div className="flex items-center gap-1 px-2">
-            <span className="text-sm font-bold">{currentPage}</span>
-            <span className="text-sm text-muted-foreground">/</span>
-            <span className="text-sm text-muted-foreground">{totalPages}</span>
+          <div className="flex items-center gap-1">
+            <Button variant="outline" size="icon" className="h-8 w-8 rounded-lg" onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1}>
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <div className="flex items-center gap-1 px-2">
+              <span className="text-sm font-bold">{currentPage}</span>
+              <span className="text-sm text-muted-foreground">/</span>
+              <span className="text-sm text-muted-foreground">{totalPages}</span>
+            </div>
+            <Button variant="outline" size="icon" className="h-8 w-8 rounded-lg" onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages}>
+              <ChevronRight className="h-4 w-4" />
+            </Button>
           </div>
-          <Button variant="outline" size="icon" className="h-8 w-8 rounded-lg" onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages}>
-            <ChevronRight className="h-4 w-4" />
-          </Button>
         </div>
       </div>
+
+      {/* Navegación server-side (cuando hay más de una página en el servidor) */}
+      {hasServerPages && onServerPrev && onServerNext && (
+        <div className="flex items-center justify-center gap-3 pt-1 border-t border-border/40">
+          <Button variant="ghost" size="sm" onClick={onServerPrev} disabled={serverPage! <= 1}
+            className="h-7 text-xs font-semibold text-muted-foreground hover:text-foreground rounded-lg px-2.5 disabled:opacity-30">
+            <ChevronLeft className="h-3.5 w-3.5 mr-1" /> Anteriores
+          </Button>
+          <span className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest">
+            Lote {serverPage} / {serverTotalPages}
+          </span>
+          <Button variant="ghost" size="sm" onClick={onServerNext} disabled={serverPage! >= serverTotalPages!}
+            className="h-7 text-xs font-semibold text-muted-foreground hover:text-foreground rounded-lg px-2.5 disabled:opacity-30">
+            Siguientes <ChevronRight className="h-3.5 w-3.5 ml-1" />
+          </Button>
+        </div>
+      )}
     </div>
   )
 }
@@ -540,9 +635,9 @@ function ProductoRow({ p, idx, load, isLow, isOut }: { p: Producto; idx: number;
     >
       <TableCell className="pl-6 py-4 w-[30%] max-w-0">
         <div className="flex items-center gap-4 min-w-0">
-          <div className="h-12 w-12 rounded-lg bg-muted/50 border border-border/60 overflow-hidden flex items-center justify-center shrink-0">
+          <div className="h-12 w-12 rounded-lg bg-muted/50 border border-border/60 overflow-hidden flex items-center justify-center shrink-0 relative">
             {p.imagenUrl ? (
-              <img src={p.imagenUrl} alt={p.nombre} className="h-full w-full object-cover" />
+              <Image src={p.imagenUrl} alt={p.nombre} fill sizes="48px" className="object-cover" />
             ) : (
               <ImageIcon className="h-6 w-6 text-muted-foreground/40" />
             )}
@@ -678,9 +773,9 @@ function MobileProductCard({ p, idx, load, isLow, isOut }: { p: Producto; idx: n
         <div className={cn("absolute left-0 top-0 bottom-0 w-1.5", isOut ? "bg-[color:var(--status-danger)]" : isLow ? "bg-[color:var(--status-warning)]" : "bg-[color:var(--status-success-strong)]")} />
 
         <div className="flex justify-between items-start pl-3 gap-3">
-          <div className="h-14 w-14 rounded-xl bg-muted/50 border border-border/60 overflow-hidden flex items-center justify-center shrink-0">
+          <div className="h-14 w-14 rounded-xl bg-muted/50 border border-border/60 overflow-hidden flex items-center justify-center shrink-0 relative">
             {p.imagenUrl ? (
-              <img src={p.imagenUrl} alt={p.nombre} className="h-full w-full object-cover" />
+              <Image src={p.imagenUrl} alt={p.nombre} fill sizes="56px" className="object-cover" />
             ) : (
               <ImageIcon className="h-7 w-7 text-muted-foreground/40" />
             )}

@@ -1,6 +1,6 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { motion } from "motion/react";
 import { Sparkles, ArrowRight, Shield, Zap, BarChart3 } from "lucide-react";
 import { StepWrapper } from "../StepWrapper";
 

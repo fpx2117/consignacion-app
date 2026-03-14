@@ -86,5 +86,9 @@ export async function GET(req: Request) {
       },
       proximosVencimientos: stats.proximosVencimientos
     },
+  }, {
+    headers: {
+      "Cache-Control": "private, max-age=15, stale-while-revalidate=45",
+    },
   });
 }

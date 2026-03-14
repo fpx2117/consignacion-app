@@ -44,6 +44,10 @@ export async function GET() {
             return NextResponse.json({
                 hasSubscription: false,
                 message: "El usuario no tiene una suscripción activa.",
+            }, {
+                headers: {
+                    "Cache-Control": "private, max-age=30, stale-while-revalidate=120",
+                },
             });
         }
 
@@ -81,6 +85,10 @@ export async function GET() {
                 currentPeriodEnd: subscription.currentPeriodEnd,
                 daysRemaining,
                 cancelAtPeriodEnd: subscription.cancelAtPeriodEnd,
+            },
+        }, {
+            headers: {
+                "Cache-Control": "private, max-age=30, stale-while-revalidate=120",
             },
         });
     } catch (error) {

@@ -4,7 +4,7 @@
 
 import { PricingTable } from "@/app/(system-guard)/(protected)/settings/subscriptions/components/PricingTable";
 import { SubscriptionPlan } from "@/constants/subscriptions";
-import { motion } from "framer-motion";
+import { motion } from "motion/react";
 
 interface SubscriptionStepProps {
     onPlanSelected: (plan: SubscriptionPlan) => void;

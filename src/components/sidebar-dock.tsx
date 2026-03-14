@@ -31,7 +31,6 @@ import type { SidebarNavItem } from "@/components/sidebar/types";
 import { useNotifications } from "@/hooks/useNotifications";
 import { useSucursalStore } from "@/store/useSucursalStore";
 import { apiService } from "@/lib/apiService";
-
 import {
   Bell,
   ClipboardList,
@@ -50,6 +49,13 @@ import {
   Wallet,
   Zap,
 } from "lucide-react";
+
+// Datos del usuario pasados desde el Server Component layout (evita el fetch duplicado)
+export interface SidebarUserData {
+  rol: "ADMIN" | "EMPLEADO";
+  sucursalesPermitidas: { id: number; nombre: string; esPrincipal: boolean; activa: boolean }[];
+  allowConsignaciones: boolean;
+}
 
 const NAV_CORE: SidebarNavItem[] = [
   { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
@@ -109,17 +115,35 @@ function NotificationButton({
   );
 }
 
-export function SidebarDock() {
+// Caché en memoria para pedidos vencidos (TTL: 60 s por sucursal)
+const pedidosCache = new Map<number, { count: number; ts: number }>();
+const PEDIDOS_TTL_MS = 60_000;
+
+// Caché en memoria para configuración (TTL: 5 min)
+let configCache: { value: boolean; ts: number } | null = null;
+const CONFIG_TTL_MS = 5 * 60_000;
+
+interface SidebarDockProps {
+  /** Datos del usuario pre-cargados por el Server Component layout.
+   *  Cuando se pasan, se elimina el fetch de /api/auth/me en el cliente. */
+  initialUserData?: SidebarUserData;
+}
+
+export function SidebarDock({ initialUserData }: SidebarDockProps = {}) {
   const pathname = usePathname() ?? "";
   const router = useRouter();
   const { setTheme, resolvedTheme } = useTheme();
 
-  const [mounted, setMounted] = React.useState(false);
+  const [themeMounted, setThemeMounted] = React.useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
   const [loggingOut, setLoggingOut] = React.useState(false);
-  const [userRole, setUserRole] = React.useState<"ADMIN" | "EMPLEADO" | null>(null);
+  const [userRole, setUserRole] = React.useState<"ADMIN" | "EMPLEADO">(
+    initialUserData?.rol ?? "ADMIN",
+  );
   const [usarControlDeCaja, setUsarControlDeCaja] = React.useState(false);
-  const [allowConsignaciones, setAllowConsignaciones] = React.useState(true);
+  const [allowConsignaciones, setAllowConsignaciones] = React.useState(
+    initialUserData?.allowConsignaciones ?? true,
+  );
 
   const notificationsState = useNotifications({ limit: 50 });
 
@@ -128,7 +152,12 @@ export function SidebarDock() {
   const pedidosVencidosCount = useSucursalStore((s) => s.pedidosVencidosCount);
   const setPedidosVencidosCount = useSucursalStore((s) => s.setPedidosVencidosCount);
 
-  const isDark = mounted && resolvedTheme === "dark";
+  const isDark = themeMounted && resolvedTheme === "dark";
+  const themeButtonLabel = themeMounted
+    ? isDark
+      ? "Activar modo claro"
+      : "Activar modo oscuro"
+    : "Cambiar tema";
   const isEmpleado = userRole === "EMPLEADO";
   const isGlobalView = activeSucursalId === 0;
 
@@ -183,31 +212,26 @@ export function SidebarDock() {
     return items;
   }, [filteredBusiness, isGlobalView, usarControlDeCaja]);
 
+  // Aplicar datos del layout en el store al montar (solo si vienen como props)
   React.useEffect(() => {
-    setMounted(true);
+    if (initialUserData?.sucursalesPermitidas?.length) {
+      setAvailableSucursales(initialUserData.sucursalesPermitidas);
+    }
+  }, [initialUserData, setAvailableSucursales]);
 
-    const loadUserData = async () => {
-      try {
-        const res = await fetch("/api/auth/me");
-        if (!res.ok) return;
+  React.useEffect(() => {
+    setThemeMounted(true);
+  }, []);
 
-        const json = await res.json();
-        const userData = json?.data;
-        setUserRole(userData?.rol ?? "ADMIN");
-
-        if (Array.isArray(userData?.sucursalesPermitidas)) {
-          setAvailableSucursales(userData.sucursalesPermitidas);
-        }
-
-        const limits = userData?.subscription?.plan?.limits;
-        if (limits) {
-          setAllowConsignaciones(limits.allowConsignaciones !== false);
-        }
-      } catch {
-      }
-    };
-
+  React.useEffect(() => {
     const loadPedidosVencidos = async () => {
+      const now = Date.now();
+      const cached = pedidosCache.get(activeSucursalId);
+      if (cached && now - cached.ts < PEDIDOS_TTL_MS) {
+        setPedidosVencidosCount(cached.count);
+        return;
+      }
+
       try {
         const res = await fetch("/api/pedidos-esperados?estado=VENCIDO", {
           headers: activeSucursalId
@@ -218,8 +242,12 @@ export function SidebarDock() {
         if (!res.ok) return;
 
         const json = await res.json();
-        const vencidos = (json?.data ?? []).filter((pedido: { estado: string }) => pedido.estado === "VENCIDO");
-        setPedidosVencidosCount(vencidos.length);
+        const vencidos = (json?.data ?? []).filter(
+          (pedido: { estado: string }) => pedido.estado === "VENCIDO",
+        );
+        const count = vencidos.length;
+        pedidosCache.set(activeSucursalId, { count, ts: Date.now() });
+        setPedidosVencidosCount(count);
       } catch {
       }
     };
@@ -230,9 +258,16 @@ export function SidebarDock() {
     }
 
     const loadConfig = async () => {
+      const now = Date.now();
+      if (configCache && now - configCache.ts < CONFIG_TTL_MS) {
+        setUsarControlDeCaja(configCache.value);
+        return;
+      }
+
       try {
         const res = await apiService.getConfiguracionGeneral();
         const value = res?.usarControlDeCaja ?? res?.data?.usarControlDeCaja ?? true;
+        configCache = { value, ts: Date.now() };
         setUsarControlDeCaja(value);
         localStorage.setItem("usarControlDeCaja", String(value));
       } catch {
@@ -241,18 +276,18 @@ export function SidebarDock() {
 
     const handleConfigChange = (event: Event) => {
       const customEvent = event as CustomEvent<{ usarControlDeCaja: boolean }>;
-      setUsarControlDeCaja(Boolean(customEvent.detail?.usarControlDeCaja));
+      const value = Boolean(customEvent.detail?.usarControlDeCaja);
+      // Invalidar caché al recibir cambios del sistema
+      configCache = { value, ts: Date.now() };
+      setUsarControlDeCaja(value);
     };
 
-    loadUserData();
     loadPedidosVencidos();
     loadConfig();
 
     window.addEventListener("config-updated", handleConfigChange as EventListener);
     return () => window.removeEventListener("config-updated", handleConfigChange as EventListener);
-  }, [activeSucursalId, setAvailableSucursales, setPedidosVencidosCount]);
-
-  if (!mounted) return null;
+  }, [activeSucursalId, setPedidosVencidosCount]);
 
   return (
     <aside className="fixed bottom-0 left-0 z-50 w-full border-t border-border/60 bg-background/75 backdrop-blur-2xl md:top-0 md:h-screen md:w-[88px] md:border-r md:border-t-0">
@@ -338,8 +373,12 @@ export function SidebarDock() {
 
             <DockIcon>
               <button
-                aria-label={isDark ? "Activar modo claro" : "Activar modo oscuro"}
-                onClick={() => setTheme(isDark ? "light" : "dark")}
+                aria-label={themeButtonLabel}
+                onClick={() => {
+                  if (!themeMounted) return;
+                  setTheme(isDark ? "light" : "dark");
+                }}
+                disabled={!themeMounted}
                 className="h-9 w-9 flex items-center justify-center rounded-full text-muted-foreground hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
               >
                 {isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
@@ -424,8 +463,12 @@ export function SidebarDock() {
 
               <DockIcon>
                 <button
-                  aria-label={isDark ? "Activar modo claro" : "Activar modo oscuro"}
-                  onClick={() => setTheme(isDark ? "light" : "dark")}
+                  aria-label={themeButtonLabel}
+                  onClick={() => {
+                    if (!themeMounted) return;
+                    setTheme(isDark ? "light" : "dark");
+                  }}
+                  disabled={!themeMounted}
                   className="h-10 w-10 flex items-center justify-center rounded-full text-muted-foreground hover:bg-muted transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                 >
                   {isDark ? <Sun className="size-5" /> : <Moon className="size-5" />}

@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
-import { startOfDay, startOfWeek, startOfMonth } from "date-fns";
+import { unstable_cache } from "next/cache";
+import { startOfDay, startOfWeek, startOfMonth, differenceInDays } from "date-fns";
 import { DashboardPeriod } from "./types";
 
 /**
@@ -7,7 +8,13 @@ import { DashboardPeriod } from "./types";
  * Centraliza la lógica de filtrado por sucursal, periodos y fórmulas de rentabilidad.
  */
 
-export async function getDashboardKpis(sucursalId: number, period: DashboardPeriod, isAdmin: boolean = false) {
+/**
+ * getDashboardKpis — envuelta en unstable_cache con revalidate: 60s.
+ * Múltiples usuarios viendo el dashboard comparten la misma respuesta cacheada
+ * durante 60 segundos. Se invalida con revalidateTag('dashboard').
+ */
+export const getDashboardKpis = unstable_cache(
+  async (sucursalId: number, period: DashboardPeriod, isAdmin: boolean = false) => {
     const now = new Date();
     let start: Date | undefined;
 
@@ -273,7 +280,13 @@ export async function getDashboardKpis(sucursalId: number, period: DashboardPeri
             monto: Number(g.monto)
         }))
     };
-}
+  },
+  ["dashboard-kpis"],
+  {
+    revalidate: 60,
+    tags: ["dashboard", "kpis"],
+  }
+);
 
 /**
  * REPORTE DE TENDENCIA DIARIA
@@ -288,7 +301,7 @@ export async function getDashboardTendencia(sucursalId: number, period: Dashboar
 
     const isGlobal = sucursalId === 0 && isAdmin;
     const sucursalWhere = isGlobal ? {} : { sucursalId };
-    const days = require("date-fns").differenceInDays(now, start) + 1;
+    const days = differenceInDays(now, start) + 1;
 
     const [ventas, pagos] = await Promise.all([
         prisma.venta.findMany({

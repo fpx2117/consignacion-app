@@ -127,10 +127,10 @@ export default function SettingsPage() {
 
     const fetchUserData = async () => {
       try {
-        const res = await fetch("/api/auth/me");
+        const res = await fetch("/api/subscriptions/current");
         if (res.ok) {
           const json = await res.json();
-          const limits = json?.data?.subscription?.plan?.limits;
+          const limits = json?.subscription?.plan?.limits;
 
           if (limits) {
             const allow = limits.allowSucursales !== false;

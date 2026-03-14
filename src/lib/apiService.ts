@@ -78,7 +78,7 @@ async function apiRequest<T>(path: string, init?: RequestInit): Promise<ApiRespo
   const res = await fetch(url, {
     ...init,
     headers,
-    cache: init?.cache || "no-store",
+    ...(init?.cache !== undefined ? { cache: init.cache } : {}),
   });
 
   if (!res.ok) {
@@ -377,6 +377,23 @@ export const apiService = {
     return apiData<Producto[]>(API_ROUTES.PRODUCTOS);
   },
 
+  getProductosPaginados(params: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    categoriaId?: number | null;
+  }) {
+    const sp = new URLSearchParams();
+    if (params.page !== undefined) sp.set("page", String(params.page));
+    if (params.limit !== undefined) sp.set("limit", String(params.limit));
+    if (params.search) sp.set("search", params.search);
+    if (params.categoriaId) sp.set("categoriaId", String(params.categoriaId));
+    const qs = sp.toString();
+    return apiRequest<{ data: Producto[]; total: number; page: number; totalPages: number }>(
+      `${API_ROUTES.PRODUCTOS}${qs ? `?${qs}` : ""}`
+    );
+  },
+
   getProducto(id: number) {
     return apiData<Producto>(API_ROUTES.PRODUCTO_ID(id));
   },
@@ -460,6 +477,23 @@ export const apiService = {
   /* ---------- CONSIGNACIONES ---------- */
   getConsignaciones() {
     return apiData<Consignacion[]>(API_ROUTES.CONSIGNACIONES);
+  },
+
+  getConsignacionesPaginadas(params: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    estado?: string;
+  }) {
+    const sp = new URLSearchParams();
+    if (params.page !== undefined) sp.set("page", String(params.page));
+    if (params.limit !== undefined) sp.set("limit", String(params.limit));
+    if (params.search) sp.set("search", params.search);
+    if (params.estado && params.estado !== "TODAS") sp.set("estado", params.estado);
+    const qs = sp.toString();
+    return apiRequest<{ data: Consignacion[]; total: number; page: number; totalPages: number }>(
+      `${API_ROUTES.CONSIGNACIONES}${qs ? `?${qs}` : ""}`
+    );
   },
 
   getConsignacion(id: number) {

@@ -24,9 +24,18 @@ export interface AppNotification {
 interface UseNotificationsProps {
   limit?: number;
   onlyUnreadOnLoad?: boolean;
+  ttlMs?: number;
 }
 
-export function useNotifications({ limit = 50, onlyUnreadOnLoad = false }: UseNotificationsProps = {}) {
+type NotificationsCache = {
+  notifications: AppNotification[];
+  unreadCount: number;
+  ts: number;
+};
+
+let notificationsCache: NotificationsCache | null = null;
+
+export function useNotifications({ limit = 50, onlyUnreadOnLoad = false, ttlMs = 30_000 }: UseNotificationsProps = {}) {
   const { socket, isConnected } = useSocket();
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -39,6 +48,14 @@ export function useNotifications({ limit = 50, onlyUnreadOnLoad = false }: UseNo
     // Evitar múltiples llamadas en menos de 2 segundos (deduplicación básica)
     const now = Date.now();
     if (now - lastFetchRef.current < 2000) return;
+
+    if (notificationsCache && now - notificationsCache.ts < ttlMs) {
+      setNotifications(notificationsCache.notifications);
+      setUnreadCount(notificationsCache.unreadCount);
+      setLoading(false);
+      return;
+    }
+
     lastFetchRef.current = now;
 
     try {
@@ -67,6 +84,11 @@ export function useNotifications({ limit = 50, onlyUnreadOnLoad = false }: UseNo
         });
         setNotifications(mappedData);
         setUnreadCount(data.unreadCount || 0);
+        notificationsCache = {
+          notifications: mappedData,
+          unreadCount: data.unreadCount || 0,
+          ts: Date.now(),
+        };
       }
 
     } catch (error) {
@@ -74,7 +96,7 @@ export function useNotifications({ limit = 50, onlyUnreadOnLoad = false }: UseNo
     } finally {
       setLoading(false);
     }
-  }, [limit, onlyUnreadOnLoad]);
+  }, [limit, onlyUnreadOnLoad, ttlMs]);
 
   useEffect(() => {
     fetchNotifications();
@@ -113,11 +135,27 @@ export function useNotifications({ limit = 50, onlyUnreadOnLoad = false }: UseNo
           consignacionId,
         };
 
-        return [formatted, ...prev];
+        const updated = [formatted, ...prev];
+        notificationsCache = {
+          notifications: updated,
+          unreadCount: notificationsCache?.unreadCount ?? unreadCount,
+          ts: Date.now(),
+        };
+        return updated;
       });
 
       // 2. Incrementamos contador
-      setUnreadCount((prev) => prev + 1);
+      setUnreadCount((prev) => {
+        const nextCount = prev + 1;
+        if (notificationsCache) {
+          notificationsCache = {
+            ...notificationsCache,
+            unreadCount: nextCount,
+            ts: Date.now(),
+          };
+        }
+        return nextCount;
+      });
     });
 
     return () => {
@@ -130,7 +168,15 @@ export function useNotifications({ limit = 50, onlyUnreadOnLoad = false }: UseNo
     try {
       // Optimistic Update (Actualizamos visualmente antes de que responda el server)
       setUnreadCount(0);
-      setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+      setNotifications((prev) => {
+        const updated = prev.map((n) => ({ ...n, read: true }));
+        notificationsCache = {
+          notifications: updated,
+          unreadCount: 0,
+          ts: Date.now(),
+        };
+        return updated;
+      });
 
       // Llamada a la API
       await fetch("/api/notificaciones", {

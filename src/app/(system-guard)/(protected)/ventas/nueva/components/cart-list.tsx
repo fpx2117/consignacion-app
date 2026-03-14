@@ -1,4 +1,4 @@
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, motion } from "motion/react";
 import { ShoppingCart } from "lucide-react";
 
 import type { CartItem } from "../types";

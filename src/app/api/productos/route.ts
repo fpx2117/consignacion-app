@@ -33,27 +33,47 @@ export async function GET(req: Request) {
     const isGlobal = isGlobalSucursalView(requestedAuth);
     const sucursalWhere = buildSucursalWhere(requestedAuth);
 
-    const productos = await prisma.producto.findMany({
-      where: {
-        activo: true,
-        ...sucursalWhere,
-      },
-      include: {
-        categoria: true,
-        subcategoria: true,
-        stockSucursals: {
-          ...(isGlobal ? {} : { where: { sucursalId: requestedSucursalId } })
-        }
-      },
-      orderBy: { id: "desc" },
-    });
+    // Parámetros de paginación (backward compatible: sin page/limit → devuelve todos)
+    const pageParam = searchParams.get("page");
+    const limitParam = searchParams.get("limit");
+    const search = searchParams.get("search")?.trim() || "";
+    const categoriaId = searchParams.get("categoriaId")?.trim() || "";
 
-    // Mapeamos para que el frontend reciba el stock de la sucursal activa
-    const mapped = productos.map(p => {
+    const isPaginated = pageParam !== null || limitParam !== null;
+    const page = Math.max(1, parseInt(pageParam || "1", 10) || 1);
+    const limit = Math.min(200, Math.max(1, parseInt(limitParam || "30", 10) || 30));
+    const skip = (page - 1) * limit;
+
+    // Where con filtros
+    const where: any = {
+      activo: true,
+      ...sucursalWhere,
+    };
+
+    if (search) {
+      where.OR = [
+        { nombre: { contains: search, mode: "insensitive" } },
+        { codigoBarra: { contains: search, mode: "insensitive" } },
+      ];
+    }
+
+    if (categoriaId && Number.isFinite(Number(categoriaId))) {
+      where.categoriaId = Number(categoriaId);
+    }
+
+    const includeConfig = {
+      categoria: true,
+      subcategoria: true,
+      stockSucursals: {
+        ...(isGlobal ? {} : { where: { sucursalId: requestedSucursalId } })
+      }
+    };
+
+    const mapProducto = (p: any) => {
       const branchStock = p.stockSucursals[0];
-      const stockDisponibleGlobal = p.stockSucursals.reduce((acc, s) => acc + (s.stockDisponibleUnits || 0), 0);
-      const stockConsignadoGlobal = p.stockSucursals.reduce((acc, s) => acc + (s.stockConsignadoUnits || 0), 0);
-      const stockMinGlobal = p.stockSucursals.reduce((acc, s) => acc + (s.stockMinUnits || 0), 0);
+      const stockDisponibleGlobal = p.stockSucursals.reduce((acc: number, s: any) => acc + (s.stockDisponibleUnits || 0), 0);
+      const stockConsignadoGlobal = p.stockSucursals.reduce((acc: number, s: any) => acc + (s.stockConsignadoUnits || 0), 0);
+      const stockMinGlobal = p.stockSucursals.reduce((acc: number, s: any) => acc + (s.stockMinUnits || 0), 0);
 
       return {
         ...p,
@@ -67,9 +87,47 @@ export async function GET(req: Request) {
           ? stockMinGlobal
           : (branchStock?.stockMinUnits ?? p.stockMinUnits),
       };
-    });
+    };
 
-    return NextResponse.json({ data: mapped });
+    if (!isPaginated) {
+      // Sin paginación → comportamiento original
+      const productos = await prisma.producto.findMany({
+        where,
+        include: includeConfig,
+        orderBy: { id: "desc" },
+      });
+      return NextResponse.json({ data: productos.map(mapProducto) }, {
+        headers: {
+          "Cache-Control": "private, max-age=20, stale-while-revalidate=60",
+        },
+      });
+    }
+
+    // Con paginación → count + findMany en paralelo
+    const [total, productos] = await Promise.all([
+      prisma.producto.count({ where }),
+      prisma.producto.findMany({
+        where,
+        include: includeConfig,
+        orderBy: { id: "desc" },
+        skip,
+        take: limit,
+      }),
+    ]);
+
+    const totalPages = Math.ceil(total / limit);
+
+    return NextResponse.json({
+      data: productos.map(mapProducto),
+      total,
+      page,
+      limit,
+      totalPages,
+    }, {
+      headers: {
+        "Cache-Control": "private, max-age=20, stale-while-revalidate=60",
+      },
+    });
   } catch (error) {
     console.error("Error obteniendo productos:", error);
     return NextResponse.json(
