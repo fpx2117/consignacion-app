@@ -31,7 +31,9 @@ interface UsePedidosEsperadosReturn {
 export function usePedidosEsperados(): UsePedidosEsperadosReturn {
   const activeSucursalId = useSucursalStore((s) => s.activeSucursalId);
   const sucursalHeaders = React.useMemo(
-    () => (activeSucursalId ? { "x-sucursal-id": String(activeSucursalId) } : {}),
+    () => (Number.isFinite(activeSucursalId) && activeSucursalId >= 0
+      ? { "x-sucursal-id": String(activeSucursalId) }
+      : {}),
     [activeSucursalId]
   );
   const [pedidos, setPedidos] = React.useState<PedidoEsperado[]>([]);
@@ -56,6 +58,7 @@ export function usePedidosEsperados(): UsePedidosEsperadosReturn {
 
       const res = await fetch(`/api/pedidos-esperados?${params.toString()}`, {
         headers: sucursalHeaders,
+        cache: "no-store",
       });
       if (!res.ok) throw new Error("Error al cargar pedidos");
       const data = await res.json();

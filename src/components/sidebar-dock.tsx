@@ -234,9 +234,10 @@ export function SidebarDock({ initialUserData }: SidebarDockProps = {}) {
 
       try {
         const res = await fetch("/api/pedidos-esperados?estado=VENCIDO", {
-          headers: activeSucursalId
+          headers: Number.isFinite(activeSucursalId) && activeSucursalId >= 0
             ? { "x-sucursal-id": String(activeSucursalId) }
             : undefined,
+          cache: "no-store",
         });
 
         if (!res.ok) return;

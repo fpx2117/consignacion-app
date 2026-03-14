@@ -94,7 +94,7 @@ export function SubscriptionCheckout({ planId, amount, currency, onClose, basePr
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
-                    className="fixed inset-0 z-[999] flex items-center justify-center p-4 bg-foreground/70 backdrop-blur-md"
+                    className="fixed inset-0 z-[999] flex items-center justify-center p-4 bg-black/56 backdrop-blur-[2px]"
                 >
                     <motion.div
                         initial={{ opacity: 0, scale: 0.9, y: 20 }}

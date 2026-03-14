@@ -17,7 +17,7 @@ export function CancelSubscriptionModal({ isOpen, onClose, onConfirm, loading }:
     return (
         <Portal>
             <AnimatePresence>
-                <div className="fixed inset-0 z-[999] flex items-center justify-center p-4 md:p-6 bg-background/80 backdrop-blur-md">
+                <div className="fixed inset-0 z-[999] flex items-center justify-center p-4 md:p-6 bg-black/52 backdrop-blur-[2px]">
                     <motion.div
                         initial={{ opacity: 0, scale: 0.95, y: 20 }}
                         animate={{ opacity: 1, scale: 1, y: 0 }}

@@ -122,7 +122,7 @@ export function CartDrawer({
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
                         onClick={onClose}
-                        className="fixed inset-0 bg-foreground/40 backdrop-blur-[8px] z-[60]"
+                        className="fixed inset-0 bg-black/42 backdrop-blur-[3px] z-[60]"
                     />
 
                     <motion.aside
