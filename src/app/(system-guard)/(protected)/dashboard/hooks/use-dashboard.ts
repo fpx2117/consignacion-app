@@ -29,14 +29,14 @@ export function useDashboard(period: DashboardPeriod) {
     setError(null);
     try {
       const [k, c, t] = await Promise.all([
-        fetchDashboardKpis(period),
-        fetchDashboardConsignaciones(5),
-        fetchDashboardTopProductos(period, 5),
+        fetchDashboardKpis(period, activeSucursalId),
+        fetchDashboardConsignaciones(5, activeSucursalId),
+        fetchDashboardTopProductos(period, 5, activeSucursalId),
       ]);
 
       let trData: DashboardTendencia | null = null;
       if (period !== "all") {
-        trData = await fetchDashboardTendencia(period as Exclude<DashboardPeriod, "all">);
+        trData = await fetchDashboardTendencia(period as Exclude<DashboardPeriod, "all">, activeSucursalId);
       }
 
       setData({ kpis: k, consig: c, top: t, trend: trData });
@@ -45,7 +45,7 @@ export function useDashboard(period: DashboardPeriod) {
     } finally {
       setLoading(false);
     }
-  }, [period]);
+  }, [period, activeSucursalId]);
 
   React.useEffect(() => {
     loadAll();
