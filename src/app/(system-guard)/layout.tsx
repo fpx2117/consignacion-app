@@ -2,6 +2,8 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { unstable_cache } from "next/cache";
 
+export const dynamic = "force-dynamic";
+
 const getUserCountCached = unstable_cache(
   async () => prisma.usuario.count(),
   ["system-user-count"],
