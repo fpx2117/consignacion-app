@@ -36,9 +36,9 @@ export function KpiCard({
   };
 
   const getIconBg = () => {
-    if (isDestructive) return "bg-[color:var(--status-danger)] text-[color:var(--status-danger)] dark:bg-[color:var(--status-danger)]/30 dark:text-[color:var(--status-danger)]";
-    if (isSuccess) return "bg-[color:var(--status-success-strong)] text-[color:var(--status-success-strong)] dark:bg-[color:var(--status-success-strong)]/30 dark:text-[color:var(--status-success-strong)]";
-    if (isWarning) return "bg-[color:var(--status-warning)] text-[color:var(--status-warning)] dark:bg-[color:var(--status-warning)]/30 dark:text-[color:var(--status-warning)]";
+    if (isDestructive) return "bg-[color:var(--status-danger)]/15 text-[color:var(--status-danger)] ring-1 ring-inset ring-[color:var(--status-danger)]/20";
+    if (isSuccess) return "bg-[color:var(--status-success-strong)]/15 text-[color:var(--status-success-strong)] ring-1 ring-inset ring-[color:var(--status-success-strong)]/20";
+    if (isWarning) return "bg-[color:var(--status-warning)]/15 text-[color:var(--status-warning)] ring-1 ring-inset ring-[color:var(--status-warning)]/20";
     return "bg-secondary text-secondary-foreground";
   };
 

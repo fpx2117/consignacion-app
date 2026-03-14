@@ -72,7 +72,7 @@ export default async function ProtectedLayout({
           <GlobalReadonlyGuard />
           <SidebarDock initialUserData={userData} />
           <TopBar />
-          <main className="min-h-screen pt-4 p-4 pb-24 md:p-8 md:pt-4 md:pb-6 md:ml-[84px] relative z-0">
+          <main className="min-h-screen p-4 pt-24 pb-24 md:ml-[84px] md:p-8 md:pt-24 md:pb-6 relative z-0">
             {children}
           </main>
         </SubscriptionGuard>

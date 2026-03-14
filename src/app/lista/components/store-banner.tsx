@@ -3,7 +3,6 @@
 "use client";
 
 import * as React from "react";
-import Image from "next/image";
 import { motion, AnimatePresence } from "motion/react";
 import { cn } from "@/lib/utils";
 import { getThemeStyles } from "../lib/theme-utils";
@@ -23,7 +22,7 @@ export function StoreBanner({ config }: { config: any }) {
         return () => clearInterval(timer);
     }, [isSliderMode, config.banners?.length]);
 
-    if (!isSliderMode && !config.bannerData) return null;
+    if (!isSliderMode && !staticBannerSrc) return null;
 
     const { theme, radiusClass } = getThemeStyles(config.themeIdentifier);
 
@@ -49,30 +48,28 @@ export function StoreBanner({ config }: { config: any }) {
                                 transition={{ duration: 1, ease: "easeInOut" }}
                                 className="absolute inset-0"
                             >
-                                <Image
+                                <img
                                     src={config.banners[currentSlide].url || `data:${config.banners[currentSlide].bannerMime};base64,${config.banners[currentSlide].bannerData}`}
                                     alt={`Banner Slide ${currentSlide + 1}`}
-                                    fill
-                                    sizes="100vw"
-                                    className="object-cover"
-                                    priority={currentSlide === 0}
+                                    loading={currentSlide === 0 ? "eager" : "lazy"}
+                                    decoding="async"
+                                    className="w-full h-full object-cover"
                                 />
                             </motion.div>
                         </AnimatePresence>
                     ) : staticBannerSrc ? (
-                        <Image
+                        <img
                             src={staticBannerSrc}
-                            className="object-cover opacity-90"
+                            className="w-full h-full object-cover opacity-90"
                             alt="Banner de la tienda"
-                            fill
-                            sizes="100vw"
-                            priority
+                            loading="eager"
+                            decoding="async"
                         />
                     ) : null}
                 </div>
 
                 {/* Overlay Area with Animated Text */}
-                <div className="absolute inset-0 bg-foreground/40 flex flex-col items-center justify-center p-4 sm:p-8 md:p-16 text-center text-[color:var(--ui-fx-white)] backdrop-blur-[2px]">
+                <div className="absolute inset-0 bg-black/45 flex flex-col items-center justify-center p-4 sm:p-8 md:p-16 text-center text-[color:var(--ui-fx-white)] backdrop-blur-[2px]">
                     <motion.h2
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
@@ -84,7 +81,7 @@ export function StoreBanner({ config }: { config: any }) {
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         transition={{ delay: 0.5 }}
-                        className="text-[10px] sm:text-sm font-bold uppercase tracking-[0.2em] sm:tracking-[0.3em] bg-foreground/35 backdrop-blur-md px-4 sm:px-6 py-2 rounded-full border border-[color:var(--ui-fx-white)]/15"
+                        className="text-[10px] sm:text-sm font-bold uppercase tracking-[0.2em] sm:tracking-[0.3em] bg-black/35 backdrop-blur-md px-4 sm:px-6 py-2 rounded-full border border-[color:var(--ui-fx-white)]/15"
                     >
                         Explorá nuestra selección exclusiva
                     </motion.p>

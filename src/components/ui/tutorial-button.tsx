@@ -68,7 +68,7 @@ function TutorialModal({
          *   [header fijo] + [contenido scroll] + [footer fijo]
          */
         <div
-            className="fixed inset-0 z-[9999] bg-foreground/70 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4"
+            className="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4"
             onClick={onClose}
             role="dialog"
             aria-modal="true"
