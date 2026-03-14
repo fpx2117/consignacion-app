@@ -317,7 +317,7 @@ export default function WhatsAppSettingsPage() {
       </div>
 
       {portalReady && previewOpen && createPortal(
-        <div className="fixed inset-0 z-[2147483000] bg-background/95 backdrop-blur-sm">
+        <div className="fixed inset-0 z-[2147483000] bg-black/58 backdrop-blur-[2px]">
           <div className="h-full flex flex-col">
             <div className="border-b border-border/60 px-3 py-2.5 flex items-center justify-between">
               <p className="text-sm font-semibold">Vista previa de WhatsApp</p>

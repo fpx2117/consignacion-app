@@ -143,7 +143,7 @@ export function ProductosView() {
           search,
           categoriaId,
         }),
-        allCategories.length > 0 ? Promise.resolve(null) : apiService.getCategorias(),
+        apiService.getCategorias(),
       ]);
 
       const payload = resProductos as any;
@@ -153,9 +153,7 @@ export function ProductosView() {
       setServerTotalPages(payload.totalPages ?? 1);
       setServerPage(payload.page ?? page);
 
-      if (resCategorias !== null) {
-        setAllCategories(Array.isArray(resCategorias) ? resCategorias : []);
-      }
+      setAllCategories(Array.isArray(resCategorias) ? resCategorias : []);
     } catch (e) {
       console.error("Error loading data:", e);
       toast.error("Error al sincronizar datos");
@@ -163,23 +161,24 @@ export function ProductosView() {
     } finally {
       setLoading(false);
     }
-  }, [allCategories.length]);
-
-  // Carga de categorías independiente (una sola vez)
-  React.useEffect(() => {
-    if (allCategories.length === 0) {
-      apiService.getCategorias()
-        .then(res => setAllCategories(Array.isArray(res) ? res : []))
-        .catch(() => {});
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  React.useEffect(() => {
+    setCategoryFilter("all");
+    setSubCategoryFilter("all");
+    setStockFilter("all");
+    setExpiryFilter("all");
+    setQ("");
+    setDebouncedQ("");
+    setCurrentPage(1);
+    setServerPage(1);
+  }, [activeSucursalId]);
 
   React.useEffect(() => {
     load(1, debouncedQ, serverCategoriaId);
     setCurrentPage(1);
     setServerPage(1);
-  }, [activeSucursalId, debouncedQ, serverCategoriaId]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [activeSucursalId, debouncedQ, serverCategoriaId]);
 
   // Wrapper sin argumentos para subcomponentes (reload de la página actual)
   const reload = React.useCallback(() => {

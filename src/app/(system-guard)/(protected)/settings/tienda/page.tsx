@@ -579,7 +579,7 @@ export default function TiendaSettingsPage() {
         {previewPortalReady &&
           isPreviewOpen &&
           createPortal(
-            <div className="fixed inset-0 z-[2147483000] bg-background/95 backdrop-blur-sm">
+            <div className="fixed inset-0 z-[2147483000] bg-black/58 backdrop-blur-[2px]">
               <div className="h-full w-full flex flex-col">
                 <div className="shrink-0 border-b border-border/60 px-3 sm:px-6 py-2.5 sm:py-3 flex items-center justify-between gap-2">
                   <div className="min-w-0">
