@@ -97,6 +97,7 @@ export function ProductosView() {
   const activeSucursalId = useSucursalStore((s) => s.activeSucursalId);
   const catalogoHref = activeSucursalId ? `/lista?sucursalId=${activeSucursalId}` : "/lista";
   const [items, setItems] = React.useState<Producto[]>([]);
+  const [statsItems, setStatsItems] = React.useState<Producto[]>([]);
   const [allCategories, setAllCategories] = React.useState<Categoria[]>([]);
   const [loading, setLoading] = React.useState(true);
 
@@ -136,7 +137,7 @@ export function ProductosView() {
   const load = React.useCallback(async (page: number = 1, search: string = "", categoriaId: number | null = null) => {
     setLoading(true);
     try {
-      const [resProductos, resCategorias] = await Promise.all([
+      const [resProductos, resCategorias, resProductosStats] = await Promise.all([
         apiService.getProductosPaginados({
           page,
           limit: SERVER_LIMIT,
@@ -144,6 +145,7 @@ export function ProductosView() {
           categoriaId,
         }),
         apiService.getCategorias(),
+        apiService.getProductos(),
       ]);
 
       const payload = resProductos as any;
@@ -154,10 +156,12 @@ export function ProductosView() {
       setServerPage(payload.page ?? page);
 
       setAllCategories(Array.isArray(resCategorias) ? resCategorias : []);
+      setStatsItems(Array.isArray(resProductosStats) ? resProductosStats : []);
     } catch (e) {
       console.error("Error loading data:", e);
       toast.error("Error al sincronizar datos");
       setItems([]);
+      setStatsItems([]);
     } finally {
       setLoading(false);
     }
@@ -277,11 +281,11 @@ export function ProductosView() {
   const stats = React.useMemo(() => ({
     // total usa el count del servidor (más preciso que items.length que es la página actual)
     total: serverTotal || items?.length || 0,
-    lowStock: items?.filter(i => isLowStock(i)).length || 0,
-    outOfStock: items?.filter(i => isOutOfStock(i)).length || 0,
-    valorVenta: items?.reduce((acc, i) => acc + (Number(i.precioVenta) * i.stockDisponibleUnits), 0) || 0,
-    utilidad: items?.reduce((acc, i) => acc + ((Number(i.precioVenta) - Number(i.precioCosto)) * i.stockDisponibleUnits), 0) || 0
-  }), [items, serverTotal, isLowStock, isOutOfStock]);
+    lowStock: statsItems?.filter(i => isLowStock(i)).length || 0,
+    outOfStock: statsItems?.filter(i => isOutOfStock(i)).length || 0,
+    valorVenta: statsItems?.reduce((acc, i) => acc + (Number(i.precioVenta) * i.stockDisponibleUnits), 0) || 0,
+    utilidad: statsItems?.reduce((acc, i) => acc + ((Number(i.precioVenta) - Number(i.precioCosto)) * i.stockDisponibleUnits), 0) || 0
+  }), [items, serverTotal, statsItems, isLowStock, isOutOfStock]);
 
   return (
     <div className="max-w-[1600px] mx-auto space-y-8 p-6 md:p-10 pb-20 text-foreground selection:bg-primary/20 font-sans">
