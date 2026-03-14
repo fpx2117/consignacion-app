@@ -5,7 +5,6 @@
 import * as React from "react";
 import { Store, ChevronDown, LayoutDashboard, AlertTriangle } from "lucide-react";
 import { useSucursalStore } from "@/store/useSucursalStore";
-import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import {
     DropdownMenu,
@@ -13,18 +12,9 @@ import {
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { BrandLogo } from "@/components/brand-logo";
 
 export function TopBar() {
     const { availableSucursales, activeSucursalId, setActiveSucursalId } = useSucursalStore();
-    const pathname = usePathname();
-    const [mounted, setMounted] = React.useState(false);
-
-    React.useEffect(() => {
-        setMounted(true);
-    }, []);
-
-    if (!mounted) return null;
 
     // No mostrar si no hay sucursales cargadas
     if (availableSucursales.length === 0) return null;
@@ -34,11 +24,9 @@ export function TopBar() {
         : (availableSucursales.find((s) => s.id === activeSucursalId) || availableSucursales[0]);
 
     return (
-        <div className="fixed top-0 left-0 right-0 z-40 bg-background/80 backdrop-blur-md border-b px-6 md:pr-10 md:pl-[110px] transition-all">
-            <div className="h-20 flex items-center justify-between">
-                <div className="flex items-center gap-2 md:hidden">
-                    <BrandLogo size="sm" showText />
-                </div>
+        <div className="absolute top-0 left-0 right-0 z-40 bg-transparent px-4 md:px-6 md:pr-10 md:pl-[110px] transition-all">
+            <div className="h-16 flex items-center justify-between">
+                {/* Logo oculto en mobile - ya está en el menú hamburguesa del dock */}
 
                 <div className="flex items-center gap-4 ml-auto">
                     {activeSucursalId === 0 && (

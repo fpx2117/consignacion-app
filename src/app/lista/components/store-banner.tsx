@@ -3,12 +3,14 @@
 "use client";
 
 import * as React from "react";
+import Image from "next/image";
 import { motion, AnimatePresence } from "motion/react";
 import { cn } from "@/lib/utils";
 import { getThemeStyles } from "../lib/theme-utils";
 
 export function StoreBanner({ config }: { config: any }) {
     const isSliderMode = config.isBannerSlider && Array.isArray(config.banners) && config.banners.length > 0;
+    const staticBannerSrc = config.bannerUrl || (config.bannerData ? `data:${config.bannerMime};base64,${config.bannerData}` : null);
 
     const [currentSlide, setCurrentSlide] = React.useState(0);
 
@@ -39,24 +41,34 @@ export function StoreBanner({ config }: { config: any }) {
                 <div className="absolute inset-0 w-full h-full">
                     {isSliderMode ? (
                         <AnimatePresence mode="popLayout" initial={false}>
-                            <motion.img
+                            <motion.div
                                 key={currentSlide}
                                 initial={{ opacity: 0, scale: 1.05 }}
                                 animate={{ opacity: 1, scale: 1 }}
                                 exit={{ opacity: 0 }}
                                 transition={{ duration: 1, ease: "easeInOut" }}
-                                src={`data:${config.banners[currentSlide].bannerMime};base64,${config.banners[currentSlide].bannerData}`}
-                                className="absolute inset-0 w-full h-full object-cover"
-                                alt={`Banner Slide ${currentSlide + 1}`}
-                            />
+                                className="absolute inset-0"
+                            >
+                                <Image
+                                    src={config.banners[currentSlide].url || `data:${config.banners[currentSlide].bannerMime};base64,${config.banners[currentSlide].bannerData}`}
+                                    alt={`Banner Slide ${currentSlide + 1}`}
+                                    fill
+                                    sizes="100vw"
+                                    className="object-cover"
+                                    priority={currentSlide === 0}
+                                />
+                            </motion.div>
                         </AnimatePresence>
-                    ) : (
-                        <img
-                            src={`data:${config.bannerMime};base64,${config.bannerData}`}
-                            className="w-full h-full object-cover opacity-90"
+                    ) : staticBannerSrc ? (
+                        <Image
+                            src={staticBannerSrc}
+                            className="object-cover opacity-90"
                             alt="Banner de la tienda"
+                            fill
+                            sizes="100vw"
+                            priority
                         />
-                    )}
+                    ) : null}
                 </div>
 
                 {/* Overlay Area with Animated Text */}

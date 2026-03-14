@@ -5,7 +5,7 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatNumber, formatMoney } from "@/lib/utils-format";
-import { motion } from "framer-motion";
+import { motion } from "motion/react";
 import { TrendingUp, Package } from "lucide-react";
 import { cn } from "@/lib/utils";
 

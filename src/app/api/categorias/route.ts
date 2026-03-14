@@ -17,7 +17,11 @@ export async function GET(req: NextRequest) {
       where: sucursalWhere,
       orderBy: { nombre: "asc" },
     });
-    return NextResponse.json(categorias);
+    return NextResponse.json(categorias, {
+      headers: {
+        "Cache-Control": "private, max-age=120, stale-while-revalidate=300",
+      },
+    });
   } catch (error) {
     console.error("Error al obtener categorías:", error);
     return NextResponse.json(

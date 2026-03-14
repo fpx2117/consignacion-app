@@ -8,7 +8,12 @@ import { DashboardHeader } from "./components/dashboard-header";
 import { KpiCard } from "./components/kpi-card";
 import { OperationsSection } from "./components/operations-section";
 import { TopProductsSection } from "./components/top-products-section";
-import { TendenciaSection } from "./components/tendencia-section";
+import dynamic from "next/dynamic";
+// TendenciaSection contiene recharts — carga dinámica para no inflar el bundle inicial
+const TendenciaSection = dynamic(
+  () => import("./components/tendencia-section").then(m => m.TendenciaSection),
+  { ssr: false, loading: () => <div className="rounded-xl border bg-card h-64 animate-pulse" /> }
+);
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";

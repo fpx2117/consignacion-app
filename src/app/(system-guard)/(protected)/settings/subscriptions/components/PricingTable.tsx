@@ -3,7 +3,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence } from "motion/react";
 import { Check, Zap, Star, AlertTriangle, X, TrendingDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 

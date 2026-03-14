@@ -14,7 +14,11 @@ export async function GET(req: Request) {
 
   try {
     const data = await getDashboardTendencia(sucursalId, period, isAdmin);
-    return NextResponse.json({ data });
+    return NextResponse.json({ data }, {
+      headers: {
+        "Cache-Control": "private, max-age=30, stale-while-revalidate=60",
+      },
+    });
   } catch (error: any) {
     console.error("Tendencia API Error:", error);
     return NextResponse.json({ error: "Error al obtener datos de tendencia" }, { status: 500 });

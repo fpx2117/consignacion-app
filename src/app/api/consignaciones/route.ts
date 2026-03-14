@@ -13,21 +13,81 @@ import { obtenerConfiguracionGlobal } from "@/lib/config";
 import { evaluateStockAlert, processNotificationQueue } from "@/lib/stock-alerts";
 
 // GET: Listar consignaciones
-export async function GET() {
+export async function GET(req: Request) {
   const auth = await requireAuth();
   if (!auth.ok) return auth.res;
   const sucursalWhere = buildSucursalWhere(auth);
 
-  const consignaciones = await prisma.consignacion.findMany({
-    where: sucursalWhere,
-    orderBy: { id: "desc" },
-    include: {
-      cliente: true,
-      detalles: { include: { producto: true } },
+  const { searchParams } = new URL(req.url);
+  const pageParam = searchParams.get("page");
+  const limitParam = searchParams.get("limit");
+  const search = searchParams.get("search")?.trim() || "";
+  const estado = searchParams.get("estado")?.trim() || "";
+
+  // Si no se pasan page/limit → devuelve todos (backward compatibility)
+  const isPaginated = pageParam !== null || limitParam !== null;
+  const page = Math.max(1, parseInt(pageParam || "1", 10) || 1);
+  const limit = Math.min(100, Math.max(1, parseInt(limitParam || "20", 10) || 20));
+  const skip = (page - 1) * limit;
+
+  // Construcción del where con filtros
+  const where: any = { ...sucursalWhere };
+  if (estado) where.estado = estado;
+  if (search) {
+    where.OR = [
+      { cliente: { nombre: { contains: search, mode: "insensitive" } } },
+      // Búsqueda por número de folio si el término es numérico
+      ...(Number.isFinite(Number(search)) && search !== ""
+        ? [{ numeroFolio: { equals: Number(search) } }]
+        : []),
+    ];
+  }
+
+  const include = {
+    cliente: true,
+    detalles: { include: { producto: true } },
+    _count: { select: { detalles: true } },
+  };
+
+  if (!isPaginated) {
+    // Sin paginación → comportamiento original
+    const consignaciones = await prisma.consignacion.findMany({
+      where,
+      orderBy: { id: "desc" },
+      include,
+    });
+    return NextResponse.json({ data: consignaciones }, {
+      headers: {
+        "Cache-Control": "private, max-age=20, stale-while-revalidate=60",
+      },
+    });
+  }
+
+  // Con paginación → count + findMany en paralelo
+  const [total, consignaciones] = await Promise.all([
+    prisma.consignacion.count({ where }),
+    prisma.consignacion.findMany({
+      where,
+      orderBy: { id: "desc" },
+      skip,
+      take: limit,
+      include,
+    }),
+  ]);
+
+  const totalPages = Math.ceil(total / limit);
+
+  return NextResponse.json({
+    data: consignaciones,
+    total,
+    page,
+    limit,
+    totalPages,
+  }, {
+    headers: {
+      "Cache-Control": "private, max-age=20, stale-while-revalidate=60",
     },
   });
-
-  return NextResponse.json({ data: consignaciones });
 }
 
 // POST: Crear ConsignaciÃ³n

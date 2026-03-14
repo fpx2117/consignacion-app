@@ -2,7 +2,7 @@
 // @ts-nocheck
 "use client";
 
-import { createContext, useContext, useEffect, useRef, useState } from "react";
+import { createContext, useContext, useEffect, useState } from "react";
 import { io as ClientIO, Socket } from "socket.io-client";
 import { usePathname } from "next/navigation";
 
@@ -22,7 +22,6 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
   const [socket, setSocket] = useState<Socket | null>(null);
   const [isConnected, setIsConnected] = useState(false);
   const pathname = usePathname();
-  const authRetryRef = useRef(0);
 
   // No intentar conectar en rutas públicas/sin sesión
   const isSocketDisabledRoute =
@@ -50,29 +49,13 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
 
     const connectSocket = async () => {
       try {
-        // 2. Verificar sesión antes de abrir socket
-        const authCheck = await fetch("/api/auth/me", {
-          method: "GET",
-          credentials: "include",
-          cache: "no-store",
-        });
-
-        if (!authCheck.ok) {
-          if (!cancelled) {
-            setSocket(null);
-            setIsConnected(false);
-            console.log("⏭️ CLIENTE: Sesión no válida para Socket.IO, conexión omitida");
-          }
-          return;
-        }
-
-        // 3. Forzar same-origin para usar la misma cookie HttpOnly de sesión.
+        // 2. Forzar same-origin para usar la misma cookie HttpOnly de sesión.
         // Evita desalineación entre NEXT_PUBLIC_BASE_URL y el host real en navegador.
         const currentOrigin = typeof window !== "undefined" ? window.location.origin : "";
 
         console.log("🔌 Intentando conectar Socket.IO (same-origin) a:", currentOrigin);
 
-        // 4. Inicializar Socket
+        // 3. Inicializar Socket
         const socketInstance = ClientIO({
           path: "/socket.io",
           addTrailingSlash: false,
@@ -84,7 +67,6 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
         });
 
         socketInstance.on("connect", () => {
-          authRetryRef.current = 0;
           console.log("🟢 CLIENTE: Socket Conectado. ID:", socketInstance.id);
           setIsConnected(true);
         });
@@ -94,33 +76,20 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
           setIsConnected(false);
         });
 
-        socketInstance.on("connect_error", async (err) => {
+        socketInstance.on("connect_error", (err) => {
           const message = String(err?.message || "");
           const isAuthError =
             message.includes("Autenticación requerida") ||
             message.includes("Token inválido") ||
             message.includes("Token inválido o expirado");
 
-          if (isAuthError && authRetryRef.current < 2) {
-            authRetryRef.current += 1;
-            try {
-              const retryAuth = await fetch("/api/auth/me", {
-                method: "GET",
-                credentials: "include",
-                cache: "no-store",
-              });
-
-              if (retryAuth.ok) {
-                window.setTimeout(() => {
-                  if (!cancelled && !socketInstance.connected) {
-                    socketInstance.connect();
-                  }
-                }, 350);
-                return;
-              }
-            } catch {
-              // noop
+          if (isAuthError) {
+            if (!cancelled) {
+              setSocket(null);
+              setIsConnected(false);
             }
+            socketInstance.disconnect();
+            return;
           }
 
           console.error("⚠️ CLIENTE: Error de conexión:", message);

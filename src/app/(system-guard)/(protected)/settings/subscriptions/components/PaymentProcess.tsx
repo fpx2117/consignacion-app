@@ -4,7 +4,7 @@
 
 import { useEffect, useState } from "react";
 import { initMercadoPago } from "@mercadopago/sdk-react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence } from "motion/react";
 import { Loader2, ExternalLink, ShieldCheck, Zap, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Portal } from "@/components/ui/portal";

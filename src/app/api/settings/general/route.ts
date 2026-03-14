@@ -18,7 +18,11 @@ export async function GET() {
             config.mpAccessTokenTienda = "**************";
         }
 
-        return NextResponse.json({ data: config });
+        return NextResponse.json({ data: config }, {
+            headers: {
+                "Cache-Control": "private, max-age=60, stale-while-revalidate=180",
+            },
+        });
     } catch (error: any) {
         return NextResponse.json({ error: "Error al obtener la configuración" }, { status: 500 });
     }

@@ -2,6 +2,7 @@
 // @ts-nocheck
 "use client";
 
+import Image from "next/image";
 import { XCircle, ShoppingCart, PackageOpen, CheckCircle2 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { Button } from "@/components/ui/button";
@@ -74,12 +75,14 @@ export function ProductModal({ product, isOpen, onClose, config, isConsigne, onA
                             </Button>
 
                             {/* Lado Izquierdo: Imagen */}
-                            <div className="w-full md:w-1/2 bg-muted/40 flex items-center justify-center p-4 sm:p-8 aspect-square md:aspect-auto">
+                            <div className="w-full md:w-1/2 bg-muted/40 flex items-center justify-center p-4 sm:p-8 aspect-square md:aspect-auto relative">
                                 {product.imagenUrl ? (
-                                    <img
+                                    <Image
                                         src={product.imagenUrl}
                                         alt={product.nombre}
-                                        className="w-full h-full object-contain mix-blend-multiply"
+                                        fill
+                                        sizes="(max-width: 768px) 100vw, 50vw"
+                                        className="object-contain mix-blend-multiply"
                                     />
                                 ) : (
                                     <PackageOpen className="h-24 w-24 opacity-10" />

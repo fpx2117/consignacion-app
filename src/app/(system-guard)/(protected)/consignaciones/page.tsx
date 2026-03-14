@@ -19,7 +19,7 @@ import {
   Folder,
   Hash,
 } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence } from "motion/react";
 import { toast } from "sonner";
 
 import { apiService } from "@/lib/apiService";
@@ -49,7 +49,8 @@ type ClientGroup = {
   lastActivity: string | Date;
 };
 
-const ITEMS_PER_PAGE = 7;
+const ITEMS_PER_PAGE = 7; // Grupos de clientes por página (paginación client-side sobre grupos)
+const SERVER_PAGE_LIMIT = 50; // Registros por fetch server-side
 
 // --- Utilidades de color para avatares ---
 const AVATAR_PALETTES = [
@@ -88,15 +89,41 @@ export default function ConsignacionesPage() {
   const [data, setData] = React.useState<Row[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [q, setQ] = React.useState("");
+  const [debouncedQ, setDebouncedQ] = React.useState("");
   const [activeTab, setActiveTab] = React.useState<string>("TODAS");
   const activeSucursalId = useSucursalStore((s) => s.activeSucursalId);
   const [currentPage, setCurrentPage] = React.useState(1);
 
-  const load = React.useCallback(async () => {
+  // Paginación server-side
+  const [serverPage, setServerPage] = React.useState(1);
+  const [serverTotal, setServerTotal] = React.useState(0);
+  const [serverTotalPages, setServerTotalPages] = React.useState(1);
+
+  // Stats globales (independiente del fetch paginado)
+  const [globalStats, setGlobalStats] = React.useState({ total: 0, abiertas: 0, items: 0 });
+
+  // Debounce de búsqueda (300ms)
+  React.useEffect(() => {
+    const timer = setTimeout(() => setDebouncedQ(q), 300);
+    return () => clearTimeout(timer);
+  }, [q]);
+
+  const load = React.useCallback(async (page: number = 1, search: string = "", estado: string = "TODAS") => {
     setLoading(true);
     try {
-      const res = await apiService.getConsignaciones();
-      setData(res as any);
+      const res = await apiService.getConsignacionesPaginadas({
+        page,
+        limit: SERVER_PAGE_LIMIT,
+        search,
+        estado,
+      });
+      // apiRequest devuelve el JSON completo (no extrae .data)
+      const payload = (res as any);
+      const rows: Row[] = payload.data ?? [];
+      setData(rows);
+      setServerTotal(payload.total ?? 0);
+      setServerTotalPages(payload.totalPages ?? 1);
+      setServerPage(payload.page ?? page);
     } catch {
       toast.error("Error cargando datos");
     } finally {
@@ -104,20 +131,29 @@ export default function ConsignacionesPage() {
     }
   }, []);
 
-  React.useEffect(() => { load(); }, [load, activeSucursalId]);
+  // Carga inicial de stats globales (sin filtros)
+  const loadStats = React.useCallback(async () => {
+    try {
+      const res = await apiService.getConsignacionesPaginadas({ page: 1, limit: 1 });
+      const payload = (res as any);
+      // Para stats necesitamos todos → usamos el total sin filtros
+      setGlobalStats(prev => ({ ...prev, total: payload.total ?? 0 }));
+    } catch { /* silently ignore */ }
+  }, []);
 
+  React.useEffect(() => {
+    load(1, debouncedQ, activeTab);
+    setCurrentPage(1);
+  }, [load, activeSucursalId, debouncedQ, activeTab]);
+
+  React.useEffect(() => {
+    loadStats();
+  }, [loadStats, activeSucursalId]);
+
+  // Agrupar los datos del servidor por cliente
   const groupedData = React.useMemo(() => {
-    const filtered = data.filter((c) => {
-      const term = q.toLowerCase();
-      const matchesSearch =
-        (c.cliente?.nombre?.toLowerCase() ?? "").includes(term) ||
-        String(c.numeroFolio).includes(term);
-      const matchesTab = activeTab === "TODAS" || c.estado === activeTab;
-      return matchesSearch && matchesTab;
-    });
-
     const groups: Record<number, ClientGroup> = {};
-    filtered.forEach((item) => {
+    data.forEach((item) => {
       const cId = item.clienteId;
       if (!groups[cId]) {
         groups[cId] = {
@@ -141,23 +177,24 @@ export default function ConsignacionesPage() {
     return Object.values(groups).sort(
       (a, b) => new Date(b.lastActivity).getTime() - new Date(a.lastActivity).getTime()
     );
-  }, [data, q, activeTab]);
+  }, [data]);
 
+  // Paginación client-side de grupos (sobre los datos ya traídos del servidor)
   const totalPages = Math.ceil(groupedData.length / ITEMS_PER_PAGE);
   const paginatedGroups = groupedData.slice(
     (currentPage - 1) * ITEMS_PER_PAGE,
     currentPage * ITEMS_PER_PAGE
   );
 
-  React.useEffect(() => { setCurrentPage(1); }, [q, activeTab]);
+  React.useEffect(() => { setCurrentPage(1); }, [debouncedQ, activeTab]);
 
   const stats = React.useMemo(
     () => ({
-      total: data.length,
+      total: serverTotal,
       abiertas: data.filter((c) => c.estado === "ABIERTA").length,
       items: data.reduce((acc, c) => acc + (c._count?.detalles || 0), 0),
     }),
-    [data]
+    [data, serverTotal]
   );
 
   const eficacia = stats.total > 0 ? Math.round(((stats.total - stats.abiertas) / stats.total) * 100) : 0;
@@ -255,7 +292,7 @@ export default function ConsignacionesPage() {
         )}
       </div>
 
-      {/* ── PAGINACIÓN ─────────────────────────────────── */}
+      {/* ── PAGINACIÓN CLIENT (grupos en pantalla) ─────── */}
       {totalPages > 1 && (
         <div className="flex justify-center items-center gap-4 sm:gap-6 pt-2">
           <Button
@@ -283,6 +320,43 @@ export default function ConsignacionesPage() {
             className="rounded-full h-10 w-10 sm:h-12 sm:w-12 border-border bg-card hover:bg-primary hover:text-primary-foreground hover:border-primary transition-all shadow-sm disabled:opacity-30"
           >
             <ChevronRight className="h-4 w-4 sm:h-5 sm:w-5" />
+          </Button>
+        </div>
+      )}
+
+      {/* ── PAGINACIÓN SERVER (cargar más registros) ──── */}
+      {serverTotalPages > 1 && (
+        <div className="flex justify-center items-center gap-3 pt-1">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              const prev = Math.max(1, serverPage - 1);
+              load(prev, debouncedQ, activeTab);
+              setCurrentPage(1);
+            }}
+            disabled={serverPage <= 1 || loading}
+            className="rounded-xl text-xs font-bold text-muted-foreground hover:text-foreground disabled:opacity-30"
+          >
+            <ChevronRight className="h-3.5 w-3.5 rotate-180 mr-1" /> Anteriores
+          </Button>
+
+          <span className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest">
+            {(serverPage - 1) * SERVER_PAGE_LIMIT + 1}–{Math.min(serverPage * SERVER_PAGE_LIMIT, serverTotal)} de {serverTotal}
+          </span>
+
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              const next = Math.min(serverTotalPages, serverPage + 1);
+              load(next, debouncedQ, activeTab);
+              setCurrentPage(1);
+            }}
+            disabled={serverPage >= serverTotalPages || loading}
+            className="rounded-xl text-xs font-bold text-muted-foreground hover:text-foreground disabled:opacity-30"
+          >
+            Siguientes <ChevronRight className="h-3.5 w-3.5 ml-1" />
           </Button>
         </div>
       )}

@@ -2,6 +2,7 @@
 // @ts-nocheck
 "use client";
 
+import Image from "next/image";
 import { PackageOpen, Instagram, Facebook, MessageCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -27,6 +28,7 @@ export function StoreFooter({ config }: { config: any }) {
   const mapsHref = normalizeUrl(config.googleMapsUrl);
   const whatsappNumber = normalizeWhatsApp(config.whatsappNumber);
   const whatsappHref = whatsappNumber ? `https://wa.me/${whatsappNumber}` : "";
+  const logoSrc = config.logoUrl || (config.logoData ? `data:${config.logoMime};base64,${config.logoData}` : null);
 
 
   return (
@@ -38,8 +40,10 @@ export function StoreFooter({ config }: { config: any }) {
     )}>
       <div className="container mx-auto px-4 flex flex-col items-center gap-8">
         <div className="flex items-center gap-3">
-          {config.logoData ? (
-            <img src={`data:${config.logoMime};base64,${config.logoData}`} className="h-8 w-auto opacity-80" alt="Logo corporativo" />
+          {logoSrc ? (
+            <div className="relative h-8 w-24 opacity-80">
+              <Image src={logoSrc} alt="Logo corporativo" fill sizes="96px" className="object-contain" />
+            </div>
           ) : (
             <PackageOpen className="h-8 w-8 text-primary/40" />
           )}

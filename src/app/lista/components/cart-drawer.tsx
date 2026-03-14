@@ -4,6 +4,7 @@ import * as React from "react";
 import { useState, useEffect } from "react";
 import { ShoppingCart, XCircle, Trash2, Info, ArrowRight, Loader2, ShieldCheck, ShoppingBag, ArrowLeft, Truck, Store } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -191,9 +192,9 @@ export function CartDrawer({
                                                 radiusClass
                                             )}
                                         >
-                                            <div className={cn("h-24 w-24 bg-foreground/5 overflow-hidden shrink-0 border border-border/70", radiusClass)}>
+                                            <div className={cn("h-24 w-24 bg-foreground/5 overflow-hidden shrink-0 border border-border/70 relative", radiusClass)}>
                                                 {item.imagenUrl && (
-                                                    <img src={item.imagenUrl} alt={item.nombre} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500 mix-blend-multiply" />
+                                                    <Image src={item.imagenUrl} alt={item.nombre} fill sizes="96px" className="object-cover group-hover:scale-110 transition-transform duration-500 mix-blend-multiply" />
                                                 )}
                                             </div>
 
@@ -418,11 +419,10 @@ export function CartDrawer({
                                             <span className="text-[9px] uppercase font-bold tracking-wider">Checkout Seguro</span>
                                         </div>
                                         <div className="h-3 w-[1px] bg-border hidden sm:block" />
-                                        <img
-                                            src="https://logodownload.org/wp-content/uploads/2019/06/mercado-pago-logo-0.png"
-                                            alt="Mercado Pago"
-                                            className="h-3.5 grayscale opacity-60 contrast-125"
-                                        />
+                                        {/* Logo MercadoPago inline — sin dependencia externa */}
+                                        <span className="text-[9px] font-bold tracking-tight opacity-60 grayscale">
+                                            MercadoPago
+                                        </span>
                                     </div>
                                 )}
                             </div>

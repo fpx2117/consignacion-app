@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -23,7 +23,7 @@ import {
 } from "lucide-react";
 import { DashboardPeriod, DashboardFilter } from "@/lib/types";
 import { apiService } from "@/lib/apiService";
-import { motion } from "framer-motion";
+import { motion } from "motion/react";
 import { cn } from "@/lib/utils";
 
 interface DashboardHeaderProps {
@@ -54,13 +54,18 @@ export function DashboardHeader({
   loading,
 }: DashboardHeaderProps) {
   const [downloading, setDownloading] = useState<DownloadKey | null>(null);
+  const [greeting, setGreeting] = useState("Bienvenido");
 
-  const getGreeting = () => {
+  const getGreetingByHour = () => {
     const hour = new Date().getHours();
     if (hour < 12) return "Buenos días";
     if (hour < 18) return "Buenas tardes";
     return "Buenas noches";
   };
+
+  useEffect(() => {
+    setGreeting(getGreetingByHour());
+  }, []);
 
   const handleDownload = async (type: ReportType, targetPeriod: DashboardPeriod) => {
     const key: DownloadKey = `${type}-${targetPeriod}`;
@@ -93,7 +98,7 @@ export function DashboardHeader({
             <LayoutDashboard className="h-3.5 w-3.5" />
           </div>
           <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground/80">
-            {getGreeting()}
+            {greeting}
           </span>
         </div>
         <div>

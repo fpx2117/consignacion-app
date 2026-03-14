@@ -4,7 +4,7 @@
 
 import { useState, useEffect } from "react";
 import { PricingTable } from "./components/PricingTable";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, motion } from "motion/react";
 import { SubscriptionCheckout } from "./components/PaymentProcess";
 import { SubscriptionStatusCard } from "./components/SubscriptionStatusCard";
 import { ArrowLeft, CheckCircle2, XCircle, Gift, Loader2 } from "lucide-react";

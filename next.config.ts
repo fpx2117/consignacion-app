@@ -1,40 +1,83 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  // Security headers para todas las respuestas
+  // ✅ No exponer versión de Next.js en headers
+  poweredByHeader: false,
+
+  // ✅ Compresión habilitada (gzip/brotli)
+  compress: true,
+
+  // ✅ Security headers + Cache headers para assets estáticos
   async headers() {
     return [
       {
         source: "/(.*)",
         headers: [
-          // Prevenir clickjacking — no permitir embeber en iframes
           { key: "X-Frame-Options", value: "DENY" },
-          // Prevenir MIME type sniffing
           { key: "X-Content-Type-Options", value: "nosniff" },
-          // Controlar qué información se envía como Referer
           { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
-          // Restringir acceso a APIs del navegador
           { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" },
-          // Forzar HTTPS en producción (max-age: 2 años)
           {
             key: "Strict-Transport-Security",
             value: "max-age=63072000; includeSubDomains; preload",
           },
-          // Prevenir ataques XSS reflejados (legacy, pero no daña)
           { key: "X-XSS-Protection", value: "1; mode=block" },
+        ],
+      },
+      // ✅ Cache agresivo para assets estáticos inmutables de Next.js
+      {
+        source: "/_next/static/(.*)",
+        headers: [
+          {
+            key: "Cache-Control",
+            value: "public, max-age=31536000, immutable",
+          },
+        ],
+      },
+      // ✅ Cache moderado para archivos de la API de imágenes
+      {
+        source: "/api/files/(.*)",
+        headers: [
+          {
+            key: "Cache-Control",
+            value: "public, max-age=3600, stale-while-revalidate=86400",
+          },
         ],
       },
     ];
   },
+
   images: {
+    // ✅ Formatos modernos WebP y AVIF para ahorro de peso
+    formats: ["image/avif", "image/webp"],
+    // ✅ Dominios permitidos para next/image
     remotePatterns: [
-      // Imágenes servidas por el endpoint /api/files/ — solo desde el mismo dominio
-      // En producción, reemplazar "localhost" por tu dominio real
       {
         protocol: "http",
         hostname: "localhost",
         pathname: "/api/files/**",
       },
+      {
+        protocol: "https",
+        hostname: "localhost",
+        pathname: "/api/files/**",
+      },
+    ],
+    // ✅ Tamaños de dispositivo optimizados para el POS
+    deviceSizes: [640, 750, 828, 1080, 1200, 1920],
+    imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
+  },
+
+  // ✅ Optimizaciones experimentales de Next.js 15
+  experimental: {
+    // Optimización de imports de paquetes grandes
+    optimizePackageImports: [
+      "lucide-react",
+      "recharts",
+      "@dnd-kit/core",
+      "@dnd-kit/sortable",
+      "motion/react",
+      "date-fns",
     ],
   },
 };

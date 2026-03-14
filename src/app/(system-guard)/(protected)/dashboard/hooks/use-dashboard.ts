@@ -1,12 +1,17 @@
 /* eslint-disable */
 // @ts-nocheck
 import * as React from "react";
-import { apiService } from "@/lib/apiService";
 import type {
   DashboardPeriod, DashboardKpis, DashboardConsignacionesResponse,
   DashboardTopProductos, DashboardTendencia
 } from "@/lib/types";
 import { useSucursalStore } from "@/store/useSucursalStore";
+import {
+  fetchDashboardKpis,
+  fetchDashboardConsignaciones,
+  fetchDashboardTopProductos,
+  fetchDashboardTendencia,
+} from "../actions/dashboard-actions";
 
 export function useDashboard(period: DashboardPeriod) {
   const activeSucursalId = useSucursalStore((s) => s.activeSucursalId);
@@ -24,15 +29,14 @@ export function useDashboard(period: DashboardPeriod) {
     setError(null);
     try {
       const [k, c, t] = await Promise.all([
-        apiService.getDashboardKpis(period),
-        apiService.getDashboardConsignaciones(5),
-        apiService.getDashboardTopProductos(period, 5),
+        fetchDashboardKpis(period),
+        fetchDashboardConsignaciones(5),
+        fetchDashboardTopProductos(period, 5),
       ]);
 
-      let trData = null;
+      let trData: DashboardTendencia | null = null;
       if (period !== "all") {
-        const tr = await apiService.getDashboardTendencia(period);
-        trData = tr;
+        trData = await fetchDashboardTendencia(period as Exclude<DashboardPeriod, "all">);
       }
 
       setData({ kpis: k, consig: c, top: t, trend: trData });

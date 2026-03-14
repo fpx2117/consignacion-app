@@ -1,11 +1,27 @@
 /* eslint-disable */
 // @ts-nocheck
+import { cache } from "react";
 import { NextResponse } from "next/server";
 import { getAuthTokenFromCookies, verifyUserJwt } from "@/lib/auth";
 
 /* ============================
    AUTH GUARD
 ============================ */
+
+/**
+ * validateSession - per-request memoized (React.cache)
+ * Múltiples llamadas con el mismo token dentro del mismo render tree
+ * sólo ejecutan 1 query a la DB. Seguro para multi-tenant.
+ */
+const validateSession = cache(async (token: string) => {
+  const { prisma } = await import("@/lib/prisma");
+  const { getSessionHash } = await import("@/lib/sessionHash");
+  const sessionToken = getSessionHash(token);
+  return prisma.userSession.findUnique({
+    where: { token: sessionToken },
+    select: { isActive: true },
+  });
+});
 
 export async function requireAuth() {
   const token = await getAuthTokenFromCookies();
@@ -23,15 +39,8 @@ export async function requireAuth() {
   try {
     const user = await verifyUserJwt(token);
 
-    // ✅ VERIFICACIÓN DE SESIÓN EN BASE DE DATOS
-    const { prisma } = await import("@/lib/prisma");
-    const { getSessionHash } = await import("@/lib/sessionHash");
-
-    const sessionToken = getSessionHash(token);
-    const session = await prisma.userSession.findUnique({
-      where: { token: sessionToken },
-      select: { isActive: true }
-    });
+    // ✅ VERIFICACIÓN DE SESIÓN EN BASE DE DATOS (memoizada por request)
+    const session = await validateSession(token);
 
     if (!session || !session.isActive) {
       const response = NextResponse.json(

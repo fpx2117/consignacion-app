@@ -15,7 +15,11 @@ export async function GET(req: Request) {
 
   try {
     const data = await getDashboardTopProductos(sucursalId, period, isAdmin, limit);
-    return NextResponse.json({ data: { period, topVendidos: data } });
+    return NextResponse.json({ data: { period, topVendidos: data } }, {
+      headers: {
+        "Cache-Control": "private, max-age=30, stale-while-revalidate=60",
+      },
+    });
   } catch (error: any) {
     console.error("Top Productos API Error:", error);
     return NextResponse.json({ error: "Error al obtener los productos más vendidos" }, { status: 500 });
