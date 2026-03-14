@@ -123,10 +123,10 @@ export function DashboardHeader({
             <Filter className="h-3.5 w-3.5" />
           </div>
           <Select value={filter} onValueChange={(v) => setFilter(v as DashboardFilter)}>
-            <SelectTrigger className="h-10 w-full pl-9 bg-transparent border-none hover:bg-foreground/5 dark:hover:bg-card/5 transition-all rounded-xl focus:ring-0">
+            <SelectTrigger className="h-10 w-full pl-9 bg-transparent border-none hover:bg-muted/45 transition-all rounded-xl focus:ring-0">
               <SelectValue placeholder="Filtrar por..." />
             </SelectTrigger>
-            <SelectContent className="rounded-xl border-none shadow-xl backdrop-blur-xl bg-card/90 dark:bg-foreground/90 ring-1 ring-black/5">
+            <SelectContent className="rounded-xl border border-border/70 shadow-2xl backdrop-blur-xl bg-popover/95 text-popover-foreground ring-1 ring-black/10 dark:ring-white/10">
               <SelectItem value="all">Vista General</SelectItem>
               <SelectItem value="consignacion">Consignaciones</SelectItem>
               <SelectItem value="pos">Ventas (POS)</SelectItem>
@@ -142,10 +142,10 @@ export function DashboardHeader({
             <CalendarDays className="h-3.5 w-3.5" />
           </div>
           <Select value={period} onValueChange={(v) => setPeriod(v as DashboardPeriod)}>
-            <SelectTrigger className="h-10 w-full pl-9 bg-transparent border-none hover:bg-foreground/5 dark:hover:bg-card/5 transition-all rounded-xl focus:ring-0">
+            <SelectTrigger className="h-10 w-full pl-9 bg-transparent border-none hover:bg-muted/45 transition-all rounded-xl focus:ring-0">
               <SelectValue placeholder="Período" />
             </SelectTrigger>
-            <SelectContent className="rounded-xl border-none shadow-xl backdrop-blur-xl bg-card/90 dark:bg-foreground/90 ring-1 ring-black/5">
+            <SelectContent className="rounded-xl border border-border/70 shadow-2xl backdrop-blur-xl bg-popover/95 text-popover-foreground ring-1 ring-black/10 dark:ring-white/10">
               <SelectItem value="today">Hoy</SelectItem>
               <SelectItem value="week">Esta semana</SelectItem>
               <SelectItem value="month">Este mes</SelectItem>
