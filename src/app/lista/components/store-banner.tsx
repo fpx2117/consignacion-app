@@ -69,7 +69,7 @@ export function StoreBanner({ config }: { config: any }) {
                 </div>
 
                 {/* Overlay Area with Animated Text */}
-                <div className="absolute inset-0 bg-black/45 flex flex-col items-center justify-center p-4 sm:p-8 md:p-16 text-center text-[color:var(--ui-fx-white)] backdrop-blur-[2px]">
+                <div className="absolute inset-0 bg-black/42 flex flex-col items-center justify-center p-4 sm:p-8 md:p-16 text-center text-[color:var(--ui-fx-white)] backdrop-blur-[2px]">
                     <motion.h2
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
