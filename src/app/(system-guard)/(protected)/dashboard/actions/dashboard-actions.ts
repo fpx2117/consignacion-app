@@ -11,6 +11,26 @@ import type {
   DashboardTendencia,
 } from "@/lib/types";
 
+function resolveActiveSucursalId(
+  user: { rol: string; sucursalId?: number | null },
+  fallbackSucursalId: number,
+  requestedSucursalId?: number
+) {
+  if (user.rol !== "ADMIN") {
+    return user.sucursalId || 1;
+  }
+
+  if (typeof requestedSucursalId === "number" && Number.isFinite(requestedSucursalId) && requestedSucursalId >= 0) {
+    return requestedSucursalId;
+  }
+
+  if (typeof fallbackSucursalId === "number" && Number.isFinite(fallbackSucursalId) && fallbackSucursalId >= 0) {
+    return fallbackSucursalId;
+  }
+
+  return user.sucursalId || 1;
+}
+
 /** Lanza UnauthorizedError si la sesión no es válida */
 class UnauthorizedError extends Error {
   constructor() {
@@ -28,14 +48,16 @@ class UnauthorizedError extends Error {
  * Llama directamente a getDashboardKpis() de kpi-logic (con unstable_cache).
  */
 export async function fetchDashboardKpis(
-  period: DashboardPeriod = "month"
+  period: DashboardPeriod = "month",
+  requestedSucursalId?: number
 ): Promise<DashboardKpis> {
   const auth = await requireAuth();
   if (!auth.ok) throw new UnauthorizedError();
 
   const { user, activeSucursalId } = auth;
   const isAdmin = user.rol === "ADMIN";
-  const stats = await getDashboardKpis(activeSucursalId, period, isAdmin);
+  const scopedSucursalId = resolveActiveSucursalId(user, activeSucursalId, requestedSucursalId);
+  const stats = await getDashboardKpis(scopedSucursalId, period, isAdmin);
 
   return {
     period,
@@ -98,15 +120,17 @@ export async function fetchDashboardKpis(
  * Consulta Prisma directamente sin pasar por HTTP.
  */
 export async function fetchDashboardConsignaciones(
-  limit: number = 5
+  limit: number = 5,
+  requestedSucursalId?: number
 ): Promise<DashboardConsignacionesResponse> {
   const auth = await requireAuth();
   if (!auth.ok) throw new UnauthorizedError();
 
   const { user, activeSucursalId } = auth;
+  const scopedSucursalId = resolveActiveSucursalId(user, activeSucursalId, requestedSucursalId);
   const safeLimit = Math.min(limit, 50);
-  const isGlobal = user.rol === "ADMIN" && activeSucursalId === 0;
-  const sucursalWhere = isGlobal ? {} : { sucursalId: activeSucursalId };
+  const isGlobal = user.rol === "ADMIN" && scopedSucursalId === 0;
+  const sucursalWhere = isGlobal ? {} : { sucursalId: scopedSucursalId };
 
   const abiertas = await prisma.consignacion.findMany({
     where: { estado: "ABIERTA", ...sucursalWhere },
@@ -166,7 +190,8 @@ export async function fetchDashboardConsignaciones(
  */
 export async function fetchDashboardTopProductos(
   period: DashboardPeriod = "month",
-  limit: number = 5
+  limit: number = 5,
+  requestedSucursalId?: number
 ): Promise<DashboardTopProductos> {
   const auth = await requireAuth();
   if (!auth.ok) throw new UnauthorizedError();
@@ -174,8 +199,9 @@ export async function fetchDashboardTopProductos(
   const { user, activeSucursalId } = auth;
   const isAdmin = user.rol === "ADMIN";
   const safeLimit = Math.min(limit, 50);
+  const scopedSucursalId = resolveActiveSucursalId(user, activeSucursalId, requestedSucursalId);
 
-  const topVendidos = await getDashboardTopProductos(activeSucursalId, period, isAdmin, safeLimit);
+  const topVendidos = await getDashboardTopProductos(scopedSucursalId, period, isAdmin, safeLimit);
 
   return {
     period,
@@ -193,17 +219,19 @@ export async function fetchDashboardTopProductos(
  * Llama directamente a getDashboardTendencia() de kpi-logic.
  */
 export async function fetchDashboardTendencia(
-  period: Exclude<DashboardPeriod, "all"> = "month"
+  period: Exclude<DashboardPeriod, "all"> = "month",
+  requestedSucursalId?: number
 ): Promise<DashboardTendencia> {
   const auth = await requireAuth();
   if (!auth.ok) throw new UnauthorizedError();
 
   const { user, activeSucursalId } = auth;
   const isAdmin = user.rol === "ADMIN";
+  const scopedSucursalId = resolveActiveSucursalId(user, activeSucursalId, requestedSucursalId);
 
-  const data = await getDashboardTendencia(activeSucursalId, period, isAdmin);
+  const data = await getDashboardTendencia(scopedSucursalId, period, isAdmin);
 
-  const series = (data.series ?? []).map((point: any) => ({
+  const series = (data.series ?? []).map((point: { date?: string; ventasTotal?: number; pagosTotal?: number }) => ({
     date: point.date as string,
     consignaciones: 0,
     liquidaciones: 0,

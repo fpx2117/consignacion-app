@@ -59,16 +59,23 @@ export async function requireAuth() {
     }
 
     // Resolviendo la sucursal activa
-    const { headers } = await import("next/headers");
+    const { headers, cookies } = await import("next/headers");
     const h = await headers();
+    const cookieStore = await cookies();
     const reqHeader = h.get("x-sucursal-id");
+    const reqCookie = cookieStore.get("active_sucursal_id")?.value;
     let activeSucursalId = 1;
 
     if (user.rol === "ADMIN") {
       const parsedHeader = reqHeader ? parseInt(reqHeader, 10) : NaN;
-      activeSucursalId = Number.isFinite(parsedHeader) && parsedHeader >= 0
-        ? parsedHeader
-        : (user.sucursalId || 1);
+      const parsedCookie = reqCookie ? parseInt(reqCookie, 10) : NaN;
+      if (Number.isFinite(parsedHeader) && parsedHeader >= 0) {
+        activeSucursalId = parsedHeader;
+      } else if (Number.isFinite(parsedCookie) && parsedCookie >= 0) {
+        activeSucursalId = parsedCookie;
+      } else {
+        activeSucursalId = user.sucursalId || 1;
+      }
     } else {
       activeSucursalId = user.sucursalId || 1;
     }
