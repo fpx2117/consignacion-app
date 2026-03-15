@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
-import { verifyUserJwt } from "@/lib/auth";
+import { verifyUserJwt } from "@/lib/auth/core";
 import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";

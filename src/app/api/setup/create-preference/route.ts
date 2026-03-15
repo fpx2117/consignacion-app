@@ -1,11 +1,11 @@
-/* eslint-disable */
-// @ts-nocheck
-// src/app/api/setup/create-preference/route.ts
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
 import { SUBSCRIPTION_PLANS } from "@/constants/subscriptions";
 import { MercadoPagoConfig, Preference } from "mercadopago";
-import { paymentConfig } from "@/lib/paymentConfig";
+import { paymentConfig } from "@/lib/payments/config";
+
+type CreatePreferenceBody = {
+    planId?: number;
+};
 
 const client = new MercadoPagoConfig({
     accessToken: paymentConfig.mp.accessToken,
@@ -14,7 +14,7 @@ const client = new MercadoPagoConfig({
 
 export async function POST(req: Request) {
     try {
-        const { planId } = await req.json();
+        const { planId } = (await req.json()) as CreatePreferenceBody;
 
         const plan = SUBSCRIPTION_PLANS.find(p => p.id === planId);
         if (!plan) {
@@ -57,7 +57,7 @@ export async function POST(req: Request) {
             initPoint: response.init_point
         });
 
-    } catch (error: any) {
+    } catch (error) {
         console.error("SETUP_CREATE_PREFERENCE_ERROR:", error);
         return NextResponse.json({ error: "Error al crear preferencia de pago" }, { status: 500 });
     }

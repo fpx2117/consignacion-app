@@ -1,5 +1,3 @@
-/* eslint-disable */
-// @ts-nocheck
 import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
@@ -50,7 +48,24 @@ type InitializeBody = {
     };
 };
 
-function jsonError(status: number, payload: any) {
+type JsonErrorPayload = {
+    message?: string;
+    [key: string]: unknown;
+};
+
+type PayPalSubscriptionStatusResponse = {
+    status?: string;
+};
+
+type MercadoPagoPaymentStatusResponse = {
+    status?: string;
+};
+
+type MercadoPagoPreapprovalStatusResponse = {
+    status?: string | null;
+};
+
+function jsonError(status: number, payload: JsonErrorPayload) {
     return NextResponse.json(payload, { status });
 }
 
@@ -93,8 +108,8 @@ export async function POST(req: Request) {
         const adminEmail = normalizeEmail(admin.email);
 
         // --- VERIFICATION LOGIC (robusta) ---
-        let verificationProvider: ProveedorSuscripcion;
-        let verificationExternalId: string;
+        let verificationProvider: ProveedorSuscripcion | null = null;
+        let verificationExternalId: string | null = null;
         const verificationStatus: EstadoSuscripcion = EstadoSuscripcion.ACTIVO;
         let trialDays = 30;
         let finalPlanId: number | null = typeof planId === "number" ? planId : null;
@@ -115,6 +130,10 @@ export async function POST(req: Request) {
                 return jsonError(400, { message: "La licencia es inválida o ya fue utilizada" });
             }
 
+            if (promo.expiresAt && new Date() > promo.expiresAt) {
+                return jsonError(400, { message: "La licencia expiró" });
+            }
+
             verificationProvider = ProveedorSuscripcion.PROMO;
             verificationExternalId = `PROMO-${promo.code}-${Date.now()}`;
             trialDays = promo.durationDays || 30;
@@ -126,8 +145,8 @@ export async function POST(req: Request) {
             if (isPayPal) {
                 // PayPal verification
                 try {
-                    const { paymentConfig } = await import("@/lib/paymentConfig");
-                    const { getPayPalAccessToken } = await import("@/lib/paypal");
+                    const { paymentConfig } = await import("@/lib/payments/config");
+                    const { getPayPalAccessToken } = await import("@/lib/payments/paypal");
 
                     const accessToken = await getPayPalAccessToken();
                     const base = paymentConfig?.paypal?.apiUrl;
@@ -145,7 +164,7 @@ export async function POST(req: Request) {
                         return jsonError(400, { message: "No se pudo verificar la suscripción de PayPal" });
                     }
 
-                    const subData = await response.json();
+                    const subData = (await response.json()) as PayPalSubscriptionStatusResponse;
                     if (subData.status !== "ACTIVE") {
                         return jsonError(400, {
                             message: `La suscripción de PayPal no está activa (Estado: ${subData.status})`,
@@ -155,14 +174,14 @@ export async function POST(req: Request) {
                     verificationProvider = ProveedorSuscripcion.PAYPAL;
                     verificationExternalId = pid;
                     trialDays = 30;
-                } catch (err) {
-                    console.error("PayPal verification error:", err);
+                } catch (error) {
+                    console.error("PayPal verification error:", error);
                     return jsonError(400, { message: "Error verificando con PayPal" });
                 }
             } else {
                 // MercadoPago verification (Payment or PreApproval)
                 try {
-                    const { paymentConfig } = await import("@/lib/paymentConfig");
+                    const { paymentConfig } = await import("@/lib/payments/config");
                     const mpAccessToken = paymentConfig?.mp?.accessToken;
 
                     if (!mpAccessToken) {
@@ -177,7 +196,7 @@ export async function POST(req: Request) {
                     // Try as single payment
                     try {
                         const payment = new Payment(mpClient);
-                        const paymentData = await payment.get({ id: pid });
+                        const paymentData = (await payment.get({ id: pid })) as MercadoPagoPaymentStatusResponse;
 
                         if (paymentData?.status === "approved") {
                             verificationProvider = ProveedorSuscripcion.MERCADOPAGO;
@@ -193,7 +212,7 @@ export async function POST(req: Request) {
                     if (!verified) {
                         const { PreApproval } = await import("mercadopago");
                         const preApproval = new PreApproval(mpClient);
-                        const subData = await preApproval.get({ id: pid });
+                        const subData = (await preApproval.get({ id: pid })) as MercadoPagoPreapprovalStatusResponse;
 
                         if (subData?.status !== "authorized") {
                             return jsonError(400, {
@@ -210,8 +229,8 @@ export async function POST(req: Request) {
                     if (!verified) {
                         return jsonError(400, { message: "El pago o suscripción no está aprobado" });
                     }
-                } catch (err) {
-                    console.error("MercadoPago verification error:", err);
+                } catch (error) {
+                    console.error("MercadoPago verification error:", error);
                     return jsonError(400, { message: "No se pudo verificar con Mercado Pago" });
                 }
             }
@@ -221,9 +240,16 @@ export async function POST(req: Request) {
             });
         }
 
+        if (!verificationProvider || !verificationExternalId) {
+            return jsonError(400, { message: "No se pudo verificar la activación del sistema" });
+        }
+
         if (finalPlanId === null) {
-            // fallback defensivo: si no vino planId y no vino promo con planId (no debería pasar)
             finalPlanId = 1;
+        }
+
+        if (!SUBSCRIPTION_PLANS.some((plan) => plan.id === finalPlanId)) {
+            return jsonError(400, { message: "planId inválido" });
         }
 
         // Exchange rate (NO rompe si falla)
@@ -304,7 +330,7 @@ export async function POST(req: Request) {
 
             // 2) Branding (id=1) - incluir datos del setup
             const brandingData = branding || {};
-            const logoBuffer = brandingData.logoData ? Buffer.from(brandingData.logoData, 'base64') : null;
+            const logoBuffer = brandingData.logoData ? Buffer.from(brandingData.logoData, "base64") : null;
             
             await tx.branding.upsert({
                 where: { id: 1 },
@@ -386,6 +412,13 @@ export async function POST(req: Request) {
                     activo: true,
                     sucursalId: sucursalId,
                 },
+                select: {
+                    id: true,
+                    email: true,
+                    nombre: true,
+                    rol: true,
+                    sucursalId: true,
+                },
             });
 
             // 6) Subscription (externalId unique)
@@ -394,9 +427,9 @@ export async function POST(req: Request) {
             const sub = await tx.subscription.create({
                 data: {
                     userId: mainAdmin.id,
-                    planId: finalPlanId!,
-                    provider: verificationProvider!,
-                    externalId: verificationExternalId!,
+                    planId: finalPlanId,
+                    provider: verificationProvider,
+                    externalId: verificationExternalId,
                     status: verificationStatus,
                     trialEndsAt,
                 },
@@ -437,7 +470,7 @@ export async function POST(req: Request) {
         });
 
         // 9) Login cookie
-        const { signUserJwt, setAuthCookie } = await import("@/lib/auth");
+        const { signUserJwt, setAuthCookie } = await import("@/lib/auth/core");
         const token = await signUserJwt({
             sub: String(result.adminId),
             email: result.user.email,
@@ -448,7 +481,7 @@ export async function POST(req: Request) {
         await setAuthCookie(token);
 
         return NextResponse.json({ success: true, data: result }, { status: 201 });
-    } catch (error: any) {
+    } catch (error) {
         console.error("Initialization error FULL:", error);
 
         return NextResponse.json(

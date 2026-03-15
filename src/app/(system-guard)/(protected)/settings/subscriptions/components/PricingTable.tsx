@@ -1,5 +1,3 @@
-/* eslint-disable */
-// @ts-nocheck
 "use client";
 
 import { useState, useEffect } from "react";
@@ -32,7 +30,7 @@ interface DowngradeModalProps {
     onCancel: () => void;
 }
 
-function DowngradeWarningModal({ targetPlan, currentPlan, currency, onConfirm, onCancel }: DowngradeModalProps) {
+function DowngradeWarningModal({ targetPlan, currentPlan, currency: _currency, onConfirm, onCancel }: DowngradeModalProps) {
     // Features the user will LOSE (in currentPlan but not in targetPlan)
     const lostFeatures = currentPlan.features.filter(
         (f) => !targetPlan.features.some((tf) => tf.toLowerCase().includes(f.toLowerCase().split(" ")[0]))
@@ -168,7 +166,8 @@ export function PricingTable({ onSelectPlan, currentPlanId }: PricingTableProps)
                     const data = await res.json();
                     const basePlans = SUBSCRIPTION_PLANS.filter((plan) => isEnabledPlan(plan.id));
                     const mergedPlans = basePlans.map(basePlan => {
-                        const dbPlan = data.plans.find((p: any) => p.id === basePlan.id);
+                        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- API /subscriptions/plans no tiene schema tipado en el cliente
+                        const dbPlan = (data.plans as any[]).find((p: { id: number }) => p.id === basePlan.id);
                         if (dbPlan) {
                             return {
                                 ...basePlan,

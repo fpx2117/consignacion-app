@@ -1,24 +1,23 @@
-/* eslint-disable */
-// @ts-nocheck
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireAuth } from "@/lib/requireAuth";
+import { requireAuth } from "@/lib/auth/require-auth";
 
 export async function GET(req: Request) {
     const auth = await requireAuth();
-    if (!auth.ok || auth.user.rol !== "ADMIN") {
-        return auth.res || NextResponse.json({ error: "No autorizado" }, { status: 403 });
+    if (!auth.ok) return auth.res;
+    if (auth.user.rol !== "ADMIN") {
+        return NextResponse.json({ error: "No autorizado" }, { status: 403 });
     }
 
     const { searchParams } = new URL(req.url);
     const limit = parseInt(searchParams.get("limit") || "50");
-    const module = searchParams.get("module") || undefined;
+    const moduleFilter = searchParams.get("module") || undefined;
     const userId = searchParams.get("userId") ? parseInt(searchParams.get("userId")!) : undefined;
 
     try {
         const logs = await prisma.auditLog.findMany({
             where: {
-                module,
+                module: moduleFilter,
                 userId,
             },
             include: {

@@ -78,7 +78,8 @@ const config: Config = {
       },
     },
   },
-  plugins: [require("tailwindcss-animate")],
+  plugins: [tailwindcssAnimate],
 };
 
 export default config;
+import tailwindcssAnimate from "tailwindcss-animate";

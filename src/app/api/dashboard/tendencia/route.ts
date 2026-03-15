@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireAuth } from "@/lib/requireAuth";
+import { requireAuth } from "@/lib/auth/require-auth";
 import { getDashboardTendencia } from "@/lib/kpi-logic";
 import { DashboardPeriod } from "@/lib/types";
 
@@ -19,7 +19,7 @@ export async function GET(req: Request) {
         "Cache-Control": "private, max-age=30, stale-while-revalidate=60",
       },
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Tendencia API Error:", error);
     return NextResponse.json({ error: "Error al obtener datos de tendencia" }, { status: 500 });
   }

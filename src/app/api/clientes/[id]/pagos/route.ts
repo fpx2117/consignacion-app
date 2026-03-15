@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireAuth } from "@/lib/requireAuth";
+import { requireAuth } from "@/lib/auth/require-auth";
 import { createPagoSchema } from "@/lib/validators/cliente";
 import { isGlobalSucursalView } from "@/lib/sucursalScope";
 

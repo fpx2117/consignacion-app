@@ -1,5 +1,3 @@
-/* eslint-disable */
-// @ts-nocheck
 "use client";
 
 import * as React from "react";
@@ -57,8 +55,8 @@ function getTodayStr() {
 
 export function CrearPedidoDialog({ open, onOpenChange, onSuccess }: CrearPedidoDialogProps) {
   const activeSucursalId = useSucursalStore((s) => s.activeSucursalId);
-  const sucursalHeaders = React.useMemo(
-    () => (activeSucursalId ? { "x-sucursal-id": String(activeSucursalId) } : {}),
+  const sucursalHeaders = React.useMemo<Record<string, string>>(
+    () => activeSucursalId ? { "x-sucursal-id": String(activeSucursalId) } : {} as Record<string, string>,
     [activeSucursalId]
   );
 
@@ -93,11 +91,11 @@ export function CrearPedidoDialog({ open, onOpenChange, onSuccess }: CrearPedido
       })
       .then((data) => {
         const arr = Array.isArray(data) ? data : Array.isArray(data?.data) ? data.data : [];
-        setProductos(arr.filter((p: any) => p.activo !== false));
+        setProductos(arr.filter((p: { activo?: boolean }) => p.activo !== false));
       })
-      .catch((err: any) => {
+      .catch((err: unknown) => {
         setProductos([]);
-        toast.error(err?.message || "No se pudieron cargar los productos");
+        toast.error(err instanceof Error ? err.message : "No se pudieron cargar los productos");
       })
       .finally(() => setLoadingProductos(false));
   }, [open, activeSucursalId, sucursalHeaders]);
@@ -176,8 +174,8 @@ export function CrearPedidoDialog({ open, onOpenChange, onSuccess }: CrearPedido
       toast.success("Pedido creado correctamente");
       onOpenChange(false);
       onSuccess();
-    } catch (err: any) {
-      toast.error(err.message || "Error al crear el pedido");
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Error al crear el pedido");
     } finally {
       setSaving(false);
     }
@@ -220,7 +218,7 @@ export function CrearPedidoDialog({ open, onOpenChange, onSuccess }: CrearPedido
               <div className="border border-border/60 rounded-xl overflow-hidden bg-background shadow-md">
                 {productosFiltrados.length === 0 ? (
                   <div className="p-4 text-sm text-muted-foreground text-center">
-                    Sin resultados para "{busqueda}"
+                    Sin resultados para &quot;{busqueda}&quot;
                   </div>
                 ) : (
                   productosFiltrados.map((p) => {

@@ -1,10 +1,8 @@
-/* eslint-disable */
-// @ts-nocheck
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
-import { checkUserLimit } from "@/lib/requireSubscription";
-import { requireAuth, requireRole } from "@/lib/requireAuth";
+import { checkUserLimit } from "@/lib/subscriptions/require-subscription";
+import { requireAuth, requireRole } from "@/lib/auth/require-auth";
 import { validatePasswordStrength } from "@/lib/validators/password";
 
 // --- GET: Listar usuarios ---
@@ -31,7 +29,7 @@ export async function GET() {
     });
 
     return NextResponse.json({ ok: true, data: usuarios });
-  } catch (error: any) {
+  } catch {
     return NextResponse.json({ ok: false, error: "Error al obtener usuarios" }, { status: 500 });
   }
 }
@@ -88,7 +86,7 @@ export async function POST(req: Request) {
     });
 
     return NextResponse.json({ ok: true, data: nuevoUsuario });
-  } catch (error: any) {
+  } catch {
     return NextResponse.json({ ok: false, error: "Error al crear usuario" }, { status: 500 });
   }
 }
@@ -142,7 +140,7 @@ export async function PUT(req: Request) {
     });
 
     return NextResponse.json({ ok: true, data: usuarioActualizado });
-  } catch (error: any) {
+  } catch {
     return NextResponse.json({ ok: false, error: "Error al actualizar usuario" }, { status: 500 });
   }
 }
@@ -169,7 +167,7 @@ export async function DELETE(req: Request) {
     });
 
     return NextResponse.json({ ok: true, message: "Usuario eliminado" });
-  } catch (error: any) {
+  } catch {
     return NextResponse.json({ ok: false, error: "Error al eliminar usuario" }, { status: 500 });
   }
 }

@@ -1,11 +1,9 @@
-/* eslint-disable */
-// @ts-nocheck
 "use client";
 
 import * as React from "react";
-import type { UpdateProductoInput } from "@/lib/types";
+import type { CreateProductoInput } from "@/lib/types";
 import { apiService } from "@/lib/apiService";
-import { CATEGORY_PALETTE, getCategoryColorByKey, type CategoryColorKey } from "@/lib/category-colors";
+import { getCategoryColorByKey } from "@/lib/category-colors";
 import { cn } from "@/lib/utils";
 
 import { Button } from "@/components/ui/button";
@@ -33,7 +31,6 @@ import {
   TrendingUp,
   Package,
   Barcode,
-  BellRing,
   Calendar,
   Layers,
   AlertCircle,
@@ -129,7 +126,7 @@ export function CreateProductoDialog({
     if (!canSubmit || saving) return;
     setSaving(true);
     try {
-      await apiService.createProducto({
+      const payload = {
         nombre: nombre.trim(),
         codigoBarra: codigoBarra.trim() || undefined,
         precioVenta: pv,
@@ -140,12 +137,14 @@ export function CreateProductoDialog({
         fechaVencimiento: fechaVencimiento || null,
         categoriaId: Number(categoriaId),
         subcategoriaId: subcategoriaId ? Number(subcategoriaId) : undefined,
-      });
+      };
+
+      await apiService.createProducto(payload as unknown as CreateProductoInput);
       toast.success("Producto creado con éxito");
       setOpen(false);
       onCreated?.();
-    } catch (err: any) {
-      toast.error(err.message || "Error al crear producto");
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Error al crear producto");
     } finally {
       setSaving(false);
     }

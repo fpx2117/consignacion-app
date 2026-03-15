@@ -1,10 +1,64 @@
-/* eslint-disable */
-// @ts-nocheck
+import { Prisma } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireAuth, requireRole } from "@/lib/requireAuth";
+import { requireAuth, requireRole } from "@/lib/auth/require-auth";
 
-// GET: Obtener branding de la sucursal activa
+type BrandingBannerInput = {
+  bannerData?: string;
+  bannerMime?: string;
+};
+
+type BrandingBody = {
+  businessName?: string;
+  primaryColor?: string;
+  secondaryColor?: string;
+  footerText?: string | null;
+  phone?: string | null;
+  address?: string | null;
+  instagramUrl?: string | null;
+  facebookUrl?: string | null;
+  whatsappNumber?: string | null;
+  whatsappMessage?: string | null;
+  themeIdentifier?: string;
+  logoData?: string | null;
+  logoMime?: string | null;
+  bannerData?: string | null;
+  bannerMime?: string | null;
+  isBannerSlider?: boolean;
+  banners?: BrandingBannerInput[];
+};
+
+type BrandingWithBanners = Prisma.BrandingGetPayload<{ include: { banners: true } }>;
+
+function toBase64(data: Uint8Array | null | undefined) {
+  return data ? Buffer.from(data).toString("base64") : null;
+}
+
+function serializeBranding(branding: BrandingWithBanners | null) {
+  if (!branding) {
+    return null;
+  }
+
+  return {
+    ...branding,
+    logoData: toBase64(branding.logoData),
+    bannerData: toBase64(branding.bannerData),
+    banners: branding.banners
+      .slice()
+      .sort((a, b) => a.orden - b.orden)
+      .map((banner) => ({
+        id: banner.id,
+        bannerData: toBase64(banner.bannerData),
+        bannerMime: banner.bannerMime,
+        orden: banner.orden,
+      })),
+  };
+}
+
+function hasBannerPayload(banner: BrandingBannerInput): banner is { bannerData: string; bannerMime: string } {
+  return typeof banner.bannerData === "string" && typeof banner.bannerMime === "string";
+}
+
 export async function GET() {
   const auth = await requireAuth();
   if (!auth.ok) return auth.res;
@@ -14,35 +68,17 @@ export async function GET() {
       where: { sucursalId: auth.activeSucursalId },
       include: {
         banners: {
-          orderBy: { orden: 'asc' }
-        }
-      }
+          orderBy: { orden: "asc" },
+        },
+      },
     });
 
-    if (!branding) {
-      return NextResponse.json({ data: null });
-    }
-
-    // Convertir buffers a base64 para el frontend
-    const data = {
-      ...branding,
-      logoData: branding.logoData ? Buffer.from(branding.logoData).toString('base64') : null,
-      bannerData: branding.bannerData ? Buffer.from(branding.bannerData).toString('base64') : null,
-      banners: branding.banners.map(b => ({
-        id: b.id,
-        bannerData: Buffer.from(b.bannerData).toString('base64'),
-        bannerMime: b.bannerMime,
-        orden: b.orden
-      }))
-    };
-
-    return NextResponse.json({ data });
-  } catch (error: any) {
+    return NextResponse.json({ data: serializeBranding(branding) });
+  } catch {
     return NextResponse.json({ error: "Error al obtener branding" }, { status: 500 });
   }
 }
 
-// PUT: Actualizar branding
 export async function PUT(req: Request) {
   const auth = await requireAuth();
   if (!auth.ok) return auth.res;
@@ -51,7 +87,7 @@ export async function PUT(req: Request) {
   }
 
   try {
-    const body = await req.json();
+    const body = (await req.json()) as BrandingBody;
     const {
       businessName,
       primaryColor,
@@ -64,15 +100,15 @@ export async function PUT(req: Request) {
       whatsappNumber,
       whatsappMessage,
       themeIdentifier,
-      logoData, // base64 string
+      logoData,
       logoMime,
-      bannerData, // base64 string
+      bannerData,
       bannerMime,
       isBannerSlider,
-      banners // array of { bannerData: base64, bannerMime: string }
+      banners,
     } = body;
 
-    const updateData: any = {
+    const updateData: Prisma.BrandingUncheckedUpdateInput = {
       ...(businessName !== undefined && { businessName }),
       ...(primaryColor !== undefined && { primaryColor }),
       ...(secondaryColor !== undefined && { secondaryColor }),
@@ -84,76 +120,84 @@ export async function PUT(req: Request) {
       ...(whatsappNumber !== undefined && { whatsappNumber }),
       ...(whatsappMessage !== undefined && { whatsappMessage }),
       ...(themeIdentifier !== undefined && { themeIdentifier }),
-      ...(isBannerSlider !== undefined && { isBannerSlider })
+      ...(isBannerSlider !== undefined && { isBannerSlider }),
     };
 
-    if (logoData && logoMime) {
-      updateData.logoData = Buffer.from(logoData, 'base64');
+    if (typeof logoData === "string" && typeof logoMime === "string") {
+      updateData.logoData = Buffer.from(logoData, "base64");
       updateData.logoMime = logoMime;
     } else if (logoData === null) {
       updateData.logoData = null;
       updateData.logoMime = null;
     }
 
-    if (bannerData && bannerMime) {
-      updateData.bannerData = Buffer.from(bannerData, 'base64');
+    if (typeof bannerData === "string" && typeof bannerMime === "string") {
+      updateData.bannerData = Buffer.from(bannerData, "base64");
       updateData.bannerMime = bannerMime;
     } else if (bannerData === null) {
       updateData.bannerData = null;
       updateData.bannerMime = null;
     }
 
-    // 1. Upsert branding first
     const brandingActualizado = await prisma.branding.upsert({
       where: { sucursalId: auth.activeSucursalId },
       update: updateData,
       create: {
-        ...updateData,
         sucursalId: auth.activeSucursalId,
-        businessName: businessName || "Mi Tienda",
-      }
+        businessName: businessName ?? "Mi Tienda",
+        primaryColor: primaryColor ?? "#111827",
+        secondaryColor: secondaryColor ?? "#3b82f6",
+        footerText: footerText ?? null,
+        phone: phone ?? null,
+        address: address ?? null,
+        instagramUrl: instagramUrl ?? null,
+        facebookUrl: facebookUrl ?? null,
+        whatsappNumber: whatsappNumber ?? null,
+        whatsappMessage: whatsappMessage ?? "Hola, estoy buscando {nombre_producto}",
+        themeIdentifier: themeIdentifier ?? "modern",
+        isBannerSlider: isBannerSlider ?? false,
+        ...(typeof logoData === "string" && typeof logoMime === "string"
+          ? { logoData: Buffer.from(logoData, "base64"), logoMime }
+          : {}),
+        ...(typeof bannerData === "string" && typeof bannerMime === "string"
+          ? { bannerData: Buffer.from(bannerData, "base64"), bannerMime }
+          : {}),
+      },
     });
 
-    // 2. Sync banners if provided
-    if (banners && Array.isArray(banners)) {
+    if (Array.isArray(banners)) {
       await prisma.brandingBanner.deleteMany({
-        where: { brandingId: brandingActualizado.id }
+        where: { brandingId: brandingActualizado.id },
       });
-      if (banners.length > 0) {
+
+      const normalizedBanners = banners.filter(hasBannerPayload);
+      if (normalizedBanners.length > 0) {
         await prisma.brandingBanner.createMany({
-          data: banners.map((b, idx) => ({
+          data: normalizedBanners.map((banner, index) => ({
             brandingId: brandingActualizado.id,
-            bannerData: Buffer.from(b.bannerData, 'base64'),
-            bannerMime: b.bannerMime,
-            orden: idx
-          }))
+            bannerData: Buffer.from(banner.bannerData, "base64"),
+            bannerMime: banner.bannerMime,
+            orden: index,
+          })),
         });
       }
     }
 
-    // 3. Re-fetch full object to return to client
     const fullBranding = await prisma.branding.findUnique({
       where: { id: brandingActualizado.id },
-      include: { banners: { orderBy: { orden: 'asc' } } }
+      include: {
+        banners: {
+          orderBy: { orden: "asc" },
+        },
+      },
     });
 
     return NextResponse.json({
       message: "Branding actualizado correctamente",
-      data: {
-        ...fullBranding,
-        logoData: fullBranding?.logoData ? Buffer.from(fullBranding.logoData).toString('base64') : null,
-        bannerData: fullBranding?.bannerData ? Buffer.from(fullBranding.bannerData).toString('base64') : null,
-        banners: fullBranding?.banners.map(b => ({
-          id: b.id,
-          bannerData: Buffer.from(b.bannerData).toString('base64'),
-          bannerMime: b.bannerMime,
-          orden: b.orden
-        }))
-      }
+      data: serializeBranding(fullBranding),
     });
-  } catch (error: any) {
+  } catch (error) {
     console.error("Error actualizando branding:", error);
     return NextResponse.json({ error: "Error al actualizar branding" }, { status: 500 });
   }
 }
-

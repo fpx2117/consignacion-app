@@ -1,12 +1,10 @@
-/* eslint-disable */
-// @ts-nocheck
 "use client";
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import {
     Loader2, ArrowLeft, Clock, User, Save, ShieldCheck,
-    CalendarDays, Ban, CheckCircle2, Copy, Users
+    CalendarDays, Ban, Copy, Users
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -14,15 +12,23 @@ import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { apiService } from "@/lib/apiService";
+import type { HorarioLaboral, Usuario } from "@/lib/types";
 
 const DIAS = ["Dom", "Lun", "Mar", "Mie", "Jue", "Vie", "Sab"];
 const DIAS_LARGOS = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
 
+type EditableHorario = Pick<HorarioLaboral, "diaSemana" | "horaInicio" | "horaFin" | "activo"> &
+    Partial<Pick<HorarioLaboral, "id" | "usuarioId">>;
+
+function getErrorMessage(error: unknown, fallback: string) {
+    return error instanceof Error ? error.message : fallback;
+}
+
 export default function HorariosPosPage() {
     const router = useRouter();
-    const [usuarios, setUsuarios] = React.useState<any[]>([]);
-    const [selectedUser, setSelectedUser] = React.useState<any>(null);
-    const [horariosTemp, setHorariosTemp] = React.useState<any[]>([]);
+    const [usuarios, setUsuarios] = React.useState<Usuario[]>([]);
+    const [selectedUser, setSelectedUser] = React.useState<Usuario | null>(null);
+    const [horariosTemp, setHorariosTemp] = React.useState<EditableHorario[]>([]);
 
     const [loading, setLoading] = React.useState(true);
     const [saving, setSaving] = React.useState(false);
@@ -32,8 +38,8 @@ export default function HorariosPosPage() {
         try {
             const res = await apiService.getUsuariosConHorarios();
             setUsuarios(res || []);
-        } catch (e: any) {
-            toast.error(e.message || "Error al cargar el staff");
+        } catch (error) {
+            toast.error(getErrorMessage(error, "Error al cargar el staff"));
         } finally {
             setLoading(false);
         }
@@ -41,10 +47,10 @@ export default function HorariosPosPage() {
 
     React.useEffect(() => { loadData(); }, [loadData]);
 
-    const selectUser = (user: any) => {
+    const selectUser = (user: Usuario) => {
         setSelectedUser(user);
         const base = DIAS.map((_, index) => {
-            const exist = user.horarios?.find((h: any) => h.diaSemana === index);
+            const exist = user.horarios?.find((horario) => horario.diaSemana === index);
             return exist ? { ...exist } : { diaSemana: index, horaInicio: "09:00", horaFin: "18:00", activo: true };
         });
         setHorariosTemp(base);
@@ -52,8 +58,8 @@ export default function HorariosPosPage() {
 
     const copyToAll = () => {
         const current = horariosTemp[activeDay];
-        const newArr = horariosTemp.map(h => ({
-            ...h,
+        const newArr = horariosTemp.map((horario) => ({
+            ...horario,
             horaInicio: current.horaInicio,
             horaFin: current.horaFin,
             activo: current.activo
@@ -68,9 +74,9 @@ export default function HorariosPosPage() {
         try {
             await apiService.guardarHorariosStaff(selectedUser.id, horariosTemp);
             toast.success("Horarios actualizados correctamente");
-            loadData();
-        } catch (e: any) {
-            toast.error(e.message || "Error al guardar");
+            void loadData();
+        } catch (error) {
+            toast.error(getErrorMessage(error, "Error al guardar"));
         } finally {
             setSaving(false);
         }

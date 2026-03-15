@@ -1,14 +1,13 @@
-/* eslint-disable */
-// @ts-nocheck
 // src/app/api/pedidos-esperados/[id]/route.ts
 // GET: Detalle completo del pedido
 // PATCH: Actualizar observaciones o cancelar
 
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireAuth, requireRole } from "@/lib/requireAuth";
+import { requireAuth, requireRole } from "@/lib/auth/require-auth";
 import { updatePedidoSchema } from "@/lib/validators/pedidos-esperados";
 import { isGlobalSucursalView } from "@/lib/sucursalScope";
+import { EstadoPedidoEsperado } from "@prisma/client";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -139,7 +138,7 @@ export async function PATCH(req: Request, { params }: RouteParams) {
     }
 
     // No permite cancelar un pedido ya CONFIRMADO
-    if (parsed.data.estado === "CANCELADO" && pedidoExistente.estado === "CONFIRMADO") {
+    if (parsed.data.estado === EstadoPedidoEsperado.CANCELADO && pedidoExistente.estado === EstadoPedidoEsperado.CONFIRMADO) {
       return NextResponse.json(
         { error: "No se puede cancelar un pedido ya confirmado" },
         { status: 400 }

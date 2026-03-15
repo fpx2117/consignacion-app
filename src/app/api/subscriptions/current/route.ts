@@ -1,10 +1,7 @@
-/* eslint-disable */
-// @ts-nocheck
-// src/app/api/subscriptions/current/route.ts
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireAuth } from "@/lib/requireAuth";
-import { SUBSCRIPTION_PLANS, getPlanByExternalId } from "@/constants/subscriptions";
+import { requireAuth } from "@/lib/auth/require-auth";
+import { SUBSCRIPTION_PLANS } from "@/constants/subscriptions";
 
 export async function GET() {
     const auth = await requireAuth();

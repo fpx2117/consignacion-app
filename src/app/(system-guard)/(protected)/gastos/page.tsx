@@ -1,12 +1,9 @@
-/* eslint-disable */
-// @ts-nocheck
 "use client";
 
 import * as React from "react";
 import {
     Plus,
     Calendar,
-    AlertTriangle,
     Repeat,
     Trash2,
     ExternalLink,
@@ -21,7 +18,7 @@ import { toast } from "sonner";
 import { apiService } from "@/lib/apiService";
 import { useSucursalStore } from "@/store/useSucursalStore";
 import type { Gasto, CategoriaGasto } from "@/lib/types";
-import { formatMoney, formatDate } from "@/lib/utils-format";
+import { formatMoney } from "@/lib/utils-format";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
@@ -30,7 +27,6 @@ import {
     DialogContent,
     DialogHeader,
     DialogTitle,
-    DialogTrigger,
 } from "@/components/ui/dialog";
 import {
     Select,
@@ -77,12 +73,12 @@ export default function GastosPage() {
             ]);
             setGastos(gRes || []);
             setCategorias(cRes || []);
-        } catch (error) {
+        } catch {
             toast.error("Error al cargar datos de gastos");
         } finally {
             setLoading(false);
         }
-    }, [filterEstado, filterCategoria, activeSucursalId]);
+    }, [filterEstado, filterCategoria]);
 
     React.useEffect(() => {
         loadData();
@@ -94,7 +90,7 @@ export default function GastosPage() {
             await apiService.deleteGasto(id);
             toast.success("Gasto eliminado");
             loadData();
-        } catch (error) {
+        } catch {
             toast.error("Error al eliminar gasto");
         }
     };
@@ -128,12 +124,12 @@ export default function GastosPage() {
             />
 
             <GastosList
-                gastos={gastos as any}
+                gastos={gastos}
                 loading={loading}
                 activeSucursalId={activeSucursalId}
-                onShare={(gasto) => handleShareClick(gasto as any)}
+                onShare={(gasto) => handleShareClick(gasto as Gasto)}
                 onEdit={(gasto) => {
-                    setEditingGasto(gasto as any);
+                    setEditingGasto(gasto as Gasto);
                     setModalOpen(true);
                 }}
                 onDelete={handleDelete}
@@ -172,7 +168,15 @@ export default function GastosPage() {
     );
 }
 
-function GastoModal({ open, onOpenChange, onSuccess, categorias, editingGasto, activeSucursalId }: any) {
+interface GastoModalProps {
+    open: boolean;
+    onOpenChange: (v: boolean) => void;
+    onSuccess: () => void;
+    categorias: import("@/lib/types").CategoriaGasto[];
+    editingGasto: import("@/lib/types").Gasto | null;
+    activeSucursalId: number;
+}
+function GastoModal({ open, onOpenChange, onSuccess, categorias, editingGasto, activeSucursalId }: GastoModalProps) {
     const [formData, setFormData] = React.useState({
         monto: "",
         motivo: "",
@@ -186,7 +190,7 @@ function GastoModal({ open, onOpenChange, onSuccess, categorias, editingGasto, a
     const [loading, setLoading] = React.useState(false);
 
     // Compartir entre sucursales
-    const [sucursales, setSucursales] = React.useState<any[]>([]);
+    const [sucursales, setSucursales] = React.useState<{ id: number; nombre: string; activa: boolean }[]>([]);
     const [esCompartido, setEsCompartido] = React.useState(false);
     const [selectedSucursales, setSelectedSucursales] = React.useState<number[]>([]);
 
@@ -203,18 +207,18 @@ function GastoModal({ open, onOpenChange, onSuccess, categorias, editingGasto, a
                 categoriaGastoId: String(editingGasto.categoriaGastoId),
             });
             setEsCompartido(!!editingGasto.esCompartido);
-            if (editingGasto.esCompartido && editingGasto.sucursalesCompartidas?.length > 0) {
-                setSelectedSucursales(editingGasto.sucursalesCompartidas.map((s: any) => s.sucursalId));
+            if (editingGasto.esCompartido && (editingGasto.sucursalesCompartidas?.length ?? 0) > 0) {
+                setSelectedSucursales((editingGasto.sucursalesCompartidas ?? []).map((s) => s.sucursalId));
             } else if (activeSucursalId) {
                 setSelectedSucursales([activeSucursalId]);
             }
         }
-    }, [editingGasto]);
+    }, [editingGasto, activeSucursalId]);
 
     // Cargar sucursales al abrir el modal (tanto crear como editar)
     React.useEffect(() => {
         if (open) {
-            apiService.getSucursales().then((data: any[]) => {
+            apiService.getSucursales().then((data) => {
                 setSucursales(data || []);
                 // Pre-seleccionar la sucursal activa solo al crear
                 if (!editingGasto && activeSucursalId) {
@@ -238,7 +242,7 @@ function GastoModal({ open, onOpenChange, onSuccess, categorias, editingGasto, a
         e.preventDefault();
         setLoading(true);
         try {
-            const payload: any = { ...formData };
+            const payload: typeof formData & { sucursalesCompartir?: number[] } = { ...formData };
 
             if (esCompartido && selectedSucursales.length > 1) {
                 payload.sucursalesCompartir = selectedSucursales;
@@ -259,7 +263,7 @@ function GastoModal({ open, onOpenChange, onSuccess, categorias, editingGasto, a
             }
             onSuccess();
             onOpenChange(false);
-        } catch (error) {
+        } catch {
             toast.error("Error al guardar gasto");
         } finally {
             setLoading(false);
@@ -322,7 +326,7 @@ function GastoModal({ open, onOpenChange, onSuccess, categorias, editingGasto, a
                                     <SelectValue placeholder="Elegir..." />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    {categorias.map((c: any) => (
+                                    {categorias.map((c) => (
                                         <SelectItem key={c.id} value={String(c.id)}>{c.nombre}</SelectItem>
                                     ))}
                                 </SelectContent>
@@ -414,7 +418,7 @@ function GastoModal({ open, onOpenChange, onSuccess, categorias, editingGasto, a
                                 <div className="rounded-2xl bg-[color:var(--primary)]/5 border border-[color:var(--primary)]/20 p-4 space-y-3">
                                     <p className="text-[10px] font-black uppercase tracking-widest text-[color:var(--primary)]/70">Seleccionar sucursales</p>
                                     <div className="space-y-2">
-                                        {sucursales.map((s: any) => (
+                                        {sucursales.map((s) => (
                                             <label key={s.id} className="flex items-center gap-3 cursor-pointer group">
                                                 <input
                                                     type="checkbox"
@@ -466,7 +470,14 @@ function GastoModal({ open, onOpenChange, onSuccess, categorias, editingGasto, a
     );
 }
 
-function CategoriasModal({ open, onOpenChange, categorias, onSuccess, activeSucursalId }: any) {
+interface CategoriasModalProps {
+    open: boolean;
+    onOpenChange: (v: boolean) => void;
+    categorias: CategoriaGasto[];
+    onSuccess: () => void;
+    activeSucursalId: number;
+}
+function CategoriasModal({ open, onOpenChange, categorias, onSuccess }: CategoriasModalProps) {
     const [nombre, setNombre] = React.useState("");
     const [loading, setLoading] = React.useState(false);
 
@@ -479,7 +490,7 @@ function CategoriasModal({ open, onOpenChange, categorias, onSuccess, activeSucu
             toast.success("Categoría creada");
             setNombre("");
             onSuccess();
-        } catch (error) {
+        } catch {
             toast.error("Error al crear categoría");
         } finally {
             setLoading(false);
@@ -521,7 +532,7 @@ function CategoriasModal({ open, onOpenChange, categorias, onSuccess, activeSucu
                     </form>
 
                     <div className="space-y-2 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
-                        {categorias.map((c: any) => (
+                        {categorias.map((c) => (
                             <div key={c.id} className="flex items-center justify-between p-3 bg-muted/20 border rounded-xl group">
                                 <span className="font-bold text-sm tracking-tight">{c.nombre}</span>
                                 <Button
@@ -547,8 +558,13 @@ function CategoriasModal({ open, onOpenChange, categorias, onSuccess, activeSucu
     );
 }
 
-function ShareGastoModal({ open, onOpenChange, gasto }: any) {
-    const [clients, setClients] = React.useState<any[]>([]);
+interface ShareGastoModalProps {
+    open: boolean;
+    onOpenChange: (v: boolean) => void;
+    gasto: Gasto;
+}
+function ShareGastoModal({ open, onOpenChange, gasto }: ShareGastoModalProps) {
+    const [clients, setClients] = React.useState<{ id: number; nombre: string; telefono?: string | null }[]>([]);
     const [loading, setLoading] = React.useState(true);
     const [manualNumber, setManualNumber] = React.useState("");
     const [searchQuery, setSearchQuery] = React.useState("");
@@ -577,7 +593,7 @@ function ShareGastoModal({ open, onOpenChange, gasto }: any) {
             const link = await getLink();
             await navigator.clipboard.writeText(link);
             toast.success("Enlace copiado al portapapeles");
-        } catch (error) {
+        } catch {
             toast.error("Error al copiar enlace");
         }
     };
@@ -586,7 +602,7 @@ function ShareGastoModal({ open, onOpenChange, gasto }: any) {
         try {
             const link = await getLink();
             window.open(link, "_blank");
-        } catch (error) {
+        } catch {
             toast.error("Error al abrir comprobante");
         }
     };
@@ -602,7 +618,7 @@ function ShareGastoModal({ open, onOpenChange, gasto }: any) {
             const link = await getLink();
             const message = encodeURIComponent(`Hola, te comparto el comprobante de gasto: ${gasto.motivo}\n\nPuedes verlo aquí: ${link}`);
             window.open(`https://wa.me/${cleanPhone}?text=${message}`, "_blank");
-        } catch (error) {
+        } catch {
             toast.error("Error al generar mensaje de WhatsApp");
         }
     };
@@ -698,7 +714,7 @@ function ShareGastoModal({ open, onOpenChange, gasto }: any) {
                                     filteredClients.map(c => (
                                         <button
                                             key={c.id}
-                                            onClick={() => handleWhatsApp(c.telefono)}
+                                            onClick={() => handleWhatsApp(c.telefono ?? "")}
                                             className="w-full flex items-center justify-between p-4 bg-muted/20 border border-transparent rounded-2xl hover:bg-primary/5 hover:border-primary/10 transition-all group relative overflow-hidden active:scale-[0.99]"
                                         >
                                             <div className="flex items-center gap-4 relative z-10">

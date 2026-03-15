@@ -1,12 +1,14 @@
-/* eslint-disable */
-// @ts-nocheck
-// src/app/api/setup/create-mp-subscription/route.ts
 import { NextResponse } from "next/server";
 import { SUBSCRIPTION_PLANS } from "@/constants/subscriptions";
 import { MercadoPagoConfig, PreApproval } from "mercadopago";
 import crypto from "crypto";
-import { paymentConfig } from "@/lib/paymentConfig";
+import { paymentConfig } from "@/lib/payments/config";
 import { prisma } from "@/lib/prisma";
+
+type CreateMpSubscriptionBody = {
+    planId?: number;
+    payerEmail?: string;
+};
 
 const client = new MercadoPagoConfig({
     accessToken: paymentConfig.mp.accessToken,
@@ -15,7 +17,7 @@ const client = new MercadoPagoConfig({
 
 export async function POST(req: Request) {
     try {
-        const { planId, payerEmail } = await req.json();
+        const { planId, payerEmail } = (await req.json()) as CreateMpSubscriptionBody;
 
         const basePlan = SUBSCRIPTION_PLANS.find(p => p.id === planId);
         if (!basePlan) {
@@ -80,7 +82,7 @@ export async function POST(req: Request) {
             initPoint: response.init_point
         });
 
-    } catch (error: any) {
+    } catch (error) {
         console.error("SETUP_CREATE_MP_SUBSCRIPTION_ERROR:", error);
         return NextResponse.json({
             error: "Error al crear la suscripción de Mercado Pago"

@@ -1,8 +1,5 @@
-/* eslint-disable */
-// @ts-nocheck
 "use client";
 
-import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 
 interface PortalProps {
@@ -10,12 +7,9 @@ interface PortalProps {
 }
 
 export function Portal({ children }: PortalProps) {
-    const [mounted, setMounted] = useState(false);
+    if (typeof document === "undefined") {
+        return null;
+    }
 
-    useEffect(() => {
-        setMounted(true);
-        return () => setMounted(false);
-    }, []);
-
-    return mounted ? createPortal(children, document.body) : null;
+    return createPortal(children, document.body);
 }

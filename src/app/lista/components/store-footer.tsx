@@ -1,7 +1,6 @@
-/* eslint-disable */
-// @ts-nocheck
 "use client";
 
+import Image from "next/image";
 import { PackageOpen, Instagram, Facebook, MessageCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -40,11 +39,12 @@ export function StoreFooter({ config }: { config: any }) {
       <div className="container mx-auto px-4 flex flex-col items-center gap-8">
         <div className="flex items-center gap-3">
           {logoSrc ? (
-            <img
+            <Image
               src={logoSrc}
               alt="Logo corporativo"
-              loading="lazy"
-              decoding="async"
+              width={96}
+              height={32}
+              unoptimized
               className="h-8 w-auto max-w-24 opacity-80 object-contain"
             />
           ) : (

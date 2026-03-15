@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useRef } from "react";
 import { motion } from "motion/react";
 import { Building2, Phone, MapPin, Upload, Palette, X } from "lucide-react";
@@ -135,10 +136,13 @@ export function BusinessStep({
             />
             {branding.logoPreview ? (
               <div className="relative h-28 rounded-2xl border border-border/50 bg-background/30 flex items-center justify-center overflow-hidden group">
-                <img
+                <Image
                   src={branding.logoPreview}
                   alt="Logo preview"
-                  className="max-h-20 max-w-[80%] object-contain"
+                  fill
+                  unoptimized
+                  sizes="50vw"
+                  className="object-contain p-4"
                 />
                 <button
                   onClick={handleRemoveLogo}

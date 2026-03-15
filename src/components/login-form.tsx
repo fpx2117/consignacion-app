@@ -1,5 +1,3 @@
-/* eslint-disable */
-// @ts-nocheck
 "use client";
 
 import type React from "react";
@@ -44,7 +42,7 @@ export function LoginForm() {
   useEffect(() => {
     if (error) setError(null);
      
-  }, [email, password]);
+  }, [email, password, error]);
 
   const handleCapsLock = (e: React.KeyboardEvent<HTMLInputElement>) => {
     const isCapsOn = e.getModifierState?.("CapsLock") ?? false;

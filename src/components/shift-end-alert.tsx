@@ -1,10 +1,8 @@
-/* eslint-disable */
-// @ts-nocheck
 "use client";
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { Lock, Timer, Loader2, Clock, ChevronRight, XCircle, AlertOctagon } from "lucide-react";
+import { Timer, Loader2, Clock, ChevronRight, XCircle, AlertOctagon } from "lucide-react";
 import {
     AlertDialog,
     AlertDialogContent,
@@ -91,7 +89,7 @@ export function ShiftEndAlert({ horaFin, onExtender }: ShiftEndAlertProps) {
 
             setShowModal(false);
             toast.success(`Turno extendido +${minutos === 60 ? '1 hora' : minutos + ' minutos'}`);
-        } catch (error: any) {
+        } catch {
             toast.error("Error al registrar la extensión");
         } finally {
             setLoadingMins(null);

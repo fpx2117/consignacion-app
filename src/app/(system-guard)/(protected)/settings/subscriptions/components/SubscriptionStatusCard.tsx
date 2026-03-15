@@ -1,12 +1,9 @@
-/* eslint-disable */
-// @ts-nocheck
 "use client";
 
 import { useEffect, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, CreditCard, RefreshCw, Star, Zap, XCircle, Loader2 } from "lucide-react";
-import { motion } from "motion/react";
+import { Calendar, RefreshCw, Star, Zap, XCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { CancelSubscriptionModal } from "./CancelSubscriptionModal";
@@ -60,8 +57,7 @@ export function SubscriptionStatusCard({ onUpgrade }: { onUpgrade: () => void })
             } else {
                 toast.error(result.error || "No se pudo cancelar la suscripción");
             }
-        } catch (error) {
-            console.error("Cancel error:", error);
+        } catch {
             toast.error("Error de conexión al cancelar");
         } finally {
             setCancelling(false);

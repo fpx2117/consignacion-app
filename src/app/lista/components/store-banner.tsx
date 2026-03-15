@@ -1,7 +1,6 @@
-/* eslint-disable */
-// @ts-nocheck
 "use client";
 
+import Image from "next/image";
 import * as React from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { cn } from "@/lib/utils";
@@ -48,22 +47,26 @@ export function StoreBanner({ config }: { config: any }) {
                                 transition={{ duration: 1, ease: "easeInOut" }}
                                 className="absolute inset-0"
                             >
-                                <img
+                                <Image
                                     src={config.banners[currentSlide].url || `data:${config.banners[currentSlide].bannerMime};base64,${config.banners[currentSlide].bannerData}`}
                                     alt={`Banner Slide ${currentSlide + 1}`}
-                                    loading={currentSlide === 0 ? "eager" : "lazy"}
-                                    decoding="async"
-                                    className="w-full h-full object-cover"
+                                    fill
+                                    unoptimized
+                                    priority={currentSlide === 0}
+                                    sizes="100vw"
+                                    className="object-cover"
                                 />
                             </motion.div>
                         </AnimatePresence>
                     ) : staticBannerSrc ? (
-                        <img
+                        <Image
                             src={staticBannerSrc}
-                            className="w-full h-full object-cover opacity-90"
                             alt="Banner de la tienda"
-                            loading="eager"
-                            decoding="async"
+                            fill
+                            unoptimized
+                            priority
+                            sizes="100vw"
+                            className="object-cover opacity-90"
                         />
                     ) : null}
                 </div>

@@ -2,21 +2,25 @@
 
 import { cn } from "@/lib/utils";
 import { getThemeStyles } from "../lib/theme-utils";
+import type {
+    PublicCatalogCategory,
+    PublicCatalogConfig,
+    PublicCatalogProduct,
+} from "@/lib/types";
 
 import { motion, AnimatePresence } from "motion/react";
 import { ChevronRight } from "lucide-react";
 
 interface StoreCategorySidebarProps {
-    config: any;
-    categories: any[];
+    config: PublicCatalogConfig;
+    categories: PublicCatalogCategory[];
     categoryCounts: Record<number, number>;
     selectedCategory: number | null;
     setSelectedCategory: (id: number | null) => void;
     selectedSubcategory: number | null;
     setSelectedSubcategory: (id: number | null) => void;
     totalProducts: number;
-    // Agregamos counts para subcategorías opcionalmente si queremos mostrarlos
-    allProducts: any[];
+    allProducts: PublicCatalogProduct[];
 }
 
 export function StoreCategorySidebar({
@@ -29,25 +33,15 @@ export function StoreCategorySidebar({
     setSelectedSubcategory,
     totalProducts,
     allProducts = []
-}: {
-    config: any;
-    categories: any[];
-    categoryCounts: Record<number, number>;
-    selectedCategory: number | null;
-    setSelectedCategory: (id: number | null) => void;
-    selectedSubcategory: number | null;
-    setSelectedSubcategory: (id: number | null) => void;
-    totalProducts: number;
-    allProducts: any[];
-}) {
+}: StoreCategorySidebarProps) {
     if (!config.mostrarCategoriasEnHeader) return null;
 
     const { buttonRadiusClass, cardBgClass } = getThemeStyles(config.themeIdentifier);
 
     // Calcular counts de subcategorías
-    const subcategoryCounts = allProducts.reduce((acc: any, p: any) => {
-        if (p.subcategoriaId) {
-            acc[p.subcategoriaId] = (acc[p.subcategoriaId] || 0) + 1;
+    const subcategoryCounts = allProducts.reduce<Record<number, number>>((acc, product) => {
+        if (product.subcategoriaId !== null) {
+            acc[product.subcategoriaId] = (acc[product.subcategoriaId] || 0) + 1;
         }
         return acc;
     }, {});
@@ -75,7 +69,7 @@ export function StoreCategorySidebar({
                     <span className="opacity-50 ml-1 font-normal">({totalProducts})</span>
                 </button>
 
-                {categories.slice().sort((a: any, b: any) => a.nombre.localeCompare(b.nombre)).map((cat: any) => {
+                {categories.slice().sort((a, b) => a.nombre.localeCompare(b.nombre)).map((cat) => {
                     const count = categoryCounts[cat.id] || 0;
                     if (count === 0) return null;
 
@@ -119,7 +113,7 @@ export function StoreCategorySidebar({
                                         transition={{ duration: 0.3, ease: "easeInOut" }}
                                         className="overflow-hidden flex flex-col gap-1 ml-4 border-l-2 border-border/70 pl-3 py-1"
                                     >
-                                        {cat.subcategorias.map((sub: any) => {
+                                        {cat.subcategorias.map((sub) => {
                                             const subCount = subcategoryCounts[sub.id] || 0;
                                             if (subCount === 0) return null;
 

@@ -1,8 +1,6 @@
-/* eslint-disable */
-// @ts-nocheck
 import { NextRequest, NextResponse } from "next/server";
 import puppeteer, { Browser } from "puppeteer";
-import { verifyPdfToken } from "@/lib/crypto";
+import { verifyPdfToken } from "@/lib/security/pdf-token";
 import { prisma } from "@/lib/prisma";
 import { hashCode } from "@/lib/share-links";
 

@@ -1,4 +1,3 @@
-// @ts-nocheck
 "use client";
 
 import * as React from "react";
@@ -31,7 +30,7 @@ interface UsePedidosEsperadosReturn {
 export function usePedidosEsperados(): UsePedidosEsperadosReturn {
   const activeSucursalId = useSucursalStore((s) => s.activeSucursalId);
   const sucursalHeaders = React.useMemo(
-    () => (Number.isFinite(activeSucursalId) && activeSucursalId >= 0
+    (): Record<string, string> => (Number.isFinite(activeSucursalId) && activeSucursalId >= 0
       ? { "x-sucursal-id": String(activeSucursalId) }
       : {}),
     [activeSucursalId]
@@ -64,8 +63,9 @@ export function usePedidosEsperados(): UsePedidosEsperadosReturn {
       const data = await res.json();
       const arr = Array.isArray(data) ? data : Array.isArray(data?.data) ? data.data : [];
       setPedidos(arr);
-    } catch (err: any) {
-      setError(err.message || "Error desconocido");
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Error desconocido";
+      setError(message);
       setPedidos([]);
     } finally {
       setLoading(false);
@@ -79,11 +79,11 @@ export function usePedidosEsperados(): UsePedidosEsperadosReturn {
       body: JSON.stringify(input),
     });
     if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      throw new Error(err.error || "Error al crear pedido");
+      const body = await res.json().catch(() => ({}) as Record<string, unknown>);
+      throw new Error(typeof body.error === "string" ? body.error : "Error al crear pedido");
     }
-    const data = await res.json();
-    return data?.data ?? data;
+    const data = await res.json() as { data?: PedidoEsperado } | PedidoEsperado;
+    return (data as { data?: PedidoEsperado }).data ?? (data as PedidoEsperado);
   }, [sucursalHeaders]);
 
   const confirmarPedido = React.useCallback(
@@ -94,8 +94,8 @@ export function usePedidosEsperados(): UsePedidosEsperadosReturn {
         body: JSON.stringify(input),
       });
       if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err.error || "Error al confirmar pedido");
+        const body = await res.json().catch(() => ({}) as Record<string, unknown>);
+        throw new Error(typeof body.error === "string" ? body.error : "Error al confirmar pedido");
       }
     },
     [sucursalHeaders]
@@ -109,8 +109,8 @@ export function usePedidosEsperados(): UsePedidosEsperadosReturn {
         body: JSON.stringify(input),
       });
       if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err.error || "Error al postergar pedido");
+        const body = await res.json().catch(() => ({}) as Record<string, unknown>);
+        throw new Error(typeof body.error === "string" ? body.error : "Error al postergar pedido");
       }
     },
     [sucursalHeaders]
@@ -123,8 +123,8 @@ export function usePedidosEsperados(): UsePedidosEsperadosReturn {
       body: JSON.stringify({ estado: "CANCELADO" } satisfies UpdatePedidoRequest),
     });
     if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      throw new Error(err.error || "Error al cancelar pedido");
+      const body = await res.json().catch(() => ({}) as Record<string, unknown>);
+      throw new Error(typeof body.error === "string" ? body.error : "Error al cancelar pedido");
     }
   }, [sucursalHeaders]);
 

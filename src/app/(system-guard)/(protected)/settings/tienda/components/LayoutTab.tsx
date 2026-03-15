@@ -1,5 +1,3 @@
-/* eslint-disable */
-// @ts-nocheck
 import * as React from "react";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
@@ -8,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { LayoutGrid, Rows3, Store, Search, Tag, Percent, ExternalLink, CheckCircle2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useSucursalStore } from "@/store/useSucursalStore";
+import type { StoreLayoutConfig } from "./types";
 
 /* ─── SVG Mockups ─── */
 
@@ -74,7 +73,12 @@ function ListMockup({ active }: { active?: boolean }) {
 
 /* ─── Main Component ─── */
 
-export function LayoutTab({ config, setConfig }: any) {
+type LayoutTabProps = {
+    config: StoreLayoutConfig;
+    setConfig: React.Dispatch<React.SetStateAction<StoreLayoutConfig>>;
+};
+
+export function LayoutTab({ config, setConfig }: LayoutTabProps) {
     const activeSucursalId = useSucursalStore((s) => s.activeSucursalId);
     const isLive = config.convertirTienda;
     const catalogoHref = activeSucursalId ? `/lista?sucursalId=${activeSucursalId}` : "/lista";

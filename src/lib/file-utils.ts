@@ -1,5 +1,3 @@
-/* eslint-disable */
-// @ts-nocheck
 // src/lib/file-utils.ts
 
 import { unlink } from "fs/promises";

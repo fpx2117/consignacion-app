@@ -1,9 +1,7 @@
-/* eslint-disable */
-// @ts-nocheck
 "use client";
 
 import { PricingTable } from "@/app/(system-guard)/(protected)/settings/subscriptions/components/PricingTable";
-import { SubscriptionPlan } from "@/constants/subscriptions";
+import type { SubscriptionPlan } from "@/constants/subscriptions";
 import { motion } from "motion/react";
 
 interface SubscriptionStepProps {

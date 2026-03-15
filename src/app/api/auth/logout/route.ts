@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { clearAuthCookie, getAuthTokenFromCookies, verifyUserJwt } from "@/lib/auth";
+import { clearAuthCookie, getAuthTokenFromCookies, verifyUserJwt } from "@/lib/auth/core";
 import { prisma } from "@/lib/prisma";
 import { recordAuditLog } from "@/lib/audit";
 
@@ -12,7 +12,7 @@ export async function POST() {
       const userId = parseInt(payload.sub);
 
       // Desactivar sesión en DB
-      const { getSessionHash } = await import("@/lib/sessionHash");
+      const { getSessionHash } = await import("@/lib/security/session-hash");
       const sessionToken = getSessionHash(token);
 
       await prisma.userSession.updateMany({

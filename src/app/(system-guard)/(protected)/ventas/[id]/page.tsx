@@ -1,5 +1,3 @@
-/* eslint-disable */
-// @ts-nocheck
 "use client";
 
 import * as React from "react";
@@ -25,7 +23,7 @@ import {
 import { toast } from "sonner";
 
 import { apiService } from "@/lib/apiService";
-import type { Venta } from "@/lib/types";
+import type { Venta, VentaDetalle } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 import {
@@ -101,8 +99,8 @@ export default function VentaDetailPage() {
     try {
       const res = await apiService.getVenta(id);
       setVenta(res);
-    } catch (e: any) {
-      toast.error(e?.message ?? "Error cargando datos de la venta");
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : "Error cargando datos de la venta");
     } finally {
       setLoading(false);
     }
@@ -135,7 +133,7 @@ export default function VentaDetailPage() {
       setVoidOpen(false);
       // Recargar para mostrar estado anulado
       await load();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Error al anular:", error);
       toast.error("No se pudo anular la venta.");
     } finally {
@@ -146,15 +144,15 @@ export default function VentaDetailPage() {
   // --- Cálculos ---
   const detalles = venta?.detalles ?? [];
   const totalItems = detalles.reduce((acc, d) => acc + d.units, 0);
-  const metodoPago = (venta as any)?.metodoPago || "Efectivo";
+  const metodoPago = (venta as Venta & { metodoPago?: string })?.metodoPago ?? "Efectivo";
   const clienteNombre = venta?.cliente?.nombre || "Consumidor Final";
-  const descuentoGlobal = Number((venta as any)?.descuentoGlobal || 0);
+  const descuentoGlobal = Number((venta as Venta & { descuentoGlobal?: number })?.descuentoGlobal ?? 0);
   const isAnulada = venta?.anulada === true;
 
   // Pérdida por rotura: suma de precioCosto * units de los ítems marcados como rotura
   const perdidaRotura = detalles
-    .filter(d => (d as any).esRotura)
-    .reduce((acc, d) => acc + Number((d.producto as any)?.precioCosto || 0) * d.units, 0);
+    .filter(d => (d as { esRotura?: boolean }).esRotura)
+    .reduce((acc, d) => acc + Number(d.producto?.precioCosto ?? 0) * d.units, 0);
 
   // Número visual de ticket (001)
   const ticketNumber = String(venta?.numeroVenta || id).padStart(3, '0');
@@ -242,7 +240,7 @@ export default function VentaDetailPage() {
                   Marcar ítems dañados (no se devolverá su stock)
                 </Label>
                 <div className="border rounded-lg divide-y">
-                  {detalles.map((d: any) => (
+                  {detalles.map((d) => (
                     <div key={d.id} className="flex items-center gap-3 p-3">
                       <Checkbox
                         id={`broken-${d.id}`}
@@ -268,7 +266,7 @@ export default function VentaDetailPage() {
                     {formatCurrency(
                       detalles
                         .filter(d => brokenItems.includes(d.id))
-                        .reduce((acc, d) => acc + Number((d.producto as any)?.precioCosto || 0) * d.units, 0)
+                        .reduce((acc, d) => acc + Number(d.producto?.precioCosto ?? 0) * d.units, 0)
                     )}
                   </p>
                 )}
@@ -357,7 +355,7 @@ export default function VentaDetailPage() {
         {/* Total Gigante en el Header */}
         <div className="text-right relative z-10 flex flex-col items-end">
           {descuentoGlobal > 0 && !loading && (
-            <Badge variant="outline" className="mb-2 bg-[color:var(--status-success-strong)] text-[color:var(--status-success-strong)] border-[color:var(--status-success-strong)]">
+            <Badge variant="outline" className="mb-2 bg-[color:var(--status-success-strong)]/15 text-[color:var(--status-success-strong)] border-[color:var(--status-success-strong)]/40 font-bold">
               Descuento General: -{formatCurrency(descuentoGlobal)}
             </Badge>
           )}
@@ -416,7 +414,7 @@ export default function VentaDetailPage() {
                   ))}
                 </div>
               ) : (
-                detalles.map((d: any) => <ProductRowVenta key={d.id} d={d} />)
+                detalles.map((d) => <ProductRowVenta key={d.id} d={d} />)
               )}
             </CardContent>
           </Card>
@@ -497,7 +495,13 @@ export default function VentaDetailPage() {
 
 // --- Subcomponentes ---
 
-function KpiCard({ title, value, loading, icon, textTransform }: any) {
+function KpiCard({ title, value, loading, icon, textTransform }: {
+  title: string;
+  value: string;
+  loading: boolean;
+  icon: React.ReactNode;
+  textTransform?: string;
+}) {
   return (
     <Card className="shadow-md border-border bg-card transition-all hover:translate-y-[-2px]">
       <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0 text-muted-foreground">
@@ -519,11 +523,11 @@ function KpiCard({ title, value, loading, icon, textTransform }: any) {
   );
 }
 
-function ProductRowVenta({ d }: { d: any }) {
-  const precio = Number(d.precioUnitario || d.precioVenta || 0);
+function ProductRowVenta({ d }: { d: VentaDetalle }) {
+  const precio = Number(d.precioUnitario || 0);
   const descuento = Number(d.descuento || 0);
   const subtotal = Number(d.subtotal);
-  const nombreCategoria = d.producto?.categoria?.nombre || "Sin Categoría";
+  const nombreCategoria = d.producto?.categoria?.nombre ?? "Sin Categoría";
   const esRotura = d.esRotura === true;
 
   return (

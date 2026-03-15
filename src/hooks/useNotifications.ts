@@ -1,5 +1,3 @@
-/* eslint-disable */
-// @ts-nocheck
 "use client";
 
 import { useEffect, useState, useCallback, useRef } from "react";
@@ -138,7 +136,7 @@ export function useNotifications({ limit = 50, onlyUnreadOnLoad = false, ttlMs =
         const updated = [formatted, ...prev];
         notificationsCache = {
           notifications: updated,
-          unreadCount: notificationsCache?.unreadCount ?? unreadCount,
+            unreadCount: notificationsCache?.unreadCount ?? 0,
           ts: Date.now(),
         };
         return updated;

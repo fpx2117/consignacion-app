@@ -1,12 +1,10 @@
-/* eslint-disable */
-// @ts-nocheck
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireAuth } from "@/lib/requireAuth";
+import { requireAuth } from "@/lib/auth/require-auth";
 import { buildSucursalWhere, isGlobalSucursalView } from "@/lib/sucursalScope";
 
 // GET: Obtener todas las categorías ordenadas por nombre (por sucursal)
-export async function GET(req: NextRequest) {
+export async function GET(_req: NextRequest) {
   // Auth: Requiere usuario autenticado
   const auth = await requireAuth();
   if (!auth.ok) return auth.res;
@@ -22,8 +20,8 @@ export async function GET(req: NextRequest) {
         "Cache-Control": "private, max-age=120, stale-while-revalidate=300",
       },
     });
-  } catch (error) {
-    console.error("Error al obtener categorías:", error);
+  } catch (err) {
+    console.error("Error al obtener categorías:", err);
     return NextResponse.json(
       { error: "Error al obtener categorías" },
       { status: 500 }
@@ -61,7 +59,7 @@ export async function POST(req: NextRequest) {
     });
 
     return NextResponse.json(nuevaCategoria);
-  } catch (error) {
+  } catch {
     // Manejo simple para nombres duplicados si tienes un constraint unique
     return NextResponse.json(
       { error: "Error al crear la categoría. Quizás ya existe en esta sucursal." },

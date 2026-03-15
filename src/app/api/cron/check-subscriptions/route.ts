@@ -1,8 +1,8 @@
 // src/app/api/cron/check-subscriptions/route.ts
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { sendNotification } from "@/lib/socket-trigger";
-import { NOTIFICATION_TYPE, NOTIFICATION_CONFIG } from "@/lib/notificationes/notificaciones-types";
+import { sendNotification } from "@/lib/notificaciones/socket-trigger";
+import { NOTIFICATION_TYPE, NOTIFICATION_CONFIG } from "@/lib/notificaciones/types";
 
 export async function GET(request: Request) {
     const cronSecret = process.env.CRON_SECRET;

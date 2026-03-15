@@ -1,8 +1,13 @@
-/* eslint-disable */
-// @ts-nocheck
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireAuth } from "@/lib/requireAuth";
+import { requireAuth } from "@/lib/auth/require-auth";
+
+type SucursalPermitida = {
+  id: number;
+  nombre: string;
+  esPrincipal: boolean;
+  activa: boolean;
+};
 
 export async function GET() {
   const auth = await requireAuth();
@@ -42,8 +47,7 @@ export async function GET() {
     }
 
     // Lógica de Sucursales permitidas
-    let sucursalesPermitidas: { id: number; nombre: string; esPrincipal: boolean; activa: boolean }[] = [];
-    const allowSucursales = user.subscription?.plan?.limits?.allowSucursales;
+    let sucursalesPermitidas: SucursalPermitida[] = [];
 
     if (user.rol === "ADMIN") {
       // ADMIN siempre puede ver todas las sucursales activas para visualizarlas

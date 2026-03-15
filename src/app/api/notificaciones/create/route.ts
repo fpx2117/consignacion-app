@@ -1,26 +1,35 @@
-/* eslint-disable */
-// @ts-nocheck
+import { NotificationType, Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
-import { requireAuth } from "@/lib/requireAuth"; // 🔒 Seguridad
-import { NOTIFICATION_TYPE } from "@/lib/notificationes/notificaciones-types";
+import { requireAuth } from "@/lib/auth/require-auth"; // 🔒 Seguridad
+import { z } from "zod";
+
+const createNotificationSchema = z.object({
+  type: z.nativeEnum(NotificationType),
+  title: z.string().trim().min(1),
+  description: z.string().trim().optional(),
+  productoId: z.coerce.number().int().positive().optional(),
+  fingerprint: z.string().trim().min(1).optional(),
+});
 
 export async function POST(req: Request) {
   try {
     const auth = await requireAuth();
     if (!auth.ok) return auth.res;
 
-    const body = await req.json();
+    const body = await req.json().catch(() => null);
+    const parsed = createNotificationSchema.safeParse(body);
 
-    if (!body.type || !body.title) {
+    if (!parsed.success) {
       return NextResponse.json(
-        { error: "Faltan campos obligatorios (type, title)" },
+        { error: "Validacion fallida", details: parsed.error.flatten() },
         { status: 400 }
       );
     }
 
-    const fingerprint = body.fingerprint || `${body.type}:${body.productoId || 'SYSTEM'}`;
     const sucursalId = auth.activeSucursalId;
+    const fingerprint =
+      parsed.data.fingerprint || `${parsed.data.type}:${parsed.data.productoId ?? "SYSTEM"}:S${sucursalId}`;
 
     const notification = await prisma.notification.upsert({
       where: {
@@ -30,15 +39,17 @@ export async function POST(req: Request) {
       update: {
         updatedAt: new Date(),
         read: false,
-        description: body.description || undefined,
-        title: body.title,
+        type: parsed.data.type,
+        title: parsed.data.title,
+        description: parsed.data.description || "",
+        productoId: parsed.data.productoId ?? null,
       },
       // B) Si NO EXISTE: La creamos con la sucursal activa
       create: {
-        type: body.type,
-        title: body.title,
-        description: body.description || "",
-        productoId: body.productoId ? Number(body.productoId) : null,
+        type: parsed.data.type,
+        title: parsed.data.title,
+        description: parsed.data.description || "",
+        productoId: parsed.data.productoId ?? null,
         fingerprint: fingerprint,
         sucursalId,
         read: false,
@@ -47,15 +58,11 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ success: true, notification });
 
-  } catch (error: any) {
+  } catch (error) {
     console.error("❌ Error creando notificación:", error);
 
-    if (error.code === 'P2003') {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2003") {
       return NextResponse.json({ error: "El Producto ID referido no existe." }, { status: 400 });
-    }
-
-    if (error.message.includes("Argument 'type'")) {
-      return NextResponse.json({ error: "El tipo de notificación no es válido." }, { status: 400 });
     }
 
     return NextResponse.json(

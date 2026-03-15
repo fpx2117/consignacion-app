@@ -1,6 +1,3 @@
-/* eslint-disable */
-// @ts-nocheck
-
 //src/app/ver/inventario/[id]/page.tsx
 "use client";
 
@@ -24,7 +21,7 @@ export default function InventarioLoadingPage({ params }: { params: Promise<{ id
         if (mounted && pdfUrl) {
           window.location.replace(pdfUrl);
         }
-      } catch (err) {
+      } catch {
         if (mounted) {
           setError("No se pudo generar el reporte de inventario. Intentá nuevamente.");
         }

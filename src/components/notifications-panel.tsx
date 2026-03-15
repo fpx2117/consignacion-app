@@ -4,7 +4,7 @@ import React from "react";
 import { cn } from "@/lib/utils";
 import { AnimatedList } from "@/components/ui/animated-list";
 import { useNotifications } from "@/hooks/useNotifications";
-import { NOTIFICATION_TYPE, NOTIFICATION_CONFIG } from "@/lib/notificationes/notificaciones-types";
+import { NOTIFICATION_TYPE, NOTIFICATION_CONFIG } from "@/lib/notificaciones/types";
 import { Button } from "@/components/ui/button";
 import { SheetClose } from "@/components/ui/sheet";
 import { motion, AnimatePresence } from "motion/react";

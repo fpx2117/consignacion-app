@@ -1,7 +1,7 @@
 // src/app/ver/gasto/[id]/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import puppeteer, { Browser } from "puppeteer";
-import { verifyPdfToken } from "@/lib/crypto";
+import { verifyPdfToken } from "@/lib/security/pdf-token";
 import type { GastoReportDTO } from "@/lib/reports/base/gasto-report-template";
 import { buildGastoHtml } from "@/lib/reports/base/gasto-report-template";
 import { getBranding } from "@/lib/reports/get-branding";

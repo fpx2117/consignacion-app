@@ -1,8 +1,6 @@
-/* eslint-disable */
-// @ts-nocheck
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireAuth } from "@/lib/requireAuth";
+import { requireAuth } from "@/lib/auth/require-auth";
 import { isGlobalSucursalView } from "@/lib/sucursalScope";
 
 // PATCH: Actualizar nombre y/o color de una categoría
@@ -23,9 +21,9 @@ export async function PATCH(
     const body = await req.json();
     const { nombre, color } = body;
 
-    const data: Record<string, any> = {};
-    if (nombre) data.nombre = nombre.trim();
-    if (color) data.color = color;
+    const data: { nombre?: string; color?: string } = {};
+    if (nombre) data.nombre = String(nombre).trim();
+    if (color) data.color = String(color);
 
     if (Object.keys(data).length === 0) {
       return NextResponse.json(
@@ -34,13 +32,19 @@ export async function PATCH(
       );
     }
 
+    // Verificar pertenencia a la sucursal activa
+    const existing = await prisma.categoria.findUnique({ where: { id: categoriaId } });
+    if (!existing || existing.sucursalId !== auth.activeSucursalId) {
+      return NextResponse.json({ error: "Categoría no encontrada" }, { status: 404 });
+    }
+
     const updated = await prisma.categoria.update({
       where: { id: categoriaId },
       data,
     });
 
     return NextResponse.json(updated);
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       { error: "Error al actualizar la categoría" },
       { status: 500 }
@@ -63,19 +67,24 @@ export async function DELETE(
     const { id } = await params;
     const categoriaId = Number(id);
 
-    // Set categoriaId to null for all associated products
+    // Verificar pertenencia a la sucursal activa
+    const existing = await prisma.categoria.findUnique({ where: { id: categoriaId } });
+    if (!existing || existing.sucursalId !== auth.activeSucursalId) {
+      return NextResponse.json({ error: "Categoría no encontrada" }, { status: 404 });
+    }
+
+    // Desasociar productos antes de eliminar
     await prisma.producto.updateMany({
       where: { categoriaId: categoriaId },
       data: { categoriaId: null },
     });
 
-    // Delete the category
     await prisma.categoria.delete({
       where: { id: categoriaId },
     });
 
     return NextResponse.json({ success: true });
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       { error: "Error al eliminar la categoría" },
       { status: 500 }

@@ -1,15 +1,14 @@
-/* eslint-disable */
-// @ts-nocheck
 // src/app/api/pedidos-esperados/route.ts
 // GET: Lista pedidos de la sucursal activa (con lazy check de vencidos)
 // POST: Crea nuevo pedido con items
 
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireAuth, requireRole } from "@/lib/requireAuth";
+import { requireAuth, requireRole } from "@/lib/auth/require-auth";
 import { createPedidoSchema } from "@/lib/validators/pedidos-esperados";
 import { checkAndUpdateVencidos } from "@/lib/pedidos-esperados";
 import { buildSucursalWhere, isGlobalSucursalView } from "@/lib/sucursalScope";
+import { EstadoPedidoEsperado, Prisma } from "@prisma/client";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -50,9 +49,9 @@ export async function GET(req: NextRequest) {
       where: {
         ...sucursalWhere,
         ...(estados.length === 1
-          ? { estado: estados[0] }
+          ? { estado: estados[0] as EstadoPedidoEsperado }
           : estados.length > 1
-          ? { estado: { in: estados } }
+          ? { estado: { in: estados as EstadoPedidoEsperado[] } }
           : {}),
         ...(fechaDesde || fechaHasta
           ? {
@@ -67,7 +66,7 @@ export async function GET(req: NextRequest) {
         items: true,
       },
       orderBy: { fechaEsperada: "asc" },
-    });
+    }) satisfies Prisma.PedidoEsperadoGetPayload<{ include: { items: true } }>[];
 
     const productoIds = Array.from(
       new Set(pedidos.flatMap((pedido) => pedido.items.map((item) => item.productoId)))
@@ -113,7 +112,7 @@ export async function GET(req: NextRequest) {
   } catch (error) {
     console.error("Error al obtener pedidos esperados:", error);
 
-    if ((error as any)?.code === "P2021") {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2021") {
       return NextResponse.json({
         data: [],
         warning: "El modulo de pedidos esperados aun no esta inicializado en esta base de datos.",
@@ -218,7 +217,7 @@ export async function POST(req: Request) {
   } catch (error) {
     console.error("Error al crear pedido esperado:", error);
 
-    if ((error as any)?.code === "P2021") {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2021") {
       return NextResponse.json(
         { error: "El modulo de pedidos esperados aun no esta inicializado en esta base de datos" },
         { status: 503 }

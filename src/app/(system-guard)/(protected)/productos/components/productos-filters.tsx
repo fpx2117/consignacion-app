@@ -15,7 +15,7 @@ import { cn } from "@/lib/utils";
 import { Separator } from "@/components/ui/separator";
 import { getCategoryColorByKey, getCategoryColorByName } from "@/lib/category-colors";
 import { apiService } from "@/lib/apiService";
-import { Label } from "@/components/ui/label"; // Added Label import
+
 import type { Categoria } from "@/lib/types";
 
 interface FiltersProps {

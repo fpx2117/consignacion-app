@@ -1,12 +1,10 @@
-/* eslint-disable */
-// @ts-nocheck
 "use client";
 
 import * as React from "react";
 import Link from "next/link";
 import { formatDistanceToNow } from "date-fns";
 import { es } from "date-fns/locale";
-import { cn } from "@/lib/utils";
+
 import { apiService } from "@/lib/apiService";
 import { toast } from "sonner";
 
@@ -24,8 +22,25 @@ import {
     ShieldCheck,
 } from "lucide-react";
 
+type ActiveSession = {
+    id: string;
+    createdAt: string;
+    isActive: boolean;
+    userAgent?: string | null;
+    ipAddress?: string | null;
+    os?: string | null;
+    browser?: string | null;
+    user?: {
+        nombre?: string | null;
+    } | null;
+};
+
+function getErrorMessage(error: unknown, fallback: string) {
+    return error instanceof Error ? error.message : fallback;
+}
+
 export default function SessionsPage() {
-    const [sessions, setSessions] = React.useState<any[]>([]);
+    const [sessions, setSessions] = React.useState<ActiveSession[]>([]);
     const [loading, setLoading] = React.useState(true);
     const [revoking, setRevoking] = React.useState<string | null>(null);
 
@@ -34,8 +49,8 @@ export default function SessionsPage() {
         try {
             const data = await apiService.getActiveSessions();
             setSessions(data);
-        } catch (error: any) {
-            toast.error(error.message || "Error cargando sesiones");
+        } catch (error) {
+            toast.error(getErrorMessage(error, "Error cargando sesiones"));
         } finally {
             setLoading(false);
         }

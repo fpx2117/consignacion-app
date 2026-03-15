@@ -1,5 +1,3 @@
-/* eslint-disable */
-// @ts-nocheck
 // src/lib/paymentConfig.ts
 import { z } from "zod";
 

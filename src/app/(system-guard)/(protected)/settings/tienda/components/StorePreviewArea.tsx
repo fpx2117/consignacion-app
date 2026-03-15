@@ -1,6 +1,3 @@
-/* eslint-disable */
-// @ts-nocheck
-
 import * as React from "react";
 import { cn } from "@/lib/utils";
 
@@ -10,6 +7,32 @@ import { StoreBanner } from "@/app/lista/components/store-banner";
 import { StoreFilters } from "@/app/lista/components/store-filters";
 import { ProductList } from "@/app/lista/components/product-list";
 import { StoreFooter } from "@/app/lista/components/store-footer";
+import type { PublicCatalogSortBy } from "@/lib/types";
+import type { BrandingPreviewSettings, StoreLayoutConfig, StoreLayoutMode } from "./types";
+
+type PreviewProduct = {
+    id: number;
+    nombre: string;
+    precioVenta: number;
+    costoConsignacion?: number;
+    imagenUrl: string;
+    stockDisponibleUnits: number;
+    categoriaId: number;
+    subcategoriaId: number | null;
+};
+
+type PreviewCategory = {
+    id: number;
+    nombre: string;
+    negocioId: number;
+    subcategorias: Array<{ id: number; nombre: string }>;
+};
+
+type StorePreviewProps = {
+    branding: BrandingPreviewSettings;
+    config: StoreLayoutConfig;
+    mode: "mobile" | "desktop";
+};
 
 // ─── Simulated Status Bar (Mobile) ───
 function MobileStatusBar() {
@@ -98,11 +121,10 @@ function DesktopBrowserBar({ storeName }: { storeName?: string }) {
 }
 
 // ─── Main Component ───
-export function StorePreviewArea({ branding, config, mode }: any) {
+export function StorePreviewArea({ branding, config, mode }: StorePreviewProps) {
     const isMobile = mode === "mobile";
 
-    // 1. Merge config + branding (as public catalog expects)
-    const mergedConfig = { ...config, ...branding };
+    const mergedConfig = { sucursalId: 1, ...config, ...branding };
     const theme = mergedConfig.themeIdentifier || "modern";
 
     // 2. Scoped CSS variables
@@ -132,33 +154,40 @@ export function StorePreviewArea({ branding, config, mode }: any) {
         "--secondary-foreground": getContrastColor(mergedConfig.secondaryColor || "hsl(var(--secondary))"),
     } as React.CSSProperties;
 
-    // 3. Interactive simulated states
     const [searchTerm, setSearchTerm] = React.useState("");
     const [selectedCategory, setSelectedCategory] = React.useState<number | null>(null);
-    const [viewMode, setViewMode] = React.useState<"grid" | "list">(mergedConfig.tiendaLayout || "grid");
+    const [selectedSubcategory, setSelectedSubcategory] = React.useState<number | null>(null);
+    const [viewMode, setViewMode] = React.useState<StoreLayoutMode>(mergedConfig.tiendaLayout || "grid");
     const [isConsigne, setIsConsigne] = React.useState(false);
-    const [sortBy, setSortBy] = React.useState("relevance");
+    const [sortBy, setSortBy] = React.useState<PublicCatalogSortBy>("relevance");
 
     React.useEffect(() => {
         setViewMode(mergedConfig.tiendaLayout || "grid");
     }, [mergedConfig.tiendaLayout]);
 
-    // 4. Simulated data
-    const categories = [
-        { id: 1, nombre: "Remeras", negocioId: 1 },
-        { id: 2, nombre: "Pantalones", negocioId: 1 },
-        { id: 3, nombre: "Accesorios", negocioId: 1 },
-        { id: 4, nombre: "Zapatillas", negocioId: 1 },
+    React.useEffect(() => {
+        if (!selectedCategory) {
+            setSelectedSubcategory(null);
+        }
+    }, [selectedCategory]);
+
+    const categories: PreviewCategory[] = [
+        { id: 1, nombre: "Remeras", negocioId: 1, subcategorias: [{ id: 11, nombre: "Basicas" }, { id: 12, nombre: "Oversize" }] },
+        { id: 2, nombre: "Pantalones", negocioId: 1, subcategorias: [{ id: 21, nombre: "Jean" }, { id: 22, nombre: "Sastrero" }] },
+        { id: 3, nombre: "Accesorios", negocioId: 1, subcategorias: [{ id: 31, nombre: "Gorras" }] },
+        { id: 4, nombre: "Zapatillas", negocioId: 1, subcategorias: [] },
     ];
 
-    const products = [
+    const products: PreviewProduct[] = [
         {
             id: 1,
             nombre: "Remera Relaxed Fit",
             precioVenta: 24900,
             costoConsignacion: 16500,
             imagenUrl: "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=400&q=80",
+            stockDisponibleUnits: 8,
             categoriaId: 1,
+            subcategoriaId: 11,
         },
         {
             id: 2,
@@ -166,7 +195,9 @@ export function StorePreviewArea({ branding, config, mode }: any) {
             precioVenta: 49900,
             costoConsignacion: 32000,
             imagenUrl: "https://images.unsplash.com/photo-1541099649105-f69ad21f3246?w=400&q=80",
+            stockDisponibleUnits: 5,
             categoriaId: 2,
+            subcategoriaId: 21,
         },
         {
             id: 3,
@@ -174,7 +205,9 @@ export function StorePreviewArea({ branding, config, mode }: any) {
             precioVenta: 38900,
             costoConsignacion: 24000,
             imagenUrl: "https://images.unsplash.com/photo-1556821840-3a63f95609a7?w=400&q=80",
+            stockDisponibleUnits: 3,
             categoriaId: 1,
+            subcategoriaId: 12,
         },
         {
             id: 4,
@@ -182,17 +215,20 @@ export function StorePreviewArea({ branding, config, mode }: any) {
             precioVenta: 14900,
             costoConsignacion: 8500,
             imagenUrl: "https://images.unsplash.com/photo-1588850561407-ed78c282e89b?w=400&q=80",
+            stockDisponibleUnits: 11,
             categoriaId: 3,
+            subcategoriaId: 31,
         },
     ];
 
     const filteredProducts = products.filter((p) => {
         const matchesSearch = p.nombre.toLowerCase().includes(searchTerm.toLowerCase());
         const matchesCategory = !selectedCategory || p.categoriaId === selectedCategory;
-        return matchesSearch && matchesCategory;
+        const matchesSubcategory = !selectedSubcategory || p.subcategoriaId === selectedSubcategory;
+        const matchesConsigne = !isConsigne || typeof p.costoConsignacion === "number";
+        return matchesSearch && matchesCategory && matchesSubcategory && matchesConsigne;
     });
 
-    // 5. Dynamic font loading
     React.useEffect(() => {
         if (mergedConfig.typography) {
             const fontName = mergedConfig.typography;
@@ -267,6 +303,8 @@ export function StorePreviewArea({ branding, config, mode }: any) {
                         categories={categories}
                         selectedCategory={selectedCategory}
                         setSelectedCategory={setSelectedCategory}
+                        selectedSubcategory={selectedSubcategory}
+                        setSelectedSubcategory={setSelectedSubcategory}
                         isConsigne={isConsigne}
                         setIsConsigne={setIsConsigne}
                         sortBy={sortBy}

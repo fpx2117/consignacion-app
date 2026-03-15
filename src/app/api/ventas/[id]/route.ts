@@ -1,9 +1,18 @@
-/* eslint-disable */
-// @ts-nocheck
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireAuth } from "@/lib/requireAuth";
+import { requireAuth } from "@/lib/auth/require-auth";
+import { MotivoMovimientoStock, TipoMovimientoStock } from "@prisma/client";
+import { z } from "zod";
 import { buildSucursalWhere, isGlobalSucursalView } from "@/lib/sucursalScope";
+
+const ventaAnulacionSchema = z.object({
+  motivo: z.string().trim().min(1).optional(),
+  brokenItems: z.array(z.number().int().positive()).optional(),
+});
+
+function getErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : "";
+}
 
 // GET: Obtener detalle de una venta
 export async function GET(
@@ -57,12 +66,21 @@ export async function DELETE(
   }
 
   // Leer payload del body (motivo obligatorio, brokenItems opcional)
-  let motivo: string = "Sin motivo";
+  let motivo = "Sin motivo";
   let brokenItems: number[] = [];
   try {
     const body = await req.json();
-    if (body?.motivo) motivo = String(body.motivo);
-    if (Array.isArray(body?.brokenItems)) brokenItems = body.brokenItems.map(Number);
+    const parsed = ventaAnulacionSchema.safeParse(body);
+
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: "Validación fallida", details: parsed.error.flatten() },
+        { status: 400 }
+      );
+    }
+
+    motivo = parsed.data.motivo ?? motivo;
+    brokenItems = parsed.data.brokenItems ?? brokenItems;
   } catch {
     // body vacío es aceptable
   }
@@ -113,8 +131,8 @@ export async function DELETE(
               data: {
                 productoId: detalle.productoId,
                 sucursalId,
-                tipo: "ENTRADA",
-                motivo: "DEVOLUCION_CLIENTE",
+                tipo: TipoMovimientoStock.ENTRADA,
+                motivo: MotivoMovimientoStock.DEVOLUCION_CLIENTE,
                 cantidad: detalle.units,
                 stockPrevio,
                 stockPosterior,
@@ -135,14 +153,14 @@ export async function DELETE(
           });
           const stockPrevio = stockSucursal?.stockDisponibleUnits ?? 0;
           await tx.movimientoStock.create({
-            data: {
-              productoId: detalle.productoId,
-              sucursalId,
-              tipo: "SALIDA",
-              motivo: "ROTURA",
-              cantidad: detalle.units,
-              stockPrevio,
-              stockPosterior: stockPrevio, // stock no cambia
+              data: {
+                productoId: detalle.productoId,
+                sucursalId,
+                tipo: TipoMovimientoStock.SALIDA,
+                motivo: MotivoMovimientoStock.ROTURA,
+                cantidad: detalle.units,
+                stockPrevio,
+                stockPosterior: stockPrevio, // stock no cambia
               observaciones: `Rotura en anulación venta #${id} - ${motivo}`,
             },
           });
@@ -162,10 +180,10 @@ export async function DELETE(
 
     return NextResponse.json({ success: true, message: "Venta anulada correctamente" });
 
-  } catch (error: any) {
+  } catch (error) {
     console.error("Error anulando venta:", error);
     return NextResponse.json(
-      { error: "Error al anular la venta" },
+      { error: getErrorMessage(error) || "Error al anular la venta" },
       { status: 500 }
     );
   }

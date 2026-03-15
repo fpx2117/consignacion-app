@@ -1,5 +1,3 @@
-/* eslint-disable */
-// @ts-nocheck
 "use client";
 
 import * as React from "react";
@@ -27,7 +25,7 @@ import { useSucursalStore } from "@/store/useSucursalStore";
 import type { Consignacion, Cliente } from "@/lib/types";
 
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -99,8 +97,7 @@ export default function ConsignacionesPage() {
   const [serverTotal, setServerTotal] = React.useState(0);
   const [serverTotalPages, setServerTotalPages] = React.useState(1);
 
-  // Stats globales (independiente del fetch paginado)
-  const [globalStats, setGlobalStats] = React.useState({ total: 0, abiertas: 0, items: 0 });
+
 
   // Debounce de búsqueda (300ms)
   React.useEffect(() => {
@@ -117,13 +114,13 @@ export default function ConsignacionesPage() {
         search,
         estado,
       });
-      // apiRequest devuelve el JSON completo (no extrae .data)
-      const payload = (res as any);
-      const rows: Row[] = payload.data ?? [];
+      // apiRequest devuelve ApiResponse<{data, total, page, totalPages}>
+      const payload = res.data;
+      const rows: Row[] = (payload?.data ?? []) as Row[];
       setData(rows);
-      setServerTotal(payload.total ?? 0);
-      setServerTotalPages(payload.totalPages ?? 1);
-      setServerPage(payload.page ?? page);
+      setServerTotal(payload?.total ?? 0);
+      setServerTotalPages(payload?.totalPages ?? 1);
+      setServerPage(payload?.page ?? page);
     } catch {
       toast.error("Error cargando datos");
     } finally {
@@ -131,24 +128,10 @@ export default function ConsignacionesPage() {
     }
   }, []);
 
-  // Carga inicial de stats globales (sin filtros)
-  const loadStats = React.useCallback(async () => {
-    try {
-      const res = await apiService.getConsignacionesPaginadas({ page: 1, limit: 1 });
-      const payload = (res as any);
-      // Para stats necesitamos todos → usamos el total sin filtros
-      setGlobalStats(prev => ({ ...prev, total: payload.total ?? 0 }));
-    } catch { /* silently ignore */ }
-  }, []);
-
   React.useEffect(() => {
     load(1, debouncedQ, activeTab);
     setCurrentPage(1);
   }, [load, activeSucursalId, debouncedQ, activeTab]);
-
-  React.useEffect(() => {
-    loadStats();
-  }, [loadStats, activeSucursalId]);
 
   // Agrupar los datos del servidor por cliente
   const groupedData = React.useMemo(() => {
@@ -376,7 +359,7 @@ function StatCard({
 }: {
   label: string;
   value: string | number;
-  icon: any;
+  icon: React.ElementType;
   color: "blue" | "orange" | "emerald";
 }) {
   const styles = {

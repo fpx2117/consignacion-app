@@ -1,13 +1,12 @@
-/* eslint-disable */
-// @ts-nocheck
 // src/app/api/pedidos-esperados/[id]/postergar/route.ts
 // POST: Postergar la fecha de un pedido
 
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireAuth, requireRole } from "@/lib/requireAuth";
+import { requireAuth, requireRole } from "@/lib/auth/require-auth";
 import { postergarPedidoSchema } from "@/lib/validators/pedidos-esperados";
 import { isGlobalSucursalView } from "@/lib/sucursalScope";
+import { EstadoPedidoEsperado } from "@prisma/client";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -78,7 +77,7 @@ export async function POST(req: Request, { params }: RouteParams) {
     }
 
     // Verificar que el pedido NO está CONFIRMADO o CANCELADO
-    if (pedido.estado === "CONFIRMADO" || pedido.estado === "CANCELADO") {
+    if (pedido.estado === EstadoPedidoEsperado.CONFIRMADO || pedido.estado === EstadoPedidoEsperado.CANCELADO) {
       return NextResponse.json(
         { error: `No se puede postergar un pedido en estado ${pedido.estado}` },
         { status: 400 }
@@ -97,7 +96,7 @@ export async function POST(req: Request, { params }: RouteParams) {
       where: { id },
       data: {
         fechaEsperada: nuevaFechaDate,
-        estado: "POSTERGADO",
+        estado: EstadoPedidoEsperado.POSTERGADO,
         observaciones: observacionesActualizadas,
       },
       include: {

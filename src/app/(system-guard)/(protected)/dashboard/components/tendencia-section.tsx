@@ -181,7 +181,7 @@ export function TendenciaSection({ trend, period, loading, filter = "all" }: Ten
                       // Determinar qué valores mostrar según el filtro
                       let vTotal = data.ventasTotal;
                       let pTotal = data.pagosTotal;
-                      let vCount = data.ventasCount;
+                      const vCount = data.ventasCount;
 
                       if (filter === "pos") {
                         vTotal = data.ventasPosTotal;

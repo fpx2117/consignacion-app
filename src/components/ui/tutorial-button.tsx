@@ -214,15 +214,13 @@ function useEffect_resetOnOpen(
             setStep(0);
             setTimeout(() => scrollRef.current?.scrollTo(0, 0), 50);
         }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [open]);
+    }, [open, scrollRef, setStep]);
 }
 
 function useEffect_scrollOnStep(step: number, scrollRef: React.RefObject<HTMLDivElement | null>) {
     React.useEffect(() => {
         scrollRef.current?.scrollTo({ top: 0, behavior: "smooth" });
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [step]);
+    }, [step, scrollRef]);
 }
 
 function useEffect_escapeKey(open: boolean, onClose: () => void) {

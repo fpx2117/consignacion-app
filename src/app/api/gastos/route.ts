@@ -1,9 +1,8 @@
-/* eslint-disable */
-// @ts-nocheck
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireAuth } from "@/lib/requireAuth";
+import { requireAuth } from "@/lib/auth/require-auth";
 import { isGlobalSucursalView } from "@/lib/sucursalScope";
+import { EstadoGasto, FrecuenciaGasto } from "@prisma/client";
 
 export async function GET(req: Request) {
     const auth = await requireAuth();
@@ -19,7 +18,7 @@ export async function GET(req: Request) {
         if (isGlobal) {
             const gastosGlobales = await prisma.gasto.findMany({
                 where: {
-                    ...(estado && { estado: estado as any }),
+                    ...(estado && { estado: estado as EstadoGasto }),
                     ...(categoriaId && { categoriaGastoId: Number(categoriaId) }),
                 },
                 include: {
@@ -37,7 +36,7 @@ export async function GET(req: Request) {
         const ownGastos = await prisma.gasto.findMany({
             where: {
                 sucursalId: auth.activeSucursalId,
-                ...(estado && { estado: estado as any }),
+                ...(estado && { estado: estado as EstadoGasto }),
                 ...(categoriaId && { categoriaGastoId: Number(categoriaId) }),
             },
             include: {
@@ -65,8 +64,10 @@ export async function GET(req: Request) {
         const sharedLinks = await prisma.gastoSucursal.findMany({
             where: {
                 sucursalId: auth.activeSucursalId,
-                gasto: { NOT: { sucursalId: auth.activeSucursalId } },
-                ...(estado && { gasto: { NOT: { sucursalId: auth.activeSucursalId }, estado: estado as any } }),
+                gasto: {
+                    NOT: { sucursalId: auth.activeSucursalId },
+                    ...(estado && { estado: estado as EstadoGasto }),
+                },
             },
             include: {
                 gasto: {
@@ -94,7 +95,7 @@ export async function GET(req: Request) {
         );
 
         return NextResponse.json({ data: all });
-    } catch (error) {
+    } catch {
         return NextResponse.json(
             { error: "Error al obtener gastos" },
             { status: 500 }
@@ -145,7 +146,7 @@ export async function POST(req: Request) {
         const montoProporcional = Number(monto) / totalSucursales;
 
         // Si es recurrente y tiene fecha de vencimiento final, generamos cuotas
-        if (!!esRecurrente && endDate && ["MENSUAL", "SEMANAL", "ANUAL"].includes(frecuencia)) {
+        if (!!esRecurrente && endDate && (["MENSUAL", "SEMANAL", "ANUAL"] as FrecuenciaGasto[]).includes(frecuencia as FrecuenciaGasto)) {
             const recurrenciaId = Math.random().toString(36).substring(2, 11).toUpperCase();
             const dates: Date[] = [];
             const current = new Date(startDate);
@@ -168,9 +169,9 @@ export async function POST(req: Request) {
                         motivo,
                         fecha: d,
                         fechaVencimiento: d,
-                        estado: index === 0 ? (estado || "PAGADO") : "PENDIENTE",
+                        estado: index === 0 ? ((estado as EstadoGasto) || "PAGADO") : "PENDIENTE",
                         esRecurrente: true,
-                        frecuencia,
+                        frecuencia: frecuencia as FrecuenciaGasto,
                         categoriaGastoId: Number(categoriaGastoId),
                         sucursalId,
                         userId,
@@ -205,9 +206,9 @@ export async function POST(req: Request) {
                 motivo,
                 fecha: startDate,
                 fechaVencimiento: endDate,
-                estado: estado || "PAGADO",
-                esRecurrente: !!esRecurrente,
-                frecuencia: frecuencia || "UNICO",
+                        estado: (estado as EstadoGasto) || "PAGADO",
+                        esRecurrente: !!esRecurrente,
+                        frecuencia: (frecuencia as FrecuenciaGasto) || "UNICO",
                 categoriaGastoId: Number(categoriaGastoId),
                 sucursalId,
                 userId,
@@ -230,8 +231,8 @@ export async function POST(req: Request) {
         }
 
         return NextResponse.json({ data: nuevoGasto }, { status: 201 });
-    } catch (error) {
-        console.error("Error POST Gasto:", error);
+    } catch (err) {
+        console.error("Error POST Gasto:", err);
         return NextResponse.json(
             { error: "Error al registrar el gasto" },
             { status: 500 }

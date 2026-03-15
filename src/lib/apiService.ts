@@ -1,11 +1,10 @@
-/* eslint-disable */
-// @ts-nocheck
 // src/lib/apiService.ts
 import type {
   ApiResponse,
   Usuario,
   Cliente,
   Producto,
+  Subcategoria,
   Pago,
   DashboardPeriod,
   DashboardKpis,
@@ -33,7 +32,13 @@ import type {
   CrearMovimientoCajaInput,
   Categoria,
   DescuentoNivel,
-  HorarioLaboralConfig,
+
+
+  PublicCatalogData,
+  PublicCheckoutPayload,
+  PublicCheckoutResponse,
+  PublicCheckoutStatusResponse,
+  PublicShippingQuote,
 } from "./types";
 
 export type ProductoWithImage = Producto & { imagenUrl?: string | null };
@@ -52,7 +57,7 @@ async function apiRequest<T>(path: string, init?: RequestInit): Promise<ApiRespo
   if (typeof window !== "undefined") {
     try {
       // Lazy import para evitar errores SSR
-      const { useSucursalStore } = require("@/store/useSucursalStore");
+      const { useSucursalStore } = await import("@/store/useSucursalStore");
       const sid = useSucursalStore.getState().activeSucursalId;
       const shouldAttachHeader = Number.isFinite(sid) && (sid > 0 || (sid === 0 && isApiEndpoint && isReadRequest));
       if (shouldAttachHeader) sucursalHeader = String(sid);
@@ -326,11 +331,11 @@ export const apiService = {
   /* ---------- PUBLIC ---------- */
   getPublicListaPrecios(sucursalId?: number) {
     const qs = sucursalId ? `?sucursalId=${sucursalId}` : "";
-    return apiData<any>(`${API_ROUTES.PUBLIC.LISTA_PRECIOS}${qs}`);
+    return apiData<PublicCatalogData>(`${API_ROUTES.PUBLIC.LISTA_PRECIOS}${qs}`);
   },
 
-  createPublicCheckout(payload: any) {
-    return apiData<any>(API_ROUTES.PUBLIC.CHECKOUT, {
+  createPublicCheckout(payload: PublicCheckoutPayload) {
+    return apiData<PublicCheckoutResponse>(API_ROUTES.PUBLIC.CHECKOUT, {
       method: "POST",
       body: JSON.stringify(payload),
     });
@@ -338,13 +343,13 @@ export const apiService = {
 
   getPublicCheckoutStatus(token: string) {
     const qs = new URLSearchParams({ token });
-    return apiData<{ status: "PENDING" | "PAID" | "FAILED"; ventaId?: number; reason?: string }>(
+    return apiData<PublicCheckoutStatusResponse>(
       `${API_ROUTES.PUBLIC.CHECKOUT_STATUS}?${qs.toString()}`,
     );
   },
 
   cotizarEnvioPublico(payload: { sucursalId: number, codigoPostal: string, subtotal: number, pesoKg?: number }) {
-    return apiData<any>("/api/public/envios/cotizar", {
+    return apiData<PublicShippingQuote>("/api/public/envios/cotizar", {
       method: "POST",
       body: JSON.stringify(payload)
     });

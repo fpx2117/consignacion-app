@@ -1,18 +1,17 @@
-/* eslint-disable */
-// @ts-nocheck
 "use client";
 
 import { PackageOpen } from "lucide-react";
 import { ProductCard } from "./product-card";
 import { cn } from "@/lib/utils";
+import type { PublicCatalogConfig, PublicCatalogProduct } from "@/lib/types";
 
 interface ProductListProps {
-    products: any[];
-    config: any;
+    products: PublicCatalogProduct[];
+    config: PublicCatalogConfig;
     viewMode: "grid" | "list";
     isConsigne: boolean;
-    onAddToCart: (p: any) => void;
-    onViewProduct: (p: any) => void; // Agregamos esto
+    onAddToCart: (product: PublicCatalogProduct, quantity?: number) => void;
+    onViewProduct: (product: PublicCatalogProduct) => void;
 }
 
 export function ProductList({ products, config, viewMode, isConsigne, onAddToCart, onViewProduct }: ProductListProps) {
@@ -43,7 +42,7 @@ export function ProductList({ products, config, viewMode, isConsigne, onAddToCar
                     viewMode={viewMode}
                     isConsigne={isConsigne}
                     onAddToCart={onAddToCart}
-                    onViewProduct={onViewProduct} // Y se lo pasamos a la tarjeta acá
+                    onViewProduct={onViewProduct}
                 />
             ))}
         </div>

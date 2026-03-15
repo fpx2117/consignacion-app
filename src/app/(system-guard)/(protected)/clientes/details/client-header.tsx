@@ -1,12 +1,10 @@
-/* eslint-disable */
-// @ts-nocheck
 "use client";
 
 import { Card } from "@/components/ui/card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Phone, MapPin, CheckCircle2, AlertCircle, MessageCircle } from "lucide-react";
+import { MapPin, CheckCircle2, AlertCircle, MessageCircle } from "lucide-react";
 import type { Cliente } from "@/lib/types";
 
 // Helpers

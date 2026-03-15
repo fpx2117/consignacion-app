@@ -1,8 +1,6 @@
-/* eslint-disable */
-// @ts-nocheck
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireAuth } from "@/lib/requireAuth";
+import { requireAuth } from "@/lib/auth/require-auth";
 import { isGlobalSucursalView } from "@/lib/sucursalScope";
 
 export async function PATCH(
@@ -38,7 +36,7 @@ export async function PATCH(
     });
 
     return NextResponse.json(subcategoria);
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       { error: "Error al actualizar la subcategoría" },
       { status: 500 }
@@ -66,8 +64,8 @@ export async function DELETE(
     });
 
     return NextResponse.json({ ok: true });
-  } catch (error) {
-    console.error("Delete subcategory error:", error);
+  } catch (err) {
+    console.error("Delete subcategory error:", err);
     return NextResponse.json(
       { error: "Error al eliminar la subcategoría" },
       { status: 500 }

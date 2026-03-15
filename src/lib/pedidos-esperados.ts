@@ -1,10 +1,8 @@
-/* eslint-disable */
-// @ts-nocheck
 // src/lib/pedidos-esperados.ts
 // Funciones compartidas para el modulo de pedidos de reposicion programados
 
 import { prisma } from "@/lib/prisma";
-import { NOTIFICATION_TYPE } from "@/lib/notificationes/notificaciones-types";
+import { NOTIFICATION_TYPE } from "@/lib/notificaciones/types";
 
 /**
  * Verifica pedidos PROGRAMADO/POSTERGADO cuya fechaEsperada ya paso,

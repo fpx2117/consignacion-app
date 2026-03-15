@@ -24,6 +24,7 @@ type ProductSelectorProps = {
   productos: ProductoConStock[];
   loading: boolean;
   onSelectProduct: (productId: number) => void;
+  triggerRef?: React.RefObject<HTMLButtonElement | null>;
 };
 
 export function ProductSelector({
@@ -33,6 +34,7 @@ export function ProductSelector({
   productos,
   loading,
   onSelectProduct,
+  triggerRef,
 }: ProductSelectorProps) {
   const selectedProduct = productoId ? productos.find((product) => product.id === productoId) : null;
 
@@ -44,6 +46,7 @@ export function ProductSelector({
       <Popover open={open} onOpenChange={onOpenChange}>
         <PopoverTrigger asChild>
           <Button
+            ref={triggerRef}
             id="selector-producto"
             variant="outline"
             role="combobox"
@@ -58,11 +61,15 @@ export function ProductSelector({
             <div className="absolute left-2.5 top-1/2 -translate-y-1/2">
               <Barcode className="h-4 w-4 text-primary animate-pulse" aria-hidden="true" />
             </div>
-            <div className="flex items-center justify-between w-full overflow-hidden">
+            {/* Badge tecla F1 */}
+            <span className="hidden md:inline-flex absolute right-2.5 top-1/2 -translate-y-1/2 items-center justify-center h-5 px-1.5 rounded border border-border bg-muted text-muted-foreground text-[9px] font-black font-mono tracking-tight select-none">
+              F1
+            </span>
+            <div className="flex items-center w-full overflow-hidden pr-10 md:pr-9">
               <span className="truncate text-xs sm:text-sm">
                 {selectedProduct ? selectedProduct.nombre : "Escanear o buscar producto..."}
               </span>
-              <ChevronsUpDown className="ml-1 h-3 w-3 shrink-0 opacity-50 hidden sm:block" aria-hidden="true" />
+              <ChevronsUpDown className="ml-1 h-3 w-3 shrink-0 opacity-50 block md:hidden" aria-hidden="true" />
             </div>
           </Button>
         </PopoverTrigger>

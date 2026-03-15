@@ -1,12 +1,10 @@
-/* eslint-disable */
-// @ts-nocheck
 // src/app/ver/inventario/[id]/pdf/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import puppeteer, { Browser } from "puppeteer";
 import { prisma } from "@/lib/prisma";
 
 import { getBranding } from "@/lib/reports/get-branding";
-import { buildInventoryHtml } from "@/lib/reports/base/inventory-report-template";
+import { buildInventoryHtml, type InventoryGroup } from "@/lib/reports/base/inventory-report-template";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -43,7 +41,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
     });
 
     // 4. Agrupar productos por sucursal con filtrado ESTRICTO de stock
-    const groups = sucursales.map((suc) => {
+    const groups: InventoryGroup[] = sucursales.map((suc) => {
       const productosEnSucursal = productos
         .map((p) => {
           const stockInfo = p.stockSucursals.find((s) => s.sucursalId === suc.id);
@@ -53,9 +51,24 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
             : (p.sucursalId === suc.id ? p.stockDisponibleUnits : 0);
 
           return {
-            ...p,
+            id: p.id,
+            nombre: p.nombre,
+            descripcion: p.descripcion ?? null,
+            codigoBarra: p.codigoBarra ?? null,
+            sku: p.sku ?? null,
+            activo: p.activo,
+            precioVenta: Number(p.precioVenta),
+            precioCosto: Number(p.precioCosto),
+            iva: Number(p.iva),
             stockDisponibleUnits: stock,
+            stockConsignadoUnits: p.stockConsignadoUnits,
             stockMinUnits: stockInfo?.stockMinUnits ?? p.stockMinUnits,
+            packSizeUnits: p.packSizeUnits ?? null,
+            fechaVencimiento: p.fechaVencimiento ? p.fechaVencimiento.toISOString() : null,
+            imagenUrl: p.imagenUrl ?? null,
+            categoriaId: p.categoriaId ?? null,
+            createdAt: p.createdAt.toISOString(),
+            updatedAt: p.updatedAt.toISOString(),
           };
         })
         // FILTRADO ESTRICTO: Solo productos con stock positivo en ESTA sucursal.

@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { requireAuth } from "@/lib/requireAuth";
+import { requireAuth } from "@/lib/auth/require-auth";
 import { prisma } from "@/lib/prisma";
 import { SidebarDock, type SidebarUserData } from "@/components/sidebar-dock";
 import { SubscriptionGuard } from "@/components/SubscriptionGuard";

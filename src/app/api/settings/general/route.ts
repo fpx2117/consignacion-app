@@ -1,8 +1,30 @@
-/* eslint-disable */
-// @ts-nocheck
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireAuth, requireRole } from "@/lib/requireAuth";
+import { requireAuth, requireRole } from "@/lib/auth/require-auth";
+
+type GeneralSettingsBody = {
+    minStockGlobal?: number;
+    diasAnticipacionVencimiento?: number;
+    notificarVencimientos?: boolean;
+    notificarStockBajo?: boolean;
+    notificarVentas?: boolean;
+    notificarLiquidaciones?: boolean;
+    notificarConsignacionesActivas?: boolean;
+    diasAvisoConsignacion?: number;
+    mensajeWhatsappConsignacion?: string | null;
+    mensajeWhatsappVenta?: string | null;
+    usarControlDeCaja?: boolean;
+    porcentajeAumentoConsignacion?: number;
+    mostrarPreciosConsignacion?: boolean;
+    porcentajeInteresTarjeta?: number;
+    mostrarListaPrecios?: boolean;
+    convertirTienda?: boolean;
+    separarListaPorSucursal?: boolean;
+    mpAccessTokenTienda?: string | null;
+    mpPublicKeyTienda?: string | null;
+    tiendaLayout?: string;
+    mostrarCategoriasEnHeader?: boolean;
+};
 
 // GET: Obtener la configuración actual
 export async function GET() {
@@ -12,18 +34,21 @@ export async function GET() {
     try {
         const config = await prisma.configuracion.findUnique({
             where: { sucursalId: auth.activeSucursalId },
-        }) as any;
+        });
 
-        if (config && config.mpAccessTokenTienda) {
-            config.mpAccessTokenTienda = "**************";
-        }
+        const data = config
+            ? {
+                ...config,
+                mpAccessTokenTienda: config.mpAccessTokenTienda ? "**************" : null,
+            }
+            : null;
 
-        return NextResponse.json({ data: config }, {
+        return NextResponse.json({ data }, {
             headers: {
                 "Cache-Control": "private, max-age=60, stale-while-revalidate=180",
             },
         });
-    } catch (error: any) {
+    } catch {
         return NextResponse.json({ error: "Error al obtener la configuración" }, { status: 500 });
     }
 }
@@ -37,7 +62,7 @@ export async function PUT(req: Request) {
     }
 
     try {
-        const body = await req.json();
+        const body = (await req.json()) as GeneralSettingsBody;
 
         const {
             minStockGlobal,
@@ -115,7 +140,7 @@ export async function PUT(req: Request) {
         });
 
         return NextResponse.json({ data: configActualizada, message: "Configuración actualizada" });
-    } catch (error: any) {
+    } catch (error) {
         console.error("Error actualizando configuración:", error);
         return NextResponse.json({ error: "Error al actualizar la configuración" }, { status: 500 });
     }

@@ -1,5 +1,3 @@
-/* eslint-disable */
-// @ts-nocheck
 "use client";
 
 import * as React from "react";
@@ -20,8 +18,28 @@ import { Card } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { apiService } from "@/lib/apiService";
+import type { Configuracion } from "@/lib/types";
 import { TutorialButton } from "@/components/ui/tutorial-button";
 import { NOTIFICATIONS_TUTORIAL } from "@/lib/tutorial-content";
+
+type NotificationConfig = Pick<
+  Configuracion,
+  | "minStockGlobal"
+  | "diasAnticipacionVencimiento"
+  | "notificarVencimientos"
+  | "notificarStockBajo"
+  | "notificarVentas"
+> & {
+  notificarLiquidaciones: boolean;
+  notificarConsignacionesActivas: boolean;
+  diasAvisoConsignacion: number;
+};
+
+type NumericConfigKey = "minStockGlobal" | "diasAnticipacionVencimiento" | "diasAvisoConsignacion";
+
+function getErrorMessage(error: unknown, fallback: string) {
+  return error instanceof Error ? error.message : fallback;
+}
 
 export default function NotificationSettingsPage() {
     const router = useRouter();
@@ -30,7 +48,7 @@ export default function NotificationSettingsPage() {
     const [loadingSubmit, setLoadingSubmit] = React.useState(false);
 
     // Form State
-    const [config, setConfig] = React.useState({
+    const [config, setConfig] = React.useState<NotificationConfig>({
         minStockGlobal: 5,
         diasAnticipacionVencimiento: 7,
         notificarVencimientos: true,
@@ -44,7 +62,7 @@ export default function NotificationSettingsPage() {
     const fetchConfig = React.useCallback(async () => {
         try {
             const res = await apiService.getConfiguracionGeneral();
-            const data = res?.data ?? res;
+            const data = (res?.data ?? res) as Partial<NotificationConfig> | undefined;
 
             if (data) {
                 setConfig({
@@ -58,8 +76,8 @@ export default function NotificationSettingsPage() {
                     diasAvisoConsignacion: data.diasAvisoConsignacion ?? 15,
                 });
             }
-        } catch (error: any) {
-            toast.error(error.message || "Error al cargar la configuración.");
+        } catch (error) {
+            toast.error(getErrorMessage(error, "Error al cargar la configuración."));
         } finally {
             setLoading(false);
         }
@@ -74,8 +92,8 @@ export default function NotificationSettingsPage() {
         try {
             await apiService.actualizarConfiguracionGeneral(config);
             toast.success("Configuración de notificaciones actualizada.");
-        } catch (error: any) {
-            toast.error(error.message || "Error al guardar los cambios.");
+        } catch (error) {
+            toast.error(getErrorMessage(error, "Error al guardar los cambios."));
         } finally {
             setLoadingSubmit(false);
         }
@@ -85,8 +103,8 @@ export default function NotificationSettingsPage() {
         setConfig((prev) => ({ ...prev, [key]: checked }));
     };
 
-    const handleInputChange = (key: keyof typeof config) => (e: React.ChangeEvent<HTMLInputElement>) => {
-        const val = parseInt(e.target.value);
+    const handleInputChange = (key: NumericConfigKey) => (e: React.ChangeEvent<HTMLInputElement>) => {
+        const val = Number.parseInt(e.target.value, 10);
         setConfig((prev) => ({ ...prev, [key]: isNaN(val) ? 0 : val }));
     };
 

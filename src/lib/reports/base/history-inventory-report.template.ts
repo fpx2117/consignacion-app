@@ -1,9 +1,23 @@
-/* eslint-disable */
-// @ts-nocheck
 // src/lib/reports/base/history-inventory-report.template.ts
-import { MovimientoConProducto, TipoMovimientoStock } from "@/lib/types";
+import { MotivoMovimientoStock, TipoMovimientoStock } from "@/lib/types";
 import { reportThemeCss } from "@/lib/reports/report-theme";
 import type { BrandingDTO } from "@/lib/reports/types";
+
+export type HistoryInventoryReportRow = {
+  id: number;
+  productoId: number;
+  tipo: TipoMovimientoStock;
+  motivo: MotivoMovimientoStock | string;
+  cantidad: number;
+  stockPrevio: number;
+  stockPosterior: number;
+  observaciones?: string | null;
+  createdAt: Date | string;
+  producto: {
+    nombre: string;
+    codigoBarra?: string | null;
+  } | null;
+};
 
 const escapeHtml = (value: unknown): string =>
   String(value ?? "")
@@ -26,7 +40,7 @@ const brandInitials = (name: string) => {
 };
 
 export function buildHistoryInventoryHtml(
-  movimientos: MovimientoConProducto[],
+  movimientos: HistoryInventoryReportRow[],
   mesNombre: string,
   anio: number,
   branding: BrandingDTO

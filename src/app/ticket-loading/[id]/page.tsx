@@ -1,9 +1,6 @@
-/* eslint-disable */
-// @ts-nocheck
 "use client";
 
 import { useEffect, useState, use } from "react";
-import { useRouter } from "next/navigation";
 import { Loader2, AlertCircle } from "lucide-react";
 import { apiService } from "@/lib/apiService";
 import { Button } from "@/components/ui/button";
@@ -16,7 +13,8 @@ export default function TicketLoadingPage(props: { params: Params, searchParams:
   const { id } = use(props.params);
   const searchParams = use(props.searchParams);
 
-  const mode = (searchParams.mode as "view" | "whatsapp") || "view";
+  const rawMode = searchParams.mode;
+  const mode: "view" | "whatsapp" = rawMode === "whatsapp" ? "whatsapp" : "view";
   const phone = searchParams.phone as string | undefined;
   const name = searchParams.name as string | undefined;
 
@@ -68,9 +66,10 @@ export default function TicketLoadingPage(props: { params: Params, searchParams:
           window.location.replace(waUrl);
         }
 
-      } catch (err: any) {
+      } catch (err) {
         if (mounted) {
-          setError(err.message || "No se pudo procesar la solicitud.");
+          const message = err instanceof Error ? err.message : "No se pudo procesar la solicitud.";
+          setError(message);
         }
       }
     };

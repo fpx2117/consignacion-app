@@ -1,6 +1,7 @@
 import { unstable_cache } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { registerCatalogVisit } from "@/lib/analytics/catalog-visit";
+import type { PublicCatalogData } from "@/lib/types";
 
 export class PublicCatalogError extends Error {
   status: number;
@@ -12,7 +13,7 @@ export class PublicCatalogError extends Error {
   }
 }
 
-export async function getPublicCatalogDataRaw(sucursalId: number | null) {
+export async function getPublicCatalogDataRaw(sucursalId: number | null): Promise<PublicCatalogData> {
   const config = (await prisma.configuracion.findUnique({
     where: { sucursalId: sucursalId || 1 },
     include: {
@@ -75,7 +76,7 @@ export async function getPublicCatalogDataRaw(sucursalId: number | null) {
     }),
   ]);
 
-  const payload = {
+  const payload: PublicCatalogData = {
     productos,
     categorias,
     config: {

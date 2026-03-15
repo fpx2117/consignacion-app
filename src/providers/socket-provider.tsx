@@ -1,5 +1,3 @@
-/* eslint-disable */
-// @ts-nocheck
 "use client";
 
 import { createContext, useContext, useEffect, useState } from "react";
@@ -41,8 +39,6 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
 
     // 1. No conectar en rutas públicas
     if (isSocketDisabledRoute) {
-      setSocket(null);
-      setIsConnected(false);
       console.log(`⏭️ CLIENTE: Ruta pública detectada (${pathname}), socket omitido`);
       return;
     }
@@ -130,7 +126,7 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
   }, [isSocketDisabledRoute, pathname]);
 
   return (
-    <SocketContext.Provider value={{ socket, isConnected }}>
+    <SocketContext.Provider value={{ socket: isSocketDisabledRoute ? null : socket, isConnected: isSocketDisabledRoute ? false : isConnected }}>
       {children}
     </SocketContext.Provider>
   );

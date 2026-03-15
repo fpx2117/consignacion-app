@@ -1,5 +1,3 @@
-/* eslint-disable */
-// @ts-nocheck
 // src/lib/reports/base/remito-template.ts
 import { reportThemeCss } from "@/lib/reports/report-theme";
 import type { BrandingDTO } from "@/lib/reports/types";

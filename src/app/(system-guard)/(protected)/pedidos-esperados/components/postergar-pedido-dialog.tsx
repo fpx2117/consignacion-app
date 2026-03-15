@@ -1,5 +1,3 @@
-/* eslint-disable */
-// @ts-nocheck
 "use client";
 
 import * as React from "react";
@@ -46,8 +44,8 @@ export function PostergarPedidoDialog({
   onSuccess,
 }: PostergarPedidoDialogProps) {
   const activeSucursalId = useSucursalStore((s) => s.activeSucursalId);
-  const sucursalHeaders = React.useMemo(
-    () => (activeSucursalId ? { "x-sucursal-id": String(activeSucursalId) } : {}),
+  const sucursalHeaders = React.useMemo<Record<string, string>>(
+    () => activeSucursalId ? { "x-sucursal-id": String(activeSucursalId) } : {} as Record<string, string>,
     [activeSucursalId]
   );
   const [nuevaFecha, setNuevaFecha] = React.useState("");
@@ -90,8 +88,8 @@ export function PostergarPedidoDialog({
       toast.success("Pedido postergado correctamente");
       onOpenChange(false);
       onSuccess();
-    } catch (err: any) {
-      toast.error(err.message || "Error al postergar el pedido");
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Error al postergar el pedido");
     } finally {
       setSaving(false);
     }

@@ -1,5 +1,3 @@
-/* eslint-disable */
-// @ts-nocheck
 "use client";
 
 import * as React from "react";
@@ -52,8 +50,8 @@ export function ConfirmarPedidoDialog({
   onSuccess,
 }: ConfirmarPedidoDialogProps) {
   const activeSucursalId = useSucursalStore((s) => s.activeSucursalId);
-  const sucursalHeaders = React.useMemo(
-    () => (activeSucursalId ? { "x-sucursal-id": String(activeSucursalId) } : {}),
+  const sucursalHeaders = React.useMemo<Record<string, string>>(
+    () => activeSucursalId ? { "x-sucursal-id": String(activeSucursalId) } : {} as Record<string, string>,
     [activeSucursalId]
   );
   const [cantidades, setCantidades] = React.useState<CantidadItem[]>([]);
@@ -114,8 +112,8 @@ export function ConfirmarPedidoDialog({
       toast.success("Llegada confirmada. Stock actualizado.");
       onOpenChange(false);
       onSuccess();
-    } catch (err: any) {
-      toast.error(err.message || "Error al confirmar el pedido");
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Error al confirmar el pedido");
     } finally {
       setSaving(false);
     }

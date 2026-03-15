@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireAuth } from "@/lib/requireAuth";
+import { requireAuth } from "@/lib/auth/require-auth";
 import { getDashboardTopProductos } from "@/lib/kpi-logic";
 import { DashboardPeriod } from "@/lib/types";
 
@@ -20,7 +20,7 @@ export async function GET(req: Request) {
         "Cache-Control": "private, max-age=30, stale-while-revalidate=60",
       },
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Top Productos API Error:", error);
     return NextResponse.json({ error: "Error al obtener los productos más vendidos" }, { status: 500 });
   }

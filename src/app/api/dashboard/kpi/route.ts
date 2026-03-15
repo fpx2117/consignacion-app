@@ -1,36 +1,18 @@
-/* eslint-disable */
-// @ts-nocheck
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
-import { requireAuth } from "@/lib/requireAuth";
-
-import { startOfDay, startOfWeek, startOfMonth } from "date-fns";
-
-type Period = "today" | "week" | "month" | "all";
-
-function getPeriodStart(period: Period) {
-  const now = new Date();
-  if (period === "all") return undefined;
-
-  if (period === "today") return startOfDay(now);
-  if (period === "week") return startOfWeek(now, { weekStartsOn: 1 }); // Comienza Lunes
-  if (period === "month") return startOfMonth(now);
-
-  return undefined;
-}
+import { requireAuth } from "@/lib/auth/require-auth";
+import { getDashboardKpis } from "@/lib/kpi-logic";
+import { DashboardPeriod } from "@/lib/types";
 
 export async function GET(req: Request) {
   const auth = await requireAuth();
   if (!auth.ok) return auth.res;
 
   const { searchParams } = new URL(req.url);
-  const period = (searchParams.get("period") as Period) ?? "month";
+  const period = (searchParams.get("period") as DashboardPeriod) ?? "month";
 
   const sucursalId = auth.activeSucursalId;
   const isAdmin = auth.user.rol === "ADMIN";
 
-  // Usamos la nueva utilidad centralizada
-  const { getDashboardKpis } = await import("@/lib/kpi-logic");
   const stats = await getDashboardKpis(sucursalId, period, isAdmin);
 
   return NextResponse.json({

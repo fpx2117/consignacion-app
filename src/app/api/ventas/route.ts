@@ -1,19 +1,48 @@
-/* eslint-disable */
-// @ts-nocheck
-// src/app/api/ventas/route.ts
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireAuth } from "@/lib/requireAuth";
-import { Prisma, TipoMovimientoStock, MotivoMovimientoStock, TipoVenta } from "@prisma/client";
+import { requireAuth } from "@/lib/auth/require-auth";
+import {
+  MetodoPago,
+  MotivoMovimientoStock,
+  Prisma,
+  TipoMovimientoStock,
+  TipoVenta,
+} from "@prisma/client";
+import { z } from "zod";
 
-import { sendNotification } from "@/lib/socket-trigger";
+import { sendNotification } from "@/lib/notificaciones/socket-trigger";
 import { obtenerConfiguracionGlobal } from "@/lib/config";
-import { evaluateStockAlert, processNotificationQueue } from "@/lib/stock-alerts";
+import { evaluateStockAlert, processNotificationQueue } from "@/lib/notificaciones/stock-alerts";
 import { buildSucursalWhere, isGlobalSucursalView } from "@/lib/sucursalScope";
 
 const MAX_VENTA_RETRIES = 3;
+const createVentaSchema = z.object({
+  clienteId: z.number().int().positive().optional().nullable(),
+  descuentoGlobal: z.number().nonnegative().optional(),
+  metodoPago: z.nativeEnum(MetodoPago).optional(),
+  items: z
+    .array(
+      z.object({
+        productoId: z.number().int().positive(),
+        units: z.number().int().positive(),
+        descuento: z.number().nonnegative().optional(),
+      })
+    )
+    .min(1),
+});
 
-function isRetriableVentaError(error: any) {
+type NotificationQueueItem = NonNullable<ReturnType<typeof evaluateStockAlert>>;
+type VentaCreada = Prisma.VentaGetPayload<{
+  include: { detalles: true; cliente: true };
+}>;
+type PagoCreado = Prisma.PagoGetPayload<object>;
+type VentaTransactionResult = {
+  venta: VentaCreada;
+  pago: PagoCreado;
+  notificationsQueue: NotificationQueueItem[];
+};
+
+function isRetriableVentaError(error: unknown) {
   if (error instanceof Prisma.PrismaClientKnownRequestError) {
     return error.code === "P2002" || error.code === "P2034";
   }
@@ -47,8 +76,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Vista global en modo solo lectura. Selecciona una sucursal para registrar ventas." }, { status: 409 });
   }
 
-  const payload = auth.user as any;
-  const rawId = payload.id || payload.userId || payload.usuarioId || payload.sub;
+  const rawId = auth.user.sub;
   const usuarioId = Number(rawId);
 
   if (!rawId || isNaN(usuarioId)) {
@@ -59,15 +87,17 @@ export async function POST(req: Request) {
   }
 
   try {
-    const body = await req.json();
-    const { clienteId, items, metodoPago, descuentoGlobal } = body;
+    const body = await req.json().catch(() => null);
+    const parsed = createVentaSchema.safeParse(body);
 
-    if (!items || !Array.isArray(items) || items.length === 0) {
+    if (!parsed.success) {
       return NextResponse.json(
-        { error: "La venta debe tener al menos un producto." },
+        { error: "Validación fallida", details: parsed.error.flatten() },
         { status: 400 }
       );
     }
+
+    const { clienteId, descuentoGlobal, items, metodoPago } = parsed.data;
 
     // ✅ 1. TRAER CONFIGURACIÓN PRIMERO
     const configGlobal = await obtenerConfiguracionGlobal(auth.activeSucursalId);
@@ -90,7 +120,7 @@ export async function POST(req: Request) {
       );
     }
 
-    let notificationsQueue: any[] = [];
+    let notificationsQueue: NotificationQueueItem[] = [];
 
     // Lógica de Cliente - Filtrado por sucursal
     let finalClienteId = clienteId;
@@ -109,13 +139,13 @@ export async function POST(req: Request) {
     }
 
     // ✅ 3. TRANSACCIÓN DE VENTA ADAPTADA (con reintento ante conflictos)
-    let result: { venta: any; pago: any; notificationsQueue: any[] } | null = null;
+    let result: VentaTransactionResult | null = null;
 
     for (let attempt = 1; attempt <= MAX_VENTA_RETRIES; attempt++) {
       try {
         result = await prisma.$transaction(async (tx) => {
           let totalVenta = 0;
-          const txNotificationsQueue: any[] = [];
+          const txNotificationsQueue: NotificationQueueItem[] = [];
           const detallesData = [];
           const sucursalId = auth.activeSucursalId;
 
@@ -231,6 +261,7 @@ export async function POST(req: Request) {
               clienteId: finalClienteId,
               sucursalId: auth.activeSucursalId,
               numeroVenta: nextNumeroVenta,
+              metodoPago: metodoPago ?? MetodoPago.EFECTIVO,
               sesionCajaId: sesionActiva?.id || null,
               fecha: new Date(),
               total: totalFinal,
@@ -248,7 +279,7 @@ export async function POST(req: Request) {
               sesionCajaId: sesionActiva?.id || null,
               fecha: new Date(),
               monto: totalFinal,
-              metodo: metodoPago || "EFECTIVO",
+              metodo: metodoPago ?? MetodoPago.EFECTIVO,
             },
           });
 
@@ -259,7 +290,7 @@ export async function POST(req: Request) {
 
         notificationsQueue = result.notificationsQueue;
         break;
-      } catch (error: any) {
+      } catch (error) {
         if (!isRetriableVentaError(error) || attempt === MAX_VENTA_RETRIES) {
           throw error;
         }
@@ -305,7 +336,7 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ data: result.venta, pago: result.pago });
 
-  } catch (error: any) {
+  } catch (error) {
     console.error("Error POS:", error);
     const msg = getErrorMessage(error);
     if (

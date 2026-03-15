@@ -2,7 +2,7 @@
 //src/app/api/liquidaciones/route.ts
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireAuth } from "@/lib/requireAuth";
+import { requireAuth } from "@/lib/auth/require-auth";
 import { buildSucursalWhere } from "@/lib/sucursalScope";
 import { Prisma } from "@prisma/client";
 

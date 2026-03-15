@@ -1,11 +1,9 @@
-/* eslint-disable */
-// @ts-nocheck
 "use client";
 
 import * as React from "react";
 import type { Producto, UpdateProductoInput } from "@/lib/types";
 import { apiService } from "@/lib/apiService";
-import { CATEGORY_PALETTE, getCategoryColorByKey, type CategoryColorKey } from "@/lib/category-colors";
+import { getCategoryColorByKey } from "@/lib/category-colors";
 import { cn } from "@/lib/utils";
 
 import { Button } from "@/components/ui/button";
@@ -37,12 +35,18 @@ import {
   BellRing,
   Calendar,
   Layers,
-  AlertCircle,
-  Plus
 } from "lucide-react";
 import { ImageUpload } from "@/components/image-upload";
 import { CreateCategoriaDialog } from "./create-categoria-dialog";
 import { toast } from "sonner";
+
+type ProductoEditable = Producto & {
+  subcategoriaId?: number | null;
+};
+
+type UpdateProductoPayload = UpdateProductoInput & {
+  subcategoriaId?: number | null;
+};
 
 function toNumber(v: string): number | undefined {
   const t = String(v).replace(",", ".").trim();
@@ -64,12 +68,12 @@ export function EditProductoDialog({
   onUpdated,
 }: {
   trigger: React.ReactNode;
-  producto: Producto;
+  producto: ProductoEditable;
   onUpdated?: () => void;
 }) {
   const [open, setOpen] = React.useState(false);
   const [saving, setSaving] = React.useState(false);
-  const [deleting, setDeleting] = React.useState(false);
+  const deleting = false;
 
   // Estados del formulario
   const [nombre, setNombre] = React.useState(producto.nombre);
@@ -146,7 +150,7 @@ export function EditProductoDialog({
     if (!canSubmit || saving) return;
     setSaving(true);
     try {
-      const payload: UpdateProductoInput = {
+      const payload: UpdateProductoPayload = {
         nombre: nombre.trim(),
         codigoBarra: codigoBarra.trim() || undefined,
         precioVenta: pv,
@@ -162,8 +166,8 @@ export function EditProductoDialog({
       toast.success("Producto actualizado correctamente");
       setOpen(false);
       onUpdated?.();
-    } catch (err: any) {
-      toast.error(err.message || "Error al actualizar");
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Error al actualizar");
     } finally {
       setSaving(false);
     }

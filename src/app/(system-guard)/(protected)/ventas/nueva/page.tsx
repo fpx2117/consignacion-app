@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { BadgePercent, Banknote, Coins, CreditCard, Loader2, Lock, Minus, Plus, QrCode } from "lucide-react";
+import { BadgePercent, Banknote, Barcode, Coins, CreditCard, Loader2, Lock, QrCode, UserCircle2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { ErrorDialog } from "@/components/error-dialog";
@@ -12,16 +12,17 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+// Note: Button/Input/Minus/Plus still used in the descuento dialog below
 import { apiService } from "@/lib/apiService";
 import type { Cliente, CreateVentaDirectaInput, DescuentoNivel, MetodoPago } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { useSucursalStore } from "@/store/useSucursalStore";
 
 import { CartList } from "./components/cart-list";
-import { CustomerSelector } from "./components/customer-selector";
+import { CustomerSearchModal } from "./components/customer-search-modal";
 import { DesktopSummary } from "./components/desktop-summary";
 import { MobileSummaryBar } from "./components/mobile-summary-bar";
-import { ProductSelector } from "./components/product-selector";
+import { ProductSearchModal } from "./components/product-search-modal";
 import { VentaHeader } from "./components/venta-header";
 import type { CartItem, MetodoPagoOption, ProductoConStock } from "./types";
 import { formatCurrency, getBestDiscount, getNextDiscount } from "./utils";
@@ -41,13 +42,11 @@ export default function NuevaVentaPage() {
   const [clientes, setClientes] = React.useState<Cliente[]>([]);
   const [porcentajeInteresTarjeta, setPorcentajeInteresTarjeta] = React.useState(0);
 
-  const [productoId, setProductoId] = React.useState<number | "">("");
   const [selectedClienteId, setSelectedClienteId] = React.useState<number | "">("");
-  const [units, setUnits] = React.useState<number>(1);
   const [metodoPago, setMetodoPago] = React.useState<MetodoPago>("EFECTIVO");
 
-  const [openProductoCombobox, setOpenProductoCombobox] = React.useState(false);
-  const [openClienteCombobox, setOpenClienteCombobox] = React.useState(false);
+  const [openClienteModal, setOpenClienteModal] = React.useState(false);
+  const [openSearchModal, setOpenSearchModal] = React.useState(false);
   const [cart, setCart] = React.useState<CartItem[]>([]);
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
@@ -71,6 +70,8 @@ export default function NuevaVentaPage() {
 
   const barcodeBuffer = React.useRef("");
   const lastKeyTime = React.useRef(0);
+
+
 
   const fetchData = React.useCallback(async () => {
     setVerificandoCaja(true);
@@ -167,7 +168,6 @@ export default function NuevaVentaPage() {
 
   React.useEffect(() => {
     setCart([]);
-    setProductoId("");
   }, [activeSucursalId]);
 
   React.useEffect(() => {
@@ -204,25 +204,86 @@ export default function NuevaVentaPage() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [cajaAbierta, processBarcode, usaCajaEstricta]);
 
-  const addItemManual = () => {
-    if (!productoId || units <= 0) {
-      return;
-    }
+  // ── Teclas de función rápida del POS ─────────────────────────────────────
+  // capture:true + preventDefault INMEDIATO antes del switch → el navegador nunca llega a procesar
+  // F1 (ayuda), F5 (reload), etc. quedan bloqueados dentro del POS
+  React.useEffect(() => {
+    if (usaCajaEstricta && !cajaAbierta) return;
 
-    const product = productos.find((item) => item.id === productoId);
-    if (!product) {
-      return;
-    }
+    const POS_FKEYS = new Set(["F1", "F2", "F3", "F4", "F5", "F6", "F7", "Delete"]);
 
-    addToCart(product, units);
-    setProductoId("");
-    setUnits(1);
-    setOpenProductoCombobox(false);
-  };
+    const handleFunctionKeys = (e: KeyboardEvent) => {
+      if (!POS_FKEYS.has(e.key)) return;
+
+      // Bloquear el navegador SIEMPRE para estas teclas cuando el POS está activo
+      e.preventDefault();
+      e.stopPropagation();
+
+      // Si el foco está en un input/textarea solo permitir F1 (buscar)
+      const tag = (e.target as HTMLElement).tagName;
+      const isTyping = tag === "INPUT" || tag === "TEXTAREA";
+
+      switch (e.key) {
+        case "F1":
+          setOpenSearchModal(true);
+          break;
+        case "F7":
+          setOpenClienteModal(true);
+          break;
+        case "F2":
+          if (!isTyping) setMetodoPago("EFECTIVO");
+          break;
+        case "F3":
+          if (!isTyping) setMetodoPago("TRANSFERENCIA");
+          break;
+        case "F4":
+          if (!isTyping) setMetodoPago("TARJETA");
+          break;
+        case "F5":
+          if (!isTyping) setOpenDescuento(true);
+          break;
+        case "F6":
+          if (!isTyping && cart.length > 0 && !loading && activeSucursalId !== 0) {
+            handleCobrar();
+          }
+          break;
+        case "Delete":
+          // Supr → elimina el último item agregado al carrito
+          if (!isTyping && cart.length > 0) {
+            const lastItem = cart[cart.length - 1];
+            removeItem(lastItem.producto.id);
+          }
+          break;
+      }
+    };
+
+    // capture:true → se ejecuta en la fase de captura, antes que cualquier handler del DOM
+    window.addEventListener("keydown", handleFunctionKeys, { capture: true });
+    return () => window.removeEventListener("keydown", handleFunctionKeys, { capture: true });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cajaAbierta, usaCajaEstricta, cart.length, loading, activeSucursalId]);
+
+
 
   const removeItem = (productId: number) => {
     setCart((previous) => previous.filter((item) => item.producto.id !== productId));
   };
+
+  const updateQuantity = React.useCallback((productId: number, delta: number) => {
+    setCart((previous) =>
+      previous
+        .map((item) => {
+          if (item.producto.id !== productId) return item;
+          const newQty = item.quantity + delta;
+          // Si llega a 0 o menos, lo eliminamos
+          if (newQty <= 0) return null;
+          // No superar el stock disponible
+          const maxStock = item.producto.stockDisponibleUnits ?? 9999;
+          return { ...item, quantity: Math.min(newQty, maxStock) };
+        })
+        .filter(Boolean) as CartItem[]
+    );
+  }, []);
 
   const totalSinInteres = React.useMemo(
     () => cart.reduce((accumulator, current) => accumulator + Number(current.producto.precioVenta) * current.quantity, 0),
@@ -521,83 +582,43 @@ export default function NuevaVentaPage() {
             )}
 
             <div className="flex gap-2">
-              <CustomerSelector
-                open={openClienteCombobox}
-                onOpenChange={setOpenClienteCombobox}
-                selectedClienteId={selectedClienteId}
-                clientesFiltrados={clientesFiltrados}
-                isClienteRegistrado={isClienteRegistrado}
-                selectedLabel={selectedClienteLabel}
-                onSelectConsumidorFinal={() => {
-                  setSelectedClienteId("");
-                  setOpenClienteCombobox(false);
-                }}
-                onSelectCliente={(clienteId) => {
-                  setSelectedClienteId(clienteId);
-                  setOpenClienteCombobox(false);
-                }}
-              />
 
-              <ProductSelector
-                open={openProductoCombobox}
-                onOpenChange={setOpenProductoCombobox}
-                productoId={productoId}
-                productos={productos}
-                loading={loading}
-                onSelectProduct={(productId) => {
-                  setProductoId(productId);
-                  setOpenProductoCombobox(false);
-                }}
-              />
-            </div>
-
-            <div className="flex gap-2 w-full">
-              <div className="flex items-center h-10 bg-background rounded-xl border border-border/50 shadow-sm w-[132px] shrink-0">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  className="h-full px-2 focus-visible:ring-2"
-                  onClick={() => setUnits((previous) => (previous > 1 ? previous - 1 : 1))}
-                  disabled={units <= 1}
-                  aria-label="Disminuir cantidad"
-                >
-                  <Minus className="h-3 w-3" aria-hidden="true" />
-                </Button>
-                <div className="flex-1 h-full flex items-center justify-center border-x border-border/50 bg-muted/5">
-                  <Input
-                    type="number"
-                    min={1}
-                    value={units}
-                    onChange={(event) => setUnits(Math.max(1, Number(event.target.value)))}
-                    className="h-full border-0 text-center text-lg font-bold bg-transparent focus-visible:ring-0 px-0"
-                    aria-label="Cantidad de unidades"
-                  />
-                </div>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  className="h-full px-2 focus-visible:ring-2"
-                  onClick={() => setUnits((previous) => previous + 1)}
-                  aria-label="Aumentar cantidad"
-                >
-                  <Plus className="h-3 w-3" aria-hidden="true" />
-                </Button>
-              </div>
-
-              <Button
+              {/* Botón cliente — tamaño fijo compacto en todos los breakpoints */}
+              <button
                 type="button"
-                className="flex-1 h-10 min-w-0 font-bold rounded-xl active:scale-[0.98] transition-all shadow-sm focus-visible:ring-2 text-sm"
-                onClick={addItemManual}
-                disabled={!productoId}
-                aria-label="Agregar producto al ticket"
+                onClick={() => setOpenClienteModal(true)}
+                className={cn(
+                  "flex items-center gap-1.5 h-10 px-2.5 rounded-xl border font-bold transition-all shrink-0 max-w-[110px]",
+                  isClienteRegistrado
+                    ? "bg-primary/10 border-primary/40 text-primary hover:bg-primary/15"
+                    : "bg-muted/20 border-border/50 text-muted-foreground hover:bg-muted/40 hover:text-foreground"
+                )}
+                aria-label="Seleccionar cliente (F7)"
               >
-                <Plus className="h-4 w-4 mr-1" aria-hidden="true" /> Agregar
-              </Button>
+                <UserCircle2 className="h-4 w-4 shrink-0" aria-hidden="true" />
+                <span className="flex-1 text-left truncate text-[11px] font-semibold min-w-0">
+                  {isClienteRegistrado ? selectedClienteLabel : "Cons. Final"}
+                </span>
+              </button>
+
+              {/* Botón búsqueda producto — ocupa el resto */}
+              <button
+                type="button"
+                onClick={() => setOpenSearchModal(true)}
+                className="flex-1 min-w-0 flex items-center gap-2 h-10 px-3 rounded-xl border border-dashed border-border/60 bg-muted/20 text-muted-foreground hover:bg-muted/40 hover:border-border/80 hover:text-foreground transition-all"
+                aria-label="Buscar producto (F1)"
+              >
+                <Barcode className="h-4 w-4 text-primary animate-pulse shrink-0" aria-hidden="true" />
+                <span className="flex-1 text-left truncate text-[11px] sm:text-sm">Escanear o buscar...</span>
+                <span className="hidden md:inline-flex items-center justify-center h-5 px-1.5 rounded border border-border bg-muted text-[9px] font-black font-mono text-muted-foreground shrink-0">
+                  F1
+                </span>
+              </button>
             </div>
           </section>
 
           <section className="flex-1 overflow-y-auto p-3 bg-muted/5" aria-label="Listado de carrito">
-            <CartList cart={cart} getDiscountInfo={getDiscountMeta} onRemoveItem={removeItem} />
+            <CartList cart={cart} getDiscountInfo={getDiscountMeta} onRemoveItem={removeItem} onUpdateQuantity={updateQuantity} />
           </section>
         </section>
 
@@ -615,19 +636,19 @@ export default function NuevaVentaPage() {
         />
       </main>
 
-      <div className="h-64 md:h-48 w-full shrink-0 lg:hidden" />
-
-      <MobileSummaryBar
-        metodoPago={metodoPago}
-        opcionesPago={METODOS_PAGO}
-        loading={loading}
-        cartLength={cart.length}
-        totalAmount={totalAmount}
-        disabled={loading || cart.length === 0 || activeSucursalId === 0}
-        onMetodoPagoChange={setMetodoPago}
-        onOpenDescuento={() => setOpenDescuento(true)}
-        onCobrar={handleCobrar}
-      />
+      <div className="lg:hidden shrink-0">
+        <MobileSummaryBar
+          metodoPago={metodoPago}
+          opcionesPago={METODOS_PAGO}
+          loading={loading}
+          cartLength={cart.length}
+          totalAmount={totalAmount}
+          disabled={loading || cart.length === 0 || activeSucursalId === 0}
+          onMetodoPagoChange={setMetodoPago}
+          onOpenDescuento={() => setOpenDescuento(true)}
+          onCobrar={handleCobrar}
+        />
+      </div>
 
       {usaCajaEstricta && cajaAbierta && (
         <ShiftEndAlert horaFin={horarioFin} onExtender={(nuevaHora) => setHorarioFin(nuevaHora)} />
@@ -654,6 +675,26 @@ export default function NuevaVentaPage() {
         onOpenChange={(isOpen) => setErrorDialog((previous) => ({ ...previous, open: isOpen }))}
         title={errorDialog.title}
         description={errorDialog.description}
+      />
+
+      {/* ── Modal búsqueda de clientes (F7) ────────────────────────────── */}
+      <CustomerSearchModal
+        open={openClienteModal}
+        onOpenChange={setOpenClienteModal}
+        clientes={clientesFiltrados}
+        selectedClienteId={selectedClienteId}
+        onSelectConsumidorFinal={() => setSelectedClienteId("")}
+        onSelectCliente={(id) => setSelectedClienteId(id)}
+      />
+
+      {/* ── Modal de búsqueda rápida de productos (F1) ─────────────────── */}
+      <ProductSearchModal
+        open={openSearchModal}
+        onOpenChange={setOpenSearchModal}
+        productos={productos}
+        onSelectProduct={(producto) => {
+          addToCart(producto, 1);
+        }}
       />
 
       <Dialog open={openDescuento} onOpenChange={setOpenDescuento}>
@@ -761,3 +802,5 @@ export default function NuevaVentaPage() {
     </div>
   );
 }
+
+

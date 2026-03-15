@@ -1,11 +1,10 @@
-/* eslint-disable */
-// @ts-nocheck
 import * as React from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
+
 import { Instagram, Facebook, Youtube, MapPin } from "lucide-react";
 import { cn } from "@/lib/utils";
+import type { BrandingPreviewSettings } from "./types";
 
 // ── Validators ──
 const isValidUrl = (val: string) => {
@@ -39,12 +38,17 @@ interface ChannelConfig {
     brandColor: string;
     bgClass: string;
     textClass: string;
-    field: string;
+    field: keyof SocialBrandingSettings;
     placeholder: string;
     validate: (v: string) => boolean | null;
     hint?: string;
     description?: string;
 }
+
+type SocialBrandingSettings = Pick<
+    BrandingPreviewSettings,
+    "instagramUrl" | "tiktokUrl" | "facebookUrl" | "youtubeUrl" | "whatsappNumber" | "googleMapsUrl"
+>;
 
 const SOCIAL_CHANNELS: ChannelConfig[] = [
     {
@@ -220,11 +224,11 @@ function SocialCard({
 }
 
 // ── Connected Summary Bar ──
-function ConnectedSummary({ branding }: { branding: any }) {
+function ConnectedSummary({ branding }: { branding: SocialBrandingSettings }) {
     const allChannels = [...SOCIAL_CHANNELS, ...CONTACT_CHANNELS];
     const connected = allChannels.filter(ch => {
         const val = branding[ch.field];
-        return Boolean(val) && ch.validate(val) === true;
+        return typeof val === "string" && ch.validate(val) === true;
     });
     const total = allChannels.length;
     const count = connected.length;
@@ -267,8 +271,13 @@ function ConnectedSummary({ branding }: { branding: any }) {
 }
 
 // ── Main Export ──
-export function SocialTab({ branding, setBranding }: any) {
-    const handleChange = (field: string) => (value: string) => {
+type SocialTabProps = {
+    branding: BrandingPreviewSettings;
+    setBranding: React.Dispatch<React.SetStateAction<BrandingPreviewSettings>>;
+};
+
+export function SocialTab({ branding, setBranding }: SocialTabProps) {
+    const handleChange = (field: keyof SocialBrandingSettings) => (value: string) => {
         setBranding({ ...branding, [field]: value });
     };
 

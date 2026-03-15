@@ -65,7 +65,6 @@ export class AndreaniService {
 
             // Simulación / Esqueleto para la llamada real que soporte node-andreani v2+.
             // Según la request del prompt, hay que buscar cotizaciones para el código postal.
-            const pesoGr = pesoKg * 1000;
             const bultos = {
                 volumen: 100,
                 kilos: pesoKg,

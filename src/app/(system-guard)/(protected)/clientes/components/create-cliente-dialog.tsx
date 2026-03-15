@@ -1,5 +1,3 @@
-/* eslint-disable */
-// @ts-nocheck
 "use client";
 
 import * as React from "react";
@@ -31,7 +29,8 @@ export function CreateClienteDialog({ onCreated, trigger }: CreateClienteDialogP
   const [open, setOpen] = React.useState(false);
   const [loading, setLoading] = React.useState(false);
 
-  const { register, handleSubmit, reset, formState: { errors } } = useForm({
+  type FormValues = { nombre: string; telefono: string; direccion: string };
+  const { register, handleSubmit, reset, formState: { errors } } = useForm<FormValues>({
     defaultValues: {
       nombre: "",
       telefono: "",
@@ -39,10 +38,10 @@ export function CreateClienteDialog({ onCreated, trigger }: CreateClienteDialogP
     }
   });
 
-  const onSubmit = async (data: any) => {
+  const onSubmit = async (data: FormValues) => {
     setLoading(true);
     try {
-      await apiService.createCliente({ ...data, activo: true });
+      await apiService.createCliente({ nombre: data.nombre, telefono: data.telefono || null, direccion: data.direccion || null });
       toast.success("Cliente creado correctamente");
       setOpen(false);
       reset();

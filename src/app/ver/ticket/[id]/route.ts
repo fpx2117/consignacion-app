@@ -1,9 +1,7 @@
-/* eslint-disable */
-// @ts-nocheck
 // src/app/ver/ticket/[id]/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import puppeteer, { Browser } from "puppeteer";
-import { verifyPdfToken } from "@/lib/crypto";
+import { verifyPdfToken } from "@/lib/security/pdf-token";
 import type { VentaReportDTO } from "@/lib/reports/base/venta-report-template";
 import { buildVentaHtml } from "@/lib/reports/base/venta-report-template";
 import { getBranding } from "@/lib/reports/get-branding";
@@ -78,21 +76,23 @@ export async function GET(
       include: { cliente: true, detalles: { include: { producto: true } } },
     });
 
+    if (!ventaRaw) return NextResponse.json({ error: "Venta no encontrada" }, { status: 404 });
+
     const reporteData: VentaReportDTO = {
       id: ventaRaw.id,
       numeroVenta: ventaRaw.numeroVenta,
       fecha: ventaRaw.fecha,
       total: Number(ventaRaw.total),
-      descuentoGlobal: Number((ventaRaw as any).descuentoGlobal || 0),
-      metodoPago: String((ventaRaw as any).metodoPago ?? "EFECTIVO"),
+      descuentoGlobal: Number(ventaRaw.descuentoGlobal ?? 0),
+      metodoPago: String(ventaRaw.metodoPago ?? "EFECTIVO"),
       clienteNombre: ventaRaw.cliente?.nombre || "Consumidor Final",
       clienteTelefono: ventaRaw.cliente?.telefono || "",
-      items: (ventaRaw as any).detalles.map((d: any) => ({
+      items: ventaRaw.detalles.map((d) => ({
         producto: d.producto.nombre,
         cantidad: d.units,
         precioUnitario: Number(d.precioUnitario),
-        descuento: Number(d.descuento || 0),
-        subtotal: (Number(d.precioUnitario) * d.units) - Number(d.descuento || 0),
+        descuento: Number(d.descuento ?? 0),
+        subtotal: (Number(d.precioUnitario) * d.units) - Number(d.descuento ?? 0),
       })),
     };
 

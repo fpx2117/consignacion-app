@@ -1,5 +1,3 @@
-/* eslint-disable */
-// @ts-nocheck
 import { Producto } from "@/lib/types";
 import { reportThemeCss } from "@/lib/reports/report-theme";
 import type { BrandingDTO } from "@/lib/reports/types";

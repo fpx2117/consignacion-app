@@ -1,13 +1,11 @@
-/* eslint-disable */
-// @ts-nocheck
 "use client";
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { AlertOctagon, Timer, ArrowRight } from "lucide-react";
+import { AlertOctagon, ArrowRight } from "lucide-react";
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+
 
 export function AutoCloseMonitor({ horaFin }: { horaFin: string | undefined }) {
     const router = useRouter();

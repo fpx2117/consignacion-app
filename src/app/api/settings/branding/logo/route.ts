@@ -1,15 +1,11 @@
-/* eslint-disable */
-// @ts-nocheck
-// src/app/api/settings/branding/logo/route.ts
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireAuth, requireRole } from "@/lib/requireAuth";
+import { requireAuth, requireRole } from "@/lib/auth/require-auth";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 export async function GET() {
-  // Auth: Requiere usuario autenticado para ver el logo
   const auth = await requireAuth();
   if (!auth.ok) return auth.res;
 
@@ -29,14 +25,13 @@ export async function GET() {
         "Cache-Control": "no-store",
       },
     });
-  } catch (e) {
-    console.error("GET BRANDING LOGO ERROR:", e);
+  } catch (error) {
+    console.error("GET BRANDING LOGO ERROR:", error);
     return new NextResponse("Error", { status: 500 });
   }
 }
 
 export async function DELETE() {
-  // Auth: Solo ADMIN puede eliminar el logo
   const auth = await requireAuth();
   if (!auth.ok) return auth.res;
   if (!requireRole(auth.user, ["ADMIN"])) {
@@ -44,18 +39,15 @@ export async function DELETE() {
   }
 
   try {
-    // Buscamos el último branding (el que usás como vigente)
     const branding = await prisma.branding.findUnique({
       where: { sucursalId: auth.activeSucursalId },
       select: { id: true },
     });
 
-    // Si no hay registro, lo tratamos como "ya está borrado"
     if (!branding?.id) {
       return NextResponse.json({ ok: true });
     }
 
-    // Limpia logo + actualiza updatedAt
     await prisma.branding.update({
       where: { id: branding.id },
       data: {
@@ -65,8 +57,8 @@ export async function DELETE() {
     });
 
     return NextResponse.json({ ok: true });
-  } catch (e) {
-    console.error("DELETE BRANDING LOGO ERROR:", e);
+  } catch (error) {
+    console.error("DELETE BRANDING LOGO ERROR:", error);
     return NextResponse.json(
       { ok: false, error: "Error eliminando logo" },
       { status: 500 }

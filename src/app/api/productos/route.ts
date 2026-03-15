@@ -1,16 +1,27 @@
-/* eslint-disable */
-// @ts-nocheck
 // src/app/api/productos/route.ts
 
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireAuth, requireRole } from "@/lib/requireAuth";
-import { createProductoSchema } from "@/lib/validators/producto";
-import { sendNotification } from "@/lib/socket-trigger";
-import { NOTIFICATION_TYPE } from "@/lib/notificationes/notificaciones-types";
+import { Prisma, TipoMovimientoStock, MotivoMovimientoStock } from "@prisma/client";
+import { requireAuth, requireRole } from "@/lib/auth/require-auth";
+import { createProductoSchema, type CreateProductoInput } from "@/lib/validators/producto";
+import { sendNotification } from "@/lib/notificaciones/socket-trigger";
+import { NOTIFICATION_TYPE } from "@/lib/notificaciones/types";
 import { obtenerConfiguracionGlobal } from "@/lib/config";
-import { checkProductLimit } from "@/lib/requireSubscription";
+import { checkProductLimit } from "@/lib/subscriptions/require-subscription";
 import { buildSucursalWhere, isGlobalSucursalView } from "@/lib/sucursalScope";
+
+type ProductoCreateBody = CreateProductoInput & {
+  subcategoriaId?: number | null;
+};
+
+type ProductoListado = Prisma.ProductoGetPayload<{
+  include: {
+    categoria: true;
+    subcategoria: true;
+    stockSucursals: true;
+  };
+}>;
 
 /**
  * GET: OBTENER PRODUCTOS
@@ -45,7 +56,7 @@ export async function GET(req: Request) {
     const skip = (page - 1) * limit;
 
     // Where con filtros
-    const where: any = {
+    const where: Prisma.ProductoWhereInput = {
       activo: true,
       ...sucursalWhere,
     };
@@ -67,13 +78,13 @@ export async function GET(req: Request) {
       stockSucursals: {
         ...(isGlobal ? {} : { where: { sucursalId: requestedSucursalId } })
       }
-    };
+    } satisfies Prisma.ProductoInclude;
 
-    const mapProducto = (p: any) => {
+    const mapProducto = (p: ProductoListado) => {
       const branchStock = p.stockSucursals[0];
-      const stockDisponibleGlobal = p.stockSucursals.reduce((acc: number, s: any) => acc + (s.stockDisponibleUnits || 0), 0);
-      const stockConsignadoGlobal = p.stockSucursals.reduce((acc: number, s: any) => acc + (s.stockConsignadoUnits || 0), 0);
-      const stockMinGlobal = p.stockSucursals.reduce((acc: number, s: any) => acc + (s.stockMinUnits || 0), 0);
+      const stockDisponibleGlobal = p.stockSucursals.reduce((acc, s) => acc + (s.stockDisponibleUnits || 0), 0);
+      const stockConsignadoGlobal = p.stockSucursals.reduce((acc, s) => acc + (s.stockConsignadoUnits || 0), 0);
+      const stockMinGlobal = p.stockSucursals.reduce((acc, s) => acc + (s.stockMinUnits || 0), 0);
 
       return {
         ...p,
@@ -161,7 +172,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: productCheck.message, limitReached: true }, { status: 403 });
     }
 
-    const body = await req.json().catch(() => null);
+    const body = (await req.json().catch(() => null)) as ProductoCreateBody | null;
     const parsed = createProductoSchema.safeParse(body);
 
     if (!parsed.success) {
@@ -187,6 +198,7 @@ export async function POST(req: Request) {
           descripcion: data.descripcion,
           precioVenta: data.precioVenta,
           precioCosto: data.precioCosto,
+          iva: data.iva,
           stockDisponibleUnits: stockInicial, // Global (legacy/sync)
           stockConsignadoUnits: 0,
           stockMinUnits: data.stockMinUnits ?? 0,
@@ -194,7 +206,7 @@ export async function POST(req: Request) {
           codigoBarra: data.codigoBarra?.trim() || null,
           sku: data.sku?.trim() || null,
           categoriaId: data.categoriaId ?? null,
-          subcategoriaId: body.subcategoriaId ?? null,
+          subcategoriaId: body?.subcategoriaId ?? null,
           fechaVencimiento: data.fechaVencimiento ? new Date(data.fechaVencimiento) : null,
           imagenUrl: data.imagenUrl || null,
           sucursalId,
@@ -207,7 +219,7 @@ export async function POST(req: Request) {
         data: {
           productoId: nuevoProducto.id,
           sucursalId,
-          stockDisponibleUnits: stockInitial,
+          stockDisponibleUnits: stockInicial,
           stockConsignadoUnits: 0,
           stockMinUnits: data.stockMinUnits ?? 0,
         }
@@ -219,8 +231,8 @@ export async function POST(req: Request) {
           data: {
             productoId: nuevoProducto.id,
             sucursalId,
-            tipo: "ENTRADA",
-            motivo: "COMPRA",
+            tipo: TipoMovimientoStock.ENTRADA,
+            motivo: MotivoMovimientoStock.COMPRA,
             cantidad: stockInicial,
             stockPrevio: 0,
             stockPosterior: stockInicial,
@@ -256,10 +268,10 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ data: created }, { status: 201 });
 
-  } catch (error: any) {
+  } catch (error) {
     // Manejo de duplicados (Unique Constraints)
-    if (error.code === 'P2002') {
-      const field = error.meta?.target?.[0];
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+      const field = Array.isArray(error.meta?.target) ? String(error.meta.target[0]) : "desconocido";
       return NextResponse.json(
         { error: `El valor en el campo '${field}' ya está registrado en otro producto.` },
         { status: 400 }

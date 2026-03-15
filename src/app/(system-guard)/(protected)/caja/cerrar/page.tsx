@@ -1,12 +1,10 @@
-/* eslint-disable */
-// @ts-nocheck
 "use client";
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import {
     Loader2, ArrowLeft, Banknote, AlertCircle,
-    CheckCircle2, CreditCard, Calculator, Store
+    CreditCard, Calculator, Store
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,7 +12,7 @@ import { Card } from "@/components/ui/card";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { apiService } from "@/lib/apiService";
-import { SesionCaja } from "@/lib/types";
+import type { SesionCaja } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 const formatCurrency = (value: number) => {
@@ -28,7 +26,7 @@ const formatCurrency = (value: number) => {
 export default function CerrarCajaPage() {
     const router = useRouter();
 
-    const [sesion, setSesion] = React.useState<any>(null);
+    const [sesion, setSesion] = React.useState<SesionCaja | null>(null);
     const [montoFinalReal, setMontoFinalReal] = React.useState<string>("");
     const [observaciones, setObservaciones] = React.useState<string>("");
 
@@ -41,13 +39,14 @@ export default function CerrarCajaPage() {
         const cargarDatos = async () => {
             try {
                 const res = await apiService.verificarCajaAbierta();
-                if (!res) {
+                const sesionData = res?.data ?? null;
+                if (!sesionData) {
                     setError("No tienes un turno abierto actualmente.");
                 } else {
-                    setSesion(res);
+                    setSesion(sesionData);
                 }
-            } catch (err: any) {
-                setError("Error al cargar datos del turno: " + err.message);
+            } catch (err: unknown) {
+                setError("Error al cargar datos del turno: " + (err instanceof Error ? err.message : "Error desconocido"));
             } finally {
                 setLoadingData(false);
             }
@@ -59,12 +58,12 @@ export default function CerrarCajaPage() {
         if (!sesion) return null;
 
         const fondoInicial = Number(sesion.montoInicial);
-        const ventasEfectivo = sesion.ventas?.filter((v: any) => v.metodoPago === "EFECTIVO").reduce((acc: number, v: any) => acc + Number(v.total), 0) || 0;
-        const cobranzasEfectivo = sesion.pagos?.filter((p: any) => p.metodo === "EFECTIVO").reduce((acc: number, p: any) => acc + Number(p.monto), 0) || 0;
-        const ventasDigital = sesion.ventas?.filter((v: any) => v.metodoPago !== "EFECTIVO").reduce((acc: number, v: any) => acc + Number(v.total), 0) || 0;
-        const cobranzasDigital = sesion.pagos?.filter((p: any) => p.metodo !== "EFECTIVO").reduce((acc: number, p: any) => acc + Number(p.monto), 0) || 0;
-        const ingresos = sesion.movimientos?.filter((m: any) => m.tipo === "INGRESO").reduce((acc: number, m: any) => acc + Number(m.monto), 0) || 0;
-        const egresos = sesion.movimientos?.filter((m: any) => m.tipo === "EGRESO").reduce((acc: number, m: any) => acc + Number(m.monto), 0) || 0;
+        const ventasEfectivo = sesion.ventas?.filter((v) => v.metodoPago === "EFECTIVO").reduce((acc, v) => acc + Number(v.total), 0) ?? 0;
+        const cobranzasEfectivo = sesion.pagos?.filter((p) => p.metodo === "EFECTIVO").reduce((acc, p) => acc + Number(p.monto), 0) ?? 0;
+        const ventasDigital = sesion.ventas?.filter((v) => v.metodoPago !== "EFECTIVO").reduce((acc, v) => acc + Number(v.total), 0) ?? 0;
+        const cobranzasDigital = sesion.pagos?.filter((p) => p.metodo !== "EFECTIVO").reduce((acc, p) => acc + Number(p.monto), 0) ?? 0;
+        const ingresos = sesion.movimientos?.filter((m) => m.tipo === "INGRESO").reduce((acc, m) => acc + Number(m.monto), 0) ?? 0;
+        const egresos = sesion.movimientos?.filter((m) => m.tipo === "EGRESO").reduce((acc, m) => acc + Number(m.monto), 0) ?? 0;
 
         const efectivoEsperado = fondoInicial + ventasEfectivo + cobranzasEfectivo + ingresos - egresos;
         const digitalTotal = ventasDigital + cobranzasDigital;
@@ -89,8 +88,8 @@ export default function CerrarCajaPage() {
                 observaciones: observaciones || undefined,
             });
 
-            const dataCierre = res.data.data;
-            const diferencia = Number(dataCierre.diferencia || 0);
+            const dataCierre = res.data?.data ?? res.data;
+            const diferencia = Number(dataCierre?.diferencia || 0);
 
             // ✅ REDIRECCIÓN AUTOMÁTICA SI COINCIDEN (DIFERENCIA 0)
             if (diferencia === 0) {
@@ -103,8 +102,8 @@ export default function CerrarCajaPage() {
                 setResultadoCierre(dataCierre);
                 toast.warning("Turno cerrado con diferencias en el arqueo.");
             }
-        } catch (err: any) {
-            toast.error(err.message || "Error al cerrar la caja");
+        } catch (err: unknown) {
+            toast.error(err instanceof Error ? err.message : "Error al cerrar la caja");
         } finally {
             setLoadingSubmit(false);
         }

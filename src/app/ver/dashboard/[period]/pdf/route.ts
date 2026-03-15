@@ -209,7 +209,6 @@ export async function GET(
         }
 
         let gananciaDirecta = 0;
-        let totalDescuentosEscrito = 0;
         for (const v of itemsVentaDirecta) {
             let gananciaVenta = 0;
             for (const det of v.detalles) {
@@ -218,7 +217,6 @@ export async function GET(
                 gananciaVenta += (subtotal - costo);
             }
             gananciaVenta -= Number(v.descuentoGlobal || 0);
-            totalDescuentosEscrito += Number(v.descuentoGlobal || 0);
             gananciaDirecta += gananciaVenta;
         }
 

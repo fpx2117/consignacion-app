@@ -1,9 +1,7 @@
-/* eslint-disable */
-// @ts-nocheck
 "use client";
 
 import * as React from "react";
-import { CheckCircle2, FileText, ArrowRight, MessageCircle } from "lucide-react";
+import { CheckCircle2, FileText, MessageCircle } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogContent,

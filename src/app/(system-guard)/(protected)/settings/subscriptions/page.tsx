@@ -1,5 +1,3 @@
-/* eslint-disable */
-// @ts-nocheck
 "use client";
 
 import { useState, useEffect } from "react";
@@ -14,14 +12,15 @@ import { toast } from "sonner";
 import { DowngradeModal } from "./components/DowngradeModal";
 import { TutorialButton } from "@/components/ui/tutorial-button";
 import { SUBSCRIPTIONS_TUTORIAL } from "@/lib/tutorial-content";
+import type { SubscriptionPlan } from "@/constants/subscriptions";
 
 export default function SubscriptionsPage() {
     const [showPricing, setShowPricing] = useState(false);
-    const [selectedPlan, setSelectedPlan] = useState<any>(null);
+    const [selectedPlan, setSelectedPlan] = useState<SubscriptionPlan | null>(null);
     const [currency, setCurrency] = useState<"ARS" | "USD">("ARS");
-    const [currentSub, setCurrentSub] = useState<any>(null);
+    const [currentSub, setCurrentSub] = useState<{ planId: number } | null>(null);
     const [showDowngradeWarning, setShowDowngradeWarning] = useState(false);
-    const [pendingPlan, setPendingPlan] = useState<any>(null);
+    const [pendingPlan, setPendingPlan] = useState<{ plan: SubscriptionPlan; currency: "ARS" | "USD" } | null>(null);
 
     // Promo code state
     const [showPromo, setShowPromo] = useState(false);
@@ -62,7 +61,7 @@ export default function SubscriptionsPage() {
         }
     }, [searchParams, router]);
 
-    const handleSelectPlan = (plan: any, curr: "ARS" | "USD") => {
+    const handleSelectPlan = (plan: SubscriptionPlan, curr: "ARS" | "USD") => {
         // Detectar si es un downgrade
         // Asumimos que IDs más bajos son planes más bajos (1: Básico, 2: Pro, 3: Enterprise)
         if (currentSub && plan.id < currentSub.planId) {

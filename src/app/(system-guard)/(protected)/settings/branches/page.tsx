@@ -5,8 +5,8 @@ import { Store } from "lucide-react";
 
 import { Skeleton } from "@/components/ui/skeleton";
 import BranchesClient from "./branches-client";
-import { requireAuth } from "@/lib/requireAuth";
-import { checkFeature } from "@/lib/requireSubscription";
+import { requireAuth } from "@/lib/auth/require-auth";
+import { checkFeature } from "@/lib/subscriptions/require-subscription";
 import { redirect } from "next/navigation";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { TutorialButton } from "@/components/ui/tutorial-button";

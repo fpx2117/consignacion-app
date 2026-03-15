@@ -1,5 +1,3 @@
-/* eslint-disable */
-// @ts-nocheck
 // src/lib/requireSubscription.ts
 import { prisma } from "@/lib/prisma";
 import { PLAN_LIMITS_DEFAULTS } from "@/constants/subscriptions";

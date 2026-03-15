@@ -137,11 +137,11 @@ export function SidebarDock({ initialUserData }: SidebarDockProps = {}) {
   const [themeMounted, setThemeMounted] = React.useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
   const [loggingOut, setLoggingOut] = React.useState(false);
-  const [userRole, setUserRole] = React.useState<"ADMIN" | "EMPLEADO">(
+  const [userRole, _setUserRole] = React.useState<"ADMIN" | "EMPLEADO">(
     initialUserData?.rol ?? "ADMIN",
   );
   const [usarControlDeCaja, setUsarControlDeCaja] = React.useState(false);
-  const [allowConsignaciones, setAllowConsignaciones] = React.useState(
+  const [allowConsignaciones, _setAllowConsignaciones] = React.useState(
     initialUserData?.allowConsignaciones ?? true,
   );
 
@@ -202,9 +202,6 @@ export function SidebarDock({ initialUserData }: SidebarDockProps = {}) {
 
   const mobileMenuItems = React.useMemo(() => {
     const items: SidebarNavItem[] = [...filteredBusiness];
-    if (!isGlobalView) {
-      items.push(QUICK_SALE);
-    }
     if (usarControlDeCaja && !isGlobalView) {
       items.push({ label: "Historial de Caja", href: "/caja/historial", icon: History });
     }

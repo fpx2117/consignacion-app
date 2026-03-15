@@ -1,5 +1,3 @@
-/* eslint-disable */
-// @ts-nocheck
 //src/app/(protected)/consignaciones/nueva/page.tsx
 "use client";
 
@@ -21,7 +19,6 @@ import {
   BadgePercent,
   AlertTriangle,
   Settings2,
-  Settings,
 } from "lucide-react";
 
 import { toast } from "sonner";
@@ -106,11 +103,12 @@ export default function NuevaConsignacionPage() {
       );
 
       setClientes(clientesFiltrados);
-      setProductos((p ?? []) as any);
+      setProductos((p ?? []) as ProductoConStock[]);
 
-      const pAumento = config?.porcentajeAumentoConsignacion ?? config?.data?.porcentajeAumentoConsignacion ?? 0;
+      // getConfiguracionGeneral devuelve `any`, accedemos defensivamente
+      const pAumento = (config as { porcentajeAumentoConsignacion?: number } | null)?.porcentajeAumentoConsignacion ?? 0;
       setPorcentajeAumento(pAumento);
-    } catch (err) {
+    } catch {
       setError("Error al cargar datos iniciales.");
     } finally {
       setLoading(false);
@@ -232,11 +230,11 @@ export default function NuevaConsignacionPage() {
       setCreatedId(res.id);
       setShowSuccessDialog(true);
       toast.success("Consignación creada correctamente");
-    } catch (e: any) {
+    } catch (e: unknown) {
       setErrorDialog({
         open: true,
         title: "Error en la operación",
-        description: e?.message || "Ocurrió un error inesperado al procesar la solicitud.",
+        description: e instanceof Error ? e.message : "Ocurrió un error inesperado al procesar la solicitud.",
       });
     } finally {
       setSaving(false);

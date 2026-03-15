@@ -1,5 +1,3 @@
-/* eslint-disable */
-// @ts-nocheck
 "use client";
 
 import { useState } from "react";
@@ -41,8 +39,9 @@ export default function ForgotPasswordPage() {
         try {
             await apiService.requestPasswordReset(email.trim());
             setSuccess(true);
-        } catch (err: any) {
-            setError(err?.message || "Ocurrió un error al procesar tu solicitud.");
+        } catch (err) {
+            const message = err instanceof Error ? err.message : "Ocurrió un error al procesar tu solicitud.";
+            setError(message);
         } finally {
             setLoading(false);
         }

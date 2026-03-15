@@ -1,32 +1,39 @@
-/* eslint-disable */
-// @ts-nocheck
 "use client";
 
-import { useEffect, useState, use } from "react";
+import { useEffect, use } from "react";
 import { Loader2, AlertCircle, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useSearchParams, useRouter } from "next/navigation";
+import { useSearchParams } from "next/navigation";
+
+const MONTH_LABELS = [
+  "Enero",
+  "Febrero",
+  "Marzo",
+  "Abril",
+  "Mayo",
+  "Junio",
+  "Julio",
+  "Agosto",
+  "Septiembre",
+  "Octubre",
+  "Noviembre",
+  "Diciembre",
+];
 
 export default function HistorialLoadingPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = use(params); 
+  const { id } = use(params);
   const searchParams = useSearchParams();
-  const router = useRouter();
 
-  // Obtenemos parámetros de la URL
-  const anio = searchParams.get("anio") || "2026";
+  const anio = searchParams.get("anio") || String(new Date().getFullYear());
   const code = searchParams.get("code");
-  const [error, setError] = useState<string | null>(null);
+  const error = code ? null : "Acceso no autorizado o enlace invalido.";
+  const mes = Number.parseInt(id, 10);
+  const mesLabel = MONTH_LABELS[mes] ?? `Mes ${id}`;
 
   useEffect(() => {
-    // Si no hay código de acceso, es una entrada inválida
-    if (!code) {
-      setError("Acceso no autorizado o enlace inválido.");
-      return;
-    }
+    if (!code) return;
 
-    // Pequeño delay para que la animación se aprecie y el navegador procese el hilo
     const timer = setTimeout(() => {
-      // Redirigimos al route.ts que genera el binario real
       window.location.replace(`/ver/historial/${id}/pdf?anio=${anio}&code=${code}`);
     }, 1200);
 
@@ -38,7 +45,7 @@ export default function HistorialLoadingPage({ params }: { params: Promise<{ id:
       <div className="h-screen w-full flex flex-col items-center justify-center bg-rose-50 dark:bg-background p-6 text-center">
         <div className="p-4 rounded-3xl bg-card dark:bg-card shadow-2xl border border-rose-100 dark:border-rose-900/30">
           <AlertCircle className="h-10 w-10 text-rose-500 mb-2 mx-auto" />
-          <h1 className="text-lg font-black text-foreground dark:text-foreground uppercase">Error de Auditoría</h1>
+          <h1 className="text-lg font-black text-foreground dark:text-foreground uppercase">Error de Auditoria</h1>
           <p className="text-xs text-muted-foreground mt-1 max-w-[200px] mx-auto">{error}</p>
           <Button onClick={() => window.close()} variant="outline" className="mt-4 w-full rounded-xl font-bold uppercase text-[10px]">Cerrar</Button>
         </div>
@@ -57,8 +64,8 @@ export default function HistorialLoadingPage({ params }: { params: Promise<{ id:
         </div>
       </div>
       <div className="text-center space-y-2">
-        <h1 className="text-xl font-black text-foreground dark:text-foreground uppercase tracking-tighter">Generando Auditoría</h1>
-        <p className="text-[10px] text-muted-foreground/80 font-black uppercase tracking-[0.3em] animate-pulse">Mes ${id} • Periodo ${anio}</p>
+        <h1 className="text-xl font-black text-foreground dark:text-foreground uppercase tracking-tighter">Generando Auditoria</h1>
+        <p className="text-[10px] text-muted-foreground/80 font-black uppercase tracking-[0.3em] animate-pulse">{mesLabel} • Periodo {anio}</p>
       </div>
     </div>
   );

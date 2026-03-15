@@ -1,9 +1,7 @@
-/* eslint-disable */
-// @ts-nocheck
 "use client";
 
 import * as React from "react";
-import { motion, AnimatePresence } from "motion/react";
+import { motion } from "motion/react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useSucursalStore } from "@/store/useSucursalStore";
@@ -113,8 +111,8 @@ const FILTROS_DEFECTO: Filtros = {
 
 export function PedidosEsperadosView() {
   const activeSucursalId = useSucursalStore((s) => s.activeSucursalId);
-  const sucursalHeaders = React.useMemo(
-    () => (activeSucursalId ? { "x-sucursal-id": String(activeSucursalId) } : {}),
+  const sucursalHeaders = React.useMemo<Record<string, string>>(
+    () => activeSucursalId ? { "x-sucursal-id": String(activeSucursalId) } : {} as Record<string, string>,
     [activeSucursalId]
   );
 
@@ -159,7 +157,7 @@ export function PedidosEsperadosView() {
       const data = await res.json();
       const arr = Array.isArray(data) ? data : Array.isArray(data?.data) ? data.data : [];
       setPedidos(arr);
-    } catch (err: any) {
+    } catch {
       toast.error("No se pudieron cargar los pedidos");
       setPedidos([]);
     } finally {
@@ -234,8 +232,8 @@ export function PedidosEsperadosView() {
       setDialogEliminar(false);
       setSelectedPedido(null);
       fetchPedidos();
-    } catch (err: any) {
-      toast.error(err?.message || "No se pudo eliminar el pedido");
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "No se pudo eliminar el pedido");
     } finally {
       setEliminandoId(null);
     }

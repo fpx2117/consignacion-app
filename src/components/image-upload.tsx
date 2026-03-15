@@ -1,11 +1,8 @@
-/* eslint-disable */
-// @ts-nocheck
-// src/components/image-upload.tsx
-
 "use client";
 
+import Image from "next/image";
 import * as React from "react";
-import { Upload, X, Loader2, Image as ImageIcon } from "lucide-react";
+import { Upload, X, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { apiService } from "@/lib/apiService";
 import { toast } from "sonner";
@@ -73,10 +70,13 @@ export function ImageUpload({ value, onChange, disabled }: ImageUploadProps) {
 
                 {value ? (
                     <>
-                        <img
+                        <Image
                             src={value}
                             alt="Preview"
-                            className="absolute inset-0 w-full h-full object-contain p-2"
+                            fill
+                            unoptimized
+                            sizes="320px"
+                            className="object-contain p-2"
                         />
                         <Button
                             type="button"

@@ -1,9 +1,7 @@
-/* eslint-disable */
-// @ts-nocheck
 "use client";
 
 import * as React from "react";
-import { motion, AnimatePresence } from "motion/react";
+import { motion } from "motion/react";
 import { toast } from "sonner";
 import type { Producto, Categoria } from "@/lib/types";
 import { apiService } from "@/lib/apiService";
@@ -87,6 +85,11 @@ interface StatCardProps {
 
 type SortKey = "nombre" | "precioVenta" | "stockDisponibleUnits" | "categoria";
 type SortDirection = "asc" | "desc";
+type ProductoViewItem = Producto & {
+  subcategoria?: {
+    nombre?: string | null;
+  } | null;
+};
 
 interface SortConfig {
   key: SortKey;
@@ -96,8 +99,8 @@ interface SortConfig {
 export function ProductosView() {
   const activeSucursalId = useSucursalStore((s) => s.activeSucursalId);
   const catalogoHref = activeSucursalId ? `/lista?sucursalId=${activeSucursalId}` : "/lista";
-  const [items, setItems] = React.useState<Producto[]>([]);
-  const [statsItems, setStatsItems] = React.useState<Producto[]>([]);
+  const [items, setItems] = React.useState<ProductoViewItem[]>([]);
+  const [statsItems, setStatsItems] = React.useState<ProductoViewItem[]>([]);
   const [allCategories, setAllCategories] = React.useState<Categoria[]>([]);
   const [loading, setLoading] = React.useState(true);
 
@@ -137,26 +140,47 @@ export function ProductosView() {
   const load = React.useCallback(async (page: number = 1, search: string = "", categoriaId: number | null = null) => {
     setLoading(true);
     try {
-      const [resProductos, resCategorias, resProductosStats] = await Promise.all([
-        apiService.getProductosPaginados({
-          page,
-          limit: SERVER_LIMIT,
-          search,
-          categoriaId,
-        }),
-        apiService.getCategorias(),
-        apiService.getProductos(),
+      // Cache buster para evitar respuestas stale al cambiar de sucursal
+      const bust = `_t=${Date.now()}`;
+      const sp = new URLSearchParams();
+      sp.set("page", String(page));
+      sp.set("limit", String(SERVER_LIMIT));
+      if (search) sp.set("search", search);
+      if (categoriaId) sp.set("categoriaId", String(categoriaId));
+      sp.set("_t", String(Date.now()));
+
+      const sid = activeSucursalId;
+      const sucursalHeaders: HeadersInit = sid ? { "x-sucursal-id": String(sid) } : {};
+
+      const [resPaginados, resCategorias, resStats] = await Promise.all([
+        fetch(`/api/productos?${sp.toString()}`, {
+          headers: { "Content-Type": "application/json", ...sucursalHeaders },
+          cache: "no-store",
+        }).then(r => r.json()),
+        fetch(`/api/categorias?${bust}`, {
+          headers: sucursalHeaders,
+          cache: "no-store",
+        }).then(r => r.json()),
+        fetch(`/api/productos?${bust}`, {
+          headers: sucursalHeaders,
+          cache: "no-store",
+        }).then(r => r.json()),
       ]);
 
-      const payload = resProductos as any;
-      const activos = Array.isArray(payload.data) ? payload.data.filter((p: Producto) => p.activo !== false) : [];
+      const paginadosPayload = resPaginados;
+      const activos = Array.isArray(paginadosPayload?.data)
+        ? paginadosPayload.data.filter((p: Producto) => p.activo !== false)
+        : [];
       setItems(activos);
-      setServerTotal(payload.total ?? 0);
-      setServerTotalPages(payload.totalPages ?? 1);
-      setServerPage(payload.page ?? page);
+      setServerTotal(paginadosPayload.total ?? 0);
+      setServerTotalPages(paginadosPayload.totalPages ?? 1);
+      setServerPage(paginadosPayload.page ?? page);
 
-      setAllCategories(Array.isArray(resCategorias) ? resCategorias : []);
-      setStatsItems(Array.isArray(resProductosStats) ? resProductosStats : []);
+      const cats = Array.isArray(resCategorias) ? resCategorias : (Array.isArray(resCategorias?.data) ? resCategorias.data : []);
+      setAllCategories(cats);
+
+      const statsRaw = Array.isArray(resStats) ? resStats : (Array.isArray(resStats?.data) ? resStats.data : []);
+      setStatsItems(statsRaw);
     } catch (e) {
       console.error("Error loading data:", e);
       toast.error("Error al sincronizar datos");
@@ -165,24 +189,34 @@ export function ProductosView() {
     } finally {
       setLoading(false);
     }
-  }, []);
-
-  React.useEffect(() => {
-    setCategoryFilter("all");
-    setSubCategoryFilter("all");
-    setStockFilter("all");
-    setExpiryFilter("all");
-    setQ("");
-    setDebouncedQ("");
-    setCurrentPage(1);
-    setServerPage(1);
   }, [activeSucursalId]);
 
+  // Al cambiar de sucursal: resetear filtros Y recargar en un solo efecto
+  const prevSucursalRef = React.useRef(activeSucursalId);
+  React.useEffect(() => {
+    const sucursalChanged = prevSucursalRef.current !== activeSucursalId;
+    prevSucursalRef.current = activeSucursalId;
+
+    if (sucursalChanged) {
+      setCategoryFilter("all");
+      setSubCategoryFilter("all");
+      setStockFilter("all");
+      setExpiryFilter("all");
+      setQ("");
+      setDebouncedQ("");
+      setCurrentPage(1);
+      setServerPage(1);
+      // Cargar con filtros limpios directamente (sin depender de estados recién seteados)
+      load(1, "", null);
+    }
+  }, [activeSucursalId, load]);
+
+  // Al cambiar filtros de búsqueda/categoría (sin cambio de sucursal)
   React.useEffect(() => {
     load(1, debouncedQ, serverCategoriaId);
     setCurrentPage(1);
     setServerPage(1);
-  }, [activeSucursalId, debouncedQ, serverCategoriaId]);
+  }, [debouncedQ, serverCategoriaId, load]);
 
   // Wrapper sin argumentos para subcomponentes (reload de la página actual)
   const reload = React.useCallback(() => {
@@ -190,12 +224,12 @@ export function ProductosView() {
   }, [load, serverPage, debouncedQ, serverCategoriaId]);
 
   // --- Lógica de Negocio ---
-  const isLowStock = React.useCallback((p: Producto) => {
+  const isLowStock = React.useCallback((p: ProductoViewItem) => {
     const min = p.stockMinUnits > 0 ? p.stockMinUnits : 5;
     return p.stockDisponibleUnits <= min && p.stockDisponibleUnits > 0;
   }, []);
 
-  const isOutOfStock = React.useCallback((p: Producto) => {
+  const isOutOfStock = React.useCallback((p: ProductoViewItem) => {
     return p.stockDisponibleUnits <= 0;
   }, []);
 
@@ -236,23 +270,26 @@ export function ProductosView() {
       }
       return matchesQuery && matchesStock && matchesCategory && matchesSubCategory && matchesExpiry;
     });
-  }, [items, q, stockFilter, categoryFilter, expiryFilter, isLowStock, isOutOfStock]);
+  }, [items, q, stockFilter, categoryFilter, subCategoryFilter, expiryFilter, isLowStock, isOutOfStock]);
 
   // Ordenamiento
   const sorted = React.useMemo(() => {
     const sortableItems = [...filtered];
     if (sortConfig.key) {
       sortableItems.sort((a, b) => {
-        let aValue: any = a[sortConfig.key as keyof Producto];
-        let bValue: any = b[sortConfig.key as keyof Producto];
+        let aValue = a[sortConfig.key as keyof ProductoViewItem] as string | number | null | undefined;
+        let bValue = b[sortConfig.key as keyof ProductoViewItem] as string | number | null | undefined;
 
         if (sortConfig.key === "categoria") {
           aValue = a.categoria?.nombre || "";
           bValue = b.categoria?.nombre || "";
         }
 
-        if (aValue < bValue) return sortConfig.direction === "asc" ? -1 : 1;
-        if (aValue > bValue) return sortConfig.direction === "asc" ? 1 : -1;
+        const comparableA = aValue ?? "";
+        const comparableB = bValue ?? "";
+
+        if (comparableA < comparableB) return sortConfig.direction === "asc" ? -1 : 1;
+        if (comparableA > comparableB) return sortConfig.direction === "asc" ? 1 : -1;
         return 0;
       });
     }
@@ -628,7 +665,7 @@ function SortableHead({ label, sortKey, currentSort, onSort, className }: { labe
   );
 }
 
-function ProductoRow({ p, idx, load, isLow, isOut }: { p: Producto; idx: number; load: () => void; isLow: boolean; isOut: boolean }) {
+function ProductoRow({ p, idx, load, isLow, isOut }: { p: ProductoViewItem; idx: number; load: () => void; isLow: boolean; isOut: boolean }) {
   return (
     <motion.tr
       initial={{ opacity: 0, y: 5 }}
@@ -769,7 +806,7 @@ function ProductoRow({ p, idx, load, isLow, isOut }: { p: Producto; idx: number;
   );
 }
 
-function MobileProductCard({ p, idx, load, isLow, isOut }: { p: Producto; idx: number; load: () => void; isLow: boolean; isOut: boolean }) {
+function MobileProductCard({ p, idx, load, isLow, isOut }: { p: ProductoViewItem; idx: number; load: () => void; isLow: boolean; isOut: boolean }) {
   return (
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: idx * 0.05 }}>
       <Card className="p-4 bg-card border-border/50 shadow-sm rounded-2xl relative overflow-hidden space-y-3">
@@ -976,7 +1013,7 @@ function DeleteButton({ id, nombre, onDeleted, trigger }: { id: number; nombre: 
             </div>
             <AlertDialogTitle className="text-xl font-bold text-center">Â¿Eliminar producto?</AlertDialogTitle>
             <AlertDialogDescription className="text-center text-muted-foreground">
-              Estás a punto de eliminar <span className="font-bold text-foreground">"{nombre}"</span>. Esta acción es irreversible y afectará los reportes de inventario.
+              Estás a punto de eliminar <span className="font-bold text-foreground">&quot;{nombre}&quot;</span>. Esta acción es irreversible y afectará los reportes de inventario.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="grid grid-cols-2 gap-3 sm:flex-row sm:justify-center pt-2">

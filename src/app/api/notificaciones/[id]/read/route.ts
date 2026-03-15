@@ -1,10 +1,8 @@
-/* eslint-disable */
-// @ts-nocheck
-
 //src/app/api/notificaciones/[id]/read/route.ts
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
-import { requireAuth } from "@/lib/requireAuth";
+import { Prisma } from "@prisma/client";
+import { requireAuth } from "@/lib/auth/require-auth";
 import { isGlobalSucursalView } from "@/lib/sucursalScope";
 
 interface RouteContext {
@@ -12,7 +10,7 @@ interface RouteContext {
 }
 
 export async function PATCH(
-  req: Request,
+  _req: Request,
   { params }: RouteContext
 ) {
   // Auth: Requiere usuario autenticado
@@ -24,16 +22,25 @@ export async function PATCH(
 
   try {
     const { id: rawId } = await params;
-    
-    // ⚠️ ATENCIÓN: Solo usa Number() si tu ID en schema.prisma es Int.
-    // Si es String (uuid/cuid), borra estas 3 líneas y usa rawId directamente.
     const id = Number(rawId);
-    if (isNaN(id)) {
+    if (!Number.isInteger(id) || id <= 0) {
       return NextResponse.json({ error: "ID inválido" }, { status: 400 });
     }
 
+    const existingNotification = await prisma.notification.findFirst({
+      where: { id, sucursalId: auth.activeSucursalId },
+      select: { id: true },
+    });
+
+    if (!existingNotification) {
+      return NextResponse.json(
+        { error: "La notificación no existe o no pertenece a la sucursal activa" },
+        { status: 404 }
+      );
+    }
+
     const notification = await prisma.notification.update({
-      where: { id }, // Si es String, asegúrate de pasar el string aquí
+      where: { id },
       data: {
         read: true,
         readAt: new Date(),
@@ -42,18 +49,16 @@ export async function PATCH(
 
     return NextResponse.json({ success: true, notification });
 
-  } catch (error: any) {
+  } catch (error) {
     console.error("Error al marcar notificación:", error);
 
-    // Prisma: P2025 significa "Record to update not found"
-    if (error.code === 'P2025') {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2025") {
       return NextResponse.json(
         { error: "La notificación no existe o ya fue eliminada" },
         { status: 404 }
       );
     }
 
-    // Cualquier otro error es un problema interno (ej. DB caída)
     return NextResponse.json(
       { error: "Error interno del servidor" },
       { status: 500 }

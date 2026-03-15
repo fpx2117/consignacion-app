@@ -1,6 +1,6 @@
 "use server";
 
-import { requireAuth } from "@/lib/requireAuth";
+import { requireAuth } from "@/lib/auth/require-auth";
 import { getDashboardKpis, getDashboardTopProductos, getDashboardTendencia } from "@/lib/kpi-logic";
 import { prisma } from "@/lib/prisma";
 import type {
