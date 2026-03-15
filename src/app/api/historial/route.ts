@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/auth/require-auth";
 import { buildSucursalWhere } from "@/lib/sucursalScope";
+import { nowAR, monthRangeAR } from "@/lib/utils-date";
+import { getConfiguredTz } from "@/lib/get-configured-tz";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -17,8 +19,10 @@ export async function GET(req: NextRequest) {
     const mesRaw = searchParams.get("mes");
     const anioRaw = searchParams.get("anio");
 
-    const mes = Number.parseInt(mesRaw ?? String(new Date().getMonth()), 10);
-    const anio = Number.parseInt(anioRaw ?? String(new Date().getFullYear()), 10);
+    const tz = await getConfiguredTz(auth.activeSucursalId);
+    const nowAr = nowAR(tz);
+    const mes = Number.parseInt(mesRaw ?? String(nowAr.getMonth()), 10);
+    const anio = Number.parseInt(anioRaw ?? String(nowAr.getFullYear()), 10);
 
     if (!Number.isFinite(mes) || mes < 0 || mes > 11) {
       return NextResponse.json({ error: "Mes inválido (debe ser 0..11)" }, { status: 400 });
@@ -27,8 +31,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "Año inválido" }, { status: 400 });
     }
 
-    const fechaInicio = new Date(anio, mes, 1, 0, 0, 0);
-    const fechaFin = new Date(anio, mes + 1, 0, 23, 59, 59);
+    const { start: fechaInicio, end: fechaFin } = monthRangeAR(anio, mes, tz);
 
     const movimientos = await prisma.movimientoStock.findMany({
       where: {

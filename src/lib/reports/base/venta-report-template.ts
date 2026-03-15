@@ -11,6 +11,7 @@ export interface VentaReportDTO {
   metodoPago: string;
   clienteNombre: string;
   clienteTelefono: string;
+  zonaHoraria?: string;
   items: Array<{
     producto: string;
     cantidad: number;
@@ -37,6 +38,7 @@ const getTicketDetails = (id: number, numeroVenta?: number | null) => {
 
 export function buildVentaHtml(data: VentaReportDTO, branding: BrandingDTO) {
   const ticket = getTicketDetails(data.id, data.numeroVenta);
+  const tz = data.zonaHoraria ?? "America/Argentina/Buenos_Aires";
 
   // Tailwind classes (se mantienen)
   const colorPrincipal = "bg-indigo-600";
@@ -101,7 +103,7 @@ export function buildVentaHtml(data: VentaReportDTO, branding: BrandingDTO) {
             </div>
             
             <div class="flex flex-col gap-1 mt-3">
-              <p class="text-[10px] font-bold text-slate-500 uppercase">Fecha: ${formatDateAR(data.fecha, true)}</p>
+              <p class="text-[10px] font-bold text-slate-500 uppercase">Fecha: ${formatDateAR(data.fecha, true, tz)}</p>
             </div>
           </div>
         </div>

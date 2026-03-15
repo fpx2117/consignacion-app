@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/select";
 import { formatMoney } from "@/lib/utils-format";
 import { DashboardTendencia, DashboardFilter } from "@/lib/types";
+import { useTimezone } from "@/hooks/useTimezone";
 import { TrendingUp, DollarSign, Activity, Calendar, BarChart3 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -34,6 +35,7 @@ interface TendenciaSectionProps {
 
 export function TendenciaSection({ trend, period, loading, filter = "all" }: TendenciaSectionProps) {
   // --- 1. HOOKS SIEMPRE AL PRINCIPIO ---
+  const { tz } = useTimezone();
   const [metric, setMetric] = React.useState<"amounts" | "counts">("amounts");
   const [selectedMonth, setSelectedMonth] = React.useState<string>("all");
 
@@ -45,19 +47,28 @@ export function TendenciaSection({ trend, period, loading, filter = "all" }: Ten
     let data = [...trend.series];
 
     if (selectedMonth !== "all") {
-      const now = new Date();
-      const currentMonth = now.getMonth();
-      const currentYear = now.getFullYear();
+      // Obtener mes/año actuales en la TZ configurada
+      const nowStr = new Intl.DateTimeFormat("en-CA", {
+        timeZone: tz,
+        year: "numeric",
+        month: "2-digit",
+      }).format(new Date());
+      const [yearStr, monthStr] = nowStr.split("-");
+      const currentYear = Number(yearStr);
+      const currentMonth = Number(monthStr) - 1; // 0-indexed
 
       data = data.filter((day) => {
-        const date = new Date(day.date);
+        // day.date viene como "YYYY-MM-DD" (key generado server-side en TZ AR)
+        const [y, m] = day.date.split("-").map(Number);
+        const dayMonth = (m ?? 1) - 1; // 0-indexed
+        const dayYear = y ?? currentYear;
         if (selectedMonth === "current") {
-          return date.getMonth() === currentMonth && date.getFullYear() === currentYear;
+          return dayMonth === currentMonth && dayYear === currentYear;
         }
         if (selectedMonth === "prev") {
           const lastMonth = currentMonth === 0 ? 11 : currentMonth - 1;
           const yearOfLastMonth = currentMonth === 0 ? currentYear - 1 : currentYear;
-          return date.getMonth() === lastMonth && date.getFullYear() === yearOfLastMonth;
+          return dayMonth === lastMonth && dayYear === yearOfLastMonth;
         }
         return true;
       });
@@ -68,9 +79,10 @@ export function TendenciaSection({ trend, period, loading, filter = "all" }: Ten
       formattedDate: new Date(day.date).toLocaleDateString("es-AR", {
         day: "2-digit",
         month: "short",
+        timeZone: tz,
       }),
     }));
-  }, [trend, selectedMonth, period]);
+  }, [trend, selectedMonth, period, tz]);
 
   // --- 2. VALIDACIONES DE RENDERIZADO (DESPUÉS DE LOS HOOKS) ---
 
@@ -195,7 +207,7 @@ export function TendenciaSection({ trend, period, loading, filter = "all" }: Ten
                       return (
                         <div className="rounded-xl border border-border bg-card/95 p-4 shadow-2xl backdrop-blur-xl ring-1 ring-border/50">
                           <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/80 mb-3">
-                            {new Date(data.date).toLocaleDateString("es-AR", { dateStyle: 'long' })}
+                            {new Date(data.date).toLocaleDateString("es-AR", { dateStyle: 'long', timeZone: tz })}
                           </p>
                           <div className="space-y-2">
                             {metric === "amounts" ? (

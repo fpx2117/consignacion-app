@@ -4,6 +4,7 @@ import { requireAuth } from "@/lib/auth/require-auth";
 import { MotivoMovimientoStock, TipoMovimientoStock } from "@prisma/client";
 import { z } from "zod";
 import { buildSucursalWhere, isGlobalSucursalView } from "@/lib/sucursalScope";
+import { nowAR } from "@/lib/utils-date";
 
 const ventaAnulacionSchema = z.object({
   motivo: z.string().trim().min(1).optional(),
@@ -173,7 +174,7 @@ export async function DELETE(
         data: {
           anulada: true,
           motivoAnulacion: motivo,
-          fechaAnulacion: new Date(),
+          fechaAnulacion: nowAR(),
         },
       });
     });

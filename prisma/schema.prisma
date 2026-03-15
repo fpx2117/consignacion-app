@@ -35,6 +35,8 @@ model Configuracion {
   andreaniCliente                String?
   andreaniUsuario                String?
   andreaniPassword               String?
+  zonaHoraria                    String   @default("America/Argentina/Buenos_Aires")
+  timezoneMigrationDone          Boolean  @default(false)
   sucursal                       Sucursal @relation(fields: [sucursalId], references: [id])
 }
 

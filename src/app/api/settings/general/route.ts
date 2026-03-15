@@ -1,6 +1,18 @@
 import { NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireAuth, requireRole } from "@/lib/auth/require-auth";
+
+const TZ_DEFAULT = "America/Argentina/Buenos_Aires";
+
+function isValidIANATz(tz: string): boolean {
+  try {
+    new Intl.DateTimeFormat(undefined, { timeZone: tz });
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 type GeneralSettingsBody = {
     minStockGlobal?: number;
@@ -24,6 +36,7 @@ type GeneralSettingsBody = {
     mpPublicKeyTienda?: string | null;
     tiendaLayout?: string;
     mostrarCategoriasEnHeader?: boolean;
+    zonaHoraria?: string;
 };
 
 // GET: Obtener la configuración actual
@@ -85,8 +98,17 @@ export async function PUT(req: Request) {
             mpAccessTokenTienda,
             mpPublicKeyTienda,
             tiendaLayout,
-            mostrarCategoriasEnHeader
+            mostrarCategoriasEnHeader,
+            zonaHoraria,
         } = body;
+
+        // Validar timezone IANA si se envía
+        if (zonaHoraria !== undefined && !isValidIANATz(zonaHoraria)) {
+            return NextResponse.json(
+                { error: `Zona horaria inválida: "${zonaHoraria}" no es una timezone IANA válida.` },
+                { status: 400 }
+            );
+        }
 
         const configActualizada = await prisma.configuracion.upsert({
             where: { sucursalId: auth.activeSucursalId },
@@ -112,6 +134,7 @@ export async function PUT(req: Request) {
                 ...(mpPublicKeyTienda !== undefined && { mpPublicKeyTienda }),
                 ...(tiendaLayout !== undefined && { tiendaLayout }),
                 ...(mostrarCategoriasEnHeader !== undefined && { mostrarCategoriasEnHeader }),
+                ...(zonaHoraria !== undefined && { zonaHoraria }),
             },
             create: {
                 sucursalId: auth.activeSucursalId,
@@ -136,8 +159,12 @@ export async function PUT(req: Request) {
                 mpPublicKeyTienda: mpPublicKeyTienda ?? null,
                 tiendaLayout: tiendaLayout ?? "grid",
                 mostrarCategoriasEnHeader: mostrarCategoriasEnHeader ?? true,
+                zonaHoraria: zonaHoraria ?? TZ_DEFAULT,
             }
         });
+
+        // Invalidar caché de settings para que el cambio tome efecto inmediato
+        revalidatePath("/settings/general");
 
         return NextResponse.json({ data: configActualizada, message: "Configuración actualizada" });
     } catch (error) {

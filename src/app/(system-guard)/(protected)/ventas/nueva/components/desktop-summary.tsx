@@ -1,8 +1,11 @@
-import { Barcode, ShoppingCart } from "lucide-react";
+import { Barcode, Loader2, ShoppingCart } from "lucide-react";
 
+import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import type { CartItem } from "../types";
+import type { MetodoPago } from "@/lib/types";
+import type { CartItem, MetodoPagoOption } from "../types";
 import { formatCurrency } from "../utils";
+import { PaymentSelector } from "./payment-selector";
 
 type DesktopSummaryProps = {
   cart: CartItem[];
@@ -15,6 +18,14 @@ type DesktopSummaryProps = {
   isTarjeta: boolean;
   descuentoTipo?: "MONTO" | "PORCENTAJE";
   descuentoValor?: number;
+  // Acciones de pago
+  metodoPago: MetodoPago;
+  opcionesPago: MetodoPagoOption[];
+  loading: boolean;
+  disabled: boolean;
+  onMetodoPagoChange: (value: MetodoPago) => void;
+  onOpenDescuento: () => void;
+  onCobrar: () => void;
 };
 
 export function DesktopSummary({
@@ -28,6 +39,13 @@ export function DesktopSummary({
   isTarjeta,
   descuentoTipo,
   descuentoValor,
+  metodoPago,
+  opcionesPago,
+  loading,
+  disabled,
+  onMetodoPagoChange,
+  onOpenDescuento,
+  onCobrar,
 }: DesktopSummaryProps) {
   return (
     <aside className="hidden lg:flex w-[380px] bg-background border-l border-border/40 flex-col shadow-xl z-20" aria-label="Resumen de compra">
@@ -72,6 +90,7 @@ export function DesktopSummary({
       </div>
 
       <div className="p-6 bg-muted/10 border-t border-border/40 space-y-4">
+        {/* Totales */}
         <div className="space-y-2">
           <div className="flex justify-between text-sm text-muted-foreground font-medium">
             <span>Subtotal</span>
@@ -102,6 +121,37 @@ export function DesktopSummary({
             <span className="text-3xl font-black text-primary tabular-nums">{formatCurrency(totalAmount)}</span>
           </div>
         </div>
+
+        {/* Selector de método de pago */}
+        <PaymentSelector
+          metodoPago={metodoPago}
+          opciones={opcionesPago}
+          onChange={onMetodoPagoChange}
+          onOpenDescuento={onOpenDescuento}
+        />
+
+        {/* Botón COBRAR */}
+        <Button
+          type="button"
+          onClick={onCobrar}
+          disabled={disabled}
+          className="w-full h-14 text-lg font-black shadow-lg shadow-indigo-500/20 bg-primary hover:bg-primary/90 text-primary-foreground rounded-2xl active:scale-[0.98] transition-all focus-visible:ring-2"
+          aria-label={`Cobrar venta por ${formatCurrency(totalAmount)}`}
+        >
+          {loading ? (
+            <Loader2 className="animate-spin h-5 w-5" aria-hidden="true" />
+          ) : (
+            <div className="flex justify-between w-full px-4 items-center">
+              <span className="text-xs font-bold tracking-widest opacity-80 uppercase bg-foreground/10 px-2 py-1 rounded-md">
+                {cart.length} ITEMS
+              </span>
+              <span className="text-xl tracking-tight">COBRAR {formatCurrency(totalAmount)}</span>
+              <span className="inline-flex items-center justify-center h-5 px-2 rounded border border-white/40 bg-white/25 text-white text-[9px] font-black font-mono tracking-tight select-none">
+                F6
+              </span>
+            </div>
+          )}
+        </Button>
       </div>
     </aside>
   );

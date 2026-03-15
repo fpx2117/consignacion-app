@@ -11,16 +11,24 @@ export function escapeAttr(value: unknown): string {
   return escapeHtml(value).replace(/[\r\n]+/g, " ").trim();
 }
 
-export function formatDateAR(date?: string | Date | null, withTime = false): string {
+export function formatDateAR(
+  date?: string | Date | null,
+  withTime = false,
+  tz = "America/Argentina/Buenos_Aires",
+): string {
   if (!date) return "-";
   const parsed = new Date(date);
   if (Number.isNaN(parsed.getTime())) return "-";
-  return parsed.toLocaleDateString("es-AR", {
+  const opts: Intl.DateTimeFormatOptions = {
     day: "2-digit",
     month: "2-digit",
     year: "numeric",
+    timeZone: tz,
     ...(withTime ? { hour: "2-digit", minute: "2-digit" } : {}),
-  });
+  };
+  return withTime
+    ? parsed.toLocaleString("es-AR", opts)
+    : parsed.toLocaleDateString("es-AR", opts);
 }
 
 export function formatMoneyARS(amount: number, maximumFractionDigits = 2): string {

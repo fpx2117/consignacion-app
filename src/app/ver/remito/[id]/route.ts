@@ -6,6 +6,7 @@ import { hashCode } from "@/lib/share-links";
 
 import { getBranding } from "@/lib/reports/get-branding";
 import { buildConsignacionHtml } from "@/lib/reports/base/remito-template";
+import { getConfiguredTz } from "@/lib/get-configured-tz";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -78,6 +79,8 @@ export async function GET(
 
     if (!consignacion) return NextResponse.json({ error: "No encontrada" }, { status: 404 });
 
+    const zonaHoraria = await getConfiguredTz(consignacion.sucursalId);
+
     // ✅ Branding desde la DB del environment del cliente
     const branding = await getBranding();
 
@@ -87,7 +90,7 @@ export async function GET(
     });
 
     const page = await browser.newPage();
-    await page.setContent(buildConsignacionHtml(consignacion as any, branding), {
+    await page.setContent(buildConsignacionHtml({ ...consignacion, zonaHoraria }, branding), {
       waitUntil: "networkidle0",
       timeout: 30000,
     });
