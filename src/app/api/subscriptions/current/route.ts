@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/auth/require-auth";
 import { SUBSCRIPTION_PLANS } from "@/constants/subscriptions";
+import { getActivePlanLimits } from "@/lib/subscriptions/require-subscription";
 
 export async function GET() {
     const auth = await requireAuth();
@@ -62,6 +63,8 @@ export async function GET() {
             daysRemaining = Math.max(0, Math.ceil(diffTime / (1000 * 60 * 60 * 24)));
         }
 
+        const planLimits = await getActivePlanLimits();
+
         // Buscamos la metadata del plan en nuestras constantes por si queremos mostrar features, etc.
         const planMeta = SUBSCRIPTION_PLANS.find(p => p.id === subscription.planId);
 
@@ -83,6 +86,7 @@ export async function GET() {
                 daysRemaining,
                 cancelAtPeriodEnd: subscription.cancelAtPeriodEnd,
             },
+            planLimits,
         }, {
             headers: {
                 "Cache-Control": "private, max-age=30, stale-while-revalidate=120",

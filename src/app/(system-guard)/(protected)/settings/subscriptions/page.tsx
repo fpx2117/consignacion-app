@@ -12,6 +12,7 @@ import { toast } from "sonner";
 import { DowngradeModal } from "./components/DowngradeModal";
 import { TutorialButton } from "@/components/ui/tutorial-button";
 import { SUBSCRIPTIONS_TUTORIAL } from "@/lib/tutorial-content";
+import { postAppMessage } from "@/lib/broadcast-channel";
 import type { SubscriptionPlan } from "@/constants/subscriptions";
 
 export default function SubscriptionsPage() {
@@ -47,6 +48,7 @@ export default function SubscriptionsPage() {
     useEffect(() => {
         const status = searchParams.get("status");
         if (status === "success") {
+            postAppMessage({ type: "plan-changed" });
             toast.success("¡Suscripción iniciada!", {
                 description: "Tu pago está siendo procesado por PayPal.",
                 icon: <CheckCircle2 className="h-4 w-4 text-[color:var(--status-success-strong)]" />
@@ -105,6 +107,7 @@ export default function SubscriptionsPage() {
                 icon: <Gift className="h-4 w-4 text-[color:var(--status-success-strong)]" />,
             });
 
+            postAppMessage({ type: "plan-changed" });
             setPromoCode("");
             setShowPromo(false);
             router.refresh();

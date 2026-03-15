@@ -141,7 +141,7 @@ export default function PosSettingsPage() {
 
     const fetchInitialData = React.useCallback(async () => {
         try {
-            const cachedConfig = localStorage.getItem("usarControlDeCaja");
+            const cachedConfig = localStorage.getItem(`config-caja-${activeSucursalId}`);
             if (cachedConfig !== null) setUsarControlDeCaja(cachedConfig === "true");
 
             const [cajasRes, configRes] = await Promise.all([
@@ -153,7 +153,7 @@ export default function PosSettingsPage() {
             const config = (configRes?.data ?? configRes) as Partial<PosConfig> | undefined;
 
             setUsarControlDeCaja(config?.usarControlDeCaja ?? true);
-            localStorage.setItem("usarControlDeCaja", String(config?.usarControlDeCaja ?? true));
+            localStorage.setItem(`config-caja-${activeSucursalId}`, String(config?.usarControlDeCaja ?? true));
             setPorcentajeAumentoConsignacion(config?.porcentajeAumentoConsignacion ?? 0);
             setPorcentajeInteresTarjeta(config?.porcentajeInteresTarjeta ?? 0);
             setMostrarListaPrecios(config?.mostrarListaPrecios ?? false);
@@ -166,7 +166,7 @@ export default function PosSettingsPage() {
         } finally {
             setLoading(false);
         }
-    }, []);
+    }, [activeSucursalId]);
 
     React.useEffect(() => { fetchInitialData(); }, [fetchInitialData]);
 
@@ -193,7 +193,7 @@ export default function PosSettingsPage() {
             await apiService.actualizarConfiguracionGeneral({ [key]: checked });
             if (key === "usarControlDeCaja") {
                 setUsarControlDeCaja(checked);
-                localStorage.setItem("usarControlDeCaja", String(checked));
+                localStorage.setItem(`config-caja-${activeSucursalId}`, String(checked));
                 window.dispatchEvent(new CustomEvent("config-updated", { detail: { usarControlDeCaja: checked } }));
             } else if (key === "mostrarListaPrecios") setMostrarListaPrecios(checked);
             else if (key === "convertirTienda") setConvertirTienda(checked);

@@ -1,4 +1,5 @@
 // src/lib/requireSubscription.ts
+import { cache } from "react";
 import { prisma } from "@/lib/prisma";
 import { PLAN_LIMITS_DEFAULTS } from "@/constants/subscriptions";
 
@@ -15,7 +16,7 @@ export interface PlanLimits {
  * Obtiene los límites del plan activo. Si no hay suscripción activa,
  * retorna null (el caller debe decidir qué hacer: redirect, 403, etc.)
  */
-export async function getActivePlanLimits(): Promise<PlanLimits | null> {
+export const getActivePlanLimits = cache(async (): Promise<PlanLimits | null> => {
     // Suscripción es a nivel programa: buscamos cualquiera activa
     const now = new Date();
     const subscription = await prisma.subscription.findFirst({
@@ -52,7 +53,7 @@ export async function getActivePlanLimits(): Promise<PlanLimits | null> {
         planId: subscription.planId,
         planNombre: subscription.plan?.nombre ?? "Desconocido",
     };
-}
+});
 
 /**
  * Verifica si se puede crear un nuevo producto.

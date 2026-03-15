@@ -7,6 +7,9 @@ import { cn } from "@/lib/utils";
 // UI
 import { Card } from "@/components/ui/card";
 
+// Store
+import { useSucursalStore } from "@/store/useSucursalStore";
+
 // Icons
 import {
   Settings2,
@@ -33,10 +36,6 @@ type SettingsModule = {
   bg: string;
   borderColor: string;
   soon: boolean;
-};
-
-type SubscriptionLimitsCache = {
-  allowSucursales?: boolean;
 };
 
 const SETTINGS_MODULES: SettingsModule[] = [
@@ -132,45 +131,10 @@ const SETTINGS_MODULES: SettingsModule[] = [
 ];
 
 export default function SettingsPage() {
-  const [allowSucursales, setAllowSucursales] = React.useState(false);
-  const [loading, setLoading] = React.useState(true);
-
-  React.useEffect(() => {
-    const cachedLimits = localStorage.getItem("subscription_limits");
-    if (cachedLimits) {
-      try {
-        const limits = JSON.parse(cachedLimits) as SubscriptionLimitsCache;
-        if (limits.allowSucursales !== undefined) {
-          setAllowSucursales(limits.allowSucursales);
-        }
-      } catch (error) {
-        console.error("Error parsing cached limits", error);
-      }
-    }
-
-    const fetchUserData = async () => {
-      try {
-        const res = await fetch("/api/subscriptions/current");
-        if (res.ok) {
-          const json = (await res.json()) as {
-            subscription?: { plan?: { limits?: SubscriptionLimitsCache } };
-          };
-          const limits = json.subscription?.plan?.limits;
-
-          if (limits) {
-            const allow = limits.allowSucursales !== false;
-            setAllowSucursales(allow);
-            localStorage.setItem("subscription_limits", JSON.stringify({ allowSucursales: allow }));
-          }
-        }
-      } catch {
-        // silently ignore
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchUserData();
-  }, []);
+  const planLimits = useSucursalStore((s) => s.planLimits);
+  const isHydrated = useSucursalStore((s) => s.isHydrated);
+  const allowSucursales = planLimits?.allowSucursales ?? false;
+  const loading = !isHydrated;
 
   return (
     <div className="max-w-7xl mx-auto space-y-8 p-4 md:p-10 text-foreground selection:bg-primary/20">
