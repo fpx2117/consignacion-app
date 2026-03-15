@@ -29,8 +29,10 @@ import { SidebarIconLink } from "@/components/sidebar/sidebar-icon-link";
 import type { SidebarNavItem } from "@/components/sidebar/types";
 
 import { useNotifications } from "@/hooks/useNotifications";
+import { useBroadcastChannel } from "@/hooks/useBroadcastChannel";
 import { useSucursalStore } from "@/store/useSucursalStore";
 import { apiService } from "@/lib/apiService";
+import type { PlanLimits } from "@/lib/subscriptions/require-subscription";
 import {
   Bell,
   ClipboardList,
@@ -55,6 +57,8 @@ export interface SidebarUserData {
   rol: "ADMIN" | "EMPLEADO";
   sucursalesPermitidas: { id: number; nombre: string; esPrincipal: boolean; activa: boolean }[];
   allowConsignaciones: boolean;
+  activeSucursalId: number;
+  planLimits: PlanLimits | null;
 }
 
 const NAV_CORE: SidebarNavItem[] = [
@@ -148,9 +152,15 @@ export function SidebarDock({ initialUserData }: SidebarDockProps = {}) {
   const notificationsState = useNotifications({ limit: 50 });
 
   const activeSucursalId = useSucursalStore((s) => s.activeSucursalId);
-  const setAvailableSucursales = useSucursalStore((s) => s.setAvailableSucursales);
+  const hydrate = useSucursalStore((s) => s.hydrate);
   const pedidosVencidosCount = useSucursalStore((s) => s.pedidosVencidosCount);
   const setPedidosVencidosCount = useSucursalStore((s) => s.setPedidosVencidosCount);
+
+  useBroadcastChannel({
+    "sucursal-changed": () => router.refresh(),
+    "plan-changed": () => router.refresh(),
+    "session-revoked": () => router.push("/login"),
+  });
 
   const isDark = themeMounted && resolvedTheme === "dark";
   const themeButtonLabel = themeMounted
@@ -209,12 +219,16 @@ export function SidebarDock({ initialUserData }: SidebarDockProps = {}) {
     return items;
   }, [filteredBusiness, isGlobalView, usarControlDeCaja]);
 
-  // Aplicar datos del layout en el store al montar (solo si vienen como props)
+  // Hidratar el store con datos del layout al montar
   React.useEffect(() => {
-    if (initialUserData?.sucursalesPermitidas?.length) {
-      setAvailableSucursales(initialUserData.sucursalesPermitidas);
+    if (initialUserData) {
+      hydrate({
+        activeSucursalId: initialUserData.activeSucursalId,
+        availableSucursales: initialUserData.sucursalesPermitidas,
+        planLimits: initialUserData.planLimits,
+      });
     }
-  }, [initialUserData, setAvailableSucursales]);
+  }, [initialUserData, hydrate]);
 
   React.useEffect(() => {
     setThemeMounted(true);
@@ -250,7 +264,7 @@ export function SidebarDock({ initialUserData }: SidebarDockProps = {}) {
       }
     };
 
-    const cachedConfig = localStorage.getItem("usarControlDeCaja");
+    const cachedConfig = localStorage.getItem(`config-caja-${activeSucursalId}`);
     if (cachedConfig !== null) {
       setUsarControlDeCaja(cachedConfig === "true");
     }
@@ -267,7 +281,7 @@ export function SidebarDock({ initialUserData }: SidebarDockProps = {}) {
         const value = res?.usarControlDeCaja ?? res?.data?.usarControlDeCaja ?? true;
         configCache = { value, ts: Date.now() };
         setUsarControlDeCaja(value);
-        localStorage.setItem("usarControlDeCaja", String(value));
+        localStorage.setItem(`config-caja-${activeSucursalId}`, String(value));
       } catch {
       }
     };

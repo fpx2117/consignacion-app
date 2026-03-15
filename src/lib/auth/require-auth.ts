@@ -56,27 +56,19 @@ export async function requireAuth() {
       };
     }
 
-    // Resolviendo la sucursal activa
-    const { headers, cookies } = await import("next/headers");
-    const h = await headers();
+    // Resolviendo la sucursal activa — cookie como fuente única
+    const { cookies } = await import("next/headers");
     const cookieStore = await cookies();
-    const reqHeader = h.get("x-sucursal-id");
     const reqCookie = cookieStore.get("active_sucursal_id")?.value;
-    let activeSucursalId = 1;
+    let activeSucursalId = user.sucursalId || 1;
 
     if (user.rol === "ADMIN") {
-      const parsedHeader = reqHeader ? parseInt(reqHeader, 10) : NaN;
       const parsedCookie = reqCookie ? parseInt(reqCookie, 10) : NaN;
-      if (Number.isFinite(parsedHeader) && parsedHeader >= 0) {
-        activeSucursalId = parsedHeader;
-      } else if (Number.isFinite(parsedCookie) && parsedCookie >= 0) {
+      if (Number.isFinite(parsedCookie) && parsedCookie >= 0) {
         activeSucursalId = parsedCookie;
-      } else {
-        activeSucursalId = user.sucursalId || 1;
       }
-    } else {
-      activeSucursalId = user.sucursalId || 1;
     }
+    // EMPLEADO: siempre user.sucursalId del JWT (ya asignado arriba)
 
     return {
       ok: true as const,

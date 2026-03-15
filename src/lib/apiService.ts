@@ -48,7 +48,7 @@ export type ProductoWithImage = Producto & { imagenUrl?: string | null };
     FETCH WRAPPER (HELPER)
  ========================= */
 async function apiRequest<T>(path: string, init?: RequestInit): Promise<ApiResponse<T>> {
-  let requestPath = path;
+  const requestPath = path;
 
   let sucursalHeader = "";
   const method = (init?.method ?? "GET").toUpperCase();
@@ -74,11 +74,6 @@ async function apiRequest<T>(path: string, init?: RequestInit): Promise<ApiRespo
     (headers as any)["x-sucursal-id"] = sucursalHeader;
   }
 
-  if (typeof window !== "undefined" && isApiEndpoint && isReadRequest && sucursalHeader) {
-    const sep = requestPath.includes("?") ? "&" : "?";
-    requestPath = `${requestPath}${sep}__sid=${encodeURIComponent(sucursalHeader)}`;
-  }
-
   let url = requestPath;
   if (typeof window === "undefined" && requestPath.startsWith("/")) {
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
@@ -88,11 +83,7 @@ async function apiRequest<T>(path: string, init?: RequestInit): Promise<ApiRespo
   const res = await fetch(url, {
     ...init,
     headers,
-    ...(init?.cache !== undefined
-      ? { cache: init.cache }
-      : isApiEndpoint && isReadRequest && !!sucursalHeader
-        ? { cache: "no-store" as RequestCache }
-        : {}),
+    cache: init?.cache ?? (isApiEndpoint ? ("no-store" as RequestCache) : undefined),
   });
 
   if (!res.ok) {

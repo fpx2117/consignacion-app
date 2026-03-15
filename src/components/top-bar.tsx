@@ -1,9 +1,11 @@
 "use client";
 
 import * as React from "react";
-import { Store, ChevronDown, LayoutDashboard, AlertTriangle } from "lucide-react";
+import { Store, ChevronDown, LayoutDashboard, AlertTriangle, Loader2 } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useSucursalStore } from "@/store/useSucursalStore";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -12,7 +14,22 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 export function TopBar() {
-    const { availableSucursales, activeSucursalId, setActiveSucursalId } = useSucursalStore();
+    const router = useRouter();
+    const { availableSucursales, activeSucursalId, switchSucursal } = useSucursalStore();
+    const [switching, setSwitching] = React.useState(false);
+
+    const handleSwitch = React.useCallback(async (id: number) => {
+        if (switching || id === activeSucursalId) return;
+        setSwitching(true);
+        try {
+            await switchSucursal(id);
+            router.refresh();
+        } catch (err) {
+            toast.error(err instanceof Error ? err.message : "Error al cambiar sucursal");
+        } finally {
+            setSwitching(false);
+        }
+    }, [switching, activeSucursalId, switchSucursal, router]);
 
     // No mostrar si no hay sucursales cargadas
     if (availableSucursales.length === 0) return null;
@@ -41,8 +58,17 @@ export function TopBar() {
                     {availableSucursales.length > 1 ? (
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                                <button className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 text-primary hover:bg-primary/20 transition-colors border border-primary/20">
-                                    {activeSucursalId === 0 ? <LayoutDashboard className="h-4 w-4" /> : <Store className="h-4 w-4" />}
+                                <button
+                                    disabled={switching}
+                                    className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 text-primary hover:bg-primary/20 transition-colors border border-primary/20 disabled:opacity-60"
+                                >
+                                    {switching ? (
+                                        <Loader2 className="h-4 w-4 animate-spin" />
+                                    ) : activeSucursalId === 0 ? (
+                                        <LayoutDashboard className="h-4 w-4" />
+                                    ) : (
+                                        <Store className="h-4 w-4" />
+                                    )}
                                     <span className="text-sm font-bold max-w-[150px] truncate">
                                         {activeSucursal?.nombre}
                                     </span>
@@ -56,7 +82,8 @@ export function TopBar() {
 
                                 {/* VISTA GLOBAL (Solo ADMIN) */}
                                 <DropdownMenuItem
-                                    onClick={() => setActiveSucursalId(0)}
+                                    onClick={() => handleSwitch(0)}
+                                    disabled={switching}
                                     className={cn(
                                         "rounded-xl cursor-pointer mb-1 border border-dashed border-primary/30",
                                         activeSucursalId === 0 ? "bg-primary text-primary-foreground font-bold" : "hover:bg-primary/5 text-primary font-semibold"
@@ -71,7 +98,8 @@ export function TopBar() {
                                 {availableSucursales.map((s) => (
                                     <DropdownMenuItem
                                         key={s.id}
-                                        onClick={() => setActiveSucursalId(s.id)}
+                                        onClick={() => handleSwitch(s.id)}
+                                        disabled={switching}
                                         className={cn(
                                             "rounded-xl cursor-pointer mb-1",
                                             activeSucursalId === s.id ? "bg-primary text-primary-foreground font-bold" : "hover:bg-muted"

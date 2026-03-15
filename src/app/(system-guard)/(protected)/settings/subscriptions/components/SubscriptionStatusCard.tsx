@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Calendar, RefreshCw, Star, Zap, XCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { postAppMessage } from "@/lib/broadcast-channel";
 import { CancelSubscriptionModal } from "./CancelSubscriptionModal";
 
 interface SubscriptionInfo {
@@ -51,6 +52,7 @@ export function SubscriptionStatusCard({ onUpgrade }: { onUpgrade: () => void })
             const result = await res.json();
 
             if (res.ok) {
+                postAppMessage({ type: "plan-changed" });
                 toast.success("Suscripción cancelada exitosamente");
                 setShowCancelModal(false);
                 fetchSubscription(); // Recargar datos

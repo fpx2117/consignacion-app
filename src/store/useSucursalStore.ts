@@ -1,65 +1,71 @@
-import { create } from 'zustand';
-import { persist, createJSONStorage } from 'zustand/middleware';
+import { create } from "zustand";
+import { postAppMessage } from "@/lib/broadcast-channel";
+import type { PlanLimits } from "@/lib/subscriptions/require-subscription";
 
 export interface Sucursal {
-    id: number;
-    nombre: string;
-    esPrincipal: boolean;
-    activa: boolean;
+  id: number;
+  nombre: string;
+  esPrincipal: boolean;
+  activa: boolean;
+}
+
+export interface HydratePayload {
+  activeSucursalId: number;
+  availableSucursales: Sucursal[];
+  planLimits: PlanLimits | null;
 }
 
 interface SucursalState {
-    activeSucursalId: number;
-    availableSucursales: Sucursal[];
-    pedidosVencidosCount: number;
-    setActiveSucursalId: (id: number) => void;
-    setAvailableSucursales: (sucursales: Sucursal[]) => void;
-    setPedidosVencidosCount: (count: number) => void;
+  activeSucursalId: number;
+  availableSucursales: Sucursal[];
+  isHydrated: boolean;
+  planLimits: PlanLimits | null;
+  pedidosVencidosCount: number;
+
+  hydrate: (data: HydratePayload) => void;
+  switchSucursal: (id: number) => Promise<void>;
+  setPedidosVencidosCount: (count: number) => void;
 }
 
-const ACTIVE_SUCURSAL_COOKIE = "active_sucursal_id";
+export const useSucursalStore = create<SucursalState>()((set) => ({
+  activeSucursalId: 1,
+  availableSucursales: [],
+  isHydrated: false,
+  planLimits: null,
+  pedidosVencidosCount: 0,
 
-function syncActiveSucursalCookie(id: number) {
-    if (typeof document === "undefined") return;
-    document.cookie = `${ACTIVE_SUCURSAL_COOKIE}=${id}; path=/; max-age=2592000; samesite=lax`;
-}
+  hydrate: (data: HydratePayload) => {
+    set({
+      activeSucursalId: data.activeSucursalId,
+      availableSucursales: data.availableSucursales,
+      planLimits: data.planLimits,
+      isHydrated: true,
+    });
+    // Migración: limpiar localStorage legacy en la primera hidratación
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("sucursal-storage");
+      localStorage.removeItem("subscription_limits");
+      localStorage.removeItem("usarControlDeCaja");
+    }
+  },
 
-export const useSucursalStore = create<SucursalState>()(
-    persist(
-        (set, get) => ({
-            activeSucursalId: 1, // Default Sede Principal
-            availableSucursales: [],
-            pedidosVencidosCount: 0,
-            setActiveSucursalId: (id: number) => {
-                // Validar que la sucursal exista en las disponibles o sea 0 (Global)
-                const exists = id === 0 || get().availableSucursales.find(s => s.id === id);
-                if (exists) {
-                    set({ activeSucursalId: id });
-                    syncActiveSucursalCookie(id);
-                }
-            },
-            setAvailableSucursales: (sucursales: Sucursal[]) => {
-                set({ availableSucursales: sucursales });
-                const activeSucursalId = get().activeSucursalId;
-                syncActiveSucursalCookie(activeSucursalId);
-                // Mantener vista global (0) como selección válida
-                if (activeSucursalId === 0) return;
+  switchSucursal: async (id: number) => {
+    const res = await fetch("/api/sucursal/switch", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ sucursalId: id }),
+    });
 
-                // Si la sucursal activa actual no está en la nueva lista, fallback a la primera o la principal
-                const currentActiveInfo = sucursales.find(s => s.id === activeSucursalId);
-                if (!currentActiveInfo && sucursales.length > 0) {
-                    const defaultSucursal = sucursales.find(s => s.esPrincipal) || sucursales[0];
-                    set({ activeSucursalId: defaultSucursal.id });
-                    syncActiveSucursalCookie(defaultSucursal.id);
-                }
-            },
-            setPedidosVencidosCount: (count: number) => {
-                set({ pedidosVencidosCount: count });
-            },
-        }),
-        {
-            name: 'sucursal-storage',
-            storage: createJSONStorage(() => localStorage),
-        }
-    )
-);
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      throw new Error(data?.error ?? `Error al cambiar sucursal (${res.status})`);
+    }
+
+    set({ activeSucursalId: id });
+    postAppMessage({ type: "sucursal-changed", sucursalId: id });
+  },
+
+  setPedidosVencidosCount: (count: number) => {
+    set({ pedidosVencidosCount: count });
+  },
+}));

@@ -43,6 +43,15 @@ export async function POST(req: Request) {
   // ✅ IMPORTANTÍSIMO
   await setAuthCookie(token);
 
+  // Setear cookie de sucursal activa al login
+  const { cookies: cookiesApi } = await import("next/headers");
+  const cookieStore = await cookiesApi();
+  cookieStore.set("active_sucursal_id", String(user.sucursalId || 1), {
+    path: "/",
+    maxAge: 30 * 24 * 60 * 60,
+    sameSite: "lax",
+  });
+
   // --- NUEVO: Seguimiento de Sesión y Auditoría ---
   try {
     const { getRealClientData } = await import("@/lib/clientData");

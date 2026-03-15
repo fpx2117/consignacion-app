@@ -7,6 +7,7 @@ import { TopBar } from "@/components/top-bar";
 import { GlobalReadonlyGuard } from "@/components/global-readonly-guard";
 import { SocketProvider } from "@/providers/socket-provider";
 import { SocketToaster } from "@/providers/socket-toaster";
+import { getActivePlanLimits } from "@/lib/subscriptions/require-subscription";
 
 async function getSidebarUserData(): Promise<SidebarUserData | null> {
   const auth = await requireAuth();
@@ -21,15 +22,6 @@ async function getSidebarUserData(): Promise<SidebarUserData | null> {
       rol: true,
       activo: true,
       sucursalId: true,
-      subscription: {
-        include: {
-          plan: {
-            include: {
-              limits: true,
-            },
-          },
-        },
-      },
     },
   });
 
@@ -47,10 +39,14 @@ async function getSidebarUserData(): Promise<SidebarUserData | null> {
           select: { id: true, nombre: true, esPrincipal: true, activa: true },
         });
 
+  const planLimits = await getActivePlanLimits();
+
   return {
     rol: user.rol,
     sucursalesPermitidas,
-    allowConsignaciones: user.subscription?.plan?.limits?.allowConsignaciones !== false,
+    allowConsignaciones: planLimits?.allowConsignaciones !== false,
+    activeSucursalId: auth.activeSucursalId,
+    planLimits,
   };
 }
 
@@ -68,7 +64,7 @@ export default async function ProtectedLayout({
       <div className="min-h-screen bg-background text-foreground transition-colors duration-300 relative overflow-hidden">
         <div className="fixed inset-0 -z-10 h-full w-full [background:radial-gradient(125%_125%_at_50%_10%,var(--background)_42%,oklch(0.58_0.2_295)_100%)] dark:[background:radial-gradient(125%_125%_at_50%_10%,#000_42%,#63e_100%)] opacity-[0.13] pointer-events-none" />
 
-        <SubscriptionGuard>
+        <SubscriptionGuard planLimits={userData.planLimits}>
           <GlobalReadonlyGuard />
           <SidebarDock initialUserData={userData} />
           <TopBar />

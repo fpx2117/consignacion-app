@@ -1,64 +1,32 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
-
-interface SubscriptionResponse {
-    hasSubscription: boolean;
-    subscription?: {
-        id: string;
-        status: string;
-    };
-}
+import { useBroadcastChannel } from "@/hooks/useBroadcastChannel";
+import type { PlanLimits } from "@/lib/subscriptions/require-subscription";
 
 const EXEMPT_PATHS = ["/settings/subscriptions", "/login"];
-// TTL de 5 minutos para no re-verificar en cada navegación
-const CACHE_TTL_MS = 5 * 60 * 1000;
 
-let cachedResult: { hasSubscription: boolean; timestamp: number } | null = null;
+interface SubscriptionGuardProps {
+  planLimits: PlanLimits | null;
+  children: React.ReactNode;
+}
 
-export function SubscriptionGuard({ children }: { children: React.ReactNode }) {
-    const pathname = usePathname();
-    const router = useRouter();
-    const checkedRef = useRef(false);
+export function SubscriptionGuard({ planLimits, children }: SubscriptionGuardProps) {
+  const pathname = usePathname();
+  const router = useRouter();
 
-    useEffect(() => {
-        if (EXEMPT_PATHS.includes(pathname)) return;
+  // Escuchar cambios de plan en otras pestañas → refrescar layout
+  useBroadcastChannel({
+    "plan-changed": () => router.refresh(),
+  });
 
-        // Si ya tenemos resultado reciente en caché, no bloqueamos ni re-verificamos
-        const now = Date.now();
-        if (cachedResult && now - cachedResult.timestamp < CACHE_TTL_MS) {
-            if (!cachedResult.hasSubscription) {
-                router.push("/settings/subscriptions");
-            }
-            return;
-        }
+  useEffect(() => {
+    if (EXEMPT_PATHS.some((p) => pathname.startsWith(p))) return;
+    if (!planLimits) {
+      router.push("/settings/subscriptions");
+    }
+  }, [planLimits, pathname, router]);
 
-        // Verificación en background — NO bloquea el render del contenido
-        if (checkedRef.current) return;
-        checkedRef.current = true;
-
-        async function checkSubscription() {
-            try {
-                const res = await fetch("/api/subscriptions/current", { cache: "no-store" });
-                if (res.ok) {
-                    const data: SubscriptionResponse = await res.json();
-                    cachedResult = { hasSubscription: data.hasSubscription, timestamp: Date.now() };
-
-                    if (!data.hasSubscription) {
-                        router.push("/settings/subscriptions");
-                    }
-                }
-            } catch {
-                // Silently ignore — no interrumpir la experiencia por un error de red
-            } finally {
-                checkedRef.current = false;
-            }
-        }
-
-        checkSubscription();
-    }, [pathname, router]);
-
-    // ✅ Render inmediato — sin spinner bloqueante. La verificación es en background.
-    return <>{children}</>;
+  return <>{children}</>;
 }
