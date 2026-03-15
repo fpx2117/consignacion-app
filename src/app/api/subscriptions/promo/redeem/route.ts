@@ -1,10 +1,12 @@
-/* eslint-disable */
-// @ts-nocheck
-// src/app/api/subscriptions/promo/redeem/route.ts
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireAuth } from "@/lib/requireAuth";
-import { seedPlanLimits } from "@/lib/requireSubscription";
+import { requireAuth } from "@/lib/auth/require-auth";
+import { seedPlanLimits } from "@/lib/subscriptions/require-subscription";
+import { EstadoSuscripcion, ProveedorSuscripcion } from "@prisma/client";
+
+type RedeemPromoBody = {
+    code?: string;
+};
 
 export async function POST(req: Request) {
     const auth = await requireAuth();
@@ -13,7 +15,7 @@ export async function POST(req: Request) {
     const userId = parseInt(auth.user.sub);
 
     try {
-        const body = await req.json().catch(() => null);
+        const body = (await req.json().catch(() => null)) as RedeemPromoBody | null;
         const code = body?.code?.trim()?.toUpperCase();
 
         if (!code) {
@@ -24,7 +26,7 @@ export async function POST(req: Request) {
         }
 
         // 1. Buscar el código
-        const promo = await (prisma as any).promoCode.findUnique({
+        const promo = await prisma.promoCode.findUnique({
             where: { code },
             include: { plan: true },
         });
@@ -73,7 +75,7 @@ export async function POST(req: Request) {
 
         const subscription = await prisma.$transaction(async (tx) => {
             // Incrementar uso del código
-            await (tx as any).promoCode.update({
+            await tx.promoCode.update({
                 where: { id: promo.id },
                 data: { usedCount: { increment: 1 } },
             });
@@ -83,8 +85,8 @@ export async function POST(req: Request) {
                 data: {
                     userId,
                     planId: promo.planId,
-                    status: "PRUEBA",
-                    provider: "PROMO" as any,
+                    status: EstadoSuscripcion.PRUEBA,
+                    provider: ProveedorSuscripcion.PROMO,
                     externalId: `PROMO-${code}-${userId}-${Date.now()}`,
                     trialEndsAt,
                 },

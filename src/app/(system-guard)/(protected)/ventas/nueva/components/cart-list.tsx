@@ -16,9 +16,10 @@ type CartListProps = {
   cart: CartItem[];
   getDiscountInfo: (item: CartItem) => CartDiscountInfo;
   onRemoveItem: (productId: number) => void;
+  onUpdateQuantity: (productId: number, delta: number) => void;
 };
 
-export function CartList({ cart, getDiscountInfo, onRemoveItem }: CartListProps) {
+export function CartList({ cart, getDiscountInfo, onRemoveItem, onUpdateQuantity }: CartListProps) {
   if (cart.length === 0) {
     return (
       <div className="h-full flex flex-col items-center justify-center text-muted-foreground/30 gap-3" role="status">
@@ -33,7 +34,7 @@ export function CartList({ cart, getDiscountInfo, onRemoveItem }: CartListProps)
   return (
     <section className="space-y-2.5 pb-4" aria-label="Productos en carrito">
       <AnimatePresence mode="popLayout" initial={false}>
-        {cart.map((item) => {
+        {cart.map((item, idx) => {
           const discountInfo = getDiscountInfo(item);
           return (
             <motion.div
@@ -43,7 +44,14 @@ export function CartList({ cart, getDiscountInfo, onRemoveItem }: CartListProps)
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, x: -20 }}
             >
-              <CartItemCard item={item} onRemove={onRemoveItem} {...discountInfo} />
+              <CartItemCard
+                item={item}
+                index={idx}
+                isLast={idx === cart.length - 1}
+                onRemove={onRemoveItem}
+                onUpdateQuantity={onUpdateQuantity}
+                {...discountInfo}
+              />
             </motion.div>
           );
         })}

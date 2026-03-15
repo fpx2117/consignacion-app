@@ -1,5 +1,3 @@
-/* eslint-disable */
-// @ts-nocheck
 "use client";
 
 import Image from "next/image";
@@ -10,14 +8,15 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { getThemeStyles } from "../lib/theme-utils";
+import type { PublicCatalogConfig, PublicCatalogProduct } from "@/lib/types";
 
 interface ProductCardProps {
-    product: any;
-    config: any;
+    product: PublicCatalogProduct;
+    config: PublicCatalogConfig;
     isConsigne: boolean;
     viewMode: "grid" | "list";
-    onAddToCart: (product: any) => void;
-    onViewProduct?: (product: any) => void;
+    onAddToCart: (product: PublicCatalogProduct, quantity?: number) => void;
+    onViewProduct?: (product: PublicCatalogProduct) => void;
     index: number;
 }
 
@@ -35,7 +34,7 @@ export function ProductCard({
 
     const basePrice = Number(product.precioVenta);
     const displayedPrice = isConsigne
-        ? basePrice * (1 + (config.porcentajeAumentoConsignacion / 100))
+        ? basePrice * (1 + ((config.porcentajeAumentoConsignacion ?? 0) / 100))
         : basePrice;
     const isAvailable = product.stockDisponibleUnits > 0;
 

@@ -1,8 +1,6 @@
-/* eslint-disable */
-// @ts-nocheck
 import { cache } from "react";
 import { NextResponse } from "next/server";
-import { getAuthTokenFromCookies, verifyUserJwt } from "@/lib/auth";
+import { getAuthTokenFromCookies, verifyUserJwt } from "@/lib/auth/core";
 
 /* ============================
    AUTH GUARD
@@ -15,7 +13,7 @@ import { getAuthTokenFromCookies, verifyUserJwt } from "@/lib/auth";
  */
 const validateSession = cache(async (token: string) => {
   const { prisma } = await import("@/lib/prisma");
-  const { getSessionHash } = await import("@/lib/sessionHash");
+  const { getSessionHash } = await import("@/lib/security/session-hash");
   const sessionToken = getSessionHash(token);
   return prisma.userSession.findUnique({
     where: { token: sessionToken },
@@ -105,5 +103,5 @@ export function requireRole(
   user: { rol: string },
   roles: Array<"ADMIN" | "EMPLEADO">
 ) {
-  return roles.includes(user.rol as any);
+  return roles.includes(user.rol as "ADMIN" | "EMPLEADO");
 }

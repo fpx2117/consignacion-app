@@ -1,8 +1,6 @@
-/* eslint-disable */
-// @ts-nocheck
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireAuth } from "@/lib/requireAuth";
+import { requireAuth } from "@/lib/auth/require-auth";
 
 export async function GET() {
     const auth = await requireAuth();
@@ -14,7 +12,7 @@ export async function GET() {
             orderBy: { nombre: "asc" },
         });
         return NextResponse.json({ data: categorias });
-    } catch (error) {
+    } catch {
         return NextResponse.json(
             { error: "Error al obtener categorías de gastos" },
             { status: 500 }

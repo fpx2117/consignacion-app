@@ -1,7 +1,7 @@
 //src/app/api/pagos/route.ts
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireAuth } from "@/lib/requireAuth";
+import { requireAuth } from "@/lib/auth/require-auth";
 import { buildSucursalWhere } from "@/lib/sucursalScope";
 
 export async function GET() {

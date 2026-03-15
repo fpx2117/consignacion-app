@@ -1,7 +1,5 @@
-/* eslint-disable */
-// @ts-nocheck
 "use client";
-import { useEffect, useState, use } from "react";
+import { useEffect, use } from "react";
 import { Loader2, AlertCircle, Handshake } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useSearchParams } from "next/navigation";
@@ -13,10 +11,10 @@ export default function ConsigReporteLoadingPage({ params }: { params: Promise<{
     const searchParams = useSearchParams();
     const code = searchParams.get("code");
     const sucursalId = searchParams.get("sucursalId") || "1";
-    const [error, setError] = useState<string | null>(null);
+    const error = code ? null : "Acceso no autorizado o enlace invalido.";
 
     useEffect(() => {
-        if (!code) { setError("Acceso no autorizado o enlace invalido."); return; }
+        if (!code) return;
         const t = setTimeout(() => window.location.replace(`/ver/consig/${period}/pdf?code=${code}&sucursalId=${sucursalId}`), 1200);
         return () => clearTimeout(t);
     }, [period, code, sucursalId]);

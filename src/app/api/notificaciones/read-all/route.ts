@@ -1,11 +1,9 @@
-/* eslint-disable */
-// @ts-nocheck
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
-import { requireAuth } from "@/lib/requireAuth"; // 🔒 Importante
+import { requireAuth } from "@/lib/auth/require-auth"; // 🔒 Importante
 import { isGlobalSucursalView } from "@/lib/sucursalScope";
 
-export async function PATCH(req: Request) {
+export async function PATCH() {
   try {
     const auth = await requireAuth();
     if (!auth.ok) return auth.res;

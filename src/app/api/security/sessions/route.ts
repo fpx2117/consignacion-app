@@ -1,14 +1,13 @@
-/* eslint-disable */
-// @ts-nocheck
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireAuth } from "@/lib/requireAuth";
+import { requireAuth } from "@/lib/auth/require-auth";
 import { recordAuditLog } from "@/lib/audit";
 
 export async function GET() {
     const auth = await requireAuth();
-    if (!auth.ok || auth.user.rol !== "ADMIN") {
-        return auth.res || NextResponse.json({ error: "No autorizado" }, { status: 403 });
+    if (!auth.ok) return auth.res;
+    if (auth.user.rol !== "ADMIN") {
+        return NextResponse.json({ error: "No autorizado" }, { status: 403 });
     }
 
     try {
@@ -31,7 +30,7 @@ export async function GET() {
         });
 
         // ✅ Lazy creation: Si la conexión ACTUAL no tiene registro, lo creamos usando su token único
-        const { getSessionHash } = await import("@/lib/sessionHash");
+        const { getSessionHash } = await import("@/lib/security/session-hash");
         const currentUserId = parseInt(auth.user.sub);
         const currentSessionToken = getSessionHash(auth.token);
         const currentSession = sessions.find(s => s.token === currentSessionToken);
@@ -75,8 +74,9 @@ export async function GET() {
 
 export async function DELETE(req: Request) {
     const auth = await requireAuth();
-    if (!auth.ok || auth.user.rol !== "ADMIN") {
-        return auth.res || NextResponse.json({ error: "No autorizado" }, { status: 403 });
+    if (!auth.ok) return auth.res;
+    if (auth.user.rol !== "ADMIN") {
+        return NextResponse.json({ error: "No autorizado" }, { status: 403 });
     }
 
     const { searchParams } = new URL(req.url);

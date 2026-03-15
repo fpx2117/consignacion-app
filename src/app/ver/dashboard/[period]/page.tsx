@@ -1,10 +1,8 @@
-/* eslint-disable */
-// @ts-nocheck
 "use client";
 
 // src/app/ver/dashboard/[period]/page.tsx
-import { useEffect, useState, use } from "react";
-import { Loader2, AlertCircle, BarChart3, Lock } from "lucide-react";
+import { useEffect, use } from "react";
+import { Loader2, AlertCircle, BarChart3 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useSearchParams } from "next/navigation";
 
@@ -24,15 +22,12 @@ export default function DashboardReporteLoadingPage({
     const searchParams = useSearchParams();
     const code = searchParams.get("code");
     const sucursalId = searchParams.get("sucursalId") || "1";
-    const [error, setError] = useState<string | null>(null);
+    const error = code ? null : "Acceso no autorizado o enlace inválido.";
 
     const label = PERIOD_LABELS[period] ?? period;
 
     useEffect(() => {
-        if (!code) {
-            setError("Acceso no autorizado o enlace inválido.");
-            return;
-        }
+        if (!code) return;
 
         const timer = setTimeout(() => {
             window.location.replace(`/ver/dashboard/${period}/pdf?code=${code}&sucursalId=${sucursalId}`);

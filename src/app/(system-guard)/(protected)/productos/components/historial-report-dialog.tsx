@@ -1,5 +1,3 @@
-/* eslint-disable */
-// @ts-nocheck
 import React from 'react';
 import { Calendar, History, Loader2, X } from 'lucide-react'; 
 import { toast } from 'sonner';
@@ -37,9 +35,9 @@ export function HistoryReportDialog() {
         if (mounted) {
           const sortedYears = years.sort((a, b) => b - a);
           setAvailableYears(sortedYears);
-          if (sortedYears.length > 0 && !sortedYears.includes(selectedAnio)) {
-            setSelectedAnio(sortedYears[0]);
-          }
+          setSelectedAnio((current) => (
+            sortedYears.length > 0 && !sortedYears.includes(current) ? sortedYears[0] : current
+          ));
         }
       } catch (error) {
         console.error("Error cargando años", error);
@@ -50,7 +48,7 @@ export function HistoryReportDialog() {
     };
     fetchYears();
     return () => { mounted = false; };
-  }, []); 
+  }, []);
 
   const handleGenerate = async () => {
     setIsPreparing(true);

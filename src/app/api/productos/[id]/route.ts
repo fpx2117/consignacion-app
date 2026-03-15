@@ -1,20 +1,28 @@
-/* eslint-disable */
-// @ts-nocheck
 // src/app/api/productos/[id]/route.ts
 
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireAuth, requireRole } from "@/lib/requireAuth";
-import { updateProductoSchema } from "@/lib/validators/producto";
+import { Prisma, TipoMovimientoStock, MotivoMovimientoStock } from "@prisma/client";
+import { requireAuth, requireRole } from "@/lib/auth/require-auth";
+import { updateProductoSchema, type UpdateProductoInput } from "@/lib/validators/producto";
 import { deleteFileSystemImage } from "@/lib/file-utils";
 
 // Imports del Sistema de Notificaciones
-import { sendNotification } from "@/lib/socket-trigger";
-import { NOTIFICATION_TYPE } from "@/lib/notificationes/notificaciones-types";
+import { sendNotification } from "@/lib/notificaciones/socket-trigger";
+import { NOTIFICATION_TYPE } from "@/lib/notificaciones/types";
 import { obtenerConfiguracionGlobal } from "@/lib/config";
 import { canAccessSucursalResource, isGlobalSucursalView } from "@/lib/sucursalScope";
 
 type RouteParams = { params: Promise<{ id: string }> };
+
+type ProductoUpdateBody = UpdateProductoInput & {
+  subcategoriaId?: number | null;
+  movimientoInfo?: {
+    tipo: TipoMovimientoStock;
+    motivo: MotivoMovimientoStock;
+    observaciones?: string | null;
+  };
+};
 
 /**
  * GET: Obtener un producto por ID
@@ -31,8 +39,8 @@ export async function GET(_: Request, { params }: RouteParams) {
 
     if (isNaN(id)) return NextResponse.json({ error: "ID inválido" }, { status: 400 });
 
-    const producto = await prisma.producto.findUnique({
-      where: { id },
+    const producto = await prisma.producto.findFirst({
+      where: isGlobal ? { id } : { id, sucursalId },
       include: {
         categoria: true,
         subcategoria: true, // Incluimos subcategoría
@@ -93,7 +101,11 @@ export async function PUT(req: Request, { params }: RouteParams) {
 
   if (isNaN(id)) return NextResponse.json({ error: "ID inválido" }, { status: 400 });
 
-  const body = await req.json().catch(() => null);
+  const body = (await req.json().catch(() => null)) as ProductoUpdateBody | null;
+
+  if (!body || typeof body !== "object") {
+    return NextResponse.json({ error: "Body inválido" }, { status: 400 });
+  }
 
   // Extraemos movimientoInfo si viene del AjustarStockDialog
   const { movimientoInfo, ...restOfBody } = body;
@@ -108,7 +120,7 @@ export async function PUT(req: Request, { params }: RouteParams) {
   }
 
   try {
-    const configGlobal = await obtenerConfiguracionGlobal();
+    const configGlobal = await obtenerConfiguracionGlobal(auth.activeSucursalId);
 
     // --- TRANSACCIÓN PARA ACTUALIZAR Y REGISTRAR MOVIMIENTO ---
     const updated = await prisma.$transaction(async (tx) => {
@@ -117,7 +129,7 @@ export async function PUT(req: Request, { params }: RouteParams) {
         where: { productoId_sucursalId: { productoId: id, sucursalId } },
       });
 
-      const anteriorProducto = await tx.producto.findUnique({
+      const anteriorProducto = await tx.producto.findFirst({
         where: { id, sucursalId },
         select: { imagenUrl: true }
       });
@@ -126,7 +138,7 @@ export async function PUT(req: Request, { params }: RouteParams) {
 
       // 2. Ejecutar la actualización del producto (datos base)
       const productoUpdate = await tx.producto.update({
-        where: { id, sucursalId },
+        where: { id },
         data: {
           ...parsed.data,
           subcategoriaId: body.subcategoriaId !== undefined ? body.subcategoriaId : undefined,
@@ -216,8 +228,8 @@ export async function PUT(req: Request, { params }: RouteParams) {
 
     return NextResponse.json({ data: updated });
 
-  } catch (error: any) {
-    if (error.code === 'P2002') {
+  } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
       return NextResponse.json(
         { error: "El código de barras o SKU ya está en uso por otro producto." },
         { status: 400 }
@@ -243,13 +255,17 @@ export async function DELETE(_: Request, { params }: RouteParams) {
   const id = Number(rawId);
 
   try {
-    const oldProduct = await prisma.producto.findUnique({
+    const oldProduct = await prisma.producto.findFirst({
       where: { id, sucursalId: auth.activeSucursalId },
       select: { imagenUrl: true }
     });
 
+    if (!oldProduct) {
+      return NextResponse.json({ error: "Producto no encontrado" }, { status: 404 });
+    }
+
     await prisma.producto.update({
-      where: { id, sucursalId: auth.activeSucursalId },
+      where: { id },
       data: { activo: false }
     });
 

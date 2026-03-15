@@ -1,16 +1,42 @@
-﻿/* eslint-disable */
-// @ts-nocheck
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireAuth } from "@/lib/requireAuth";
+import { requireAuth } from "@/lib/auth/require-auth";
 import { createConsignacionSchema } from "@/lib/validators/consignacion";
-import { TipoMovimientoStock, MotivoMovimientoStock } from "@prisma/client";
-import { checkFeature } from "@/lib/requireSubscription";
+import {
+  EstadoConsignacion,
+  MotivoMovimientoStock,
+  Prisma,
+  TipoMovimientoStock,
+} from "@prisma/client";
+import { checkFeature } from "@/lib/subscriptions/require-subscription";
 import { buildSucursalWhere, isGlobalSucursalView } from "@/lib/sucursalScope";
 
 // âœ… Imports Centralizados de Config y Notificaciones
 import { obtenerConfiguracionGlobal } from "@/lib/config";
-import { evaluateStockAlert, processNotificationQueue } from "@/lib/stock-alerts";
+import { evaluateStockAlert, processNotificationQueue } from "@/lib/notificaciones/stock-alerts";
+
+type NotificationQueueItem = NonNullable<ReturnType<typeof evaluateStockAlert>>;
+type StockSucursalWithProducto = Prisma.StockSucursalGetPayload<{
+  include: { producto: true };
+}>;
+
+const consignacionInclude = Prisma.validator<Prisma.ConsignacionInclude>()({
+  cliente: true,
+  detalles: { include: { producto: true } },
+  _count: { select: { detalles: true } },
+});
+
+function parseEstadoConsignacion(value: string): EstadoConsignacion | null {
+  if (value === EstadoConsignacion.ABIERTA || value === EstadoConsignacion.CERRADA) {
+    return value;
+  }
+
+  return null;
+}
+
+function getErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : "";
+}
 
 // GET: Listar consignaciones
 export async function GET(req: Request) {
@@ -31,8 +57,15 @@ export async function GET(req: Request) {
   const skip = (page - 1) * limit;
 
   // Construcción del where con filtros
-  const where: any = { ...sucursalWhere };
-  if (estado) where.estado = estado;
+  const where: Prisma.ConsignacionWhereInput = { ...sucursalWhere };
+  if (estado) {
+    const estadoNormalizado = parseEstadoConsignacion(estado.toUpperCase());
+    if (!estadoNormalizado) {
+      return NextResponse.json({ error: "Estado inválido" }, { status: 400 });
+    }
+
+    where.estado = estadoNormalizado;
+  }
   if (search) {
     where.OR = [
       { cliente: { nombre: { contains: search, mode: "insensitive" } } },
@@ -43,18 +76,12 @@ export async function GET(req: Request) {
     ];
   }
 
-  const include = {
-    cliente: true,
-    detalles: { include: { producto: true } },
-    _count: { select: { detalles: true } },
-  };
-
   if (!isPaginated) {
     // Sin paginación → comportamiento original
     const consignaciones = await prisma.consignacion.findMany({
       where,
       orderBy: { id: "desc" },
-      include,
+      include: consignacionInclude,
     });
     return NextResponse.json({ data: consignaciones }, {
       headers: {
@@ -71,7 +98,7 @@ export async function GET(req: Request) {
       orderBy: { id: "desc" },
       skip,
       take: limit,
-      include,
+      include: consignacionInclude,
     }),
   ]);
 
@@ -116,7 +143,7 @@ export async function POST(req: Request) {
 
   // âœ… 1. Preparar ConfiguraciÃ³n y Cola de Notificaciones
   const configGlobal = await obtenerConfiguracionGlobal(auth.activeSucursalId);
-  const notificationsQueue: any[] = [];
+  const notificationsQueue: NotificationQueueItem[] = [];
 
   const porcentaje = configGlobal.porcentajeAumentoConsignacion || 0;
   const factorAumento = 1 + (porcentaje / 100);
@@ -150,7 +177,9 @@ export async function POST(req: Request) {
         include: { producto: true }
       });
 
-      const mapStock = new Map(stocksSucursal.map((s) => [s.productoId, s]));
+      const mapStock = new Map<number, StockSucursalWithProducto>(
+        stocksSucursal.map((stock) => [stock.productoId, stock])
+      );
 
       for (const it of parsed.data.items) {
         const s = mapStock.get(it.productoId);
@@ -228,13 +257,19 @@ export async function POST(req: Request) {
       }
 
       // Devolver la consignaciÃ³n completa con sus relaciones (opcional, como lo tenÃ­as)
-      return await tx.consignacion.findUnique({
+      const consignacionCompleta = await tx.consignacion.findUnique({
         where: { id: consignacion.id },
         include: {
           cliente: true,
           detalles: { include: { producto: true } },
         },
       });
+
+      if (!consignacionCompleta) {
+        throw new Error("CONSIGNACION_NO_EXISTE");
+      }
+
+      return consignacionCompleta;
     });
 
     // âœ… 6. DISPARAR NOTIFICACIONES DE STOCK (Centralizado y fuera de la transacciÃ³n)
@@ -242,15 +277,15 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ data: result }, { status: 201 });
 
-  } catch (e: any) {
-    const msg = String(e?.message || "");
+  } catch (error) {
+    const msg = getErrorMessage(error);
 
     if (msg === "CLIENTE_NO_EXISTE") {
       return NextResponse.json({ error: "Cliente no encontrado" }, { status: 404 });
     }
-    if (msg.startsWith("PRODUCTO_NO_EXISTE:")) {
+    if (msg.startsWith("PRODUCTO_NO_ASIGNADO_SUCURSAL:")) {
       return NextResponse.json(
-        { error: "Producto no encontrado", productoId: Number(msg.split(":")[1]) },
+        { error: "Producto no asignado a la sucursal", productoId: Number(msg.split(":")[1]) },
         { status: 404 }
       );
     }
@@ -261,7 +296,7 @@ export async function POST(req: Request) {
       );
     }
 
-    console.error("Consignaciones POST error:", e);
+    console.error("Consignaciones POST error:", error);
     return NextResponse.json({ error: "Error inesperado" }, { status: 500 });
   }
 }

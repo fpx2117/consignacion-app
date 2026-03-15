@@ -1,5 +1,3 @@
-/* eslint-disable */
-// @ts-nocheck
 "use client";
 
 import * as React from "react";
@@ -29,7 +27,7 @@ import {
 
 import {
   Handshake, AlertTriangle, Boxes, Wallet,
-  TrendingUp, Activity, Truck, Store,
+  TrendingUp, Activity, Store,
   Calendar, Receipt, Settings2, GripVertical, RotateCcw, BarChart3, Check, X, Shield
 } from "lucide-react";
 import {
@@ -41,6 +39,8 @@ import {
   TouchSensor,
   useSensor,
   useSensors,
+  type DragStartEvent,
+  type DragEndEvent,
 } from "@dnd-kit/core";
 import {
   SortableContext,
@@ -137,11 +137,11 @@ function SortableKpiGrid({
     [activeId, items]
   );
 
-  const handleDragStart = React.useCallback((event: any) => {
+  const handleDragStart = React.useCallback((event: DragStartEvent) => {
     setActiveId(String(event.active.id));
   }, []);
 
-  const handleDragEnd = React.useCallback((event: any) => {
+  const handleDragEnd = React.useCallback((event: DragEndEvent) => {
     const { active, over } = event;
     setActiveId(null);
     if (!over || active.id === over.id) return;
@@ -244,6 +244,8 @@ export default function DashboardPage() {
   });
   const [prefsLoaded, setPrefsLoaded] = React.useState(false);
   const { kpis, consig, top, trend, loading, error, refresh } = useDashboard(period);
+  const ventasStats = kpis?.finanzas?.ventas as { total?: number; soloVenta?: number; soloConsig?: number } | undefined;
+  const pagosStats = kpis?.finanzas?.pagos as { total?: number; soloVenta?: number; soloDeuda?: number } | undefined;
 
   const storageKey = React.useMemo(() => {
     const suffix = activeSucursalId ?? "global";
@@ -296,19 +298,13 @@ export default function DashboardPage() {
   const gananciaConsig = kpis?.finanzas?.ganancia?.porConsignacion ?? 0;
   const gananciaPOS = kpis?.finanzas?.ganancia?.porVentaDirecta ?? 0;
 
-  const pctConsig = gananciaTotal > 0 ? Math.round((gananciaConsig / gananciaTotal) * 100) : 0;
-  const pctPOS = gananciaTotal > 0 ? Math.round((gananciaPOS / gananciaTotal) * 100) : 0;
-
   // Ganancia mostrada según filtro
   let displayedGanancia = gananciaTotal;
-  let displayedGananciaLabel = "Ganancia Neta";
 
   if (filter === "consignacion") {
     displayedGanancia = gananciaConsig;
-    displayedGananciaLabel = "Ganancia (Consignación)";
   } else if (filter === "pos") {
     displayedGanancia = gananciaPOS;
-    displayedGananciaLabel = "Ganancia (Ventas Directas)";
   }
 
   // --- KPIs OPERATIVOS (array filtrado) ---
@@ -421,17 +417,17 @@ export default function DashboardPage() {
 
     if (usesCashControl) {
       // UNIFICADO: MOVIMIENTO TOTAL (Ingresos vs Facturación)
-      let displayedVentas = kpis?.finanzas?.ventas?.total ?? 0;
-      let displayedPagos = kpis?.finanzas?.pagos?.total ?? 0;
+      let displayedVentas = ventasStats?.total ?? 0;
+      let displayedPagos = pagosStats?.total ?? 0;
       let titleSuffix = "";
 
       if (filter === "pos") {
-        displayedVentas = kpis?.finanzas?.ventas?.soloVenta ?? 0;
-        displayedPagos = kpis?.finanzas?.pagos?.soloVenta ?? 0;
+        displayedVentas = ventasStats?.soloVenta ?? 0;
+        displayedPagos = pagosStats?.soloVenta ?? 0;
         titleSuffix = " (POS)";
       } else if (filter === "consignacion") {
-        displayedVentas = kpis?.finanzas?.ventas?.soloConsig ?? 0;
-        displayedPagos = kpis?.finanzas?.pagos?.soloDeuda ?? 0;
+        displayedVentas = ventasStats?.soloConsig ?? 0;
+        displayedPagos = pagosStats?.soloDeuda ?? 0;
         titleSuffix = " (Consig)";
       }
 
@@ -445,14 +441,14 @@ export default function DashboardPage() {
       });
     } else {
       // SOLO VENTAS: Cuando el control de caja está deshabilitado
-      let displayedVentas = kpis?.finanzas?.ventas?.total ?? 0;
+      let displayedVentas = ventasStats?.total ?? 0;
       let titleSuffix = "";
 
       if (filter === "pos") {
-        displayedVentas = kpis?.finanzas?.ventas?.soloVenta ?? 0;
+        displayedVentas = ventasStats?.soloVenta ?? 0;
         titleSuffix = " POS";
       } else if (filter === "consignacion") {
-        displayedVentas = kpis?.finanzas?.ventas?.soloConsig ?? 0;
+        displayedVentas = ventasStats?.soloConsig ?? 0;
         titleSuffix = " Consignación";
       }
 
@@ -467,7 +463,7 @@ export default function DashboardPage() {
     }
 
     return items;
-  }, [kpis, filter, loading, displayedGanancia, maskMoney]);
+  }, [kpis, filter, loading, displayedGanancia, maskMoney, ventasStats, pagosStats]);
 
   const allVisibleKpis = React.useMemo(
     () => [...operativeKpis, ...financeKpis],
@@ -742,7 +738,7 @@ export default function DashboardPage() {
                   </div>
                 </CardHeader>
                 <CardContent className="pt-4 space-y-3">
-                  {kpis?.proximosVencimientos.map((g: any) => (
+                  {kpis?.proximosVencimientos.map((g) => (
                     <div key={g.id} className="flex items-center justify-between p-3.5 bg-muted/30 rounded-2xl border border-transparent hover:border-[color:var(--status-warning)]/20 transition-all">
                       <div className="flex items-center gap-4">
                         <div className="h-10 w-10 rounded-xl bg-background flex items-center justify-center shadow-sm">

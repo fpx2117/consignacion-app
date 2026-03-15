@@ -1,6 +1,5 @@
-/* eslint-disable */
-// @ts-nocheck
 import * as React from "react";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -147,6 +146,7 @@ function ColorPalette({
 
 /* ─── Main Component ───────────────────────────────────────── */
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- BrandingTab tiene estado extendido que supera el contrato BrandingPreviewSettings; refactor pendiente para alinear tipos en una sola interfaz
 export function BrandingTab({ branding, setBranding, handleImageUpload }: any) {
     const [fontOpen, setFontOpen] = React.useState(false);
     const [bannerDragOver, setBannerDragOver] = React.useState(false);
@@ -202,10 +202,13 @@ export function BrandingTab({ branding, setBranding, handleImageUpload }: any) {
                             className="relative w-24 h-24 rounded-2xl border border-border/60 flex items-center justify-center overflow-hidden shrink-0 bg-muted/20 group cursor-pointer transition-shadow hover:shadow-lg"
                         >
                             {branding.logoData ? (
-                                <img
+                                <Image
                                     src={`data:${branding.logoMime};base64,${branding.logoData}`}
                                     alt="Logo"
-                                    className="w-full h-full object-contain p-2"
+                                    fill
+                                    unoptimized
+                                    sizes="96px"
+                                    className="object-contain p-2"
                                 />
                             ) : (
                                 <ImageIcon className="h-8 w-8 text-muted-foreground/25" />
@@ -289,10 +292,13 @@ export function BrandingTab({ branding, setBranding, handleImageUpload }: any) {
                                 {branding.bannerData ? (
                                     <div className="space-y-3">
                                         <div className="relative aspect-[3/1] rounded-xl overflow-hidden border border-border/40 group">
-                                            <img
+                                            <Image
                                                 src={`data:${branding.bannerMime};base64,${branding.bannerData}`}
                                                 alt="Banner"
-                                                className="w-full h-full object-cover"
+                                                fill
+                                                unoptimized
+                                                sizes="(max-width: 768px) 100vw, 50vw"
+                                                className="object-cover"
                                             />
                                             <div className="absolute inset-0 bg-foreground/0 group-hover:bg-foreground/30 transition-colors duration-200 flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100">
                                                 <Button
@@ -393,10 +399,13 @@ export function BrandingTab({ branding, setBranding, handleImageUpload }: any) {
                                 <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                                     {(branding.banners || []).map((slide: any, index: number) => (
                                         <div key={index} className="relative aspect-[3/1] rounded-xl overflow-hidden group border border-border/40">
-                                            <img
+                                            <Image
                                                 src={`data:${slide.bannerMime};base64,${slide.bannerData}`}
                                                 alt={`Slide ${index + 1}`}
-                                                className="w-full h-full object-cover"
+                                                fill
+                                                unoptimized
+                                                sizes="(max-width: 768px) 50vw, 33vw"
+                                                className="object-cover"
                                             />
                                             {/* Overlay on hover */}
                                             <div className="absolute inset-0 bg-foreground/0 group-hover:bg-foreground/40 transition-colors duration-200">

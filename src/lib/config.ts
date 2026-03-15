@@ -40,7 +40,23 @@ export async function obtenerConfiguracionGlobal(sucursalId: number = 1) {
       notificarConsignacionesActivas: true,
       diasAvisoConsignacion: 15,
       usarControlDeCaja: true,
-      porcentajeAumentoConsignacion: 0
+      mensajeWhatsappConsignacion: null,
+      mensajeWhatsappVenta: null,
+      porcentajeAumentoConsignacion: 0,
+      mostrarPreciosConsignacion: false,
+      porcentajeInteresTarjeta: 0,
+      convertirTienda: false,
+      mostrarListaPrecios: false,
+      mpAccessTokenTienda: null,
+      mpPublicKeyTienda: null,
+      separarListaPorSucursal: true,
+      mostrarCategoriasEnHeader: true,
+      tiendaLayout: "grid",
+      andreaniContratoDomicilio: null,
+      andreaniContratoSucursal: null,
+      andreaniCliente: null,
+      andreaniUsuario: null,
+      andreaniPassword: null,
     };
   }
 }

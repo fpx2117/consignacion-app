@@ -1,7 +1,6 @@
-/* eslint-disable */
-// @ts-nocheck
 "use client";
 
+import Image from "next/image";
 import { PackageOpen } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getThemeStyles } from "../lib/theme-utils";
@@ -12,7 +11,7 @@ interface StoreHeaderProps {
     onOpenCart: () => void;
 }
 
-export function StoreHeader({ config, cartCount, onOpenCart }: StoreHeaderProps) {
+export function StoreHeader({ config, cartCount: _cartCount, onOpenCart: _onOpenCart }: StoreHeaderProps) {
     const { theme, radiusClass, headerBgClass } = getThemeStyles(config.themeIdentifier);
     const logoSrc = config.logoUrl || (config.logoData ? `data:${config.logoMime};base64,${config.logoData}` : null);
 
@@ -27,11 +26,12 @@ export function StoreHeader({ config, cartCount, onOpenCart }: StoreHeaderProps)
                 {/* Logo y Nombre */}
                 <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 max-w-[75vw] sm:max-w-none">
                     {logoSrc ? (
-                        <img
+                        <Image
                             src={logoSrc}
                             alt={config.businessName || "Logo"}
-                            loading="eager"
-                            decoding="async"
+                            width={96}
+                            height={40}
+                            unoptimized
                             className={cn(
                                 "h-9 sm:h-10 w-auto max-w-24 object-contain shrink-0",
                                 radiusClass,

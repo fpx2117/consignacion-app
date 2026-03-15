@@ -1,6 +1,4 @@
-/* eslint-disable */
-// @ts-nocheck
-import { NOTIFICATION_TYPE } from "@/lib/notificationes/notificaciones-types";
+import { NOTIFICATION_TYPE } from "@/lib/notificaciones/types";
 
 interface NotificationPayload {
   id?: number;

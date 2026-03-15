@@ -1,5 +1,3 @@
-/* eslint-disable */
-// @ts-nocheck
 import * as React from "react";
 import type {
   DashboardPeriod, DashboardKpis, DashboardConsignacionesResponse,
@@ -40,8 +38,8 @@ export function useDashboard(period: DashboardPeriod) {
       }
 
       setData({ kpis: k, consig: c, top: t, trend: trData });
-    } catch (e: any) {
-      setError(e?.message ?? "Error cargando dashboard");
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Error cargando dashboard");
     } finally {
       setLoading(false);
     }

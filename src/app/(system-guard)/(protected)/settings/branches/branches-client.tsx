@@ -1,9 +1,7 @@
-/* eslint-disable */
-// @ts-nocheck
 "use client";
 
 import { useEffect, useState } from "react";
-import { Plus, Store, Navigation, BriefcaseBusiness, Check, X, Pencil, Trash2 } from "lucide-react";
+import { Plus, Store, Navigation, BriefcaseBusiness, Check, Pencil, Trash2 } from "lucide-react";
 
 import { apiService } from "@/lib/apiService";
 import { Button } from "@/components/ui/button";
@@ -21,13 +19,11 @@ import {
     DialogFooter
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
+import type { Sucursal } from "@/store/useSucursalStore";
 
-type Sucursal = {
-    id: number;
-    nombre: string;
-    esPrincipal: boolean;
-    activa: boolean;
-};
+function getErrorMessage(error: unknown, fallback: string) {
+    return error instanceof Error ? error.message : fallback;
+}
 
 export default function BranchesClient() {
     const [branches, setBranches] = useState<Sucursal[]>([]);
@@ -52,15 +48,15 @@ export default function BranchesClient() {
             setLoading(true);
             const data = await apiService.getSucursales();
             setBranches(data);
-        } catch (e: any) {
-            toast.error(e.message || "Error al cargar sucursales");
+        } catch (error) {
+            toast.error(getErrorMessage(error, "Error al cargar sucursales"));
         } finally {
             setLoading(false);
         }
     };
 
     useEffect(() => {
-        fetchBranches();
+        void fetchBranches();
     }, []);
 
     const openNewModal = () => {
@@ -90,8 +86,8 @@ export default function BranchesClient() {
             }
             setIsModalOpen(false);
             fetchBranches();
-        } catch (e: any) {
-            toast.error(e.message || "Error al guardar");
+        } catch (error) {
+            toast.error(getErrorMessage(error, "Error al guardar"));
         } finally {
             setSubmitting(false);
         }
@@ -109,9 +105,9 @@ export default function BranchesClient() {
             await apiService.deleteSucursal(branchToDelete.id);
             toast.success("Sucursal eliminada correctamente.");
             setIsDeleteModalOpen(false);
-            fetchBranches();
-        } catch (e: any) {
-            toast.error(e.message || "Error al eliminar");
+            void fetchBranches();
+        } catch (error) {
+            toast.error(getErrorMessage(error, "Error al eliminar"));
         } finally {
             setDeleting(false);
             setBranchToDelete(null);

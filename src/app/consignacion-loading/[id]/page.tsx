@@ -1,5 +1,3 @@
-/* eslint-disable */
-// @ts-nocheck
 "use client";
 
 import { useEffect, useState, use } from "react";
@@ -16,7 +14,8 @@ export default function ConsignacionLoadingPage(props: { params: Params, searchP
   const { id } = use(props.params);
   const searchParams = use(props.searchParams);
 
-  const mode = searchParams.mode as "view" | "whatsapp" || "view";
+  const rawMode = searchParams.mode;
+  const mode: "view" | "whatsapp" = rawMode === "whatsapp" ? "whatsapp" : "view";
   const phone = searchParams.phone as string | undefined;
   const name = searchParams.name as string | undefined;
 
@@ -70,9 +69,10 @@ export default function ConsignacionLoadingPage(props: { params: Params, searchP
           window.location.replace(waUrl);
         }
 
-      } catch (err: any) {
+      } catch (err) {
         if (mounted) {
-          setError(err.message || "No se pudo procesar la solicitud.");
+          const message = err instanceof Error ? err.message : "No se pudo procesar la solicitud.";
+          setError(message);
         }
       }
     };

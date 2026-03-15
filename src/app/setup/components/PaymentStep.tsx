@@ -1,9 +1,7 @@
-/* eslint-disable */
-// @ts-nocheck
 "use client";
 
 import { motion } from "motion/react";
-import { CreditCard, CheckCircle2, Loader2, Tag, ArrowRight, ExternalLink, Zap } from "lucide-react";
+import { CreditCard, CheckCircle2, Loader2, Tag, ExternalLink, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -30,6 +28,83 @@ export function PaymentStep({ plan, onPaymentSuccess, loading }: PaymentStepProp
     const calculatedPrice = Math.round(plan.precioUSD * (rate || 1200));
     const finalPrice = promoApplied?.discountPercentage === 100 ? 0 : calculatedPrice;
     const activePlanName = promoApplied?.planName || plan.nombre;
+
+    const handleApplyPromo = async () => {
+        if (!promoCode) return;
+        setIsValidatingPromo(true);
+        try {
+            const res = await fetch("/api/setup/validate-promo", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ code: promoCode, planId: plan.id }),
+            });
+            const data = await res.json();
+
+            if (res.ok && data.valid) {
+                setPromoApplied({
+                    valid: true,
+                    discountPercentage: data.discountPercentage,
+                    planId: data.planId,
+                    planName: data.planName,
+                });
+                toast.success(`Licencia de ${data.planName} activada!`);
+                return;
+            }
+
+            setPromoApplied({ valid: false, discountPercentage: 0 });
+            toast.error(data.error || "Licencia inválida");
+        } catch {
+            toast.error("Error al validar licencia");
+        } finally {
+            setIsValidatingPromo(false);
+        }
+    };
+
+    const handlePayPalPayment = async () => {
+        setIsRedirecting(true);
+        try {
+            const res = await fetch("/api/setup/create-paypal", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ planId: plan.id }),
+            });
+            const data = await res.json();
+
+            if (res.ok && data.approveUrl) {
+                window.location.href = data.approveUrl;
+                return;
+            }
+
+            toast.error(data.error || "Error al iniciar PayPal");
+        } catch {
+            toast.error("Error de conexión");
+        } finally {
+            setIsRedirecting(false);
+        }
+    };
+
+    const handleMercadoPagoPayment = async () => {
+        setIsRedirecting(true);
+        try {
+            const res = await fetch("/api/setup/create-mp-subscription", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ planId: plan.id }),
+            });
+            const data = await res.json();
+
+            if (res.ok && data.initPoint) {
+                window.location.href = data.initPoint;
+                return;
+            }
+
+            toast.error(data.error || "Error al iniciar suscripción de Mercado Pago");
+        } catch {
+            toast.error("Error de conexión");
+        } finally {
+            setIsRedirecting(false);
+        }
+    };
 
     return (
         <motion.div

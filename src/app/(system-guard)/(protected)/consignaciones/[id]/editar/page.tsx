@@ -1,5 +1,3 @@
-/* eslint-disable */
-// @ts-nocheck
 //src/app/(protected)/consignaciones/[id]/editar/page.tsx
 "use client";
 
@@ -21,7 +19,7 @@ import {
 } from "lucide-react";
 
 import { apiService } from "@/lib/apiService";
-import type { Consignacion, Producto } from "@/lib/types";
+import type { Producto } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -80,7 +78,7 @@ export default function EditarConsignacionPage() {
 
   const [openCombobox, setOpenCombobox] = React.useState(false);
   const [selectedProdId, setSelectedProdId] = React.useState<number | "">("");
-  const [addQty, setAddQty] = React.useState(1); // lo mantenés aunque ahora no lo uses
+
 
   const [showSuccess, setShowSuccess] = React.useState(false);
   const [showHelp, setShowHelp] = React.useState(false);
@@ -105,7 +103,7 @@ export default function EditarConsignacionPage() {
       const _hasLiquidaciones = (consignacion.liquidaciones?.length ?? 0) > 0;
       setHasLiquidaciones(_hasLiquidaciones);
 
-      const mappedItems: EditableItem[] = (consignacion.detalles || []).map((d: any) => {
+      const mappedItems: EditableItem[] = (consignacion.detalles ?? []).map((d) => {
         const realProd = productos.find((p) => p.id === d.productoId);
 
         return {
@@ -126,11 +124,11 @@ export default function EditarConsignacionPage() {
       });
 
       setItems(mappedItems);
-    } catch (e: any) {
+    } catch (e: unknown) {
       setErrorDialog({
         open: true,
         title: "Error",
-        description: e?.message ?? "No se pudo cargar la consignación.",
+        description: e instanceof Error ? e.message : "No se pudo cargar la consignación.",
       });
     } finally {
       setLoading(false);
@@ -189,11 +187,11 @@ export default function EditarConsignacionPage() {
       });
 
       setShowSuccess(true);
-    } catch (e: any) {
+    } catch (e: unknown) {
       setErrorDialog({
         open: true,
         title: "Error",
-        description: e?.message ?? "No se pudieron guardar los cambios.",
+        description: e instanceof Error ? e.message : "No se pudieron guardar los cambios.",
       });
     } finally {
       setSaving(false);
@@ -392,7 +390,7 @@ export default function EditarConsignacionPage() {
                         originalEntregadas: 0,
                         originalVendidas: 0,
                         originalDevueltas: 0,
-                        stockDisponible: p.stockDisponibleUnits,
+                        stockDisponible: p.stockDisponibleUnits ?? 0,
                         isNew: true,
                       },
                     ]);

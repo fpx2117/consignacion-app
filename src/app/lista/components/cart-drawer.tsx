@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useState, useEffect } from "react";
-import { ShoppingCart, XCircle, Trash2, Info, ArrowRight, Loader2, ShieldCheck, ShoppingBag, ArrowLeft, Truck, Store } from "lucide-react";
+import { XCircle, Trash2, Info, ArrowRight, Loader2, ShieldCheck, ShoppingBag, ArrowLeft, Truck, Store } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
@@ -12,15 +12,22 @@ import { cn } from "@/lib/utils";
 import { getThemeStyles } from "../lib/theme-utils";
 import { toast } from "sonner";
 import { apiService } from "@/lib/apiService";
+import type {
+    CatalogCartItem,
+    PublicCatalogConfig,
+    PublicCheckoutCustomerData,
+    PublicCheckoutShippingData,
+    PublicShippingQuote,
+} from "@/lib/types";
 
 interface CartDrawerProps {
     isOpen: boolean;
     onClose: () => void;
-    cart: any[];
-    config: any;
+    cart: CatalogCartItem[];
+    config: PublicCatalogConfig;
     onUpdateQuantity: (id: number, delta: number) => void;
     onRemove: (id: number) => void;
-    onCheckout: (clienteData: any, envioData: any) => void;
+    onCheckout: (clienteData: PublicCheckoutCustomerData, envioData: PublicCheckoutShippingData) => void;
     loading: boolean;
 }
 
@@ -33,7 +40,7 @@ export function CartDrawer({
     const [step, setStep] = useState(1);
 
     // Estado del Formulario
-    const [clienteData, setClienteData] = useState({
+    const [clienteData, setClienteData] = useState<PublicCheckoutCustomerData>({
         nombre: "",
         email: "",
         documento: "",
@@ -52,7 +59,7 @@ export function CartDrawer({
         costo: 0,
     });
 
-    const [tarifas, setTarifas] = useState<{ domicilio: number, sucursal: number } | null>(null);
+    const [tarifas, setTarifas] = useState<PublicShippingQuote | null>(null);
     const [cotizando, setCotizando] = useState(false);
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -69,7 +76,7 @@ export function CartDrawer({
     }, [isOpen]);
 
     const subtotalProductos = cart.reduce((a, b) => a + (Number(b.precioVenta) * b.quantity), 0);
-    const interest = config.convertirTienda ? (subtotalProductos * (config.porcentajeInteresTarjeta / 100)) : 0;
+    const interest = config.convertirTienda ? (subtotalProductos * ((config.porcentajeInteresTarjeta ?? 0) / 100)) : 0;
     const totalParcial = subtotalProductos + interest;
     const totalFinal = totalParcial + (envioData.costo || 0);
 
@@ -99,14 +106,13 @@ export function CartDrawer({
         try {
             const res = await apiService.cotizarEnvioPublico({
                 sucursalId: config.sucursalId,
-                codigoPostal: clienteData.codigoPostal,
+                codigoPostal: clienteData.codigoPostal ?? "",
                 subtotal: totalParcial,
             });
-            if (res.data) {
-                setTarifas(res.data);
-            }
-        } catch (error: any) {
-            toast.error(error.message || "Error al cotizar envío. Revisa tu CP.");
+            setTarifas(res);
+        } catch (error: unknown) {
+            const message = error instanceof Error ? error.message : "Error al cotizar envío. Revisa tu CP.";
+            toast.error(message);
         } finally {
             setCotizando(false);
         }
@@ -242,7 +248,7 @@ export function CartDrawer({
                                         </div>
                                         <div className="space-y-1">
                                             <Label>DNI / CUIT</Label>
-                                            <Input name="documento" value={clienteData.documento} onChange={handleInputChange} placeholder="Sin puntos" />
+                                            <Input name="documento" value={clienteData.documento ?? ""} onChange={handleInputChange} placeholder="Sin puntos" />
                                         </div>
                                     </div>
                                     <div className="space-y-1">
@@ -251,7 +257,7 @@ export function CartDrawer({
                                     </div>
                                     <div className="space-y-1">
                                         <Label>Teléfono</Label>
-                                        <Input name="telefono" value={clienteData.telefono} onChange={handleInputChange} placeholder="11 1234 5678" />
+                                            <Input name="telefono" value={clienteData.telefono ?? ""} onChange={handleInputChange} placeholder="11 1234 5678" />
                                     </div>
 
                                     <div className="pt-2 border-t border-border/70">
@@ -259,21 +265,21 @@ export function CartDrawer({
                                     </div>
                                     <div className="space-y-1">
                                         <Label>Provincia</Label>
-                                        <Input name="provincia" value={clienteData.provincia} onChange={handleInputChange} placeholder="Ej. Buenos Aires" />
+                                        <Input name="provincia" value={clienteData.provincia ?? ""} onChange={handleInputChange} placeholder="Ej. Buenos Aires" />
                                     </div>
                                     <div className="grid grid-cols-2 gap-4">
                                         <div className="space-y-1">
                                             <Label>Localidad</Label>
-                                            <Input name="localidad" value={clienteData.localidad} onChange={handleInputChange} placeholder="Ej. CABA" />
+                                            <Input name="localidad" value={clienteData.localidad ?? ""} onChange={handleInputChange} placeholder="Ej. CABA" />
                                         </div>
                                         <div className="space-y-1">
                                             <Label>Código Postal *</Label>
-                                            <Input name="codigoPostal" value={clienteData.codigoPostal} onChange={handleInputChange} placeholder="1000" />
+                                            <Input name="codigoPostal" value={clienteData.codigoPostal ?? ""} onChange={handleInputChange} placeholder="1000" />
                                         </div>
                                     </div>
                                     <div className="space-y-1">
                                         <Label>Calle y Número *</Label>
-                                        <Input name="direccion" value={clienteData.direccion} onChange={handleInputChange} placeholder="Av. Siempre Viva 123, Piso 1" />
+                                        <Input name="direccion" value={clienteData.direccion ?? ""} onChange={handleInputChange} placeholder="Av. Siempre Viva 123, Piso 1" />
                                     </div>
                                 </motion.div>
                             )}

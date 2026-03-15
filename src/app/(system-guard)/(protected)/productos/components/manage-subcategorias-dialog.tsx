@@ -1,18 +1,14 @@
-/* eslint-disable */
-// @ts-nocheck
 "use client";
 
 import * as React from "react";
 import { toast } from "sonner";
 import { apiService } from "@/lib/apiService";
-import { cn } from "@/lib/utils";
-import { Loader2, Plus, Pencil, Trash2, Tag, ChevronLeft, BadgePercent } from "lucide-react";
+import { Loader2, Plus, Pencil, Trash2, Tag, ChevronLeft } from "lucide-react";
 import { DiscountTiersInline } from "./discount-tiers-inline";
 import type { DescuentoNivel } from "@/lib/types";
 import {
     Dialog,
     DialogContent,
-    DialogHeader,
     DialogTitle,
 } from "@/components/ui/dialog";
 import {
@@ -39,7 +35,7 @@ interface Props {
 
 export function ManageSubcategoriasDialog({ categoriaId, categoriaNombre, open, onOpenChange, onUpdated }: Props) {
     const [loading, setLoading] = React.useState(false);
-    const [subcategorias, setSubcategorias] = React.useState<any[]>([]);
+    const [subcategorias, setSubcategorias] = React.useState<import("@/lib/types").Subcategoria[]>([]);
     const [mode, setMode] = React.useState<"list" | "create" | "edit">("list");
 
     const [currentId, setCurrentId] = React.useState<number | null>(null);
@@ -49,14 +45,7 @@ export function ManageSubcategoriasDialog({ categoriaId, categoriaNombre, open, 
     const [deleteConfirmOpen, setDeleteConfirmOpen] = React.useState(false);
     const [subToDelete, setSubToDelete] = React.useState<number | null>(null);
 
-    React.useEffect(() => {
-        if (open && categoriaId) {
-            loadSubcategorias();
-            setMode("list");
-        }
-    }, [open, categoriaId]);
-
-    async function loadSubcategorias() {
+    const loadSubcategorias = React.useCallback(async () => {
         setLoading(true);
         try {
             const data = await apiService.getSubcategorias(categoriaId);
@@ -66,7 +55,14 @@ export function ManageSubcategoriasDialog({ categoriaId, categoriaNombre, open, 
         } finally {
             setLoading(false);
         }
-    }
+    }, [categoriaId]);
+
+    React.useEffect(() => {
+        if (open && categoriaId) {
+            void loadSubcategorias();
+            setMode("list");
+        }
+    }, [open, categoriaId, loadSubcategorias]);
 
     function resetForm() {
         setNombre("");
@@ -96,7 +92,7 @@ export function ManageSubcategoriasDialog({ categoriaId, categoriaNombre, open, 
             await loadSubcategorias();
             setMode("list");
             onUpdated?.();
-        } catch (error) {
+        } catch {
             toast.error("Error al guardar subcategoría");
         } finally {
             setSaving(false);

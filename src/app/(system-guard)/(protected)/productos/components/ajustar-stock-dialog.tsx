@@ -1,9 +1,7 @@
-/* eslint-disable */
-// @ts-nocheck
 "use client";
 
 import * as React from "react";
-import { Producto } from "@/lib/types";
+import { MotivoMovimientoStock, Producto, TipoMovimientoStock } from "@/lib/types";
 import { apiService } from "@/lib/apiService";
 import {
   Dialog,
@@ -31,7 +29,7 @@ import {
   AlertTriangle,
   PackagePlus,
   TrendingDown,
-  ClipboardPen
+  ClipboardPen,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -44,12 +42,29 @@ interface Props {
 
 type TipoMovimiento = "entrada" | "salida";
 
+const ENTRY_REASONS = [
+  { value: MotivoMovimientoStock.COMPRA, label: "Compra" },
+  { value: MotivoMovimientoStock.DEVOLUCION_CLIENTE, label: "Devolución" },
+  { value: MotivoMovimientoStock.AJUSTE_POSITIVO, label: "Ajuste Manual" },
+] as const;
+
+const EXIT_REASONS = [
+  { value: MotivoMovimientoStock.ROTURA, label: "Rotura / Daño" },
+  { value: MotivoMovimientoStock.VENCIMIENTO, label: "Vencido" },
+  { value: MotivoMovimientoStock.PERDIDA, label: "Pérdida" },
+  { value: MotivoMovimientoStock.AJUSTE_NEGATIVO, label: "Ajuste Manual" },
+] as const;
+
+function getErrorMessage(error: unknown, fallback: string) {
+  return error instanceof Error ? error.message : fallback;
+}
+
 export function AjustarStockDialog({ producto, onUpdated, trigger }: Props) {
   const [open, setOpen] = React.useState(false);
   const [cantidad, setCantidad] = React.useState<number>(0);
   const [loading, setLoading] = React.useState(false);
   const [tipo, setTipo] = React.useState<TipoMovimiento>("entrada");
-  const [motivo, setMotivo] = React.useState<string>("COMPRA");
+  const [motivo, setMotivo] = React.useState<MotivoMovimientoStock>(MotivoMovimientoStock.COMPRA);
   const [notas, setNotas] = React.useState("");
 
   // Limpiar formulario al cerrar
@@ -57,7 +72,7 @@ export function AjustarStockDialog({ producto, onUpdated, trigger }: Props) {
     if (!open) {
       setCantidad(0);
       setTipo("entrada");
-      setMotivo("COMPRA");
+      setMotivo(MotivoMovimientoStock.COMPRA);
       setNotas("");
     }
   }, [open]);
@@ -75,14 +90,13 @@ export function AjustarStockDialog({ producto, onUpdated, trigger }: Props) {
     setLoading(true);
 
     try {
-      // El payload ahora incluye los datos para el historial (MovimientoStock)
       const payload = {
         stockDisponibleUnits: stockFinal,
         movimientoInfo: {
-          tipo: tipo.toUpperCase(), // ENTRADA o SALIDA
-          motivo: motivo, // Ya viene en Mayúsculas del Select
-          observaciones: notas || `Ajuste manual: ${motivo.toLowerCase().replace('_', ' ')}`
-        }
+          tipo: tipo === "entrada" ? TipoMovimientoStock.ENTRADA : TipoMovimientoStock.SALIDA,
+          motivo,
+          observaciones: notas || `Ajuste manual: ${motivo.toLowerCase().replace(/_/g, " ")}`,
+        },
       };
 
       await apiService.updateProducto(producto.id, payload);
@@ -90,8 +104,8 @@ export function AjustarStockDialog({ producto, onUpdated, trigger }: Props) {
       toast.success(`Stock actualizado: ${producto.stockDisponibleUnits} → ${stockFinal}`);
       onUpdated();
       setOpen(false);
-    } catch (e) {
-      toast.error("No se pudo procesar el movimiento");
+    } catch (error) {
+      toast.error(getErrorMessage(error, "No se pudo procesar el movimiento"));
     } finally {
       setLoading(false);
     }
@@ -146,9 +160,10 @@ export function AjustarStockDialog({ producto, onUpdated, trigger }: Props) {
               <Label className="text-[10px] uppercase font-bold opacity-70 ml-1">Operación</Label>
               <Select
                 value={tipo}
-                onValueChange={(val: TipoMovimiento) => {
-                  setTipo(val);
-                  setMotivo(val === "entrada" ? "COMPRA" : "ROTURA");
+                onValueChange={(value) => {
+                  const nextTipo = value as TipoMovimiento;
+                  setTipo(nextTipo);
+                  setMotivo(nextTipo === "entrada" ? MotivoMovimientoStock.COMPRA : MotivoMovimientoStock.ROTURA);
                 }}
               >
                 <SelectTrigger className="h-11 rounded-xl bg-muted/30 border-transparent focus:ring-primary/20 font-medium">
@@ -161,26 +176,24 @@ export function AjustarStockDialog({ producto, onUpdated, trigger }: Props) {
               </Select>
             </div>
 
-            {/* MOTIVO (Mapeado a Enums de Prisma) */}
-            <div className="space-y-2">
-              <Label className="text-[10px] uppercase font-bold opacity-70 ml-1">Motivo</Label>
-              <Select value={motivo} onValueChange={setMotivo}>
+              <div className="space-y-2">
+                <Label className="text-[10px] uppercase font-bold opacity-70 ml-1">Motivo</Label>
+              <Select value={motivo} onValueChange={(value) => setMotivo(value as MotivoMovimientoStock)}>
                 <SelectTrigger className="h-11 rounded-xl bg-muted/30 border-transparent font-medium">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent className="rounded-xl">
                   {tipo === "entrada" ? (
                     <>
-                      <SelectItem value="COMPRA">📦 Compra</SelectItem>
-                      <SelectItem value="DEVOLUCION_CLIENTE">🔄 Devolución</SelectItem>
-                      <SelectItem value="AJUSTE_POSITIVO">⚙️ Ajuste Manual</SelectItem>
+                      {ENTRY_REASONS.map((option) => (
+                        <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+                      ))}
                     </>
                   ) : (
                     <>
-                      <SelectItem value="ROTURA">💢 Rotura / Daño</SelectItem>
-                      <SelectItem value="VENCIMIENTO">📅 Vencido</SelectItem>
-                      <SelectItem value="PERDIDA">🔍 Pérdida</SelectItem>
-                      <SelectItem value="AJUSTE_NEGATIVO">⚙️ Ajuste Manual</SelectItem>
+                      {EXIT_REASONS.map((option) => (
+                        <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+                      ))}
                     </>
                   )}
                 </SelectContent>

@@ -1,7 +1,5 @@
-/* eslint-disable */
-// @ts-nocheck
 // src/lib/paypal.ts
-import { paymentConfig } from "./paymentConfig";
+import { paymentConfig } from "@/lib/payments/config";
 import crypto from "crypto";
 
 const base = paymentConfig.paypal.apiUrl;

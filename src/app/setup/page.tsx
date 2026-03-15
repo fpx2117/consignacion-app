@@ -117,23 +117,6 @@ export default function SetupPage() {
     );
   }, [form, stepIndex]);
 
-  // ─── Payment redirect handler ──────────────────────────────────────────
-  useEffect(() => {
-    const status = searchParams.get("status");
-    const paymentId =
-      searchParams.get("payment_id") ??
-      searchParams.get("preference_id") ??
-      searchParams.get("subscription_id");
-
-    if (status === "success" && paymentId) {
-      handlePaymentSuccess(undefined, paymentId);
-    } else if (status === "failure") {
-      toast.error("El pago no pudo ser procesado. Reintenta.");
-      goToStep("payment");
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchParams]);
-
   // ─── Navigation ─────────────────────────────────────────────────────────
   const goToStep = useCallback(
     (step: SetupStep) => {
@@ -213,7 +196,7 @@ export default function SetupPage() {
   }, []);
 
   // ─── Payment + Initialize ──────────────────────────────────────────────
-  const handlePaymentSuccess = async (promoCode?: string, paymentId?: string) => {
+  const handlePaymentSuccess = useCallback(async (promoCode?: string, paymentId?: string) => {
     console.log("🚀 handlePaymentSuccess llamado - promoCode:", promoCode, "paymentId:", paymentId);
     
     if (!selectedPlan && !promoCode) {
@@ -300,7 +283,26 @@ export default function SetupPage() {
     } finally {
       setIsProcessing(false);
     }
-  };
+  }, [form, goToStep, router, selectedPlan]);
+
+  // ─── Payment redirect handler ──────────────────────────────────────────
+  useEffect(() => {
+    const status = searchParams.get("status");
+    const paymentId =
+      searchParams.get("payment_id") ??
+      searchParams.get("preference_id") ??
+      searchParams.get("subscription_id");
+
+    if (status === "success" && paymentId) {
+      void handlePaymentSuccess(undefined, paymentId);
+      return;
+    }
+
+    if (status === "failure") {
+      toast.error("El pago no pudo ser procesado. Reintenta.");
+      goToStep("payment");
+    }
+  }, [goToStep, handlePaymentSuccess, searchParams]);
 
   // ─── Render ─────────────────────────────────────────────────────────────
   const stepsWithOwnNext: SetupStep[] = ["welcome", "subscription", "payment", "loading", "success"];

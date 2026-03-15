@@ -1,9 +1,8 @@
-/* eslint-disable */
-// @ts-nocheck
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireAuth } from "@/lib/requireAuth";
+import { requireAuth } from "@/lib/auth/require-auth";
 import { canAccessSucursalResource, isGlobalSucursalView } from "@/lib/sucursalScope";
+import { EstadoGasto, FrecuenciaGasto } from "@prisma/client";
 
 export async function GET(
     req: Request,
@@ -31,7 +30,7 @@ export async function GET(
         }
 
         return NextResponse.json({ data: gasto });
-    } catch (error) {
+    } catch {
         return NextResponse.json(
             { error: "Error al obtener el gasto" },
             { status: 500 }
@@ -113,11 +112,11 @@ export async function PUT(
             data: {
                 ...(monto !== undefined && { monto: montoFinal }),
                 ...(motivo !== undefined && { motivo }),
-                ...(fecha !== undefined && { fecha: new Date(fecha) }),
-                ...(fechaVencimiento !== undefined && { fechaVencimiento: fechaVencimiento ? new Date(fechaVencimiento) : null }),
-                ...(estado !== undefined && { estado }),
+                ...(fecha !== undefined && { fecha: new Date(fecha as string) }),
+                ...(fechaVencimiento !== undefined && { fechaVencimiento: fechaVencimiento ? new Date(fechaVencimiento as string) : null }),
+                ...(estado !== undefined && { estado: estado as EstadoGasto }),
                 ...(esRecurrente !== undefined && { esRecurrente: !!esRecurrente }),
-                ...(frecuencia !== undefined && { frecuencia }),
+                ...(frecuencia !== undefined && { frecuencia: frecuencia as FrecuenciaGasto }),
                 ...(categoriaGastoId !== undefined && { categoriaGastoId: Number(categoriaGastoId) }),
                 esCompartido: nuevoEsCompartido,
             },
@@ -128,7 +127,7 @@ export async function PUT(
         });
 
         return NextResponse.json({ data: updated });
-    } catch (error) {
+    } catch {
         return NextResponse.json(
             { error: "Error al actualizar el gasto" },
             { status: 500 }
@@ -166,7 +165,7 @@ export async function DELETE(
         });
 
         return NextResponse.json({ success: true });
-    } catch (error) {
+    } catch {
         return NextResponse.json(
             { error: "Error al eliminar el gasto" },
             { status: 500 }

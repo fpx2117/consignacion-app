@@ -1,5 +1,3 @@
-/* eslint-disable */
-// @ts-nocheck
 "use client";
 
 import { Card, CardContent } from "@/components/ui/card";
@@ -8,8 +6,14 @@ import { ChevronRight, CheckCircle2, History, Zap } from "lucide-react";
 import { formatNumber } from "@/lib/utils-format";
 import Link from "next/link";
 import { motion } from "motion/react";
+import type { DashboardConsignacionesResponse, DashboardLiquidacionItem } from "@/lib/types";
 
-export function OperationsSection({ consig, loading }: { consig: any; loading: boolean }) {
+type OperationsSectionProps = {
+  consig?: DashboardConsignacionesResponse | null;
+  loading: boolean;
+};
+
+export function OperationsSection({ consig, loading }: OperationsSectionProps) {
   return (
     <div className="grid gap-8 xl:grid-cols-2">
       {/* SECCIÓN: PRIORIDAD */}
@@ -38,8 +42,7 @@ export function OperationsSection({ consig, loading }: { consig: any; loading: b
             ) : (consig?.pendientesPrioridad ?? []).length === 0 ? (
               <EmptyState icon={<CheckCircle2 className="text-[color:var(--status-success-strong)]" />} message="Todo al día por aquí" />
             ) : (
-              // SE AÑADIÓ .slice(0, 4) AQUÍ
-              (consig?.pendientesPrioridad ?? []).slice(0, 4).map((c: any, index: number) => (
+              (consig?.pendientesPrioridad ?? []).slice(0, 4).map((c, index) => (
                 <motion.div
                   key={c.id}
                   initial={{ opacity: 0, x: -10 }}
@@ -119,9 +122,11 @@ export function OperationsSection({ consig, loading }: { consig: any; loading: b
             ) : (consig?.ultimasLiquidaciones ?? []).length === 0 ? (
               <EmptyState icon={<History className="text-muted-foreground/50" />} message="No hay actividad reciente" />
             ) : (
-              // SE CAMBIÓ .slice(0, 5) POR .slice(0, 4) AQUÍ
-              (consig?.ultimasLiquidaciones ?? []).slice(0, 4).map((l: any, index: number) => {
-                const vendidas = l.items?.reduce((a: number, b: any) => a + (b.unitsVendidas || 0), 0) || 0;
+              (consig?.ultimasLiquidaciones ?? []).slice(0, 4).map((l, index) => {
+                const vendidas = l.items?.reduce(
+                  (acc, item: DashboardLiquidacionItem) => acc + (item.unitsVendidas || 0),
+                  0,
+                ) || 0;
                 return (
                   <motion.div
                     key={l.id}

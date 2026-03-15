@@ -1,8 +1,7 @@
-
-//src/app/x/[code]/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { hashCode } from "@/lib/share-links";
+import { decodeHistorialShareTarget } from "@/lib/historial-share-links";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -45,11 +44,9 @@ export async function GET(
 
   const link = await prisma.shareLink.findUnique({ where: { codeHash } });
 
-  // 1. Validaciones de existencia y expiración
   if (!link) return redirectAbs(req, `/x/status?state=invalid`);
   if (new Date() > link.expiresAt) return redirectAbs(req, `/x/status?state=expired`);
 
-  // 2. Lógica de control de vistas por Cookie
   const cookieName = `v_${codeHash}`;
   const hasViewedCookie = req.cookies.get(cookieName);
 
@@ -64,7 +61,6 @@ export async function GET(
     });
   }
 
-  // 3. Mapeo de rutas (Ajustado para evitar conflictos de Next.js)
   let destPath = "";
   const queryParams = `?code=${encodeURIComponent(code)}`;
 
@@ -75,19 +71,20 @@ export async function GET(
     case "REMITO":
       destPath = `/ver/remito/${link.targetId}`;
       break;
-    case "HISTORIAL_INVENTARIO":
-      const fullId = link.targetId || 0;
-      const targetAnio = Math.floor(fullId / 100);
-      const targetMes = fullId % 100;
+    case "HISTORIAL_INVENTARIO": {
+      const historialTarget = decodeHistorialShareTarget(link.targetId || 0);
 
-      // ✅ Apuntamos a la carpeta base (donde está el page.tsx con el Loader)
-      destPath = `/ver/historial/${targetMes}`;
-      const query = `?code=${encodeURIComponent(code)}&anio=${targetAnio}`;
+      if (!historialTarget) {
+        return redirectAbs(req, `/x/status?state=invalid`);
+      }
 
-      return redirectAbs(req, `${destPath}${query}`, { name: cookieName, value: '1' });
+      destPath = `/ver/historial/${historialTarget.mes}`;
+      const query = `?code=${encodeURIComponent(code)}&anio=${historialTarget.anio}`;
+
+      return redirectAbs(req, `${destPath}${query}`, { name: cookieName, value: "1" });
+    }
     case "INVENTARIO":
-      // ✅ IMPORTANTE: Apuntamos a /pdf para no chocar con page.tsx en la carpeta [id]
-      destPath = `/ver/inventario/${link.targetId || '0'}/pdf`;
+      destPath = `/ver/inventario/${link.targetId || "0"}/pdf`;
       break;
     case "REPORTE_DASHBOARD": {
       const fullId = link.targetId || 11; // Default S1 Today
@@ -97,7 +94,7 @@ export async function GET(
       const periodName = PERIOD_MAP[periodId] ?? "month";
       destPath = `/ver/dashboard/${periodName}`;
       destPath += `?code=${encodeURIComponent(code)}&sucursalId=${sucursalId}`;
-      return redirectAbs(req, destPath, { name: cookieName, value: '1' });
+      return redirectAbs(req, destPath, { name: cookieName, value: "1" });
     }
     case "REPORTE_POS": {
       const fullId = link.targetId || 11;
@@ -107,7 +104,7 @@ export async function GET(
       const periodName = PERIOD_MAP_POS[periodId] ?? "month";
       destPath = `/ver/pos/${periodName}`;
       destPath += `?code=${encodeURIComponent(code)}&sucursalId=${sucursalId}`;
-      return redirectAbs(req, destPath, { name: cookieName, value: '1' });
+      return redirectAbs(req, destPath, { name: cookieName, value: "1" });
     }
     case "REPORTE_CONSIGNACION": {
       const fullId = link.targetId || 11;
@@ -117,7 +114,7 @@ export async function GET(
       const periodName = PERIOD_MAP_CONSIG[periodId] ?? "month";
       destPath = `/ver/consig/${periodName}`;
       destPath += `?code=${encodeURIComponent(code)}&sucursalId=${sucursalId}`;
-      return redirectAbs(req, destPath, { name: cookieName, value: '1' });
+      return redirectAbs(req, destPath, { name: cookieName, value: "1" });
     }
     case "COMPROBANTE_GASTO":
       destPath = `/ver/gasto/${link.targetId}`;
@@ -128,6 +125,5 @@ export async function GET(
 
   const finalUrl = `${destPath}${queryParams}`;
 
-  // 4. Redirección final con seteo de cookie
-  return redirectAbs(req, finalUrl, { name: cookieName, value: '1' });
+  return redirectAbs(req, finalUrl, { name: cookieName, value: "1" });
 }

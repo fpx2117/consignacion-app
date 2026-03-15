@@ -1,6 +1,3 @@
-/* eslint-disable */
-// @ts-nocheck
-
 "use client";
 
 import * as React from "react";
@@ -10,6 +7,15 @@ import { motion } from "motion/react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import type {
+    CatalogCartItem,
+    PublicCatalogConfig,
+    PublicCatalogData,
+    PublicCatalogProduct,
+    PublicCatalogSortBy,
+    PublicCheckoutCustomerData,
+    PublicCheckoutShippingData,
+} from "@/lib/types";
 
 import { apiService } from "@/lib/apiService";
 
@@ -53,13 +59,13 @@ export function CatalogClient({
     sucursalId,
     checkoutReturnStatus,
 }: {
-    initialData: any | null;
+    initialData: PublicCatalogData | null;
     initialError?: string | null;
     sucursalId: number | null;
     checkoutReturnStatus: string | null;
 }) {
     // --- Estados de Datos ---
-    const [data, setData] = React.useState<any>(initialData);
+    const [data, setData] = React.useState<PublicCatalogData | null>(initialData);
     const [loading, setLoading] = React.useState(!initialData && !initialError);
     const [error, setError] = React.useState<string | null>(initialError);
 
@@ -69,11 +75,11 @@ export function CatalogClient({
     const [selectedSubcategory, setSelectedSubcategory] = React.useState<number | null>(null);
     const [viewMode, setViewMode] = React.useState<"grid" | "list">("grid");
     const [isConsigne, setIsConsigne] = React.useState(false);
-    const [selectedProduct, setSelectedProduct] = React.useState<any>(null);
-    const [sortBy, setSortBy] = React.useState("relevance"); // Nuevo estado para ordenar
+    const [selectedProduct, setSelectedProduct] = React.useState<PublicCatalogProduct | null>(null);
+    const [sortBy, setSortBy] = React.useState<PublicCatalogSortBy>("relevance");
 
     // --- Estados del Carrito ---
-    const [cart, setCart] = React.useState<any[]>([]);
+    const [cart, setCart] = React.useState<CatalogCartItem[]>([]);
     const [isCartOpen, setIsCartOpen] = React.useState(false);
     const [checkoutLoading, setCheckoutLoading] = React.useState(false);
     const [checkoutFeedback, setCheckoutFeedback] = React.useState<CheckoutFeedbackState | null>(null);
@@ -133,8 +139,8 @@ export function CatalogClient({
             try {
                 const res = await apiService.getPublicListaPrecios(sucursalId ?? undefined);
                 setData(res);
-            } catch (err: any) {
-                setError(err.message || "Error al cargar el catálogo");
+            } catch (err: unknown) {
+                setError(err instanceof Error ? err.message : "Error al cargar el catálogo");
             } finally {
                 setLoading(false);
             }
@@ -143,15 +149,16 @@ export function CatalogClient({
     }, [initialData, initialError, sucursalId]);
 
     // --- Configuración e Inyección de Estilos ---
-    const config = data?.config || {};
-    const { theme, pageBgClass } = getThemeStyles(config.themeIdentifier);
+    const config: PublicCatalogConfig = data?.config ?? { sucursalId: sucursalId ?? 1 };
+    const { theme: _theme, pageBgClass } = getThemeStyles(config.themeIdentifier);
     const products = React.useMemo(() => data?.productos || [], [data?.productos]);
     const categories = React.useMemo(() => data?.categorias || [], [data?.categorias]);
     const deferredSearchTerm = React.useDeferredValue(searchTerm);
 
     const categoryCounts = React.useMemo(() => {
-        return products.reduce((acc: any, product: any) => {
+        return products.reduce<Record<number, number>>((acc, product) => {
             const catId = product.categoriaId;
+            if (catId === null) return acc;
             acc[catId] = (acc[catId] || 0) + 1;
             return acc;
         }, {});
@@ -169,8 +176,8 @@ export function CatalogClient({
         };
 
         const getContrastColor = (hex: string) => {
-            const rgb = hexToRgb(hex).split(',').map(n => parseInt(n));
-            const brightness = (rgb[0] * 299 + rgb[1] * 587 + rgb[2] * 114) / 1000;
+            const [red = 0, green = 0, blue = 0] = hexToRgb(hex).split(",").map((value) => parseInt(value, 10));
+            const brightness = (red * 299 + green * 587 + blue * 114) / 1000;
             return brightness > 155 ? 'hsl(var(--foreground))' : 'hsl(var(--background))';
         };
 
@@ -201,7 +208,7 @@ export function CatalogClient({
 
     // --- Lógica del Carrito ---
     // 👇 Modificado para recibir "quantity" desde el Modal
-    const addToCart = (product: any, quantity: number = 1) => {
+    const addToCart = (product: PublicCatalogProduct, quantity: number = 1) => {
         setCart(prev => {
             const existing = prev.find(item => item.id === product.id);
             if (existing) {
@@ -226,7 +233,7 @@ export function CatalogClient({
         }));
     };
 
-    const handleCheckout = async (clienteData: any, envioData: any) => {
+    const handleCheckout = async (clienteData: PublicCheckoutCustomerData, envioData: PublicCheckoutShippingData) => {
         setCheckoutLoading(true);
         try {
             const targetSucursalId = getSucursalIdForCheckout();
@@ -237,20 +244,18 @@ export function CatalogClient({
                 envioData
             });
 
-            const checkoutToken = res?.checkout_token ?? res?.data?.checkout_token;
+            const checkoutToken = res?.checkout_token;
             if (checkoutToken) {
                 saveCheckoutToken(checkoutToken, targetSucursalId);
             }
 
             if (res?.init_point) {
                 window.location.href = res.init_point;
-            } else if (res?.data?.init_point) {
-                window.location.href = res.data.init_point;
             } else {
                 toast.error("No se pudo obtener el link de pago");
             }
-        } catch (err: any) {
-            toast.error(err.message || "Error al iniciar el pago");
+        } catch (err: unknown) {
+            toast.error(err instanceof Error ? err.message : "Error al iniciar el pago");
         } finally {
             setCheckoutLoading(false);
         }
@@ -322,6 +327,43 @@ export function CatalogClient({
         };
     }, [checkoutReturnStatus, clearCheckoutToken, getSucursalIdForCheckout, readCheckoutToken]);
 
+    // --- Motor de Filtrado y Ordenamiento Avanzado (E-commerce Style) ---
+    const filteredProducts = React.useMemo(() => {
+        if (!products.length) return [];
+
+        const normalizedSearch = deferredSearchTerm.trim().toLowerCase();
+
+        const result = products.filter((p) => {
+            const matchesSearch = p.nombre.toLowerCase().includes(normalizedSearch);
+
+            if (selectedSubcategory) {
+                return matchesSearch && p.subcategoriaId === selectedSubcategory;
+            }
+
+            const matchesCategory = !selectedCategory || p.categoriaId === selectedCategory;
+            return matchesSearch && matchesCategory;
+        });
+
+        switch (sortBy) {
+            case "price_asc":
+                result.sort((a, b) => Number(a.precioVenta) - Number(b.precioVenta));
+                break;
+            case "price_desc":
+                result.sort((a, b) => Number(b.precioVenta) - Number(a.precioVenta));
+                break;
+            case "name_asc":
+                result.sort((a, b) => a.nombre.localeCompare(b.nombre));
+                break;
+            case "name_desc":
+                result.sort((a, b) => b.nombre.localeCompare(a.nombre));
+                break;
+            default:
+                break;
+        }
+
+        return result;
+    }, [products, deferredSearchTerm, selectedSubcategory, selectedCategory, sortBy]);
+
     // --- Render Loading/Error ---
     if (loading) {
         return (
@@ -346,43 +388,6 @@ export function CatalogClient({
             </div>
         );
     }
-
-    // --- Motor de Filtrado y Ordenamiento Avanzado (E-commerce Style) ---
-    const filteredProducts = React.useMemo(() => {
-        if (!products.length) return [];
-
-        const normalizedSearch = deferredSearchTerm.trim().toLowerCase();
-
-        const result = products.filter((p: any) => {
-            const matchesSearch = p.nombre.toLowerCase().includes(normalizedSearch);
-
-            if (selectedSubcategory) {
-                return matchesSearch && p.subcategoriaId === selectedSubcategory;
-            }
-
-            const matchesCategory = !selectedCategory || p.categoriaId === selectedCategory;
-            return matchesSearch && matchesCategory;
-        });
-
-        switch (sortBy) {
-            case "price_asc":
-                result.sort((a: any, b: any) => Number(a.precioVenta) - Number(b.precioVenta));
-                break;
-            case "price_desc":
-                result.sort((a: any, b: any) => Number(b.precioVenta) - Number(a.precioVenta));
-                break;
-            case "name_asc":
-                result.sort((a: any, b: any) => a.nombre.localeCompare(b.nombre));
-                break;
-            case "name_desc":
-                result.sort((a: any, b: any) => b.nombre.localeCompare(a.nombre));
-                break;
-            default:
-                break;
-        }
-
-        return result;
-    }, [products, deferredSearchTerm, selectedSubcategory, selectedCategory, sortBy]);
 
     return (
         <div
@@ -441,7 +446,7 @@ export function CatalogClient({
                             setSearchTerm={setSearchTerm}
                             viewMode={viewMode}
                             setViewMode={setViewMode}
-                            categories={data?.categorias || []}
+                            categories={categories}
                             selectedCategory={selectedCategory}
                             setSelectedCategory={(id) => {
                                 setSelectedCategory(id);

@@ -1,5 +1,3 @@
-/* eslint-disable */
-// @ts-nocheck
 "use client";
 
 import * as React from "react";
@@ -30,9 +28,7 @@ import {
   Power,
   CheckCircle2,
   XCircle,
-  Building2,
   Save,
-  Trash2
 } from "lucide-react";
 
 export function EditClienteDialog({
@@ -82,9 +78,9 @@ export function EditClienteDialog({
 
       setOpen(false);
       onUpdated?.();
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(err);
-      alert(err?.message ?? "No se pudo actualizar el cliente");
+      alert(err instanceof Error ? err.message : "No se pudo actualizar el cliente");
     } finally {
       setSaving(false);
     }

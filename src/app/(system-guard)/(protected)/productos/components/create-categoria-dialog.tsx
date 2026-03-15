@@ -3,16 +3,13 @@
 import * as React from "react";
 import { toast } from "sonner";
 import { apiService } from "@/lib/apiService";
-import { CATEGORY_PALETTE, type CategoryColorKey } from "@/lib/category-colors";
+import { CATEGORY_PALETTE } from "@/lib/category-colors";
 import { cn } from "@/lib/utils";
-import { Loader2, Check, Plus, Pencil, Trash2, Tag, ChevronDown, ChevronRight, AlertTriangle, Layers } from "lucide-react";
-import type { DescuentoNivel } from "@/lib/types";
-import { DiscountTiersInline } from "./discount-tiers-inline";
+import { Loader2, Check, Plus, Pencil, Trash2, Tag, Layers } from "lucide-react";
 import { ManageSubcategoriasDialog } from "./manage-subcategorias-dialog";
 import {
   Dialog,
   DialogContent,
-  DialogHeader,
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
@@ -38,7 +35,7 @@ interface Props {
 export function CreateCategoriaDialog({ onCreated, trigger }: Props) {
   const [open, setOpen] = React.useState(false);
   const [loading, setLoading] = React.useState(false);
-  const [categorias, setCategorias] = React.useState<any[]>([]);
+  const [categorias, setCategorias] = React.useState<{ id: number; nombre: string; color?: string | null }[]>([]);
 
   // Modos: 'list' | 'create' | 'edit'
   const [mode, setMode] = React.useState<"list" | "create" | "edit">("list");
@@ -102,7 +99,7 @@ export function CreateCategoriaDialog({ onCreated, trigger }: Props) {
       await loadCategorias();
       setMode("list");
       onCreated?.();
-    } catch (error: any) {
+    } catch {
       toast.error("Error al guardar la categoría");
     } finally {
       setSaving(false);
@@ -115,15 +112,13 @@ export function CreateCategoriaDialog({ onCreated, trigger }: Props) {
       toast.success("Categoría eliminada");
       await loadCategorias();
       onCreated?.();
-    } catch (error) {
+    } catch {
       toast.error("Error al eliminar categoría");
     } finally {
       setDeleteConfirmOpen(false);
       setCategoryToDelete(null);
     }
   }
-
-  const activeColor = CATEGORY_PALETTE.find((c) => c.key === color) || CATEGORY_PALETTE[0];
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -307,7 +302,7 @@ export function CreateCategoriaDialog({ onCreated, trigger }: Props) {
           <AlertDialogHeader>
             <AlertDialogTitle className="text-[color:var(--ui-fx-white)]">¿Seguro que deseas eliminar esta categoría?</AlertDialogTitle>
             <AlertDialogDescription className="text-muted-foreground/80">
-              Los productos asociados quedarán "Sin Categoría". Esta acción no se puede deshacer.
+              Los productos asociados quedarán &quot;Sin Categoría&quot;. Esta acción no se puede deshacer.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

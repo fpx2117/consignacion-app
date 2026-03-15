@@ -1,21 +1,21 @@
-/* eslint-disable */
-// @ts-nocheck
 // src/app/api/liquidaciones/consignacion/[consignacionId]/route.ts
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireAuth } from "@/lib/requireAuth";
+import { requireAuth } from "@/lib/auth/require-auth";
 import { createLiquidacionBodySchema } from "@/lib/validators/liquidacion";
 import { TipoMovimientoStock, MotivoMovimientoStock, TipoVenta } from "@prisma/client";
 
 // ✅ Imports Centralizados de Config y Notificaciones
 import { obtenerConfiguracionGlobal } from "@/lib/config";
-import { evaluateStockAlert, processNotificationQueue } from "@/lib/stock-alerts";
-import { sendNotification } from "@/lib/socket-trigger";
+import { evaluateStockAlert, processNotificationQueue } from "@/lib/notificaciones/stock-alerts";
+import { sendNotification } from "@/lib/notificaciones/socket-trigger";
 import { isGlobalSucursalView } from "@/lib/sucursalScope";
 
 type RouteParams = {
   params: Promise<{ consignacionId: string }>;
 };
+
+type StockNotification = NonNullable<ReturnType<typeof evaluateStockAlert>>;
 
 export async function POST(req: Request, { params }: RouteParams) {
   const auth = await requireAuth();
@@ -25,8 +25,7 @@ export async function POST(req: Request, { params }: RouteParams) {
   }
 
   // 1. 👇 EXTRACCIÓN SEGURA DEL ID (Evita errores de sesión o tipos) 👇
-  const payload = auth.user as any;
-  const rawId = payload.id || payload.userId || payload.usuarioId || payload.sub;
+  const rawId = auth.user.sub;
   const usuarioId = Number(rawId);
 
   if (!rawId || isNaN(usuarioId)) {
@@ -54,12 +53,15 @@ export async function POST(req: Request, { params }: RouteParams) {
 
   // ✅ 2. Preparar Alertas y Config
   const configGlobal = await obtenerConfiguracionGlobal(auth.activeSucursalId);
-  const notificationsQueue: any[] = [];
+  const notificationsQueue: StockNotification[] = [];
 
   try {
     const result = await prisma.$transaction(async (tx) => {
-      const consignacion = await tx.consignacion.findUnique({
-        where: { id: consignacionId },
+      const consignacion = await tx.consignacion.findFirst({
+        where: {
+          id: consignacionId,
+          sucursalId: auth.activeSucursalId,
+        },
         include: {
           detalles: { include: { producto: true } },
           cliente: true // Necesario para la notificación
@@ -77,7 +79,7 @@ export async function POST(req: Request, { params }: RouteParams) {
         consignacionDetalleId: number;
         unitsVendidas: number;
         unitsDevueltas: number;
-        precioUnitario: any;
+          precioUnitario: number;
       }[] = [];
 
       // 2) Procesar cada item enviado en la liquidación
@@ -272,9 +274,9 @@ export async function POST(req: Request, { params }: RouteParams) {
     // Devolvemos solo la liquidación para no romper la respuesta esperada en el frontend
     return NextResponse.json({ data: result.liquidacion }, { status: 201 });
 
-  } catch (e: any) {
-    console.error("Error en liquidación:", e);
-    const msg = String(e?.message || "");
+  } catch (error) {
+    console.error("Error en liquidación:", error);
+    const msg = error instanceof Error ? error.message : "";
 
     if (msg === "CONSIGNACION_NO_ENCONTRADA") return NextResponse.json({ error: "Consignación no encontrada" }, { status: 404 });
     if (msg === "CONSIGNACION_CERRADA") return NextResponse.json({ error: "La consignación ya está cerrada" }, { status: 409 });

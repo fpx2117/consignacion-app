@@ -1,5 +1,3 @@
-/* eslint-disable */
-// @ts-nocheck
 "use client";
 
 import * as React from "react";
@@ -10,12 +8,12 @@ import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { toast } from "sonner";
 import { apiService } from "@/lib/apiService";
-import { cn } from "@/lib/utils";
+import type { Caja } from "@/lib/types";
 
 export default function AbrirCajaPage() {
     const router = useRouter();
 
-    const [cajas, setCajas] = React.useState<any[]>([]);
+    const [cajas, setCajas] = React.useState<Caja[]>([]);
     const [selectedCajaId, setSelectedCajaId] = React.useState<string>("");
 
     // Guardaremos el número en crudo ("15000") pero lo mostraremos formateado ("15.000")
@@ -33,8 +31,8 @@ export default function AbrirCajaPage() {
                 if (res && res.length > 0) {
                     setSelectedCajaId(String(res[0].id));
                 }
-            } catch (err: any) {
-                setError(err.message || "Error al cargar las cajas.");
+            } catch (err: unknown) {
+                setError(err instanceof Error ? err.message : "Error al cargar las cajas.");
             } finally {
                 setLoadingData(false);
             }
@@ -73,8 +71,8 @@ export default function AbrirCajaPage() {
             toast.success("¡Turno abierto exitosamente!");
             router.push("/ventas/nueva");
 
-        } catch (err: any) {
-            setError(err.message);
+        } catch (err: unknown) {
+            setError(err instanceof Error ? err.message : "Error al abrir la caja.");
             setLoading(false);
         }
     };

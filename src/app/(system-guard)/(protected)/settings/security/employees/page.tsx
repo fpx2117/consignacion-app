@@ -1,5 +1,3 @@
-/* eslint-disable */
-// @ts-nocheck
 "use client";
 
 import * as React from "react";
@@ -7,7 +5,7 @@ import Link from "next/link";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import type { Usuario, RolUsuario } from "@/lib/types";
-import { useSucursalStore, type Sucursal } from "@/store/useSucursalStore";
+import { useSucursalStore } from "@/store/useSucursalStore";
 
 // UI
 import { Card } from "@/components/ui/card";
@@ -45,6 +43,29 @@ import {
 
 type DialogMode = "create" | "edit";
 
+type UserFormState = {
+    nombre: string;
+    email: string;
+    password: string;
+    rol: RolUsuario;
+    sucursalId: string;
+};
+
+type UsersApiResponse = {
+    ok: boolean;
+    data: Usuario;
+    error?: string;
+};
+
+type UsersListApiResponse = {
+    ok: boolean;
+    data: Usuario[];
+};
+
+function getErrorMessage(error: unknown, fallback: string) {
+    return error instanceof Error ? error.message : fallback;
+}
+
 export default function EmployeesSettingsPage() {
     const [usuarios, setUsuarios] = React.useState<Usuario[]>([]);
     const [loading, setLoading] = React.useState(true);
@@ -61,7 +82,7 @@ export default function EmployeesSettingsPage() {
     const [deleting, setDeleting] = React.useState(false);
 
     // Estado del formulario incluyendo ROL
-    const [form, setForm] = React.useState({
+    const [form, setForm] = React.useState<UserFormState>({
         nombre: "",
         email: "",
         password: "",
@@ -73,7 +94,7 @@ export default function EmployeesSettingsPage() {
         setLoading(true);
         try {
             const res = await fetch("/api/settings/users");
-            const json = await res.json();
+            const json = (await res.json()) as UsersListApiResponse;
             if (json.ok) setUsuarios(json.data);
         } catch {
             toast.error("Error cargando usuarios");
@@ -119,7 +140,7 @@ export default function EmployeesSettingsPage() {
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(payload),
             });
-            const json = await res.json();
+            const json = (await res.json()) as UsersApiResponse;
 
             if (!res.ok || !json.ok) throw new Error(json.error || "Error al guardar usuario");
 
@@ -132,8 +153,8 @@ export default function EmployeesSettingsPage() {
             }
 
             setIsDialogOpen(false);
-        } catch (error: any) {
-            toast.error(error.message);
+        } catch (error) {
+            toast.error(getErrorMessage(error, "Error al guardar usuario"));
         } finally {
             setSaving(false);
         }
@@ -148,15 +169,15 @@ export default function EmployeesSettingsPage() {
             const res = await fetch(`/api/settings/users?id=${userToDelete.id}`, {
                 method: "DELETE",
             });
-            const json = await res.json();
+            const json = (await res.json()) as Omit<UsersApiResponse, "data">;
 
             if (!res.ok || !json.ok) throw new Error(json.error || "Error al eliminar usuario");
 
             toast.success("Usuario eliminado");
             setUsuarios((prev) => prev.filter((u) => u.id !== userToDelete.id));
             setUserToDelete(null);
-        } catch (error: any) {
-            toast.error(error.message);
+        } catch (error) {
+            toast.error(getErrorMessage(error, "Error al eliminar usuario"));
         } finally {
             setDeleting(false);
         }

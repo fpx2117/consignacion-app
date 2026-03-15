@@ -1,16 +1,17 @@
-/* eslint-disable */
-// @ts-nocheck
-// src/app/api/subscriptions/mercadopago/create/route.ts
 import { NextResponse } from "next/server";
-import { requireAuth } from "@/lib/requireAuth";
-import { createMercadoPagoPreference } from "@/lib/mercadopago";
+import { requireAuth } from "@/lib/auth/require-auth";
+import { createMercadoPagoPreference } from "@/lib/payments/mercadopago";
+
+type CreateMercadoPagoBody = {
+    planId?: string;
+};
 
 export async function POST(req: Request) {
     const auth = await requireAuth();
     if (!auth.ok) return auth.res;
 
     try {
-        const { planId } = await req.json();
+        const { planId } = (await req.json()) as CreateMercadoPagoBody;
 
         if (!planId) {
             return NextResponse.json({ error: "No se proporcionó un ID de plan" }, { status: 400 });
@@ -24,7 +25,7 @@ export async function POST(req: Request) {
             sandboxInitPoint: preference.sandbox_init_point
         });
 
-    } catch (error: any) {
+    } catch (error) {
         console.error("API_MERCADOPAGO_CREATE_ERROR:", error);
         return NextResponse.json(
             { error: "Error al crear la preferencia en Mercado Pago" },

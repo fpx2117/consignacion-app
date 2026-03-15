@@ -1,9 +1,7 @@
-/* eslint-disable */
-// @ts-nocheck
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { fetchDolarBlue } from "@/lib/dolarBlue";
-import { updateMercadoPagoSubscriptionPrice } from "@/lib/mercadopago";
+import { updateMercadoPagoSubscriptionPrice } from "@/lib/payments/mercadopago";
 
 export const dynamic = "force-dynamic";
 
@@ -81,9 +79,9 @@ export async function GET(request: Request) {
                 await updateMercadoPagoSubscriptionPrice(sub.mpPreapprovalId, newPriceARS);
 
                 updatedCount++;
-            } catch (err: any) {
+            } catch (err: unknown) {
                 console.error(`Error updating subscription ${sub.id}:`, err);
-                errors.push({ subscriptionId: sub.id, error: err.message });
+                errors.push({ subscriptionId: sub.id, error: err instanceof Error ? err.message : String(err) });
             }
         }
 

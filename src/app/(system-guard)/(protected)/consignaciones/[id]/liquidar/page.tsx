@@ -1,5 +1,3 @@
-/* eslint-disable */
-// @ts-nocheck
 //src/app/(protected)/consignaciones/[id]/liquidar/page.tsx
 "use client";
 
@@ -10,7 +8,7 @@ import {
   TrendingUp, Package, User, ChevronRight, BadgePercent, CheckCircle2
 } from "lucide-react";
 
-import { toast } from "sonner";
+
 import { apiService } from "@/lib/apiService";
 import type { Consignacion, CreateLiquidacionInput } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -27,6 +25,8 @@ import { Progress } from "@/components/ui/progress";
 // IMPORTAMOS EL DIÁLOGO DE ÉXITO (Asegúrate de tener este componente o quítalo si no lo usas)
 import { SuccessDialog } from "@/components/success-dialog";
 
+import type { Subcategoria } from "@/lib/types";
+
 type Row = {
   consignacionDetalleId: number;
   productoNombre: string;
@@ -36,7 +36,7 @@ type Row = {
   unitsVendidas: number;
   unitsDevueltas: number;
   descuento: number;
-  subcategoria?: any;
+  subcategoria?: Subcategoria | null;
 };
 
 const formatCurrency = (value: number) => {
@@ -69,7 +69,7 @@ export default function LiquidarConsignacionPage() {
         const pend = Math.max(0, d.unitsEntregadas - d.unitsVendidasAcum - d.unitsDevueltasAcum);
         const precioBase = Number(d.producto?.precioVenta ?? 0);
 
-        let precioFinal = Number((d as any).precioVentaAplicado);
+        let precioFinal = Number(d.precioVentaAplicado);
         if (!precioFinal || precioFinal === 0) {
           precioFinal = precioBase * (1 + porcentaje / 100);
         }
@@ -83,13 +83,13 @@ export default function LiquidarConsignacionPage() {
           unitsVendidas: 0,
           unitsDevueltas: pend,
           descuento: 0,
-          subcategoria: d.producto?.subcategoria
+          subcategoria: (d.producto as (typeof d.producto & { subcategoria?: Subcategoria | null }) | undefined)?.subcategoria ?? null
         };
       });
 
       setRows(mapped);
-    } catch (e: any) {
-      setError(e?.message ?? "Error cargando consignación");
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Error cargando consignación");
     } finally {
       setLoading(false);
     }
@@ -114,8 +114,8 @@ export default function LiquidarConsignacionPage() {
       let discount = 0;
       const subDescuentos = r.subcategoria?.descuentos;
       if (subDescuentos && Array.isArray(subDescuentos)) {
-        const sorted = [...subDescuentos].sort((a: any, b: any) => b.cantidadMin - a.cantidadMin);
-        const best = sorted.find((d: any) => vendidas >= d.cantidadMin);
+        const sorted = [...subDescuentos].sort((a, b) => b.cantidadMin - a.cantidadMin);
+        const best = sorted.find((d) => vendidas >= d.cantidadMin);
         if (best) {
           discount = (r.precioFinal * vendidas) * (best.porcentaje / 100);
         }
@@ -175,8 +175,8 @@ export default function LiquidarConsignacionPage() {
       await apiService.createLiquidacion(consignacionId, payload);
       setShowSuccessDialog(true);
 
-    } catch (e: any) {
-      setError(e?.message ?? "Error creando liquidación");
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Error creando liquidación");
     } finally {
       setSaving(false);
     }
@@ -265,10 +265,6 @@ export default function LiquidarConsignacionPage() {
               ) : (
                 <div className="space-y-6">
                   {actionableRows.map((r) => {
-                    const totalCargado = Number(r.unitsVendidas || 0) + Number(r.unitsDevueltas || 0);
-                    // Como forzamos el tope, no debería haber error visual, pero mantenemos lógica de progreso
-                    const progress = (totalCargado / r.maxPendiente) * 100;
-
                     return (
                       <div key={r.consignacionDetalleId} className="rounded-xl border hover:border-primary/30 bg-card shadow-sm transition-all p-5">
 

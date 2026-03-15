@@ -48,7 +48,7 @@ export function BranchStep({ data, onChange }: BranchStepProps) {
             className="h-14 rounded-2xl bg-background/50 border-border/50 focus:border-[color:var(--status-success-strong)] focus:ring-4 focus:ring-[color:var(--status-success-strong)]/10 text-lg font-semibold"
           />
           <p className="text-xs text-muted-foreground/60 pl-2">
-            Si tenés un solo local, podés dejarlo como "Sucursal Principal".
+            Si tenés un solo local, podés dejarlo como &quot;Sucursal Principal&quot;.
           </p>
         </div>
 

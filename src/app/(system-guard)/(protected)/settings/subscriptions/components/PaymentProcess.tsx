@@ -1,5 +1,3 @@
-/* eslint-disable */
-// @ts-nocheck
 "use client";
 
 import { useEffect, useState } from "react";
@@ -53,9 +51,9 @@ export function SubscriptionCheckout({ planId, amount, currency, onClose, basePr
             } else {
                 throw new Error("No se recibió la URL de pago de Mercado Pago");
             }
-        } catch (err: any) {
+        } catch (err: unknown) {
             console.error("Mercado Pago redirect error:", err);
-            setError(err.message);
+            setError(err instanceof Error ? err.message : "Error desconocido");
             setLoading(false);
         }
     };
@@ -80,9 +78,9 @@ export function SubscriptionCheckout({ planId, amount, currency, onClose, basePr
             } else {
                 throw new Error("No se recibió la URL de aprobación de PayPal");
             }
-        } catch (err: any) {
+        } catch (err: unknown) {
             console.error("PayPal redirect error:", err);
-            setError(err.message);
+            setError(err instanceof Error ? err.message : "Error desconocido");
             setLoading(false);
         }
     };

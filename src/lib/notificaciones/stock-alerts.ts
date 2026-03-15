@@ -1,9 +1,7 @@
-/* eslint-disable */
-// @ts-nocheck
 // src/lib/stock-alerts.ts
 import { prisma } from "@/lib/prisma";
-import { sendNotification } from "@/lib/socket-trigger";
-import { NOTIFICATION_TYPE, NOTIFICATION_CONFIG } from "@/lib/notificationes/notificaciones-types";
+import { sendNotification } from "@/lib/notificaciones/socket-trigger";
+import { NOTIFICATION_TYPE, NOTIFICATION_CONFIG } from "@/lib/notificaciones/types";
 
 // 1. EVALUADOR DE STOCK: Decide si hay que generar una alerta
 export function evaluateStockAlert(productoActualizado: any, configGlobal: any) {

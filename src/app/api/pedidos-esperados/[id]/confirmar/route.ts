@@ -1,13 +1,12 @@
-/* eslint-disable */
-// @ts-nocheck
 // src/app/api/pedidos-esperados/[id]/confirmar/route.ts
 // POST: Confirmar llegada total o parcial de un pedido
 
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireAuth, requireRole } from "@/lib/requireAuth";
+import { requireAuth, requireRole } from "@/lib/auth/require-auth";
 import { confirmarPedidoSchema } from "@/lib/validators/pedidos-esperados";
 import { isGlobalSucursalView } from "@/lib/sucursalScope";
+import { EstadoPedidoEsperado, EstadoItemPedido } from "@prisma/client";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -102,6 +101,12 @@ export async function POST(req: Request, { params }: RouteParams) {
       }
     }
 
+    // Verificar que todos los itemId son válidos antes de continuar (ya fue validado arriba, esta guarda evita errores de undefined en la tx)
+    const allItemsValid = itemsInput.every((input) => itemsDelPedido.has(input.itemId));
+    if (!allItemsValid) {
+      return NextResponse.json({ error: "Items inválidos en el payload" }, { status: 400 });
+    }
+
     // 5. Ejecutar todo dentro de una transacción atómica
     const { pedidoActualizado, movimientos } = await prisma.$transaction(async (tx) => {
       const movimientosCreados = [];
@@ -109,7 +114,8 @@ export async function POST(req: Request, { params }: RouteParams) {
       for (const input of itemsInput) {
         if (input.cantidadRecibida <= 0) continue;
 
-        const item = itemsDelPedido.get(input.itemId);
+        // Validado previamente: allItemsValid asegura que el item existe
+        const item = itemsDelPedido.get(input.itemId)!;
 
         // a. Obtener StockSucursal actual
         const stockActual = await tx.stockSucursal.findUnique({
@@ -161,12 +167,9 @@ export async function POST(req: Request, { params }: RouteParams) {
         });
 
         // d. Actualizar PedidoEsperadoItem estado y cantidadRecibida
-        let estadoItem: string;
-        if (input.cantidadRecibida >= item.cantidadEsperada) {
-          estadoItem = "CONFIRMADO";
-        } else {
-          estadoItem = "PARCIAL";
-        }
+        const estadoItem: EstadoItemPedido = input.cantidadRecibida >= item.cantidadEsperada
+          ? EstadoItemPedido.CONFIRMADO
+          : EstadoItemPedido.PARCIAL;
 
         await tx.pedidoEsperadoItem.update({
           where: { id: input.itemId },
@@ -181,23 +184,21 @@ export async function POST(req: Request, { params }: RouteParams) {
       const itemsActualizados = new Map(pedido.items.map((i) => [i.id, i.estado]));
       for (const input of itemsInput) {
         if (input.cantidadRecibida > 0) {
-          const item = itemsDelPedido.get(input.itemId);
-          if (input.cantidadRecibida >= item.cantidadEsperada) {
-            itemsActualizados.set(input.itemId, "CONFIRMADO");
-          } else {
-            itemsActualizados.set(input.itemId, "PARCIAL");
-          }
+          const item = itemsDelPedido.get(input.itemId)!;
+          itemsActualizados.set(
+            input.itemId,
+            input.cantidadRecibida >= item.cantidadEsperada
+              ? EstadoItemPedido.CONFIRMADO
+              : EstadoItemPedido.PARCIAL,
+          );
         }
       }
 
       // Determinar estado del pedido
       const estadosItems = Array.from(itemsActualizados.values());
-      let estadoPedido: string;
-      if (estadosItems.every((e) => e === "CONFIRMADO")) {
-        estadoPedido = "CONFIRMADO";
-      } else {
-        estadoPedido = "PARCIAL";
-      }
+      const estadoPedido: EstadoPedidoEsperado = estadosItems.every((e) => e === EstadoItemPedido.CONFIRMADO)
+        ? EstadoPedidoEsperado.CONFIRMADO
+        : EstadoPedidoEsperado.PARCIAL;
 
       // Actualizar PedidoEsperado
       const pedidoUpdated = await tx.pedidoEsperado.update({

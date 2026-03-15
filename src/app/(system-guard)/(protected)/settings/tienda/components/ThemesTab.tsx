@@ -1,8 +1,7 @@
-/* eslint-disable */
-// @ts-nocheck
 import * as React from "react";
 import { Check } from "lucide-react";
 import { cn } from "@/lib/utils";
+import type { BrandingPreviewSettings } from "./types";
 
 const THEME_PRESETS = [
     {
@@ -77,7 +76,12 @@ function resolveToken(token: string): string {
     return value || "hsl(var(--primary))";
 }
 
-export function ThemesTab({ branding, setBranding }: any) {
+type ThemesTabProps = {
+    branding: BrandingPreviewSettings;
+    setBranding: React.Dispatch<React.SetStateAction<BrandingPreviewSettings>>;
+};
+
+export function ThemesTab({ branding, setBranding }: ThemesTabProps) {
     const themes = React.useMemo(
         () =>
             THEME_PRESETS.map((theme) => ({

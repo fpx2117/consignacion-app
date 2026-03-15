@@ -1,10 +1,8 @@
-/* eslint-disable */
-// @ts-nocheck
 // src/app/api/pedidos-esperados/check-vencidos/route.ts
 // POST: Chequea y actualiza pedidos vencidos (para cron o llamada interna)
 
 import { NextResponse } from "next/server";
-import { requireAuth } from "@/lib/requireAuth";
+import { requireAuth } from "@/lib/auth/require-auth";
 import { checkAndUpdateVencidos } from "@/lib/pedidos-esperados";
 
 export const dynamic = "force-dynamic";

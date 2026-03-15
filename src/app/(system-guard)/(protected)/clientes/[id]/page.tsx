@@ -1,12 +1,10 @@
-/* eslint-disable */
-// @ts-nocheck
 "use client";
 
 import * as React from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { apiService } from "@/lib/apiService";
-import type { Cliente, Consignacion, Venta } from "@/lib/types";
+import type { Cliente } from "@/lib/types";
 import { motion, AnimatePresence } from "motion/react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
@@ -63,7 +61,8 @@ export default function ClienteDetailPage() {
 
   const [q, setQ] = React.useState("");
   const [date, setDate] = React.useState<Date | undefined>(undefined);
-  const [estadoFiltro, setEstadoFiltro] = React.useState<"todas" | "activas" | "anuladas">("todas");
+  type EstadoFiltro = "todas" | "activas" | "anuladas";
+  const [estadoFiltro, setEstadoFiltro] = React.useState<EstadoFiltro>("todas");
   const [currentPage, setCurrentPage] = React.useState(1);
   const itemsPerPage = 8;
 
@@ -118,7 +117,7 @@ export default function ClienteDetailPage() {
         }
         listaOperaciones.sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime());
         setOperaciones(listaOperaciones);
-      } catch (e) {
+      } catch (e: unknown) {
         console.error("Error cargando perfil:", e);
       } finally {
         if (isMounted) setLoading(false);
@@ -232,7 +231,7 @@ export default function ClienteDetailPage() {
                   </PopoverContent>
                 </Popover>
 
-                <Select value={estadoFiltro} onValueChange={(v) => { setEstadoFiltro(v as any); setCurrentPage(1); }}>
+                <Select value={estadoFiltro} onValueChange={(v) => { setEstadoFiltro(v as EstadoFiltro); setCurrentPage(1); }}>
                   <SelectTrigger className={cn(
                     "h-12 md:h-14 w-full sm:w-[140px] font-bold rounded-xl md:rounded-2xl border-border bg-muted/30 text-[10px] md:text-[11px] tracking-widest uppercase shrink-0",
                     estadoFiltro === "anuladas" && "border-[color:var(--status-danger)] bg-[color:var(--status-danger)]/50 text-[color:var(--status-danger)] dark:bg-[color:var(--status-danger)]/20 dark:border-[color:var(--status-danger)]/50 dark:text-[color:var(--status-danger)]",

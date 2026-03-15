@@ -1,51 +1,42 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
-import { decryptCode, encryptCode, generateShortCode, hashCode } from "@/lib/share-links";
-import { requireAuth } from "@/lib/requireAuth";
+import { requireAuth } from "@/lib/auth/require-auth";
+import {
+  getOrCreateHistorialShareUrl,
+  isValidHistorialPeriod,
+  parseHistorialPeriod,
+} from "@/lib/historial-share-links";
 
 export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  // Auth: Requiere usuario autenticado
   const auth = await requireAuth();
   if (!auth.ok) return auth.res;
-  const { id } = await params;
-  const mes = parseInt(id);
-  const anio = parseInt(new URL(req.url).searchParams.get("anio") || "2026");
-  const targetId = (anio * 100) + mes;
 
-  const periodTargetId = anio * 100 + mes; // Ej: 202602
+  try {
+    const { id } = await params;
+    const period = parseHistorialPeriod(id, req.url);
 
-const existing = await prisma.shareLink.findFirst({
-  where: {
-    type: "HISTORIAL_INVENTARIO", // Coincide con tu Enum ShareLinkType
-    expiresAt: {
-      gt: new Date()
-    },
-    views: {
-      lt: 15 // O el límite que tengas definido
-    },
-    // 👇 ESTO ES LO QUE TE FALTA AGREGAR:
-    targetId: periodTargetId, 
-  },
-  orderBy: {
-    createdAt: "desc"
-  }
-});
-
-  if (existing) return NextResponse.json({ url: `/x/${decryptCode(existing.codeEnc)}` });
-
-  const code = generateShortCode(8);
-  await prisma.shareLink.create({
-    data: {
-      codeHash: hashCode(code),
-      codeEnc: encryptCode(code),
-      type: "HISTORIAL_INVENTARIO",
-      targetId,
-      expiresAt: new Date(Date.now() + 86400000), // 24hs
-      maxViews: 15
+    if (!Number.isFinite(period.mes) || period.mes < 0 || period.mes > 11) {
+      return NextResponse.json({ error: "Mes invalido (debe ser 0..11)" }, { status: 400 });
     }
-  });
 
-  return NextResponse.json({ url: `/x/${code}` });
+    if (!Number.isFinite(period.anio) || period.anio < 2000 || period.anio > 2100) {
+      return NextResponse.json({ error: "Ano invalido" }, { status: 400 });
+    }
+
+    if (!isValidHistorialPeriod(period)) {
+      return NextResponse.json({ error: "Periodo invalido" }, { status: 400 });
+    }
+
+    const url = await getOrCreateHistorialShareUrl({
+      ...period,
+      sucursalId: auth.activeSucursalId,
+    });
+
+    return NextResponse.json({ url });
+  } catch (error) {
+    console.error("HISTORIAL_INVENTARIO SHARELINK ERROR:", error);
+    return NextResponse.json({ error: "Error de servidor" }, { status: 500 });
+  }
 }

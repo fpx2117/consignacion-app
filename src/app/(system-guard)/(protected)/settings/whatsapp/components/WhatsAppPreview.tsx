@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Check, CheckCheck, Mic, Smartphone } from "lucide-react";
+import { CheckCheck, Mic, Smartphone } from "lucide-react";
 
 // Rich Preview Component to parse WhatsApp formatting
 export const WhatsAppRichText = ({ text }: { text: string }) => {

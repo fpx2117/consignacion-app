@@ -1,8 +1,9 @@
 
 //src/app/api/notificaciones/route.ts
 import { NextResponse } from "next/server";
+import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
-import { requireAuth } from "@/lib/requireAuth"; // 🔒 Seguridad
+import { requireAuth } from "@/lib/auth/require-auth"; // 🔒 Seguridad
 import { buildSucursalWhere, isGlobalSucursalView } from "@/lib/sucursalScope";
 
 // --- GET: Obtener lista y contador ---
@@ -15,10 +16,10 @@ export async function GET(req: Request) {
     const sucursalWhere = buildSucursalWhere(auth);
     const { searchParams } = new URL(req.url);
     const onlyUnread = searchParams.get("onlyUnread") === "true";
-    const limit = Number(searchParams.get("limit") || 50);
+    const rawLimit = Number(searchParams.get("limit") || 50);
+    const limit = Number.isFinite(rawLimit) ? Math.min(Math.max(rawLimit, 1), 200) : 50;
 
-    // 2. Query filtrada por sucursal
-    const baseWhere = {
+    const baseWhere: Prisma.NotificationWhereInput = {
       ...sucursalWhere,
       ...(onlyUnread ? { read: false } : {}),
     };
@@ -63,7 +64,7 @@ export async function PATCH(req: Request) {
     }
 
     const sucursalId = auth.activeSucursalId;
-    const body = await req.json();
+    const body = await req.json().catch(() => null);
     const { ids, markAll } = body;
 
     // Opción A: Marcar todo como leído solo en la sucursal activa
@@ -80,8 +81,16 @@ export async function PATCH(req: Request) {
 
     // Opción B: Marcar algunas específicas (protegemos que sean de esta sucursal)
     if (ids && Array.isArray(ids) && ids.length > 0) {
+      const normalizedIds = ids
+        .map((id) => Number(id))
+        .filter((id) => Number.isInteger(id) && id > 0);
+
+      if (normalizedIds.length === 0) {
+        return NextResponse.json({ error: "IDs invalidos" }, { status: 400 });
+      }
+
       await prisma.notification.updateMany({
-        where: { id: { in: ids }, sucursalId },
+        where: { id: { in: normalizedIds }, sucursalId },
         data: {
           read: true,
           readAt: new Date()

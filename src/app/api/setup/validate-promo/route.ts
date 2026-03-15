@@ -1,18 +1,20 @@
-/* eslint-disable */
-// @ts-nocheck
-// src/app/api/setup/validate-promo/route.ts
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
+type ValidatePromoBody = {
+  code?: string;
+  planId?: number;
+};
+
 export async function POST(req: Request) {
     try {
-        const { code, planId } = await req.json();
+        const { code } = (await req.json()) as ValidatePromoBody;
 
         if (!code) {
             return NextResponse.json({ error: "Código requerido" }, { status: 400 });
         }
 
-        const promo = await (prisma as any).promoCode.findUnique({
+        const promo = await prisma.promoCode.findUnique({
             where: { code: code.toUpperCase() },
             include: { plan: true }
         });
@@ -39,7 +41,7 @@ export async function POST(req: Request) {
             durationDays: promo.durationDays
         });
 
-    } catch (error: any) {
+    } catch (error) {
         console.error("VALIDATE_PROMO_ERROR:", error);
         return NextResponse.json({ error: "Error de servidor" }, { status: 500 });
     }

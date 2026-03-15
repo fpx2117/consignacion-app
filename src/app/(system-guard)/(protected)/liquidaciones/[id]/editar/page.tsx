@@ -1,5 +1,3 @@
-/* eslint-disable */
-// @ts-nocheck
 "use client";
 
 import * as React from "react";
@@ -23,6 +21,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Label } from "@/components/ui/label";
+import type { Consignacion, ConsignacionDetalle, Liquidacion, LiquidacionItem, Producto } from "@/lib/types";
 
 // Dialogs
 import { SuccessDialog } from "@/components/success-dialog";
@@ -36,6 +35,24 @@ type EditableLiquidacionItem = {
   unitsDevueltas: number;
   maxDisponibleParaEstaEdicion: number;
 };
+
+type LiquidacionDetalleEditable = ConsignacionDetalle & {
+  producto?: Producto;
+};
+
+type LiquidacionItemEditable = LiquidacionItem & {
+  detalle?: LiquidacionDetalleEditable | null;
+  consignacionDetalle?: LiquidacionDetalleEditable | null;
+};
+
+type LiquidacionEditable = Liquidacion & {
+  consignacion?: Consignacion | null;
+  items?: LiquidacionItemEditable[];
+};
+
+function getErrorMessage(error: unknown, fallback: string) {
+  return error instanceof Error ? error.message : fallback;
+}
 
 const clampInt = (n: number) => {
   if (!Number.isFinite(n)) return 0;
@@ -76,14 +93,12 @@ export default function EditarLiquidacionPage() {
     setLoading(true);
 
     try {
-      // ✅ ahora devuelve data plano
-      const liq: any = await apiService.getLiquidacion(liquidacionId);
+      const liq = (await apiService.getLiquidacion(liquidacionId)) as LiquidacionEditable | null;
 
       if (!liq) throw new Error("No se encontró la liquidación");
 
       setConsignacionId(liq.consignacionId);
 
-      // ✅ porcentaje aumento
       if (liq.consignacion) {
         setPorcentajeAumento(liq.consignacion.porcentajeAumento || 0);
       } else {
@@ -91,8 +106,12 @@ export default function EditarLiquidacionPage() {
         setPorcentajeAumento(cons.porcentajeAumento || 0);
       }
 
-      const mappedItems: EditableLiquidacionItem[] = (liq.items || []).map((item: any) => {
+      const mappedItems: EditableLiquidacionItem[] = ((liq.items || []) as LiquidacionItemEditable[]).map((item) => {
         const det = item.detalle || item.consignacionDetalle;
+
+        if (!det) {
+          throw new Error("La liquidación tiene items sin detalle asociado.");
+        }
 
         const pendienteActual =
           (det.unitsEntregadas ?? 0) - (det.unitsVendidasAcum ?? 0) - (det.unitsDevueltasAcum ?? 0);
@@ -112,11 +131,11 @@ export default function EditarLiquidacionPage() {
       });
 
       setItems(mappedItems);
-    } catch (e: any) {
+    } catch (error) {
       setErrorDialog({
         open: true,
         title: "Error de carga",
-        description: e?.message || "No se pudo cargar la liquidación.",
+        description: getErrorMessage(error, "No se pudo cargar la liquidación."),
       });
     } finally {
       setLoading(false);
@@ -124,7 +143,7 @@ export default function EditarLiquidacionPage() {
   }, [liquidacionId]);
 
   React.useEffect(() => {
-    loadData();
+    void loadData();
   }, [loadData]);
 
   const handleUpdate = (
@@ -180,11 +199,11 @@ export default function EditarLiquidacionPage() {
       });
 
       setShowSuccess(true);
-    } catch (e: any) {
+    } catch (error) {
       setErrorDialog({
         open: true,
         title: "Error al guardar",
-        description: e.message || "No se pudieron guardar los cambios.",
+        description: getErrorMessage(error, "No se pudieron guardar los cambios."),
       });
     } finally {
       setSaving(false);

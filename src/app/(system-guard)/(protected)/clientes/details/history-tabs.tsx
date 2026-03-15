@@ -1,7 +1,6 @@
-/* eslint-disable */
-// @ts-nocheck
 "use client";
 
+import * as React from "react";
 import Link from "next/link";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -25,8 +24,9 @@ interface HistoryProps {
 export function ClientHistoryTabs({ consignaciones, pagos, ventas }: HistoryProps) {
 
     // Función auxiliar para verificar estado sin errores de TS
-    const isAbierta = (estado: any) => {
-        return String(estado).toLowerCase() === 'abierta' || String(estado).toLowerCase() === 'activa';
+    const isAbierta = (estado: string) => {
+        const lower = estado.toLowerCase();
+        return lower === 'abierta' || lower === 'activa';
     };
 
     return (
@@ -100,12 +100,12 @@ export function ClientHistoryTabs({ consignaciones, pagos, ventas }: HistoryProp
                     <>
                         {/* MOBILE */}
                         <div className="grid gap-3 md:hidden">
-                            {pagos.map((p: any) => (
+                            {pagos.map((p) => (
                                 <MobileCard key={p.id}
                                     title="Pago Recibido"
                                     date={p.fecha}
-                                    amount={p.monto}
-                                    subtitle={(p as any).metodoPago || "Efectivo"}
+                                    amount={Number(p.monto)}
+                                    subtitle={p.metodo ?? "Efectivo"}
                                 />
                             ))}
                         </div>
@@ -114,11 +114,11 @@ export function ClientHistoryTabs({ consignaciones, pagos, ventas }: HistoryProp
                             <Table>
                                 <TableHeader className="bg-muted/40"><TableRow><TableHead>Fecha</TableHead><TableHead>Método</TableHead><TableHead className="text-right">Monto</TableHead></TableRow></TableHeader>
                                 <TableBody>
-                                    {pagos.map((p: any) => (
+                                    {pagos.map((p) => (
                                         <TableRow key={p.id}>
                                             <TableCell>{formatDate(p.fecha)}</TableCell>
-                                            <TableCell className="capitalize flex items-center gap-2"><Receipt className="h-3 w-3" /> {(p as any).metodoPago || "Efectivo"}</TableCell>
-                                            <TableCell className="text-right font-bold text-[color:var(--status-success-strong)]">+ {formatCurrency(p.monto)}</TableCell>
+                                            <TableCell className="capitalize flex items-center gap-2"><Receipt className="h-3 w-3" /> {p.metodo ?? "Efectivo"}</TableCell>
+                                            <TableCell className="text-right font-bold text-[color:var(--status-success-strong)]">+ {formatCurrency(Number(p.monto))}</TableCell>
                                         </TableRow>
                                     ))}
                                 </TableBody>
@@ -138,10 +138,10 @@ export function ClientHistoryTabs({ consignaciones, pagos, ventas }: HistoryProp
                         <div className="grid gap-3 md:hidden">
                             {ventas.map(v => (
                                 <MobileCard key={v.id}
-                                    title={`Ticket #${v.numeroVenta || v.id}`}
+                                    title={`Ticket #${v.numeroVenta ?? v.id}`}
                                     date={v.fecha}
-                                    amount={v.total}
-                                    subtitle={`${(v as any).cantidadTotal ?? "-"} artículos`}
+                                    amount={Number(v.total)}
+                                    subtitle={`${v.detalles?.length ?? "-"} artículos`}
                                 />
                             ))}
                         </div>
@@ -153,9 +153,9 @@ export function ClientHistoryTabs({ consignaciones, pagos, ventas }: HistoryProp
                                     {ventas.map(v => (
                                         <TableRow key={v.id}>
                                             <TableCell>{formatDate(v.fecha)}</TableCell>
-                                            <TableCell className="font-mono text-xs">#{v.numeroVenta || v.id}</TableCell>
-                                            <TableCell>{(v as any).cantidadTotal ?? "-"} un.</TableCell>
-                                            <TableCell className="text-right font-bold">{formatCurrency(v.total)}</TableCell>
+                                            <TableCell className="font-mono text-xs">#{v.numeroVenta ?? v.id}</TableCell>
+                                            <TableCell>{v.detalles?.length ?? "-"} un.</TableCell>
+                                            <TableCell className="text-right font-bold">{formatCurrency(Number(v.total))}</TableCell>
                                         </TableRow>
                                     ))}
                                 </TableBody>
@@ -170,8 +170,18 @@ export function ClientHistoryTabs({ consignaciones, pagos, ventas }: HistoryProp
 
 // --- SUBCOMPONENTES DE UI ---
 
-function MobileCard({ title, date, status, statusColor, amount, subtitle, link }: any) {
-    const Content = () => (
+interface MobileCardProps {
+    title: string;
+    date: string | Date;
+    status?: string;
+    statusColor?: "default" | "secondary" | "outline" | "destructive";
+    amount?: number;
+    subtitle?: string;
+    link?: string;
+}
+
+function MobileCard({ title, date, status, statusColor, amount, subtitle, link }: MobileCardProps) {
+    const content = (
         <div className="flex items-center justify-between p-4">
             <div className="space-y-1">
                 <div className="flex items-center gap-2">
@@ -190,12 +200,12 @@ function MobileCard({ title, date, status, statusColor, amount, subtitle, link }
     );
 
     if (link) {
-        return <Link href={link}><Card className="active:scale-[0.98] transition-transform"><Content /></Card></Link>;
+        return <Link href={link}><Card className="active:scale-[0.98] transition-transform">{content}</Card></Link>;
     }
-    return <Card><Content /></Card>;
+    return <Card>{content}</Card>;
 }
 
-function EmptyState({ icon: Icon, title, text }: any) {
+function EmptyState({ icon: Icon, title, text }: { icon: React.ElementType; title: string; text: string }) {
     return (
         <div className="flex flex-col items-center justify-center py-12 border-2 border-dashed border-muted-foreground/10 rounded-xl bg-muted/5 text-center">
             <div className="p-3 bg-background rounded-full mb-3 shadow-sm border"><Icon className="h-5 w-5 text-muted-foreground" /></div>

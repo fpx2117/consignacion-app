@@ -1,5 +1,3 @@
-/* eslint-disable */
-// @ts-nocheck
 "use client";
 
 import Image from "next/image";
@@ -8,32 +6,30 @@ import { motion, AnimatePresence } from "motion/react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import { useState, useEffect } from "react";
 import { getThemeStyles } from "../lib/theme-utils";
+import type {
+    PublicCatalogConfig,
+    PublicCatalogProduct,
+} from "@/lib/types";
 
 interface ProductModalProps {
-    product: any | null;
+    product: PublicCatalogProduct | null;
     isOpen: boolean;
     onClose: () => void;
-    config: any;
+    config: PublicCatalogConfig;
     isConsigne: boolean;
-    onAddToCart: (product: any, quantity: number) => void;
+    onAddToCart: (product: PublicCatalogProduct, quantity: number) => void;
 }
 
 export function ProductModal({ product, isOpen, onClose, config, isConsigne, onAddToCart }: ProductModalProps) {
-    const [quantity, setQuantity] = useState(1);
-
-    // Resetear la cantidad cada vez que se abre un producto nuevo
-    useEffect(() => {
-        if (isOpen) setQuantity(1);
-    }, [isOpen, product]);
+    const quantity = 1;
 
     if (!product) return null;
 
     const { radiusClass, buttonRadiusClass, buttonHoverClass, cardBgClass } = getThemeStyles(config?.themeIdentifier);
     const basePrice = Number(product.precioVenta);
     const displayedPrice = isConsigne
-        ? basePrice * (1 + (config.porcentajeAumentoConsignacion / 100))
+        ? basePrice * (1 + ((config.porcentajeAumentoConsignacion ?? 0) / 100))
         : basePrice;
     const isAvailable = product.stockDisponibleUnits > 0;
 

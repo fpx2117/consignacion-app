@@ -1,5 +1,3 @@
-/* eslint-disable */
-// @ts-nocheck
 "use client";
 
 import { Card, CardContent } from "@/components/ui/card";
@@ -9,12 +7,25 @@ import { motion } from "motion/react";
 import { TrendingUp, Package } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-import { DashboardFilter } from "@/lib/types";
+import { DashboardFilter, DashboardTopConsignados, DashboardTopProductos, DashboardTopVendidos } from "@/lib/types";
 
-export function TopProductsSection({ top, loading, filter = "all" }: { top: any; loading: boolean; filter?: DashboardFilter }) {
+type ProductRowProps = {
+  rank: number;
+  name: string;
+  detailMain: string;
+  detailSub: string;
+  index: number;
+};
 
-  // Se cambió Link por div y se eliminaron las clases de hover relacionadas con interactividad
-  const ProductRow = ({ rank, name, detailMain, detailSub, index }: any) => (
+type TopProductsSectionProps = {
+  top?: DashboardTopProductos | null;
+  loading: boolean;
+  filter?: DashboardFilter;
+};
+
+export function TopProductsSection({ top, loading, filter = "all" }: TopProductsSectionProps) {
+
+  const ProductRow = ({ rank, name, detailMain, detailSub, index }: ProductRowProps) => (
     <motion.div
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
@@ -88,7 +99,7 @@ export function TopProductsSection({ top, loading, filter = "all" }: { top: any;
               ) : (top?.topVendidos ?? []).length === 0 ? (
                 <EmptyState message="Sin ventas en este período" />
               ) : (
-                (top?.topVendidos ?? []).map((p: any, index: number) => (
+                (top?.topVendidos ?? []).map((p: DashboardTopVendidos, index: number) => (
                   <ProductRow
                     key={p.productoId}
                     index={index}
@@ -130,7 +141,7 @@ export function TopProductsSection({ top, loading, filter = "all" }: { top: any;
               ) : (top?.topConsignados ?? []).length === 0 ? (
                 <EmptyState message="Sin movimientos registrados" />
               ) : (
-                (top?.topConsignados ?? []).map((p: any, index: number) => (
+                (top?.topConsignados ?? []).map((p: DashboardTopConsignados, index: number) => (
                   <ProductRow
                     key={p.productoId}
                     index={index}

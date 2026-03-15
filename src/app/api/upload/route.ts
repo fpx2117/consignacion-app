@@ -1,11 +1,9 @@
-/* eslint-disable */
-// @ts-nocheck
 // src/app/api/upload/route.ts
 
 import { NextResponse } from "next/server";
 import { writeFile, mkdir } from "fs/promises";
 import path from "path";
-import { requireAuth, requireRole } from "@/lib/requireAuth";
+import { requireAuth, requireRole } from "@/lib/auth/require-auth";
 
 // En Railway: UPLOAD_DIR=/app/uploads (volumen persistente montado)
 // En local:   guarda en public/uploads (servido estático por Next.js)

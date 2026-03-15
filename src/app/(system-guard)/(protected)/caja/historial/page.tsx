@@ -1,14 +1,11 @@
-/* eslint-disable */
-// @ts-nocheck
 "use client";
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import {
-    Loader2, ArrowLeft, History, User, Store,
-    TrendingDown, TrendingUp, AlertTriangle,
-    Wallet, Search, Clock, FileText, Timer, ArrowUpRight,
-    Filter, X, Calendar as CalendarIcon, ChevronRight
+    Loader2, ArrowLeft, History, Store,
+    AlertTriangle,
+    Wallet, Search, FileText, Timer, ArrowUpRight
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -74,8 +71,8 @@ const cleanObservaciones = (obs: string | null | undefined) => {
 
 export default function HistorialCajasPage() {
     const router = useRouter();
-    const [sesiones, setSesiones] = React.useState<any[]>([]);
-    const [cajasFisicas, setCajasFisicas] = React.useState<any[]>([]);
+    const [sesiones, setSesiones] = React.useState<import("@/lib/types").SesionCaja[]>([]);
+    const [cajasFisicas, setCajasFisicas] = React.useState<{ id: number; nombre: string; activa: boolean }[]>([]);
     const [loading, setLoading] = React.useState(true);
 
     // --- ESTADOS DE FILTROS ---
@@ -92,7 +89,7 @@ export default function HistorialCajasPage() {
                 ]);
                 setSesiones(resHistorial || []);
                 setCajasFisicas(resCajas || []);
-            } catch (err: any) {
+            } catch {
                 toast.error("Error al cargar historial");
             } finally {
                 setLoading(false);
@@ -328,7 +325,7 @@ export default function HistorialCajasPage() {
                                                                 <AlertTriangle className="h-3.5 w-3.5" /> Comentarios del Cajero
                                                             </p>
                                                             <p className="text-sm italic text-muted-foreground leading-relaxed font-medium">
-                                                                "{cleanObservaciones(s.observaciones)}"
+                                                                &quot;{cleanObservaciones(s.observaciones)}&quot;
                                                             </p>
                                                         </div>
 
@@ -348,8 +345,16 @@ export default function HistorialCajasPage() {
     );
 }
 
-function StatCard({ title, value, icon: Icon, color, smallValue, pulse }: any) {
-    const colorConfigs: any = {
+interface StatCardProps {
+    title: string;
+    value: string | number;
+    icon: React.ComponentType<{ className?: string }>;
+    color: string;
+    smallValue?: string;
+    pulse?: boolean;
+}
+function StatCard({ title, value, icon: Icon, color, smallValue, pulse }: StatCardProps) {
+    const colorConfigs: Record<string, string> = {
         violet: "bg-[color:var(--primary)]/10 text-[color:var(--primary)] border-[color:var(--primary)]/20 shadow-violet-500/5",
         emerald: "bg-[color:var(--status-success-strong)]/10 text-[color:var(--status-success-strong)] border-[color:var(--status-success-strong)]/20 shadow-emerald-500/5",
         red: "bg-[color:var(--status-danger)]/10 text-[color:var(--status-danger)] border-[color:var(--status-danger)]/20 shadow-red-500/5",

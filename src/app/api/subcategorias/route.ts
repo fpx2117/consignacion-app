@@ -1,8 +1,6 @@
-/* eslint-disable */
-// @ts-nocheck
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireAuth } from "@/lib/requireAuth";
+import { requireAuth } from "@/lib/auth/require-auth";
 import { isGlobalSucursalView } from "@/lib/sucursalScope";
 
 // GET: Obtener subcategorías por categoriaId
@@ -27,7 +25,7 @@ export async function GET(req: NextRequest) {
       orderBy: { nombre: "asc" },
     });
     return NextResponse.json(subcategorias);
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       { error: "Error al obtener subcategorías" },
       { status: 500 }
@@ -64,7 +62,7 @@ export async function POST(req: NextRequest) {
     });
 
     return NextResponse.json(nuevaSubcategoria);
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       { error: "Error al crear la subcategoría. Quizás ya existe en esta categoría." },
       { status: 500 }

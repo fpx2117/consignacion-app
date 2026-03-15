@@ -1,6 +1,3 @@
-/* eslint-disable */
-// @ts-nocheck
-
 //src/app/(protected)/consignaciones/[id]/page.tsx
 "use client";
 
@@ -21,7 +18,6 @@ import {
   Download,
   MessageCircle,
   Pencil,
-  History,
   BadgePercent,
   TrendingUp,
   DollarSign,
@@ -74,8 +70,8 @@ export default function ConsignacionDetailPage() {
     try {
       const res = await apiService.getConsignacion(id);
       setConsignacion(res);
-    } catch (e: any) {
-      toast.error(e?.message ?? "Error cargando datos");
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : "Error cargando datos");
     } finally {
       setLoading(false);
     }
@@ -85,10 +81,7 @@ export default function ConsignacionDetailPage() {
     if (id) load();
   }, [id, load]);
 
-  const liquidaciones = React.useMemo(() => {
-    const arr = (consignacion as any)?.liquidaciones;
-    return Array.isArray(arr) ? arr : [];
-  }, [consignacion]);
+  const liquidaciones = React.useMemo(() => consignacion?.liquidaciones ?? [], [consignacion]);
 
   const tieneLiquidaciones = liquidaciones.length > 0;
   const lastLiquidacionId = tieneLiquidaciones ? Number(liquidaciones[0]?.id) : null;
@@ -106,9 +99,7 @@ export default function ConsignacionDetailPage() {
     router.push(`/liquidaciones/${lastLiquidacionId}/editar`);
   }, [router, lastLiquidacionId]);
 
-  const goLiquidacionesHistory = React.useCallback(() => {
-    router.push(`/consignaciones/${id}/liquidaciones`);
-  }, [router, id]);
+  // goLiquidacionesHistory reservado para navegación futura al historial de liquidaciones
 
   const handlePdfAction = (mode: "view" | "whatsapp") => {
     if (!consignacion) return;
@@ -133,10 +124,10 @@ export default function ConsignacionDetailPage() {
     window.open(url, '_blank');
   };
 
-  const detalles = consignacion?.detalles ?? [];
-  const entregadas = detalles.reduce((a, d: any) => a + (d.unitsEntregadas ?? 0), 0);
-  const vendidas = detalles.reduce((a, d: any) => a + (d.unitsVendidasAcum ?? 0), 0);
-  const devueltas = detalles.reduce((a, d: any) => a + (d.unitsDevueltasAcum ?? 0), 0);
+  const detalles = React.useMemo(() => consignacion?.detalles ?? [], [consignacion?.detalles]);
+  const entregadas = detalles.reduce((a, d) => a + (Number(d.unitsEntregadas) ?? 0), 0);
+  const vendidas = detalles.reduce((a, d) => a + (Number(d.unitsVendidasAcum) ?? 0), 0);
+  const devueltas = detalles.reduce((a, d) => a + (Number(d.unitsDevueltasAcum) ?? 0), 0);
   const pendientes = Math.max(0, entregadas - vendidas - devueltas);
 
   const estado: EstadoConsignacion = consignacion?.estado ?? "ABIERTA";
@@ -151,10 +142,10 @@ export default function ConsignacionDetailPage() {
 
     if (tieneLiquidaciones) {
       // Ya liquidada: sumar totales de las ventas generadas por cada liquidación
-      return liquidaciones.reduce((total: number, liq: any) => {
+      return liquidaciones.reduce((total, liq) => {
         if (liq.venta?.total) return total + Number(liq.venta.total);
         // Fallback: calcular desde los items de la liquidación
-        const itemsTotal = (liq.items ?? []).reduce((sum: number, item: any) => {
+        const itemsTotal = (liq.items ?? []).reduce((sum, item) => {
           return sum + (Number(item.unitsVendidas ?? 0) * Number(item.precioUnitario ?? 0));
         }, 0);
         return total + itemsTotal;
@@ -162,7 +153,7 @@ export default function ConsignacionDetailPage() {
     }
 
     // No liquidada: total de productos consignados (entregadas × precio unitario)
-    return detalles.reduce((total: number, d: any) => {
+    return detalles.reduce((total, d) => {
       let precio = Number(d.precioUnitario);
       if (!precio || precio === 0) {
         const precioBase = Number(d.producto?.precioVenta || 0);
@@ -333,7 +324,7 @@ export default function ConsignacionDetailPage() {
                   {[1, 2, 3].map((i) => <Skeleton key={i} className="h-24 w-full rounded-xl" />)}
                 </div>
               ) : (
-                detalles.map((d: any) => (
+                detalles.map((d) => (
                   <ProductRow key={d.id} d={d} porcentajeAumento={porcentajeAumento} />
                 ))
               )}
@@ -386,7 +377,14 @@ function EstadoBadge({ estado }: { estado: EstadoConsignacion }) {
   );
 }
 
-function KpiCard({ title, value, loading, icon, emphasis }: any) {
+interface KpiCardProps {
+  title: string;
+  value: string | number;
+  loading: boolean;
+  icon: React.ReactNode;
+  emphasis?: boolean;
+}
+function KpiCard({ title, value, loading, icon, emphasis }: KpiCardProps) {
   return (
     <Card className={cn("shadow-md border-border bg-card transition-all hover:translate-y-[-2px]", emphasis && "border-destructive/30 bg-destructive/5")}>
       <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0 text-muted-foreground">
@@ -403,7 +401,7 @@ function KpiCard({ title, value, loading, icon, emphasis }: any) {
 }
 
 // --- PRODUCT ROW CON PRECIOS ---
-function ProductRow({ d, porcentajeAumento }: { d: any; porcentajeAumento: number }) {
+function ProductRow({ d, porcentajeAumento }: { d: import("@/lib/types").ConsignacionDetalle; porcentajeAumento: number }) {
   const pend = Math.max(0, (d.unitsEntregadas ?? 0) - (d.unitsVendidasAcum ?? 0) - (d.unitsDevueltasAcum ?? 0));
   const percentVendido = (d.unitsEntregadas ?? 0) > 0 ? ((d.unitsVendidasAcum ?? 0) / d.unitsEntregadas) * 100 : 0;
 

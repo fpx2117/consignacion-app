@@ -1,5 +1,3 @@
-/* eslint-disable */
-// @ts-nocheck
 "use client";
 
 import { Search, Grid, List as ListIcon, Zap, PackageOpen, SlidersHorizontal } from "lucide-react";
@@ -9,26 +7,32 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { getThemeStyles } from "../lib/theme-utils";
+import type {
+  PublicCatalogCategory,
+  PublicCatalogConfig,
+  PublicCatalogProduct,
+  PublicCatalogSortBy,
+} from "@/lib/types";
 
 import { motion, AnimatePresence } from "motion/react";
-import { ChevronRight, ChevronDown } from "lucide-react";
+import { ChevronDown } from "lucide-react";
 
 interface StoreFiltersProps {
-    config: any;
-    products: any[];
+    config: PublicCatalogConfig;
+    products: PublicCatalogProduct[];
     searchTerm: string;
     setSearchTerm: (val: string) => void;
     viewMode: "grid" | "list";
     setViewMode: (mode: "grid" | "list") => void;
-    categories: any[];
+    categories: PublicCatalogCategory[];
     selectedCategory: number | null;
     setSelectedCategory: (id: number | null) => void;
     selectedSubcategory: number | null;
     setSelectedSubcategory: (id: number | null) => void;
     isConsigne: boolean;
     setIsConsigne: (val: boolean) => void;
-    sortBy: string;
-    setSortBy: (val: string) => void;
+    sortBy: PublicCatalogSortBy;
+    setSortBy: (val: PublicCatalogSortBy) => void;
 }
 
 export function StoreFilters({
@@ -51,15 +55,16 @@ export function StoreFilters({
     const { inputRadiusClass, buttonRadiusClass, cardBgClass } = getThemeStyles(config.themeIdentifier);
 
     // Calcular cuántos productos hay por categoría/subcategoría para mostrar el contador
-    const categoryCounts = products.reduce((acc, product) => {
+    const categoryCounts = products.reduce<Record<number, number>>((acc, product) => {
         const catId = product.categoriaId;
+        if (catId === null) return acc;
         acc[catId] = (acc[catId] || 0) + 1;
         return acc;
-    }, {} as Record<number, number>);
+    }, {});
 
-    const subcategoryCounts = products.reduce((acc: any, p: any) => {
-        if (p.subcategoriaId) {
-            acc[p.subcategoriaId] = (acc[p.subcategoriaId] || 0) + 1;
+    const subcategoryCounts = products.reduce<Record<number, number>>((acc, product) => {
+        if (product.subcategoriaId !== null) {
+            acc[product.subcategoriaId] = (acc[product.subcategoriaId] || 0) + 1;
         }
         return acc;
     }, {});
@@ -172,7 +177,7 @@ export function StoreFilters({
                         </button>
 
                         {/* Lista de Categorías con Acordeón para Subcategorías */}
-                        {categories.slice().sort((a, b) => a.nombre.localeCompare(b.nombre)).map((cat: any) => {
+                        {categories.slice().sort((a, b) => a.nombre.localeCompare(b.nombre)).map((cat) => {
                             const count = categoryCounts[cat.id] || 0;
                             if (count === 0) return null;
 
@@ -221,7 +226,7 @@ export function StoreFilters({
                                                     Todo {cat.nombre}
                                                 </button>
 
-                                                {cat.subcategorias.map((sub: any) => {
+                                                {cat.subcategorias.map((sub) => {
                                                     const subCount = subcategoryCounts[sub.id] || 0;
                                                     if (subCount === 0) return null;
                                                     const isSubSelected = selectedSubcategory === sub.id;
@@ -252,7 +257,7 @@ export function StoreFilters({
             )}
 
             {/* Fila 3: Switch de Consignación */}
-            {config.mostrarPreciosConsignacion && config.porcentajeAumentoConsignacion > 0 && (
+            {config.mostrarPreciosConsignacion && (config.porcentajeAumentoConsignacion ?? 0) > 0 && (
                 <div className="flex justify-start w-full mt-2">
                     <div className={cn(
                         "flex p-1 w-full md:max-w-[400px] border border-border shadow-inner backdrop-blur-sm",

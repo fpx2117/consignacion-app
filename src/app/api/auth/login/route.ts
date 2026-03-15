@@ -1,12 +1,15 @@
-/* eslint-disable */
-// @ts-nocheck
 import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
-import { setAuthCookie, signUserJwt } from "@/lib/auth";
+import { setAuthCookie, signUserJwt } from "@/lib/auth/core";
+
+type LoginBody = {
+  email?: string;
+  password?: string;
+};
 
 export async function POST(req: Request) {
-  const body = await req.json().catch(() => null);
+  const body = (await req.json().catch(() => null)) as LoginBody | null;
 
   const email = String(body?.email || "").toLowerCase().trim();
   const password = String(body?.password || "");
@@ -43,7 +46,7 @@ export async function POST(req: Request) {
   // --- NUEVO: Seguimiento de Sesión y Auditoría ---
   try {
     const { getRealClientData } = await import("@/lib/clientData");
-    const { getSessionHash } = await import("@/lib/sessionHash");
+    const { getSessionHash } = await import("@/lib/security/session-hash");
     const clientData = await getRealClientData();
     const sessionToken = getSessionHash(token);
 
@@ -71,8 +74,11 @@ export async function POST(req: Request) {
       ipAddress: clientData.ip,
       userAgent: clientData.userAgent,
     });
-  } catch (e: any) {
-    console.error("Error logging session:", e.message);
+  } catch (error) {
+    console.error(
+      "Error logging session:",
+      error instanceof Error ? error.message : error
+    );
   }
 
   return NextResponse.json({

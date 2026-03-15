@@ -1,4 +1,5 @@
 import { reportThemeCss } from "@/lib/reports/report-theme";
+import { brandInitials, escapeAttr, escapeHtml, formatDateAR, formatMoneyARS } from "@/lib/reports/template-helpers";
 import type { BrandingDTO } from "@/lib/reports/types";
 
 export interface GastoReportDTO {
@@ -12,44 +13,6 @@ export interface GastoReportDTO {
     esRecurrente: boolean;
     frecuencia: string;
 }
-
-const escapeHtml = (value: unknown): string => {
-    return String(value ?? "")
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;");
-};
-
-const escapeAttr = (value: unknown): string => {
-    return escapeHtml(value).replace(/[\r\n]+/g, " ").trim();
-};
-
-const formatDateAR = (date?: string | Date | null) => {
-    if (!date) return "-";
-    const d = new Date(date);
-    return isNaN(d.getTime())
-        ? "-"
-        : d.toLocaleDateString("es-AR", {
-            day: "2-digit",
-            month: "2-digit",
-            year: "numeric",
-        });
-};
-
-const formatMoney = (amount: number) => {
-    return new Intl.NumberFormat("es-AR", {
-        style: "currency",
-        currency: "ARS",
-        minimumFractionDigits: 2,
-    }).format(amount);
-};
-
-const brandInitials = (name: string) => {
-    const parts = name.trim().split(/\s+/).filter(Boolean);
-    const a = parts[0]?.[0] ?? "A";
-    const b = parts[1]?.[0] ?? parts[0]?.[1] ?? "D";
-    return (a + b).toUpperCase();
-};
 
 export function buildGastoHtml(data: GastoReportDTO, branding: BrandingDTO) {
     const colorPrincipal = "bg-rose-600";
@@ -123,7 +86,7 @@ export function buildGastoHtml(data: GastoReportDTO, branding: BrandingDTO) {
 
                 <div class="${colorPrincipal} rounded-3xl p-8 text-white flex flex-col justify-center items-end shadow-2xl relative overflow-hidden min-w-[200px]">
                   <h3 class="text-[10px] font-black text-white/60 uppercase tracking-widest mb-1 relative z-10">Monto del Egreso</h3>
-                  <p class="text-5xl font-black money tracking-tighter relative z-10">${formatMoney(data.monto)}</p>
+                  <p class="text-5xl font-black money tracking-tighter relative z-10">${formatMoneyARS(data.monto)}</p>
                   
                   <div class="flex items-center gap-2 mt-4 border-t border-white/20 pt-3 w-full justify-end relative z-10">
                     <span class="text-[10px] uppercase font-bold text-white/60">Estado:</span>

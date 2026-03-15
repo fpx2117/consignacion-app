@@ -1,11 +1,9 @@
-/* eslint-disable */
-// @ts-nocheck
 // src/lib/mercadopago.ts
 import { MercadoPagoConfig, Preference } from "mercadopago";
 import crypto from "crypto";
-import { paymentConfig } from "./paymentConfig";
+import { paymentConfig } from "@/lib/payments/config";
 import { getPlanByExternalId } from "@/constants/subscriptions";
-import { prisma } from "./prisma";
+import { prisma } from "@/lib/prisma";
 
 // Initialize Mercado Pago client
 const client = new MercadoPagoConfig({

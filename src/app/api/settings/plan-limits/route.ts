@@ -1,10 +1,15 @@
-/* eslint-disable */
-// @ts-nocheck
-// src/app/api/settings/plan-limits/route.ts
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireAuth, requireRole } from "@/lib/requireAuth";
+import { requireAuth, requireRole } from "@/lib/auth/require-auth";
 import { PLAN_LIMITS_DEFAULTS } from "@/constants/subscriptions";
+
+type PlanLimitsPatchBody = {
+    planId?: number;
+    maxProductos?: number;
+    maxUsuarios?: number;
+    allowConsignaciones?: boolean;
+    allowSucursales?: boolean;
+};
 
 /**
  * GET: Lista los límites de todos los planes.
@@ -24,8 +29,8 @@ export async function GET() {
         });
 
         // Load limits separately to avoid Prisma type cache issues
-        const allLimits = await (prisma as any).planLimit.findMany();
-        const limitsMap = new Map((allLimits as any[]).map((l: any) => [l.planId, l]));
+        const allLimits = await prisma.planLimit.findMany();
+        const limitsMap = new Map(allLimits.map((limit) => [limit.planId, limit]));
 
         const result = plans.map((plan) => {
             const planLimits = limitsMap.get(plan.id);
@@ -58,7 +63,7 @@ export async function PATCH(req: Request) {
             return NextResponse.json({ error: "No autorizado" }, { status: 403 });
         }
 
-        const body = await req.json().catch(() => null);
+        const body = (await req.json().catch(() => null)) as PlanLimitsPatchBody | null;
         if (!body?.planId) {
             return NextResponse.json({ error: "planId es requerido" }, { status: 400 });
         }
@@ -73,7 +78,7 @@ export async function PATCH(req: Request) {
 
         const defaults = PLAN_LIMITS_DEFAULTS[planId] ?? PLAN_LIMITS_DEFAULTS[1];
 
-        const updated = await (prisma as any).planLimit.upsert({
+        const updated = await prisma.planLimit.upsert({
             where: { planId },
             create: {
                 planId,

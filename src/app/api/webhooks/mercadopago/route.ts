@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
 import crypto from "crypto";
 import { prisma } from "@/lib/prisma";
-import { paymentConfig } from "@/lib/paymentConfig";
-import { sendNotification } from "@/lib/socket-trigger";
-import { NOTIFICATION_TYPE } from "@/lib/notificationes/notificaciones-types";
-import { seedPlanLimits } from "@/lib/requireSubscription";
+import { paymentConfig } from "@/lib/payments/config";
+import { sendNotification } from "@/lib/notificaciones/socket-trigger";
+import { NOTIFICATION_TYPE } from "@/lib/notificaciones/types";
+import { seedPlanLimits } from "@/lib/subscriptions/require-subscription";
 import {
     MotivoMovimientoStock,
     Prisma,

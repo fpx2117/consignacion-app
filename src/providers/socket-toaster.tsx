@@ -1,13 +1,20 @@
-/* eslint-disable */
-// @ts-nocheck
 "use client";
 
 import { useEffect } from "react";
 import { useSocket } from "@/providers/socket-provider";
 import { usePathname } from "next/navigation";
 import { toast } from "sonner";
-import { ShoppingBag, BellRing } from "lucide-react";
-import { NOTIFICATION_TYPE, NOTIFICATION_CONFIG } from "@/lib/notificationes/notificaciones-types";
+import { BellRing } from "lucide-react";
+import { NOTIFICATION_TYPE, NOTIFICATION_CONFIG } from "@/lib/notificaciones/types";
+
+interface SocketNotificationPayload {
+  type: NOTIFICATION_TYPE;
+  title?: string;
+  message?: string;
+  data?: {
+    ventaId?: string | number;
+  };
+}
 
 export const SocketToaster = () => {
   const { socket } = useSocket();
@@ -20,7 +27,7 @@ export const SocketToaster = () => {
     if (pathname.startsWith("/lista")) return;
 
     // Escuchar el evento genérico
-    socket.on("new-notification", (data: any) => {
+    socket.on("new-notification", (data: SocketNotificationPayload) => {
       console.log("🔔 CLIENTE: Notificación recibida:", data.type, data.title);
 
       // 1. Si es una venta (NEW_ORDER), NO mostramos toast.
@@ -35,25 +42,29 @@ export const SocketToaster = () => {
       audio.play().catch(() => null);
 
       // Determinar configuración visual
-      const type = data.type as NOTIFICATION_TYPE;
-      const config = NOTIFICATION_CONFIG[type] || NOTIFICATION_CONFIG[NOTIFICATION_TYPE.SYSTEM];
+      const type = data.type;
+      const config = NOTIFICATION_CONFIG[type] ?? NOTIFICATION_CONFIG[NOTIFICATION_TYPE.SYSTEM];
 
-      // Icono personalizado para ventas
-      const Icon = type === NOTIFICATION_TYPE.NEW_ORDER ? ShoppingBag : BellRing;
+      // Icono: ShoppingBag sólo para NEW_ORDER (ya filtrado arriba — siempre BellRing aquí)
+      const Icon = BellRing;
 
-      // Mostrar Toast
-      toast[config.severity === "error" ? "error" : config.severity === "warning" ? "warning" : "message"](
-        data.title || config.label,
-        {
-          icon: <Icon className="h-4 w-4" />,
-          description: data.message,
-          duration: 5000,
-          action: data.data?.ventaId ? {
-            label: "Ver Ticket",
-            onClick: () => window.open(`/ticket-loading/${data.data.ventaId}`, '_blank'),
-          } : undefined,
-        }
-      );
+      // Mostrar Toast según severidad
+      const toastFn =
+        config.severity === "error"
+          ? toast.error
+          : config.severity === "warning"
+            ? toast.warning
+            : toast.message;
+
+      toastFn(data.title ?? config.label, {
+        icon: <Icon className="h-4 w-4" />,
+        description: data.message,
+        duration: 5000,
+        action: data.data?.ventaId != null ? {
+          label: "Ver Ticket",
+          onClick: () => window.open(`/ticket-loading/${data.data!.ventaId}`, "_blank"),
+        } : undefined,
+      });
     });
 
     return () => {

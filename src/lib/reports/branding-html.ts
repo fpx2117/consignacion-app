@@ -1,4 +1,5 @@
 import { REPORT_COLORS } from "./report-theme";
+import { escapeAttr, escapeHtml } from "./template-helpers";
 import type { BrandingDTO } from "./types";
 
 /**
@@ -46,26 +47,6 @@ export function brandingFooterHtml(b: BrandingDTO) {
       ${escapeHtml(txt)}
     </div>
   `;
-}
-
-/**
- * Escapa HTML (texto dentro de tags).
- */
-function escapeHtml(s: string): string {
-  return s
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
-}
-
-/**
- * Escapa atributos HTML (src, style values, etc.).
- * Reutiliza escapeHtml y además elimina saltos de línea.
- */
-function escapeAttr(s: string): string {
-  return escapeHtml(s).replace(/[\r\n]+/g, " ").trim();
 }
 
 /**

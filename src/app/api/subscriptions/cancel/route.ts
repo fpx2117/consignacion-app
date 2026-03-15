@@ -1,19 +1,21 @@
-/* eslint-disable */
-// @ts-nocheck
-// src/app/api/subscriptions/cancel/route.ts
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireAuth } from "@/lib/requireAuth";
-import { ProveedorSuscripcion } from "@prisma/client";
+import { requireAuth } from "@/lib/auth/require-auth";
+import { EstadoSuscripcion, ProveedorSuscripcion } from "@prisma/client";
 import { MercadoPagoConfig, PreApproval } from "mercadopago";
-import { paymentConfig } from "@/lib/paymentConfig";
-import { getPayPalAccessToken } from "@/lib/paypal";
+import { paymentConfig } from "@/lib/payments/config";
+import { getPayPalAccessToken } from "@/lib/payments/paypal";
+
+type PayPalErrorResponse = {
+    message?: string;
+    details?: unknown;
+};
 
 const mpClient = new MercadoPagoConfig({
     accessToken: paymentConfig.mp.accessToken
 });
 
-export async function POST(req: Request) {
+export async function POST() {
     const auth = await requireAuth();
     if (!auth.ok) return auth.res;
 
@@ -42,7 +44,7 @@ export async function POST(req: Request) {
             });
 
             if (!res.ok && res.status !== 204) {
-                const err = await res.json();
+                const err = (await res.json().catch(() => null)) as PayPalErrorResponse | null;
                 console.error("PayPal Cancel Error:", err);
                 return NextResponse.json({ error: "No se pudo cancelar en PayPal" }, { status: 400 });
             }
@@ -58,12 +60,12 @@ export async function POST(req: Request) {
         // Actualizar en base de datos
         await prisma.subscription.update({
             where: { id: subscription.id },
-            data: { status: "CANCELADO" }
+            data: { status: EstadoSuscripcion.CANCELADO }
         });
 
         return NextResponse.json({ ok: true, message: "Suscripción cancelada exitosamente" });
 
-    } catch (error: any) {
+    } catch (error) {
         console.error("CANCEL_SUBSCRIPTION_ERROR:", error);
         return NextResponse.json({ error: "Error interno al cancelar la suscripción" }, { status: 500 });
     }

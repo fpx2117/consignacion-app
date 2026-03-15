@@ -1,9 +1,6 @@
-/* eslint-disable */
-// @ts-nocheck
 "use client";
 
 import * as React from "react";
-import { Boxes } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface BrandLogoProps {
@@ -12,7 +9,7 @@ interface BrandLogoProps {
     size?: "sm" | "md" | "lg";
 }
 
-export function BrandLogo({ className, showText = false, size = "md" }: BrandLogoProps) {
+export function BrandLogo({ className, showText: _showText = false, size = "md" }: BrandLogoProps) {
     const sizeClasses = {
         sm: "h-8 w-8",
         md: "h-10 w-10",

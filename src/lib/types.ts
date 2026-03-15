@@ -1,5 +1,3 @@
-/* eslint-disable */
-// @ts-nocheck
 // src/lib/types.ts
 
 import { AppNotification } from "@/types/notification";
@@ -60,11 +58,14 @@ export enum ShareLinkType {
 export enum MotivoMovimientoStock {
   COMPRA = "COMPRA",
   VENTA = "VENTA",
+  VENCIMIENTO = "VENCIMIENTO",
   DEVOLUCION_CLIENTE = "DEVOLUCION_CLIENTE",
   DEVOLUCION_PROVEEDOR = "DEVOLUCION_PROVEEDOR",
   ROTURA = "ROTURA",
   PERDIDA = "PERDIDA",
   AJUSTE_INVENTARIO = "AJUSTE_INVENTARIO",
+  AJUSTE_POSITIVO = "AJUSTE_POSITIVO",
+  AJUSTE_NEGATIVO = "AJUSTE_NEGATIVO",
   INICIAL = "INICIAL",
   CONSIGNACION = "CONSIGNACION",
 }
@@ -105,7 +106,7 @@ export type Branding = {
   id: ID;
   businessName: string;
   logoMime?: string | null;
-  logoData?: any | null; // Bytes in Prisma, usually Buffer or check implementation
+  logoData?: Buffer | string | null; // Bytes from Prisma (Buffer in Node, base64 string on client)
   primaryColor: string;
   footerText?: string | null;
   phone?: string | null;
@@ -220,6 +221,129 @@ export type Producto = {
   notifications?: Notification[];
 };
 
+export type PublicCatalogSubcategory = {
+  id: ID;
+  nombre: string;
+};
+
+export type PublicCatalogCategory = {
+  id: ID;
+  nombre: string;
+  subcategorias: PublicCatalogSubcategory[];
+};
+
+export type PublicCatalogProduct = Pick<
+  Producto,
+  "id" | "nombre" | "imagenUrl" | "stockDisponibleUnits"
+> & {
+  precioVenta: number | string | { toString(): string };
+  categoriaId: ID | null;
+  subcategoriaId: ID | null;
+  categoria?: Pick<Categoria, "id" | "nombre"> | null;
+  subcategoria?: PublicCatalogSubcategory | null;
+};
+
+export type PublicCatalogBanner = {
+  id?: ID;
+  bannerData?: string | null;
+  bannerMime?: string | null;
+  orden?: number;
+  url?: string | null;
+};
+
+export type PublicCatalogConfig = {
+  sucursalId: ID;
+  businessName?: string | null;
+  primaryColor?: string | null;
+  secondaryColor?: string | null;
+  logoMime?: string | null;
+  logoData?: string | null;
+  logoUrl?: string | null;
+  bannerMime?: string | null;
+  bannerData?: string | null;
+  bannerUrl?: string | null;
+  isBannerSlider?: boolean;
+  banners?: PublicCatalogBanner[];
+  instagramUrl?: string | null;
+  tiktokUrl?: string | null;
+  facebookUrl?: string | null;
+  youtubeUrl?: string | null;
+  whatsappNumber?: string | null;
+  whatsappMessage?: string | null;
+  phone?: string | null;
+  address?: string | null;
+  googleMapsUrl?: string | null;
+  footerText?: string | null;
+  typography?: string | null;
+  themeIdentifier?: string | null;
+  tiendaLayout?: string | null;
+  mostrarCategoriasEnHeader?: boolean;
+  convertirTienda?: boolean;
+  mostrarPreciosConsignacion?: boolean;
+  porcentajeAumentoConsignacion?: number;
+  porcentajeInteresTarjeta?: number;
+  mpPublicKeyTienda?: string | null;
+};
+
+export type PublicCatalogData = {
+  productos: PublicCatalogProduct[];
+  categorias: PublicCatalogCategory[];
+  config: PublicCatalogConfig;
+};
+
+export type CatalogCartItem = PublicCatalogProduct & {
+  quantity: number;
+};
+
+export type PublicCatalogSortBy =
+  | "relevance"
+  | "price_asc"
+  | "price_desc"
+  | "name_asc"
+  | "name_desc";
+
+export type PublicCheckoutCustomerData = {
+  nombre: string;
+  email: string;
+  documento?: string | null;
+  telefono?: string | null;
+  provincia?: string | null;
+  localidad?: string | null;
+  codigoPostal?: string | null;
+  direccion?: string | null;
+};
+
+export type PublicCheckoutShippingMethod = "DOMICILIO" | "SUCURSAL" | "RETIRO_LOCAL";
+
+export type PublicCheckoutShippingData = {
+  metodoEnvio: PublicCheckoutShippingMethod | null;
+  costo: number;
+};
+
+export type PublicCheckoutPayload = {
+  items: CatalogCartItem[];
+  sucursalId: ID;
+  clienteData: PublicCheckoutCustomerData;
+  envioData: PublicCheckoutShippingData;
+};
+
+export type PublicCheckoutResponse = {
+  init_point?: string | null;
+  preference_id?: string | null;
+  checkout_token?: string | null;
+};
+
+export type PublicCheckoutStatusResponse = {
+  status: "PENDING" | "PAID" | "FAILED";
+  ventaId?: ID;
+  reason?: string;
+};
+
+export type PublicShippingQuote = {
+  domicilio: number;
+  sucursal: number;
+};
+
 export type MovimientoStock = {
   id: ID;
   productoId: ID;
@@ -330,6 +454,14 @@ export type LiquidacionItem = {
 };
 
 export type Pago = {
+  id: ID;
+  clienteId: ID;
+  sucursalId?: ID;
+  tipo?: string;
+  fecha: ISODateString;
+  monto: Money;
+  metodo: MetodoPago;
+  sesionCajaId?: ID | null;
   cliente?: Cliente;
 };
 
@@ -418,7 +550,12 @@ export type CreateProductoInput = {
 };
 
 export type UpdateProductoInput = Partial<CreateProductoInput> & {
-  activo?: boolean
+  activo?: boolean;
+  movimientoInfo?: {
+    tipo: TipoMovimientoStock;
+    motivo: MotivoMovimientoStock;
+    observaciones?: string;
+  };
 };
 
 export type CreateVentaDirectaInput = {

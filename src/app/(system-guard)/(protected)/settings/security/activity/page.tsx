@@ -1,5 +1,3 @@
-/* eslint-disable */
-// @ts-nocheck
 "use client";
 
 import * as React from "react";
@@ -17,15 +15,12 @@ import {
     ChevronLeft,
     Loader2,
     Calendar,
-    User,
     Info,
     History,
     Eye,
     Globe,
     Monitor,
     Cpu,
-    Mail,
-    Package,
     Settings,
     Shield,
     Database,
@@ -42,13 +37,39 @@ import {
     DialogTitle,
     DialogTrigger,
 } from "@/components/ui/dialog";
+import type { LucideIcon } from "lucide-react";
 
-function LogDetailFormatter({ log }: { log: any }) {
+type AuditLogDetailValue = unknown;
+
+type AuditLog = {
+    id: number;
+    createdAt: string;
+    action: string;
+    module: string;
+    userAgent?: string | null;
+    ipAddress?: string | null;
+    details?: Record<string, AuditLogDetailValue> | null;
+    user?: {
+        nombre: string;
+    } | null;
+};
+
+function getDetailString(details: Record<string, AuditLogDetailValue>, key: string, fallback: string) {
+    const value = details[key];
+    return typeof value === "string" && value.trim() ? value : fallback;
+}
+
+function getDetailNumber(details: Record<string, AuditLogDetailValue>, key: string) {
+    const value = details[key];
+    return typeof value === "number" ? value : 0;
+}
+
+function LogDetailFormatter({ log }: { log: AuditLog }) {
     const details = log.details;
     if (!details) return <span className="text-muted-foreground/30 italic">Sin datos</span>;
 
     let summary = "";
-    let Icon = Info;
+    let Icon: LucideIcon = Info;
     let iconColor = "text-primary";
 
     // Enhanced logic for summary and icons
@@ -68,23 +89,25 @@ function LogDetailFormatter({ log }: { log: any }) {
             Icon = Shield;
             iconColor = "text-[color:var(--status-danger)]";
             break;
-        case "STOCK_ADJUSTMENT":
-            summary = `Ajuste stock (${details.cantidad > 0 ? "+" : ""}${details.cantidad})`;
+        case "STOCK_ADJUSTMENT": {
+            const cantidad = getDetailNumber(details, "cantidad");
+            summary = `Ajuste stock (${cantidad > 0 ? "+" : ""}${cantidad})`;
             Icon = RefreshCcw;
             iconColor = "text-[color:var(--theme-ocean-primary)]";
             break;
+        }
         case "CREATE_PRODUCT":
-            summary = `Producto nuevo: ${details.nombre}`;
+            summary = `Producto nuevo: ${getDetailString(details, "nombre", "Sin nombre")}`;
             Icon = PlusCircle;
             iconColor = "text-[color:var(--status-success-strong)]";
             break;
         case "UPDATE_PRODUCT":
-            summary = `Edición: ${details.nombre}`;
+            summary = `Edición: ${getDetailString(details, "nombre", "Sin nombre")}`;
             Icon = RefreshCcw;
             iconColor = "text-[color:var(--theme-ocean-primary)]";
             break;
         case "DELETE_PRODUCT":
-            summary = `Eliminado: ${details.nombre}`;
+            summary = `Eliminado: ${getDetailString(details, "nombre", "Sin nombre")}`;
             Icon = Trash2;
             iconColor = "text-[color:var(--status-danger)]";
             break;
@@ -94,7 +117,7 @@ function LogDetailFormatter({ log }: { log: any }) {
     }
 
     // Simple UA parsing for better display
-    const getDeviceInfo = (ua: string) => {
+    const getDeviceInfo = (ua?: string | null) => {
         if (!ua) return { os: "Desconocido", browser: "Desconocido" };
         const osMatch = ua.match(/\(([^)]+)\)/);
         const os = osMatch ? osMatch[1].split(";")[0] : "Desconocido";
@@ -146,7 +169,7 @@ function LogDetailFormatter({ log }: { log: any }) {
                                 </div>
                                 <div className="grid grid-cols-1 gap-2.5 p-5 rounded-[2rem] bg-muted/30 border border-border/40 backdrop-blur-sm shadow-inner-sm">
                                     {Object.entries(details).length > 0 ? (
-                                        Object.entries(details).map(([key, value]: [string, any]) => {
+                                        Object.entries(details).map(([key, value]) => {
                                             if (key === "hash" || key === "password") return null;
                                             return (
                                                 <div key={key} className="flex flex-col gap-1 py-1.5 border-b border-border/20 last:border-0 group/field">
@@ -205,7 +228,7 @@ function LogDetailFormatter({ log }: { log: any }) {
 }
 
 export default function ActivityLogPage() {
-    const [logs, setLogs] = React.useState<any[]>([]);
+    const [logs, setLogs] = React.useState<AuditLog[]>([]);
     const [loading, setLoading] = React.useState(true);
 
     const loadLogs = React.useCallback(async () => {

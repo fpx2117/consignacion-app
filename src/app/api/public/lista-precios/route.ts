@@ -1,5 +1,3 @@
-/* eslint-disable */
-// @ts-nocheck
 import { NextResponse } from "next/server";
 import {
   getPublicCatalogDataCached,
@@ -12,7 +10,7 @@ export async function GET(req: Request) {
   const sucursalIdParam = searchParams.get("sucursalId");
   const sucursalIdParsed = sucursalIdParam ? Number(sucursalIdParam) : null;
 
-  if (sucursalIdParam && (!Number.isFinite(sucursalIdParsed) || sucursalIdParsed <= 0)) {
+  if (sucursalIdParam && (sucursalIdParsed === null || !Number.isFinite(sucursalIdParsed) || sucursalIdParsed <= 0)) {
     return NextResponse.json({ error: "sucursalId inválido" }, { status: 400 });
   }
 
@@ -32,7 +30,7 @@ export async function GET(req: Request) {
         "Cache-Control": "public, s-maxage=120, stale-while-revalidate=600",
       },
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     if (error instanceof PublicCatalogError) {
       return NextResponse.json({ error: error.message }, { status: error.status });
     }

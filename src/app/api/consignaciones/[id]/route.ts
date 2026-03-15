@@ -1,18 +1,22 @@
-﻿/* eslint-disable */
-// @ts-nocheck
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireAuth } from "@/lib/requireAuth";
+import { requireAuth } from "@/lib/auth/require-auth";
 import { createLiquidacionSchema } from "@/lib/validators/consignacion";
 import { z } from "zod";
-import { TipoMovimientoStock, MotivoMovimientoStock } from "@prisma/client";
+import { MotivoMovimientoStock, TipoMovimientoStock } from "@prisma/client";
 import { buildSucursalWhere, isGlobalSucursalView } from "@/lib/sucursalScope";
 
 // âœ… Imports Centralizados de Config y Notificaciones
 import { obtenerConfiguracionGlobal } from "@/lib/config";
-import { evaluateStockAlert, processNotificationQueue } from "@/lib/stock-alerts";
+import { evaluateStockAlert, processNotificationQueue } from "@/lib/notificaciones/stock-alerts";
 
+type NotificationQueueItem = NonNullable<ReturnType<typeof evaluateStockAlert>>;
 type RouteParams = { params: Promise<{ id: string }> };
+type SoldProductResume = { units: number; precioUnitario: number; descuento: number };
+
+function getErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : "Error inesperado";
+}
 
 const updateConsignacionSchema = z.object({
   items: z.array(
@@ -81,8 +85,8 @@ export async function PUT(req: Request, { params }: RouteParams) {
   }
 
   // âœ… 1. Cola de Alertas
-  const configGlobal = await obtenerConfiguracionGlobal();
-  const notificationsQueue: any[] = [];
+  const configGlobal = await obtenerConfiguracionGlobal(auth.activeSucursalId);
+  const notificationsQueue: NotificationQueueItem[] = [];
 
   try {
     const updated = await prisma.$transaction(async (tx) => {
@@ -94,7 +98,7 @@ export async function PUT(req: Request, { params }: RouteParams) {
       if (!consignacion) throw new Error("CONSIGNACION_NO_EXISTE");
       if (consignacion.estado === "CERRADA") throw new Error("CONSIGNACION_CERRADA");
 
-      const oldDetalles = new Map(consignacion.detalles.map(d => [d.productoId, d]));
+      const oldDetalles = new Map(consignacion.detalles.map((detalle) => [detalle.productoId, detalle]));
       const newItems = parsed.data.items;
 
       // 1. Procesar cada item del payload (Ajustes hacia arriba o abajo)
@@ -117,11 +121,11 @@ export async function PUT(req: Request, { params }: RouteParams) {
             include: { producto: true }
           });
 
-          if (!sAntes) throw new Error(`El producto ${item.productoId} no estÃ¡ asignado a la sucursal de la consignaciÃ³n.`);
+            if (!sAntes) throw new Error(`PRODUCTO_NO_ASIGNADO_SUCURSAL:${item.productoId}`);
 
-          if (deltaEntregadas > 0 && sAntes.stockDisponibleUnits < deltaEntregadas) {
-            throw new Error(`Stock insuficiente para producto ${sAntes.producto.nombre} en esta sucursal.`);
-          }
+            if (deltaEntregadas > 0 && sAntes.stockDisponibleUnits < deltaEntregadas) {
+              throw new Error(`STOCK_INSUF:${item.productoId}`);
+            }
 
           // 2. Ajustar Stock en Sucursal
           const sDespues = await tx.stockSucursal.update({
@@ -167,13 +171,31 @@ export async function PUT(req: Request, { params }: RouteParams) {
             data: { unitsEntregadas: item.unitsEntregadas }
           });
         } else {
+          const stockSucursal = await tx.stockSucursal.findUnique({
+            where: {
+              productoId_sucursalId: {
+                productoId: item.productoId,
+                sucursalId: consignacion.sucursalId,
+              },
+            },
+            include: { producto: true },
+          });
+
+          if (!stockSucursal) {
+            throw new Error(`PRODUCTO_NO_ASIGNADO_SUCURSAL:${item.productoId}`);
+          }
+
           await tx.consignacionDetalle.create({
             data: {
               consignacionId,
               productoId: item.productoId,
               unitsEntregadas: item.unitsEntregadas,
               unitsVendidasAcum: 0,
-              unitsDevueltasAcum: 0
+              unitsDevueltasAcum: 0,
+              precioUnitario:
+                Number(stockSucursal.producto.precioVenta) *
+                (1 + consignacion.porcentajeAumento / 100),
+              descuento: 0,
             }
           });
         }
@@ -194,9 +216,13 @@ export async function PUT(req: Request, { params }: RouteParams) {
             where: { productoId_sucursalId: { productoId: prodId, sucursalId } }
           });
 
+          if (!sAntes) {
+            throw new Error(`PRODUCTO_NO_ASIGNADO_SUCURSAL:${prodId}`);
+          }
+
           // 2. Devolver stock al almacÃ©n de la sucursal
           const sDespues = await tx.stockSucursal.update({
-            where: { id: sAntes!.id },
+            where: { id: sAntes.id },
             data: {
               stockDisponibleUnits: { increment: oldDet.unitsEntregadas },
               stockConsignadoUnits: { decrement: oldDet.unitsEntregadas }
@@ -220,28 +246,52 @@ export async function PUT(req: Request, { params }: RouteParams) {
               tipo: TipoMovimientoStock.ENTRADA,
               motivo: MotivoMovimientoStock.AJUSTE_POSITIVO,
               cantidad: oldDet.unitsEntregadas,
-              stockPrevio: sAntes!.stockDisponibleUnits,
+              stockPrevio: sAntes.stockDisponibleUnits,
               stockPosterior: sDespues.stockDisponibleUnits,
               observaciones: `Eliminado de ConsignaciÃ³n #${consignacionId}`
             }
           });
 
+          const alerta = evaluateStockAlert(productoDespues, configGlobal);
+          if (alerta) notificationsQueue.push(alerta);
+
           await tx.consignacionDetalle.delete({ where: { id: oldDet.id } });
         }
       }
 
-      return await tx.consignacion.findUnique({
+      const consignacionActualizada = await tx.consignacion.findUnique({
         where: { id: consignacionId },
         include: { detalles: { include: { producto: { include: { subcategoria: true } } } } }
       });
+
+      if (!consignacionActualizada) {
+        throw new Error("CONSIGNACION_NO_EXISTE");
+      }
+
+      return consignacionActualizada;
     });
 
     // âœ… DISPARAR ALERTAS
     await processNotificationQueue(notificationsQueue, auth.activeSucursalId);
 
     return NextResponse.json({ data: updated });
-  } catch (e: any) {
-    return NextResponse.json({ error: e.message || "Error al actualizar" }, { status: 400 });
+  } catch (error) {
+    const message = getErrorMessage(error);
+
+    if (message === "CONSIGNACION_NO_EXISTE") {
+      return NextResponse.json({ error: "Consignación no encontrada" }, { status: 404 });
+    }
+    if (message === "CONSIGNACION_CERRADA") {
+      return NextResponse.json({ error: "La consignación ya está cerrada" }, { status: 409 });
+    }
+    if (message.startsWith("PRODUCTO_NO_ASIGNADO_SUCURSAL:")) {
+      return NextResponse.json({ error: "Producto no asignado a la sucursal" }, { status: 404 });
+    }
+    if (message.startsWith("STOCK_INSUF:")) {
+      return NextResponse.json({ error: "Stock insuficiente para ajustar la consignación" }, { status: 409 });
+    }
+
+    return NextResponse.json({ error: message || "Error al actualizar" }, { status: 400 });
   }
 }
 
@@ -268,8 +318,15 @@ export async function POST(req: Request, { params }: RouteParams) {
   }
 
   // âœ… 1. Cola de Alertas
-  const configGlobal = await obtenerConfiguracionGlobal();
-  const notificationsQueue: any[] = [];
+  if (parsed.data.consignacionId !== consignacionId) {
+    return NextResponse.json(
+      { error: "El cuerpo no coincide con la consignación solicitada" },
+      { status: 409 }
+    );
+  }
+
+  const configGlobal = await obtenerConfiguracionGlobal(auth.activeSucursalId);
+  const notificationsQueue: NotificationQueueItem[] = [];
 
   try {
     const result = await prisma.$transaction(async (tx) => {
@@ -281,9 +338,9 @@ export async function POST(req: Request, { params }: RouteParams) {
       if (!consignacion) throw new Error("CONSIGNACION_NO_EXISTE");
       if (consignacion.estado === "CERRADA") throw new Error("CONSIGNACION_CERRADA");
 
-      const detallesMap = new Map(consignacion.detalles.map((d) => [d.id, d]));
+      const detallesMap = new Map(consignacion.detalles.map((detalle) => [detalle.id, detalle]));
       let totalVenta = 0;
-      const soldByProduct = new Map<number, { units: number; precioUnitario: number; descuento: number }>();
+      const soldByProduct = new Map<number, SoldProductResume>();
 
       // A) CÃ¡lculos previos
       for (const it of parsed.data.items) {
@@ -297,7 +354,7 @@ export async function POST(req: Request, { params }: RouteParams) {
         const pendiente = det.unitsEntregadas - det.unitsVendidasAcum - det.unitsDevueltasAcum;
         if (vendidas + devueltas > pendiente) throw new Error(`EXCEDE_PENDIENTE:${det.id}`);
 
-        const precioUnit = Number(det.producto.precioVenta);
+        const precioUnit = Number(det.precioUnitario);
         const discountItem = Number(it.descuento || 0);
 
         if (vendidas > 0) {
@@ -322,7 +379,7 @@ export async function POST(req: Request, { params }: RouteParams) {
                 consignacionDetalleId: it.consignacionDetalleId,
                 unitsVendidas: it.unitsVendidas ?? 0,
                 unitsDevueltas: it.unitsDevueltas ?? 0,
-                precioUnitario: det.producto.precioVenta,
+                precioUnitario: det.precioUnitario,
                 descuento: Number(it.descuento || 0),
               };
             }),
@@ -351,9 +408,13 @@ export async function POST(req: Request, { params }: RouteParams) {
           where: { productoId_sucursalId: { productoId: det.productoId, sucursalId } }
         });
 
+        if (!sAntes) {
+          throw new Error(`PRODUCTO_NO_ASIGNADO_SUCURSAL:${det.productoId}`);
+        }
+
         // 2. Actualizar Stock en Sucursal
         const sDespues = await tx.stockSucursal.update({
-          where: { id: sAntes!.id },
+          where: { id: sAntes.id },
           data: {
             stockConsignadoUnits: { decrement: vendidas + devueltas },
             ...(devueltas > 0 ? { stockDisponibleUnits: { increment: devueltas } } : {}),
@@ -378,7 +439,7 @@ export async function POST(req: Request, { params }: RouteParams) {
               tipo: TipoMovimientoStock.ENTRADA,
               motivo: MotivoMovimientoStock.DEVOLUCION_CLIENTE,
               cantidad: devueltas,
-              stockPrevio: sAntes!.stockDisponibleUnits,
+              stockPrevio: sAntes.stockDisponibleUnits,
               stockPosterior: sDespues.stockDisponibleUnits,
               observaciones: `DevoluciÃ³n s/ConsignaciÃ³n #${consignacionId}`
             }
@@ -394,7 +455,7 @@ export async function POST(req: Request, { params }: RouteParams) {
               tipo: TipoMovimientoStock.SALIDA,
               motivo: MotivoMovimientoStock.VENTA,
               cantidad: vendidas,
-              stockPrevio: sAntes!.stockDisponibleUnits,
+              stockPrevio: sAntes.stockDisponibleUnits,
               stockPosterior: sDespues.stockDisponibleUnits,
               observaciones: `Venta Liquidada s/ConsignaciÃ³n #${consignacionId}`
             }
@@ -435,7 +496,9 @@ export async function POST(req: Request, { params }: RouteParams) {
 
       // E) Cerrar si estÃ¡ terminada
       const detallesFinales = await tx.consignacionDetalle.findMany({ where: { consignacionId } });
-      const cerrada = !detallesFinales.some(d => (d.unitsEntregadas - d.unitsVendidasAcum - d.unitsDevueltasAcum) > 0);
+      const cerrada = !detallesFinales.some(
+        (detalle) => (detalle.unitsEntregadas - detalle.unitsVendidasAcum - detalle.unitsDevueltasAcum) > 0
+      );
       if (cerrada) await tx.consignacion.update({ where: { id: consignacionId }, data: { estado: "CERRADA" } });
 
       return { liquidacion, cerrada };
@@ -445,7 +508,28 @@ export async function POST(req: Request, { params }: RouteParams) {
     await processNotificationQueue(notificationsQueue, auth.activeSucursalId);
 
     return NextResponse.json({ data: result }, { status: 201 });
-  } catch (e: any) {
-    return NextResponse.json({ error: e.message || "Error inesperado" }, { status: 400 });
+  } catch (error) {
+    const message = getErrorMessage(error);
+
+    if (message === "CONSIGNACION_NO_EXISTE") {
+      return NextResponse.json({ error: "Consignación no encontrada" }, { status: 404 });
+    }
+    if (message === "CONSIGNACION_CERRADA") {
+      return NextResponse.json({ error: "La consignación ya está cerrada" }, { status: 409 });
+    }
+    if (message === "DETALLE_NO_PERTENECE") {
+      return NextResponse.json({ error: "Uno o más ítems no pertenecen a la consignación" }, { status: 400 });
+    }
+    if (message === "ITEM_VACIO") {
+      return NextResponse.json({ error: "Cada ítem debe informar venta o devolución" }, { status: 400 });
+    }
+    if (message.startsWith("EXCEDE_PENDIENTE:")) {
+      return NextResponse.json({ error: "La liquidación excede el pendiente disponible" }, { status: 409 });
+    }
+    if (message.startsWith("PRODUCTO_NO_ASIGNADO_SUCURSAL:")) {
+      return NextResponse.json({ error: "Producto no asignado a la sucursal" }, { status: 404 });
+    }
+
+    return NextResponse.json({ error: message || "Error inesperado" }, { status: 400 });
   }
 }

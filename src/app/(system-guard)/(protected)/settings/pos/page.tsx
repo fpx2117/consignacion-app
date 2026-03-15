@@ -1,5 +1,3 @@
-/* eslint-disable */
-// @ts-nocheck
 "use client";
 
 import * as React from "react";
@@ -7,7 +5,7 @@ import { useRouter } from "next/navigation";
 import {
     Loader2, ArrowLeft, Plus, Store,
     MonitorSmartphone, Clock, ChevronRight, Settings2, TerminalSquare, Info,
-    HelpCircle, Percent, CreditCard, ShoppingBag, BookMarked, Monitor, Lock
+    HelpCircle, Percent, CreditCard, BookMarked, Monitor, Lock
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,10 +15,29 @@ import { toast } from "sonner";
 import { apiService } from "@/lib/apiService";
 import { cn } from "@/lib/utils";
 import { useSucursalStore } from "@/store/useSucursalStore";
+import type { Caja, Configuracion } from "@/lib/types";
 
 // ─── Tutorial compartido ───────────────────────────────────────────────────────
 import { TutorialButton } from "@/components/ui/tutorial-button";
 import { POS_TUTORIAL } from "@/lib/tutorial-content";
+
+type PosToggleKey = "usarControlDeCaja" | "mostrarListaPrecios" | "convertirTienda" | "separarListaPorSucursal";
+
+type PosConfig = Pick<
+    Configuracion,
+    | "usarControlDeCaja"
+    | "porcentajeAumentoConsignacion"
+    | "porcentajeInteresTarjeta"
+    | "mostrarListaPrecios"
+    | "convertirTienda"
+    | "separarListaPorSucursal"
+    | "mpAccessTokenTienda"
+    | "mpPublicKeyTienda"
+>;
+
+function getErrorMessage(error: unknown, fallback: string) {
+    return error instanceof Error ? error.message : fallback;
+}
 
 // ─── Inline Help Tip ─────────────────────────────────────────────────────────
 function HelpTip({ text }: { text: string }) {
@@ -107,7 +124,7 @@ export default function PosSettingsPage() {
     const router = useRouter();
     const activeSucursalId = useSucursalStore((s) => s.activeSucursalId);
 
-    const [cajas, setCajas] = React.useState<any[]>([]);
+    const [cajas, setCajas] = React.useState<Caja[]>([]);
     const [nombreNuevaCaja, setNombreNuevaCaja] = React.useState("");
     const [usarControlDeCaja, setUsarControlDeCaja] = React.useState(true);
     const [porcentajeAumentoConsignacion, setPorcentajeAumentoConsignacion] = React.useState(0);
@@ -133,7 +150,7 @@ export default function PosSettingsPage() {
             ]);
 
             setCajas(Array.isArray(cajasRes) ? cajasRes : []);
-            const config = configRes?.data ?? configRes;
+            const config = (configRes?.data ?? configRes) as Partial<PosConfig> | undefined;
 
             setUsarControlDeCaja(config?.usarControlDeCaja ?? true);
             localStorage.setItem("usarControlDeCaja", String(config?.usarControlDeCaja ?? true));
@@ -144,8 +161,8 @@ export default function PosSettingsPage() {
             setSepararListaPorSucursal(config?.separarListaPorSucursal ?? true);
             setMpAccessTokenTienda(config?.mpAccessTokenTienda ?? "");
             setMpPublicKeyTienda(config?.mpPublicKeyTienda ?? "");
-        } catch (error: any) {
-            toast.error(error.message || "Error al cargar los datos.");
+        } catch (error) {
+            toast.error(getErrorMessage(error, "Error al cargar los datos."));
         } finally {
             setLoading(false);
         }
@@ -163,14 +180,14 @@ export default function PosSettingsPage() {
             setNombreNuevaCaja("");
             const res = await apiService.getCajasDisponibles();
             setCajas(Array.isArray(res) ? res : []);
-        } catch (error: any) {
-            toast.error(error.message || "No se pudo crear la terminal.");
+        } catch (error) {
+            toast.error(getErrorMessage(error, "No se pudo crear la terminal."));
         } finally {
             setLoadingSubmit(false);
         }
     };
 
-    const handleToggleConfig = async (key: string, checked: boolean) => {
+    const handleToggleConfig = async (key: PosToggleKey, checked: boolean) => {
         setLoadingConfigToggle(true);
         try {
             await apiService.actualizarConfiguracionGeneral({ [key]: checked });

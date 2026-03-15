@@ -1,26 +1,13 @@
-/* eslint-disable */
-// @ts-nocheck
 "use client";
 
 import * as React from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { toast } from "sonner";
-import { cn } from "@/lib/utils";
 
 // UI
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
 import {
   Dialog,
   DialogContent,
@@ -39,7 +26,6 @@ import {
   ZoomIn,
   ZoomOut,
   Maximize2,
-  Minimize2,
   Scan,
   FileText,
   ChevronLeft,
@@ -140,8 +126,8 @@ export default function BrandingPage() {
       if (!res.ok) throw new Error("No se pudo guardar branding");
 
       toast.success("Branding actualizado");
-    } catch (e: any) {
-      toast.error(e?.message || "Error guardando");
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : "Error guardando");
     } finally {
       setSaving(false);
     }
@@ -158,8 +144,8 @@ export default function BrandingPage() {
       toast.success("Logo actualizado");
       bumpLogo();
       if (fileInputRef.current) fileInputRef.current.value = "";
-    } catch (e: any) {
-      toast.error(e?.message || "Error subiendo logo");
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : "Error subiendo logo");
     } finally {
       setUploading(false);
     }
@@ -175,8 +161,8 @@ export default function BrandingPage() {
       setHasLogo(false);
       setLogoVersion(Date.now());
       if (fileInputRef.current) fileInputRef.current.value = "";
-    } catch (e: any) {
-      toast.error(e?.message || "Error eliminando logo");
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : "Error eliminando logo");
     } finally {
       setDeletingLogo(false);
     }
@@ -264,7 +250,18 @@ export default function BrandingPage() {
                   <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/70">Logo del Negocio</span>
                   <div className="flex flex-col sm:flex-row sm:items-center gap-4">
                     <div className="w-full sm:w-40 h-32 rounded-2xl border border-border/50 bg-muted/20 grid place-items-center overflow-hidden relative">
-                      {hasLogo ? <img key={logoSrc} src={logoSrc} alt="Logo" className="max-h-24 max-w-[90%] object-contain" onError={() => setHasLogo(false)} /> : <span className="text-[10px] font-black text-muted-foreground/60">SIN LOGO</span>}
+                      {hasLogo && logoSrc ? (
+                        <Image
+                          key={logoSrc}
+                          src={logoSrc}
+                          alt="Logo"
+                          fill
+                          unoptimized
+                          sizes="160px"
+                          className="object-contain p-3"
+                          onError={() => setHasLogo(false)}
+                        />
+                      ) : <span className="text-[10px] font-black text-muted-foreground/60">SIN LOGO</span>}
                     </div>
                     <div className="grid gap-3 w-full">
                       <input ref={fileInputRef} type="file" accept="image/*" disabled={uploading} className="block w-full text-xs text-foreground file:mr-3 file:rounded-xl file:border file:border-border/60 file:px-4 file:py-2 file:text-[10px] file:font-black file:uppercase file:bg-background/60 hover:file:bg-muted/80 cursor-pointer" onChange={(e) => { const f = e.target.files?.[0]; if (f) onUploadLogo(f); }} />

@@ -1,7 +1,8 @@
 // src/lib/reports/base/dashboard-report-template.ts
 import { REPORT_COLORS, reportThemeCss } from "@/lib/reports/report-theme";
+import { escapeHtml, formatMoneyARS, formatNumberAR } from "@/lib/reports/template-helpers";
 import type { BrandingDTO } from "@/lib/reports/types";
-import { brandingHeaderHtml, brandingFooterHtml } from "@/lib/reports/brading-html";
+import { brandingHeaderHtml, brandingFooterHtml } from "@/lib/reports/branding-html";
 
 export type DashboardReportData = {
     period: string;
@@ -38,25 +39,8 @@ export type DashboardReportData = {
     gastosDetalle: { motivo: string; categoria: string; monto: number; fecha: string; esCompartido: boolean }[];
 };
 
-function escapeHtml(s: unknown): string {
-    return String(s ?? "")
-        .replaceAll("&", "&amp;")
-        .replaceAll("<", "&lt;")
-        .replaceAll(">", "&gt;")
-        .replaceAll('"', "&quot;");
-}
-
-function fmt(n: number): string {
-    return new Intl.NumberFormat("es-AR", {
-        style: "currency",
-        currency: "ARS",
-        maximumFractionDigits: 2,
-    }).format(n);
-}
-
-function fmtN(n: number): string {
-    return new Intl.NumberFormat("es-AR").format(n);
-}
+const fmt = (n: number) => formatMoneyARS(n, 2);
+const fmtN = (n: number) => formatNumberAR(n);
 
 function kpiBox(label: string, value: string, accent: string, sub?: string): string {
     return `
