@@ -24,7 +24,7 @@ export function formatDateAR(
     month: "2-digit",
     year: "numeric",
     timeZone: tz,
-    ...(withTime ? { hour: "2-digit", minute: "2-digit" } : {}),
+    ...(withTime ? { hour: "2-digit", minute: "2-digit", hour12: false } : {}),
   };
   return withTime
     ? parsed.toLocaleString("es-AR", opts)
