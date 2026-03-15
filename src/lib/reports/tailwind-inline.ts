@@ -1,16 +1,14 @@
-import fs from "fs";
-import path from "path";
-
 /**
  * tailwind-inline.ts
  *
  * CSS mínimo que reemplaza el CDN de Tailwind en los templates de reportes PDF.
+ * NO usa APIs de Node.js (fs, path) - solo retorna strings CSS estáticos.
  *
  * PROBLEMA: Puppeteer en Railway no tiene acceso confiable a internet.
  * cdn.tailwindcss.com falla intermitentemente → página en blanco.
  *
- * SOLUCIÓN: Subset de utilidades Tailwind + fuente Geist inlineada como base64,
- * todo inlineado como string CSS — sin dependencias externas en runtime.
+ * SOLUCIÓN: Subset de utilidades Tailwind inlineadas como string CSS —
+ * sin dependencias externas en runtime.
  */
 
 export const TAILWIND_INLINE_CSS = `
@@ -45,7 +43,7 @@ img{display:block;max-width:100%}
 .z-10{z-index:10}.z-20{z-index:20}.overflow-hidden{overflow:hidden}
 
 /* ── Spacing — padding ──────────────────────────────────────────────────────── */
-.p-0{padding:0}.p-1{padding:0.25rem}.p-2{padding:0.5rem}.p-3{padding:0.75rem}.p-4{padding:1rem}.p-5{padding:1.25rem}.p-6{padding:1.5rem}.p-8{padding:2rem}.p-10{padding:2.5rem}
+.p-0{padding:0}.p-1{padding:0.25rem}.p-2{padding:0.5rem}.p-3{padding:0.75rem}.p-4{padding:1rem}.p-5{padding:1.25rem}.p-6{padding:1.5rem}.p-8{padding:2rem}.p-10{padding:2.5rem}.p-12{padding:3rem}
 .px-1{padding-left:.25rem;padding-right:.25rem}.px-2{padding-left:.5rem;padding-right:.5rem}.px-3{padding-left:.75rem;padding-right:.75rem}.px-4{padding-left:1rem;padding-right:1rem}
 .px-5{padding-left:1.25rem;padding-right:1.25rem}.px-6{padding-left:1.5rem;padding-right:1.5rem}
 .py-0{padding-top:0;padding-bottom:0}.py-1{padding-top:.25rem;padding-bottom:.25rem}.py-1\\.5{padding-top:.375rem;padding-bottom:.375rem}
@@ -148,55 +146,20 @@ img{display:block;max-width:100%}
 `;
 
 /**
- * Reemplaza el bloque de CDN+Google Fonts por CSS inline + sistema de fuentes local.
- * Usar en todos los templates de reportes en vez de:
- *   <script src="https://cdn.tailwindcss.com"></script>
- *   @import url('https://fonts.googleapis.com/...')
+ * Reemplaza el bloque de CDN+Google Fonts por CSS inline.
+ * Usa fuente del sistema (Inter/SF Pro/Segoe UI) - similar a Geist.
+ * NO usa fs/path - funciona tanto en servidor como cliente.
  */
-// ── Fuente Geist inlineada como base64 ────────────────────────────────────────
-
-function loadGeistBase64(): string {
-  try {
-    // En Railway y producción, la fuente está en node_modules de Next.js
-    const candidates = [
-      path.join(process.cwd(), "node_modules/next/dist/next-devtools/server/font/geist-latin.woff2"),
-      path.join(process.cwd(), "node_modules/next/dist/esm/next-devtools/server/font/geist-latin.woff2"),
-    ];
-    for (const p of candidates) {
-      if (fs.existsSync(p)) {
-        return fs.readFileSync(p).toString("base64");
-      }
-    }
-  } catch {
-    // silently fallback — sistema usará font stack de sistema
-  }
-  return "";
-}
-
-// Cargado una sola vez en startup (no en cada request)
-const GEIST_B64 = loadGeistBase64();
-
-const GEIST_FONT_CSS = GEIST_B64
-  ? `@font-face {
-    font-family: 'Geist';
-    font-style: normal;
-    font-weight: 100 900;
-    src: url('data:font/woff2;base64,${GEIST_B64}') format('woff2');
-  }`
-  : "";
-
-const FONT_STACK = GEIST_B64
-  ? `'Geist', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif`
-  : `ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif`;
-
 export function getReportHeadAssets(extraCss = ""): string {
+  // Fuente del sistema similar a Geist - disponible en todos lados
+  const fontStack = `'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif`;
+  
   return `
 <style>
-${GEIST_FONT_CSS}
 ${TAILWIND_INLINE_CSS}
 ${extraCss}
 body {
-  font-family: ${FONT_STACK};
+  font-family: ${fontStack};
   -webkit-print-color-adjust: exact;
   print-color-adjust: exact;
 }
