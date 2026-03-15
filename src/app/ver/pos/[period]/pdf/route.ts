@@ -4,21 +4,20 @@ import puppeteer, { Browser } from "puppeteer";
 import { prisma } from "@/lib/prisma";
 import { getBranding } from "@/lib/reports/get-branding";
 import { buildPosReportHtml, type PosReportData } from "@/lib/reports/base/pos-report-template";
+import { getConfiguredTz } from "@/lib/get-configured-tz";
+import { nowAR, startOfDayAR, startOfWeekAR, startOfMonthAR, formatDateTimeAR } from "@/lib/utils-date";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 type Period = "today" | "week" | "month" | "all";
 
-function getPeriodStart(period: Period): Date | undefined {
+function getPeriodStart(period: Period, tz: string): Date | undefined {
     if (period === "all") return undefined;
-    const now = new Date();
-    const start = new Date(now);
-    start.setHours(0, 0, 0, 0);
-    if (period === "today") return start;
-    if (period === "week") { start.setDate(start.getDate() - 6); return start; }
-    start.setDate(start.getDate() - 29);
-    return start;
+    const now = nowAR(tz);
+    if (period === "today") return startOfDayAR(now, tz);
+    if (period === "week") return startOfWeekAR(now, tz);
+    return startOfMonthAR(now, tz);
 }
 
 const PERIOD_LABELS: Record<Period, string> = {
@@ -27,10 +26,6 @@ const PERIOD_LABELS: Record<Period, string> = {
     month: "Este mes",
     all: "Historico",
 };
-
-function formatDateAR(d: Date) {
-    return d.toLocaleString("es-AR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
-}
 
 export async function GET(
     req: NextRequest,
@@ -50,7 +45,8 @@ export async function GET(
             return NextResponse.json({ error: "Code is required" }, { status: 400 });
         }
 
-        const start = getPeriodStart(period);
+        const tz = await getConfiguredTz(sucursalId);
+        const start = getPeriodStart(period, tz);
         const dateWhere = start ? { gte: start } : undefined;
         const sucursalWhere = { sucursalId };
 
@@ -107,7 +103,7 @@ export async function GET(
 
         for (const v of ventasConDetalles) {
             const dateStr = new Date(v.fecha).toLocaleDateString("es-AR", {
-                day: "2-digit", month: "2-digit", year: "numeric",
+                day: "2-digit", month: "2-digit", year: "numeric", timeZone: tz,
             });
             const tPrev = tendenciaMap.get(dateStr) ?? { ventasTotal: 0, cantidad: 0, ganancia: 0, unitsVendidas: 0 };
 
@@ -158,7 +154,7 @@ export async function GET(
         const reportData: PosReportData = {
             period,
             periodLabel: PERIOD_LABELS[period],
-            fechaGeneracion: formatDateAR(new Date()),
+            fechaGeneracion: formatDateTimeAR(nowAR(tz), true, tz),
             totalVentas: totalVentasNeto,
             cantidadVentas,
             totalGanancia,
@@ -179,7 +175,7 @@ export async function GET(
 
         browser = await puppeteer.launch({ headless: true, args: ["--no-sandbox", "--disable-setuid-sandbox"] });
         const page = await browser.newPage();
-        await page.setContent(htmlContent, { waitUntil: "networkidle2" });
+        await page.setContent(htmlContent, { waitUntil: "domcontentloaded" });
         await page.emulateMediaType("screen");
 
         const pdfBytes = await page.pdf({ format: "A4", printBackground: true, margin: { top: "0", bottom: "0", left: "0", right: "0" } });

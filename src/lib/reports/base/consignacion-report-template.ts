@@ -1,6 +1,7 @@
 // src/lib/reports/base/consignacion-report-template.ts
 // Reporte de Consignaciones - diseño premium con Tailwind
 import { reportThemeCss } from "@/lib/reports/report-theme";
+import { getReportHeadAssets } from "@/lib/reports/tailwind-inline";
 import type { BrandingDTO } from "@/lib/reports/types";
 
 // ─────────────────────────────────────────────
@@ -158,15 +159,12 @@ export function buildConsigReportHtml(data: ConsigReportData, branding: Branding
 <html>
 <head>
   <meta charset="utf-8" />
-  <script src="https://cdn.tailwindcss.com"></script>
-  <style>
+  ${getReportHeadAssets(`
     ${reportThemeCss(branding.primaryColor)}
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap');
-    body { font-family: 'Inter', sans-serif; -webkit-print-color-adjust: exact; }
     .money { font-feature-settings: "tnum"; font-variant-numeric: tabular-nums; }
     @page { margin: 0; size: A4; }
     table { border-collapse: separate; border-spacing: 0 0.3rem; }
-  </style>
+  `)}
 </head>
 <body class="p-10 bg-white text-slate-900 max-w-[210mm] mx-auto border-t-[12px] border-indigo-700">
 

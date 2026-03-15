@@ -1,5 +1,6 @@
 // src/lib/reports/base/remito-template.ts
 import { reportThemeCss } from "@/lib/reports/report-theme";
+import { getReportHeadAssets } from "@/lib/reports/tailwind-inline";
 import { formatDateAR } from "@/lib/reports/template-helpers";
 import type { BrandingDTO } from "@/lib/reports/types";
 
@@ -80,14 +81,11 @@ export function buildConsignacionHtml(consignacion: ConsignacionInput, branding:
 <html>
 <head>
   <meta charset="utf-8" />
-  <script src="https://cdn.tailwindcss.com"></script>
-  <style>
+  ${getReportHeadAssets(`
     ${reportThemeCss(branding.primaryColor)}
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap');
-    body { font-family: 'Inter', sans-serif; -webkit-print-color-adjust: exact; }
     .money { font-feature-settings: "tnum"; font-variant-numeric: tabular-nums; }
     @page { margin: 0; size: A4; }
-  </style>
+  `)}
 </head>
 <body class="p-10 bg-white text-slate-900 max-w-[210mm] mx-auto min-h-screen border-t-[12px] border-emerald-600 flex flex-col">
 

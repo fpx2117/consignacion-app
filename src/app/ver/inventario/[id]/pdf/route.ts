@@ -97,7 +97,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
     });
 
     const page = await browser.newPage();
-    await page.setContent(htmlContent, { waitUntil: "networkidle0" });
+    await page.setContent(htmlContent, { waitUntil: "domcontentloaded" });
     await page.emulateMediaType("screen");
 
     const pdfUint8Array = await page.pdf({
