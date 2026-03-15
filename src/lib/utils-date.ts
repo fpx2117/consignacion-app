@@ -194,6 +194,7 @@ export function formatDateTimeAR(
   if (includeTime) {
     base.hour = "2-digit";
     base.minute = "2-digit";
+    base.hour12 = false;
   }
 
   return d.toLocaleString("es-AR", base);
