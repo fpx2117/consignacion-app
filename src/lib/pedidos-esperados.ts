@@ -3,6 +3,8 @@
 
 import { prisma } from "@/lib/prisma";
 import { NOTIFICATION_TYPE } from "@/lib/notificaciones/types";
+import { nowAR } from "@/lib/utils-date";
+import { getConfiguredTz } from "@/lib/get-configured-tz";
 
 /**
  * Verifica pedidos PROGRAMADO/POSTERGADO cuya fechaEsperada ya paso,
@@ -14,7 +16,8 @@ import { NOTIFICATION_TYPE } from "@/lib/notificaciones/types";
  * @returns cantidad de pedidos actualizados
  */
 export async function checkAndUpdateVencidos(sucursalId?: number): Promise<{ count: number; ids: number[] }> {
-  const now = new Date();
+  const tz = sucursalId !== undefined ? await getConfiguredTz(sucursalId) : undefined;
+  const now = nowAR(tz);
 
   const pedidosAVencer = await prisma.pedidoEsperado.findMany({
     where: {
@@ -46,6 +49,7 @@ export async function checkAndUpdateVencidos(sucursalId?: number): Promise<{ cou
         day: "2-digit",
         month: "2-digit",
         year: "numeric",
+        timeZone: "America/Argentina/Buenos_Aires",
       });
 
       return prisma.notification.upsert({

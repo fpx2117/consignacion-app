@@ -15,6 +15,7 @@ export function formatDate(date: string | Date | null | undefined) {
   return new Intl.DateTimeFormat("es-AR", {
     day: "2-digit",
     month: "2-digit",
-    year: "numeric"
+    year: "numeric",
+    timeZone: "America/Argentina/Buenos_Aires",
   }).format(new Date(date));
 }

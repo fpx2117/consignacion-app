@@ -20,11 +20,11 @@ type CartItemCardProps = {
 
 export function CartItemCard({
   item,
-  totalSubQty,
+  totalSubQty: _totalSubQty,
   bestDiscountPct,
   nextDiscountPct,
   nextDiscountQty,
-  subcategoriaNombre,
+  subcategoriaNombre: _subcategoriaNombre,
   isLast,
   onRemove,
   onUpdateQuantity,

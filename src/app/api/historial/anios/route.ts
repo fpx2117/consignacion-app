@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/auth/require-auth";
 import { buildSucursalWhere } from "@/lib/sucursalScope";
+import { nowAR } from "@/lib/utils-date";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -29,13 +30,13 @@ export async function GET() {
     const years = Array.from(yearsSet).sort((a, b) => b - a);
 
     if (years.length === 0) {
-      years.push(new Date().getFullYear());
+      years.push(nowAR().getFullYear());
     }
 
     return NextResponse.json(years);
   } catch (error) {
     console.error("Error al obtener años del historial:", error);
 
-    return NextResponse.json([new Date().getFullYear()], { status: 200 });
+    return NextResponse.json([nowAR().getFullYear()], { status: 200 });
   }
 }

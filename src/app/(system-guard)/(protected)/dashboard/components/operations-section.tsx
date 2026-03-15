@@ -7,6 +7,7 @@ import { formatNumber } from "@/lib/utils-format";
 import Link from "next/link";
 import { motion } from "motion/react";
 import type { DashboardConsignacionesResponse, DashboardLiquidacionItem } from "@/lib/types";
+import { useTimezone } from "@/hooks/useTimezone";
 
 type OperationsSectionProps = {
   consig?: DashboardConsignacionesResponse | null;
@@ -14,6 +15,7 @@ type OperationsSectionProps = {
 };
 
 export function OperationsSection({ consig, loading }: OperationsSectionProps) {
+  const { tz } = useTimezone();
   return (
     <div className="grid gap-8 xl:grid-cols-2">
       {/* SECCIÓN: PRIORIDAD */}
@@ -69,7 +71,7 @@ export function OperationsSection({ consig, loading }: OperationsSectionProps) {
                         </span>
                         <div className="flex items-center gap-2 text-[10px] font-medium text-muted-foreground/70">
                           <span className="bg-[color:var(--status-danger)] dark:bg-[color:var(--status-danger)]/20 text-[color:var(--status-danger)] dark:text-[color:var(--status-danger)] px-1.5 py-0.5 rounded-md leading-none">
-                            {new Date(c.fecha).toLocaleDateString("es-AR", { day: 'numeric', month: 'short' })}
+                            {new Date(c.fecha).toLocaleDateString("es-AR", { day: 'numeric', month: 'short', timeZone: tz })}
                           </span>
                           <span>•</span>
                           <span>{c.detalles?.length ?? 0} categorías</span>
@@ -148,7 +150,7 @@ export function OperationsSection({ consig, loading }: OperationsSectionProps) {
                           </span>
                           <div className="flex items-center gap-2 text-[10px] font-medium text-muted-foreground/70">
                             <span className="bg-[color:var(--status-success-strong)] dark:bg-[color:var(--status-success-strong)]/20 text-[color:var(--status-success-strong)] dark:text-[color:var(--status-success-strong)] px-1.5 py-0.5 rounded-md leading-none">
-                              {new Date(l.fecha).toLocaleDateString("es-AR")}
+                              {new Date(l.fecha).toLocaleDateString("es-AR", { timeZone: tz })}
                             </span>
                           </div>
                         </div>

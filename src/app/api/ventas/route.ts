@@ -13,6 +13,8 @@ import { z } from "zod";
 import { sendNotification } from "@/lib/notificaciones/socket-trigger";
 import { obtenerConfiguracionGlobal } from "@/lib/config";
 import { evaluateStockAlert, processNotificationQueue } from "@/lib/notificaciones/stock-alerts";
+import { nowAR } from "@/lib/utils-date";
+import { getConfiguredTz } from "@/lib/get-configured-tz";
 import { buildSucursalWhere, isGlobalSucursalView } from "@/lib/sucursalScope";
 
 const MAX_VENTA_RETRIES = 3;
@@ -99,8 +101,11 @@ export async function POST(req: Request) {
 
     const { clienteId, descuentoGlobal, items, metodoPago } = parsed.data;
 
-    // ✅ 1. TRAER CONFIGURACIÓN PRIMERO
-    const configGlobal = await obtenerConfiguracionGlobal(auth.activeSucursalId);
+    // ✅ 1. TRAER CONFIGURACIÓN Y TIMEZONE PRIMERO
+    const [configGlobal, tzVenta] = await Promise.all([
+      obtenerConfiguracionGlobal(auth.activeSucursalId),
+      getConfiguredTz(auth.activeSucursalId),
+    ]);
     // Asumimos que si no existe el campo en DB aún, por defecto es estricto (true)
     const usaCaja = configGlobal.usarControlDeCaja ?? true;
 
@@ -263,7 +268,7 @@ export async function POST(req: Request) {
               numeroVenta: nextNumeroVenta,
               metodoPago: metodoPago ?? MetodoPago.EFECTIVO,
               sesionCajaId: sesionActiva?.id || null,
-              fecha: new Date(),
+              fecha: nowAR(tzVenta),
               total: totalFinal,
               descuentoGlobal: descGlobalFinal,
               detalles: { create: detallesData },
@@ -277,7 +282,7 @@ export async function POST(req: Request) {
               sucursalId: auth.activeSucursalId,
               tipo: "VENTA",
               sesionCajaId: sesionActiva?.id || null,
-              fecha: new Date(),
+              fecha: nowAR(tzVenta),
               monto: totalFinal,
               metodo: metodoPago ?? MetodoPago.EFECTIVO,
             },

@@ -1,6 +1,8 @@
 import { prisma } from "@/lib/prisma";
 import { unstable_cache } from "next/cache";
-import { startOfDay, startOfWeek, startOfMonth, differenceInDays } from "date-fns";
+import { differenceInDays } from "date-fns";
+import { nowAR, startOfDayAR, startOfWeekAR, startOfMonthAR } from "@/lib/utils-date";
+import { getConfiguredTz } from "@/lib/get-configured-tz";
 import { DashboardPeriod } from "./types";
 
 /**
@@ -15,12 +17,13 @@ import { DashboardPeriod } from "./types";
  */
 export const getDashboardKpis = unstable_cache(
   async (sucursalId: number, period: DashboardPeriod, isAdmin: boolean = false) => {
-    const now = new Date();
+    const tz = await getConfiguredTz(isAdmin && sucursalId === 0 ? 1 : sucursalId);
+    const now = nowAR(tz);
     let start: Date | undefined;
 
-    if (period === "today") start = startOfDay(now);
-    else if (period === "week") start = startOfWeek(now, { weekStartsOn: 1 });
-    else if (period === "month") start = startOfMonth(now);
+    if (period === "today") start = startOfDayAR(now, tz);
+    else if (period === "week") start = startOfWeekAR(now, tz);
+    else if (period === "month") start = startOfMonthAR(now, tz);
 
     const dateWhere = start ? { gte: start } : undefined;
 
@@ -292,14 +295,15 @@ export const getDashboardKpis = unstable_cache(
  * REPORTE DE TENDENCIA DIARIA
  */
 export async function getDashboardTendencia(sucursalId: number, period: DashboardPeriod, isAdmin: boolean = false) {
-    const now = new Date();
+    const isGlobal = sucursalId === 0 && isAdmin;
+    const tz = await getConfiguredTz(isGlobal ? 1 : sucursalId);
+    const now = nowAR(tz);
     let start: Date;
 
-    if (period === "today") start = startOfDay(now);
-    else if (period === "week") start = startOfWeek(now, { weekStartsOn: 1 });
-    else start = startOfMonth(now);
+    if (period === "today") start = startOfDayAR(now, tz);
+    else if (period === "week") start = startOfWeekAR(now, tz);
+    else start = startOfMonthAR(now, tz);
 
-    const isGlobal = sucursalId === 0 && isAdmin;
     const sucursalWhere = isGlobal ? {} : { sucursalId };
     const days = differenceInDays(now, start) + 1;
 
@@ -320,7 +324,7 @@ export async function getDashboardTendencia(sucursalId: number, period: Dashboar
         }),
     ]);
 
-    const key = (d: Date) => startOfDay(d).toISOString().slice(0, 10);
+    const key = (d: Date) => startOfDayAR(d, tz).toISOString().slice(0, 10);
     const seriesMap: Record<string, any> = {};
 
     for (let i = 0; i < days; i++) {
@@ -368,14 +372,15 @@ export async function getDashboardTendencia(sucursalId: number, period: Dashboar
  * REPORTE DE PRODUCTOS TOP (Rotación)
  */
 export async function getDashboardTopProductos(sucursalId: number, period: DashboardPeriod, isAdmin: boolean = false, limit: number = 10) {
-    const now = new Date();
+    const isGlobal = sucursalId === 0 && isAdmin;
+    const tz = await getConfiguredTz(isGlobal ? 1 : sucursalId);
+    const now = nowAR(tz);
     let start: Date | undefined;
 
-    if (period === "today") start = startOfDay(now);
-    else if (period === "week") start = startOfWeek(now, { weekStartsOn: 1 });
-    else if (period === "month") start = startOfMonth(now);
+    if (period === "today") start = startOfDayAR(now, tz);
+    else if (period === "week") start = startOfWeekAR(now, tz);
+    else if (period === "month") start = startOfMonthAR(now, tz);
 
-    const isGlobal = sucursalId === 0 && isAdmin;
     const sucursalWhere = isGlobal ? {} : { sucursalId };
     const dateWhere = start ? { gte: start } : undefined;
 

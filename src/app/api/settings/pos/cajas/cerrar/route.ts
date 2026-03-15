@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/auth/require-auth";
+import { nowAR } from "@/lib/utils-date";
+import { getConfiguredTz } from "@/lib/get-configured-tz";
 
 type CerrarCajaBody = {
   sesionId?: number;
@@ -47,11 +49,13 @@ export async function POST(req: Request) {
     const montoEsperado = Number(sesion.montoInicial) + totalVentas + totalIngresos - totalEgresos;
     const diferencia = montoRealNumerico - montoEsperado;
 
+    const tzCierre = await getConfiguredTz(auth.activeSucursalId);
+
     const sesionCerrada = await prisma.sesionCaja.update({
       where: { id: sesionCajaId },
       data: {
         estado: "CERRADA",
-        fechaCierre: new Date(),
+        fechaCierre: nowAR(tzCierre),
         montoFinalEsperado: montoEsperado,
         montoFinalReal: montoRealNumerico,
         diferencia,

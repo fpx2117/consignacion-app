@@ -14,17 +14,19 @@ const escapeAttr = (value: unknown): string => {
   return escapeHtml(value).replace(/[\r\n]+/g, " ").trim();
 };
 
-const formatDateAR = (date?: string | Date | null, includeTime = true) => {
+const formatDateAR = (date?: string | Date | null, includeTime = true, tz = "America/Argentina/Buenos_Aires") => {
   if (!date) return "-";
   const d = new Date(date);
   if (isNaN(d.getTime())) return "-";
 
-  return d.toLocaleDateString("es-AR", {
+  const opts: Intl.DateTimeFormatOptions = {
     day: "2-digit",
     month: "2-digit",
     year: "numeric",
+    timeZone: tz,
     ...(includeTime && { hour: "2-digit", minute: "2-digit" }),
-  });
+  };
+  return includeTime ? d.toLocaleString("es-AR", opts) : d.toLocaleDateString("es-AR", opts);
 };
 
 const formatMoney = (amount: number) => {
@@ -49,7 +51,12 @@ export interface InventoryGroup {
   productos: Producto[];
 }
 
-export function buildInventoryHtml(groups: InventoryGroup[], branding: BrandingDTO) {
+export function buildInventoryHtml(
+  groups: InventoryGroup[],
+  branding: BrandingDTO,
+  zonaHoraria?: string,
+) {
+  const tz = zonaHoraria ?? "America/Argentina/Buenos_Aires";
   // --- 1. PROCESAMIENTO Y CÁLCULOS GLOBALES ---
   let totalItemsGlobal = 0;
   let totalStockUnitsGlobal = 0;
@@ -147,7 +154,7 @@ export function buildInventoryHtml(groups: InventoryGroup[], branding: BrandingD
 
           <div class="text-right">
             <h2 class="text-[9px] font-black text-slate-400 uppercase tracking-[0.3em] mb-1">Estado General de Existencias</h2>
-            <p class="text-xs font-bold text-slate-600 uppercase">${formatDateAR(new Date())}</p>
+            <p class="text-xs font-bold text-slate-600 uppercase">${formatDateAR(new Date(), true, tz)}</p>
           </div>
         </div>
 
@@ -218,7 +225,7 @@ export function buildInventoryHtml(groups: InventoryGroup[], branding: BrandingD
           ? `
                           <div class="inline-flex flex-col">
                             <span class="font-bold ${isExpired ? "text-red-600" : "text-slate-600"}">
-                              ${formatDateAR(p.fechaVencimiento, false)}
+                              ${formatDateAR(p.fechaVencimiento, false, tz)}
                             </span>
                             ${isExpired ? '<span class="text-[7px] text-red-500 font-black uppercase tracking-tighter">Vencido</span>' : ""}
                           </div>

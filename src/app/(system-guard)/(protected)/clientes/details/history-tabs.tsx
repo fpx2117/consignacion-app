@@ -10,9 +10,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Separator } from "@/components/ui/separator";
 import { Package, Wallet, FileText, ArrowRight, Receipt } from "lucide-react";
 import type { Consignacion, Pago, Venta } from "@/lib/types";
+import { useTimezone } from "@/hooks/useTimezone";
 
-// Helpers
-const formatDate = (dateStr: string | Date) => new Date(dateStr).toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit", year: "2-digit" });
 const formatCurrency = (val: number) => new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS" }).format(val);
 
 interface HistoryProps {
@@ -22,6 +21,7 @@ interface HistoryProps {
 }
 
 export function ClientHistoryTabs({ consignaciones, pagos, ventas }: HistoryProps) {
+    const { formatDate } = useTimezone();
 
     // Función auxiliar para verificar estado sin errores de TS
     const isAbierta = (estado: string) => {
@@ -181,6 +181,7 @@ interface MobileCardProps {
 }
 
 function MobileCard({ title, date, status, statusColor, amount, subtitle, link }: MobileCardProps) {
+    const { formatDate } = useTimezone();
     const content = (
         <div className="flex items-center justify-between p-4">
             <div className="space-y-1">

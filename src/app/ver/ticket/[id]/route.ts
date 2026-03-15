@@ -7,6 +7,7 @@ import { buildVentaHtml } from "@/lib/reports/base/venta-report-template";
 import { getBranding } from "@/lib/reports/get-branding";
 import { prisma } from "@/lib/prisma";
 import { hashCode } from "@/lib/share-links";
+import { getConfiguredTz } from "@/lib/get-configured-tz";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -78,6 +79,9 @@ export async function GET(
 
     if (!ventaRaw) return NextResponse.json({ error: "Venta no encontrada" }, { status: 404 });
 
+    // Leer timezone configurada para la sucursal de esta venta
+    const zonaHoraria = await getConfiguredTz(ventaRaw.sucursalId);
+
     const reporteData: VentaReportDTO = {
       id: ventaRaw.id,
       numeroVenta: ventaRaw.numeroVenta,
@@ -87,6 +91,7 @@ export async function GET(
       metodoPago: String(ventaRaw.metodoPago ?? "EFECTIVO"),
       clienteNombre: ventaRaw.cliente?.nombre || "Consumidor Final",
       clienteTelefono: ventaRaw.cliente?.telefono || "",
+      zonaHoraria,
       items: ventaRaw.detalles.map((d) => ({
         producto: d.producto.nombre,
         cantidad: d.units,

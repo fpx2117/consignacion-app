@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/auth/require-auth";
 import { isGlobalSucursalView } from "@/lib/sucursalScope";
 import { EstadoGasto, FrecuenciaGasto } from "@prisma/client";
+import { nowAR } from "@/lib/utils-date";
 
 export async function GET(req: Request) {
     const auth = await requireAuth();
@@ -135,7 +136,7 @@ export async function POST(req: Request) {
             );
         }
 
-        const startDate = fecha ? new Date(fecha) : new Date();
+        const startDate = fecha ? new Date(fecha) : nowAR();
         const endDate = fechaVencimiento ? new Date(fechaVencimiento) : null;
         const sucursalId = auth.activeSucursalId;
         const userId = Number(auth.user.sub);

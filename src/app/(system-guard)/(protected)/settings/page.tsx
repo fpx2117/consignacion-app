@@ -19,6 +19,7 @@ import {
   CreditCard,
   MessageCircle,
   Zap,
+  SlidersHorizontal,
   type LucideIcon,
 } from "lucide-react";
 
@@ -39,6 +40,17 @@ type SubscriptionLimitsCache = {
 };
 
 const SETTINGS_MODULES: SettingsModule[] = [
+  {
+    id: "general",
+    title: "General",
+    description: "Zona horaria, mantenimiento de datos y parámetros del sistema.",
+    href: "/settings/general",
+    icon: SlidersHorizontal,
+    color: "text-primary",
+    bg: "bg-primary/10",
+    borderColor: "group-hover:border-primary/30",
+    soon: false,
+  },
   {
     id: "tienda",
     title: "Tu Tienda Online",

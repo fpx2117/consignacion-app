@@ -633,6 +633,13 @@ export default function NuevaVentaPage() {
           isTarjeta={metodoPago === "TARJETA"}
           descuentoTipo={descuentoAplicado?.tipo}
           descuentoValor={descuentoAplicado?.valor}
+          metodoPago={metodoPago}
+          opcionesPago={METODOS_PAGO}
+          loading={loading}
+          disabled={loading || cart.length === 0 || activeSucursalId === 0}
+          onMetodoPagoChange={setMetodoPago}
+          onOpenDescuento={() => setOpenDescuento(true)}
+          onCobrar={handleCobrar}
         />
       </main>
 

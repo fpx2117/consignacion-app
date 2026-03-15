@@ -7,6 +7,7 @@ import { buildGastoHtml } from "@/lib/reports/base/gasto-report-template";
 import { getBranding } from "@/lib/reports/get-branding";
 import { prisma } from "@/lib/prisma";
 import { hashCode } from "@/lib/share-links";
+import { getConfiguredTz } from "@/lib/get-configured-tz";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -78,6 +79,8 @@ export async function GET(
 
         if (!gasto) return NextResponse.json({ error: "Gasto no encontrado" }, { status: 404 });
 
+        const zonaHoraria = await getConfiguredTz(gasto.sucursalId);
+
         const reporteData: GastoReportDTO = {
             id: gasto.id,
             fecha: gasto.fecha,
@@ -88,6 +91,7 @@ export async function GET(
             categoria: gasto.categoria?.nombre || "Sin Categoría",
             esRecurrente: gasto.esRecurrente,
             frecuencia: gasto.frecuencia,
+            zonaHoraria,
         };
 
         const branding = await getBranding();

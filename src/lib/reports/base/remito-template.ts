@@ -1,5 +1,6 @@
 // src/lib/reports/base/remito-template.ts
 import { reportThemeCss } from "@/lib/reports/report-theme";
+import { formatDateAR } from "@/lib/reports/template-helpers";
 import type { BrandingDTO } from "@/lib/reports/types";
 
 // Helpers
@@ -19,7 +20,18 @@ const brandInitials = (name: string) => {
     return ((p[0]?.[0] ?? "R") + (p[1]?.[0] ?? p[0]?.[1] ?? "T")).toUpperCase();
 };
 
-export function buildConsignacionHtml(consignacion: any, branding: BrandingDTO): string {
+type ConsignacionInput = {
+    zonaHoraria?: string;
+    detalles?: unknown[];
+    numeroFolio?: number;
+    id?: number;
+    fecha?: Date | string;
+    estado?: string;
+    cliente?: { nombre?: string | null; telefono?: string | null } | null;
+};
+
+export function buildConsignacionHtml(consignacion: ConsignacionInput, branding: BrandingDTO): string {
+    const tz = consignacion.zonaHoraria ?? "America/Argentina/Buenos_Aires";
     const brandName = branding.businessName || "Comercio";
     const badge = brandInitials(brandName);
     const metaLine = [branding.address, branding.phone]
@@ -62,9 +74,7 @@ export function buildConsignacionHtml(consignacion: any, branding: BrandingDTO):
     }).join("");
 
     const ticketNumber = String(consignacion.numeroFolio || consignacion.id).padStart(4, "0");
-    const dateFormatted = new Date(consignacion.fecha || new Date()).toLocaleDateString("es-AR", {
-        day: "2-digit", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit"
-    });
+    const dateFormatted = formatDateAR(consignacion.fecha ?? new Date(), true, tz);
 
     return `<!DOCTYPE html>
 <html>

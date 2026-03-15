@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 
 import { getBranding } from "@/lib/reports/get-branding";
 import { buildInventoryHtml, type InventoryGroup } from "@/lib/reports/base/inventory-report-template";
+import { getConfiguredTz } from "@/lib/get-configured-tz";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -81,11 +82,14 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
       };
     }).filter(g => g.productos.length > 0);
 
-    // 5. Branding
+    // 5. Branding + timezone
     const branding = await getBranding();
+    // Para inventario usamos sucursal 1 como referencia (o la primera sucursal activa)
+    const firstSucursalId = sucursales[0]?.id ?? 1;
+    const zonaHoraria = await getConfiguredTz(firstSucursalId);
 
     // 6. Generar HTML
-    const htmlContent = buildInventoryHtml(groups, branding);
+    const htmlContent = buildInventoryHtml(groups, branding, zonaHoraria);
 
     browser = await puppeteer.launch({
       headless: true,

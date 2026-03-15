@@ -3,6 +3,8 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/auth/require-auth";
 import type { JwtPayloadUser } from "@/lib/auth/core";
+import { nowAR, getDayOfWeekAR, getTimeStringAR } from "@/lib/utils-date";
+import { getConfiguredTz } from "@/lib/get-configured-tz";
 
 type AbrirTurnoBody = {
   cajaId?: number;
@@ -37,10 +39,11 @@ function getUsuarioIdFuerte(userPayload: JwtPayloadUser) {
   return parsed;
 }
 
-async function validarHorarioLaboral(usuarioId: number): Promise<ValidacionHorario> {
-  const ahora = new Date();
-  const diaSemana = ahora.getDay();
-  const horaActual = `${ahora.getHours().toString().padStart(2, "0")}:${ahora.getMinutes().toString().padStart(2, "0")}`;
+async function validarHorarioLaboral(usuarioId: number, sucursalId: number): Promise<ValidacionHorario> {
+  const tz = await getConfiguredTz(sucursalId);
+  const ahora = nowAR(tz);
+  const diaSemana = getDayOfWeekAR(ahora, tz);
+  const horaActual = getTimeStringAR(ahora, tz);
 
   const horario = await prisma.horarioLaboral.findUnique({
     where: { usuarioId_diaSemana: { usuarioId, diaSemana } },
@@ -78,9 +81,10 @@ export async function GET() {
       },
     });
 
-    const ahora = new Date();
+    const tzGet = await getConfiguredTz(auth.activeSucursalId);
+    const ahora = nowAR(tzGet);
     const horarioHoy = await prisma.horarioLaboral.findUnique({
-      where: { usuarioId_diaSemana: { usuarioId, diaSemana: ahora.getDay() } },
+      where: { usuarioId_diaSemana: { usuarioId, diaSemana: getDayOfWeekAR(ahora, tzGet) } },
     });
 
     let horaFinCalculada = horarioHoy?.horaFin;
@@ -128,7 +132,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Payload invalido." }, { status: 400 });
     }
 
-    const verificacion = await validarHorarioLaboral(usuarioId);
+    const verificacion = await validarHorarioLaboral(usuarioId, auth.activeSucursalId);
     if (!verificacion.permitido) {
       return NextResponse.json({ error: verificacion.error }, { status: 403 });
     }
@@ -182,11 +186,7 @@ export async function PATCH(req: Request) {
       return NextResponse.json({ error: "No hay sesion para extender." }, { status: 404 });
     }
 
-    const timeStamp = new Date().toLocaleTimeString("es-AR", {
-      hour: "2-digit",
-      minute: "2-digit",
-      hour12: false,
-    });
+    const timeStamp = getTimeStringAR(nowAR());
     const tagExtension = `[EXTENSIÓN ${minutosExtra}MIN: ${timeStamp}]`;
 
     const actualizada = await prisma.sesionCaja.update({
@@ -256,7 +256,7 @@ export async function PUT(req: Request) {
       where: { id: sesion.id },
       data: {
         estado: "CERRADA",
-        fechaCierre: new Date(),
+        fechaCierre: nowAR(),
         montoFinalEsperado: esperado,
         montoFinalReal: montoRealNumerico,
         diferencia,
