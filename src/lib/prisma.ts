@@ -28,10 +28,17 @@ const createPrismaClient = () => {
   const pool = new pg.Pool({ connectionString });
   const adapter = new PrismaPg(pool);
 
-  return new PrismaClient({
+  const client = new PrismaClient({
     adapter,
     log: process.env.NODE_ENV === "development" ? ["error", "warn"] : ["error"],
   });
+
+  // Ejecutar SET TIME ZONE al iniciar - esto afecta todas las sesiones de este pool
+  pool.on('connect', () => {
+    pool.query("SET TIME ZONE 'America/Argentina/Buenos_Aires'").catch(console.error);
+  });
+
+  return client;
 };
 
 /**
