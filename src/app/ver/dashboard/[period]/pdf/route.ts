@@ -4,21 +4,20 @@ import puppeteer, { Browser } from "puppeteer";
 import { prisma } from "@/lib/prisma";
 import { getBranding } from "@/lib/reports/get-branding";
 import { buildDashboardReportHtml, type DashboardReportData } from "@/lib/reports/base/dashboard-report-template";
+import { getConfiguredTz } from "@/lib/get-configured-tz";
+import { nowAR, startOfDayAR, startOfWeekAR, startOfMonthAR, formatDateTimeAR } from "@/lib/utils-date";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 type Period = "today" | "week" | "month" | "all";
 
-function getPeriodStart(period: Period): Date | undefined {
+function getPeriodStart(period: Period, tz: string): Date | undefined {
     if (period === "all") return undefined;
-    const now = new Date();
-    const start = new Date(now);
-    start.setHours(0, 0, 0, 0);
-    if (period === "today") return start;
-    if (period === "week") { start.setDate(start.getDate() - 6); return start; }
-    start.setDate(start.getDate() - 29); // month
-    return start;
+    const now = nowAR(tz);
+    if (period === "today") return startOfDayAR(now, tz);
+    if (period === "week") return startOfWeekAR(now, tz);
+    return startOfMonthAR(now, tz);
 }
 
 function getPeriodLabel(period: Period): string {
@@ -29,16 +28,6 @@ function getPeriodLabel(period: Period): string {
         all: "Histórico",
     };
     return labels[period] ?? period;
-}
-
-function formatDateAR(date: Date): string {
-    return date.toLocaleString("es-AR", {
-        day: "2-digit",
-        month: "2-digit",
-        year: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-    });
 }
 
 export async function GET(
@@ -60,7 +49,8 @@ export async function GET(
             return NextResponse.json({ error: "Code is required" }, { status: 400 });
         }
 
-        const start = getPeriodStart(period);
+        const tz = await getConfiguredTz(sucursalId);
+        const start = getPeriodStart(period, tz);
         const dateWhere = start ? { gte: start } : undefined;
         const sucursalWhere = { sucursalId };
 
@@ -229,6 +219,7 @@ export async function GET(
                     day: "2-digit",
                     month: "2-digit",
                     year: "numeric",
+                    timeZone: tz,
                 });
                 const existing = tendenciaMap.get(dateStr) ?? { ventasTotal: 0, pagosTotal: 0 };
                 const totalNeto = Number(row.total) - Number(row.descuentoGlobal || 0);
@@ -249,7 +240,7 @@ export async function GET(
         const totalGastos = totalGastosPropios + totalGastosLinks;
 
         function formatDateShort(d: Date | string): string {
-            return new Date(d).toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit", year: "numeric" });
+            return new Date(d).toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit", year: "numeric", timeZone: tz });
         }
 
         const gastosDetalle = [
@@ -275,7 +266,7 @@ export async function GET(
         const reportData: DashboardReportData = {
             period,
             periodLabel: getPeriodLabel(period),
-            fechaGeneracion: formatDateAR(new Date()),
+            fechaGeneracion: formatDateTimeAR(nowAR(tz), true, tz),
             gananciaBruta,
             gananciaConsignacion,
             gananciaDirecta,
@@ -305,7 +296,7 @@ export async function GET(
         });
 
         const page = await browser.newPage();
-        await page.setContent(htmlContent, { waitUntil: "networkidle0" });
+        await page.setContent(htmlContent, { waitUntil: "domcontentloaded" });
         await page.emulateMediaType("screen");
 
         const pdfBytes = await page.pdf({
