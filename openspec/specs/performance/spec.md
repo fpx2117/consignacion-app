@@ -1,421 +1,408 @@
-# Especificación de Performance — `optimizacion-performance`
+# Especificación: Optimización de Performance — Navegación y Componentes
 
-> **Tipo**: Especificación Nueva (dominio sin especificación previa)
-> **Cambio**: `optimizacion-performance`
-> **Proyecto**: `consignacion-app` — Next.js 15 App Router, Prisma, PostgreSQL, Socket.IO
-> **Fecha**: 2026-03-13
-> **Score objetivo**: ~80/100 (desde ~30/100 actual)
-
----
-
-## Propósito
-
-Este documento especifica los requisitos de optimización de rendimiento para `consignacion-app`.
-Cubre loading states, caché de autenticación, code splitting, gestión de imágenes, animaciones,
-variables CSS y arquitectura de componentes del dashboard.
+- **Change ID:** optimizacion-performance
+- **Versión:** 1.0.0
+- **Fecha:** 2026-03-16
+- **Estado:** DRAFT
+- **Referencia:** [proposal.md](../../proposal.md)
 
 ---
 
-## Requisitos
+## Convenciones de lenguaje (RFC 2119)
+
+| Keyword | Significado |
+|---------|-------------|
+| **DEBE** / **DEBEN** | Requisito obligatorio. El incumplimiento invalida la implementación. |
+| **DEBERÁ** | Requisito obligatorio con énfasis en temporalidad futura. |
+| **NO DEBE** / **NO DEBEN** | Prohibición absoluta. |
+| **DEBERÍA** | Recomendación fuerte. Se puede omitir con justificación documentada. |
+| **PODRÁ** | Comportamiento opcional permitido. |
 
 ---
 
-### REQ-PERF-01: Loading States por Ruta
+## Tabla de Requisitos
 
-Cada ruta protegida dentro de `(system-guard)/(protected)` DEBE tener un archivo `loading.tsx`
-colocado en su directorio de ruta correspondiente, con un skeleton visual apropiado al contenido
-de esa ruta.
-
-El skeleton DEBE reflejar la estructura aproximada de la página (encabezados, tarjetas, tablas)
-y NO DEBE mostrar un spinner genérico de pantalla completa como único indicador de carga.
-
-El archivo `loading.tsx` DEBE exportar un componente por defecto que sea un React Server Component
-(sin directiva `"use client"`).
-
-#### Escenario: Ruta protegida cargando por primera vez
-
-- DADO QUE el usuario está autenticado y navega a `/dashboard`
-- CUANDO Next.js aún no ha resuelto los datos del Server Component de la página
-- ENTONCES el sistema DEBE mostrar el skeleton definido en `dashboard/loading.tsx`
-- Y el skeleton DEBE ocupar el mismo espacio visual que el contenido real
-
-#### Escenario: Navegación entre rutas protegidas con Suspense
-
-- DADO QUE el usuario navega desde `/dashboard` hacia `/ventas`
-- CUANDO la ruta de destino aún está cargando sus datos
-- ENTONCES el sistema DEBE mostrar el skeleton de `ventas/loading.tsx`
-- Y NO DEBE mostrar una pantalla en blanco ni el spinner del `SubscriptionGuard`
-
-#### Escenario: Ruta sin archivo loading.tsx (caso negativo)
-
-- DADO QUE una ruta protegida no tiene `loading.tsx`
-- CUANDO el usuario navega hacia esa ruta
-- ENTONCES el sistema DEBE igualmente completar la navegación (el archivo es requerido pero su ausencia no rompe la app)
-- Y el equipo DEBE ser notificado mediante lint o review que falta el archivo
+| ID | Dominio | Tipo | Prioridad |
+|----|---------|------|-----------|
+| REQ-01 | Broadcast Channel | Funcional | Alta |
+| REQ-02 | Broadcast Channel | Funcional | Alta |
+| REQ-03 | WebSocket Provider | Funcional | Alta |
+| REQ-04 | WebSocket Provider | Funcional | Alta |
+| REQ-05 | WebSocket Provider | Funcional | Alta |
+| REQ-06 | Notificaciones | Funcional | Media |
+| REQ-07 | Notificaciones | Funcional | Media |
+| REQ-08 | Catálogo POS | Funcional | Alta |
+| REQ-09 | Catálogo POS | Funcional | Alta |
+| REQ-10 | Catálogo POS | Funcional | Alta |
+| REQ-11 | Bundle y Dependencias | No Funcional | Media |
+| REQ-12 | Bundle y Dependencias | No Funcional | Media |
+| REQ-13 | Bundle y Dependencias | No Funcional | Media |
+| PERF-01 | Performance General | No Funcional | Alta |
+| PERF-02 | Performance General | No Funcional | Media |
+| PERF-03 | Performance General | No Funcional | Media |
 
 ---
 
-### REQ-PERF-02: Caché de Validación de Sesión en `requireAuth()`
+## 1. Dominio: Broadcast Channel
 
-La función `requireAuth()` DEBE cachear el resultado de la validación de sesión (consulta a
-`prisma.userSession.findUnique`) por al menos 30 segundos por token dentro del mismo request cycle.
+**Archivo afectado:** `src/hooks/useBroadcastChannel.ts`
 
-El caché DEBE invalidarse automáticamente si el token cambia entre requests.
+**Contexto:** El hook `useBroadcastChannel` actualmente se re-suscribe al canal en cada render del componente Sidebar porque el `useEffect` carece de array de dependencias vacío `[]`. Esto genera múltiples listeners activos simultáneos y es una fuente directa del lag percibido en navegación.
 
-El caché NO DEBE persistir entre request cycles distintos (no es caché entre usuarios ni entre peticiones HTTP independientes).
+### REQ-01: Suscripción única al canal
 
-La implementación DEBE usar `React.cache()` o `unstable_cache` con un tag por token para lograr
-el deduplicado dentro del mismo Server Component tree.
+El hook `useBroadcastChannel` DEBE suscribirse al `BroadcastChannel` exactamente **una sola vez** durante el ciclo de vida del componente que lo invoca.
 
-#### Escenario: Múltiples Server Components llaman a `requireAuth()` en el mismo request
+- La suscripción DEBE ocurrir en el efecto de montaje (`componentDidMount` equivalente).
+- El array de dependencias del `useEffect` responsable de la suscripción DEBE ser `[]` (vacío).
+- DEBE registrarse exactamente un listener `onmessage` por instancia del hook.
 
-- DADO QUE una página tiene tres Server Components que invocan `requireAuth()` con el mismo token
-- CUANDO Next.js renderiza la página en el servidor
-- ENTONCES `prisma.userSession.findUnique` DEBE ejecutarse exactamente UNA vez por token por request
-- Y los tres componentes DEBEN recibir el mismo resultado de validación
+### REQ-02: Sin re-suscripción en re-renders
 
-#### Escenario: Token diferente en requests consecutivos
+El hook `useBroadcastChannel` NO DEBE crear una nueva suscripción al canal cuando el componente padre re-renderice sin haber sido desmontado.
 
-- DADO QUE dos requests HTTP llegan con tokens JWT distintos
-- CUANDO `requireAuth()` procesa cada request
-- ENTONCES DEBE realizar la consulta a la base de datos para cada token distinto
-- Y NO DEBE retornar datos de sesión de un token para el otro
+- Si el componente re-renderiza N veces, DEBE existir exactamente 1 listener activo (no N).
+- NO DEBE cerrar y reabrir el canal en re-renders subsecuentes.
+- El canal DEBE cerrarse (`.close()`) únicamente en la función de limpieza del `useEffect` de montaje.
 
-#### Escenario: Token inválido o revocado
+#### Escenario 1.A — Suscripción inicial al montar
 
-- DADO QUE la sesión de un usuario ha sido revocada en la base de datos
-- CUANDO `requireAuth()` se ejecuta con ese token
-- ENTONCES DEBE retornar `{ ok: false }` con status 401
-- Y DEBE limpiar la cookie `access_token` en la respuesta
+```
+Dado  que el hook useBroadcastChannel es invocado por primera vez en un componente
+Cuando el componente se monta en el DOM
+Entonces se DEBE crear exactamente 1 instancia de BroadcastChannel
+  Y    se DEBE registrar exactamente 1 listener onmessage en esa instancia
+  Y    el canal DEBE permanecer abierto mientras el componente esté montado
+```
 
----
+#### Escenario 1.B — Re-render sin re-suscripción
 
-### REQ-PERF-03: `SubscriptionGuard` — Spinner de Pantalla Completa
+```
+Dado  que el hook useBroadcastChannel ya está suscrito (componente montado)
+Cuando el componente padre provoca un re-render (ej. cambio de pathname, state update)
+Entonces NO DEBE crearse una nueva instancia de BroadcastChannel
+  Y    el número total de listeners activos DEBE seguir siendo 1
+  Y    el canal original DEBE permanecer abierto sin interrupción
+```
 
-`SubscriptionGuard` NO DEBE bloquear el render con un spinner de pantalla completa (`h-screen w-full`)
-durante navegaciones entre rutas que ya fueron autenticadas en la sesión actual.
+#### Escenario 1.C — Limpieza al desmontar
 
-El componente DEBE cachear el resultado de `/api/subscriptions/current` en memoria del cliente
-(zustand store o React context) durante al menos la duración de la sesión activa del usuario,
-para evitar re-fetches en cada cambio de ruta.
-
-El spinner de pantalla completa PUEDE mostrarse únicamente en la carga inicial de la aplicación
-(primera verificación tras login).
-
-#### Escenario: Primer acceso tras login
-
-- DADO QUE el usuario acaba de autenticarse y accede por primera vez a una ruta protegida
-- CUANDO `SubscriptionGuard` verifica el estado de suscripción contra la API
-- ENTONCES PUEDE mostrar el spinner de pantalla completa durante esa única verificación inicial
-- Y una vez verificado, DEBE cachear el resultado en el cliente
-
-#### Escenario: Navegación entre rutas ya verificadas
-
-- DADO QUE el usuario navegó a `/dashboard` y `SubscriptionGuard` ya verificó la suscripción
-- CUANDO el usuario navega a `/ventas` o cualquier otra ruta protegida
-- ENTONCES NO DEBE mostrarse el spinner de pantalla completa
-- Y el render de la nueva ruta DEBE comenzar sin esperar a `/api/subscriptions/current`
-
-#### Escenario: Suscripción sin acceso
-
-- DADO QUE la verificación inicial determina que el usuario no tiene suscripción activa
-- CUANDO `SubscriptionGuard` recibe `hasSubscription: false`
-- ENTONCES DEBE redirigir a `/settings/subscriptions`
-- Y DEBE limpiar el caché del cliente para esa sesión
+```
+Dado  que el hook useBroadcastChannel está activo con 1 listener registrado
+Cuando el componente que lo contiene se desmonta del DOM
+Entonces la función de cleanup del useEffect DEBE ejecutarse
+  Y    el canal DEBE cerrarse mediante .close()
+  Y    NO DEBE quedar ningún listener activo para ese canal
+```
 
 ---
 
-### REQ-PERF-04: Caché en Rutas de API con Datos Estables
+## 2. Dominio: WebSocket Provider
 
-Las rutas de API que retornan datos que no cambian en tiempo real (configuración, catálogos,
-listas de referencia) DEBERÍAN usar caché con revalidación mediante `next/cache` o headers HTTP
-`Cache-Control` apropiados.
+**Archivo afectado:** `src/lib/socket-provider.tsx` (o equivalente)
 
-El tiempo de revalidación DEBERÍA ser de al menos 60 segundos para datos semi-estáticos.
+**Contexto:** El provider WebSocket actualmente incluye `pathname` en las dependencias del `useEffect` de conexión. Cada cambio de ruta destruye la conexión y crea una nueva, generando latencia perceptible en cada navegación. La reconexión solo es legítima cuando cambia la identidad del usuario o la sucursal activa.
 
-Las rutas de API que consumen datos en tiempo real (ventas activas, stock en movimiento, Socket.IO)
-NO DEBEN aplicar caché a nivel de response HTTP.
+### REQ-03: Persistencia de conexión durante la navegación
 
-#### Escenario: Ruta de API de datos de configuración
+El WebSocket DEBE mantener la conexión activa durante la navegación entre rutas de la aplicación, sin ejecutar destroy/reconnect como efecto secundario del cambio de `pathname`.
 
-- DADO QUE `/api/settings/config` retorna la configuración de la tienda
-- CUANDO un cliente realiza un GET a ese endpoint
-- ENTONCES la respuesta DEBERÍA incluir `Cache-Control: public, s-maxage=60, stale-while-revalidate=300`
-- Y Next.js DEBERÍA retornar la respuesta cacheada para requests subsiguientes dentro del período
+- La instancia del socket DEBE ser reutilizada entre renders provocados por cambios de `pathname`.
+- La conexión DEBE sobrevivir a navegaciones client-side (Next.js router).
 
-#### Escenario: Ruta de API de datos en tiempo real
+### REQ-04: Reconexión condicionada a cambios de identidad
 
-- DADO QUE `/api/ventas/live` retorna el estado de ventas en curso
-- CUANDO un cliente realiza un GET a ese endpoint
-- ENTONCES la respuesta DEBE incluir `Cache-Control: no-store`
-- Y DEBE retornar datos frescos en cada request
+El WebSocket DEBE reconectarse (teardown + new connection) únicamente cuando cambien alguno de los siguientes valores:
+- El identificador del usuario autenticado (ej. `user.id` o `session.userId`).
+- El identificador de la sucursal activa (ej. `sucursalId`).
 
-#### Escenario: Revalidación tras mutación
+- `pathname` NO DEBE figurar como dependencia en el `useEffect` de conexión del socket.
+- El array de dependencias del efecto de conexión DEBE contener solo valores de identidad/sesión.
 
-- DADO QUE un usuario actualiza la configuración de la tienda
-- CUANDO la mutación se completa exitosamente
-- ENTONCES el sistema DEBERÍA invalidar el caché de `/api/settings/config`
-- Y la próxima petición DEBE obtener datos actualizados
+### REQ-05: No reconexión al cambiar pathname
 
----
+Al cambiar de ruta dentro de la aplicación, el WebSocket NO DEBE desconectarse ni reconectarse.
 
-### REQ-PERF-05: Dashboard KPIs con `unstable_cache`
+- En DevTools > Network > WS, NO DEBE aparecer un nuevo handshake WebSocket tras una navegación client-side.
+- La latencia introducida por reconexión DEBE ser eliminada de los eventos de navegación.
 
-La función `getDashboardKpis` en `src/lib/kpi-logic.ts` DEBE ser envuelta con `unstable_cache`
-de Next.js con un tiempo de revalidación (`revalidate`) de 60 segundos.
+#### Escenario 2.A — Navegación sin reconexión
 
-El caché DEBE estar segmentado por los parámetros `sucursalId` y `period` para evitar colisión
-entre distintas sucursales o períodos.
+```
+Dado  que el WebSocket está conectado y el usuario está autenticado en la sucursal X
+Cuando el usuario navega de /dashboard a /pos (client-side navigation)
+Entonces el WebSocket NO DEBE cerrarse
+  Y    NO DEBE iniciarse un nuevo handshake de conexión
+  Y    la conexión existente DEBE seguir recibiendo mensajes sin interrupción
+```
 
-Las tags de caché DEBEN incluir al menos: `["dashboard-kpis", "sucursal-{sucursalId}", "period-{period}"]`.
+#### Escenario 2.B — Cambio de sucursal provoca reconexión
 
-La función DEBE ser revalidada on-demand mediante `revalidateTag("dashboard-kpis")` cuando se
-registre una nueva venta, gasto o liquidación.
+```
+Dado  que el WebSocket está conectado con sucursalId = "SUC-001"
+Cuando el usuario cambia la sucursal activa a sucursalId = "SUC-002"
+Entonces el WebSocket existente DEBE cerrarse limpiamente
+  Y    DEBE iniciarse una nueva conexión con los parámetros de "SUC-002"
+  Y    la nueva conexión DEBE establecerse correctamente
+```
 
-#### Escenario: Múltiples usuarios ven el dashboard simultáneamente
+#### Escenario 2.C — Cambio de ruta NO provoca reconexión
 
-- DADO QUE dos usuarios de la misma sucursal acceden a `/dashboard` con el mismo período
-- CUANDO `getDashboardKpis` se ejecuta
-- ENTONCES la función DEBE ejecutar las queries SQL exactamente UNA vez y servir la respuesta cacheada al segundo usuario
-- Y el tiempo de respuesta del segundo usuario DEBE ser menor a 100ms
-
-#### Escenario: Revalidación por registro de venta nueva
-
-- DADO QUE se registra una nueva venta en el sistema
-- CUANDO la operación de creación se confirma en la base de datos
-- ENTONCES el sistema DEBE llamar a `revalidateTag("dashboard-kpis")`
-- Y la próxima visita al dashboard DEBE mostrar los KPIs actualizados
-
-#### Escenario: Distintas sucursales no comparten caché
-
-- DADO QUE `sucursal-1` y `sucursal-2` acceden al dashboard con el período `"today"`
-- CUANDO `getDashboardKpis` se ejecuta para cada una
-- ENTONCES DEBEN tener entradas de caché independientes
-- Y los datos de `sucursal-1` NO DEBEN aparecer en el dashboard de `sucursal-2`
-
-#### Escenario: Revalidación por tiempo expirado
-
-- DADO QUE el caché de KPIs fue generado hace 61 segundos
-- CUANDO un usuario accede al dashboard
-- ENTONCES Next.js DEBE ejecutar `getDashboardKpis` de forma nueva en background
-- Y DEBE servir la respuesta stale inmediatamente mientras revalida (stale-while-revalidate)
+```
+Dado  que el WebSocket está conectado y el usuario navega entre rutas
+Cuando el pathname cambia de "/pos" a "/dashboard" (o cualquier otra ruta)
+Entonces el useEffect de conexión NO DEBE re-ejecutarse
+  Y    la instancia del socket DEBE ser la misma antes y después de la navegación
+  Y    NO DEBE registrarse ningún evento "close" ni "open" en el socket durante la navegación
+```
 
 ---
 
-### REQ-PERF-06: Unificación de Librería de Animaciones
+## 3. Dominio: Notificaciones
 
-El proyecto DEBE usar únicamente `motion/react` (el paquete `motion`) como fuente de importación
-de animaciones, eliminando cualquier import directo desde `framer-motion`.
+**Archivos afectados:** `src/components/notifications/` (todos los archivos del panel)
 
-No DEBE existir ningún archivo con `import ... from 'framer-motion'` en el proyecto una vez
-aplicado este cambio.
+**Contexto:** El panel de notificaciones instancia `useNotifications()` dos veces (en el componente padre y en un subcomponente), duplicando los fetches al backend en cada apertura del panel. El resultado es latencia innecesaria y potencial inconsistencia de datos.
 
-El package `framer-motion` NO DEBE listarse como dependencia directa en `package.json`
-si ya está presente como subdependencia de `motion`.
+### REQ-06: Fetch único al abrir el panel
 
-Todos los componentes que actualmente importan desde `framer-motion` DEBEN migrar sus imports
-a `motion/react` manteniendo la misma API de componentes (`motion.div`, `AnimatePresence`, etc.).
+Al abrir el panel de notificaciones, DEBE realizarse exactamente **un** fetch HTTP hacia el endpoint de notificaciones.
 
-#### Escenario: Componente usando import de framer-motion
+- El fetch DEBE ocurrir una sola vez por evento de apertura del panel.
+- NO DEBE realizarse más de una petición simultánea o secuencial inmediata al mismo endpoint en el mismo evento de apertura.
+- El resultado del fetch DEBE ser compartido (prop drilling o context) con todos los subcomponentes del panel que requieran los datos.
 
-- DADO QUE un componente tiene `import { motion } from 'framer-motion'`
-- CUANDO se aplica la migración
-- ENTONCES el import DEBE actualizarse a `import { motion } from 'motion/react'`
-- Y el comportamiento visual del componente DEBE ser idéntico
+### REQ-07: Instancia única de useNotifications por panel
 
-#### Escenario: Verificación de no duplicación de librería
+NO DEBE existir más de **una** instancia activa del hook `useNotifications` por panel de notificaciones abierto en pantalla.
 
-- DADO QUE el proyecto tiene `motion` en `package.json`
-- CUANDO se ejecuta `npm ls framer-motion`
-- ENTONCES `framer-motion` NO DEBE aparecer como dependencia directa en el `package.json` raíz
-- Y el bundle final DEBE incluir solo una versión del runtime de animaciones
+- Si el panel renderiza subcomponentes que necesitan datos de notificaciones, DEBEN recibirlos via props o context, no mediante llamadas independientes al hook.
+- El hook DEBE ser invocado exclusivamente en el componente raíz del panel.
 
-#### Escenario: AnimatePresence en navegaciones
+#### Escenario 3.A — Apertura del panel (1 fetch)
 
-- DADO QUE se usa `AnimatePresence` para transiciones de rutas
-- CUANDO el import se migra a `motion/react`
-- ENTONCES las transiciones DEBEN continuar funcionando correctamente
-- Y NO DEBE haber errores de hydration en el cliente
+```
+Dado  que el panel de notificaciones está cerrado
+Cuando el usuario hace click en el ícono de notificaciones
+Entonces el panel DEBE abrirse
+  Y    DEBE realizarse exactamente 1 petición HTTP al endpoint de notificaciones
+  Y    los datos DEBE estar disponibles para todos los subcomponentes del panel
+```
 
----
+#### Escenario 3.B — Reapertura del panel (1 fetch adicional)
 
-### REQ-PERF-07: Imágenes de Productos con `next/image`
+```
+Dado  que el usuario ya abrió y cerró el panel de notificaciones previamente
+Cuando el usuario vuelve a hacer click en el ícono de notificaciones
+Entonces DEBE realizarse exactamente 1 nueva petición HTTP (no 2, no 0)
+  Y    los datos actualizados DEBEN mostrarse correctamente
+```
 
-Todas las imágenes de productos mostradas en la aplicación DEBEN usar el componente `<Image>`
-de `next/image` en lugar de la etiqueta `<img>` nativa de HTML.
+#### Escenario 3.C — Panel abierto sin fetches duplicados en re-renders
 
-Los componentes afectados incluyen al menos: `product-card.tsx`, `product-modal.tsx`,
-`cart-item-card.tsx`, `product-selector.tsx`, `store-banner.tsx`, `store-header.tsx`,
-`store-footer.tsx`, `BrandingTab.tsx` y `productos-view.tsx`.
-
-El componente `<Image>` DEBE configurarse con los atributos `width`, `height` (o `fill` con
-contenedor relativo), y `alt` descriptivo en cada instancia.
-
-Los dominios de imágenes externas DEBEN estar declarados en `next.config.ts` bajo
-`images.remotePatterns`.
-
-#### Escenario: Imagen de producto en la lista pública
-
-- DADO QUE el catálogo público muestra productos con imágenes almacenadas en un CDN externo
-- CUANDO se renderiza `product-card.tsx`
-- ENTONCES DEBE usar `<Image src={url} width={...} height={...} alt={nombre} />`
-- Y Next.js DEBE servir la imagen optimizada (WebP/AVIF) con lazy loading automático
-
-#### Escenario: Imagen con URL no declarada en remotePatterns
-
-- DADO QUE una imagen proviene de un dominio no declarado en `next.config.ts`
-- CUANDO Next.js intenta optimizarla
-- ENTONCES DEBE lanzar un error descriptivo en desarrollo
-- Y el equipo DEBE agregar el dominio a `remotePatterns` antes del deploy
-
-#### Escenario: Imagen sin dimensiones definidas (fill mode)
-
-- DADO QUE el contenedor de la imagen tiene `position: relative` y dimensiones definidas por CSS
-- CUANDO se usa `<Image fill />`
-- ENTONCES la imagen DEBE cubrir el contenedor sin distorsión
-- Y DEBE aplicarse `object-fit: cover` mediante la prop `className` o `style`
+```
+Dado  que el panel de notificaciones está abierto y mostrando datos
+Cuando el componente padre re-renderiza (ej. cambio de estado externo)
+Entonces NO DEBE dispararse un nuevo fetch al endpoint de notificaciones
+  Y    los datos mostrados DEBEN permanecer estables hasta la próxima apertura
+```
 
 ---
 
-### REQ-PERF-08: Code Splitting de Librerías Pesadas
+## 4. Dominio: Catálogo POS
 
-Las librerías de alto peso (`recharts`, `@dnd-kit/*`, `@mercadopago/sdk-react`,
-`@paypal/react-paypal-js`) DEBEN cargarse de forma diferida usando `next/dynamic` con `ssr: false`
-cuando corresponda.
+**Archivos afectados:**
+- `src/app/api/productos/route.ts`
+- `src/app/pos/` (componente de lista de productos)
 
-Cada componente que use estas librerías DEBE ser envuelto en un `dynamic()` call desde el
-componente padre que lo importa, o el componente mismo DEBE exportarse como una exportación
-dinámica.
+**Contexto:** `getProductos()` carga todos los registros de la base de datos sin restricción, lo que bloquea el hilo principal en catálogos con 500+ productos. Es necesario implementar paginación server-side.
 
-El tiempo de carga inicial del dashboard (LCP) DEBE mejorar al menos un 20% respecto al baseline
-de ~30/100 al implementar este requisito.
+### REQ-08: API de productos con soporte de paginación
 
-Los componentes cargados dinámicamente DEBEN tener un `loading` prop definido con un skeleton
-apropiado para evitar layout shift (CLS).
+La API `GET /api/productos` DEBE soportar paginación mediante los parámetros de query:
+- `limit` (entero positivo): número máximo de registros a retornar.
+- `offset` (entero no negativo): número de registros a saltar desde el inicio. **O alternativamente:**
+- `cursor` (string opaco): identificador del último registro de la página anterior (cursor-based pagination).
 
-#### Escenario: Carga del dashboard sin recharts
+- Si no se proveen parámetros de paginación, la API DEBERÁ retornar los primeros `50` registros (valor por defecto).
+- La respuesta DEBE incluir metadata de paginación: `total` (conteo total de registros) y el cursor o el offset actual.
+- La API DEBE retornar `HTTP 400` si `limit` excede `200` o si los parámetros son inválidos.
 
-- DADO QUE el usuario navega al dashboard
-- CUANDO la página carga inicialmente
-- ENTONCES el bundle inicial NO DEBE incluir `recharts` en el chunk principal
-- Y `recharts` DEBE cargarse en un chunk separado solo cuando el componente de gráficos entra al viewport
+### REQ-09: Límite de productos por página en POS
 
-#### Escenario: Componente DnD en vista de productos
+El componente de lista de productos en POS DEBE solicitar máximo **50 productos** por página al realizar peticiones al API.
 
-- DADO QUE la vista de productos usa `@dnd-kit` para reordenamiento
-- CUANDO la página carga
-- ENTONCES `@dnd-kit` DEBE cargarse dinámicamente con `next/dynamic({ ssr: false })`
-- Y DEBE mostrarse un skeleton o placeholder mientras `@dnd-kit` carga
+- La petición inicial DEBE incluir `limit=50` (o el valor por defecto acordado).
+- El componente DEBE renderizar solo los productos de la página activa, no todos los cargados.
+- DEBE existir un mecanismo de navegación entre páginas (botones siguiente/anterior, o scroll infinito con carga lazy).
 
-#### Escenario: SDK de pago en la página de suscripciones
+### REQ-10: Búsqueda y filtros compatibles con paginación
 
-- DADO QUE `@mercadopago/sdk-react` solo se usa en `/settings/subscriptions`
-- CUANDO el usuario está en cualquier otra ruta
-- ENTONCES el SDK de MercadoPago NO DEBE estar presente en el bundle de esa ruta
-- Y DEBE cargarse solo cuando el usuario navega a `/settings/subscriptions`
+Las funcionalidades de búsqueda por texto y filtros (categoría, precio, disponibilidad) en el catálogo POS DEBEN funcionar correctamente cuando la paginación está activa.
 
-#### Escenario: Loading placeholder de componente dinámico
+- Al aplicar un filtro o iniciar una búsqueda, la paginación DEBE reiniciarse a la página 1 (offset=0 o cursor=null).
+- Los parámetros de búsqueda y filtro DEBEN enviarse junto con los parámetros de paginación en la misma petición.
+- El total de resultados mostrado DEBE reflejar el total filtrado, no el total de todos los productos.
 
-- DADO QUE un componente pesado se carga con `next/dynamic`
-- CUANDO aún no se ha descargado el chunk
-- ENTONCES DEBE renderizarse el skeleton definido en la prop `loading`
-- Y NO DEBE ocurrir un layout shift (CLS score DEBE ser < 0.1)
+#### Escenario 4.A — Carga inicial paginada
 
----
+```
+Dado  que el usuario abre el módulo POS con un catálogo de 500+ productos
+Cuando el componente de lista se monta
+Entonces DEBE realizarse 1 petición a GET /api/productos?limit=50&offset=0
+  Y    DEBE mostrarse máximo 50 productos en pantalla
+  Y    el tiempo de respuesta DEBE ser menor a 1 segundo
+  Y    DEBE mostrarse un indicador de navegación entre páginas
+```
 
-### REQ-PERF-09: Variables CSS Sin Duplicación
+#### Escenario 4.B — Navegación entre páginas
 
-Las variables CSS del sistema de diseño NO DEBEN definirse en dos lugares distintos
-simultáneamente dentro del mismo proyecto.
+```
+Dado  que el catálogo POS muestra la página 1 (productos 1-50)
+Cuando el usuario navega a la página 2
+Entonces DEBE realizarse 1 petición a GET /api/productos?limit=50&offset=50
+  Y    DEBE mostrarse los productos 51-100 sin recargar los primeros 50
+  Y    la página activa DEBE actualizarse visualmente
+```
 
-El archivo `src/app/globals.css` NO DEBE contener más de un bloque `:root { }` con
-definiciones de variables de color o de tema.
+#### Escenario 4.C — Búsqueda con paginación activa
 
-Las variables de tema (colores, espaciados, tipografía) DEBEN tener una única fuente de verdad:
-el bloque `:root` principal de `globals.css`.
+```
+Dado  que el catálogo POS está mostrando la página 3
+Cuando el usuario escribe un término en la caja de búsqueda
+Entonces la paginación DEBE reiniciarse a la página 1 (offset=0)
+  Y    DEBE realizarse 1 petición con ?limit=50&offset=0&q=<término>
+  Y    DEBE mostrarse el total de resultados filtrados
+  Y    la navegación entre páginas DEBE funcionar sobre los resultados filtrados
+```
 
-El archivo `tailwind.config.ts` PUEDE referenciar variables CSS usando `hsl(var(--nombre))`
-pero NO DEBE redefinir los valores de esas variables.
+#### Escenario 4.D — API retorna error en parámetros inválidos
 
-#### Escenario: Dos bloques `:root` en globals.css (caso actual)
-
-- DADO QUE `globals.css` tiene dos bloques `:root` (en líneas 111 y 355)
-- CUANDO se aplica la migración
-- ENTONCES DEBE existir exactamente UN bloque `:root` consolidado con todas las variables
-- Y las variables duplicadas DEBEN fusionarse manteniendo el valor correcto (el último en cascada)
-
-#### Escenario: Variable redefinida con valor diferente
-
-- DADO QUE una variable como `--primary` aparece con valores distintos en cada bloque `:root`
-- CUANDO se consolida en un único bloque
-- ENTONCES el equipo DEBE decidir y documentar cuál valor es el canónico
-- Y el valor final DEBE ser consistente con el diseño visual de la aplicación
-
-#### Escenario: Verificación de integridad post-migración
-
-- DADO QUE se consolidaron los bloques `:root`
-- CUANDO se ejecuta la aplicación en desarrollo
-- ENTONCES todos los colores y variables deben renderizarse correctamente en modo claro y oscuro
-- Y NO DEBE haber regresiones visuales en componentes que dependían del segundo bloque `:root`
+```
+Dado  que un cliente llama a GET /api/productos?limit=500
+Cuando el servidor procesa la petición
+Entonces DEBE retornar HTTP 400 Bad Request
+  Y    el cuerpo DEBE contener un mensaje descriptivo del error de validación
+```
 
 ---
 
-### REQ-PERF-10: Server Components en el Dashboard
+## 5. Dominio: Bundle y Dependencias
 
-Al menos el 50% del árbol de componentes de la ruta `/dashboard` DEBERÍA ser implementado
-como React Server Components (RSC), eliminando la directiva `"use client"` donde no sea estrictamente necesaria.
+**Archivos afectados:**
+- `src/app/dashboard/` (componentes con @dnd-kit)
+- `package.json`
+- `src/components/ui/sidebar-dock.tsx`
+- `src/lib/socket-provider.tsx`
 
-Un componente PUEDE ser Client Component únicamente si requiere: hooks de estado (`useState`, `useEffect`),
-event handlers, acceso a APIs del browser, o contextos de cliente como zustand.
+**Contexto:** Existen tres problemas independientes que inflan el bundle o contaminan la consola de producción: componentes drag-and-drop cargados de forma síncrona, dependencias declaradas en `package.json` no utilizadas en el código, y llamadas a `console.log` en componentes de navegación críticos.
 
-Los componentes que solo renderizan datos estáticos o fetched data DEBERÍAN ser Server Components.
+### REQ-11: Lazy loading de componentes @dnd-kit
 
-El componente raíz de la ruta (`dashboard/page.tsx`) DEBE ser un Server Component que
-haga data fetching directo y pase los datos como props a los Client Components necesarios.
+Los componentes que utilizan `@dnd-kit` (drag-and-drop) en el dashboard DEBEN cargarse de forma **lazy** mediante `dynamic()` de Next.js.
 
-#### Escenario: Componente de KPI card sin interactividad
+- DEBE usarse `next/dynamic` con `{ ssr: false }` para los componentes que importan de `@dnd-kit/core`, `@dnd-kit/sortable`, o `@dnd-kit/utilities`.
+- DEBE proveerse un componente `loading` (skeleton o spinner) mientras el chunk se descarga.
+- El bundle principal (first load JS) NO DEBE incluir el código de `@dnd-kit` directamente.
 
-- DADO QUE `kpi-card.tsx` solo renderiza valores numéricos y labels recibidos como props
-- CUANDO se evalúa su arquitectura
-- ENTONCES DEBERÍA ser un Server Component sin `"use client"`
-- Y los datos DEBEN ser pasados como props desde el Server Component padre
+### REQ-12: Sin dependencias instaladas no utilizadas
 
-#### Escenario: Componente de gráfico con interactividad
+NO DEBEN existir paquetes declarados en `dependencies` o `devDependencies` de `package.json` que no tengan ningún import en el código fuente del proyecto.
 
-- DADO QUE el gráfico de ventas usa recharts (librería de cliente) y tiene tooltips interactivos
-- CUANDO se evalúa su arquitectura
-- ENTONCES DEBE ser un Client Component con `"use client"`
-- Y DEBE recibir los datos como props desde un Server Component padre (no hacer fetch propio)
+- La dependencia `cobe` DEBE ser eliminada de `package.json` si no existe ningún `import` de `cobe` en el código fuente.
+- Cualquier otra dependencia sin uso verificable DEBE ser evaluada para remoción.
+- Tras la eliminación, DEBE ejecutarse `npm install` para actualizar `package-lock.json`.
 
-#### Escenario: Layout del dashboard
+### REQ-13: Sin console.log en producción (componentes de navegación)
 
-- DADO QUE `dashboard/layout.tsx` no tiene lógica de cliente
-- CUANDO se evalúa su arquitectura
-- ENTONCES DEBE ser un Server Component
-- Y el data fetching de KPIs DEBE ocurrir en `dashboard/page.tsx` (Server Component) y no en hooks de cliente
+NO DEBEN existir llamadas a `console.log` en los siguientes archivos en el código que se ejecuta en producción:
+- `src/components/ui/sidebar-dock.tsx`
+- `src/lib/socket-provider.tsx` (o el archivo que contiene el WebSocket provider)
 
-#### Escenario: Verificación de proporción Server/Client
+- Los `console.log` de debugging DEBEN eliminarse del código fuente (no solo condicionarse con `process.env.NODE_ENV`).
+- `console.error` y `console.warn` legítimos para errores de runtime PODRÁN permanecer si documentan condiciones de error reales.
 
-- DADO QUE se completó la refactorización del dashboard
-- CUANDO se analiza el árbol de componentes con React DevTools o el bundle analyzer
-- ENTONCES al menos el 50% de los componentes del árbol de `/dashboard` DEBEN ser Server Components
-- Y el bundle de JavaScript enviado al cliente DEBE reducirse al menos un 15% respecto al baseline
+#### Escenario 5.A — @dnd-kit carga lazy en dashboard
+
+```
+Dado  que el usuario navega al dashboard por primera vez
+Cuando Next.js ejecuta el bundle principal
+Entonces el código de @dnd-kit NO DEBE estar incluido en el bundle inicial
+  Y    DEBE cargarse de forma asíncrona cuando el componente drag-and-drop se necesite
+  Y    DEBE mostrarse un estado de carga (skeleton/spinner) durante la descarga del chunk
+```
+
+#### Escenario 5.B — Eliminación de dependencia cobe
+
+```
+Dado  que cobe está declarado en package.json
+Cuando se verifica que no existe ningún import de cobe en el código fuente
+Entonces cobe DEBE ser removido de package.json
+  Y    npm install DEBE ejecutarse para actualizar el lockfile
+  Y    npm run build DEBE completar sin errores ni warnings relacionados con cobe
+```
+
+#### Escenario 5.C — Consola limpia en producción
+
+```
+Dado  que la aplicación está corriendo en modo producción (NODE_ENV=production)
+Cuando el usuario navega entre rutas usando el Sidebar
+Entonces NO DEBE aparecer ningún console.log en la consola del navegador
+  Y    ningún mensaje de debug DEBE ser visible en producción
+```
+
+---
+
+## 6. Criterios de Performance (No Funcionales)
+
+### PERF-01: Latencia de navegación entre rutas
+
+La navegación entre rutas client-side DEBE completarse sin delay perceptible.
+
+- **Objetivo:** el hilo principal DEBE bloquearse menos de **16ms** durante un evento de click en el Sidebar.
+- El "Long Task" generado por la navegación NO DEBE superar los 50ms (umbral de "perceptible" según RAIL).
+- Se DEBERÁ medir con Chrome DevTools Performance tab en una sesión de incógnito, sin extensiones.
+
+**Método de verificación:**
+- Abrir DevTools > Performance > Record.
+- Hacer click en un item del Sidebar.
+- Verificar que no hay Long Tasks (bloques rojos) en el flame chart asociados al evento de click.
+
+### PERF-02: Tiempo de respuesta del panel de notificaciones
+
+El panel de notificaciones DEBE responder visualmente al click del usuario en menos de **100ms**.
+
+- "Responder visualmente" se define como: el panel DEBE iniciar su animación de apertura dentro de los 100ms posteriores al evento `mousedown`.
+- El fetch de notificaciones PODRÁ completarse de forma asíncrona (muestra skeleton mientras carga).
+- El tiempo de respuesta DEBE medirse desde el evento `click` hasta el primer frame de la animación de apertura.
+
+### PERF-03: Tiempo de carga inicial del catálogo POS
+
+La lista de productos en POS DEBE mostrar los primeros resultados en menos de **1 segundo** desde que el componente se monta, con catálogos de hasta 500 productos.
+
+- "Primeros resultados" se define como: al menos 10 productos renderizados en el DOM.
+- Este tiempo incluye la petición de red al API + renderizado del DOM.
+- El criterio DEBE cumplirse en condiciones de red "Fast 3G" simuladas en DevTools.
+- Se DEBERÁ medir con Chrome DevTools > Network > throttle "Fast 3G".
 
 ---
 
 ## Resumen de Cobertura
 
-| REQ | Nombre | Nivel | Escenarios Happy Path | Escenarios Edge Case |
-|-----|--------|-------|-----------------------|----------------------|
-| REQ-PERF-01 | Loading States | DEBE | ✅ | ✅ |
-| REQ-PERF-02 | Auth Cache | DEBE | ✅ | ✅ |
-| REQ-PERF-03 | SubscriptionGuard Spinner | NO DEBE | ✅ | ✅ |
-| REQ-PERF-04 | API Cache | DEBERÍA | ✅ | ✅ |
-| REQ-PERF-05 | Dashboard KPIs Cache | DEBE | ✅ | ✅ |
-| REQ-PERF-06 | Animaciones Unificadas | DEBE | ✅ | ✅ |
-| REQ-PERF-07 | Imágenes con next/image | DEBE | ✅ | ✅ |
-| REQ-PERF-08 | Code Splitting | DEBE | ✅ | ✅ |
-| REQ-PERF-09 | CSS Variables Sin Dup. | NO DEBE | ✅ | ✅ |
-| REQ-PERF-10 | Server Components | DEBERÍA | ✅ | ✅ |
+| Dominio | Requisitos | Escenarios |
+|---------|-----------|------------|
+| 1. Broadcast Channel | REQ-01, REQ-02 | 1.A, 1.B, 1.C |
+| 2. WebSocket Provider | REQ-03, REQ-04, REQ-05 | 2.A, 2.B, 2.C |
+| 3. Notificaciones | REQ-06, REQ-07 | 3.A, 3.B, 3.C |
+| 4. Catálogo POS | REQ-08, REQ-09, REQ-10 | 4.A, 4.B, 4.C, 4.D |
+| 5. Bundle y Dependencias | REQ-11, REQ-12, REQ-13 | 5.A, 5.B, 5.C |
+| 6. Performance General | PERF-01, PERF-02, PERF-03 | — (métricas medibles) |
+| **TOTAL** | **16 requisitos** | **16 escenarios** |
 
-**Total**: 10 requisitos · 27 escenarios · 100% con cobertura happy path + edge case
+---
+
+## Referencias
+
+- [proposal.md](../../proposal.md) — Propuesta original con contexto de negocio y áreas afectadas
+- RFC 2119: Key words for use in RFCs to Indicate Requirement Levels
+- RAIL Model: Response, Animation, Idle, Load — Google Web Fundamentals

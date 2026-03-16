@@ -41,8 +41,9 @@ const createPrismaClient = () => {
 export const prisma = globalForPrisma.prisma ?? createPrismaClient();
 
 /**
- * 5. Store in Global (Only in Prod or if we want to stick to one instance)
+ * 5. Store in Global (Only in Dev to prevent multiple instances on hot reload)
+ * In production the module is loaded once so this is not needed.
  */
-if (process.env.NODE_ENV !== "development") {
+if (process.env.NODE_ENV === "development") {
   globalForPrisma.prisma = prisma;
 }

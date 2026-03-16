@@ -51,8 +51,17 @@ export async function GET(req: Request) {
     const categoriaId = searchParams.get("categoriaId")?.trim() || "";
 
     const isPaginated = pageParam !== null || limitParam !== null;
+
+    // Validación explícita: limit > 200 retorna HTTP 400
+    if (limitParam && parseInt(limitParam, 10) > 200) {
+      return NextResponse.json(
+        { error: "El parámetro 'limit' no puede superar 200." },
+        { status: 400 }
+      );
+    }
+
     const page = Math.max(1, parseInt(pageParam || "1", 10) || 1);
-    const limit = Math.min(200, Math.max(1, parseInt(limitParam || "30", 10) || 30));
+    const limit = Math.min(200, Math.max(1, parseInt(limitParam || "50", 10) || 50));
     const skip = (page - 1) * limit;
 
     // Where con filtros

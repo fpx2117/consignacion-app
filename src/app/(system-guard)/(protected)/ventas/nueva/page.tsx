@@ -42,6 +42,12 @@ export default function NuevaVentaPage() {
   const [clientes, setClientes] = React.useState<Cliente[]>([]);
   const [porcentajeInteresTarjeta, setPorcentajeInteresTarjeta] = React.useState(0);
 
+  // Estado de paginación de productos
+  const [productosPage, setProductosPage] = React.useState(1);
+  const [productosTotalPages, setProductosTotalPages] = React.useState(1);
+  const [productosLoading, setProductosLoading] = React.useState(false);
+  const [searchQuery, setSearchQuery] = React.useState("");
+
   const [selectedClienteId, setSelectedClienteId] = React.useState<number | "">("");
   const [metodoPago, setMetodoPago] = React.useState<MetodoPago>("EFECTIVO");
 
@@ -73,6 +79,29 @@ export default function NuevaVentaPage() {
 
 
 
+  const fetchProductosPaginados = React.useCallback(
+    async (page: number, search: string) => {
+      setProductosLoading(true);
+      try {
+        const res = await apiService.getProductosPaginados({
+          page,
+          limit: 50,
+          search: search || undefined,
+        });
+        const payload = res.data;
+        const activos = (payload.data ?? []).filter((p) => p.activo !== false) as ProductoConStock[];
+        setProductos(activos);
+        setProductosTotalPages(payload.totalPages ?? 1);
+        setProductosPage(payload.page ?? 1);
+      } catch {
+        setError("Error cargando productos.");
+      } finally {
+        setProductosLoading(false);
+      }
+    },
+    []
+  );
+
   const fetchData = React.useCallback(async () => {
     setVerificandoCaja(true);
 
@@ -96,20 +125,18 @@ export default function NuevaVentaPage() {
         setCajaAbierta(true);
       }
 
-      const [productosResponse, clientesResponse] = await Promise.all([
-        apiService.getProductos(),
+      const [, clientesResponse] = await Promise.all([
+        fetchProductosPaginados(1, ""),
         apiService.getClientes(),
       ]);
 
-      const productosActivos = (productosResponse as ProductoConStock[]).filter((producto) => producto.activo !== false);
-      setProductos(productosActivos);
       setClientes(clientesResponse);
     } catch {
       setError("Error cargando datos del sistema.");
     } finally {
       setVerificandoCaja(false);
     }
-  }, []);
+  }, [fetchProductosPaginados]);
 
   const addToCart = React.useCallback(
     (product: ProductoConStock, quantityToAdd: number) => {
@@ -165,6 +192,11 @@ export default function NuevaVentaPage() {
   React.useEffect(() => {
     fetchData();
   }, [activeSucursalId, fetchData]);
+
+  // Al cambiar la búsqueda, reiniciar a página 1 (incluso al vaciar el campo)
+  React.useEffect(() => {
+    fetchProductosPaginados(1, searchQuery);
+  }, [searchQuery, fetchProductosPaginados]);
 
   React.useEffect(() => {
     setCart([]);
@@ -702,6 +734,11 @@ export default function NuevaVentaPage() {
         onSelectProduct={(producto) => {
           addToCart(producto, 1);
         }}
+        currentPage={productosPage}
+        totalPages={productosTotalPages}
+        onPageChange={(page) => fetchProductosPaginados(page, searchQuery)}
+        onSearchChange={setSearchQuery}
+        loadingProductos={productosLoading}
       />
 
       <Dialog open={openDescuento} onOpenChange={setOpenDescuento}>

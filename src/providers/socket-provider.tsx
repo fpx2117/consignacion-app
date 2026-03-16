@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useRef, useState } from "react";
 import { io as ClientIO, Socket } from "socket.io-client";
 import { usePathname } from "next/navigation";
 
@@ -16,42 +16,29 @@ const SocketContext = createContext<SocketContextType>({
 
 export const useSocket = () => useContext(SocketContext);
 
+const DISABLED_ROUTES = ["/setup", "/login", "/forgot-password", "/reset-password", "/lista", "/x/"];
+
+function isPublicRoute(path: string | null): boolean {
+  if (!path) return false;
+  return DISABLED_ROUTES.some((r) => path.startsWith(r));
+}
+
 export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
+  const pathname = usePathname();
+  const socketRef = useRef<Socket | null>(null);
   const [socket, setSocket] = useState<Socket | null>(null);
   const [isConnected, setIsConnected] = useState(false);
-  const pathname = usePathname();
 
-  // No intentar conectar en rutas públicas/sin sesión
-  const isSocketDisabledRoute =
-    pathname?.startsWith("/setup") ||
-    pathname?.startsWith("/login") ||
-    pathname?.startsWith("/forgot-password") ||
-    pathname?.startsWith("/reset-password") ||
-    pathname?.startsWith("/lista") ||
-    pathname?.startsWith("/x/");
-
+  // ✅ Efecto de conexión: se ejecuta UNA vez al montar.
+  // No depende de pathname — el socket persiste entre navegaciones.
   useEffect(() => {
+    // No conectar si la ruta inicial ya es pública
+    if (isPublicRoute(pathname)) return;
+
     let cancelled = false;
-
-    if (!pathname) {
-      return;
-    }
-
-    // 1. No conectar en rutas públicas
-    if (isSocketDisabledRoute) {
-      console.log(`⏭️ CLIENTE: Ruta pública detectada (${pathname}), socket omitido`);
-      return;
-    }
 
     const connectSocket = async () => {
       try {
-        // 2. Forzar same-origin para usar la misma cookie HttpOnly de sesión.
-        // Evita desalineación entre NEXT_PUBLIC_BASE_URL y el host real en navegador.
-        const currentOrigin = typeof window !== "undefined" ? window.location.origin : "";
-
-        console.log("🔌 Intentando conectar Socket.IO (same-origin) a:", currentOrigin);
-
-        // 3. Inicializar Socket
         const socketInstance = ClientIO({
           path: "/socket.io",
           addTrailingSlash: false,
@@ -63,13 +50,11 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
         });
 
         socketInstance.on("connect", () => {
-          console.log("🟢 CLIENTE: Socket Conectado. ID:", socketInstance.id);
-          setIsConnected(true);
+          if (!cancelled) setIsConnected(true);
         });
 
-        socketInstance.on("disconnect", (reason) => {
-          console.log("🔴 CLIENTE: Socket Desconectado. Razón:", reason);
-          setIsConnected(false);
+        socketInstance.on("disconnect", () => {
+          if (!cancelled) setIsConnected(false);
         });
 
         socketInstance.on("connect_error", (err) => {
@@ -92,6 +77,7 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
         });
 
         if (!cancelled) {
+          socketRef.current = socketInstance;
           setSocket(socketInstance);
           window.setTimeout(() => {
             if (!cancelled && !socketInstance.connected) {
@@ -115,18 +101,34 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
     return () => {
       cancelled = true;
       setIsConnected(false);
-      setSocket((prev) => {
-        if (prev) {
-          console.log("🛑 Limpiando instancia de socket...");
-          prev.disconnect();
-        }
-        return null;
-      });
+      if (socketRef.current) {
+        socketRef.current.disconnect();
+        socketRef.current = null;
+      }
+      setSocket(null);
     };
-  }, [isSocketDisabledRoute, pathname]);
+  }, []); // ✅ Sin pathname en las dependencias — reconexión solo al montar/desmontar
+
+  // ✅ Efecto de guarda de ruta: observa pathname pero SOLO desconecta.
+  // No reconecta — el provider se desmontará si el usuario navega a /login.
+  useEffect(() => {
+    if (isPublicRoute(pathname) && socketRef.current) {
+      socketRef.current.disconnect();
+      socketRef.current = null;
+      setSocket(null);
+      setIsConnected(false);
+    }
+  }, [pathname]);
+
+  const isDisabled = isPublicRoute(pathname);
 
   return (
-    <SocketContext.Provider value={{ socket: isSocketDisabledRoute ? null : socket, isConnected: isSocketDisabledRoute ? false : isConnected }}>
+    <SocketContext.Provider
+      value={{
+        socket: isDisabled ? null : socket,
+        isConnected: isDisabled ? false : isConnected,
+      }}
+    >
       {children}
     </SocketContext.Provider>
   );

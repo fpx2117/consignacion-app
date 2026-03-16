@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import {
   subscribeAppMessages,
   type BroadcastMessage,
@@ -24,11 +24,16 @@ type MessageHandler = {
  * });
  */
 export function useBroadcastChannel(handlers: MessageHandler): void {
+  // Capturamos handlers en un ref para que el efecto nunca necesite re-ejecutarse
+  // pero siempre invoque la versión más reciente del handler.
+  const handlersRef = useRef(handlers);
+  handlersRef.current = handlers;
+
   useEffect(() => {
     if (typeof window === "undefined") return;
 
     const unsubscribe = subscribeAppMessages((message) => {
-      const handler = handlers[message.type] as
+      const handler = handlersRef.current[message.type] as
         | ((msg: BroadcastMessage) => void)
         | undefined;
       if (handler) {
@@ -37,8 +42,6 @@ export function useBroadcastChannel(handlers: MessageHandler): void {
     });
 
     return unsubscribe;
-    // handlers cambia en cada render, pero la suscripción se usa como callback
-    // estable internamente. Re-suscribirse en cada render está bien dado que
-    // es solo un addEventListener/removeEventListener ligero.
-  });
+    // ✅ Array vacío → suscripción única por ciclo de vida del componente
+  }, []);
 }
