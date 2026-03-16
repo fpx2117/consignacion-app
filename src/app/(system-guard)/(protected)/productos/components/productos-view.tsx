@@ -591,92 +591,156 @@ export function ProductosView() {
       </div>
 
       {/* Sheet de detalle de KPI de stock */}
+      {/* ── Sheet KPI de stock — responsive: bottom en mobile, right en desktop ── */}
       <Sheet open={stockDrawer !== null} onOpenChange={(open) => !open && setStockDrawer(null)}>
-        <SheetContent side="right" className="w-full sm:max-w-lg p-0 flex flex-col">
-          <SheetHeader className="p-6 pb-4 border-b border-border/60">
-            <div className="flex items-center gap-3">
-              {stockDrawer === "out" ? (
-                <div className="p-2 rounded-xl bg-red-100 dark:bg-red-900/20">
-                  <XCircle className="h-5 w-5 text-red-500" />
-                </div>
-              ) : (
-                <div className="p-2 rounded-xl bg-orange-100 dark:bg-orange-900/20">
-                  <AlertTriangle className="h-5 w-5 text-orange-500" />
-                </div>
-              )}
-              <div>
-                <SheetTitle className="text-base font-black">
-                  {stockDrawer === "out" ? "Productos Agotados" : "Productos con Stock Bajo"}
-                </SheetTitle>
-                <SheetDescription className="text-xs">
-                  {stockDrawer === "out"
-                    ? `${stats.outOfStock} producto${stats.outOfStock !== 1 ? "s" : ""} sin stock disponible`
-                    : `${stats.lowStock} producto${stats.lowStock !== 1 ? "s" : ""} por debajo del mínimo`
-                  }
-                </SheetDescription>
-              </div>
-            </div>
-          </SheetHeader>
-
-          <ScrollArea className="flex-1">
-            <div className="p-4 space-y-2">
-              {(stockDrawer === "out"
-                ? statsItems?.filter(i => isOutOfStock(i))
-                : statsItems?.filter(i => isLowStock(i))
-              )?.map((p) => (
-                <div
-                  key={p.id}
-                  className={cn(
-                    "flex items-center justify-between gap-3 p-3 rounded-xl border transition-colors",
-                    stockDrawer === "out"
-                      ? "bg-red-50/50 dark:bg-red-900/10 border-red-100 dark:border-red-900/30"
-                      : "bg-orange-50/50 dark:bg-orange-900/10 border-orange-100 dark:border-orange-900/30"
-                  )}
-                >
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div className={cn(
-                      "flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center text-xs font-black",
-                      stockDrawer === "out"
-                        ? "bg-red-100 dark:bg-red-900/30 text-red-600"
-                        : "bg-orange-100 dark:bg-orange-900/30 text-orange-600"
-                    )}>
-                      {p.stockDisponibleUnits}
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-sm font-semibold text-foreground truncate">{p.nombre}</p>
-                      <p className="text-xs text-muted-foreground truncate">
-                        {p.categoria?.nombre ?? "Sin categoría"}
-                        {p.stockMinUnits > 0 && stockDrawer === "low" && (
-                          <span className="ml-1 text-orange-500">· mín. {p.stockMinUnits}</span>
-                        )}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex-shrink-0 text-right">
-                    <p className="text-xs font-black text-muted-foreground">
-                      {formatMoney(Number(p.precioVenta))}
-                    </p>
-                    {p.codigoBarra && (
-                      <p className="text-[10px] text-muted-foreground/60 font-mono">{p.codigoBarra}</p>
-                    )}
-                  </div>
-                </div>
-              ))}
-
-              {/* Estado vacío */}
-              {((stockDrawer === "out" ? stats.outOfStock : stats.lowStock) === 0) && (
-                <div className="flex flex-col items-center justify-center py-16 gap-3 text-muted-foreground">
-                  <Package className="h-12 w-12 opacity-20" />
-                  <p className="text-sm font-medium">
-                    {stockDrawer === "out" ? "Sin productos agotados 🎉" : "Stock en niveles saludables 🎉"}
-                  </p>
-                </div>
-              )}
-            </div>
-          </ScrollArea>
+        <SheetContent
+          side="bottom"
+          className={cn(
+            // Mobile: bottom sheet con altura máxima 90vh
+            "sm:hidden rounded-t-3xl p-0 flex flex-col",
+            "max-h-[90dvh] h-auto"
+          )}
+        >
+          <StockDrawerInner
+            stockDrawer={stockDrawer}
+            stats={stats}
+            statsItems={statsItems}
+            isOutOfStock={isOutOfStock}
+            isLowStock={isLowStock}
+          />
+        </SheetContent>
+        <SheetContent
+          side="right"
+          className={cn(
+            // Desktop: panel lateral full-height
+            "hidden sm:flex flex-col",
+            "w-[420px] lg:w-[480px] max-w-full p-0 h-full"
+          )}
+        >
+          <StockDrawerInner
+            stockDrawer={stockDrawer}
+            stats={stats}
+            statsItems={statsItems}
+            isOutOfStock={isOutOfStock}
+            isLowStock={isLowStock}
+          />
         </SheetContent>
       </Sheet>
     </div>
+  );
+}
+
+// --- STOCK DRAWER INNER (compartido entre bottom sheet mobile y right panel desktop) ---
+
+function StockDrawerInner({
+  stockDrawer,
+  stats,
+  statsItems,
+  isOutOfStock,
+  isLowStock,
+}: {
+  stockDrawer: "low" | "out" | null;
+  stats: { lowStock: number; outOfStock: number };
+  statsItems: ProductoViewItem[] | undefined;
+  isOutOfStock: (p: ProductoViewItem) => boolean;
+  isLowStock: (p: ProductoViewItem) => boolean;
+}) {
+  const isOut = stockDrawer === "out";
+  const count = isOut ? stats.outOfStock : stats.lowStock;
+  const productos = isOut
+    ? statsItems?.filter(i => isOutOfStock(i))
+    : statsItems?.filter(i => isLowStock(i));
+
+  return (
+    <>
+      {/* Header fijo — nunca scrollea */}
+      <SheetHeader className="flex-shrink-0 p-5 pb-4 border-b border-border/60">
+        <div className="flex items-center gap-3">
+          <div className={cn(
+            "p-2 rounded-xl flex-shrink-0",
+            isOut ? "bg-red-100 dark:bg-red-900/20" : "bg-orange-100 dark:bg-orange-900/20"
+          )}>
+            {isOut
+              ? <XCircle className="h-5 w-5 text-red-500" />
+              : <AlertTriangle className="h-5 w-5 text-orange-500" />
+            }
+          </div>
+          <div className="min-w-0">
+            <SheetTitle className="text-base font-black leading-tight">
+              {isOut ? "Productos Agotados" : "Productos con Stock Bajo"}
+            </SheetTitle>
+            <SheetDescription className="text-xs mt-0.5">
+              {count} producto{count !== 1 ? "s" : ""}{" "}
+              {isOut ? "sin stock disponible" : "por debajo del mínimo"}
+            </SheetDescription>
+          </div>
+        </div>
+      </SheetHeader>
+
+      {/* Lista scrolleable — ocupa todo el espacio restante */}
+      <ScrollArea className="flex-1 min-h-0">
+        <div className="p-4 space-y-2 pb-8">
+          {productos && productos.length > 0 ? (
+            productos.map((p) => (
+              <div
+                key={p.id}
+                className={cn(
+                  "flex items-center gap-3 p-3 rounded-xl border transition-colors",
+                  isOut
+                    ? "bg-red-50/50 dark:bg-red-900/10 border-red-100 dark:border-red-900/30"
+                    : "bg-orange-50/50 dark:bg-orange-900/10 border-orange-100 dark:border-orange-900/30"
+                )}
+              >
+                {/* Badge de stock */}
+                <div className={cn(
+                  "flex-shrink-0 w-9 h-9 rounded-lg flex items-center justify-center text-sm font-black",
+                  isOut
+                    ? "bg-red-100 dark:bg-red-900/30 text-red-600"
+                    : "bg-orange-100 dark:bg-orange-900/30 text-orange-600"
+                )}>
+                  {p.stockDisponibleUnits}
+                </div>
+
+                {/* Info del producto */}
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-semibold text-foreground truncate leading-tight">
+                    {p.nombre}
+                  </p>
+                  <p className="text-xs text-muted-foreground truncate mt-0.5">
+                    {p.categoria?.nombre ?? "Sin categoría"}
+                    {!isOut && p.stockMinUnits > 0 && (
+                      <span className="ml-1.5 text-orange-500 font-medium">
+                        · mín. {p.stockMinUnits}
+                      </span>
+                    )}
+                  </p>
+                </div>
+
+                {/* Precio + código */}
+                <div className="flex-shrink-0 text-right">
+                  <p className="text-xs font-black text-foreground">
+                    {formatMoney(Number(p.precioVenta))}
+                  </p>
+                  {p.codigoBarra && (
+                    <p className="text-[10px] text-muted-foreground/60 font-mono mt-0.5 leading-tight">
+                      {p.codigoBarra}
+                    </p>
+                  )}
+                </div>
+              </div>
+            ))
+          ) : (
+            /* Estado vacío */
+            <div className="flex flex-col items-center justify-center py-16 gap-3 text-muted-foreground">
+              <Package className="h-12 w-12 opacity-20" />
+              <p className="text-sm font-medium text-center">
+                {isOut ? "Sin productos agotados 🎉" : "Stock en niveles saludables 🎉"}
+              </p>
+            </div>
+          )}
+        </div>
+      </ScrollArea>
+    </>
   );
 }
 
