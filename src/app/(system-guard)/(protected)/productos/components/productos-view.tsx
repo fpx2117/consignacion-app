@@ -596,7 +596,6 @@ export function ProductosView() {
         <SheetContent
           side="bottom"
           className={cn(
-            // Mobile: bottom sheet con altura máxima 90vh
             "sm:hidden rounded-t-3xl p-0 flex flex-col",
             "max-h-[90dvh] h-auto"
           )}
@@ -607,13 +606,12 @@ export function ProductosView() {
             statsItems={statsItems}
             isOutOfStock={isOutOfStock}
             isLowStock={isLowStock}
+            onStockUpdated={reload}
           />
         </SheetContent>
         <SheetContent
           side="right"
           className={cn(
-            // Desktop: panel lateral full-height
-            // max-w-[90vw] evita que sobrepase el viewport cuando el sidebar está abierto
             "hidden sm:flex flex-col",
             "w-[380px] max-w-[90vw] p-0 h-full overflow-x-hidden"
           )}
@@ -624,6 +622,7 @@ export function ProductosView() {
             statsItems={statsItems}
             isOutOfStock={isOutOfStock}
             isLowStock={isLowStock}
+            onStockUpdated={reload}
           />
         </SheetContent>
       </Sheet>
@@ -639,12 +638,14 @@ function StockDrawerInner({
   statsItems,
   isOutOfStock,
   isLowStock,
+  onStockUpdated,
 }: {
   stockDrawer: "low" | "out" | null;
   stats: { lowStock: number; outOfStock: number };
   statsItems: ProductoViewItem[] | undefined;
   isOutOfStock: (p: ProductoViewItem) => boolean;
   isLowStock: (p: ProductoViewItem) => boolean;
+  onStockUpdated: () => void;
 }) {
   const isOut = stockDrawer === "out";
   const count = isOut ? stats.outOfStock : stats.lowStock;
@@ -702,9 +703,9 @@ function StockDrawerInner({
                   {p.stockDisponibleUnits}
                 </div>
 
-                {/* Info — ocupa todo el ancho restante, sin competir con precio */}
+                {/* Info — ocupa todo el ancho restante */}
                 <div className="min-w-0 flex-1 overflow-hidden">
-                  {/* Línea 1: nombre completo con wrap permitido */}
+                  {/* Línea 1: nombre */}
                   <p className="text-sm font-semibold text-foreground leading-snug break-words">
                     {p.nombre}
                   </p>
@@ -717,8 +718,8 @@ function StockDrawerInner({
                       </span>
                     )}
                   </p>
-                  {/* Línea 3: precio + código de barra (juntos, no compiten) */}
-                  <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                  {/* Línea 3: precio + código de barra */}
+                  <div className="flex items-center gap-2 mt-1 flex-wrap">
                     <span className="text-xs font-black text-foreground">
                       {formatMoney(Number(p.precioVenta))}
                     </span>
@@ -729,6 +730,26 @@ function StockDrawerInner({
                     )}
                   </div>
                 </div>
+
+                {/* Botón ajustar stock */}
+                <AjustarStockDialog
+                  producto={p as unknown as import("@/lib/types").Producto}
+                  onUpdated={onStockUpdated}
+                  trigger={
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className={cn(
+                        "flex-shrink-0 h-8 w-8 p-0 rounded-lg border",
+                        isOut
+                          ? "border-red-200 dark:border-red-800 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20"
+                          : "border-orange-200 dark:border-orange-800 text-orange-500 hover:bg-orange-50 dark:hover:bg-orange-900/20"
+                      )}
+                    >
+                      <ArrowRightLeft className="h-3.5 w-3.5" />
+                    </Button>
+                  }
+                />
               </div>
             ))
           ) : (
