@@ -28,6 +28,8 @@ export type PosReportData = {
   totalGanancia: number;
   ingresosCaja: number;
   ticketPromedio: number;
+  gastosTotal: number;
+  catalogoVisitas: number;
   // Desglose por método de pago
   pagosPorMetodo: { metodo: string; total: number; cantidad: number }[];
   // Top productos
@@ -98,6 +100,11 @@ export function buildPosReportHtml(data: PosReportData, branding: BrandingDTO): 
   const rentabilidad = data.totalVentas > 0
     ? Math.round((data.totalGanancia / data.totalVentas) * 100)
     : 0;
+
+
+  // ─ Utilidad neta = ganancia - gastos
+  const utilidadNeta = data.totalGanancia - data.gastosTotal;
+  const rentabilidadNeta = data.totalVentas > 0 ? Math.round((utilidadNeta / data.totalVentas) * 100) : 0;
 
   // ─ Por método de pago (chips horizontales compactos con ícono SVG)
   const metodosHtml = data.pagosPorMetodo.length > 0
@@ -187,29 +194,71 @@ export function buildPosReportHtml(data: PosReportData, branding: BrandingDTO): 
     </div>
   </div>
 
-  <!-- KPIs PRINCIPALES -->
-  <div class="grid grid-cols-4 gap-4 mb-6">
-    <div class="bg-slate-50 rounded-2xl p-5 border border-slate-100">
-      <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Ventas totales</p>
-      <p class="text-2xl font-black text-slate-900 money leading-tight">${fmt(data.totalVentas)}</p>
-      <p class="text-[10px] text-slate-400 mt-1">${formatNumberAR(data.cantidadVentas)} transacciones</p>
+  <!-- KPIs PRINCIPALES — 3 cols x 2 filas, cada uno con accent propio -->
+  <div class="grid grid-cols-3 gap-4 mb-6">
+
+    <!-- Ventas Totales — accent primary -->
+    <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+      <div style="height:3px;background:${primaryColor}"></div>
+      <div class="p-5">
+        <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Ventas Totales</p>
+        <p class="text-2xl font-black text-slate-900 money leading-tight">${fmt(data.totalVentas)}</p>
+        <p class="text-[10px] text-slate-400 mt-1">${formatNumberAR(data.cantidadVentas)} transacciones</p>
+      </div>
     </div>
-    <div class="rounded-2xl p-5 text-white shadow-xl relative overflow-hidden" style="background-color:${primaryColor}">
-      <p class="text-[10px] font-black text-white/60 uppercase tracking-widest mb-2 relative z-10">Ganancia Neta</p>
-      <p class="text-2xl font-black tracking-tight money leading-tight relative z-10">${fmt(data.totalGanancia)}</p>
-      <p class="text-[10px] text-white/60 mt-1 relative z-10">${rentabilidad}% margen</p>
-      <div class="absolute -bottom-4 -left-4 w-20 h-20 bg-white/10 rounded-full blur-2xl"></div>
+
+    <!-- Ganancia Bruta — accent emerald -->
+    <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+      <div style="height:3px;background:#059669"></div>
+      <div class="p-5">
+        <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Ganancia Bruta</p>
+        <p class="text-2xl font-black text-slate-900 money leading-tight">${fmt(data.totalGanancia)}</p>
+        <p class="text-[10px] text-slate-400 mt-1">${rentabilidad}% margen s/ventas</p>
+      </div>
     </div>
-    <div class="bg-slate-50 rounded-2xl p-5 border border-slate-100">
-      <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Ticket Promedio</p>
-      <p class="text-2xl font-black text-slate-900 money leading-tight">${fmt(data.ticketPromedio)}</p>
-      <p class="text-[10px] text-slate-400 mt-1">por transacción</p>
+
+    <!-- Gastos Totales — accent rose -->
+    <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+      <div style="height:3px;background:#e11d48"></div>
+      <div class="p-5">
+        <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Gastos Totales</p>
+        <p class="text-2xl font-black text-slate-900 money leading-tight">${fmt(data.gastosTotal)}</p>
+        <p class="text-[10px] mt-1" style="color:${utilidadNeta >= 0 ? '#059669' : '#e11d48'}">
+          Utilidad neta: ${fmt(utilidadNeta)}
+        </p>
+      </div>
     </div>
-    <div class="bg-slate-50 rounded-2xl p-5 border border-slate-100">
-      <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Cobros en Caja</p>
-      <p class="text-xl font-black text-slate-900 money leading-tight">${fmt(data.ingresosCaja)}</p>
-      <p class="text-[10px] text-slate-400 mt-1">pagos procesados</p>
+
+    <!-- Ticket Promedio — accent amber -->
+    <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+      <div style="height:3px;background:#d97706"></div>
+      <div class="p-5">
+        <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Ticket Promedio</p>
+        <p class="text-2xl font-black text-slate-900 money leading-tight">${fmt(data.ticketPromedio)}</p>
+        <p class="text-[10px] text-slate-400 mt-1">por transacción</p>
+      </div>
     </div>
+
+    <!-- Cobros en Caja — accent sky -->
+    <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+      <div style="height:3px;background:#0369a1"></div>
+      <div class="p-5">
+        <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Cobros en Caja</p>
+        <p class="text-xl font-black text-slate-900 money leading-tight">${fmt(data.ingresosCaja)}</p>
+        <p class="text-[10px] text-slate-400 mt-1">pagos tipo venta procesados</p>
+      </div>
+    </div>
+
+    <!-- Visitas Catálogo — accent violet -->
+    <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+      <div style="height:3px;background:#7c3aed"></div>
+      <div class="p-5">
+        <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Visitas Catálogo</p>
+        <p class="text-2xl font-black text-slate-900 leading-tight">${formatNumberAR(data.catalogoVisitas)}</p>
+        <p class="text-[10px] text-slate-400 mt-1">visitas en el período</p>
+      </div>
+    </div>
+
   </div>
 
   <!-- MÉTODOS DE PAGO -->

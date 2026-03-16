@@ -50,8 +50,10 @@ export async function GET(
         const dateWhere = start ? { gte: start } : undefined;
         const sucursalWhere = { sucursalId };
 
+        const hasCatalogVisitModel = "catalogVisit" in prisma;
+
         // Fetch data in parallel
-        const [ventasAgg, pagosAgg, ventasConDetalles, pagosPorMetodo] = await Promise.all([
+        const [ventasAgg, pagosAgg, ventasConDetalles, pagosPorMetodo, gastosAgg, catalogVisitsCount] = await Promise.all([
             // Totales de ventas directas
             prisma.venta.aggregate({
                 where: { ...sucursalWhere, fecha: dateWhere, liquidacionId: null },
@@ -59,9 +61,9 @@ export async function GET(
                 _count: { _all: true },
             }),
 
-            // Cobros totales
+            // Cobros en caja — SOLO pagos de tipo VENTA (excluye cobros de deudas de consignación)
             prisma.pago.aggregate({
-                where: { ...sucursalWhere, fecha: dateWhere },
+                where: { ...sucursalWhere, fecha: dateWhere, tipo: "VENTA" },
                 _sum: { monto: true },
                 _count: { _all: true },
             }),
@@ -93,6 +95,20 @@ export async function GET(
                 _sum: { total: true, descuentoGlobal: true },
                 _count: { _all: true },
             }),
+
+            // Gastos totales del período para esta sucursal
+            prisma.gasto.aggregate({
+                where: { sucursalId, ...(start ? { fecha: { gte: start } } : {}) },
+                _sum: { monto: true },
+                _count: { _all: true },
+            }),
+
+            // Visitas al catálogo del período
+            hasCatalogVisitModel
+                ? (prisma as any).catalogVisit.count({
+                    where: { sucursalId, ...(start ? { visitedAt: { gte: start } } : {}) },
+                })
+                : Promise.resolve(0),
         ]);
 
         // Procesar ventas para KPIs, Top Productos y Tendencia
@@ -160,6 +176,8 @@ export async function GET(
             totalGanancia,
             ingresosCaja: Number(pagosAgg._sum?.monto ?? 0),
             ticketPromedio: cantidadVentas > 0 ? totalVentasNeto / cantidadVentas : 0,
+            gastosTotal: Number(gastosAgg._sum?.monto ?? 0),
+            catalogoVisitas: Number(catalogVisitsCount ?? 0),
             pagosPorMetodo: pagosPorMetodo.map(m => ({
                 metodo: m.metodoPago,
                 total: Number(m._sum.total ?? 0) - Number(m._sum.descuentoGlobal || 0),
