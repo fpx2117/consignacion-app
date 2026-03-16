@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import puppeteer, { Browser } from "puppeteer";
 import { verifyPdfToken } from "@/lib/security/pdf-token";
 import type { VentaReportDTO } from "@/lib/reports/base/venta-report-template";
-import { buildVentaHtml } from "@/lib/reports/base/venta-report-template";
+import { buildVentaHtmlAsync } from "@/lib/reports/base/venta-report-template";
 import { getBranding } from "@/lib/reports/get-branding";
 import { prisma } from "@/lib/prisma";
 import { hashCode } from "@/lib/share-links";
@@ -105,7 +105,7 @@ export async function GET(
     const branding = await getBranding();
 
     // ✅ Template base + branding
-    const html = buildVentaHtml(reporteData, branding);
+    const html = await buildVentaHtmlAsync(reporteData, branding);
 
     browser = await puppeteer.launch({
       headless: true,

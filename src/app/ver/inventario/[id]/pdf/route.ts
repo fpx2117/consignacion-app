@@ -89,7 +89,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
     const zonaHoraria = await getConfiguredTz(firstSucursalId);
 
     // 6. Generar HTML
-    const htmlContent = buildInventoryHtml(groups, branding, zonaHoraria);
+    const htmlContent = await buildInventoryHtml(groups, branding, zonaHoraria);
 
     browser = await puppeteer.launch({
       headless: true,

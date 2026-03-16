@@ -95,7 +95,7 @@ export async function GET(
         };
 
         const branding = await getBranding();
-        const html = buildGastoHtml(reporteData, branding);
+        const html = await buildGastoHtml(reporteData, branding);
 
         browser = await puppeteer.launch({
             headless: true,
