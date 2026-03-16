@@ -154,7 +154,7 @@ export async function GET(
         const reportData: PosReportData = {
             period,
             periodLabel: PERIOD_LABELS[period],
-            fechaGeneracion: formatDateTimeAR(nowAR(tz), true, tz),
+            fechaGeneracion: formatDateTimeAR(new Date(), true, tz),
             totalVentas: totalVentasNeto,
             cantidadVentas,
             totalGanancia,

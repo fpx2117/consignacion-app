@@ -207,7 +207,7 @@ export function buildPosReportHtml(data: PosReportData, branding: BrandingDTO): 
     </div>
     <div class="bg-slate-50 rounded-2xl p-5 border border-slate-100">
       <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Cobros en Caja</p>
-      <p class="text-2xl font-black text-slate-900 money leading-tight break-all">${fmt(data.ingresosCaja)}</p>
+      <p class="text-xl font-black text-slate-900 money leading-tight">${fmt(data.ingresosCaja)}</p>
       <p class="text-[10px] text-slate-400 mt-1">pagos procesados</p>
     </div>
   </div>

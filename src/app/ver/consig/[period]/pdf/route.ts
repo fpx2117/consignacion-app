@@ -309,7 +309,7 @@ export async function GET(
         const reportData: ConsigReportData = {
             period,
             periodLabel: PERIOD_LABELS[period],
-            fechaGeneracion: formatDateTimeAR(nowAR(tz), true, tz),
+            fechaGeneracion: formatDateTimeAR(new Date(), true, tz),
             consigAbiertas,
             consigCerradas,
             unitsPendientesTotal,
