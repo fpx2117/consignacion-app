@@ -33,9 +33,8 @@ export function ProductCard({
     const isGrid = viewMode === "grid";
 
     const basePrice = Number(product.precioVenta);
-    const displayedPrice = isConsigne
-        ? basePrice * (1 + ((config.porcentajeAumentoConsignacion ?? 0) / 100))
-        : basePrice;
+    const pct = Number(config.porcentajeAumentoConsignacion) || 0;
+    const displayedPrice = isConsigne ? basePrice * (1 + pct / 100) : basePrice;
     const isAvailable = product.stockDisponibleUnits > 0;
 
     return (

@@ -58,8 +58,11 @@ export const getDashboardKpis = unstable_cache(
         ...(dateWhere ? { visitedAt: dateWhere } : {}),
     };
 
+    const hasCatalogVisitModel = "catalogVisit" in prisma;
+
     const [
-        counts,
+        countAbiertas,
+        countEnPeriodo,
         stockAgg,
         ventasAgg,
         pagosAgg,
@@ -72,10 +75,14 @@ export const getDashboardKpis = unstable_cache(
         saldoClientesAgg,
         roturasData,
         catalogVisitsCount,
-        catalogVisitorsUnique
+        catalogVisitorsUnique,
+        unitsPendientesAgg,
+        productosVisiblesCount,
     ] = await Promise.all([
-        // 1. Conteos de Consignaciones
-        prisma.consignacion.count({ where: sucursalWhere }),
+        // 1a. Consignaciones ABIERTAS (sin filtro de período)
+        prisma.consignacion.count({ where: { ...sucursalWhere, estado: "ABIERTA" } }),
+        // 1b. Consignaciones creadas en período
+        prisma.consignacion.count({ where: { ...sucursalWhere, fecha: dateWhere } }),
         // 2. Stock
         isGlobal
             ? prisma.producto.aggregate({ _sum: { stockDisponibleUnits: true, stockConsignadoUnits: true } })
@@ -174,13 +181,35 @@ export const getDashboardKpis = unstable_cache(
             }
         }),
         // 14. Visitas catalogo (dedupe por bucket)
-        (prisma as any).catalogVisit.count({
-            where: catalogVisitWhere,
+        hasCatalogVisitModel
+            ? (prisma as any).catalogVisit.count({ where: catalogVisitWhere })
+            : Promise.resolve(0),
+        hasCatalogVisitModel
+            ? (prisma as any).catalogVisit.groupBy({ by: ["visitorHash"], where: catalogVisitWhere })
+            : Promise.resolve([]),
+        // 16. Units pendientes reales (consignaciones abiertas)
+        prisma.consignacionDetalle.aggregate({
+            where: {
+                consignacion: { ...sucursalWhere, estado: "ABIERTA" },
+            },
+            _sum: {
+                unitsEntregadas: true,
+                unitsVendidasAcum: true,
+                unitsDevueltasAcum: true,
+            },
         }),
-        (prisma as any).catalogVisit.groupBy({
-            by: ["visitorHash"],
-            where: catalogVisitWhere,
-        })
+        // 17. Productos visibles en catálogo
+        catalogUsesSucursalScope
+            ? prisma.stockSucursal.count({
+                where: {
+                    sucursalId,
+                    stockDisponibleUnits: { gt: 0 },
+                    producto: { activo: true },
+                },
+            })
+            : prisma.producto.count({
+                where: { activo: true, stockDisponibleUnits: { gt: 0 } },
+            }),
     ]);
 
     // --- CÁLCULOS DE GANANCIA ---
@@ -207,6 +236,13 @@ export const getDashboardKpis = unstable_cache(
     const perdidaRotura = roturasData.reduce((acc: number, det: any) => {
         return acc + (Number(det.producto?.precioCosto || 0) * det.units);
     }, 0);
+
+    // --- UNITS PENDIENTES ---
+    const unitsPendientesTotal = Math.max(0,
+        (unitsPendientesAgg._sum.unitsEntregadas ?? 0) -
+        (unitsPendientesAgg._sum.unitsVendidasAcum ?? 0) -
+        (unitsPendientesAgg._sum.unitsDevueltasAcum ?? 0)
+    );
 
     // --- GASTOS TOTALES (propios no compartidos + participación proporcional en compartidos) ---
     const totalGastosPropios = Number(gastosPropiosAgg._sum?.monto || 0);
@@ -242,7 +278,8 @@ export const getDashboardKpis = unstable_cache(
     return {
         period,
         isGlobal,
-        counts,
+        countAbiertas,
+        countEnPeriodo,
         usarControlDeCaja: dashboardConfig?.usarControlDeCaja ?? true,
         stock: {
             disponible: stockAgg._sum?.stockDisponibleUnits || 0,
@@ -274,9 +311,13 @@ export const getDashboardKpis = unstable_cache(
             cantidad: cantidadGastos,
             total: totalGastos
         },
+        consignacionUnits: {
+            pendientes: unitsPendientesTotal,
+        },
         catalogo: {
             visitas: catalogVisitsCount,
             visitantesUnicos: catalogVisitorsUnique.length,
+            productosVisibles: productosVisiblesCount,
         },
         proximosVencimientos: allPendientes.map((g: any) => ({
             ...g,

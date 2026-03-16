@@ -683,6 +683,7 @@ export type DashboardKpis = {
   catalogo: {
     visitas: number;
     visitantesUnicos: number;
+    productosVisibles: number;
   };
 
   proximosVencimientos: Gasto[];
