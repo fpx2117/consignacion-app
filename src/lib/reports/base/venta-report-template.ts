@@ -14,8 +14,8 @@ export interface VentaReportDTO {
   clienteNombre: string;
   clienteTelefono: string;
   zonaHoraria?: string;
-  /** URL pública del comprobante digital (ej: https://dominio/x/ABC123). Si se provee, se embebe como QR. */
-  shareUrl?: string;
+  /** URL pública del catálogo online del negocio (ej: https://dominio/lista?sucursalId=1). Si se provee, se embebe como QR. */
+  catalogUrl?: string;
   items: Array<{
     producto: string;
     cantidad: number;
@@ -231,8 +231,8 @@ function buildVentaBody(data: VentaReportDTO, branding: BrandingDTO, qrHtml: str
               ? `<div style="display:flex;align-items:center;gap:12px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:10px 14px">
                   ${qrHtml}
                   <div>
-                    <p style="font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:.08em;color:#94a3b8;margin-bottom:2px">Comprobante digital</p>
-                    <p style="font-size:8px;color:#64748b;line-height:1.4">Escaneá para ver<br>tu ticket online</p>
+                    <p style="font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:.08em;color:#94a3b8;margin-bottom:2px">Catálogo online</p>
+                    <p style="font-size:8px;color:#64748b;line-height:1.5">Escaneá para ver<br>todos nuestros productos</p>
                   </div>
                 </div>`
               : `<div></div>`
@@ -256,8 +256,8 @@ function buildVentaBody(data: VentaReportDTO, branding: BrandingDTO, qrHtml: str
  */
 export async function buildVentaHtmlAsync(data: VentaReportDTO, branding: BrandingDTO): Promise<string> {
   let qrHtml = "";
-  if (data.shareUrl) {
-    qrHtml = await generateQRHtml(data.shareUrl, {
+  if (data.catalogUrl) {
+    qrHtml = await generateQRHtml(data.catalogUrl, {
       size: 72,
       darkColor: "#0f172a",
     });
