@@ -199,9 +199,9 @@ export async function buildInventoryHtml(
         <div class="flex-grow">
           ${groupsProcesados.map(group => {
 
-    // Helper que renderiza una tabla de productos
+    // Helper unificado — renderiza filas para las 3 secciones
     type ProcItem = typeof group.normales[number];
-    const renderTabla = (items: ProcItem[]) => items.map((p) => {
+    const renderTabla = (items: ProcItem[], esAgotado = false) => items.map((p) => {
       const hasExpiry = p.fechaVencimiento != null;
       const expiryDate = hasExpiry ? new Date(p.fechaVencimiento as string | Date) : null;
       const isExpired = expiryDate && expiryDate < new Date();
@@ -209,33 +209,44 @@ export async function buildInventoryHtml(
       const barcodeUrl = codigoBarra ? barcodeMap.get(codigoBarra) : null;
       const barcodeCell = codigoBarra
         ? barcodeUrl
-          ? `<img src="${barcodeUrl}" alt="${escapeHtml(codigoBarra)}" style="display:block;max-height:20px;max-width:120px;" />`
+          ? `<img src="${barcodeUrl}" alt="${escapeHtml(codigoBarra)}" style="display:block;max-height:20px;max-width:120px;${esAgotado ? "opacity:.55;" : ""}" />`
           : `<span style="font-size:8px;color:#94a3b8;font-family:monospace;">${escapeHtml(codigoBarra)}</span>`
         : "";
 
+      // Estilos por estado
+      const rowBg    = esAgotado ? "#fef2f2"  : p.isLow ? "#fff7ed"  : "#f8fafc";
+      const borderL  = esAgotado ? "3px solid #e11d48" : p.isLow ? "3px solid #d97706" : "1px solid #f1f5f9";
+      const borderY  = esAgotado ? "1px solid #fecaca" : p.isLow ? "1px solid #fed7aa"  : "1px solid #f1f5f9";
+      const borderR  = esAgotado ? "1px solid #fecaca" : p.isLow ? "1px solid #fed7aa"  : "1px solid #f1f5f9";
+      const textNombre = esAgotado ? "#9f1239" : p.isLow ? "#92400e" : "#1e293b";
+      const stockBadgeBg = esAgotado ? "#fee2e2" : p.isLow ? "#ffedd5" : "#d1fae5";
+      const stockBadgeColor = esAgotado ? "#e11d48" : p.isLow ? "#d97706" : "#059669";
+
       return `
-        <tr style="background:#f8fafc;">
-          <td class="py-2.5 pl-5 rounded-l-xl border-y border-l border-slate-100">
-            <div class="font-bold text-slate-800 text-[11px]">${escapeHtml(String(p.nombre ?? ""))}</div>
-            ${barcodeCell ? `<div class="mt-0.5">${barcodeCell}</div>` : ""}
+        <tr style="background:${rowBg};">
+          <td style="padding:10px 0 10px 20px;border-top:${borderY};border-bottom:${borderY};border-left:${borderL};border-radius:10px 0 0 10px;">
+            <div style="font-weight:700;color:${textNombre};font-size:11px;">${escapeHtml(String(p.nombre ?? ""))}</div>
+            ${barcodeCell ? `<div style="margin-top:3px;">${barcodeCell}</div>` : ""}
           </td>
-          <td class="py-2.5 text-center border-y border-slate-100">
+          <td style="padding:10px 0;text-align:center;border-top:${borderY};border-bottom:${borderY};">
             ${hasExpiry
-          ? `<div class="inline-flex flex-col items-center">
-                <span class="font-bold text-[10px] ${isExpired ? "text-red-600" : "text-slate-600"}">${formatDateAR(p.fechaVencimiento as string | Date, false, tz)}</span>
+          ? `<div style="display:inline-flex;flex-direction:column;align-items:center;gap:2px;">
+                <span style="font-weight:700;font-size:10px;color:${isExpired ? "#dc2626" : "#475569"};">${formatDateAR(p.fechaVencimiento as string | Date, false, tz)}</span>
                 ${isExpired ? '<span style="font-size:7px;color:#ef4444;font-weight:900;text-transform:uppercase;letter-spacing:.05em;">Vencido</span>' : ""}
               </div>`
           : '<span style="font-size:9px;color:#cbd5e1;font-style:italic;">No vence</span>'
         }
           </td>
-          <td class="py-2.5 text-center border-y border-slate-100">
-            <span class="px-2 py-1 rounded-md font-black text-[11px] ${p.isOut ? "bg-red-100 text-red-600" : p.isLow ? "bg-orange-100 text-orange-600" : "bg-emerald-100 text-emerald-700"}">
+          <td style="padding:10px 0;text-align:center;border-top:${borderY};border-bottom:${borderY};">
+            <span style="padding:3px 10px;border-radius:6px;font-weight:900;font-size:11px;background:${stockBadgeBg};color:${stockBadgeColor};">
               ${p.stock}
             </span>
           </td>
-          <td class="py-2.5 text-right border-y border-slate-100 text-slate-400 money text-[11px]">${formatMoney(p.precioCosto)}</td>
-          <td class="py-2.5 text-right border-y border-slate-100 font-bold text-slate-700 money text-[11px]">${formatMoney(p.precioVenta)}</td>
-          <td class="py-2.5 text-right pr-5 rounded-r-xl border-y border-r border-slate-100 font-black text-slate-900 money text-[11px]">${formatMoney(p.subtotalVenta)}</td>
+          <td style="padding:10px 0;text-align:right;border-top:${borderY};border-bottom:${borderY};color:#94a3b8;font-size:11px;">${formatMoney(p.precioCosto)}</td>
+          <td style="padding:10px 0;text-align:right;border-top:${borderY};border-bottom:${borderY};font-weight:700;color:#334155;font-size:11px;">${formatMoney(p.precioVenta)}</td>
+          <td style="padding:10px 20px 10px 0;text-align:right;border-top:${borderY};border-bottom:${borderY};border-right:${borderR};border-radius:0 10px 10px 0;font-weight:900;color:${esAgotado ? "#94a3b8" : "#0f172a"};font-size:11px;">
+            ${esAgotado ? '<span style="color:#cbd5e1;font-style:italic;font-weight:400;font-size:9px;">—</span>' : formatMoney(p.subtotalVenta)}
+          </td>
         </tr>`;
     }).join("");
 
@@ -312,49 +323,7 @@ export async function buildInventoryHtml(
                 — ${group.agotados.length} producto${group.agotados.length !== 1 ? "s" : ""} sin stock disponible
               </span>
             </div>
-            <table class="w-full text-left mb-3">
-              <thead>
-                <tr style="font-size:8px;color:#94a3b8;font-weight:900;text-transform:uppercase;letter-spacing:.1em;">
-                  <th style="padding:6px 0 6px 20px;">Producto</th>
-                  <th style="padding:6px 0;text-align:center;">Vencimiento</th>
-                  <th style="padding:6px 0;text-align:center;">Stock</th>
-                  <th style="padding:6px 0;text-align:right;">Costo Unit.</th>
-                  <th style="padding:6px 0;text-align:right;padding-right:20px;" colspan="2">Precio Venta</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${group.agotados.map(p => {
-    const hasExpiry = p.fechaVencimiento != null;
-    const expiryDate = hasExpiry ? new Date(p.fechaVencimiento as string | Date) : null;
-    const isExpired = expiryDate && expiryDate < new Date();
-    const codigoBarra = p.codigoBarra ? String(p.codigoBarra) : null;
-    const barcodeUrl = codigoBarra ? barcodeMap.get(codigoBarra) : null;
-    const barcodeCell = codigoBarra
-      ? barcodeUrl
-        ? `<img src="${barcodeUrl}" alt="${escapeHtml(codigoBarra)}" style="display:block;max-height:18px;max-width:100px;opacity:.5;" />`
-        : `<span style="font-size:8px;color:#94a3b8;font-family:monospace;">${escapeHtml(codigoBarra)}</span>`
-      : "";
-    return `
-      <tr style="background:#fef2f2;opacity:.85;">
-        <td style="padding:10px 0 10px 20px;border-top:1px solid #fecaca;border-bottom:1px solid #fecaca;border-left:3px solid #e11d48;border-radius:10px 0 0 10px;">
-          <div style="font-weight:700;color:#9f1239;font-size:11px;">${escapeHtml(String(p.nombre ?? ""))}</div>
-          ${barcodeCell ? `<div style="margin-top:2px;">${barcodeCell}</div>` : ""}
-        </td>
-        <td style="padding:10px 0;text-align:center;border-top:1px solid #fecaca;border-bottom:1px solid #fecaca;">
-          ${hasExpiry
-      ? `<span style="font-size:10px;font-weight:700;color:${isExpired ? "#dc2626" : "#475569"};">${formatDateAR(p.fechaVencimiento as string | Date, false, tz)}</span>`
-      : '<span style="font-size:9px;color:#cbd5e1;font-style:italic;">No vence</span>'
-    }
-        </td>
-        <td style="padding:10px 0;text-align:center;border-top:1px solid #fecaca;border-bottom:1px solid #fecaca;">
-          <span style="padding:3px 10px;border-radius:6px;font-weight:900;font-size:11px;background:#fee2e2;color:#e11d48;">0</span>
-        </td>
-        <td style="padding:10px 0;text-align:right;border-top:1px solid #fecaca;border-bottom:1px solid #fecaca;color:#94a3b8;font-size:11px;">${formatMoney(p.precioCosto)}</td>
-        <td style="padding:10px 20px 10px 0;text-align:right;border-top:1px solid #fecaca;border-bottom:1px solid #fecaca;border-right:1px solid #fecaca;border-radius:0 10px 10px 0;font-weight:700;color:#dc2626;font-size:11px;" colspan="2">${formatMoney(p.precioVenta)}</td>
-      </tr>`;
-  }).join("")}
-              </tbody>
-            </table>
+            ${tableHead}${renderTabla(group.agotados, true)}${tableClose}
           </div>
         ` : ""}
 
