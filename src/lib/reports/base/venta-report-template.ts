@@ -14,6 +14,8 @@ export interface VentaReportDTO {
   clienteNombre: string;
   clienteTelefono: string;
   zonaHoraria?: string;
+  /** URL pública del comprobante digital (ej: https://dominio/x/ABC123). Si se provee, se embebe como QR. */
+  shareUrl?: string;
   items: Array<{
     producto: string;
     cantidad: number;
@@ -224,10 +226,17 @@ function buildVentaBody(data: VentaReportDTO, branding: BrandingDTO, qrHtml: str
         </div>
 
         <div class="mt-auto border-t border-slate-100 pt-6">
-          <div class="flex justify-between items-end">
-            <div style="flex:0 0 auto">
-              ${qrHtml}
-            </div>
+          <div class="flex justify-between items-center">
+            ${qrHtml
+              ? `<div style="display:flex;align-items:center;gap:12px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:10px 14px">
+                  ${qrHtml}
+                  <div>
+                    <p style="font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:.08em;color:#94a3b8;margin-bottom:2px">Comprobante digital</p>
+                    <p style="font-size:8px;color:#64748b;line-height:1.4">Escaneá para ver<br>tu ticket online</p>
+                  </div>
+                </div>`
+              : `<div></div>`
+            }
             <div class="text-right">
               <p class="text-xs font-bold text-slate-400">Gracias por su compra</p>
               ${footerText ? `<p class="text-[10px] font-semibold text-slate-400 mt-1">${footerText}</p>` : ``}
@@ -241,15 +250,18 @@ function buildVentaBody(data: VentaReportDTO, branding: BrandingDTO, qrHtml: str
 }
 
 /**
- * Versión async: incluye QR en el footer.
+ * Versión async: incluye QR con la URL pública del comprobante (shareUrl).
+ * Si no se provee shareUrl, el footer no muestra QR.
  * Usar en API routes (server-side / Puppeteer).
  */
 export async function buildVentaHtmlAsync(data: VentaReportDTO, branding: BrandingDTO): Promise<string> {
-  const ticketId = `${data.numeroVenta ?? data.id}`;
-  const qrHtml = await generateQRHtml(ticketId, {
-    size: 80,
-    label: `Ticket #${ticketId}`,
-  });
+  let qrHtml = "";
+  if (data.shareUrl) {
+    qrHtml = await generateQRHtml(data.shareUrl, {
+      size: 72,
+      darkColor: "#0f172a",
+    });
+  }
   return buildVentaBody(data, branding, qrHtml);
 }
 
