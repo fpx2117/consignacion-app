@@ -15,6 +15,8 @@ import { getCategoryColorByKey, getCategoryColorByName } from "@/lib/category-co
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Table,
   TableBody,
@@ -54,6 +56,8 @@ import {
   MoreVertical,
   Eye,
   EyeOff,
+  AlertTriangle,
+  XCircle,
 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
@@ -81,6 +85,8 @@ interface StatCardProps {
   trend?: string;
   trendUp?: boolean;
   color?: "default" | "blue" | "emerald" | "orange" | "red";
+  onClick?: () => void;
+  clickable?: boolean;
 }
 
 type SortKey = "nombre" | "precioVenta" | "stockDisponibleUnits" | "categoria";
@@ -123,6 +129,7 @@ export function ProductosView() {
   const [itemsPerPage, setItemsPerPage] = React.useState(10);
   const [sortConfig, setSortConfig] = React.useState<SortConfig>({ key: "nombre", direction: "asc" });
   const [showSensitiveData, setShowSensitiveData] = React.useState(false);
+  const [stockDrawer, setStockDrawer] = React.useState<"low" | "out" | null>(null);
 
   // Debounce de búsqueda (400ms)
   React.useEffect(() => {
@@ -433,8 +440,26 @@ export function ProductosView() {
       </div>
       <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
         <StatCard label="Total Items" value={stats.total} icon={LayoutGrid} color="default" />
-        <StatCard label="Stock Bajo" value={stats.lowStock} icon={AlertCircle} color="orange" trend={stats.lowStock > 0 ? "Atención requerida" : "Todo en orden"} trendUp={stats.lowStock === 0} />
-        <StatCard label="Agotados" value={stats.outOfStock} icon={Package} color="red" trend={stats.outOfStock > 0 ? "Reponer urgente" : "Stock saludable"} trendUp={stats.outOfStock === 0} />
+        <StatCard
+          label="Stock Bajo"
+          value={stats.lowStock}
+          icon={AlertCircle}
+          color="orange"
+          trend={stats.lowStock > 0 ? "Atención requerida" : "Todo en orden"}
+          trendUp={stats.lowStock === 0}
+          clickable={true}
+          onClick={() => setStockDrawer("low")}
+        />
+        <StatCard
+          label="Agotados"
+          value={stats.outOfStock}
+          icon={Package}
+          color="red"
+          trend={stats.outOfStock > 0 ? "Reponer urgente" : "Stock saludable"}
+          trendUp={stats.outOfStock === 0}
+          clickable={true}
+          onClick={() => setStockDrawer("out")}
+        />
         <StatCard
           label="Valuación Total"
           value={showSensitiveData ? formatMoney(stats.valorVenta) : "••••••"}
@@ -564,6 +589,93 @@ export function ProductosView() {
           </>
         )}
       </div>
+
+      {/* Sheet de detalle de KPI de stock */}
+      <Sheet open={stockDrawer !== null} onOpenChange={(open) => !open && setStockDrawer(null)}>
+        <SheetContent side="right" className="w-full sm:max-w-lg p-0 flex flex-col">
+          <SheetHeader className="p-6 pb-4 border-b border-border/60">
+            <div className="flex items-center gap-3">
+              {stockDrawer === "out" ? (
+                <div className="p-2 rounded-xl bg-red-100 dark:bg-red-900/20">
+                  <XCircle className="h-5 w-5 text-red-500" />
+                </div>
+              ) : (
+                <div className="p-2 rounded-xl bg-orange-100 dark:bg-orange-900/20">
+                  <AlertTriangle className="h-5 w-5 text-orange-500" />
+                </div>
+              )}
+              <div>
+                <SheetTitle className="text-base font-black">
+                  {stockDrawer === "out" ? "Productos Agotados" : "Productos con Stock Bajo"}
+                </SheetTitle>
+                <SheetDescription className="text-xs">
+                  {stockDrawer === "out"
+                    ? `${stats.outOfStock} producto${stats.outOfStock !== 1 ? "s" : ""} sin stock disponible`
+                    : `${stats.lowStock} producto${stats.lowStock !== 1 ? "s" : ""} por debajo del mínimo`
+                  }
+                </SheetDescription>
+              </div>
+            </div>
+          </SheetHeader>
+
+          <ScrollArea className="flex-1">
+            <div className="p-4 space-y-2">
+              {(stockDrawer === "out"
+                ? statsItems?.filter(i => isOutOfStock(i))
+                : statsItems?.filter(i => isLowStock(i))
+              )?.map((p) => (
+                <div
+                  key={p.id}
+                  className={cn(
+                    "flex items-center justify-between gap-3 p-3 rounded-xl border transition-colors",
+                    stockDrawer === "out"
+                      ? "bg-red-50/50 dark:bg-red-900/10 border-red-100 dark:border-red-900/30"
+                      : "bg-orange-50/50 dark:bg-orange-900/10 border-orange-100 dark:border-orange-900/30"
+                  )}
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className={cn(
+                      "flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center text-xs font-black",
+                      stockDrawer === "out"
+                        ? "bg-red-100 dark:bg-red-900/30 text-red-600"
+                        : "bg-orange-100 dark:bg-orange-900/30 text-orange-600"
+                    )}>
+                      {p.stockDisponibleUnits}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-foreground truncate">{p.nombre}</p>
+                      <p className="text-xs text-muted-foreground truncate">
+                        {p.categoria?.nombre ?? "Sin categoría"}
+                        {p.stockMinUnits > 0 && stockDrawer === "low" && (
+                          <span className="ml-1 text-orange-500">· mín. {p.stockMinUnits}</span>
+                        )}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex-shrink-0 text-right">
+                    <p className="text-xs font-black text-muted-foreground">
+                      {formatMoney(Number(p.precioVenta))}
+                    </p>
+                    {p.codigoBarra && (
+                      <p className="text-[10px] text-muted-foreground/60 font-mono">{p.codigoBarra}</p>
+                    )}
+                  </div>
+                </div>
+              ))}
+
+              {/* Estado vacío */}
+              {((stockDrawer === "out" ? stats.outOfStock : stats.lowStock) === 0) && (
+                <div className="flex flex-col items-center justify-center py-16 gap-3 text-muted-foreground">
+                  <Package className="h-12 w-12 opacity-20" />
+                  <p className="text-sm font-medium">
+                    {stockDrawer === "out" ? "Sin productos agotados 🎉" : "Stock en niveles saludables 🎉"}
+                  </p>
+                </div>
+              )}
+            </div>
+          </ScrollArea>
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }
@@ -937,7 +1049,7 @@ function MobileProductCard({ p, idx, load, isLow, isOut }: { p: ProductoViewItem
   );
 }
 
-function StatCard({ label, value, icon: Icon, color = "default", trend, trendUp }: StatCardProps) {
+function StatCard({ label, value, icon: Icon, color = "default", trend, trendUp, onClick, clickable }: StatCardProps) {
   const colors = {
     default: "bg-primary/5 text-primary",
     blue: "bg-[color:var(--theme-ocean-primary)]/10 text-[color:var(--theme-ocean-primary)]",
@@ -947,7 +1059,18 @@ function StatCard({ label, value, icon: Icon, color = "default", trend, trendUp 
   };
 
   return (
-    <Card className="p-5 border-border/50 shadow-sm bg-card/50 backdrop-blur-sm relative overflow-hidden group hover:bg-card/80 transition-all">
+    <Card
+      className={cn(
+        "p-5 border-border/50 shadow-sm bg-card/50 backdrop-blur-sm relative overflow-hidden group hover:bg-card/80 transition-all",
+        clickable && "cursor-pointer hover:shadow-md hover:border-primary/40"
+      )}
+      onClick={clickable ? onClick : undefined}
+    >
+      {clickable && (
+        <div className="absolute top-3 right-3 z-20">
+          <ChevronRight className="h-3 w-3 text-muted-foreground/40" />
+        </div>
+      )}
       <div className="absolute right-0 top-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
         <Icon className={cn("h-16 w-16", colors[color].split(" ")[1])} />
       </div>
