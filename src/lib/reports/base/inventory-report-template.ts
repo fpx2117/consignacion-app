@@ -1,35 +1,10 @@
-import { Producto } from "@/lib/types";
 import { reportThemeCss } from "@/lib/reports/report-theme";
 import { getReportHeadAssets } from "@/lib/reports/tailwind-inline";
+import { escapeHtml, escapeAttr, brandInitials, formatDateAR } from "@/lib/reports/template-helpers";
 import type { BrandingDTO } from "@/lib/reports/types";
+import { generateBarcodeDataUrl } from "@/lib/reports/barcode-helper";
 
-// --- Helpers ---
-const escapeHtml = (value: unknown): string => {
-  return String(value ?? "")
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;");
-};
-
-const escapeAttr = (value: unknown): string => {
-  return escapeHtml(value).replace(/[\r\n]+/g, " ").trim();
-};
-
-const formatDateAR = (date?: string | Date | null, includeTime = true, tz = "America/Argentina/Buenos_Aires") => {
-  if (!date) return "-";
-  const d = new Date(date);
-  if (isNaN(d.getTime())) return "-";
-
-  const opts: Intl.DateTimeFormatOptions = {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    timeZone: tz,
-    ...(includeTime && { hour: "2-digit", minute: "2-digit" }),
-  };
-  return includeTime ? d.toLocaleString("es-AR", opts) : d.toLocaleDateString("es-AR", opts);
-};
-
+// formatMoney usa maximumFractionDigits:0 y redondeo entero para cantidades de inventario
 const formatMoney = (amount: number) => {
   const safeAmount = Math.round(Number(amount) || 0);
   return new Intl.NumberFormat("es-AR", {
@@ -40,19 +15,23 @@ const formatMoney = (amount: number) => {
   }).format(safeAmount);
 };
 
-const brandInitials = (name: string) => {
-  const parts = name.trim().split(/\s+/).filter(Boolean);
-  const a = parts[0]?.[0] ?? "A";
-  const b = parts[1]?.[0] ?? parts[0]?.[1] ?? "D";
-  return (a + b).toUpperCase();
-};
+export interface ProductoInventario {
+  nombre?: string;
+  stockDisponibleUnits?: number;
+  stockMinUnits?: number;
+  precioVenta?: number;
+  precioCosto?: number;
+  fechaVencimiento?: string | Date | null;
+  codigoBarra?: string | null;
+  [key: string]: unknown;
+}
 
 export interface InventoryGroup {
   sucursal: string;
-  productos: Producto[];
+  productos: ProductoInventario[];
 }
 
-export function buildInventoryHtml(
+export async function buildInventoryHtml(
   groups: InventoryGroup[],
   branding: BrandingDTO,
   zonaHoraria?: string,
@@ -70,11 +49,11 @@ export function buildInventoryHtml(
     let groupTotalStock = 0;
     let groupValorVenta = 0;
 
-    const itemsProcesados = (group.productos || []).map((p) => {
-      const stock = Number((p as any).stockDisponibleUnits) || 0;
-      const precioVenta = Number((p as any).precioVenta) || 0;
-      const precioCosto = Number((p as any).precioCosto) || 0;
-      const minStock = Number((p as any).stockMinUnits) || 5;
+    const itemsProcesados = (group.productos as ProductoInventario[] || []).map((p) => {
+      const stock = Number(p.stockDisponibleUnits) || 0;
+      const precioVenta = Number(p.precioVenta) || 0;
+      const precioCosto = Number(p.precioCosto) || 0;
+      const minStock = Number(p.stockMinUnits) || 5;
 
       groupTotalStock += stock;
       groupValorVenta += precioVenta * stock;
@@ -107,6 +86,26 @@ export function buildInventoryHtml(
   });
 
   const margenEstimadoTotalGlobal = valorVentaTotalGlobal - valorCostoTotalGlobal;
+
+  // --- Precarga de barcodes en paralelo ---
+  const barcodeMap = new Map<string, string>();
+  const barcodePromises: Promise<void>[] = [];
+  for (const group of groupsProcesados) {
+    for (const p of group.productos as ProductoInventario[]) {
+      if (p.codigoBarra) {
+        const code = String(p.codigoBarra);
+        if (!barcodeMap.has(code)) {
+          barcodeMap.set(code, ""); // reservar slot
+          barcodePromises.push(
+            generateBarcodeDataUrl(code, { height: 6, scale: 1 }).then((url) => {
+              barcodeMap.set(code, url);
+            })
+          );
+        }
+      }
+    }
+  }
+  await Promise.all(barcodePromises);
 
   // Branding values
   const brandName = branding.businessName || "Consignación";
@@ -205,58 +204,77 @@ export function buildInventoryHtml(
                   </tr>
                 </thead>
 
-                <tbody class="text-[11px]">
-                  ${group.productos.map((p: any) => {
+                 <tbody class="text-[11px]">
+                   ${(group.productos as (ProductoInventario & { stock: number; precioVenta: number; precioCosto: number; subtotalVenta: number; isLow: boolean; isOut: boolean; })[]).map((p) => {
       const hasExpiry = p.fechaVencimiento != null;
-      const expiryDate = hasExpiry ? new Date(p.fechaVencimiento) : null;
+      const expiryDate = hasExpiry ? new Date(p.fechaVencimiento as string | Date) : null;
       const isExpired = expiryDate && expiryDate < new Date();
 
-      return `
-                    <tr class="group">
-                      <td class="py-3 pl-5 bg-slate-50 rounded-l-xl border-y border-l border-slate-100">
-                        <div class="font-bold text-slate-800">${escapeHtml(p.nombre)}</div>
-                        <div class="text-[8px] text-slate-400 font-mono mt-0.5 uppercase">${p.codigoBarra ? "• " + escapeHtml(p.codigoBarra) : ""}</div>
-                      </td>
-                      
-                      <td class="py-3 text-center bg-slate-50 border-y border-slate-100">
-                        ${hasExpiry
-          ? `
-                          <div class="inline-flex flex-col">
-                            <span class="font-bold ${isExpired ? "text-red-600" : "text-slate-600"}">
-                              ${formatDateAR(p.fechaVencimiento, false, tz)}
-                            </span>
-                            ${isExpired ? '<span class="text-[7px] text-red-500 font-black uppercase tracking-tighter">Vencido</span>' : ""}
-                          </div>
-                        `
-          : '<span class="text-slate-300 italic text-[9px]">No vence</span>'
-        }
-                      </td>
-
-                      <td class="py-3 text-center bg-slate-50 border-y border-slate-100">
-                         <span class="px-2 py-1 rounded-md font-black ${p.isOut
-          ? "bg-red-100 text-red-600"
+      // Alertas visuales de stock
+      const minStock = Number(p.stockMinUnits) || 5;
+      const rowStyle = p.isOut
+        ? "background:#fef2f2;border-left:3px solid #E11D48;"
+        : p.stock < minStock * 0.5
+          ? "background:#fef2f2;border-left:3px solid #E11D48;"
           : p.isLow
-            ? "bg-orange-100 text-orange-600"
-            : "bg-emerald-100 text-emerald-700"
-        }">
-                            ${p.stock}
-                         </span>
-                      </td>
+            ? "background:#fff7ed;border-left:3px solid #D97706;"
+            : "background:#f8fafc;";
 
-                      <td class="py-3 text-right bg-slate-50 border-y border-slate-100 text-slate-400 money">
-                        ${formatMoney(p.precioCosto)}
-                      </td>
+      // Barcode
+      const codigoBarra = p.codigoBarra ? String(p.codigoBarra) : null;
+      const barcodeUrl = codigoBarra ? barcodeMap.get(codigoBarra) : null;
+      const barcodeCell = codigoBarra
+        ? barcodeUrl
+          ? `<img src="${barcodeUrl}" alt="${escapeHtml(codigoBarra)}" style="display:block;max-height:20px;max-width:120px;" />`
+          : `<span style="font-size:8px;color:#94a3b8;font-family:monospace;">${escapeHtml(codigoBarra)}</span>`
+        : "";
 
-                      <td class="py-3 text-right bg-slate-50 border-y border-slate-100 font-bold text-slate-700 money">
-                        ${formatMoney(p.precioVenta)}
-                      </td>
+      return `
+                     <tr style="${rowStyle}">
+                       <td class="py-3 pl-5 bg-transparent rounded-l-xl border-y border-l border-slate-100">
+                         <div class="font-bold text-slate-800">${escapeHtml(String(p.nombre ?? ""))}</div>
+                         ${barcodeCell ? `<div class="mt-0.5">${barcodeCell}</div>` : ""}
+                       </td>
+                       
+                       <td class="py-3 text-center bg-transparent border-y border-slate-100">
+                         ${hasExpiry
+           ? `
+                           <div class="inline-flex flex-col">
+                             <span class="font-bold ${isExpired ? "text-red-600" : "text-slate-600"}">
+                               ${formatDateAR(p.fechaVencimiento as string | Date, false, tz)}
+                             </span>
+                             ${isExpired ? '<span class="text-[7px] text-red-500 font-black uppercase tracking-tighter">Vencido</span>' : ""}
+                           </div>
+                         `
+           : '<span class="text-slate-300 italic text-[9px]">No vence</span>'
+         }
+                       </td>
 
-                      <td class="py-3 text-right pr-5 bg-slate-50 rounded-r-xl border-y border-r border-slate-100 font-black text-slate-900 money">
-                        ${formatMoney(p.subtotalVenta)}
-                      </td>
-                    </tr>
-                  `;
-    }).join("")}
+                       <td class="py-3 text-center bg-transparent border-y border-slate-100">
+                          <span class="px-2 py-1 rounded-md font-black ${p.isOut
+           ? "bg-red-100 text-red-600"
+           : p.isLow
+             ? "bg-orange-100 text-orange-600"
+             : "bg-emerald-100 text-emerald-700"
+         }">
+                             ${p.stock}
+                          </span>
+                       </td>
+
+                       <td class="py-3 text-right bg-transparent border-y border-slate-100 text-slate-400 money">
+                         ${formatMoney(p.precioCosto)}
+                       </td>
+
+                       <td class="py-3 text-right bg-transparent border-y border-slate-100 font-bold text-slate-700 money">
+                         ${formatMoney(p.precioVenta)}
+                       </td>
+
+                       <td class="py-3 text-right pr-5 bg-transparent rounded-r-xl border-y border-r border-slate-100 font-black text-slate-900 money">
+                         ${formatMoney(p.subtotalVenta)}
+                       </td>
+                     </tr>
+                   `;
+     }).join("")}
                 </tbody>
               </table>
             </div>

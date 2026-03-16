@@ -2,6 +2,7 @@
 import { MotivoMovimientoStock, TipoMovimientoStock } from "@/lib/types";
 import { reportThemeCss } from "@/lib/reports/report-theme";
 import { getReportHeadAssets } from "@/lib/reports/tailwind-inline";
+import { escapeHtml, escapeAttr, brandInitials } from "@/lib/reports/template-helpers";
 import type { BrandingDTO } from "@/lib/reports/types";
 
 export type HistoryInventoryReportRow = {
@@ -20,25 +21,8 @@ export type HistoryInventoryReportRow = {
   } | null;
 };
 
-const escapeHtml = (value: unknown): string =>
-  String(value ?? "")
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;");
-
-const escapeAttr = (value: unknown): string => {
-  return escapeHtml(value).replace(/[\r\n]+/g, " ").trim();
-};
-
 const safeStr = (val?: string | null) =>
   val === null || val === undefined ? "-" : escapeHtml(val);
-
-const brandInitials = (name: string) => {
-  const parts = name.trim().split(/\s+/).filter(Boolean);
-  const a = parts[0]?.[0] ?? "A";
-  const b = parts[1]?.[0] ?? parts[0]?.[1] ?? "D";
-  return (a + b).toUpperCase();
-};
 
 export function buildHistoryInventoryHtml(
   movimientos: HistoryInventoryReportRow[],

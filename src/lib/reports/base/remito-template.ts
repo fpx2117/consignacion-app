@@ -1,25 +1,24 @@
 // src/lib/reports/base/remito-template.ts
 import { reportThemeCss } from "@/lib/reports/report-theme";
 import { getReportHeadAssets } from "@/lib/reports/tailwind-inline";
-import { formatDateAR } from "@/lib/reports/template-helpers";
+import { escapeHtml, escapeAttr, brandInitials, formatDateAR } from "@/lib/reports/template-helpers";
 import type { BrandingDTO } from "@/lib/reports/types";
+import { generateQRHtml } from "@/lib/reports/qr-helper";
 
-// Helpers
-const e = (v: unknown) =>
-    String(v ?? "")
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;");
-
-const ea = (v: unknown) => e(v).replace(/[\r\n]+/g, " ").trim();
-
+// fmt usa maximumFractionDigits:0 para montos enteros en este reporte
 const fmt = (n: number) =>
     new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS", maximumFractionDigits: 0 }).format(Number(n) || 0);
 
-const brandInitials = (name: string) => {
-    const p = name.trim().split(/\s+/).filter(Boolean);
-    return ((p[0]?.[0] ?? "R") + (p[1]?.[0] ?? p[0]?.[1] ?? "T")).toUpperCase();
-};
+interface DetalleConsignacion {
+    producto?: { nombre?: string; precioVenta?: number };
+    unitsEntregadas?: number;
+    precioUnitario?: number;
+    descuento?: number;
+}
+
+function asDetalles(arr: unknown[]): DetalleConsignacion[] {
+    return arr as DetalleConsignacion[];
+}
 
 type ConsignacionInput = {
     zonaHoraria?: string;
@@ -31,20 +30,20 @@ type ConsignacionInput = {
     cliente?: { nombre?: string | null; telefono?: string | null } | null;
 };
 
-export function buildConsignacionHtml(consignacion: ConsignacionInput, branding: BrandingDTO): string {
+export async function buildConsignacionHtml(consignacion: ConsignacionInput, branding: BrandingDTO): Promise<string> {
     const tz = consignacion.zonaHoraria ?? "America/Argentina/Buenos_Aires";
     const brandName = branding.businessName || "Comercio";
     const badge = brandInitials(brandName);
     const metaLine = [branding.address, branding.phone]
         .filter((v): v is string => typeof v === "string" && v.trim().length > 0)
-        .map(e).join(" · ");
-    const footerText = branding.footerText ? e(branding.footerText) : "";
+        .map(escapeHtml).join(" · ");
+    const footerText = branding.footerText ? escapeHtml(branding.footerText) : "";
 
     // Cálculos
     let totalConsignado = 0;
     let totalDescuentos = 0;
     let subtotalSinDescuentos = 0;
-    const itemsHtml = (consignacion.detalles || []).map((d: any) => {
+    const itemsHtml = asDetalles(consignacion.detalles || []).map((d: DetalleConsignacion) => {
         const units = Number(d.unitsEntregadas || 0);
         const unitPrice = Number(d.precioUnitario || d.producto?.precioVenta || 0);
         const subtotalBruto = units * unitPrice;
@@ -56,9 +55,9 @@ export function buildConsignacionHtml(consignacion: ConsignacionInput, branding:
         totalConsignado += subtotalFinal;
 
         return `
-      <tr>
+      <tr style="border-spacing:0 0.4rem;">
         <td class="py-3 pl-4 border-b border-slate-100">
-          <div class="font-bold text-slate-800 text-sm">${e(d.producto?.nombre)}</div>
+          <div class="font-bold text-slate-800 text-sm">${escapeHtml(d.producto?.nombre ?? "")}</div>
           ${discountItem > 0 ? `<div class="text-[10px] text-indigo-500 font-bold uppercase tracking-widest mt-0.5">- ${fmt(discountItem)} en desc.</div>` : ""}
         </td>
         <td class="py-3 text-center border-b border-slate-100 text-slate-600 font-medium">
@@ -73,6 +72,8 @@ export function buildConsignacionHtml(consignacion: ConsignacionInput, branding:
       </tr>
     `;
     }).join("");
+
+    const qrHtml = await generateQRHtml(`Remito-${consignacion.numeroFolio ?? consignacion.id}`, { size: 70, label: `Folio #${consignacion.numeroFolio ?? consignacion.id}` });
 
     const ticketNumber = String(consignacion.numeroFolio || consignacion.id).padStart(4, "0");
     const dateFormatted = formatDateAR(consignacion.fecha ?? new Date(), true, tz);
@@ -92,9 +93,9 @@ export function buildConsignacionHtml(consignacion: ConsignacionInput, branding:
   <!-- HEADER -->
   <div class="flex justify-between items-start border-b-2 border-slate-100 pb-8 mb-8">
     <div class="flex items-center gap-4">
-      ${branding.logoBase64 ? `<img src="${ea(branding.logoBase64)}" class="w-16 h-16 rounded-2xl object-contain bg-white border border-slate-100 shadow-lg" />` : `<div class="w-16 h-16 bg-emerald-600 text-white flex items-center justify-center rounded-2xl font-black text-2xl shadow-lg">${e(badge)}</div>`}
+      ${branding.logoBase64 ? `<img src="${escapeAttr(branding.logoBase64)}" class="w-16 h-16 rounded-2xl object-contain bg-white border border-slate-100 shadow-lg" />` : `<div class="w-16 h-16 bg-emerald-600 text-white flex items-center justify-center rounded-2xl font-black text-2xl shadow-lg">${escapeHtml(badge)}</div>`}
       <div>
-        <h1 class="text-3xl font-black tracking-tight text-slate-900">${e(brandName)}</h1>
+        <h1 class="text-3xl font-black tracking-tight text-slate-900">${escapeHtml(brandName)}</h1>
         <p class="text-[10px] font-bold text-emerald-600 uppercase tracking-[0.2em] mt-1">Remito de Consignación</p>
         ${metaLine ? `<p class="text-xs font-medium text-slate-500 mt-1">${metaLine}</p>` : ""}
       </div>
@@ -102,7 +103,7 @@ export function buildConsignacionHtml(consignacion: ConsignacionInput, branding:
     <div class="text-right">
       <h2 class="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] mb-1">Comprobante</h2>
       <p class="text-3xl font-black text-slate-900 tracking-tighter leading-none uppercase">#${ticketNumber}</p>
-      <p class="text-[10px] font-bold text-slate-400 uppercase mt-2">Emitido el ${e(dateFormatted)}</p>
+      <p class="text-[10px] font-bold text-slate-400 uppercase mt-2">Emitido el ${escapeHtml(dateFormatted)}</p>
     </div>
   </div>
 
@@ -110,8 +111,8 @@ export function buildConsignacionHtml(consignacion: ConsignacionInput, branding:
   <div class="bg-slate-50 rounded-2xl p-6 border border-slate-100 mb-8 flex items-start justify-between">
     <div>
       <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Cliente / Destinatario</p>
-      <p class="text-lg font-black text-slate-900">${e(consignacion.cliente?.nombre || "Consumidor")}</p>
-      ${consignacion.cliente?.telefono ? `<p class="text-xs text-slate-500 font-medium mt-1">Tel: ${e(consignacion.cliente.telefono)}</p>` : ""}
+      <p class="text-lg font-black text-slate-900">${escapeHtml(consignacion.cliente?.nombre || "Consumidor")}</p>
+      ${consignacion.cliente?.telefono ? `<p class="text-xs text-slate-500 font-medium mt-1">Tel: ${escapeHtml(consignacion.cliente.telefono)}</p>` : ""}
     </div>
     <div class="text-right">
       <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Estado</p>
@@ -123,7 +124,7 @@ export function buildConsignacionHtml(consignacion: ConsignacionInput, branding:
 
   <!-- DETALLE DE ITEMS -->
   <div class="flex-1">
-    <table class="w-full">
+    <table class="w-full" style="border-collapse:separate; border-spacing:0 0.4rem;">
       <thead>
         <tr class="text-[9px] text-slate-400 uppercase font-bold tracking-wider border-b-2 border-slate-100">
           <th class="py-3 pl-4 text-left">Producto</th>
@@ -156,6 +157,13 @@ export function buildConsignacionHtml(consignacion: ConsignacionInput, branding:
     </div>
   </div>
 
+  <!-- QR FOLIO -->
+  ${qrHtml ? `
+  <div style="display:flex; justify-content:center; margin:16px 0 8px; padding:10px 0; border-top:1px solid #f1f5f9;">
+    ${qrHtml}
+  </div>
+  ` : ""}
+
   <!-- FOOTER -->
   <div class="mt-12 pt-6 border-t border-slate-100 flex justify-between items-end">
     <div>
@@ -163,7 +171,7 @@ export function buildConsignacionHtml(consignacion: ConsignacionInput, branding:
       ${footerText ? `<p class="text-[10px] font-semibold text-slate-400 mt-1">${footerText}</p>` : ""}
     </div>
     <div class="text-right">
-      <p class="text-[10px] font-black text-slate-300 uppercase tracking-widest">Powered by AllData</p>
+      <p class="text-[10px] font-black text-slate-300 uppercase tracking-widest">${escapeHtml(branding.footerText ?? branding.businessName ?? 'Sistema POS')}</p>
     </div>
   </div>
 

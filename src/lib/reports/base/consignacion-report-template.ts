@@ -2,6 +2,7 @@
 // Reporte de Consignaciones - diseño premium con Tailwind
 import { reportThemeCss } from "@/lib/reports/report-theme";
 import { getReportHeadAssets } from "@/lib/reports/tailwind-inline";
+import { escapeHtml, escapeAttr, brandInitials, formatNumberAR } from "@/lib/reports/template-helpers";
 import type { BrandingDTO } from "@/lib/reports/types";
 
 // ─────────────────────────────────────────────
@@ -49,26 +50,11 @@ export type ConsigReportData = {
 };
 
 // ─────────────────────────────────────────────
-// HELPERS
+// HELPERS (locales)
 // ─────────────────────────────────────────────
-const e = (v: unknown) =>
-  String(v ?? "")
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;");
-
-const ea = (v: unknown) => e(v).replace(/[\r\n]+/g, " ").trim();
-
-const brandInitials = (name: string) => {
-  const p = name.trim().split(/\s+/).filter(Boolean);
-  return ((p[0]?.[0] ?? "C") + (p[1]?.[0] ?? p[0]?.[1] ?? "S")).toUpperCase();
-};
-
+// fmt usa maximumFractionDigits:0 para montos enteros en este reporte
 const fmt = (n: number) =>
   new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS", maximumFractionDigits: 0 }).format(n);
-
-const fmtN = (n: number) =>
-  new Intl.NumberFormat("es-AR").format(n);
 
 // ─────────────────────────────────────────────
 // TEMPLATE
@@ -78,12 +64,24 @@ export function buildConsigReportHtml(data: ConsigReportData, branding: Branding
   const badge = brandInitials(brandName);
   const metaLine = [branding.address, branding.phone]
     .filter((v): v is string => typeof v === "string" && v.trim().length > 0)
-    .map(e).join(" · ");
-  const footerText = branding.footerText ? e(branding.footerText) : "";
+    .map(escapeHtml).join(" · ");
+  const footerText = branding.footerText ? escapeHtml(branding.footerText) : "";
+
+  // Color primario del branding (con fallback indigo-700 ≈ #4338CA)
+  const primaryColor = branding.primaryColor ?? "#4338CA";
 
   const tasaRecuperacion = data.unitsVendidasTotal + data.unitsPendientesTotal > 0
     ? Math.round((data.unitsVendidasTotal / (data.unitsVendidasTotal + data.unitsPendientesTotal)) * 100)
     : 0;
+
+  // Color para la barra de progreso de tasa de rotación
+  const tasaColor = tasaRecuperacion >= 60 ? "#059669" : tasaRecuperacion >= 30 ? "#D97706" : "#E11D48";
+
+  // Barra de progreso SVG para tasa de rotación
+  const tasaProgressBar = `
+    <div style="margin-top:8px;background:#e2e8f0;border-radius:4px;height:6px;overflow:hidden">
+      <div style="height:6px;border-radius:4px;background:${tasaColor};width:${Math.min(tasaRecuperacion, 100)}%"></div>
+    </div>`;
 
   // ─ Top clientes
   const clientesHtml = data.topClientes.length > 0
@@ -93,7 +91,7 @@ export function buildConsigReportHtml(data: ConsigReportData, branding: Branding
         <tr class="group">
           <td class="py-3 pl-4 bg-slate-50 rounded-l-xl border-y border-l border-slate-100">
             <span class="text-[10px] font-black text-slate-300 w-5 inline-block">${i + 1}</span>
-            <span class="text-xs font-bold text-slate-800">${e(c.clienteNombre)}</span>
+            <span class="text-xs font-bold text-slate-800">${escapeHtml(c.clienteNombre)}</span>
             <span class="text-[9px] text-slate-400 ml-1">#${c.folioNumero}</span>
           </td>
           <td class="py-3 bg-slate-50 border-y border-slate-100 text-center">
@@ -103,12 +101,12 @@ export function buildConsigReportHtml(data: ConsigReportData, branding: Branding
         }
           </td>
           <td class="py-3 bg-slate-50 border-y border-slate-100 text-center">
-            <div class="text-xs font-black ${c.unitsPendientes > 0 ? "text-amber-600" : "text-slate-400"} money">${fmtN(c.unitsPendientes)} u.</div>
+            <div class="text-xs font-black ${c.unitsPendientes > 0 ? "text-amber-600" : "text-slate-400"} money">${formatNumberAR(c.unitsPendientes)} u.</div>
             <div class="text-[9px] text-slate-400">pendientes</div>
           </td>
           <td class="py-3 bg-slate-50 border-y border-slate-100 text-right">
             <div class="text-xs font-black text-emerald-600 money">${fmt(c.gananciaGenerada)}</div>
-            <div class="text-[9px] text-slate-400">${fmtN(c.unitsVendidas)} vendidas</div>
+            <div class="text-[9px] text-slate-400">${formatNumberAR(c.unitsVendidas)} vendidas</div>
           </td>
           <td class="py-3 pr-4 bg-slate-50 rounded-r-xl border-y border-r border-slate-100 text-right">
             <div class="text-xs font-black ${c.pagosPendiente > 0 ? "text-rose-600" : "text-slate-400"} money">${c.pagosPendiente > 0 ? fmt(c.pagosPendiente) : "&#8212;"}</div>
@@ -128,11 +126,11 @@ export function buildConsigReportHtml(data: ConsigReportData, branding: Branding
         <div class="flex items-center justify-between py-2.5 border-b border-slate-100 last:border-0 gap-4">
           <div class="flex items-center gap-2 min-w-0">
             <span class="text-[10px] font-black text-slate-300 shrink-0 w-4">${i + 1}</span>
-            <span class="text-xs font-bold text-slate-800 truncate">${e(p.nombre)}</span>
+            <span class="text-xs font-bold text-slate-800 truncate">${escapeHtml(p.nombre)}</span>
           </div>
           <div class="flex items-center gap-4 shrink-0">
             <div class="text-right">
-              <div class="text-[10px] font-black text-slate-600 money">${fmtN(p.unitsVendidas)}/${fmtN(p.unitsEntregadas)} u.</div>
+              <div class="text-[10px] font-black text-slate-600 money">${formatNumberAR(p.unitsVendidas)}/${formatNumberAR(p.unitsEntregadas)} u.</div>
               <div class="text-[9px] text-slate-400">${tasaP}% rotacion</div>
             </div>
             <div class="text-right min-w-[80px]">
@@ -148,9 +146,9 @@ export function buildConsigReportHtml(data: ConsigReportData, branding: Branding
   const tendHtml = data.tendencia.length > 0
     ? data.tendencia.map(t => `
       <tr>
-        <td class="py-2 pl-4 bg-slate-50 rounded-l-xl border-y border-l border-slate-100 text-[10px] font-bold text-slate-500">${e(t.date)}</td>
-        <td class="py-2 bg-slate-50 border-y border-slate-100 text-center text-[10px] font-bold text-sky-600">${fmtN(t.nuevasConsig)}</td>
-        <td class="py-2 bg-slate-50 border-y border-slate-100 text-center text-[10px] font-bold text-amber-600">${fmtN(t.liquidaciones)}</td>
+        <td class="py-2 pl-4 bg-slate-50 rounded-l-xl border-y border-l border-slate-100 text-[10px] font-bold text-slate-500">${escapeHtml(t.date)}</td>
+        <td class="py-2 bg-slate-50 border-y border-slate-100 text-center text-[10px] font-bold text-sky-600">${formatNumberAR(t.nuevasConsig)}</td>
+        <td class="py-2 bg-slate-50 border-y border-slate-100 text-center text-[10px] font-bold text-amber-600">${formatNumberAR(t.liquidaciones)}</td>
         <td class="py-2 pr-4 bg-slate-50 rounded-r-xl border-y border-r border-slate-100 text-right text-[10px] font-black text-emerald-600 money">${fmt(t.ganancia)}</td>
       </tr>`).join("")
     : `<tr><td colspan="4" class="py-4 text-center text-xs text-slate-400">Sin datos de tendencia para periodo historico.</td></tr>`;
@@ -160,31 +158,31 @@ export function buildConsigReportHtml(data: ConsigReportData, branding: Branding
 <head>
   <meta charset="utf-8" />
   ${getReportHeadAssets(`
-    ${reportThemeCss(branding.primaryColor)}
+    ${reportThemeCss(primaryColor)}
     .money { font-feature-settings: "tnum"; font-variant-numeric: tabular-nums; }
     @page { margin: 0; size: A4; }
     table { border-collapse: separate; border-spacing: 0 0.3rem; }
   `)}
 </head>
-<body class="p-10 bg-white text-slate-900 max-w-[210mm] mx-auto border-t-[12px] border-indigo-700">
+<body class="p-10 bg-white text-slate-900 max-w-[210mm] mx-auto border-t-[12px]" style="border-top-color:${primaryColor}">
 
   <!-- HEADER -->
   <div class="flex justify-between items-start border-b-2 border-slate-100 pb-8 mb-8">
     <div class="flex items-center gap-4">
       ${branding.logoBase64
-      ? `<img src="${ea(branding.logoBase64)}" class="w-14 h-14 rounded-2xl object-contain bg-white border border-slate-100 shadow-lg" />`
-      : `<div class="w-14 h-14 bg-indigo-700 text-white flex items-center justify-center rounded-2xl font-black text-2xl shadow-lg">${e(badge)}</div>`
+      ? `<img src="${escapeAttr(branding.logoBase64)}" class="w-14 h-14 rounded-2xl object-contain bg-white border border-slate-100 shadow-lg" />`
+      : `<div class="w-14 h-14 text-white flex items-center justify-center rounded-2xl font-black text-2xl shadow-lg" style="background-color:${primaryColor}">${escapeHtml(badge)}</div>`
     }
       <div>
-        <h1 class="text-2xl font-black tracking-tight text-slate-900">${e(brandName)}</h1>
+        <h1 class="text-2xl font-black tracking-tight text-slate-900">${escapeHtml(brandName)}</h1>
         <p class="text-xs font-bold text-slate-400 uppercase tracking-[0.2em]">Reporte de Consignaciones</p>
         ${metaLine ? `<p class="text-[10px] font-semibold text-slate-400 mt-1">${metaLine}</p>` : ""}
       </div>
     </div>
     <div class="text-right">
       <h2 class="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] mb-1">Periodo</h2>
-      <p class="text-3xl font-black text-slate-900 tracking-tighter leading-none uppercase">${e(data.periodLabel)}</p>
-      <p class="text-[10px] font-bold text-slate-400 uppercase mt-2">Generado ${e(data.fechaGeneracion)}</p>
+      <p class="text-3xl font-black text-slate-900 tracking-tighter leading-none uppercase">${escapeHtml(data.periodLabel)}</p>
+      <p class="text-[10px] font-bold text-slate-400 uppercase mt-2">Generado ${escapeHtml(data.fechaGeneracion)}</p>
     </div>
   </div>
 
@@ -192,24 +190,25 @@ export function buildConsigReportHtml(data: ConsigReportData, branding: Branding
   <div class="grid grid-cols-4 gap-4 mb-8">
     <div class="bg-slate-50 rounded-2xl p-5 border border-slate-100">
       <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Consig. Abiertas</p>
-      <p class="text-3xl font-black text-slate-900">${fmtN(data.consigAbiertas)}</p>
-      <p class="text-[10px] text-slate-400 mt-1">${fmtN(data.consigCerradas)} cerradas</p>
+      <p class="text-3xl font-black text-slate-900">${formatNumberAR(data.consigAbiertas)}</p>
+      <p class="text-[10px] text-slate-400 mt-1">${formatNumberAR(data.consigCerradas)} cerradas</p>
     </div>
-    <div class="bg-indigo-700 rounded-2xl p-5 text-white shadow-xl relative overflow-hidden">
+    <div class="rounded-2xl p-5 text-white shadow-xl relative overflow-hidden" style="background-color:${primaryColor}">
       <p class="text-[10px] font-black text-white/60 uppercase tracking-widest mb-2 relative z-10">Ganancia</p>
       <p class="text-3xl font-black tracking-tight money relative z-10">${fmt(data.gananciaTotal)}</p>
-      <p class="text-[10px] text-white/60 mt-1 relative z-10">${fmtN(data.liquidacionesRealizadas)} liquidaciones</p>
+      <p class="text-[10px] text-white/60 mt-1 relative z-10">${formatNumberAR(data.liquidacionesRealizadas)} liquidaciones</p>
       <div class="absolute -bottom-4 -left-4 w-20 h-20 bg-white/10 rounded-full blur-2xl"></div>
     </div>
     <div class="bg-slate-50 rounded-2xl p-5 border border-slate-100">
       <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Unidades en Calle</p>
-      <p class="text-3xl font-black text-amber-600">${fmtN(data.unitsEnCalle)} <span class="text-lg font-bold">u.</span></p>
-      <p class="text-[10px] text-slate-400 mt-1">${fmtN(data.unitsPendientesTotal)} sin liquidar</p>
+      <p class="text-3xl font-black text-amber-600">${formatNumberAR(data.unitsEnCalle)} <span class="text-lg font-bold">u.</span></p>
+      <p class="text-[10px] text-slate-400 mt-1">${formatNumberAR(data.unitsPendientesTotal)} sin liquidar</p>
     </div>
     <div class="bg-slate-50 rounded-2xl p-5 border border-slate-100">
       <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Tasa de Rotacion</p>
-      <p class="text-3xl font-black ${tasaRecuperacion >= 60 ? "text-emerald-600" : tasaRecuperacion >= 30 ? "text-amber-600" : "text-rose-600"}">${tasaRecuperacion}%</p>
+      <p class="text-3xl font-black" style="color:${tasaColor}">${tasaRecuperacion}%</p>
       <p class="text-[10px] text-slate-400 mt-1">vendidas/entregadas</p>
+      ${tasaProgressBar}
     </div>
   </div>
 
@@ -266,7 +265,7 @@ export function buildConsigReportHtml(data: ConsigReportData, branding: Branding
 
   <!-- FOOTER -->
   <div class="flex justify-between items-end pt-4 border-t border-slate-100 mt-6">
-    <p class="text-[10px] text-slate-400 uppercase font-medium">Reporte Consignaciones · ${e(data.periodLabel)}</p>
+    <p class="text-[10px] text-slate-400 uppercase font-medium">Reporte Consignaciones · ${escapeHtml(data.periodLabel)}</p>
     ${footerText ? `<p class="text-[10px] font-semibold text-slate-400">${footerText}</p>` : ""}
   </div>
 

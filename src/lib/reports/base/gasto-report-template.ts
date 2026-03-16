@@ -2,6 +2,7 @@ import { reportThemeCss } from "@/lib/reports/report-theme";
 import { getReportHeadAssets } from "@/lib/reports/tailwind-inline";
 import { brandInitials, escapeAttr, escapeHtml, formatDateAR, formatMoneyARS } from "@/lib/reports/template-helpers";
 import type { BrandingDTO } from "@/lib/reports/types";
+import { generateBarcodeHtml } from "@/lib/reports/barcode-helper";
 
 export interface GastoReportDTO {
     id: number;
@@ -16,7 +17,7 @@ export interface GastoReportDTO {
     zonaHoraria?: string;
 }
 
-export function buildGastoHtml(data: GastoReportDTO, branding: BrandingDTO) {
+export async function buildGastoHtml(data: GastoReportDTO, branding: BrandingDTO) {
     const tz = data.zonaHoraria ?? "America/Argentina/Buenos_Aires";
     const colorPrincipal = "bg-rose-600";
     const colorBorde = "border-rose-900";
@@ -24,6 +25,8 @@ export function buildGastoHtml(data: GastoReportDTO, branding: BrandingDTO) {
     const brandBadge = brandInitials(brandName);
     const footerText = branding.footerText ? escapeHtml(branding.footerText) : "";
     const metaLine = [branding.address, branding.phone].filter((v) => typeof v === "string" && v.trim().length > 0);
+
+    const barcodeHtml = await generateBarcodeHtml(String(data.id), { height: 8, label: `GS-${data.id}` });
 
     return `
     <!DOCTYPE html>
@@ -112,14 +115,20 @@ export function buildGastoHtml(data: GastoReportDTO, branding: BrandingDTO) {
         </div>
         ` : ""}
 
+        ${barcodeHtml ? `
+        <div style="text-align:center; margin:16px 0 8px; padding:12px 0; border-top:1px solid #f1f5f9; border-bottom:1px solid #f1f5f9;">
+          ${barcodeHtml}
+        </div>
+        ` : ""}
+
         <div class="mt-auto border-t border-slate-100 pt-6">
           <div class="flex justify-between items-end">
             <div>
-              <p class="text-xs font-bold text-slate-400">Comprobante generado por Antigravity POS</p>
+              <p class="text-xs font-bold text-slate-400">Comprobante generado por ${escapeHtml(branding.footerText ?? branding.businessName ?? 'Sistema POS')}</p>
               ${footerText ? `<p class="text-[10px] font-semibold text-slate-400 mt-1">${footerText}</p>` : ``}
             </div>
             <div class="text-[9px] font-bold text-slate-300 uppercase tracking-widest">
-               Valid Code: ${data.id}-EXPL ${new Date().getFullYear()}
+               Valid Code: ${data.id}-GS ${new Date().getFullYear()}
             </div>
           </div>
         </div>
