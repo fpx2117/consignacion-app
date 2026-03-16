@@ -63,16 +63,16 @@ export async function fetchDashboardKpis(
     period,
     usarControlDeCaja: stats.usarControlDeCaja,
     consignaciones: {
-      total: stats.counts,
-      abiertas: stats.counts,
+      total: stats.countEnPeriodo,
+      abiertas: stats.countAbiertas,
       cerradas: 0,
-      creadasEnPeriodo: stats.counts,
+      creadasEnPeriodo: stats.countEnPeriodo,
     },
     consignacionUnits: {
       entregadas: 0,
       vendidas: 0,
       devueltas: 0,
-      pendientes: 0,
+      pendientes: stats.consignacionUnits?.pendientes ?? 0,
     },
     stock: {
       disponibleUnits: stats.stock.disponible,
@@ -106,6 +106,7 @@ export async function fetchDashboardKpis(
     catalogo: {
       visitas: stats.catalogo?.visitas ?? 0,
       visitantesUnicos: stats.catalogo?.visitantesUnicos ?? 0,
+      productosVisibles: stats.catalogo?.productosVisibles ?? 0,
     },
     proximosVencimientos: stats.proximosVencimientos as DashboardKpis["proximosVencimientos"],
   };

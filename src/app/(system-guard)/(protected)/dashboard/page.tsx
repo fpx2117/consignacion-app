@@ -27,7 +27,7 @@ import {
 
 import {
   Handshake, AlertTriangle, Boxes, Wallet,
-  TrendingUp, Activity, Store,
+  TrendingUp, Activity, Store, Package,
   Calendar, Receipt, Settings2, GripVertical, RotateCcw, BarChart3, Check, X, Shield
 } from "lucide-react";
 import {
@@ -232,6 +232,13 @@ function KpiToggleMenuItem({
   );
 }
 
+const PERIOD_LABEL: Record<DashboardPeriod, string> = {
+  today: "hoy",
+  week: "esta semana",
+  month: "este mes",
+  all: "histórico",
+};
+
 export default function DashboardPage() {
   const activeSucursalId = useSucursalStore((s) => s.activeSucursalId);
   const [period, setPeriod] = React.useState<DashboardPeriod>("month");
@@ -314,8 +321,16 @@ export default function DashboardPage() {
         key: "catalogo-visitas",
         title: "Visitas Catalogo",
         value: formatNumber(kpis?.catalogo?.visitas ?? 0),
-        subtitle: `${formatNumber(kpis?.catalogo?.visitantesUnicos ?? 0)} visitantes unicos`,
+        subtitle: `${formatNumber(kpis?.catalogo?.visitantesUnicos ?? 0)} únicos · ${PERIOD_LABEL[period]}`,
         icon: Store,
+        loading,
+      },
+      {
+        key: "catalogo-productos-visibles",
+        title: "En Catálogo",
+        value: formatNumber(kpis?.catalogo?.productosVisibles ?? 0),
+        subtitle: "Productos activos con stock",
+        icon: Package,
         loading,
       },
     ];

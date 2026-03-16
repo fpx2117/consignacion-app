@@ -21,10 +21,10 @@ export async function GET(req: Request) {
       isGlobal: stats.isGlobal,
       usarControlDeCaja: stats.usarControlDeCaja,
       consignaciones: {
-        total: stats.counts,
-        abiertas: stats.counts,
+        total: stats.countEnPeriodo,
+        abiertas: stats.countAbiertas,
         cerradas: 0,
-        creadasEnPeriodo: stats.counts,
+        creadasEnPeriodo: stats.countEnPeriodo,
       },
       consignacionUnits: {
         pendientes: 0,
@@ -65,6 +65,7 @@ export async function GET(req: Request) {
       catalogo: {
         visitas: stats.catalogo?.visitas || 0,
         visitantesUnicos: stats.catalogo?.visitantesUnicos || 0,
+        productosVisibles: stats.catalogo?.productosVisibles || 0,
       },
       proximosVencimientos: stats.proximosVencimientos
     },
