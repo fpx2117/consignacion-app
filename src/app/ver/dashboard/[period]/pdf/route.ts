@@ -266,7 +266,7 @@ export async function GET(
         const reportData: DashboardReportData = {
             period,
             periodLabel: getPeriodLabel(period),
-            fechaGeneracion: formatDateTimeAR(nowAR(tz), true, tz),
+            fechaGeneracion: formatDateTimeAR(new Date(), true, tz),
             gananciaBruta,
             gananciaConsignacion,
             gananciaDirecta,
