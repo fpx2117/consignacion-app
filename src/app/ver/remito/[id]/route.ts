@@ -90,7 +90,7 @@ export async function GET(
     });
 
     const page = await browser.newPage();
-    await page.setContent(buildConsignacionHtml({ ...consignacion, zonaHoraria }, branding), {
+    await page.setContent(await buildConsignacionHtml({ ...consignacion, zonaHoraria }, branding), {
       waitUntil: "domcontentloaded",
       timeout: 30000,
     });
