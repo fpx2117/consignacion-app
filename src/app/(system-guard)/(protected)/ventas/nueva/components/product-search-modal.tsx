@@ -4,7 +4,7 @@ import * as React from "react";
 import Image from "next/image";
 import { Dialog as DialogPrimitive } from "radix-ui";
 import { Command as CommandPrimitive } from "cmdk";
-import { BadgePercent, Barcode, Image as ImageIcon, Package, Search, ShoppingCart } from "lucide-react";
+import { BadgePercent, Barcode, ChevronLeft, ChevronRight, Image as ImageIcon, Loader2, Package, Search, ShoppingCart } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Command, CommandEmpty, CommandGroup, CommandItem, CommandList } from "@/components/ui/command";
 import { cn } from "@/lib/utils";
@@ -17,6 +17,12 @@ interface ProductSearchModalProps {
   onOpenChange: (open: boolean) => void;
   productos: ProductoConStock[];
   onSelectProduct: (producto: ProductoConStock) => void;
+  // Paginación del servidor
+  currentPage?: number;
+  totalPages?: number;
+  onPageChange?: (page: number) => void;
+  onSearchChange?: (search: string) => void;
+  loadingProductos?: boolean;
 }
 
 export function ProductSearchModal({
@@ -24,9 +30,24 @@ export function ProductSearchModal({
   onOpenChange,
   productos,
   onSelectProduct,
+  currentPage = 1,
+  totalPages = 1,
+  onPageChange,
+  onSearchChange,
+  loadingProductos = false,
 }: ProductSearchModalProps) {
   const disponibles = productos.filter((p) => (p.stockDisponibleUnits ?? 0) > 0);
   const agotados    = productos.filter((p) => (p.stockDisponibleUnits ?? 0) <= 0);
+
+  // Debounce para no disparar un fetch por cada tecla
+  const searchTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  const handleSearchInput = React.useCallback((value: string) => {
+    if (!onSearchChange) return;
+    if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+    searchTimerRef.current = setTimeout(() => {
+      onSearchChange(value);
+    }, 350);
+  }, [onSearchChange]);
 
   const handleSelect = (producto: ProductoConStock) => {
     if ((producto.stockDisponibleUnits ?? 0) <= 0) return;
@@ -66,6 +87,7 @@ export function ProductSearchModal({
               if (p.categoria?.nombre?.toLowerCase().includes(q)) return 1;
               return 0;
             }}
+            onValueChange={handleSearchInput}
           >
             {/* ── Header ────────────────────────────────────────────────── */}
             <div className="flex items-center h-14 border-b border-border/60">
@@ -129,9 +151,40 @@ export function ProductSearchModal({
 
             {/* ── Footer ────────────────────────────────────────────────── */}
             <div className="flex items-center justify-between gap-4 px-4 py-2.5 border-t border-border/40 bg-muted/10">
-              <span className="text-[10px] text-muted-foreground font-medium">
-                {productos.length} productos cargados
-              </span>
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] text-muted-foreground font-medium">
+                  {loadingProductos ? (
+                    <span className="flex items-center gap-1">
+                      <Loader2 className="h-3 w-3 animate-spin" /> Cargando...
+                    </span>
+                  ) : (
+                    `${productos.length} productos cargados`
+                  )}
+                </span>
+                {totalPages > 1 && onPageChange && (
+                  <div className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      disabled={currentPage <= 1 || loadingProductos}
+                      onClick={() => onPageChange(currentPage - 1)}
+                      className="inline-flex h-5 w-5 items-center justify-center rounded border border-border bg-muted text-muted-foreground hover:bg-muted/70 disabled:opacity-40 disabled:cursor-not-allowed"
+                    >
+                      <ChevronLeft className="h-3 w-3" />
+                    </button>
+                    <span className="text-[10px] font-semibold text-muted-foreground tabular-nums">
+                      {currentPage}/{totalPages}
+                    </span>
+                    <button
+                      type="button"
+                      disabled={currentPage >= totalPages || loadingProductos}
+                      onClick={() => onPageChange(currentPage + 1)}
+                      className="inline-flex h-5 w-5 items-center justify-center rounded border border-border bg-muted text-muted-foreground hover:bg-muted/70 disabled:opacity-40 disabled:cursor-not-allowed"
+                    >
+                      <ChevronRight className="h-3 w-3" />
+                    </button>
+                  </div>
+                )}
+              </div>
               <div className="hidden sm:flex items-center gap-3 text-[10px] text-muted-foreground">
                 <span className="flex items-center gap-1">
                   <kbd className="inline-flex h-4 items-center px-1 rounded border border-border bg-muted text-[9px] font-mono">↑↓</kbd>

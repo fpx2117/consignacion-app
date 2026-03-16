@@ -251,17 +251,15 @@ function FilterTabs({
 /* ─── Main Panel ─── */
 export function NotificationsAnimatedPanel({
   className,
-  notificationsState: externalNotificationsState,
+  notificationsState,
   open,
 }: {
   className?: string;
-  notificationsState?: ReturnType<typeof useNotifications>;
+  notificationsState: ReturnType<typeof useNotifications>;
   open?: boolean;
 }) {
-  // Usamos el estado externo si se provee, sino (fallback) usamos el interno
-  const internalNotificationsState = useNotifications();
-  const activeState = externalNotificationsState || internalNotificationsState;
-  const { notifications, markAllAsRead, unreadCount, loading } = activeState;
+  // ✅ Sin instancia interna — el estado proviene del padre (SidebarDock)
+  const { notifications, markAllAsRead, unreadCount, loading } = notificationsState;
 
   const [showRead, setShowRead] = React.useState(false);
 
