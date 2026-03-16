@@ -6,7 +6,7 @@ import type { VentaReportDTO } from "@/lib/reports/base/venta-report-template";
 import { buildVentaHtmlAsync } from "@/lib/reports/base/venta-report-template";
 import { getBranding } from "@/lib/reports/get-branding";
 import { prisma } from "@/lib/prisma";
-import { decryptCode, encryptCode, generateShortCode, hashCode } from "@/lib/share-links";
+import { hashCode } from "@/lib/share-links";
 import { getConfiguredTz } from "@/lib/get-configured-tz";
 
 export const dynamic = "force-dynamic";
@@ -82,42 +82,8 @@ export async function GET(
     // Leer timezone configurada para la sucursal de esta venta
     const zonaHoraria = await getConfiguredTz(ventaRaw.sucursalId);
 
-    // ── Obtener o generar ShareLink para el QR del ticket ──────────────────────
-    let shareUrl: string | undefined;
-    try {
-      const origin = getPublicOrigin(request);
-      const now = new Date();
-      const existing = await prisma.shareLink.findFirst({
-        where: { type: "TICKET", targetId: id, expiresAt: { gt: now }, views: { lt: 3 }, maxViews: 3 },
-        orderBy: { createdAt: "desc" },
-      });
-      let shareCode: string | null = null;
-      if (existing) {
-        shareCode = decryptCode(existing.codeEnc);
-      } else {
-        for (let i = 0; i < 10; i++) {
-          const candidate = generateShortCode(6);
-          const candidateHash = hashCode(candidate);
-          const used = await prisma.shareLink.findUnique({ where: { codeHash: candidateHash } });
-          if (used) continue;
-          await prisma.shareLink.create({
-            data: {
-              codeHash: candidateHash,
-              codeEnc: encryptCode(candidate),
-              type: "TICKET",
-              targetId: id,
-              expiresAt: new Date(Date.now() + 7 * 86400000),
-              maxViews: 3,
-            },
-          });
-          shareCode = candidate;
-          break;
-        }
-      }
-      if (shareCode) shareUrl = `${origin}/x/${shareCode}`;
-    } catch {
-      // Si falla la generación del link, el ticket se genera igual sin QR
-    }
+    // ── URL del catálogo público para el QR del ticket ─────────────────────────
+    const catalogUrl = `${getPublicOrigin(request)}/lista?sucursalId=${ventaRaw.sucursalId}`;
 
     const reporteData: VentaReportDTO = {
       id: ventaRaw.id,
@@ -129,7 +95,7 @@ export async function GET(
       clienteNombre: ventaRaw.cliente?.nombre || "Consumidor Final",
       clienteTelefono: ventaRaw.cliente?.telefono || "",
       zonaHoraria,
-      shareUrl,
+      catalogUrl,
       items: ventaRaw.detalles.map((d) => ({
         producto: d.producto.nombre,
         cantidad: d.units,
