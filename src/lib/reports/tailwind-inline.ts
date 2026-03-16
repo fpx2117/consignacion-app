@@ -34,7 +34,8 @@ img{display:block;max-width:100%}
 .grid-cols-2{grid-template-columns:repeat(2,minmax(0,1fr))}
 .grid-cols-3{grid-template-columns:repeat(3,minmax(0,1fr))}
 .grid-cols-4{grid-template-columns:repeat(4,minmax(0,1fr))}
-.col-span-2{grid-column:span 2/span 2}.col-span-3{grid-column:span 3/span 3}
+.grid-cols-5{grid-template-columns:repeat(5,minmax(0,1fr))}
+.col-span-1{grid-column:span 1/span 1}.col-span-2{grid-column:span 2/span 2}.col-span-3{grid-column:span 3/span 3}.col-span-4{grid-column:span 4/span 4}
 
 /* ── Positioning ────────────────────────────────────────────────────────────── */
 .relative{position:relative}.absolute{position:absolute}
@@ -61,17 +62,16 @@ img{display:block;max-width:100%}
 .space-y-1>*+*{margin-top:.25rem}.space-y-2>*+*{margin-top:.5rem}.space-y-3>*+*{margin-top:.75rem}.space-y-4>*+*{margin-top:1rem}.space-y-6>*+*{margin-top:1.5rem}
 
 /* ── Sizing ─────────────────────────────────────────────────────────────────── */
-.w-full{width:100%}.w-5{width:1.25rem}.w-6{width:1.5rem}.w-8{width:2rem}.w-10{width:2.5rem}.w-12{width:3rem}.w-14{width:3.5rem}.w-20{width:5rem}
-.h-full{height:100%}.h-3{height:.75rem}.h-4{height:1rem}.h-5{height:1.25rem}.h-6{height:1.5rem}.h-8{height:2rem}.h-10{height:2.5rem}.h-12{height:3rem}.h-14{height:3.5rem}.h-20{height:5rem}
-.h-1{height:.25rem}.h-1\\.5{height:.375rem}
-.max-w-\\[210mm\\]{max-width:210mm}.min-w-0{min-width:0}
+.w-full{width:100%}.w-5{width:1.25rem}.w-6{width:1.5rem}.w-8{width:2rem}.w-10{width:2.5rem}.w-12{width:3rem}.w-14{width:3.5rem}.w-16{width:4rem}.w-20{width:5rem}.w-24{width:6rem}.w-32{width:8rem}.w-72{width:18rem}
+.h-full{height:100%}.h-1{height:.25rem}.h-1\\.5{height:.375rem}.h-3{height:.75rem}.h-4{height:1rem}.h-5{height:1.25rem}.h-6{height:1.5rem}.h-8{height:2rem}.h-10{height:2.5rem}.h-12{height:3rem}.h-14{height:3.5rem}.h-16{height:4rem}.h-20{height:5rem}.h-24{height:6rem}.h-32{height:8rem}
+.max-w-\\[210mm\\]{max-width:210mm}.min-w-0{min-width:0}.min-h-0{min-height:0}.min-h-screen{min-height:100vh}
 
 /* ── Typography ─────────────────────────────────────────────────────────────── */
-.text-\\[9px\\]{font-size:9px}.text-\\[10px\\]{font-size:10px}.text-\\[11px\\]{font-size:11px}.text-\\[12px\\]{font-size:12px}
+.text-\\[8px\\]{font-size:8px}.text-\\[9px\\]{font-size:9px}.text-\\[10px\\]{font-size:10px}.text-\\[11px\\]{font-size:11px}.text-\\[12px\\]{font-size:12px}
 .text-xs{font-size:.75rem;line-height:1rem}.text-sm{font-size:.875rem;line-height:1.25rem}
 .text-base{font-size:1rem;line-height:1.5rem}.text-lg{font-size:1.125rem;line-height:1.75rem}
 .text-xl{font-size:1.25rem;line-height:1.75rem}.text-2xl{font-size:1.5rem;line-height:2rem}
-.text-3xl{font-size:1.875rem;line-height:2.25rem}
+.text-3xl{font-size:1.875rem;line-height:2.25rem}.text-4xl{font-size:2.25rem;line-height:2.5rem}.text-5xl{font-size:3rem;line-height:1}
 .font-normal{font-weight:400}.font-medium{font-weight:500}.font-semibold{font-weight:600}
 .font-bold{font-weight:700}.font-black{font-weight:900}
 .tracking-tight{letter-spacing:-.025em}.tracking-wide{letter-spacing:.025em}.tracking-wider{letter-spacing:.05em}.tracking-widest{letter-spacing:.1em}
@@ -90,10 +90,10 @@ img{display:block;max-width:100%}
 .bg-slate-800{background-color:#1e293b}.bg-slate-900{background-color:#0f172a}
 .bg-sky-700{background-color:#0369a1}
 .bg-blue-600{background-color:#2563eb}.bg-blue-50{background-color:#eff6ff}
-.bg-indigo-600{background-color:#4f46e5}.bg-indigo-50{background-color:#eef2ff}
+.bg-indigo-600{background-color:#4f46e5}.bg-indigo-50{background-color:#eef2ff}.bg-indigo-700{background-color:#4338ca}
 .bg-emerald-600{background-color:#059669}.bg-emerald-100{background-color:#d1fae5}
-.bg-rose-600{background-color:#e11d48}.bg-rose-50{background-color:#fff1f2}
-.bg-amber-50{background-color:#fffbeb}.bg-orange-50{background-color:#fff7ed}
+.bg-rose-600{background-color:#e11d48}.bg-rose-50{background-color:#fff1f2}.bg-rose-100{background-color:#ffe4e6}.bg-rose-900{background-color:#881337}
+.bg-amber-50{background-color:#fffbeb}.bg-amber-100{background-color:#fef3c7}.bg-amber-200{background-color:#fde68a}.bg-orange-50{background-color:#fff7ed}.bg-orange-100{background-color:#ffedd5}
 .bg-red-50{background-color:#fef2f2}.bg-red-100{background-color:#fee2e2}
 .bg-green-50{background-color:#f0fdf4}.bg-green-100{background-color:#dcfce7}
 .bg-violet-600{background-color:#7c3aed}.bg-teal-600{background-color:#0d9488}
@@ -109,8 +109,8 @@ img{display:block;max-width:100%}
 .text-emerald-600{color:#059669}.text-emerald-700{color:#047857}
 .text-green-600{color:#16a34a}
 .text-red-500{color:#ef4444}.text-red-600{color:#dc2626}.text-red-700{color:#b91c1c}
-.text-rose-600{color:#e11d48}
-.text-amber-600{color:#d97706}.text-orange-700{color:#c2410c}
+.text-rose-600{color:#e11d48}.text-rose-700{color:#be123c}
+.text-amber-600{color:#d97706}.text-amber-700{color:#b45309}.text-orange-600{color:#ea580c}.text-orange-700{color:#c2410c}
 .text-violet-600{color:#7c3aed}
 .text-teal-600{color:#0d9488}
 
@@ -122,25 +122,30 @@ img{display:block;max-width:100%}
 .border-slate-100{border-color:#f1f5f9}.border-slate-200{border-color:#e2e8f0}.border-slate-300{border-color:#cbd5e1}.border-slate-900{border-color:#0f172a}
 .border-sky-700{border-color:#0369a1}.border-blue-600{border-color:#2563eb}
 .border-indigo-700{border-color:#4338ca}.border-indigo-900{border-color:#312e81}
-.border-emerald-200{border-color:#a7f3d0}
+.border-emerald-200{border-color:#a7f3d0}.border-emerald-600{border-color:#059669}
 .border-red-200{border-color:#fecaca}
+.border-rose-200{border-color:#fecdd3}
+.border-amber-100{border-color:#fef3c7}.border-amber-200{border-color:#fde68a}
+.border-orange-200{border-color:#fed7aa}
 .border-white{border-color:#fff}
 
 /* ── Border radius ───────────────────────────────────────────────────────────── */
 .rounded{border-radius:.25rem}.rounded-sm{border-radius:.125rem}.rounded-md{border-radius:.375rem}
 .rounded-lg{border-radius:.5rem}.rounded-xl{border-radius:.75rem}.rounded-2xl{border-radius:1rem}.rounded-3xl{border-radius:1.5rem}.rounded-full{border-radius:9999px}
 .rounded-l-xl{border-radius:.75rem 0 0 .75rem}.rounded-r-xl{border-radius:0 .75rem .75rem 0}
+.rounded-l-2xl{border-radius:1rem 0 0 1rem}.rounded-r-2xl{border-radius:0 1rem 1rem 0}
 
 /* ── Shadows ─────────────────────────────────────────────────────────────────── */
 .shadow-sm{box-shadow:0 1px 2px 0 rgba(0,0,0,.05)}.shadow{box-shadow:0 1px 3px 0 rgba(0,0,0,.1),0 1px 2px -1px rgba(0,0,0,.1)}
 .shadow-lg{box-shadow:0 10px 15px -3px rgba(0,0,0,.1),0 4px 6px -4px rgba(0,0,0,.1)}
 .shadow-xl{box-shadow:0 20px 25px -5px rgba(0,0,0,.1),0 8px 10px -6px rgba(0,0,0,.1)}
+.shadow-2xl{box-shadow:0 25px 50px -12px rgba(0,0,0,.25)}
 
 /* ── Misc ────────────────────────────────────────────────────────────────────── */
 .opacity-60{opacity:.6}.opacity-80{opacity:.8}
 .ring-1{box-shadow:0 0 0 1px rgba(0,0,0,.05)}
 .blur-2xl{filter:blur(40px)}
-.inline-block{display:inline-block}
+.inline-block{display:inline-block}.inline-flex{display:inline-flex}
 .object-contain{object-fit:contain}
 .cursor-default{cursor:default}
 `;
@@ -151,8 +156,8 @@ img{display:block;max-width:100%}
  * NO usa fs/path - funciona tanto en servidor como cliente.
  */
 export function getReportHeadAssets(extraCss = ""): string {
-  // Fuente del sistema similar a Geist - disponible en todos lados
-  const fontStack = `'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif`;
+  // Fuentes garantizadas en Linux/Railway (sin acceso a Google Fonts)
+  const fontStack = `'Inter', 'Noto Sans', 'DejaVu Sans', 'Liberation Sans', Arial, sans-serif`;
   
   return `
 <style>
@@ -162,6 +167,12 @@ body {
   font-family: ${fontStack};
   -webkit-print-color-adjust: exact;
   print-color-adjust: exact;
+  line-height: 1.5;
+}
+h1, h2, h3, h4, h5, h6 {
+  font-family: ${fontStack};
+  font-weight: 700;
+  line-height: 1.25;
 }
 </style>`;
 }
