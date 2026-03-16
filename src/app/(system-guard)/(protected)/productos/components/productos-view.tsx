@@ -613,8 +613,9 @@ export function ProductosView() {
           side="right"
           className={cn(
             // Desktop: panel lateral full-height
+            // max-w-[90vw] evita que sobrepase el viewport cuando el sidebar está abierto
             "hidden sm:flex flex-col",
-            "w-[420px] lg:w-[480px] max-w-full p-0 h-full"
+            "w-[380px] max-w-[90vw] p-0 h-full overflow-x-hidden"
           )}
         >
           <StockDrawerInner
@@ -685,15 +686,15 @@ function StockDrawerInner({
               <div
                 key={p.id}
                 className={cn(
-                  "flex items-center gap-3 p-3 rounded-xl border transition-colors",
+                  "flex items-start gap-3 p-3 rounded-xl border transition-colors",
                   isOut
                     ? "bg-red-50/50 dark:bg-red-900/10 border-red-100 dark:border-red-900/30"
                     : "bg-orange-50/50 dark:bg-orange-900/10 border-orange-100 dark:border-orange-900/30"
                 )}
               >
-                {/* Badge de stock */}
+                {/* Badge de stock — siempre visible, no se comprime */}
                 <div className={cn(
-                  "flex-shrink-0 w-9 h-9 rounded-lg flex items-center justify-center text-sm font-black",
+                  "flex-shrink-0 w-9 h-9 rounded-lg flex items-center justify-center text-sm font-black mt-0.5",
                   isOut
                     ? "bg-red-100 dark:bg-red-900/30 text-red-600"
                     : "bg-orange-100 dark:bg-orange-900/30 text-orange-600"
@@ -701,12 +702,14 @@ function StockDrawerInner({
                   {p.stockDisponibleUnits}
                 </div>
 
-                {/* Info del producto */}
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-semibold text-foreground truncate leading-tight">
+                {/* Info — ocupa todo el ancho restante, sin competir con precio */}
+                <div className="min-w-0 flex-1 overflow-hidden">
+                  {/* Línea 1: nombre completo con wrap permitido */}
+                  <p className="text-sm font-semibold text-foreground leading-snug break-words">
                     {p.nombre}
                   </p>
-                  <p className="text-xs text-muted-foreground truncate mt-0.5">
+                  {/* Línea 2: categoría + stock mínimo */}
+                  <p className="text-xs text-muted-foreground mt-0.5 truncate">
                     {p.categoria?.nombre ?? "Sin categoría"}
                     {!isOut && p.stockMinUnits > 0 && (
                       <span className="ml-1.5 text-orange-500 font-medium">
@@ -714,18 +717,17 @@ function StockDrawerInner({
                       </span>
                     )}
                   </p>
-                </div>
-
-                {/* Precio + código */}
-                <div className="flex-shrink-0 text-right">
-                  <p className="text-xs font-black text-foreground">
-                    {formatMoney(Number(p.precioVenta))}
-                  </p>
-                  {p.codigoBarra && (
-                    <p className="text-[10px] text-muted-foreground/60 font-mono mt-0.5 leading-tight">
-                      {p.codigoBarra}
-                    </p>
-                  )}
+                  {/* Línea 3: precio + código de barra (juntos, no compiten) */}
+                  <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                    <span className="text-xs font-black text-foreground">
+                      {formatMoney(Number(p.precioVenta))}
+                    </span>
+                    {p.codigoBarra && (
+                      <span className="text-[10px] text-muted-foreground/50 font-mono truncate">
+                        {p.codigoBarra}
+                      </span>
+                    )}
+                  </div>
                 </div>
               </div>
             ))
