@@ -47,7 +47,7 @@ export function useDashboard(period: DashboardPeriod) {
 
   React.useEffect(() => {
     loadAll();
-  }, [loadAll, activeSucursalId]);
+  }, [loadAll]); // activeSucursalId ya está en useCallback — no duplicar
 
   return { ...data, loading, error, refresh: loadAll };
 }

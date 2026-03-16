@@ -1,7 +1,7 @@
 "use server";
 
 import { requireAuth } from "@/lib/auth/require-auth";
-import { getDashboardKpis, getDashboardTopProductos, getDashboardTendencia } from "@/lib/kpi-logic";
+import { getDashboardKpis, getDashboardTopProductos, getDashboardTopConsignados, getDashboardTendencia } from "@/lib/kpi-logic";
 import { prisma } from "@/lib/prisma";
 import type {
   DashboardPeriod,
@@ -83,10 +83,14 @@ export async function fetchDashboardKpis(
       ventas: {
         cantidad: stats.finanzas.ventas.cantidad,
         total: stats.finanzas.ventas.total,
+        soloVenta: stats.finanzas.ventas.porTipo?.["CASUAL"] ?? 0,
+        soloConsig: stats.finanzas.ventas.porTipo?.["LIQUIDACION"] ?? 0,
       },
       pagos: {
         cantidad: stats.finanzas.pagos.cantidad,
         total: stats.finanzas.pagos.total,
+        soloVenta: stats.finanzas.pagos.porTipo?.["VENTA"] ?? 0,
+        soloDeuda: stats.finanzas.pagos.porTipo?.["DEUDA"] ?? 0,
       },
       ganancia: {
         total: stats.finanzas.ganancia.neta,
@@ -202,12 +206,15 @@ export async function fetchDashboardTopProductos(
   const safeLimit = Math.min(limit, 50);
   const scopedSucursalId = resolveActiveSucursalId(user, activeSucursalId, requestedSucursalId);
 
-  const topVendidos = await getDashboardTopProductos(scopedSucursalId, period, isAdmin, safeLimit);
+  const [topVendidos, topConsignados] = await Promise.all([
+    getDashboardTopProductos(scopedSucursalId, period, isAdmin, safeLimit),
+    getDashboardTopConsignados(scopedSucursalId, period, isAdmin, safeLimit),
+  ]);
 
   return {
     period,
     topVendidos,
-    topConsignados: [],
+    topConsignados,
   };
 }
 
@@ -232,14 +239,22 @@ export async function fetchDashboardTendencia(
 
   const data = await getDashboardTendencia(scopedSucursalId, period, isAdmin);
 
-  const series = (data.series ?? []).map((point: { date?: string; ventasTotal?: number; pagosTotal?: number }) => ({
+  const series = (data.series ?? []).map((point: {
+    date?: string;
+    ventasTotal?: number;
+    ventasPosTotal?: number;
+    ventasConsigTotal?: number;
+    pagosTotal?: number;
+  }) => ({
     date: point.date as string,
     consignaciones: 0,
     liquidaciones: 0,
     ventasCount: 0,
-    ventasTotal: (point.ventasTotal as number) ?? 0,
+    ventasTotal: point.ventasTotal ?? 0,
+    ventasPosTotal: point.ventasPosTotal ?? 0,
+    ventasConsigTotal: point.ventasConsigTotal ?? 0,
     pagosCount: 0,
-    pagosTotal: (point.pagosTotal as number) ?? 0,
+    pagosTotal: point.pagosTotal ?? 0,
   }));
 
   const from = series[0]?.date ?? new Date().toISOString().slice(0, 10);

@@ -482,3 +482,50 @@ export async function getDashboardTopProductos(sucursalId: number, period: Dashb
         .sort((a, b) => b.units - a.units)
         .slice(0, limit);
 }
+
+/**
+ * TOP PRODUCTOS CONSIGNADOS (unidades entregadas en consignaciones abiertas)
+ */
+export async function getDashboardTopConsignados(
+    sucursalId: number,
+    period: DashboardPeriod,
+    isAdmin: boolean = false,
+    limit: number = 10
+) {
+    const isGlobal = sucursalId === 0 && isAdmin;
+    const tz = await getConfiguredTz(isGlobal ? 1 : sucursalId);
+    const now = nowAR(tz);
+    let start: Date | undefined;
+
+    if (period === "today") start = startOfDayAR(now, tz);
+    else if (period === "week") start = startOfWeekAR(now, tz);
+    else if (period === "month") start = startOfMonthAR(now, tz);
+
+    const sucursalWhere = isGlobal ? {} : { sucursalId };
+    const dateWhere = start ? { gte: start } : undefined;
+
+    const detalles = await prisma.consignacionDetalle.findMany({
+        where: {
+            consignacion: {
+                ...sucursalWhere,
+                ...(dateWhere ? { fecha: dateWhere } : {}),
+            },
+        },
+        select: {
+            unitsEntregadas: true,
+            producto: { select: { id: true, nombre: true } },
+        },
+    });
+
+    const map = new Map<number, { productoId: number; nombre: string; unitsEntregadas: number }>();
+    for (const d of detalles) {
+        const id = d.producto.id;
+        const prev = map.get(id);
+        if (!prev) map.set(id, { productoId: id, nombre: d.producto.nombre, unitsEntregadas: d.unitsEntregadas ?? 0 });
+        else prev.unitsEntregadas += d.unitsEntregadas ?? 0;
+    }
+
+    return Array.from(map.values())
+        .sort((a, b) => b.unitsEntregadas - a.unitsEntregadas)
+        .slice(0, limit);
+}

@@ -658,10 +658,14 @@ export type DashboardKpis = {
     ventas: {
       cantidad: number;
       total: number;
+      soloVenta?: number;   // Ventas directas POS (tipo CASUAL)
+      soloConsig?: number;  // Liquidaciones de consignación (tipo LIQUIDACION)
     };
     pagos: {
       cantidad: number;
       total: number;
+      soloVenta?: number;  // Pagos de ventas directas (tipo VENTA)
+      soloDeuda?: number;  // Cobros de deudas de consignación (tipo DEUDA)
     };
     ganancia: {
       total: number;
@@ -749,6 +753,8 @@ export type DashboardTendenciaPoint = {
 
   ventasCount: number;
   ventasTotal: number;
+  ventasPosTotal: number;    // Solo ventas directas POS
+  ventasConsigTotal: number; // Solo liquidaciones consignación
 
   pagosCount: number;
   pagosTotal: number;
