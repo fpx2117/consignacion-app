@@ -57,7 +57,8 @@ export async function fetchDashboardKpis(
   const { user, activeSucursalId } = auth;
   const isAdmin = user.rol === "ADMIN";
   const scopedSucursalId = resolveActiveSucursalId(user, activeSucursalId, requestedSucursalId);
-  const stats = await getDashboardKpis(scopedSucursalId, period, isAdmin);
+  const userId = Number(user.sub);
+  const stats = await getDashboardKpis(scopedSucursalId, period, isAdmin, Number.isFinite(userId) ? userId : undefined);
 
   return {
     period,
@@ -112,7 +113,7 @@ export async function fetchDashboardKpis(
       visitantesUnicos: stats.catalogo?.visitantesUnicos ?? 0,
       productosVisibles: stats.catalogo?.productosVisibles ?? 0,
     },
-    proximosVencimientos: stats.proximosVencimientos as DashboardKpis["proximosVencimientos"],
+    proximosVencimientos: stats.proximosVencimientos as unknown as DashboardKpis["proximosVencimientos"],
   };
 }
 
@@ -205,10 +206,11 @@ export async function fetchDashboardTopProductos(
   const isAdmin = user.rol === "ADMIN";
   const safeLimit = Math.min(limit, 50);
   const scopedSucursalId = resolveActiveSucursalId(user, activeSucursalId, requestedSucursalId);
+  const userId = Number(user.sub);
 
   const [topVendidos, topConsignados] = await Promise.all([
-    getDashboardTopProductos(scopedSucursalId, period, isAdmin, safeLimit),
-    getDashboardTopConsignados(scopedSucursalId, period, isAdmin, safeLimit),
+    getDashboardTopProductos(scopedSucursalId, period, isAdmin, safeLimit, Number.isFinite(userId) ? userId : undefined),
+    getDashboardTopConsignados(scopedSucursalId, period, isAdmin, safeLimit, Number.isFinite(userId) ? userId : undefined),
   ]);
 
   return {
@@ -236,8 +238,9 @@ export async function fetchDashboardTendencia(
   const { user, activeSucursalId } = auth;
   const isAdmin = user.rol === "ADMIN";
   const scopedSucursalId = resolveActiveSucursalId(user, activeSucursalId, requestedSucursalId);
+  const userId = Number(user.sub);
 
-  const data = await getDashboardTendencia(scopedSucursalId, period, isAdmin);
+  const data = await getDashboardTendencia(scopedSucursalId, period, isAdmin, Number.isFinite(userId) ? userId : undefined);
 
   const series = (data.series ?? []).map((point: {
     date?: string;

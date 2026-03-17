@@ -62,7 +62,7 @@ export default function NotificationSettingsPage() {
     const fetchConfig = React.useCallback(async () => {
         try {
             const res = await apiService.getConfiguracionGeneral();
-            const data = (res?.data ?? res) as Partial<NotificationConfig> | undefined;
+            const data = res as Partial<NotificationConfig> | undefined;
 
             if (data) {
                 setConfig({

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
+import { Prisma } from "@prisma/client";
 import { checkUserLimit } from "@/lib/subscriptions/require-subscription";
 import { requireAuth, requireRole } from "@/lib/auth/require-auth";
 import { validatePasswordStrength } from "@/lib/validators/password";
@@ -23,6 +24,7 @@ export async function GET() {
         rol: true,
         activo: true,
         sucursalId: true,
+        zonaHoraria: true,
         createdAt: true,
       },
       orderBy: { createdAt: "desc" },
@@ -45,7 +47,7 @@ export async function POST(req: Request) {
 
   try {
     const body = await req.json();
-    const { nombre, email, password, rol, sucursalId } = body;
+    const { nombre, email, password, rol, sucursalId, zonaHoraria } = body;
 
     if (!nombre || !email || !password || !rol) {
       return NextResponse.json({ ok: false, error: "Faltan campos obligatorios" }, { status: 400 });
@@ -80,9 +82,10 @@ export async function POST(req: Request) {
         hash,
         rol,
         sucursalId: sucursalId ? Number(sucursalId) : 1,
+        zonaHoraria: typeof zonaHoraria === "string" ? zonaHoraria : null,
         activo: true
       },
-      select: { id: true, nombre: true, email: true, rol: true, sucursalId: true, activo: true, createdAt: true },
+      select: { id: true, nombre: true, email: true, rol: true, sucursalId: true, zonaHoraria: true, activo: true, createdAt: true },
     });
 
     return NextResponse.json({ ok: true, data: nuevoUsuario });
@@ -102,7 +105,7 @@ export async function PUT(req: Request) {
 
   try {
     const body = await req.json();
-    const { id, nombre, email, password, rol, sucursalId } = body;
+    const { id, nombre, email, password, rol, sucursalId, zonaHoraria } = body;
 
     if (!id || !nombre || !email || !rol) {
       return NextResponse.json({ ok: false, error: "Faltan campos obligatorios" }, { status: 400 });
@@ -116,11 +119,12 @@ export async function PUT(req: Request) {
       return NextResponse.json({ ok: false, error: "El correo ya está en uso por otro usuario" }, { status: 400 });
     }
 
-    const dataToUpdate: any = {
+    const dataToUpdate: Prisma.UsuarioUncheckedUpdateInput = {
       nombre,
       email: normalizedEmail,
       rol,
-      sucursalId: sucursalId ? Number(sucursalId) : null
+      sucursalId: sucursalId ? Number(sucursalId) : null,
+      ...(zonaHoraria !== undefined ? { zonaHoraria } : {}),
     };
 
     if (password && password.trim() !== "") {
@@ -136,7 +140,7 @@ export async function PUT(req: Request) {
     const usuarioActualizado = await prisma.usuario.update({
       where: { id: numericId },
       data: dataToUpdate,
-      select: { id: true, nombre: true, email: true, rol: true, sucursalId: true, activo: true, createdAt: true },
+      select: { id: true, nombre: true, email: true, rol: true, sucursalId: true, zonaHoraria: true, activo: true, createdAt: true },
     });
 
     return NextResponse.json({ ok: true, data: usuarioActualizado });

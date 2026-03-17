@@ -12,9 +12,10 @@ export async function GET(req: Request) {
   const limit = Math.min(Number(searchParams.get("limit") ?? 5) || 5, 50);
   const sucursalId = auth.activeSucursalId;
   const isAdmin = auth.user.rol === "ADMIN";
+  const userId = Number(auth.user.sub);
 
   try {
-    const data = await getDashboardTopProductos(sucursalId, period, isAdmin, limit);
+    const data = await getDashboardTopProductos(sucursalId, period, isAdmin, limit, Number.isFinite(userId) ? userId : undefined);
     return NextResponse.json({ data: { period, topVendidos: data } }, {
       headers: {
         "Cache-Control": "private, max-age=30, stale-while-revalidate=60",

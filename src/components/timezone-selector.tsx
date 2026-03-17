@@ -18,8 +18,6 @@ import {
   type TimezoneOption,
 } from "@/lib/timezone-list";
 
-const TZ_DEFAULT = "America/Argentina/Buenos_Aires";
-
 type Props = {
   value: string;
   onChange: (tz: string) => void;
@@ -43,18 +41,20 @@ export function TimezoneSelector({ value, onChange, disabled }: Props) {
     return () => clearInterval(interval);
   }, [value]);
 
-  // Sugerencia automática por navegador (solo cuando el valor es el default)
+  // El navegador solo aporta una sugerencia UX, nunca la timezone operativa.
   React.useEffect(() => {
-    if (value !== TZ_DEFAULT) return;
     try {
       const browserTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
-      if (browserTz && browserTz !== TZ_DEFAULT) {
-        // Verificar que la sugerencia existe en nuestra lista
+      if (browserTz && browserTz !== value) {
         const exists = TIMEZONE_LIST.some((tz) => tz.value === browserTz);
         if (exists) setSuggestedTz(browserTz);
+        else setSuggestedTz(null);
+        return;
       }
+
+      setSuggestedTz(null);
     } catch {
-      // browser no soporta resolvedOptions
+      setSuggestedTz(null);
     }
   }, [value]);
 
@@ -174,7 +174,7 @@ export function TimezoneSelector({ value, onChange, disabled }: Props) {
       </div>
 
       {/* Badge de sugerencia del navegador */}
-      {suggestedTz && value === TZ_DEFAULT && (
+      {suggestedTz && suggestedTz !== value && (
         <div className="flex items-center gap-2 px-1 flex-wrap">
           <Badge
             variant="outline"
@@ -185,6 +185,9 @@ export function TimezoneSelector({ value, onChange, disabled }: Props) {
           <span className="text-xs text-muted-foreground">
             {TIMEZONE_LIST.find((t) => t.value === suggestedTz)?.label ??
               suggestedTz}
+          </span>
+          <span className="text-[11px] text-muted-foreground/80">
+            Solo como sugerencia visual.
           </span>
           <button
             onClick={() => {

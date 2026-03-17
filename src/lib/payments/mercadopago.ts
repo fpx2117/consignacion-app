@@ -55,9 +55,9 @@ export async function createMercadoPagoPreference(planId: string, userId: string
         });
 
         return response;
-    } catch (error: any) {
+    } catch (error: unknown) {
         console.error("Mercado Pago Preference Creation Error:", error);
-        throw new Error(error.message || "Error al crear la preferencia de Mercado Pago");
+        throw new Error(error instanceof Error ? error.message : "Error al crear la preferencia de Mercado Pago");
     }
 }
 
@@ -84,8 +84,8 @@ export async function updateMercadoPagoSubscriptionPrice(preapprovalId: string, 
         }
 
         return data;
-    } catch (error: any) {
+    } catch (error: unknown) {
         console.error("Mercado Pago Subscription Update Error:", error);
-        throw new Error(error.message || "Error de red al actualizar la suscripción");
+        throw new Error(error instanceof Error ? error.message : "Error de red al actualizar la suscripción");
     }
 }

@@ -19,8 +19,10 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useTimezone } from "@/hooks/useTimezone";
+import { nowAR } from "@/lib/utils-date";
 import { cn } from "@/lib/utils";
-import { formatDate, formatMoney } from "@/lib/utils-format";
+import { formatMoney } from "@/lib/utils-format";
 
 import { gastosTypography } from "./gastos-typography";
 
@@ -60,6 +62,8 @@ export function GastosList({
   onEdit,
   onDelete,
 }: GastosListProps) {
+  const { tz, formatDateTime } = useTimezone();
+
   if (loading) {
     return (
       <div className="space-y-3">
@@ -86,7 +90,10 @@ export function GastosList({
     <div className="grid gap-4 px-2 md:px-0">
       {gastos.map((g) => {
         const isOwner = g.sucursalId === activeSucursalId;
-        const isOverdue = Boolean(g.fechaVencimiento) && new Date(g.fechaVencimiento as string) < new Date() && g.estado === "PENDIENTE";
+        const isOverdue =
+          Boolean(g.fechaVencimiento) &&
+          new Date(g.fechaVencimiento as string) < nowAR(tz) &&
+          g.estado === "PENDIENTE";
 
         return (
           <div
@@ -132,7 +139,7 @@ export function GastosList({
 
                   <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4">
                     <span className={`${gastosTypography.meta} flex items-center gap-1.5`}>
-                      <Calendar className="h-3 w-3" /> {formatDate(g.fecha)}
+                      <Calendar className="h-3 w-3" /> {formatDateTime(g.fecha)}
                     </span>
 
                     {g.fechaVencimiento && (
@@ -142,7 +149,7 @@ export function GastosList({
                           isOverdue ? "text-destructive" : "text-[color:var(--status-warning)]/80",
                         )}
                       >
-                        <AlertTriangle className="h-3 w-3" /> Vence: {formatDate(g.fechaVencimiento)}
+                        <AlertTriangle className="h-3 w-3" /> Vence: {formatDateTime(g.fechaVencimiento)}
                       </span>
                     )}
                   </div>

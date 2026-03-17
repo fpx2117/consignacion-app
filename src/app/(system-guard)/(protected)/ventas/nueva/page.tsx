@@ -83,6 +83,10 @@ export default function NuevaVentaPage() {
     async (page: number, search: string) => {
       setProductosLoading(true);
       try {
+        // Aseguramos que el hook de sucursal esté hidratado antes de buscar
+        if (!activeSucursalId) {
+          console.warn("activeSucursalId no está definido, usando sucursal por defecto 1");
+        }
         const res = await apiService.getProductosPaginados({
           page,
           limit: 50,
@@ -93,13 +97,14 @@ export default function NuevaVentaPage() {
         setProductos(activos);
         setProductosTotalPages(payload.totalPages ?? 1);
         setProductosPage(payload.page ?? 1);
-      } catch {
+      } catch (err) {
+        console.error("Error cargando productos:", err);
         setError("Error cargando productos.");
       } finally {
         setProductosLoading(false);
       }
     },
-    []
+    [activeSucursalId]
   );
 
   const fetchData = React.useCallback(async () => {
@@ -109,7 +114,7 @@ export default function NuevaVentaPage() {
       const configRes = await apiService.getConfiguracionGeneral();
       const requiereCaja = configRes?.usarControlDeCaja ?? true;
       setUsaCajaEstricta(requiereCaja);
-      setPorcentajeInteresTarjeta(configRes?.porcentajeInteresTarjeta ?? configRes?.data?.porcentajeInteresTarjeta ?? 0);
+      setPorcentajeInteresTarjeta(configRes?.porcentajeInteresTarjeta ?? 0);
 
       const cajaRes = await apiService.verificarCajaAbierta();
       setHorarioFin(cajaRes.horarioConfigurado?.horaFin);
@@ -191,7 +196,8 @@ export default function NuevaVentaPage() {
 
   React.useEffect(() => {
     fetchData();
-  }, [activeSucursalId, fetchData]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeSucursalId]);
 
   // Al cambiar la búsqueda, reiniciar a página 1 (incluso al vaciar el campo)
   React.useEffect(() => {
@@ -846,5 +852,4 @@ export default function NuevaVentaPage() {
     </div>
   );
 }
-
 

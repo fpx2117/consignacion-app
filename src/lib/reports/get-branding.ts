@@ -2,6 +2,15 @@ import { prisma } from "@/lib/prisma";
 import { REPORT_COLORS } from "@/lib/reports/report-theme";
 import type { BrandingDTO } from "@/lib/reports/types";
 
+type BrandingRecord = {
+  businessName?: string | null;
+  logoData?: Buffer | Uint8Array | null;
+  primaryColor?: string | null;
+  footerText?: string | null;
+  phone?: string | null;
+  address?: string | null;
+};
+
 const DEFAULT_BRANDING: BrandingDTO = {
   businessName: "Consignación",
   logoUrl: null,
@@ -47,7 +56,7 @@ export async function getBranding(sucursalId?: number): Promise<BrandingDTO> {
   return mapToDTO(branding);
 }
 
-function mapToDTO(branding: any): BrandingDTO {
+function mapToDTO(branding: BrandingRecord): BrandingDTO {
   const baseUrl =
     process.env.NEXT_PUBLIC_APP_URL ||
     process.env.APP_URL ||

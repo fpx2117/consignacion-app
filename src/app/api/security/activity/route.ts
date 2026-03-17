@@ -35,7 +35,7 @@ export async function GET(req: Request) {
         });
 
         return NextResponse.json({ ok: true, data: logs });
-    } catch (error: any) {
+    } catch (error: unknown) {
         console.error("Fetch audit logs error:", error);
         return NextResponse.json({ error: "Error al obtener los registros de actividad" }, { status: 500 });
     }

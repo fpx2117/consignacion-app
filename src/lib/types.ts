@@ -22,6 +22,7 @@ export type ApiResponse<T> = {
 };
 
 export type RolUsuario = "ADMIN" | "EMPLEADO";
+export type TimezoneSource = "user" | "branch" | "fallback";
 export type EstadoConsignacion = "ABIERTA" | "CERRADA";
 export type MetodoPago = "EFECTIVO" | "TRANSFERENCIA" | "TARJETA" | "OTRO";
 export type EstadoGasto = "PENDIENTE" | "PAGADO";
@@ -81,6 +82,11 @@ export type Usuario = {
   rol: RolUsuario;
   activo: boolean;
   sucursalId?: ID | null;
+  zonaHoraria?: string | null;
+  zonaHorariaSucursal?: string | null;
+  zonaHorariaResuelta?: string;
+  timezoneSource?: TimezoneSource;
+  sucursalesPermitidas?: SucursalPermitida[];
   createdAt: ISODateString;
   horarios?: HorarioLaboral[];
 };
@@ -92,14 +98,111 @@ export type Configuracion = {
   notificarVencimientos: boolean;
   notificarStockBajo: boolean;
   notificarVentas: boolean;
+  notificarLiquidaciones?: boolean;
+  notificarConsignacionesActivas?: boolean;
+  diasAvisoConsignacion?: number;
   usarControlDeCaja: boolean;
   porcentajeAumentoConsignacion: number;
   porcentajeInteresTarjeta: number;
   mostrarListaPrecios: boolean;
   convertirTienda: boolean;
   separarListaPorSucursal: boolean;
+  mostrarPreciosConsignacion?: boolean;
+  mostrarCategoriasEnHeader?: boolean;
+  tiendaLayout?: string;
+  mensajeWhatsappConsignacion?: string | null;
+  mensajeWhatsappVenta?: string | null;
+  mostrarBuscador?: boolean;
   mpAccessTokenTienda?: string | null;
   mpPublicKeyTienda?: string | null;
+  zonaHoraria?: string | null;
+  timezoneMigrationDone?: boolean;
+};
+
+export type SucursalPermitida = {
+  id: ID;
+  nombre: string;
+  esPrincipal: boolean;
+  activa: boolean;
+};
+
+export type ProfileTimezone = {
+  zonaHoraria: string | null;
+  zonaHorariaSucursal: string | null;
+  zonaHorariaResuelta: string;
+  timezoneSource: TimezoneSource;
+};
+
+export type BrandingBanner = {
+  id?: ID;
+  bannerData?: string | null;
+  bannerMime?: string | null;
+  orden?: number;
+  url?: string | null;
+};
+
+export type BrandingSettings = {
+  businessName?: string;
+  primaryColor?: string;
+  secondaryColor?: string;
+  footerText?: string | null;
+  phone?: string | null;
+  address?: string | null;
+  instagramUrl?: string | null;
+  tiktokUrl?: string | null;
+  facebookUrl?: string | null;
+  youtubeUrl?: string | null;
+  whatsappNumber?: string | null;
+  whatsappMessage?: string | null;
+  googleMapsUrl?: string | null;
+  themeIdentifier?: string;
+  logoData?: string | null;
+  logoMime?: string | null;
+  logoUrl?: string | null;
+  bannerData?: string | null;
+  bannerMime?: string | null;
+  bannerUrl?: string | null;
+  typography?: string | null;
+  isBannerSlider?: boolean;
+  banners?: BrandingBanner[];
+};
+
+export type AuditLogEntry = {
+  id: ID;
+  createdAt: ISODateString;
+  action: string;
+  module: string;
+  userAgent?: string | null;
+  ipAddress?: string | null;
+  details?: Record<string, unknown> | null;
+  user?: {
+    nombre: string;
+    email?: string | null;
+  } | null;
+};
+
+export type ActiveSession = {
+  id: string;
+  createdAt: ISODateString;
+  lastActivity?: ISODateString | null;
+  expiresAt?: ISODateString;
+  isActive: boolean;
+  userAgent?: string | null;
+  ipAddress?: string | null;
+  browser?: string | null;
+  os?: string | null;
+  device?: string | null;
+  user?: {
+    nombre?: string | null;
+    email?: string | null;
+  } | null;
+};
+
+export type SucursalResumen = {
+  id: ID;
+  nombre: string;
+  esPrincipal: boolean;
+  activa: boolean;
 };
 
 export type Branding = {

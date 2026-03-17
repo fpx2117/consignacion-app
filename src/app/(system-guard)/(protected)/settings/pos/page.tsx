@@ -150,7 +150,7 @@ export default function PosSettingsPage() {
             ]);
 
             setCajas(Array.isArray(cajasRes) ? cajasRes : []);
-            const config = (configRes?.data ?? configRes) as Partial<PosConfig> | undefined;
+            const config = configRes as Partial<PosConfig> | undefined;
 
             setUsarControlDeCaja(config?.usarControlDeCaja ?? true);
             localStorage.setItem(`config-caja-${activeSucursalId}`, String(config?.usarControlDeCaja ?? true));

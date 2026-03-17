@@ -10,6 +10,7 @@ import {
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
+import type { BrandingPreviewSettings } from "./types";
 
 /* ─── Data ─────────────────────────────────────────────────── */
 
@@ -146,8 +147,15 @@ function ColorPalette({
 
 /* ─── Main Component ───────────────────────────────────────── */
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- BrandingTab tiene estado extendido que supera el contrato BrandingPreviewSettings; refactor pendiente para alinear tipos en una sola interfaz
-export function BrandingTab({ branding, setBranding, handleImageUpload }: any) {
+type BrandingTabProps = {
+    branding: BrandingPreviewSettings;
+    setBranding: React.Dispatch<React.SetStateAction<BrandingPreviewSettings>>;
+    handleImageUpload: (event: React.ChangeEvent<HTMLInputElement>, type: 'logo' | 'banner') => void;
+};
+
+type BrandingBannerItem = NonNullable<BrandingPreviewSettings["banners"]>[number];
+
+export function BrandingTab({ branding, setBranding, handleImageUpload }: BrandingTabProps) {
     const [fontOpen, setFontOpen] = React.useState(false);
     const [bannerDragOver, setBannerDragOver] = React.useState(false);
 
@@ -231,7 +239,7 @@ export function BrandingTab({ branding, setBranding, handleImageUpload }: any) {
                             {branding.logoData && (
                                 <button
                                     type="button"
-                                    onClick={() => setBranding((prev: any) => ({ ...prev, logoData: null, logoMime: null }))}
+                                    onClick={() => setBranding((prev) => ({ ...prev, logoData: null, logoMime: null }))}
                                     className="mt-2 text-xs text-destructive/70 hover:text-destructive font-medium flex items-center gap-1 transition-colors"
                                 >
                                     <Trash2 className="h-3 w-3" /> Eliminar logo
@@ -315,7 +323,7 @@ export function BrandingTab({ branding, setBranding, handleImageUpload }: any) {
                                                     size="sm"
                                                     variant="secondary"
                                                     className="rounded-lg text-xs font-medium shadow-lg text-destructive"
-                                                    onClick={() => setBranding((prev: any) => ({ ...prev, bannerData: null, bannerMime: null }))}
+                                                    onClick={() => setBranding((prev) => ({ ...prev, bannerData: null, bannerMime: null }))}
                                                 >
                                                     <Trash2 className="h-3.5 w-3.5 mr-1.5" /> Quitar
                                                 </Button>
@@ -385,8 +393,8 @@ export function BrandingTab({ branding, setBranding, handleImageUpload }: any) {
                                             reader.onload = () => {
                                                 const base64String = reader.result as string;
                                                 const [mimeInfo, data] = base64String.split(';base64,');
-                                                const mime = mimeInfo.split(':')[1];
-                                                setBranding((prev: any) => ({
+                                                const mime = mimeInfo.split(':')[1] ?? "image/jpeg";
+                                                setBranding((prev) => ({
                                                     ...prev,
                                                     banners: [...(prev.banners || []), { bannerData: data, bannerMime: mime }]
                                                 }));
@@ -397,7 +405,7 @@ export function BrandingTab({ branding, setBranding, handleImageUpload }: any) {
                                 />
 
                                 <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                                    {(branding.banners || []).map((slide: any, index: number) => (
+                                    {(branding.banners || []).map((slide: BrandingBannerItem, index: number) => (
                                         <div key={index} className="relative aspect-[3/1] rounded-xl overflow-hidden group border border-border/40">
                                             <Image
                                                 src={`data:${slide.bannerMime};base64,${slide.bannerData}`}
@@ -418,7 +426,7 @@ export function BrandingTab({ branding, setBranding, handleImageUpload }: any) {
                                                     type="button"
                                                     className="absolute top-2 right-2 h-6 w-6 bg-foreground/0 group-hover:bg-[color:var(--status-danger)]/90 rounded-lg flex items-center justify-center transition-all opacity-0 group-hover:opacity-100 hover:bg-[color:var(--status-danger)]"
                                                     onClick={() => {
-                                                        const newBanners = [...branding.banners];
+                                                        const newBanners = [...(branding.banners ?? [])];
                                                         newBanners.splice(index, 1);
                                                         setBranding({ ...branding, banners: newBanners });
                                                     }}
@@ -536,13 +544,13 @@ export function BrandingTab({ branding, setBranding, handleImageUpload }: any) {
                     {/* Colores */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                         <ColorPalette
-                            value={branding.primaryColor}
+                            value={branding.primaryColor ?? resolveColorToken("--swatch-1")}
                             onChange={(c) => setBranding({ ...branding, primaryColor: c })}
                             label="Color Primario"
                             hint="Botones y acciones principales"
                         />
                         <ColorPalette
-                            value={branding.secondaryColor}
+                            value={branding.secondaryColor ?? resolveColorToken("--swatch-2")}
                             onChange={(c) => setBranding({ ...branding, secondaryColor: c })}
                             label="Color Secundario"
                             hint="Fondos y acentos sutiles"

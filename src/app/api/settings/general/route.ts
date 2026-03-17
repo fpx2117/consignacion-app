@@ -1,18 +1,9 @@
+import { Prisma } from "@prisma/client";
 import { NextResponse } from "next/server";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireAuth, requireRole } from "@/lib/auth/require-auth";
-
-const TZ_DEFAULT = "America/Argentina/Buenos_Aires";
-
-function isValidIANATz(tz: string): boolean {
-  try {
-    new Intl.DateTimeFormat(undefined, { timeZone: tz });
-    return true;
-  } catch {
-    return false;
-  }
-}
+import { isValidTimezone, TECHNICAL_FALLBACK_TZ } from "@/lib/get-configured-tz";
 
 type GeneralSettingsBody = {
     minStockGlobal?: number;
@@ -38,6 +29,10 @@ type GeneralSettingsBody = {
     mostrarCategoriasEnHeader?: boolean;
     zonaHoraria?: string;
 };
+
+function buildIntervalOperator(offsetHours: number) {
+    return Prisma.raw(offsetHours > 0 ? "-" : "+");
+}
 
 // GET: Obtener la configuración actual
 export async function GET() {
@@ -103,7 +98,7 @@ export async function PUT(req: Request) {
         } = body;
 
         // Validar timezone IANA si se envía
-        if (zonaHoraria !== undefined && !isValidIANATz(zonaHoraria)) {
+        if (zonaHoraria !== undefined && !isValidTimezone(zonaHoraria)) {
             return NextResponse.json(
                 { error: `Zona horaria inválida: "${zonaHoraria}" no es una timezone IANA válida.` },
                 { status: 400 }
@@ -116,7 +111,7 @@ export async function PUT(req: Request) {
             select: { zonaHoraria: true, timezoneMigrationDone: true },
         });
 
-        const zonaHorariaActual = configActual?.zonaHoraria ?? TZ_DEFAULT;
+        const zonaHorariaActual = configActual?.zonaHoraria ?? TECHNICAL_FALLBACK_TZ;
         const timezoneMigrationDone = configActual?.timezoneMigrationDone ?? false;
         const seCambioTimezone = zonaHoraria !== undefined && zonaHoraria !== zonaHorariaActual;
 
@@ -145,18 +140,18 @@ export async function PUT(req: Request) {
             if (offsetHours !== 0) {
                 const interval = `${Math.abs(offsetHours)} hours`;
                 // Ejecutar corrección: restar el offset (si anterior > nueva) o sumar
-                const operador = offsetHours > 0 ? '-' : '+';
+                const operator = buildIntervalOperator(offsetHours);
                 
                 await prisma.$transaction(async (tx) => {
-                    await tx.$executeRaw`UPDATE "Venta" SET "fecha" = "fecha" ${operador as any} ${interval}::interval`;
-                    await tx.$executeRaw`UPDATE "Venta" SET "fechaAnulacion" = "fechaAnulacion" ${operador as any} ${interval}::interval WHERE "fechaAnulacion" IS NOT NULL`;
-                    await tx.$executeRaw`UPDATE "Pago" SET "fecha" = "fecha" ${operador as any} ${interval}::interval`;
-                    await tx.$executeRaw`UPDATE "Consignacion" SET "fecha" = "fecha" ${operador as any} ${interval}::interval`;
-                    await tx.$executeRaw`UPDATE "Liquidacion" SET "fecha" = "fecha" ${operador as any} ${interval}::interval`;
-                    await tx.$executeRaw`UPDATE "Gasto" SET "fecha" = "fecha" ${operador as any} ${interval}::interval`;
-                    await tx.$executeRaw`UPDATE "SesionCaja" SET "fechaApertura" = "fechaApertura" ${operador as any} ${interval}::interval`;
-                    await tx.$executeRaw`UPDATE "SesionCaja" SET "fechaCierre" = "fechaCierre" ${operador as any} ${interval}::interval WHERE "fechaCierre" IS NOT NULL`;
-                    await tx.$executeRaw`UPDATE "MovimientoCaja" SET "fecha" = "fecha" ${operador as any} ${interval}::interval`;
+                    await tx.$executeRaw(Prisma.sql`UPDATE "Venta" SET "fecha" = "fecha" ${operator} ${interval}::interval`);
+                    await tx.$executeRaw(Prisma.sql`UPDATE "Venta" SET "fechaAnulacion" = "fechaAnulacion" ${operator} ${interval}::interval WHERE "fechaAnulacion" IS NOT NULL`);
+                    await tx.$executeRaw(Prisma.sql`UPDATE "Pago" SET "fecha" = "fecha" ${operator} ${interval}::interval`);
+                    await tx.$executeRaw(Prisma.sql`UPDATE "Consignacion" SET "fecha" = "fecha" ${operator} ${interval}::interval`);
+                    await tx.$executeRaw(Prisma.sql`UPDATE "Liquidacion" SET "fecha" = "fecha" ${operator} ${interval}::interval`);
+                    await tx.$executeRaw(Prisma.sql`UPDATE "Gasto" SET "fecha" = "fecha" ${operator} ${interval}::interval`);
+                    await tx.$executeRaw(Prisma.sql`UPDATE "SesionCaja" SET "fechaApertura" = "fechaApertura" ${operator} ${interval}::interval`);
+                    await tx.$executeRaw(Prisma.sql`UPDATE "SesionCaja" SET "fechaCierre" = "fechaCierre" ${operator} ${interval}::interval WHERE "fechaCierre" IS NOT NULL`);
+                    await tx.$executeRaw(Prisma.sql`UPDATE "MovimientoCaja" SET "fecha" = "fecha" ${operator} ${interval}::interval`);
                     
                     // Marcar migración como completada
                     await tx.configuracion.update({
@@ -218,16 +213,17 @@ export async function PUT(req: Request) {
                 mpPublicKeyTienda: mpPublicKeyTienda ?? null,
                 tiendaLayout: tiendaLayout ?? "grid",
                 mostrarCategoriasEnHeader: mostrarCategoriasEnHeader ?? true,
-                zonaHoraria: zonaHoraria ?? TZ_DEFAULT,
+                zonaHoraria: zonaHoraria ?? TECHNICAL_FALLBACK_TZ,
             }
         });
 
         // Invalidar caché de settings para que el cambio tome efecto inmediato
         revalidatePath("/settings/general");
+        revalidateTag("config", "max");
 
         const message = migrationMessage 
-            ? `Zona horaria actualizada${migrationMessage}` 
-            : "Configuración actualizada";
+            ? `Zona horaria de sucursal actualizada${migrationMessage}` 
+            : "Configuración general actualizada";
             
         return NextResponse.json({ data: configActualizada, message });
     } catch (error) {

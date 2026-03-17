@@ -1,10 +1,11 @@
 // src/app/ver/consig/[period]/pdf/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import puppeteer, { Browser } from "puppeteer";
+import { requireAuth } from "@/lib/auth/require-auth";
+import { resolveTimezone } from "@/lib/get-configured-tz";
 import { prisma } from "@/lib/prisma";
 import { getBranding } from "@/lib/reports/get-branding";
 import { buildConsigReportHtml, type ConsigReportData, type ConsigClienteRow, type ConsigTopProducto } from "@/lib/reports/base/consignacion-report-template";
-import { getConfiguredTz } from "@/lib/get-configured-tz";
 import { nowAR, startOfDayAR, startOfWeekAR, startOfMonthAR, formatDateTimeAR } from "@/lib/utils-date";
 
 export const dynamic = "force-dynamic";
@@ -39,16 +40,24 @@ export async function GET(
 
         const { searchParams } = new URL(req.url);
         const code = searchParams.get("code");
-        const sucursalId = Number(searchParams.get("sucursalId") || 1);
+        const requestedSucursalId = Number(searchParams.get("sucursalId") ?? 1);
+        const auth = await requireAuth();
+        const authUserId = auth.ok ? Number(auth.user.sub) : null;
+        const userId = Number.isFinite(authUserId) ? authUserId : null;
+        const scopedSucursalId = auth.ok && auth.user.rol !== "ADMIN"
+            ? (auth.user.sucursalId ?? auth.activeSucursalId)
+            : (Number.isFinite(requestedSucursalId) && requestedSucursalId >= 0 ? requestedSucursalId : 1);
+        const isGlobal = scopedSucursalId === 0;
 
         if (!code) {
             return NextResponse.json({ error: "Code is required" }, { status: 400 });
         }
 
-        const tz = await getConfiguredTz(sucursalId);
+        const timezone = await resolveTimezone({ userId, sucursalId: scopedSucursalId });
+        const tz = timezone.tz;
         const start = getPeriodStart(period, tz);
         const dateWhere = start ? { gte: start } : undefined;
-        const sucursalWhere = { sucursalId };
+        const sucursalWhere = isGlobal ? {} : { sucursalId: scopedSucursalId };
 
         const [
             consignaciones,
@@ -323,7 +332,7 @@ export async function GET(
             tendencia,
         };
 
-        const branding = await getBranding(sucursalId);
+        const branding = await getBranding(isGlobal ? (timezone.sucursalId ?? undefined) : scopedSucursalId);
         const htmlContent = buildConsigReportHtml(reportData, branding);
 
         browser = await puppeteer.launch({ headless: true, args: ["--no-sandbox", "--disable-setuid-sandbox"] });

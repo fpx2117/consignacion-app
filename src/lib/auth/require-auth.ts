@@ -56,19 +56,31 @@ export async function requireAuth() {
       };
     }
 
-    // Resolviendo la sucursal activa — cookie como fuente única
-    const { cookies } = await import("next/headers");
+    // Resolviendo la sucursal activa — prioridad: header > cookie > JWT
+    const { cookies, headers } = await import("next/headers");
     const cookieStore = await cookies();
+    const headerStore = await headers();
     const reqCookie = cookieStore.get("active_sucursal_id")?.value;
+    const reqHeader = headerStore.get("x-sucursal-id");
     let activeSucursalId = user.sucursalId || 1;
 
+    // 1. Si hay header x-sucursal-id, intentamos usarlo (para admin o empleado)
+    if (reqHeader) {
+      const parsedHeader = parseInt(reqHeader, 10);
+      if (Number.isFinite(parsedHeader) && parsedHeader >= 0) {
+        activeSucursalId = parsedHeader;
+      }
+    }
+
+    // 2. Si es ADMIN, también respetamos la cookie si no hubo header válido
     if (user.rol === "ADMIN") {
       const parsedCookie = reqCookie ? parseInt(reqCookie, 10) : NaN;
-      if (Number.isFinite(parsedCookie) && parsedCookie >= 0) {
+      if (Number.isFinite(parsedCookie) && parsedCookie >= 0 && !reqHeader) {
         activeSucursalId = parsedCookie;
       }
     }
-    // EMPLEADO: siempre user.sucursalId del JWT (ya asignado arriba)
+
+    // 3. EMPLEADO: solo header o JWT (no usamos cookie para evitar persistencia no intencionada)
 
     return {
       ok: true as const,

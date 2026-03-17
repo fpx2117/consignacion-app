@@ -25,7 +25,9 @@ import {
 import { toast } from "sonner";
 
 import { apiService } from "@/lib/apiService";
+import { useTimezone } from "@/hooks/useTimezone";
 import type { Consignacion, EstadoConsignacion } from "@/lib/types";
+import { formatMoney } from "@/lib/utils-format";
 import { cn } from "@/lib/utils";
 
 import {
@@ -40,24 +42,8 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Progress } from "@/components/ui/progress";
 
-// Helper de moneda
-const formatMoney = (amount: number) => {
-  return new Intl.NumberFormat("es-AR", {
-    style: "currency",
-    currency: "ARS",
-    maximumFractionDigits: 0,
-  }).format(amount);
-};
-
-function formatDate(d: string | Date) {
-  return new Date(d).toLocaleDateString("es-AR", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  });
-}
-
 export default function ConsignacionDetailPage() {
+  const { formatWithOptions } = useTimezone();
   const params = useParams<{ id: string }>();
   const router = useRouter();
   const id = Number(params.id);
@@ -230,7 +216,11 @@ export default function ConsignacionDetailPage() {
               {loading ? <Skeleton className="h-8 w-48" /> : consignacion?.cliente?.nombre}
             </h1>
             <p className="text-sm text-muted-foreground flex items-center gap-1 mt-1">
-              <Clock className="h-3.5 w-3.5" /> Iniciada el {consignacion?.fecha ? formatDate(consignacion.fecha) : "-"}
+              <Clock className="h-3.5 w-3.5" /> Iniciada el {consignacion?.fecha ? formatWithOptions(consignacion.fecha, {
+                day: "2-digit",
+                month: "short",
+                year: "numeric",
+              }) : "-"}
             </p>
           </div>
         </div>

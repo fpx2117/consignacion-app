@@ -1,6 +1,9 @@
 // src/lib/apiService.ts
 import type {
+  ActiveSession,
+  AuditLogEntry,
   ApiResponse,
+  BrandingSettings,
   Usuario,
   Cliente,
   Producto,
@@ -11,6 +14,9 @@ import type {
   DashboardConsignacionesResponse,
   DashboardTopProductos,
   DashboardTendencia,
+  Configuracion,
+  ProfileTimezone,
+  SucursalResumen,
   Venta,
   Consignacion,
   LoginInput,
@@ -22,6 +28,8 @@ import type {
   CreateLiquidacionInput,
   CreatePagoInput,
   EstadoCuentaResponse,
+  Gasto,
+  CategoriaGasto,
   CreateVentaDirectaInput,
   CrearPagoResponse,
   CrearLiquidacionResponse,
@@ -65,13 +73,14 @@ async function apiRequest<T>(path: string, init?: RequestInit): Promise<ApiRespo
   }
 
   const isFormData = init?.body instanceof FormData;
-  const headers: RequestInit["headers"] = {
-    ...(!isFormData ? { "Content-Type": "application/json" } : {}),
-    ...(init?.headers ?? {}),
-  };
+  const headers = new Headers(init?.headers);
+
+  if (!isFormData && !headers.has("Content-Type")) {
+    headers.set("Content-Type", "application/json");
+  }
 
   if (sucursalHeader) {
-    (headers as any)["x-sucursal-id"] = sucursalHeader;
+    headers.set("x-sucursal-id", sucursalHeader);
   }
 
   let url = requestPath;
@@ -110,13 +119,19 @@ async function apiRequest<T>(path: string, init?: RequestInit): Promise<ApiRespo
  * Esto hace que el apiService sea limpio y fácil de usar en UI.
  */
 async function apiData<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await apiRequest<any>(path, init);
+  const res = await apiRequest<unknown>(path, init);
   // Si la respuesta tiene una propiedad 'data', la extraemos. 
   // Caso contrario, devolvemos el objeto raíz (por si es un array directo).
   if (res && typeof res === "object" && "data" in res) {
     return res.data as T;
   }
   return res as T;
+}
+
+function getObjectUrl(value: unknown): string | null {
+  if (!value || typeof value !== "object") return null;
+  const maybeUrl = (value as { url?: unknown }).url;
+  return typeof maybeUrl === "string" && maybeUrl.trim().length > 0 ? maybeUrl : null;
 }
 
 /* =========================
@@ -215,6 +230,7 @@ export const API_ROUTES = {
   SETTINGS: {
     HORARIOS: "/api/settings/pos/horarios",
     GENERAL: "/api/settings/general",
+    PROFILE_TIMEZONE: "/api/settings/profile/timezone",
     BRANDING: "/api/settings/branding",
     SECURITY: {
       ACTIVITY: "/api/security/activity",
@@ -258,7 +274,7 @@ export const apiService = {
   },
 
   registrarMovimientoCaja(payload: CrearMovimientoCajaInput) {
-    return apiData<any>(API_ROUTES.CAJAS.MOVIMIENTO, {
+    return apiData<{ ok?: boolean; message?: string }>(API_ROUTES.CAJAS.MOVIMIENTO, {
       method: "POST",
       body: JSON.stringify(payload),
     });
@@ -285,23 +301,34 @@ export const apiService = {
 
   /* ---------- CONFIGURACIÓN GENERAL ---------- */
   getConfiguracionGeneral() {
-    return apiData<any>(API_ROUTES.SETTINGS.GENERAL);
+    return apiData<Configuracion | null>(API_ROUTES.SETTINGS.GENERAL);
   },
 
-  actualizarConfiguracionGeneral(data: any) {
-    return apiRequest<{ message: string; data: any }>(API_ROUTES.SETTINGS.GENERAL, {
+   actualizarConfiguracionGeneral(data: Partial<Configuracion> & Record<string, unknown>) {
+    return apiRequest<{ message: string; data: Configuracion }>(API_ROUTES.SETTINGS.GENERAL, {
       method: "PUT",
       body: JSON.stringify(data),
     });
   },
 
-  /* ---------- BRANDING ---------- */
-  getBranding() {
-    return apiData<any>(API_ROUTES.SETTINGS.BRANDING);
+  getProfileTimezone() {
+    return apiData<ProfileTimezone>(API_ROUTES.SETTINGS.PROFILE_TIMEZONE);
   },
 
-  actualizarBranding(data: any) {
-    return apiRequest<{ message: string; data: any }>(API_ROUTES.SETTINGS.BRANDING, {
+  updateProfileTimezone(zonaHoraria: string | null) {
+    return apiData<ProfileTimezone>(API_ROUTES.SETTINGS.PROFILE_TIMEZONE, {
+      method: "PUT",
+      body: JSON.stringify({ zonaHoraria }),
+    });
+  },
+
+  /* ---------- BRANDING ---------- */
+  getBranding() {
+    return apiData<BrandingSettings | null>(API_ROUTES.SETTINGS.BRANDING);
+  },
+
+  actualizarBranding(data: BrandingSettings) {
+    return apiRequest<{ message: string; data: BrandingSettings | null }>(API_ROUTES.SETTINGS.BRANDING, {
       method: "PUT",
       body: JSON.stringify(data),
     });
@@ -312,7 +339,7 @@ export const apiService = {
     return apiData<Usuario[]>(API_ROUTES.SETTINGS.HORARIOS);
   },
 
-  guardarHorariosStaff(usuarioId: number, horarios: any[]) {
+  guardarHorariosStaff(usuarioId: number, horarios: Array<{ id?: number; usuarioId?: number; diaSemana: number; horaInicio: string; horaFin: string; activo: boolean }>) {
     return apiRequest<{ message: string }>(API_ROUTES.SETTINGS.HORARIOS, {
       method: "POST",
       body: JSON.stringify({ usuarioId, horarios }),
@@ -512,7 +539,7 @@ export const apiService = {
     });
   },
 
-  updateConsignacion(id: number, payload: any) {
+  updateConsignacion<TPayload extends Record<string, unknown>>(id: number, payload: TPayload) {
     return apiData<Consignacion>(API_ROUTES.CONSIGNACION_ID(id), {
       method: "PUT",
       body: JSON.stringify(payload),
@@ -527,12 +554,12 @@ export const apiService = {
     });
   },
 
-  getLiquidacion(id: number) {
-    return apiData<any>(API_ROUTES.LIQUIDACIONES.BY_ID(id));
+  getLiquidacion<TResponse = unknown>(id: number) {
+    return apiData<TResponse>(API_ROUTES.LIQUIDACIONES.BY_ID(id));
   },
 
-  updateLiquidacion(liquidacionId: number, payload: any) {
-    return apiData<any>(API_ROUTES.LIQUIDACIONES.BY_ID(liquidacionId), {
+  updateLiquidacion<TPayload extends Record<string, unknown>, TResponse = unknown>(liquidacionId: number, payload: TPayload) {
+    return apiData<TResponse>(API_ROUTES.LIQUIDACIONES.BY_ID(liquidacionId), {
       method: "PUT",
       body: JSON.stringify(payload),
     });
@@ -604,7 +631,11 @@ export const apiService = {
 
   async getDashboardReporteUrl(period: DashboardPeriod = "month", type: "general" | "pos" | "consignacion" = "general"): Promise<string> {
     const data = await apiRequest<{ url?: string }>(`${API_ROUTES.DASHBOARD.REPORTE_LINK(period)}&type=${type}`);
-    return normalizeShareUrl((data as any)?.url);
+    const url = getObjectUrl(data) ?? getObjectUrl(data.data);
+    if (!url) {
+      throw new Error("No se pudo obtener la URL del reporte.");
+    }
+    return normalizeShareUrl(url);
   },
 
   getPosReporteUrl(period: DashboardPeriod = "month"): Promise<string> {
@@ -621,7 +652,7 @@ export const apiService = {
       onlyUnread: String(params?.onlyUnread ?? false),
       limit: String(params?.limit ?? 50),
     });
-    return apiData<any[]>(`${API_ROUTES.NOTIFICACIONES.LIST}?${qs.toString()}`);
+    return apiData<Array<Record<string, unknown>>>(`${API_ROUTES.NOTIFICACIONES.LIST}?${qs.toString()}`);
   },
 
   marcarNotificacionLeida(id: number) {
@@ -688,11 +719,11 @@ export const apiService = {
     if (params?.module) qs.append("module", params.module);
     if (params?.userId) qs.append("userId", String(params.userId));
     if (params?.limit) qs.append("limit", String(params.limit));
-    return apiData<any[]>(`${API_ROUTES.SETTINGS.SECURITY.ACTIVITY}?${qs.toString()}`);
+    return apiData<AuditLogEntry[]>(`${API_ROUTES.SETTINGS.SECURITY.ACTIVITY}?${qs.toString()}`);
   },
 
   getActiveSessions() {
-    return apiData<any[]>(API_ROUTES.SETTINGS.SECURITY.SESSIONS);
+    return apiData<ActiveSession[]>(API_ROUTES.SETTINGS.SECURITY.SESSIONS);
   },
 
   revokeSession(sessionId: string) {
@@ -703,22 +734,22 @@ export const apiService = {
 
   /* ---------- SUCURSALES ---------- */
   getSucursales() {
-    return apiData<any[]>("/api/settings/sucursales");
+    return apiData<SucursalResumen[]>("/api/settings/sucursales");
   },
   createSucursal(payload: { nombre: string; activa?: boolean }) {
-    return apiData<any>("/api/settings/sucursales", {
+    return apiData<SucursalResumen>("/api/settings/sucursales", {
       method: "POST",
       body: JSON.stringify(payload),
     });
   },
   updateSucursal(id: number, payload: { nombre?: string; activa?: boolean }) {
-    return apiData<any>(`/api/settings/sucursales/${id}`, {
+    return apiData<SucursalResumen>(`/api/settings/sucursales/${id}`, {
       method: "PUT",
       body: JSON.stringify(payload),
     });
   },
   deleteSucursal(id: number) {
-    return apiData<any>(`/api/settings/sucursales/${id}`, {
+    return apiData<{ ok?: boolean; success?: boolean }>(`/api/settings/sucursales/${id}`, {
       method: "DELETE",
     });
   },
@@ -728,18 +759,18 @@ export const apiService = {
     const qs = new URLSearchParams();
     if (params?.estado) qs.append("estado", params.estado);
     if (params?.categoriaId) qs.append("categoriaId", String(params.categoriaId));
-    return apiData<any[]>(`${API_ROUTES.GASTOS.LIST}?${qs.toString()}`);
+    return apiData<Gasto[]>(`${API_ROUTES.GASTOS.LIST}?${qs.toString()}`);
   },
 
-  createGasto(payload: any) {
-    return apiData<any>(API_ROUTES.GASTOS.LIST, {
+  createGasto<TPayload extends Record<string, unknown>>(payload: TPayload) {
+    return apiData<Gasto>(API_ROUTES.GASTOS.LIST, {
       method: "POST",
       body: JSON.stringify(payload),
     });
   },
 
-  updateGasto(id: number, payload: any) {
-    return apiData<any>(API_ROUTES.GASTOS.ID(id), {
+  updateGasto<TPayload extends Record<string, unknown>>(id: number, payload: TPayload) {
+    return apiData<Gasto>(API_ROUTES.GASTOS.ID(id), {
       method: "PUT",
       body: JSON.stringify(payload),
     });
@@ -752,11 +783,11 @@ export const apiService = {
   },
 
   getGastosCategorias() {
-    return apiData<any[]>(API_ROUTES.GASTOS.CATEGORIAS);
+    return apiData<CategoriaGasto[]>(API_ROUTES.GASTOS.CATEGORIAS);
   },
 
   createGastoCategoria(nombre: string) {
-    return apiData<any>(API_ROUTES.GASTOS.CATEGORIAS, {
+    return apiData<CategoriaGasto>(API_ROUTES.GASTOS.CATEGORIAS, {
       method: "POST",
       body: JSON.stringify({ nombre }),
     });

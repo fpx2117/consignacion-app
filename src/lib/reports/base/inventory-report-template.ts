@@ -1,6 +1,6 @@
 import { reportThemeCss } from "@/lib/reports/report-theme";
 import { getReportHeadAssets } from "@/lib/reports/tailwind-inline";
-import { escapeHtml, escapeAttr, brandInitials, formatDateAR } from "@/lib/reports/template-helpers";
+import { escapeHtml, escapeAttr, brandInitials, formatDateAR, resolveReportTimezone } from "@/lib/reports/template-helpers";
 import type { BrandingDTO } from "@/lib/reports/types";
 import { generateBarcodeDataUrl } from "@/lib/reports/barcode-helper";
 
@@ -34,9 +34,9 @@ export interface InventoryGroup {
 export async function buildInventoryHtml(
   groups: InventoryGroup[],
   branding: BrandingDTO,
-  zonaHoraria?: string,
+  zonaHoraria: string,
 ) {
-  const tz = zonaHoraria ?? "America/Argentina/Buenos_Aires";
+  const tz = resolveReportTimezone(zonaHoraria);
   // --- 1. PROCESAMIENTO Y CÁLCULOS GLOBALES ---
   let totalItemsGlobal = 0;
   let totalStockUnitsGlobal = 0;

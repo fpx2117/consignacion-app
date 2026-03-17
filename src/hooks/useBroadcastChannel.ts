@@ -27,7 +27,10 @@ export function useBroadcastChannel(handlers: MessageHandler): void {
   // Capturamos handlers en un ref para que el efecto nunca necesite re-ejecutarse
   // pero siempre invoque la versión más reciente del handler.
   const handlersRef = useRef(handlers);
-  handlersRef.current = handlers;
+
+  useEffect(() => {
+    handlersRef.current = handlers;
+  }, [handlers]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;

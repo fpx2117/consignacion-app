@@ -1,7 +1,13 @@
+import { Prisma } from "@prisma/client";
 import { unstable_cache } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { registerCatalogVisit } from "@/lib/analytics/catalog-visit";
 import type { PublicCatalogData } from "@/lib/types";
+
+function readOptionalString(record: Record<string, unknown> | null | undefined, key: string) {
+  const value = record?.[key];
+  return typeof value === "string" && value.trim().length > 0 ? value : null;
+}
 
 export class PublicCatalogError extends Error {
   status: number;
@@ -14,7 +20,7 @@ export class PublicCatalogError extends Error {
 }
 
 export async function getPublicCatalogDataRaw(sucursalId: number | null): Promise<PublicCatalogData> {
-  const config = (await prisma.configuracion.findUnique({
+  const config = await prisma.configuracion.findUnique({
     where: { sucursalId: sucursalId || 1 },
     include: {
       sucursal: {
@@ -29,13 +35,13 @@ export async function getPublicCatalogDataRaw(sucursalId: number | null): Promis
         },
       },
     },
-  })) as any;
+  });
 
   if (!config || !config.mostrarListaPrecios) {
     throw new PublicCatalogError("La lista de precios no está habilitada", 403);
   }
 
-  const where: any = { activo: true };
+  const where: Prisma.ProductoWhereInput = { activo: true };
   if (config.separarListaPorSucursal) {
     where.sucursalId = config.sucursalId;
   }
@@ -76,6 +82,8 @@ export async function getPublicCatalogDataRaw(sucursalId: number | null): Promis
     }),
   ]);
 
+  const brandingExtra = config.sucursal.branding as Record<string, unknown> | null | undefined;
+
   const payload: PublicCatalogData = {
     productos,
     categorias,
@@ -96,8 +104,8 @@ export async function getPublicCatalogDataRaw(sucursalId: number | null): Promis
         : null,
       isBannerSlider: config.sucursal.branding?.isBannerSlider || false,
       banners: config.sucursal.branding?.banners
-        ? config.sucursal.branding.banners.map((b: any) => ({
-            id: b.id,
+          ? config.sucursal.branding.banners.map((b) => ({
+              id: b.id,
             bannerData: null,
             bannerMime: b.bannerMime,
             orden: b.orden,
@@ -105,16 +113,16 @@ export async function getPublicCatalogDataRaw(sucursalId: number | null): Promis
           }))
         : [],
       instagramUrl: config.sucursal.branding?.instagramUrl,
-      tiktokUrl: config.sucursal.branding?.tiktokUrl,
+      tiktokUrl: readOptionalString(brandingExtra, "tiktokUrl"),
       facebookUrl: config.sucursal.branding?.facebookUrl,
-      youtubeUrl: config.sucursal.branding?.youtubeUrl,
+      youtubeUrl: readOptionalString(brandingExtra, "youtubeUrl"),
       whatsappNumber: config.sucursal.branding?.whatsappNumber,
       whatsappMessage: config.sucursal.branding?.whatsappMessage,
       phone: config.sucursal.branding?.phone,
       address: config.sucursal.branding?.address,
-      googleMapsUrl: config.sucursal.branding?.googleMapsUrl,
+      googleMapsUrl: readOptionalString(brandingExtra, "googleMapsUrl"),
       footerText: config.sucursal.branding?.footerText,
-      typography: config.sucursal.branding?.typography,
+      typography: readOptionalString(brandingExtra, "typography"),
       themeIdentifier: config.sucursal.branding?.themeIdentifier || "modern",
       tiendaLayout: config.tiendaLayout,
       mostrarCategoriasEnHeader: config.mostrarCategoriasEnHeader,

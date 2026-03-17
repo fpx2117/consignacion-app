@@ -8,8 +8,25 @@ interface AndreaniConfigProps {
     andreaniPassword?: string | null;
 }
 
+type AndreaniClient = {
+    getTarifa: (input: {
+        sucursalOrigen: string;
+        cpDestino: string;
+        bultos: Array<{
+            volumen: number;
+            kilos: number;
+            largoCm: number;
+            altoCm: number;
+            anchoCm: number;
+            valorDeclarado: number;
+        }>;
+        contrato?: string | null;
+    }) => Promise<{ tarifa?: number | null }>;
+    getSucursales: (input: { cp: string }) => Promise<unknown>;
+};
+
 export class AndreaniService {
-    private client: any | null = null;
+    private client: AndreaniClient | null = null;
     private config: AndreaniConfigProps | null = null;
 
     constructor() { }
@@ -45,7 +62,7 @@ export class AndreaniService {
                 sandbox_url: "https://apisqa.andreani.com/",
                 production_url: "https://apis.andreani.com",
             },
-        });
+        }) as unknown as AndreaniClient;
     }
 
     /**
@@ -93,9 +110,9 @@ export class AndreaniService {
                 sucursal: responseSucursal?.tarifa || 0,
             };
 
-        } catch (error: any) {
+        } catch (error: unknown) {
             console.error("Error al cotizar envío en Andreani:", error);
-            throw new Error("No se pudo obtener las tarifas de envío: " + (error.message || "Error desconocido"));
+            throw new Error("No se pudo obtener las tarifas de envío: " + (error instanceof Error ? error.message : "Error desconocido"));
         }
     }
 
@@ -110,7 +127,7 @@ export class AndreaniService {
             // Asumiendo que `getSucursales` es un método en node-andreani.
             const result = await this.client.getSucursales({ cp: codigoPostal });
             return result;
-        } catch (error: any) {
+        } catch (error: unknown) {
             console.error("Error al buscar sucursales en Andreani:", error);
             throw new Error("Error obteniendo sucursales de Andreani.");
         }

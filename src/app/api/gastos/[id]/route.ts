@@ -3,6 +3,8 @@ import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/auth/require-auth";
 import { canAccessSucursalResource, isGlobalSucursalView } from "@/lib/sucursalScope";
 import { EstadoGasto, FrecuenciaGasto } from "@prisma/client";
+import { formatTimeInputAR, parseDateTimeInputAR } from "@/lib/utils-date";
+import { resolveTimezoneForAuth } from "@/lib/get-configured-tz";
 
 export async function GET(
     req: Request,
@@ -60,7 +62,9 @@ export async function PUT(
             monto,
             motivo,
             fecha,
+            hora,
             fechaVencimiento,
+            horaVencimiento,
             estado,
             esRecurrente,
             frecuencia,
@@ -78,6 +82,13 @@ export async function PUT(
         }
 
         const montoFinal = monto !== undefined ? Number(monto) : Number(existing.monto);
+        const timezone = await resolveTimezoneForAuth(auth);
+        const horaFecha = typeof hora === "string" && hora ? hora : formatTimeInputAR(existing.fecha, timezone.tz) || "00:00";
+        const horaFechaVencimiento = typeof horaVencimiento === "string" && horaVencimiento
+            ? horaVencimiento
+            : existing.fechaVencimiento
+                ? (formatTimeInputAR(existing.fechaVencimiento, timezone.tz) || "23:59")
+                : "23:59";
 
         // Actualizar reparto si viene en el payload
         let nuevoEsCompartido = existing.esCompartido;
@@ -112,8 +123,8 @@ export async function PUT(
             data: {
                 ...(monto !== undefined && { monto: montoFinal }),
                 ...(motivo !== undefined && { motivo }),
-                ...(fecha !== undefined && { fecha: new Date(fecha as string) }),
-                ...(fechaVencimiento !== undefined && { fechaVencimiento: fechaVencimiento ? new Date(fechaVencimiento as string) : null }),
+                ...(fecha !== undefined && { fecha: parseDateTimeInputAR(fecha as string, horaFecha, timezone.tz) }),
+                ...(fechaVencimiento !== undefined && { fechaVencimiento: fechaVencimiento ? parseDateTimeInputAR(fechaVencimiento as string, horaFechaVencimiento, timezone.tz) : null }),
                 ...(estado !== undefined && { estado: estado as EstadoGasto }),
                 ...(esRecurrente !== undefined && { esRecurrente: !!esRecurrente }),
                 ...(frecuencia !== undefined && { frecuencia: frecuencia as FrecuenciaGasto }),

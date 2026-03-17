@@ -1,17 +1,41 @@
 // src/app/ver/dashboard/[period]/pdf/route.ts
+import { Prisma } from "@prisma/client";
 import { NextRequest, NextResponse } from "next/server";
 import puppeteer, { Browser } from "puppeteer";
+import { requireAuth } from "@/lib/auth/require-auth";
+import { resolveTimezone } from "@/lib/get-configured-tz";
 import { prisma } from "@/lib/prisma";
 import { getDashboardKpis } from "@/lib/kpi-logic";
 import { getBranding } from "@/lib/reports/get-branding";
 import { buildDashboardReportHtml, type DashboardReportData } from "@/lib/reports/base/dashboard-report-template";
-import { getConfiguredTz } from "@/lib/get-configured-tz";
 import { nowAR, startOfDayAR, startOfWeekAR, startOfMonthAR, formatDateTimeAR } from "@/lib/utils-date";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 type Period = "today" | "week" | "month" | "all";
+
+type GastoDetalleRecord = Prisma.GastoGetPayload<{
+    select: {
+        monto: true;
+        motivo: true;
+        fecha: true;
+        categoria: { select: { nombre: true } };
+    };
+}>;
+
+type GastoCompartidoDetalleRecord = Prisma.GastoSucursalGetPayload<{
+    select: {
+        montoProporcional: true;
+        gasto: {
+            select: {
+                motivo: true;
+                fecha: true;
+                categoria: { select: { nombre: true } };
+            };
+        };
+    };
+}>;
 
 function getPeriodStart(period: Period, tz: string): Date | undefined {
     if (period === "all") return undefined;
@@ -44,16 +68,24 @@ export async function GET(
 
         const { searchParams } = new URL(req.url);
         const code = searchParams.get("code");
-        const sucursalId = Number(searchParams.get("sucursalId") || 1);
+        const requestedSucursalId = Number(searchParams.get("sucursalId") ?? 1);
+        const auth = await requireAuth();
+        const authUserId = auth.ok ? Number(auth.user.sub) : null;
+        const userId = Number.isFinite(authUserId) ? authUserId : null;
+        const scopedSucursalId = auth.ok && auth.user.rol !== "ADMIN"
+            ? (auth.user.sucursalId ?? auth.activeSucursalId)
+            : (Number.isFinite(requestedSucursalId) && requestedSucursalId >= 0 ? requestedSucursalId : 1);
+        const isGlobal = scopedSucursalId === 0;
 
         if (!code) {
             return NextResponse.json({ error: "Code is required" }, { status: 400 });
         }
 
-        const tz = await getConfiguredTz(sucursalId);
+        const timezone = await resolveTimezone({ userId, sucursalId: scopedSucursalId });
+        const tz = timezone.tz;
         const start = getPeriodStart(period, tz);
         const dateWhere = start ? { gte: start } : undefined;
-        const sucursalWhere = { sucursalId };
+        const sucursalWhere = isGlobal ? {} : { sucursalId: scopedSucursalId };
 
         // 1. Usar getDashboardKpis como única fuente de verdad para KPIs financieros
         //    (garantiza consistencia exacta con el Dashboard UI)
@@ -65,7 +97,7 @@ export async function GET(
             gastosPropiosDetalle,
             gastosLinksDetalle,
         ] = await Promise.all([
-            getDashboardKpis(sucursalId, kpiPeriod, false),
+            getDashboardKpis(scopedSucursalId, kpiPeriod, isGlobal, userId ?? undefined),
 
             // Consignaciones cerradas (kpi-logic no lo expone)
             prisma.consignacion.count({ where: { ...sucursalWhere, estado: "CERRADA" } }),
@@ -81,7 +113,9 @@ export async function GET(
 
             // Gastos propios PAGADO no compartidos — solo para tabla de detalle
             prisma.gasto.findMany({
-                where: { sucursalId, esCompartido: false, fecha: dateWhere, estado: "PAGADO" },
+                where: isGlobal
+                    ? { esCompartido: false, fecha: dateWhere, estado: "PAGADO" }
+                    : { sucursalId: scopedSucursalId, esCompartido: false, fecha: dateWhere, estado: "PAGADO" },
                 select: {
                     monto: true,
                     motivo: true,
@@ -92,23 +126,34 @@ export async function GET(
             }),
 
             // Participación proporcional en gastos compartidos — solo para tabla de detalle
-            prisma.gastoSucursal.findMany({
-                where: {
-                    sucursalId,
-                    gasto: { fecha: dateWhere, estado: "PAGADO", esCompartido: true },
-                },
-                select: {
-                    montoProporcional: true,
-                    gasto: {
-                        select: {
-                            motivo: true,
-                            fecha: true,
-                            categoria: { select: { nombre: true } },
+            isGlobal
+                ? prisma.gasto.findMany({
+                    where: { fecha: dateWhere, estado: "PAGADO", esCompartido: true },
+                    select: {
+                        monto: true,
+                        motivo: true,
+                        fecha: true,
+                        categoria: { select: { nombre: true } },
+                    },
+                    orderBy: { fecha: "asc" },
+                })
+                : prisma.gastoSucursal.findMany({
+                    where: {
+                        sucursalId: scopedSucursalId,
+                        gasto: { fecha: dateWhere, estado: "PAGADO", esCompartido: true },
+                    },
+                    select: {
+                        montoProporcional: true,
+                        gasto: {
+                            select: {
+                                motivo: true,
+                                fecha: true,
+                                categoria: { select: { nombre: true } },
+                            },
                         },
                     },
-                },
-                orderBy: { gasto: { fecha: "asc" } },
-            }),
+                    orderBy: { gasto: { fecha: "asc" } },
+                }),
         ]);
 
         // 2. Extraer KPIs directamente desde getDashboardKpis (fuente de verdad)
@@ -116,7 +161,6 @@ export async function GET(
         const gananciaConsig   = kpis.finanzas.ganancia.porConsig;
         const gananciaDirecta  = kpis.finanzas.ganancia.porPos;
         const totalGastos      = kpis.gastos.total;
-        const perdidaRotura    = kpis.finanzas.ganancia.perdidaRotura;
         const utilidadNeta     = kpis.finanzas.ganancia.neta;
         const unitsPendientes  = kpis.consignacionUnits?.pendientes ?? 0;
 
@@ -146,20 +190,32 @@ export async function GET(
         }
 
         const gastosDetalle = [
-            ...(gastosPropiosDetalle as any[]).map((g: any) => ({
+            ...(gastosPropiosDetalle as GastoDetalleRecord[]).map((g) => ({
                 motivo: g.motivo as string,
                 categoria: g.categoria?.nombre ?? "Sin categoría",
                 monto: Number(g.monto),
                 fecha: formatDateShort(g.fecha),
                 esCompartido: false,
             })),
-            ...(gastosLinksDetalle as any[]).map((g: any) => ({
-                motivo: g.gasto.motivo as string,
-                categoria: g.gasto.categoria?.nombre ?? "Sin categoría",
-                monto: Number(g.montoProporcional),
-                fecha: formatDateShort(g.gasto.fecha),
-                esCompartido: true,
-            })),
+            ...(gastosLinksDetalle as Array<GastoDetalleRecord | GastoCompartidoDetalleRecord>).map((g) => {
+                if ("gasto" in g) {
+                    return {
+                        motivo: g.gasto.motivo,
+                        categoria: g.gasto.categoria?.nombre ?? "Sin categoría",
+                        monto: Number(g.montoProporcional),
+                        fecha: formatDateShort(g.gasto.fecha),
+                        esCompartido: true,
+                    };
+                }
+
+                return {
+                    motivo: g.motivo,
+                    categoria: g.categoria?.nombre ?? "Sin categoría",
+                    monto: Number(g.monto),
+                    fecha: formatDateShort(g.fecha),
+                    esCompartido: true,
+                };
+            }),
         ].sort((a, b) => a.fecha.localeCompare(b.fecha));
 
         const reportData: DashboardReportData = {
@@ -185,7 +241,7 @@ export async function GET(
             gastosDetalle,
         };
 
-        const branding = await getBranding(sucursalId);
+        const branding = await getBranding(isGlobal ? (timezone.sucursalId ?? undefined) : scopedSucursalId);
         const htmlContent = buildDashboardReportHtml(reportData, branding);
 
         // 4. Puppeteer PDF

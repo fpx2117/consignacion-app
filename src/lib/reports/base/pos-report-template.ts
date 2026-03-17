@@ -106,7 +106,6 @@ export function buildPosReportHtml(data: PosReportData, branding: BrandingDTO): 
 
   // ─ Utilidad neta = ganancia - gastos
   const utilidadNeta = data.totalGanancia - data.gastosTotal;
-  const rentabilidadNeta = data.totalVentas > 0 ? Math.round((utilidadNeta / data.totalVentas) * 100) : 0;
   const gastosSubtitle = data.gastosDesglose
     ? data.gastosDesglose.isGlobal
       ? `No compartidos: ${fmt(data.gastosDesglose.propios)} · Compartidos: ${fmt(data.gastosDesglose.compartidos)}`

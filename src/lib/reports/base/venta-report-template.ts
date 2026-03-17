@@ -1,6 +1,6 @@
 import { reportThemeCss } from "@/lib/reports/report-theme";
 import { getReportHeadAssets } from "@/lib/reports/tailwind-inline";
-import { brandInitials, escapeAttr, escapeHtml, formatDateAR, formatMoneyARS } from "@/lib/reports/template-helpers";
+import { brandInitials, escapeAttr, escapeHtml, formatDateAR, formatMoneyARS, resolveReportTimezone } from "@/lib/reports/template-helpers";
 import { generateQRHtml } from "@/lib/reports/qr-helper";
 import type { BrandingDTO } from "@/lib/reports/types";
 
@@ -13,7 +13,7 @@ export interface VentaReportDTO {
   metodoPago: string;
   clienteNombre: string;
   clienteTelefono: string;
-  zonaHoraria?: string;
+  zonaHoraria: string;
   /** URL pública del catálogo online del negocio (ej: https://dominio/lista?sucursalId=1). Si se provee, se embebe como QR. */
   catalogUrl?: string;
   items: Array<{
@@ -75,7 +75,7 @@ function getMetodoPagoIcon(metodo: string): string {
 
 function buildVentaBody(data: VentaReportDTO, branding: BrandingDTO, qrHtml: string): string {
   const ticket = getTicketDetails(data.id, data.numeroVenta);
-  const tz = data.zonaHoraria ?? "America/Argentina/Buenos_Aires";
+  const tz = resolveReportTimezone(data.zonaHoraria);
 
   // Color primario del branding (con fallback)
   const primaryColor = branding.primaryColor ?? "#4f46e5";

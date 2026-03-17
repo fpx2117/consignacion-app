@@ -15,6 +15,7 @@ export type BrandingPreviewSettings = {
   primaryColor?: string;
   secondaryColor?: string;
   footerText?: string;
+  phone?: string;
   address?: string;
   instagramUrl?: string;
   tiktokUrl?: string;

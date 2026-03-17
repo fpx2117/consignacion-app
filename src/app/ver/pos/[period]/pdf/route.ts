@@ -1,16 +1,32 @@
 // src/app/ver/pos/[period]/pdf/route.ts
+import { Prisma } from "@prisma/client";
 import { NextRequest, NextResponse } from "next/server";
 import puppeteer, { Browser } from "puppeteer";
+import { requireAuth } from "@/lib/auth/require-auth";
+import { resolveTimezone } from "@/lib/get-configured-tz";
 import { prisma } from "@/lib/prisma";
 import { getBranding } from "@/lib/reports/get-branding";
 import { buildPosReportHtml, type PosReportData } from "@/lib/reports/base/pos-report-template";
-import { getConfiguredTz } from "@/lib/get-configured-tz";
 import { nowAR, startOfDayAR, startOfWeekAR, startOfMonthAR, formatDateTimeAR } from "@/lib/utils-date";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 type Period = "today" | "week" | "month" | "all";
+
+type CatalogVisitDelegate = {
+    count: (args: { where: Record<string, unknown> }) => Promise<number>;
+};
+
+type GastoLinkRecord = {
+    montoProporcional: Prisma.Decimal | number;
+};
+
+function getCatalogVisitDelegate(): CatalogVisitDelegate | null {
+    return "catalogVisit" in prisma
+        ? ((prisma as unknown as { catalogVisit?: CatalogVisitDelegate }).catalogVisit ?? null)
+        : null;
+}
 
 function getPeriodStart(period: Period, tz: string): Date | undefined {
     if (period === "all") return undefined;
@@ -39,19 +55,26 @@ export async function GET(
 
         const { searchParams } = new URL(req.url);
         const code = searchParams.get("code");
-        const sucursalId = Number(searchParams.get("sucursalId") || 1);
+        const requestedSucursalId = Number(searchParams.get("sucursalId") ?? 1);
+        const auth = await requireAuth();
+        const authUserId = auth.ok ? Number(auth.user.sub) : null;
+        const userId = Number.isFinite(authUserId) ? authUserId : null;
+        const scopedSucursalId = auth.ok && auth.user.rol !== "ADMIN"
+            ? (auth.user.sucursalId ?? auth.activeSucursalId)
+            : (Number.isFinite(requestedSucursalId) && requestedSucursalId >= 0 ? requestedSucursalId : 1);
+        const isGlobal = scopedSucursalId === 0;
 
         if (!code) {
             return NextResponse.json({ error: "Code is required" }, { status: 400 });
         }
 
-        const isGlobal = sucursalId === 0;
-        const tz = await getConfiguredTz(isGlobal ? 1 : sucursalId);
+        const timezone = await resolveTimezone({ userId, sucursalId: scopedSucursalId });
+        const tz = timezone.tz;
         const start = getPeriodStart(period, tz);
         const dateWhere = start ? { gte: start } : undefined;
-        const sucursalWhere = isGlobal ? {} : { sucursalId };
+        const sucursalWhere = isGlobal ? {} : { sucursalId: scopedSucursalId };
 
-        const hasCatalogVisitModel = "catalogVisit" in prisma;
+        const catalogVisitDelegate = getCatalogVisitDelegate();
 
         // Fetch data in parallel
         const [ventasAgg, pagosAgg, ventasConDetalles, pagosPorMetodo, gastosPropiosAgg, gastosLinksData, catalogVisitsCount] = await Promise.all([
@@ -101,7 +124,7 @@ export async function GET(
             prisma.gasto.aggregate({
                 where: isGlobal
                     ? { fecha: dateWhere, estado: "PAGADO", esCompartido: false }
-                    : { sucursalId, esCompartido: false, fecha: dateWhere, estado: "PAGADO" },
+                    : { sucursalId: scopedSucursalId, esCompartido: false, fecha: dateWhere, estado: "PAGADO" },
                 _sum: { monto: true },
                 _count: { _all: true },
             }),
@@ -114,15 +137,15 @@ export async function GET(
                 })
                 : prisma.gastoSucursal.findMany({
                     where: {
-                        sucursalId,
+                        sucursalId: scopedSucursalId,
                         gasto: { fecha: dateWhere, estado: "PAGADO", esCompartido: true },
                     },
                     select: { montoProporcional: true },
                 }),
 
             // Visitas al catálogo del período
-            hasCatalogVisitModel
-                ? (prisma as any).catalogVisit.count({
+            catalogVisitDelegate
+                ? catalogVisitDelegate.count({
                     where: { ...sucursalWhere, ...(start ? { visitedAt: { gte: start } } : {}) },
                 })
                 : Promise.resolve(0),
@@ -187,9 +210,9 @@ export async function GET(
         // Gastos: propios no compartidos + participación proporcional en compartidos
         const totalGastosPropios = Number(gastosPropiosAgg._sum?.monto ?? 0);
         const totalGastosLinks = isGlobal
-            ? Number((gastosLinksData as any)?._sum?.monto ?? 0)
-            : (gastosLinksData as any[]).reduce(
-                (acc: number, g: any) => acc + Number(g.montoProporcional), 0
+            ? Number((gastosLinksData as { _sum?: { monto?: Prisma.Decimal | number | null } })?._sum?.monto ?? 0)
+            : (gastosLinksData as GastoLinkRecord[]).reduce(
+                (acc: number, g) => acc + Number(g.montoProporcional), 0
             );
         const gastosTotal = totalGastosPropios + totalGastosLinks;
 
@@ -197,7 +220,7 @@ export async function GET(
             period,
             periodLabel: PERIOD_LABELS[period],
             fechaGeneracion: formatDateTimeAR(new Date(), true, tz),
-            scopeLabel: isGlobal ? "Vista global" : `Sucursal ${sucursalId}`,
+            scopeLabel: isGlobal ? "Vista global" : `Sucursal ${scopedSucursalId}`,
             totalVentas: totalVentasNeto,
             cantidadVentas,
             totalGanancia,
@@ -220,7 +243,7 @@ export async function GET(
             tendencia,
         };
 
-        const branding = await getBranding(sucursalId);
+        const branding = await getBranding(isGlobal ? (timezone.sucursalId ?? undefined) : scopedSucursalId);
         const htmlContent = buildPosReportHtml(reportData, branding);
 
         browser = await puppeteer.launch({ headless: true, args: ["--no-sandbox", "--disable-setuid-sandbox"] });

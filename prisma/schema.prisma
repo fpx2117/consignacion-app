@@ -50,6 +50,7 @@ model Usuario {
   createdAt     DateTime         @default(now())
   updatedAt     DateTime         @updatedAt
   sucursalId    Int?
+  zonaHoraria   String?
   auditLogs     AuditLog[]
   horarios      HorarioLaboral[]
   notifications Notification[]

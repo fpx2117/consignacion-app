@@ -16,9 +16,11 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { apiService } from "@/lib/apiService";
+import { useTimezone } from "@/hooks/useTimezone";
 import { useSucursalStore } from "@/store/useSucursalStore";
 import type { Gasto, CategoriaGasto } from "@/lib/types";
 import { formatMoney } from "@/lib/utils-format";
+import { formatDateInputAR, formatTimeInputAR } from "@/lib/utils-date";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
@@ -43,6 +45,7 @@ import { GastosFilters } from "./components/gastos-filters";
 import { GastosList } from "./components/gastos-list";
 
 export default function GastosPage() {
+    const { tz } = useTimezone();
     const [gastos, setGastos] = React.useState<Gasto[]>([]);
     const [categorias, setCategorias] = React.useState<CategoriaGasto[]>([]);
     const [loading, setLoading] = React.useState(true);
@@ -144,6 +147,7 @@ export default function GastosPage() {
                     categorias={categorias}
                     editingGasto={editingGasto}
                     activeSucursalId={activeSucursalId}
+                    tz={tz}
                 />
             )}
 
@@ -175,13 +179,16 @@ interface GastoModalProps {
     categorias: import("@/lib/types").CategoriaGasto[];
     editingGasto: import("@/lib/types").Gasto | null;
     activeSucursalId: number;
+    tz: string;
 }
-function GastoModal({ open, onOpenChange, onSuccess, categorias, editingGasto, activeSucursalId }: GastoModalProps) {
+function GastoModal({ open, onOpenChange, onSuccess, categorias, editingGasto, activeSucursalId, tz }: GastoModalProps) {
     const [formData, setFormData] = React.useState({
         monto: "",
         motivo: "",
-        fecha: new Date().toISOString().split("T")[0],
+        fecha: formatDateInputAR(new Date(), tz),
+        hora: formatTimeInputAR(new Date(), tz),
         fechaVencimiento: "",
+        horaVencimiento: "23:59",
         estado: "PAGADO",
         esRecurrente: false,
         frecuencia: "UNICO",
@@ -199,8 +206,10 @@ function GastoModal({ open, onOpenChange, onSuccess, categorias, editingGasto, a
             setFormData({
                 monto: String(editingGasto.monto),
                 motivo: editingGasto.motivo,
-                fecha: new Date(editingGasto.fecha).toISOString().split("T")[0],
-                fechaVencimiento: editingGasto.fechaVencimiento ? new Date(editingGasto.fechaVencimiento).toISOString().split("T")[0] : "",
+                fecha: formatDateInputAR(editingGasto.fecha, tz),
+                hora: formatTimeInputAR(editingGasto.fecha, tz),
+                fechaVencimiento: editingGasto.fechaVencimiento ? formatDateInputAR(editingGasto.fechaVencimiento, tz) : "",
+                horaVencimiento: editingGasto.fechaVencimiento ? formatTimeInputAR(editingGasto.fechaVencimiento, tz) : "23:59",
                 estado: editingGasto.estado,
                 esRecurrente: editingGasto.esRecurrente,
                 frecuencia: editingGasto.frecuencia,
@@ -213,7 +222,25 @@ function GastoModal({ open, onOpenChange, onSuccess, categorias, editingGasto, a
                 setSelectedSucursales([activeSucursalId]);
             }
         }
-    }, [editingGasto, activeSucursalId]);
+    }, [editingGasto, activeSucursalId, tz]);
+
+    React.useEffect(() => {
+        if (open && !editingGasto) {
+            setFormData({
+                monto: "",
+                motivo: "",
+                fecha: formatDateInputAR(new Date(), tz),
+                hora: formatTimeInputAR(new Date(), tz),
+                fechaVencimiento: "",
+                horaVencimiento: "23:59",
+                estado: "PAGADO",
+                esRecurrente: false,
+                frecuencia: "UNICO",
+                categoriaGastoId: "",
+            });
+            setEsCompartido(false);
+        }
+    }, [open, editingGasto, tz]);
 
     // Cargar sucursales al abrir el modal (tanto crear como editar)
     React.useEffect(() => {
@@ -279,7 +306,7 @@ function GastoModal({ open, onOpenChange, onSuccess, categorias, editingGasto, a
                     </DialogTitle>
                 </DialogHeader>
                 <form onSubmit={handleSubmit} className="space-y-4 pt-4">
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                         <div className="space-y-1.5">
                             <label className="text-[10px] uppercase font-black tracking-widest text-muted-foreground ml-1">Monto ($)</label>
                             <Input
@@ -302,6 +329,15 @@ function GastoModal({ open, onOpenChange, onSuccess, categorias, editingGasto, a
                                 type="date" required
                                 value={formData.fecha}
                                 onChange={(e) => setFormData({ ...formData, fecha: e.target.value })}
+                                className="rounded-xl bg-muted/30 border-transparent focus:border-primary/30 h-11"
+                            />
+                        </div>
+                        <div className="space-y-1.5">
+                            <label className="text-[10px] uppercase font-black tracking-widest text-muted-foreground ml-1">Hora</label>
+                            <Input
+                                type="time" required
+                                value={formData.hora}
+                                onChange={(e) => setFormData({ ...formData, hora: e.target.value })}
                                 className="rounded-xl bg-muted/30 border-transparent focus:border-primary/30 h-11"
                             />
                         </div>
@@ -375,22 +411,34 @@ function GastoModal({ open, onOpenChange, onSuccess, categorias, editingGasto, a
                         )}
                     </div>
 
-                    <div className="space-y-1.5 pt-2">
-                        <label className="text-[10px] uppercase font-black tracking-widest text-muted-foreground ml-1 flex items-center gap-1">
-                            <Calendar className="h-3 w-3" /> {formData.esRecurrente ? "Fecha Final de Pago" : "Fecha de Vencimiento (Opcional)"}
-                        </label>
-                        <Input
-                            type="date"
-                            value={formData.fechaVencimiento}
-                            onChange={(e) => setFormData({ ...formData, fechaVencimiento: e.target.value })}
-                            className="rounded-xl bg-muted/30 border-transparent h-11"
-                        />
-                        {formData.esRecurrente && formData.fechaVencimiento && (
-                            <p className="text-[10px] font-bold text-primary/70 px-1 italic">
-                                * Se generarán automáticamente todas las cuotas hasta esta fecha.
-                            </p>
-                        )}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+                        <div className="space-y-1.5">
+                            <label className="text-[10px] uppercase font-black tracking-widest text-muted-foreground ml-1 flex items-center gap-1">
+                                <Calendar className="h-3 w-3" /> {formData.esRecurrente ? "Fecha Final de Pago" : "Fecha de Vencimiento (Opcional)"}
+                            </label>
+                            <Input
+                                type="date"
+                                value={formData.fechaVencimiento}
+                                onChange={(e) => setFormData({ ...formData, fechaVencimiento: e.target.value })}
+                                className="rounded-xl bg-muted/30 border-transparent h-11"
+                            />
+                        </div>
+                        <div className="space-y-1.5">
+                            <label className="text-[10px] uppercase font-black tracking-widest text-muted-foreground ml-1">Hora de Vencimiento</label>
+                            <Input
+                                type="time"
+                                value={formData.horaVencimiento}
+                                onChange={(e) => setFormData({ ...formData, horaVencimiento: e.target.value })}
+                                className="rounded-xl bg-muted/30 border-transparent h-11"
+                                disabled={!formData.fechaVencimiento}
+                            />
+                        </div>
                     </div>
+                    {formData.esRecurrente && formData.fechaVencimiento && (
+                        <p className="text-[10px] font-bold text-primary/70 px-1 italic">
+                            * Se generarán automáticamente todas las cuotas hasta esta fecha.
+                        </p>
+                    )}
 
                     {/* Dividir entre sucursales */}
                     {sucursales.length > 1 && (

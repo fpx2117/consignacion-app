@@ -59,21 +59,20 @@ export function LoginForm() {
     setError(null);
 
     try {
-      const payload: LoginInput & { remember?: boolean } = {
+      const payload: LoginInput = {
         email: cleanEmail,
         password,
-        remember, // backend puede ignorarlo; queda listo para futuro
-      } as any;
+      };
 
       // ✅ Usa apiService (cookie HttpOnly seteada por el backend)
       await apiService.login(payload);
 
       router.push(callbackUrl);
       router.refresh();
-    } catch (err: any) {
+    } catch (err: unknown) {
       // Si tu apiRequest tira Error(msg), lo capturamos acá
       const msg =
-        typeof err?.message === "string" && err.message.length > 0
+        err instanceof Error && err.message.length > 0
           ? err.message
           : "Credenciales inválidas. Verificá tu correo y contraseña.";
       setError(msg);

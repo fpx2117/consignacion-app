@@ -3,6 +3,10 @@ import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/auth/require-auth";
 import { recordAuditLog } from "@/lib/audit";
 
+function hasErrorCode(error: unknown, code: string) {
+    return typeof error === "object" && error !== null && "code" in error && (error as { code?: unknown }).code === code;
+}
+
 export async function GET() {
     const auth = await requireAuth();
     if (!auth.ok) return auth.res;
@@ -57,16 +61,16 @@ export async function GET() {
                 });
 
                 sessions.push(newSession);
-            } catch (lazyError: any) {
+            } catch (lazyError: unknown) {
                 // P2002 es error de duplicado en Prisma, significa que ya existe
-                if (lazyError.code !== "P2002") {
+                if (!hasErrorCode(lazyError, "P2002")) {
                     console.error("Lazy session creation failed:", lazyError);
                 }
             }
         }
 
         return NextResponse.json({ ok: true, data: sessions });
-    } catch (error: any) {
+    } catch (error: unknown) {
         console.error("Fetch sessions error:", error);
         return NextResponse.json({ error: "Error al obtener las sesiones" }, { status: 500 });
     }
@@ -100,7 +104,7 @@ export async function DELETE(req: Request) {
         });
 
         return NextResponse.json({ ok: true });
-    } catch (error: any) {
+    } catch (error: unknown) {
         console.error("Revoke session error:", error);
         return NextResponse.json({ error: "Error al revocar la sesión" }, { status: 500 });
     }

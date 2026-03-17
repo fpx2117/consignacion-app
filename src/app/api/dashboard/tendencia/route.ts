@@ -11,9 +11,10 @@ export async function GET(req: Request) {
   const period = (searchParams.get("period") as DashboardPeriod) ?? "month";
   const sucursalId = auth.activeSucursalId;
   const isAdmin = auth.user.rol === "ADMIN";
+  const userId = Number(auth.user.sub);
 
   try {
-    const data = await getDashboardTendencia(sucursalId, period, isAdmin);
+    const data = await getDashboardTendencia(sucursalId, period, isAdmin, Number.isFinite(userId) ? userId : undefined);
     return NextResponse.json({ data }, {
       headers: {
         "Cache-Control": "private, max-age=30, stale-while-revalidate=60",

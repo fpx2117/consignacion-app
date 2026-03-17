@@ -29,17 +29,13 @@ import {
 } from "@/components/ui/select";
 import { toast } from "sonner";
 import { apiService } from "@/lib/apiService";
+import { useTimezone } from "@/hooks/useTimezone";
 import { cn } from "@/lib/utils";
 import { Separator } from "@/components/ui/separator";
 
 // --- HELPERS ---
 const formatARS = (val: number) =>
     new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS", maximumFractionDigits: 0 }).format(val);
-
-const formatDate = (dateStr: string) =>
-    new Date(dateStr).toLocaleString("es-AR", {
-        day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit'
-    });
 
 /**
  * Extrae las extensiones del string de observaciones de forma DINÁMICA
@@ -70,6 +66,7 @@ const cleanObservaciones = (obs: string | null | undefined) => {
 };
 
 export default function HistorialCajasPage() {
+    const { formatDateTime } = useTimezone();
     const router = useRouter();
     const [sesiones, setSesiones] = React.useState<import("@/lib/types").SesionCaja[]>([]);
     const [cajasFisicas, setCajasFisicas] = React.useState<{ id: number; nombre: string; activa: boolean }[]>([]);
@@ -225,7 +222,7 @@ export default function HistorialCajasPage() {
                                                     {s.usuario?.nombre.substring(0, 2)}
                                                 </div>
                                                 <div className="flex flex-col">
-                                                    <span className="font-bold text-foreground text-base tracking-tight">{formatDate(s.fechaApertura)}</span>
+                                                    <span className="font-bold text-foreground text-base tracking-tight">{formatDateTime(s.fechaApertura)}</span>
                                                     <div className="flex items-center gap-2">
                                                         <span className="text-[10px] text-muted-foreground font-bold uppercase">
                                                             {s.usuario?.nombre}
