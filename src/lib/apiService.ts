@@ -51,6 +51,14 @@ import type {
 
 export type ProductoWithImage = Producto & { imagenUrl?: string | null };
 
+type ProductosPaginadosResponse = {
+  data: Producto[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+};
+
 
 /* =========================
     FETCH WRAPPER (HELPER)
@@ -409,7 +417,7 @@ export const apiService = {
     return apiData<Producto[]>(API_ROUTES.PRODUCTOS);
   },
 
-  getProductosPaginados(params: {
+  async getProductosPaginados(params: {
     page?: number;
     limit?: number;
     search?: string;
@@ -421,9 +429,16 @@ export const apiService = {
     if (params.search) sp.set("search", params.search);
     if (params.categoriaId) sp.set("categoriaId", String(params.categoriaId));
     const qs = sp.toString();
-    return apiRequest<{ data: Producto[]; total: number; page: number; totalPages: number }>(
-      `${API_ROUTES.PRODUCTOS}${qs ? `?${qs}` : ""}`
-    );
+    const response = await apiRequest<Producto[]>(`${API_ROUTES.PRODUCTOS}${qs ? `?${qs}` : ""}`);
+    const metadata = response as ApiResponse<Producto[]> & Partial<Omit<ProductosPaginadosResponse, "data">>;
+
+    return {
+      data: Array.isArray(response.data) ? response.data : [],
+      total: metadata.total ?? 0,
+      page: metadata.page ?? params.page ?? 1,
+      limit: metadata.limit ?? params.limit ?? 50,
+      totalPages: metadata.totalPages ?? 1,
+    } satisfies ProductosPaginadosResponse;
   },
 
   getProducto(id: number) {

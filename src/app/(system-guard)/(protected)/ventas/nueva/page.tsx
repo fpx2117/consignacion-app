@@ -92,11 +92,10 @@ export default function NuevaVentaPage() {
           limit: 50,
           search: search || undefined,
         });
-        const payload = res.data;
-        const activos = (payload.data ?? []).filter((p) => p.activo !== false) as ProductoConStock[];
+        const activos = (res.data ?? []).filter((p) => p.activo !== false) as ProductoConStock[];
         setProductos(activos);
-        setProductosTotalPages(payload.totalPages ?? 1);
-        setProductosPage(payload.page ?? 1);
+        setProductosTotalPages(res.totalPages ?? 1);
+        setProductosPage(res.page ?? 1);
       } catch (err) {
         console.error("Error cargando productos:", err);
         setError("Error cargando productos.");
@@ -852,4 +851,3 @@ export default function NuevaVentaPage() {
     </div>
   );
 }
-
