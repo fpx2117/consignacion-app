@@ -1,0 +1,28 @@
+# Consignación App
+> Sistema de gestión de ventas, consignaciones y liquidaciones para sucursales.
+
+## Archivos Principales
+- `src/app/api/**: Rutas de la API (autenticación, ventas, consignaciones).
+- `docs/API_REFERENCIA_TECNICA.md`: Contratos técnicos de endpoints.
+- `docs/GUIA_TECNICA_PROYECTO.md`: Arquitectura y modelo de negocio.
+
+## Conceptos Clave
+- **Autenticación**: JWT HttpOnly + sesiones activas en DB.
+- **Multisucursal**: Header `x-sucursal-id` para contexto.
+- **Consignaciones**: Modelo de negocio con liquidaciones.
+- **Webhooks**: MercadoPago y PayPal para pagos.
+
+## Estructura del Proyecto
+```
+/consignacion-app
+├── src/
+│   ├── app/api/**
+│   │   └── route.ts (endpoints)
+│   ├── lib/
+│   │   └── requireAuth.ts (autenticación)
+│   └── ...
+└── docs/
+    ├── API_REFERENCIA_TECNICA.md
+    ├── GUIA_TECNICA_PROYECTO.md
+    └── ADR/0001-servidor-custom-next-socketio.md
+```
