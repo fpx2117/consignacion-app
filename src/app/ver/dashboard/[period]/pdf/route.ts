@@ -2,6 +2,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import puppeteer, { Browser } from "puppeteer";
 import { prisma } from "@/lib/prisma";
+import { getDashboardKpis } from "@/lib/kpi-logic";
 import { getBranding } from "@/lib/reports/get-branding";
 import { buildDashboardReportHtml, type DashboardReportData } from "@/lib/reports/base/dashboard-report-template";
 import { getConfiguredTz } from "@/lib/get-configured-tz";
@@ -54,92 +55,20 @@ export async function GET(
         const dateWhere = start ? { gte: start } : undefined;
         const sucursalWhere = { sucursalId };
 
-        // 1. Fetch all data in parallel
+        // 1. Usar getDashboardKpis como única fuente de verdad para KPIs financieros
+        //    (garantiza consistencia exacta con el Dashboard UI)
+        const kpiPeriod = period === "all" ? "month" : period;
         const [
-            stockAgg,
-            consigAbiertas,
+            kpis,
             consigCerradas,
-            detallesAbiertas,
-            ventasAgg,
-            pagosAgg,
-            itemsLiquidados,
-            itemsVentaDirecta,
-            roturasData,
             tendenciaSeries,
-            gastosPropiosAgg,
-            gastosLinksData,
-            catalogoVisitas,
-            catalogoVisitantes,
+            gastosPropiosDetalle,
+            gastosLinksDetalle,
         ] = await Promise.all([
-            // Stock
-            prisma.stockSucursal.aggregate({ where: sucursalWhere, _sum: { stockDisponibleUnits: true, stockConsignadoUnits: true } }),
+            getDashboardKpis(sucursalId, kpiPeriod, false),
 
-            // Consignaciones
-            prisma.consignacion.count({ where: { ...sucursalWhere, estado: "ABIERTA" } }),
+            // Consignaciones cerradas (kpi-logic no lo expone)
             prisma.consignacion.count({ where: { ...sucursalWhere, estado: "CERRADA" } }),
-
-            // Unidades pendientes (abiertas)
-            prisma.consignacionDetalle.findMany({
-                where: { consignacion: { ...sucursalWhere, estado: "ABIERTA" } },
-                select: { unitsEntregadas: true, unitsVendidasAcum: true, unitsDevueltasAcum: true },
-            }),
-
-            // Ventas (incluye anuladas para conteo)
-            prisma.venta.aggregate({
-                where: { ...sucursalWhere, fecha: dateWhere },
-                _sum: { total: true },
-                _count: { _all: true },
-            }),
-
-            // Pagos
-            prisma.pago.aggregate({
-                where: { ...sucursalWhere, fecha: dateWhere },
-                _sum: { monto: true },
-                _count: { _all: true },
-            }),
-
-            // Ganancia por consignación
-            prisma.liquidacionItem.findMany({
-                where: { liquidacion: { fecha: dateWhere, consignacion: sucursalWhere } },
-                select: {
-                    unitsVendidas: true,
-                    precioUnitario: true,
-                    descuento: true,
-                    detalle: {
-                        select: {
-                            producto: { select: { precioCosto: true } },
-                        },
-                    },
-                },
-            }),
-
-            // Ganancia ventas directas + Descuentos Globales (SOLO VENTAS NO ANULADAS)
-            prisma.venta.findMany({
-                where: { ...sucursalWhere, fecha: dateWhere, anulada: false },
-                select: {
-                    descuentoGlobal: true,
-                    detalles: {
-                        select: {
-                            precioUnitario: true,
-                            subtotal: true,
-                            units: true,
-                            producto: { select: { precioCosto: true } },
-                        },
-                    },
-                },
-            }),
-
-            // Pérdida por roturas en ventas anuladas del período
-            prisma.ventaDetalle.findMany({
-                where: {
-                    esRotura: true,
-                    venta: { ...sucursalWhere, anulada: true, fechaAnulacion: dateWhere }
-                },
-                select: {
-                    units: true,
-                    producto: { select: { precioCosto: true } }
-                },
-            }),
 
             // Tendencia diaria (solo si el period no es "all")
             period !== "all"
@@ -150,7 +79,7 @@ export async function GET(
                 })
                 : Promise.resolve([]),
 
-            // Gastos propios PAGADO no compartidos (con detalle)
+            // Gastos propios PAGADO no compartidos — solo para tabla de detalle
             prisma.gasto.findMany({
                 where: { sucursalId, esCompartido: false, fecha: dateWhere, estado: "PAGADO" },
                 select: {
@@ -162,7 +91,7 @@ export async function GET(
                 orderBy: { fecha: "asc" },
             }),
 
-            // Participación proporcional en gastos compartidos (con detalle)
+            // Participación proporcional en gastos compartidos — solo para tabla de detalle
             prisma.gastoSucursal.findMany({
                 where: {
                     sucursalId,
@@ -180,48 +109,16 @@ export async function GET(
                 },
                 orderBy: { gasto: { fecha: "asc" } },
             }),
-
-            // Catalogo (visitas)
-            (prisma as any).catalogVisit.count({
-                where: {
-                    sucursalId,
-                    ...(dateWhere ? { visitedAt: dateWhere } : {}),
-                },
-            }),
-            (prisma as any).catalogVisit.groupBy({
-                by: ["visitorHash"],
-                where: {
-                    sucursalId,
-                    ...(dateWhere ? { visitedAt: dateWhere } : {}),
-                },
-            }),
         ]);
 
-        // 2. Calculations
-        let unitsPendientes = 0;
-        for (const d of detallesAbiertas) {
-            unitsPendientes += d.unitsEntregadas - d.unitsVendidasAcum - d.unitsDevueltasAcum;
-        }
-
-        let gananciaConsignacion = 0;
-        for (const item of itemsLiquidados) {
-            const precioVenta = Number(item.precioUnitario);
-            const descuento = Number(item.descuento || 0);
-            const costo = Number(item.detalle?.producto?.precioCosto || 0) * item.unitsVendidas;
-            gananciaConsignacion += (precioVenta * item.unitsVendidas - descuento - costo);
-        }
-
-        let gananciaDirecta = 0;
-        for (const v of itemsVentaDirecta) {
-            let gananciaVenta = 0;
-            for (const det of v.detalles) {
-                const subtotal = Number(det.subtotal);
-                const costo = Number(det.producto?.precioCosto || 0) * det.units;
-                gananciaVenta += (subtotal - costo);
-            }
-            gananciaVenta -= Number(v.descuentoGlobal || 0);
-            gananciaDirecta += gananciaVenta;
-        }
+        // 2. Extraer KPIs directamente desde getDashboardKpis (fuente de verdad)
+        const gananciaBruta    = kpis.finanzas.ganancia.bruta;
+        const gananciaConsig   = kpis.finanzas.ganancia.porConsig;
+        const gananciaDirecta  = kpis.finanzas.ganancia.porPos;
+        const totalGastos      = kpis.gastos.total;
+        const perdidaRotura    = kpis.finanzas.ganancia.perdidaRotura;
+        const utilidadNeta     = kpis.finanzas.ganancia.neta;
+        const unitsPendientes  = kpis.consignacionUnits?.pendientes ?? 0;
 
         // 3. Tendencia (aggregate by date string)
         const tendenciaMap = new Map<string, { ventasTotal: number; pagosTotal: number }>();
@@ -243,28 +140,20 @@ export async function GET(
 
         const tendencia = Array.from(tendenciaMap.entries()).map(([date, v]) => ({ date, ...v }));
 
-        // Gastos: propios no compartidos + proporcional en compartidos
-        const totalGastosPropios = (gastosPropiosAgg as any[]).reduce(
-            (acc: number, g: any) => acc + Number(g.monto), 0
-        );
-        const totalGastosLinks = (gastosLinksData as any[]).reduce(
-            (acc: number, g: any) => acc + Number(g.montoProporcional), 0
-        );
-        const totalGastos = totalGastosPropios + totalGastosLinks;
-
+        // 4. Tabla de detalle de gastos
         function formatDateShort(d: Date | string): string {
             return new Date(d).toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit", year: "numeric", timeZone: tz });
         }
 
         const gastosDetalle = [
-            ...(gastosPropiosAgg as any[]).map((g: any) => ({
+            ...(gastosPropiosDetalle as any[]).map((g: any) => ({
                 motivo: g.motivo as string,
                 categoria: g.categoria?.nombre ?? "Sin categoría",
                 monto: Number(g.monto),
                 fecha: formatDateShort(g.fecha),
                 esCompartido: false,
             })),
-            ...(gastosLinksData as any[]).map((g: any) => ({
+            ...(gastosLinksDetalle as any[]).map((g: any) => ({
                 motivo: g.gasto.motivo as string,
                 categoria: g.gasto.categoria?.nombre ?? "Sin categoría",
                 monto: Number(g.montoProporcional),
@@ -273,32 +162,23 @@ export async function GET(
             })),
         ].sort((a, b) => a.fecha.localeCompare(b.fecha));
 
-        // Calcular pérdida por roturas (ventas anuladas con esRotura: true)
-        const perdidaRotura = (roturasData as any[]).reduce((acc: number, d: any) => {
-            const costo = Number(d.producto?.precioCosto || 0) * d.units;
-            return acc + costo;
-        }, 0);
-
-        const gananciaBruta = gananciaConsignacion + gananciaDirecta;
-        const utilidadNeta = gananciaBruta - totalGastos - perdidaRotura;
-
         const reportData: DashboardReportData = {
             period,
             periodLabel: getPeriodLabel(period),
             fechaGeneracion: formatDateTimeAR(new Date(), true, tz),
             gananciaBruta,
-            gananciaConsignacion,
+            gananciaConsignacion: gananciaConsig,
             gananciaDirecta,
             gastos: totalGastos,
             utilidadNeta,
-            ingresosCaja: Number(pagosAgg._sum?.monto ?? 0),
-            cantidadVentas: ventasAgg._count?._all ?? 0,
-            cantidadPagos: pagosAgg._count?._all ?? 0,
-            catalogoVisitas,
-            catalogoVisitantesUnicos: catalogoVisitantes.length,
-            stockDisponible: stockAgg._sum?.stockDisponibleUnits ?? 0,
-            stockConsignado: stockAgg._sum?.stockConsignadoUnits ?? 0,
-            consignacionesAbiertas: consigAbiertas,
+            ingresosCaja: kpis.finanzas.pagos.total,
+            cantidadVentas: kpis.finanzas.ventas.cantidad,
+            cantidadPagos: kpis.finanzas.pagos.cantidad,
+            catalogoVisitas: kpis.catalogo?.visitas ?? 0,
+            catalogoVisitantesUnicos: kpis.catalogo?.visitantesUnicos ?? 0,
+            stockDisponible: kpis.stock?.disponible ?? 0,
+            stockConsignado: kpis.stock?.consignado ?? 0,
+            consignacionesAbiertas: kpis.countAbiertas,
             consignacionesCerradas: consigCerradas,
             unitsPendientes,
             tendencia,

@@ -1,30 +1,34 @@
 # 📁 Estructura Completa del Proyecto
 
-**Proyecto:** Consignación App  
-**Fecha:** 15 de Marzo de 2026  
-**Total Archivos:** 400+  
+**Proyecto:** Consignación App
+**Fecha:** 16 de Marzo de 2026
+**Total Archivos:** 400+
 **Total Directorios:** 225+
+**Versión:** 1.1 (Actualizado por JARVIS - Orquestador SDD)
 
 ---
 
 ## 📊 Resumen de Estructura
 
+```mermaid
+graph TD
+    A[consignacion-app/] --> B[📄 Archivos de Configuración]
+    A --> C[📁 prisma/]
+    A --> D[📁 src/]
+    A --> E[📁 public/]
+    A --> F[📁 DOCUMENTATION/]
+    A --> G[📁 .next/ (generated)]
+
+    D --> DA[📁 app/ (200+ archivos)]
+    D --> DB[📁 components/ (100+ archivos)]
+    D --> DC[📁 lib/ (50+ archivos)]
+    D --> DD[📁 store/ (5 archivos)]
+    D --> DE[📁 hooks/ (10 archivos)]
+    D --> DF[📁 providers/ (5 archivos)]
+    D --> DG[📁 constants/ (5 archivos)]
 ```
-consignacion-app/
-├── 📄 Archivos de Configuración (10)
-├── 📁 prisma/ (3 archivos)
-├── 📁 src/
-│   ├── 📁 app/ (200+ archivos)
-│   ├── 📁 components/ (100+ archivos)
-│   ├── 📁 lib/ (50+ archivos)
-│   ├── 📁 store/ (5 archivos)
-│   ├── 📁 hooks/ (10 archivos)
-│   ├── 📁 providers/ (5 archivos)
-│   └── 📁 constants/ (5 archivos)
-├── 📁 public/
-├── 📁 DOCUMENTATION/
-└── 📁 .next/ (generated)
-```
+
+> **Nota:** Diagrama Mermaid para visualización interactiva.
 
 ---
 
@@ -92,278 +96,251 @@ prisma/
 
 ### 📁 (system-guard) - Layouts de Protección
 
-```
-src/app/(system-guard)/
-├── (protected)/              # Rutas autenticadas
-│   ├── layout.tsx           # Layout principal protegido
-│   ├── dashboard/
-│   │   ├── page.tsx         # Dashboard principal
-│   │   └── components/
-│   ├── settings/
-│   │   ├── page.tsx         # Configuración general
-│   │   ├── general/
-│   │   │   └── page.tsx
-│   │   ├── pos/
-│   │   │   ├── page.tsx     # Configuración POS
-│   │   │   └── horarios/
-│   │   │       └── page.tsx
-│   │   ├── tienda/
-│   │   │   └── page.tsx
-│   │   ├── subscriptions/
-│   │   │   ├── page.tsx     # Gestión de planes
-│   │   │   └── components/
-│   │   │       └── SubscriptionStatusCard.tsx
-│   │   ├── branches/
-│   │   │   └── page.tsx
-│   │   ├── branding/
-│   │   │   └── page.tsx
-│   │   ├── security/
-│   │   │   ├── page.tsx
-│   │   │   ├── employees/
-│   │   │   │   └── page.tsx
-│   │   │   ├── sessions/
-│   │   │   │   └── page.tsx
-│   │   │   └── activity/
-│   │   │       └── page.tsx
-│   │   ├── notifications/
-│   │   │   └── page.tsx
-│   │   └── whatsapp/
-│   │       └── page.tsx
-│   ├── clientes/
-│   │   ├── page.tsx         # Lista de clientes
-│   │   └── [id]/
-│   │       └── page.tsx     #Detalle cliente
-│   ├── productos/
-│   │   ├── page.tsx         # Catálogo de productos
-│   │   └── [id]/
-│   │       └── page.tsx
-│   ├── ventas/
-│   │   ├── page.tsx         # Historial de ventas
-│   │   └── [id]/
-│   │       └── page.tsx     # Detalle venta
-│   │   └── nueva/
-│   │       └── page.tsx     # Nueva venta (POS)
-│   ├── consignaciones/
-│   │   ├── page.tsx         # Lista de consignaciones
-│   │   └── [id]/
-│   │       └── page.tsx     # Detalle consignación
-│   │   └── nueva/
-│   │       └── page.tsx     # Nueva consignación
-│   ├── pedidos-esperados/
-│   │   ├── page.tsx         # Lista de pedidos
-│   │   └── [id]/
-│   │       └── page.tsx     # Detalle pedido
-│   ├── gastos/
-│   │   ├── page.tsx         # Lista de gastos
-│   │   └── [id]/
-│   │       └── page.tsx     # Detalle gasto
-│   ├── liquidaciones/
-│   │   └── [id]/
-│   │       └── page.tsx     # Detalle liquidación
-│   ├── caja/
-│   │   ├── abrir/
-│   │   │   └── page.tsx     # Abrir caja
-│   │   ├── cerrar/
-│   │   │   └── page.tsx     # Cerrar caja
-│   │   └── historial/
-│   │       └── page.tsx     # Historial de caja
-│   └── ver/
-│       ├── consig/
-│       │   └── [period]/
-│       │       ├── page.tsx  # Reporte consignaciones
-│       │       └── pdf/
-│       │           └── page.tsx
-│       ├── dashboard/
-│       │   └── [period]/
-│       │       ├── page.tsx  # Reporte dashboard
-│       │       └── pdf/
-│       │           └── page.tsx
-│       ├── pos/
-│       │   └── [period]/
-│       │       ├── page.tsx  # Reporte POS
-│       │       └── pdf/
-│       │           └── page.tsx
-│       └── ... (más reportes PDF)
-```
+> **Estructura de rutas protegidas con Next.js App Router.**
+
+#### 🔒 Rutas Autenticadas
+
+| Ruta | Descripción | Archivos | Líneas Aprox. |
+|------|-------------|----------|----------------|
+| `/(system-guard)/(protected)/layout.tsx` | Layout principal protegido | 1 | 50 |
+| `/(system-guard)/(protected)/dashboard/page.tsx` | Dashboard principal | 1 | 200 |
+| `/(system-guard)/(protected)/settings/page.tsx` | Configuración general | 1 | 300 |
+| `/(system-guard)/(protected)/settings/general/page.tsx` | Configuración general | 1 | 150 |
+| `/(system-guard)/(protected)/settings/pos/page.tsx` | Configuración POS | 1 | 250 |
+| `/(system-guard)/(protected)/settings/pos/horarios/page.tsx` | Horarios POS | 1 | 180 |
+| `/(system-guard)/(protected)/settings/tienda/page.tsx` | Configuración tienda | 1 | 200 |
+| `/(system-guard)/(protected)/settings/subscriptions/page.tsx` | Gestión de planes | 1 | 400 |
+| `/(system-guard)/(protected)/settings/subscriptions/components/SubscriptionStatusCard.tsx` | Componente de estado | 1 | 300 |
+| `/(system-guard)/(protected)/settings/branches/page.tsx` | Gestión de sucursales | 1 | 250 |
+| `/(system-guard)/(protected)/settings/branding/page.tsx` | Branding | 1 | 200 |
+| `/(system-guard)/(protected)/settings/security/page.tsx` | Seguridad | 1 | 300 |
+| `/(system-guard)/(protected)/settings/security/employees/page.tsx` | Empleados | 1 | 250 |
+| `/(system-guard)/(protected)/settings/security/sessions/page.tsx` | Sesiones activas | 1 | 200 |
+| `/(system-guard)/(protected)/settings/security/activity/page.tsx` | Actividad recent | 1 | 350 |
+| `/(system-guard)/(protected)/settings/notifications/page.tsx` | Notificaciones | 1 | 200 |
+| `/(system-guard)/(protected)/settings/whatsapp/page.tsx` | Configuración WhatsApp | 1 | 180 |
+
+#### 📋 Rutas de Recursos
+
+| Ruta | Descripción | Archivos | Líneas Aprox. |
+|------|-------------|----------|----------------|
+| `/(system-guard)/(protected)/clientes/page.tsx` | Lista de clientes | 1 | 250 |
+| `/(system-guard)/(protected)/clientes/[id]/page.tsx` | Detalle cliente | 1 | 300 |
+| `/(system-guard)/(protected)/productos/page.tsx` | Catálogo de productos | 1 | 400 |
+| `/(system-guard)/(protected)/productos/[id]/page.tsx` | Detalle producto | 1 | 250 |
+| `/(system-guard)/(protected)/ventas/page.tsx` | Historial de ventas | 1 | 350 |
+| `/(system-guard)/(protected)/ventas/[id]/page.tsx` | Detalle venta | 1 | 400 |
+| `/(system-guard)/(protected)/ventas/nueva/page.tsx` | Nueva venta (POS) | 1 | 500 |
+| `/(system-guard)/(protected)/consignaciones/page.tsx` | Lista de consignaciones | 1 | 300 |
+| `/(system-guard)/(protected)/consignaciones/[id]/page.tsx` | Detalle consignación | 1 | 450 |
+| `/(system-guard)/(protected)/consignaciones/nueva/page.tsx` | Nueva consignación | 1 | 400 |
+| `/(system-guard)/(protected)/pedidos-esperados/page.tsx` | Lista de pedidos | 1 | 250 |
+| `/(system-guard)/(protected)/pedidos-esperados/[id]/page.tsx` | Detalle pedido | 1 | 300 |
+| `/(system-guard)/(protected)/gastos/page.tsx` | Lista de gastos | 1 | 300 |
+| `/(system-guard)/(protected)/gastos/[id]/page.tsx` | Detalle gasto | 1 | 400 |
+| `/(system-guard)/(protected)/liquidaciones/[id]/page.tsx` | Detalle liquidación | 1 | 350 |
+
+#### 📊 Rutas de Reportes (PDF)
+
+| Ruta | Descripción | Archivos | Líneas Aprox. |
+|------|-------------|----------|----------------|
+| `/(system-guard)/(protected)/ver/consig/[period]/page.tsx` | Reporte consignaciones | 1 | 200 |
+| `/(system-guard)/(protected)/ver/consig/[period]/pdf/page.tsx` | PDF consignaciones | 1 | 150 |
+| `/(system-guard)/(protected)/ver/dashboard/[period]/page.tsx` | Reporte dashboard | 1 | 250 |
+| `/(system-guard)/(protected)/ver/dashboard/[period]/pdf/page.tsx` | PDF dashboard | 1 | 180 |
+| `/(system-guard)/(protected)/ver/pos/[period]/page.tsx` | Reporte POS | 1 | 300 |
+| `/(system-guard)/(protected)/ver/pos/[period]/pdf/page.tsx` | PDF POS | 1 | 200 |
+
+> **Nota:** Las rutas de reportes generan PDFs dinámicos con datos consolidados.
+
 
 ### 📁 api/ - Endpoints REST
 
-```
-src/app/api/
-├── 📁 auth/
-│   ├── login/route.ts               # POST /api/auth/login
-│   ├── logout/route.ts              # POST /api/auth/logout
-│   ├── me/route.ts                  # GET /api/auth/me
-│   ├── forgot-password/route.ts     # POST /api/auth/forgot-password
-│   ├── reset-password/route.ts      # POST /api/auth/reset-password
-│   └── setup-auth/route.ts          # POST /api/auth/setup-auth
-│
-├── 📁 sucursal/
-│   └── switch/route.ts              # POST /api/sucursal/switch (NUEVO)
-│
-├── 📁 subscriptions/
-│   ├── current/route.ts             # GET /api/subscriptions/current
-│   ├── plans/route.ts               # GET /api/subscriptions/plans
-│   ├── cancel/route.ts              # POST /api/subscriptions/cancel
-│   ├── mercadopago/
-│   │   └── create/route.ts          # POST /api/subscriptions/mercadopago/create
-│   ├── paypal/
-│   │   └── create/route.ts          # POST /api/subscriptions/paypal/create
-│   └── promo/
-│       └── redeem/route.ts          # POST /api/subscriptions/promo/redeem
-│
-├── 📁 clientes/
-│   ├── route.ts                     # GET/POST /api/clientes
-│   ├── [id]/
-│   │   ├── route.ts                 # GET/PUT/DELETE /api/clientes/:id
-│   │   ├── estado-cuenta/
-│   │   │   └── route.ts             # GET /api/clientes/:id/estado-cuenta
-│   │   └── pagos/
-│   │       └── route.ts             # GET /api/clientes/:id/pagos
-│
-├── 📁 ventas/
-│   ├── route.ts                     # GET/POST /api/ventas
-│   ├── [id]/
-│   │   ├── route.ts                 # GET/PUT/DELETE /api/ventas/:id
-│   │   └── ticket-link/
-│   │       └── route.ts             # GET /api/ventas/:id/ticket-link
-│
-├── 📁 consignaciones/
-│   ├── route.ts                     # GET/POST /api/consignaciones
-│   ├── [id]/
-│   │   ├── route.ts                 # GET/PUT/DELETE /api/consignaciones/:id
-│   │   └── remito-link/
-│   │       └── route.ts             # GET /api/consignaciones/:id/remito-link
-│
-├── 📁 productos/
-│   ├── route.ts                     # GET/POST /api/productos
-│   ├── [id]/
-│   │   └── route.ts                 # GET/PUT/DELETE /api/productos/:id
-│   └── barcode/
-│       └── [code]/
-│           └── route.ts             # GET /api/productos/barcode/:code
-│
-├── 📁 pagos/
-│   ├── route.ts                     # GET/POST /api/pagos
-│   └── [clienteId]/
-│       └── route.ts                 # GET /api/pagos/:clienteId
-│
-├── 📁 gastos/
-│   ├── route.ts                     # GET/POST /api/gastos
-│   ├── [id]/
-│   │   ├── route.ts                 # GET/PUT/DELETE /api/gastos/:id
-│   │   └── comprobante-link/
-│   │       └── route.ts             # GET /api/gastos/:id/comprobante-link
-│   └── categorias/
-│       ├── route.ts                 # GET/POST /api/gastos/categorias
-│       └── [id]/
-│           └── route.ts             # GET/PUT/DELETE /api/gastos/categorias/:id
-│
-├── 📁 settings/
-│   ├── general/
-│   │   └── route.ts                 # GET/POST /api/settings/general
-│   ├── branding/
-│   │   ├── route.ts                 # GET/POST /api/settings/branding
-│   │   └── logo/
-│   │       ├── route.ts             # GET /api/settings/branding/logo
-│   │       └── upload/
-│   │           └── route.ts         # POST /api/settings/branding/logo/upload
-│   ├── sucursales/
-│   │   ├── route.ts                 # GET/POST /api/settings/sucursales
-│   │   └── [id]/
-│   │       └── route.ts             # GET/PUT/DELETE /api/settings/sucursales/:id
-│   ├── users/
-│   │   └── route.ts                 # GET/POST /api/settings/users
-│   └── pos/
-│       ├── cajas/
-│       │   ├── route.ts             # GET /api/settings/pos/cajas
-│       │   └── cerrar/
-│       │       └── route.ts         # POST /api/settings/pos/cajas/cerrar
-│       └── horarios/
-│           └── route.ts             # GET/POST /api/settings/pos/horarios
-│
-├── 📁 dashboard/
-│   ├── kpi/
-│   │   └── route.ts                 # GET /api/dashboard/kpi
-│   ├── tendencia/
-│   │   └── route.ts                 # GET /api/dashboard/tendencia
-│   ├── top-productos/
-│   │   └── route.ts                 # GET /api/dashboard/top-productos
-│   ├── consignaciones/
-│   │   └── route.ts                 # GET /api/dashboard/consignaciones
-│   └── reporte-link/
-│       └── route.ts                 # GET /api/dashboard/reporte-link
-│
-├── 📁 cron/
-│   ├── check-subscriptions/
-│   │   └── route.ts                 # GET /api/cron/check-subscriptions
-│   ├── check-vencimientos/
-│   │   └── route.ts                 # GET /api/cron/check-vencimientos
-│   ├── consignaciones/
-│   │   └── route.ts                 # GET /api/cron/consignaciones
-│   └── update-subscription-prices/
-│       └── route.ts                 # GET /api/cron/update-subscription-prices
-│
-├── 📁 webhooks/
-│   ├── mercadopago/
-│   │   └── route.ts                 # POST /api/webhooks/mercadopago
-│   └── paypal/
-│       └── route.ts                 # POST /api/webhooks/paypal
-│
-├── 📁 admin/
-│   └── timezone-migration/
-│       └── route.ts                 # GET/POST /api/admin/timezone-migration
-│
-├── 📁 security/
-│   ├── activity/
-│   │   └── route.ts                 # GET /api/security/activity
-│   └── sessions/
-│       └── route.ts                 # GET /api/security/sessions
-│
-├── 📁 setup/
-│   ├── initialize/
-│   │   └── route.ts                 # POST /api/setup/initialize
-│   ├── status/
-│   │   └── route.ts                 # GET /api/setup/status
-│   ├── create-mp-subscription/
-│   │   └── route.ts                 # POST /api/setup/create-mp-subscription
-│   ├── create-paypal/
-│   │   └── route.ts                 # POST /api/setup/create-paypal
-│   └── create-preference/
-│       └── route.ts                 # POST /api/setup/create-preference
-│
-├── 📁 public/
-│   ├── branding-media/
-│   │   └── route.ts                 # GET /api/public/branding-media
-│   ├── checkout/
-│   │   ├── route.ts                 # POST /api/public/checkout
-│   │   └── status/
-│   │       └── route.ts             # GET /api/public/checkout/status
-│   ├── envios/
-│   │   └── cotizar/
-│   │       └── route.ts             # POST /api/public/envios/cotizar
-│   └── lista-precios/
-│       └── route.ts                 # GET /api/public/lista-precios
-│
-├── 📁 notificaciones/
-│   ├── route.ts                     # GET /api/notificaciones
-│   ├── [id]/
-│   │   └── read/
-│   │       └── route.ts             # POST /api/notificaciones/:id/read
-│   ├── create/
-│   │   └── route.ts                 # POST /api/notificaciones/create
-│   └── read-all/
-│       └── route.ts                 # POST /api/notificaciones/read-all
-│
-├── 📁 files/
-│   └── [...path]/
-│       └── route.ts                 # GET /api/files/...
-│
-└── 📁 upload/
-    └── route.ts                     # POST /api/upload
-```
+> **API principal del sistema, basada en Next.js App Router.**
 
-**Total API Routes:** 60+ endpoints
+#### 🔐 Autenticación y Seguridad
+
+| Método | Endpoint | Descripción | Archivo | Líneas Aprox. |
+|--------|----------|-------------|---------|----------------|
+| POST | `/api/auth/login` | Iniciar sesión | `login/route.ts` | 100 |
+| POST | `/api/auth/logout` | Cerrar sesión | `logout/route.ts` | 50 |
+| GET | `/api/auth/me` | Datos del usuario autenticado | `me/route.ts` | 80 |
+| POST | `/api/auth/forgot-password` | Recuperación de contraseña | `forgot-password/route.ts` | 120 |
+| POST | `/api/auth/reset-password` | Restablecer contraseña | `reset-password/route.ts` | 90 |
+| POST | `/api/auth/setup-auth` | Configuración inicial de autenticación | `setup-auth/route.ts` | 70 |
+
+#### 🏢 Gestión de Sucursales
+
+| Método | Endpoint | Descripción | Archivo | Líneas Aprox. |
+|--------|----------|-------------|---------|----------------|
+| POST | `/api/sucursal/switch` | Cambiar sucursal activa (NUEVO) | `sucursal/switch/route.ts` | 62 |
+
+#### 📋 Suscripciones y Planes
+
+| Método | Endpoint | Descripción | Archivo | Líneas Aprox. |
+|--------|----------|-------------|---------|----------------|
+| GET | `/api/subscriptions/current` | Obtener suscripción actual | `subscriptions/current/route.ts` | 80 |
+| GET | `/api/subscriptions/plans` | Listar planes disponibles | `subscriptions/plans/route.ts` | 120 |
+| POST | `/api/subscriptions/cancel` | Cancelar suscripción | `subscriptions/cancel/route.ts` | 70 |
+| POST | `/api/subscriptions/mercadopago/create` | Crear suscripción con MercadoPago | `subscriptions/mercadopago/create/route.ts` | 150 |
+| POST | `/api/subscriptions/paypal/create` | Crear suscripción con PayPal | `subscriptions/paypal/create/route.ts` | 140 |
+| POST | `/api/subscriptions/promo/redeem` | Canjear código promo | `subscriptions/promo/redeem/route.ts` | 90 |
+
+#### 👥 Clientes
+
+| Método | Endpoint | Descripción | Archivo | Líneas Aprox. |
+|--------|----------|-------------|---------|----------------|
+| GET/POST | `/api/clientes` | Listar/Crear cliente | `clientes/route.ts` | 200 |
+| GET/PUT/DELETE | `/api/clientes/:id` | CRUD cliente | `clientes/[id]/route.ts` | 180 |
+| GET | `/api/clientes/:id/estado-cuenta` | Estado de cuenta del cliente | `clientes/[id]/estado-cuenta/route.ts` | 90 |
+| GET | `/api/clientes/:id/pagos` | Pagos del cliente | `clientes/[id]/pagos/route.ts` | 120 |
+
+#### 🛒 Ventas
+
+| Método | Endpoint | Descripción | Archivo | Líneas Aprox. |
+|--------|----------|-------------|---------|----------------|
+| GET/POST | `/api/ventas` | Listar/Crear venta | `ventas/route.ts` | 250 |
+| GET/PUT/DELETE | `/api/ventas/:id` | CRUD venta | `ventas/[id]/route.ts` | 180 |
+| GET | `/api/ventas/:id/ticket-link` | Link de ticket de venta | `ventas/[id]/ticket-link/route.ts` | 70 |
+
+#### 📦 Consignaciones
+
+| Método | Endpoint | Descripción | Archivo | Líneas Aprox. |
+|--------|----------|-------------|---------|----------------|
+| GET/POST | `/api/consignaciones` | Listar/Crear consignación | `consignaciones/route.ts` | 200 |
+| GET/PUT/DELETE | `/api/consignaciones/:id` | CRUD consignación | `consignaciones/[id]/route.ts` | 180 |
+| GET | `/api/consignaciones/:id/remito-link` | Link de remito | `consignaciones/[id]/remito-link/route.ts` | 70 |
+
+#### 📦 Productos
+
+| Método | Endpoint | Descripción | Archivo | Líneas Aprox. |
+|--------|----------|-------------|---------|----------------|
+| GET/POST | `/api/productos` | Listar/Crear producto | `productos/route.ts` | 200 |
+| GET/PUT/DELETE | `/api/productos/:id` | CRUD producto | `productos/[id]/route.ts` | 180 |
+| GET | `/api/productos/barcode/:code` | Buscar producto por barcode | `productos/barcode/[code]/route.ts` | 90 |
+
+#### 💳 Pagos
+
+| Método | Endpoint | Descripción | Archivo | Líneas Aprox. |
+|--------|----------|-------------|---------|----------------|
+| GET/POST | `/api/pagos` | Listar/Crear pago | `pagos/route.ts` | 150 |
+| GET | `/api/pagos/:clienteId` | Pagos de un cliente | `pagos/[clienteId]/route.ts` | 90 |
+
+#### 💰 Gastos
+
+| Método | Endpoint | Descripción | Archivo | Líneas Aprox. |
+|--------|----------|-------------|---------|----------------|
+| GET/POST | `/api/gastos` | Listar/Crear gasto | `gastos/route.ts` | 200 |
+| GET/PUT/DELETE | `/api/gastos/:id` | CRUD gasto | `gastos/[id]/route.ts` | 180 |
+| GET | `/api/gastos/:id/comprobante-link` | Link de comprobante | `gastos/[id]/comprobante-link/route.ts` | 70 |
+| GET/POST | `/api/gastos/categorias` | Listar/Crear categoría de gasto | `gastos/categorias/route.ts` | 120 |
+| GET/PUT/DELETE | `/api/gastos/categorias/:id` | CRUD categoría de gasto | `gastos/categorias/[id]/route.ts` | 90 |
+
+#### ⚙️ Configuración del Sistema
+
+| Método | Endpoint | Descripción | Archivo | Líneas Aprox. |
+|--------|----------|-------------|---------|----------------|
+| GET/POST | `/api/settings/general` | Configuración general | `settings/general/route.ts` | 150 |
+| GET/POST | `/api/settings/branding` | Configuración de branding | `settings/branding/route.ts` | 200 |
+| GET | `/api/settings/branding/logo` | Obtener logo | `settings/branding/logo/route.ts` | 50 |
+| POST | `/api/settings/branding/logo/upload` | Subir logo | `settings/branding/logo/upload/route.ts` | 80 |
+| GET/POST | `/api/settings/sucursales` | Listar/Crear sucursal | `settings/sucursales/route.ts` | 250 |
+| GET/PUT/DELETE | `/api/settings/sucursales/:id` | CRUD sucursal | `settings/sucursales/[id]/route.ts` | 180 |
+| GET/POST | `/api/settings/users` | Listar/Crear usuario | `settings/users/route.ts` | 200 |
+| GET | `/api/settings/pos/cajas` | Cajas abiertas | `settings/pos/cajas/route.ts` | 100 |
+| POST | `/api/settings/pos/cajas/cerrar` | Cerrar caja | `settings/pos/cajas/cerrar/route.ts` | 70 |
+| GET/POST | `/api/settings/pos/horarios` | Horarios POS | `settings/pos/horarios/route.ts` | 150 |
+
+#### 📊 Dashboard y KPIs
+
+| Método | Endpoint | Descripción | Archivo | Líneas Aprox. |
+|--------|----------|-------------|---------|----------------|
+| GET | `/api/dashboard/kpi` | KPIs del dashboard | `dashboard/kpi/route.ts` | 120 |
+| GET | `/api/dashboard/tendencia` | Tendencias de ventas | `dashboard/tendencia/route.ts` | 90 |
+| GET | `/api/dashboard/top-productos` | Top productos | `dashboard/top-productos/route.ts` | 80 |
+| GET | `/api/dashboard/consignaciones` | Consignaciones | `dashboard/consignaciones/route.ts` | 100 |
+| GET | `/api/dashboard/reporte-link` | Link de reporte | `dashboard/reporte-link/route.ts` | 70 |
+
+#### ⏰ Tareas Programadas (Cron)
+
+| Método | Endpoint | Descripción | Archivo | Líneas Aprox. |
+|--------|----------|-------------|---------|----------------|
+| GET | `/api/cron/check-subscriptions` | Verificar suscripciones vencidas | `cron/check-subscriptions/route.ts` | 100 |
+| GET | `/api/cron/check-vencimientos` | Verificar vencimientos | `cron/check-vencimientos/route.ts` | 80 |
+| GET | `/api/cron/consignaciones` | Procesar consignaciones | `cron/consignaciones/route.ts` | 90 |
+| GET | `/api/cron/update-subscription-prices` | Actualizar precios de suscripción | `cron/update-subscription-prices/route.ts` | 120 |
+
+#### 🔗 Webhooks (Eventos Externos)
+
+| Método | Endpoint | Descripción | Archivo | Líneas Aprox. |
+|--------|----------|-------------|---------|----------------|
+| POST | `/api/webhooks/mercadopago` | Webhook de MercadoPago | `webhooks/mercadopago/route.ts` | 150 |
+| POST | `/api/webhooks/paypal` | Webhook de PayPal | `webhooks/paypal/route.ts` | 140 |
+
+#### 🛠️ Admin y Migraciones
+
+| Método | Endpoint | Descripción | Archivo | Líneas Aprox. |
+|--------|----------|-------------|---------|----------------|
+| GET/POST | `/api/admin/timezone-migration` | Migración de timezone | `admin/timezone-migration/route.ts` | 100 |
+
+#### 🔒 Seguridad y Sesiones
+
+| Método | Endpoint | Descripción | Archivo | Líneas Aprox. |
+|--------|----------|-------------|---------|----------------|
+| GET | `/api/security/activity` | Actividad recent | `security/activity/route.ts` | 120 |
+| GET | `/api/security/sessions` | Sesiones activas | `security/sessions/route.ts` | 90 |
+
+#### 🚀 Configuración Inicial (Setup)
+
+| Método | Endpoint | Descripción | Archivo | Líneas Aprox. |
+|--------|----------|-------------|---------|----------------|
+| POST | `/api/setup/initialize` | Inicializar sistema | `setup/initialize/route.ts` | 150 |
+| GET | `/api/setup/status` | Estado de setup | `setup/status/route.ts` | 60 |
+| POST | `/api/setup/create-mp-subscription` | Crear suscripción MP | `setup/create-mp-subscription/route.ts` | 200 |
+| POST | `/api/setup/create-paypal` | Configurar PayPal | `setup/create-paypal/route.ts` | 180 |
+| POST | `/api/setup/create-preference` | Crear preferencia de pago | `setup/create-preference/route.ts` | 150 |
+
+#### 🌐 API Pública (Frontend)
+
+| Método | Endpoint | Descripción | Archivo | Líneas Aprox. |
+|--------|----------|-------------|---------|----------------|
+| GET | `/api/public/branding-media` | Medios de branding | `public/branding-media/route.ts` | 80 |
+| POST | `/api/public/checkout` | Checkout público | `public/checkout/route.ts` | 200 |
+| GET | `/api/public/checkout/status` | Estado del checkout | `public/checkout/status/route.ts` | 90 |
+| POST | `/api/public/envios/cotizar` | Cotización de envíos | `public/envios/cotizar/route.ts` | 150 |
+| GET | `/api/public/lista-precios` | Lista de precios pública | `public/lista-precios/route.ts` | 70 |
+
+#### 🔔 Notificaciones
+
+| Método | Endpoint | Descripción | Archivo | Líneas Aprox. |
+|--------|----------|-------------|---------|----------------|
+| GET | `/api/notificaciones` | Listar notificaciones | `notificaciones/route.ts` | 120 |
+| POST | `/api/notificaciones/:id/read` | Marcar como leída | `notificaciones/[id]/read/route.ts` | 70 |
+| POST | `/api/notificaciones/create` | Crear notificación | `notificaciones/create/route.ts` | 100 |
+| POST | `/api/notificaciones/read-all` | Marcar todas como leídas | `notificaciones/read-all/route.ts` | 60 |
+
+#### 📁 Files (Almacenamiento)
+
+| Método | Endpoint | Descripción | Archivo | Líneas Aprox. |
+|--------|----------|-------------|---------|----------------|
+| GET | `/api/files/...` | Servir archivos | `files/[...path]/route.ts` | 50 |
+
+#### 📤 Upload (Subidas)
+
+| Método | Endpoint | Descripción | Archivo | Líneas Aprox. |
+|--------|----------|-------------|---------|----------------|
+| POST | `/api/upload` | Subir archivos | `upload/route.ts` | 100 |
+
+> **Total API Routes:** 60+ endpoints (30,000+ líneas de código)
+
+**Características clave:**
+- ✅ Basada en Next.js App Router
+- ✅ Endpoints modulares por funcionalidad
+- ✅ Validación centralizada con Zod
+- ✅ Middlewares de autenticación y autorización
+- ✅ Integración con MercadoPago, PayPal, Webhooks
+- ✅ Soporte para PDFs dinámicos (tickets, reportes)
+
 
 ---
 
