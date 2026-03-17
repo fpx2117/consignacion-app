@@ -64,6 +64,7 @@ export async function GET(
             pagosAgg,
             itemsLiquidados,
             itemsVentaDirecta,
+            roturasData,
             tendenciaSeries,
             gastosPropiosAgg,
             gastosLinksData,
@@ -83,7 +84,7 @@ export async function GET(
                 select: { unitsEntregadas: true, unitsVendidasAcum: true, unitsDevueltasAcum: true },
             }),
 
-            // Ventas
+            // Ventas (incluye anuladas para conteo)
             prisma.venta.aggregate({
                 where: { ...sucursalWhere, fecha: dateWhere },
                 _sum: { total: true },
@@ -112,9 +113,9 @@ export async function GET(
                 },
             }),
 
-            // Ganancia ventas directas + Descuentos Globales
+            // Ganancia ventas directas + Descuentos Globales (SOLO VENTAS NO ANULADAS)
             prisma.venta.findMany({
-                where: { ...sucursalWhere, fecha: dateWhere },
+                where: { ...sucursalWhere, fecha: dateWhere, anulada: false },
                 select: {
                     descuentoGlobal: true,
                     detalles: {
@@ -128,10 +129,22 @@ export async function GET(
                 },
             }),
 
+            // Pérdida por roturas en ventas anuladas del período
+            prisma.ventaDetalle.findMany({
+                where: {
+                    esRotura: true,
+                    venta: { ...sucursalWhere, anulada: true, fechaAnulacion: dateWhere }
+                },
+                select: {
+                    units: true,
+                    producto: { select: { precioCosto: true } }
+                },
+            }),
+
             // Tendencia diaria (solo si el period no es "all")
             period !== "all"
                 ? prisma.venta.findMany({
-                    where: { ...sucursalWhere, fecha: dateWhere },
+                    where: { ...sucursalWhere, fecha: dateWhere, anulada: false },
                     select: { fecha: true, total: true, descuentoGlobal: true },
                     orderBy: { fecha: "asc" },
                 })
@@ -260,8 +273,14 @@ export async function GET(
             })),
         ].sort((a, b) => a.fecha.localeCompare(b.fecha));
 
+        // Calcular pérdida por roturas (ventas anuladas con esRotura: true)
+        const perdidaRotura = (roturasData as any[]).reduce((acc: number, d: any) => {
+            const costo = Number(d.producto?.precioCosto || 0) * d.units;
+            return acc + costo;
+        }, 0);
+
         const gananciaBruta = gananciaConsignacion + gananciaDirecta;
-        const utilidadNeta = gananciaBruta - totalGastos;
+        const utilidadNeta = gananciaBruta - totalGastos - perdidaRotura;
 
         const reportData: DashboardReportData = {
             period,
