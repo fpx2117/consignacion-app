@@ -139,7 +139,7 @@ export const getDashboardKpis = unstable_cache(
             : prisma.gastoSucursal.findMany({
                 where: {
                     sucursalId,
-                    gasto: { fecha: dateWhere, estado: "PAGADO" }
+                    gasto: { fecha: dateWhere, estado: "PAGADO", esCompartido: true }
                 },
                 select: { montoProporcional: true }
             }),
