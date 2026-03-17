@@ -12,6 +12,26 @@ export interface PlanLimits {
     planNombre: string;
 }
 
+type PlanLimitRecord = {
+    maxProductos: number;
+    maxUsuarios: number;
+    allowConsignaciones: boolean;
+    allowSucursales: boolean;
+};
+
+function getPlanLimitDelegate() {
+    return (prisma as unknown as {
+        planLimit?: {
+            findUnique: (args: { where: { planId: number } }) => Promise<PlanLimitRecord | null>;
+            upsert: (args: {
+                where: { planId: number };
+                create: { planId: number } & PlanLimitRecord;
+                update: Record<string, never>;
+            }) => Promise<unknown>;
+        };
+    }).planLimit;
+}
+
 /**
  * Obtiene los límites del plan activo. Si no hay suscripción activa,
  * retorna null (el caller debe decidir qué hacer: redirect, 403, etc.)
@@ -39,9 +59,9 @@ export const getActivePlanLimits = cache(async (): Promise<PlanLimits | null> =>
     if (!subscription) return null;
 
     // Cargar límites del plan por separado (evita dependencia de tipos generados)
-    const limits = await (prisma as any).planLimit.findUnique({
+    const limits = await getPlanLimitDelegate()?.findUnique({
         where: { planId: subscription.planId },
-    });
+    }) ?? null;
 
     const defaults = PLAN_LIMITS_DEFAULTS[subscription.planId] ?? PLAN_LIMITS_DEFAULTS[1];
 
@@ -128,7 +148,7 @@ export async function checkFeature(feature: "consignaciones" | "sucursales") {
 export async function seedPlanLimits(planId: number) {
     const defaults = PLAN_LIMITS_DEFAULTS[planId] ?? PLAN_LIMITS_DEFAULTS[1];
 
-    await (prisma as any).planLimit.upsert({
+    await getPlanLimitDelegate()?.upsert({
         where: { planId },
         create: {
             planId,
@@ -149,9 +169,9 @@ export async function handlePlanDowngrade(newPlanId: number) {
     const defaults = PLAN_LIMITS_DEFAULTS[newPlanId] ?? PLAN_LIMITS_DEFAULTS[1];
 
     // Cargar límites custom si existen
-    const customLimits = await (prisma as any).planLimit.findUnique({
+    const customLimits = await getPlanLimitDelegate()?.findUnique({
         where: { planId: newPlanId },
-    });
+    }) ?? null;
 
     const maxProductos = customLimits?.maxProductos ?? defaults.maxProductos;
     const maxUsuarios = customLimits?.maxUsuarios ?? defaults.maxUsuarios;

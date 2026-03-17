@@ -1,9 +1,44 @@
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { unstable_cache } from "next/cache";
 import { differenceInDays } from "date-fns";
 import { nowAR, startOfDayAR, startOfWeekAR, startOfMonthAR } from "@/lib/utils-date";
-import { getConfiguredTz } from "@/lib/get-configured-tz";
+import { resolveTimezone } from "@/lib/get-configured-tz";
 import { DashboardPeriod } from "./types";
+
+type CatalogVisitDelegate = {
+  count: (args: { where: Record<string, unknown> }) => Promise<number>;
+  groupBy: (args: { by: string[]; where: Record<string, unknown> }) => Promise<Array<{ visitorHash: string }>>;
+};
+
+type RoturaDetalle = {
+  units: number;
+  producto: {
+    precioCosto: Prisma.Decimal | number | null;
+  } | null;
+};
+
+type GastoLinkRecord = {
+  montoProporcional: Prisma.Decimal | number;
+};
+
+type GastoPendienteRecord = Prisma.GastoGetPayload<{
+  include: { categoria: true; sucursalesCompartidas: true };
+}>;
+
+type GastoCompartidoPendienteRecord = Prisma.GastoSucursalGetPayload<{
+  include: { gasto: { include: { categoria: true } } };
+}>;
+
+function getCatalogVisitDelegate(): CatalogVisitDelegate | null {
+  return "catalogVisit" in prisma
+    ? ((prisma as unknown as { catalogVisit?: CatalogVisitDelegate }).catalogVisit ?? null)
+    : null;
+}
+
+async function resolveKpiTimezone(sucursalId: number, userId?: number | null) {
+  return resolveTimezone({ userId: userId ?? null, sucursalId });
+}
 
 /**
  * UTORIDAD CENTRAL PARA CÁLCULOS DE KPI
@@ -16,8 +51,9 @@ import { DashboardPeriod } from "./types";
  * durante 60 segundos. Se invalida con revalidateTag('dashboard').
  */
 export const getDashboardKpis = unstable_cache(
-  async (sucursalId: number, period: DashboardPeriod, isAdmin: boolean = false) => {
-    const tz = await getConfiguredTz(isAdmin && sucursalId === 0 ? 1 : sucursalId);
+  async (sucursalId: number, period: DashboardPeriod, isAdmin: boolean = false, userId?: number | null) => {
+    const timezone = await resolveKpiTimezone(sucursalId, userId);
+    const tz = timezone.tz;
     const now = nowAR(tz);
     let start: Date | undefined;
 
@@ -30,15 +66,14 @@ export const getDashboardKpis = unstable_cache(
     // Si sucursalId es 0 y es admin, no filtramos por sucursal (Vista Global)
     const isGlobal = sucursalId === 0 && isAdmin;
     const sucursalWhere = isGlobal ? {} : { sucursalId };
-    const [branchConfig, principalConfig, sharedCatalogConfig] = await Promise.all([
-        prisma.configuracion.findFirst({
-            where: isGlobal ? { sucursalId: 1 } : { sucursalId },
+    const configSucursalId = timezone.sucursalId;
+    const [dashboardConfig, sharedCatalogConfig] = await Promise.all([
+        configSucursalId
+          ? prisma.configuracion.findFirst({
+            where: { sucursalId: configSucursalId },
             select: { usarControlDeCaja: true, separarListaPorSucursal: true },
-        }),
-        prisma.configuracion.findFirst({
-            where: { sucursalId: 1 },
-            select: { usarControlDeCaja: true, separarListaPorSucursal: true },
-        }),
+          })
+          : Promise.resolve(null),
         prisma.configuracion.findFirst({
             where: {
                 mostrarListaPrecios: true,
@@ -47,7 +82,6 @@ export const getDashboardKpis = unstable_cache(
             select: { sucursalId: true },
         }),
     ]);
-    const dashboardConfig = branchConfig ?? principalConfig;
     const hasSharedCatalogEnabled = Boolean(sharedCatalogConfig);
     const catalogUsesSucursalScope =
         !isGlobal &&
@@ -58,7 +92,7 @@ export const getDashboardKpis = unstable_cache(
         ...(dateWhere ? { visitedAt: dateWhere } : {}),
     };
 
-    const hasCatalogVisitModel = "catalogVisit" in prisma;
+    const catalogVisitDelegate = getCatalogVisitDelegate();
 
     const [
         countAbiertas,
@@ -181,11 +215,11 @@ export const getDashboardKpis = unstable_cache(
             }
         }),
         // 14. Visitas catalogo (dedupe por bucket)
-        hasCatalogVisitModel
-            ? (prisma as any).catalogVisit.count({ where: catalogVisitWhere })
+        catalogVisitDelegate
+            ? catalogVisitDelegate.count({ where: catalogVisitWhere })
             : Promise.resolve(0),
-        hasCatalogVisitModel
-            ? (prisma as any).catalogVisit.groupBy({ by: ["visitorHash"], where: catalogVisitWhere })
+        catalogVisitDelegate
+            ? catalogVisitDelegate.groupBy({ by: ["visitorHash"], where: catalogVisitWhere })
             : Promise.resolve([]),
         // 16. Units pendientes reales (consignaciones abiertas)
         prisma.consignacionDetalle.aggregate({
@@ -233,7 +267,7 @@ export const getDashboardKpis = unstable_cache(
     }
 
     // Pérdida por roturas: costo de productos dañados en ventas anuladas del período
-    const perdidaRotura = roturasData.reduce((acc: number, det: any) => {
+    const perdidaRotura = roturasData.reduce((acc: number, det: RoturaDetalle) => {
         return acc + (Number(det.producto?.precioCosto || 0) * det.units);
     }, 0);
 
@@ -246,23 +280,23 @@ export const getDashboardKpis = unstable_cache(
 
     // --- GASTOS TOTALES (propios no compartidos + participación proporcional en compartidos) ---
     const totalGastosPropios = Number(gastosPropiosAgg._sum?.monto || 0);
-    const totalGastosLinks = (gastosLinksData as any[]).reduce(
-        (acc: number, g: any) => acc + Number(g.montoProporcional), 0
+    const totalGastosLinks = (gastosLinksData as GastoLinkRecord[]).reduce(
+        (acc: number, g) => acc + Number(g.montoProporcional), 0
     );
     const totalGastos = totalGastosPropios + totalGastosLinks;
-    const cantidadGastos = (gastosPropiosAgg._count?._all || 0) + (gastosLinksData as any[]).length;
+    const cantidadGastos = (gastosPropiosAgg._count?._all || 0) + (gastosLinksData as GastoLinkRecord[]).length;
 
     // --- PRÓXIMOS VENCIMIENTOS (normalizar monto proporcional para gastos compartidos) ---
-    const ownPendientes = (proximosVencimientosOwn as any[]).map((g: any) => {
+    const ownPendientes = (proximosVencimientosOwn as GastoPendienteRecord[]).map((g) => {
         let monto = Number(g.monto);
         if (g.esCompartido && g.sucursalesCompartidas?.length > 0) {
-            const link = g.sucursalesCompartidas.find((s: any) => s.sucursalId === sucursalId);
+            const link = g.sucursalesCompartidas.find((s) => s.sucursalId === sucursalId);
             if (link) monto = Number(link.montoProporcional);
         }
         return { ...g, monto };
     });
 
-    const sharedPendientes = (proximosVencimientosLinks as any[]).map((link: any) => ({
+    const sharedPendientes = (proximosVencimientosLinks as GastoCompartidoPendienteRecord[]).map((link) => ({
         ...link.gasto,
         monto: Number(link.montoProporcional),
     }));
@@ -287,14 +321,14 @@ export const getDashboardKpis = unstable_cache(
         },
         finanzas: {
             ventas: {
-                total: ventasAgg.reduce((acc: number, v: any) => acc + Number(v._sum?.total || 0), 0),
-                cantidad: ventasAgg.reduce((acc: number, v: any) => acc + (v._count?._all || 0), 0),
-                porTipo: ventasAgg.reduce((acc: any, v: any) => ({ ...acc, [v.tipo]: Number(v._sum?.total || 0) }), {} as any)
+                total: ventasAgg.reduce((acc: number, v) => acc + Number(v._sum?.total || 0), 0),
+                cantidad: ventasAgg.reduce((acc: number, v) => acc + (v._count?._all || 0), 0),
+                porTipo: ventasAgg.reduce<Record<string, number>>((acc, v) => ({ ...acc, [v.tipo]: Number(v._sum?.total || 0) }), {})
             },
             pagos: {
                 total: Number(pagosAgg._sum?.monto || 0),
                 cantidad: pagosAgg._count?._all || 0,
-                porTipo: pagosPorTipo.reduce((acc: any, p: any) => ({ ...acc, [p.tipo]: Number(p._sum?.monto || 0) }), {} as any)
+                porTipo: pagosPorTipo.reduce<Record<string, number>>((acc, p) => ({ ...acc, [p.tipo]: Number(p._sum?.monto || 0) }), {})
             },
             ganancia: {
                 bruta: gananciaBruta,
@@ -319,7 +353,7 @@ export const getDashboardKpis = unstable_cache(
             visitantesUnicos: catalogVisitorsUnique.length,
             productosVisibles: productosVisiblesCount,
         },
-        proximosVencimientos: allPendientes.map((g: any) => ({
+        proximosVencimientos: allPendientes.map((g) => ({
             ...g,
             monto: Number(g.monto)
         }))
@@ -335,9 +369,10 @@ export const getDashboardKpis = unstable_cache(
 /**
  * REPORTE DE TENDENCIA DIARIA
  */
-export async function getDashboardTendencia(sucursalId: number, period: DashboardPeriod, isAdmin: boolean = false) {
+export async function getDashboardTendencia(sucursalId: number, period: DashboardPeriod, isAdmin: boolean = false, userId?: number | null) {
     const isGlobal = sucursalId === 0 && isAdmin;
-    const tz = await getConfiguredTz(isGlobal ? 1 : sucursalId);
+    const timezone = await resolveKpiTimezone(sucursalId, userId);
+    const tz = timezone.tz;
     const now = nowAR(tz);
     let start: Date;
 
@@ -366,7 +401,7 @@ export async function getDashboardTendencia(sucursalId: number, period: Dashboar
     ]);
 
     const key = (d: Date) => startOfDayAR(d, tz).toISOString().slice(0, 10);
-    const seriesMap: Record<string, any> = {};
+    const seriesMap: Record<string, { date: string; ventasTotal: number; pagosTotal: number; ventasPosTotal: number; ventasConsigTotal: number; unitsVendidas: number }> = {};
 
     for (let i = 0; i < days; i++) {
         const d = new Date(start);
@@ -388,7 +423,7 @@ export async function getDashboardTendencia(sucursalId: number, period: Dashboar
         const totalNeto = Number(v.total) - Number(v.descuentoGlobal || 0);
 
         // Sumar unidades vendidas
-        const unitsVenta = v.detalles?.reduce((acc: number, d: any) => acc + (d.units || 0), 0) || 0;
+        const unitsVenta = v.detalles?.reduce((acc: number, d) => acc + (d.units || 0), 0) || 0;
         seriesMap[k].unitsVendidas += unitsVenta;
 
         seriesMap[k].ventasTotal += totalNeto;
@@ -412,9 +447,10 @@ export async function getDashboardTendencia(sucursalId: number, period: Dashboar
 /**
  * REPORTE DE PRODUCTOS TOP (Rotación)
  */
-export async function getDashboardTopProductos(sucursalId: number, period: DashboardPeriod, isAdmin: boolean = false, limit: number = 10) {
+export async function getDashboardTopProductos(sucursalId: number, period: DashboardPeriod, isAdmin: boolean = false, limit: number = 10, userId?: number | null) {
     const isGlobal = sucursalId === 0 && isAdmin;
-    const tz = await getConfiguredTz(isGlobal ? 1 : sucursalId);
+    const timezone = await resolveKpiTimezone(sucursalId, userId);
+    const tz = timezone.tz;
     const now = nowAR(tz);
     let start: Date | undefined;
 
@@ -490,10 +526,12 @@ export async function getDashboardTopConsignados(
     sucursalId: number,
     period: DashboardPeriod,
     isAdmin: boolean = false,
-    limit: number = 10
+    limit: number = 10,
+    userId?: number | null,
 ) {
     const isGlobal = sucursalId === 0 && isAdmin;
-    const tz = await getConfiguredTz(isGlobal ? 1 : sucursalId);
+    const timezone = await resolveKpiTimezone(sucursalId, userId);
+    const tz = timezone.tz;
     const now = nowAR(tz);
     let start: Date | undefined;
 

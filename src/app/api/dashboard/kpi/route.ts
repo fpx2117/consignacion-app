@@ -12,8 +12,9 @@ export async function GET(req: Request) {
 
   const sucursalId = auth.activeSucursalId;
   const isAdmin = auth.user.rol === "ADMIN";
+  const userId = Number(auth.user.sub);
 
-  const stats = await getDashboardKpis(sucursalId, period, isAdmin);
+  const stats = await getDashboardKpis(sucursalId, period, isAdmin, Number.isFinite(userId) ? userId : undefined);
 
   return NextResponse.json({
     data: {

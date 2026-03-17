@@ -3,8 +3,29 @@ import { prisma } from "@/lib/prisma";
 import { sendNotification } from "@/lib/notificaciones/socket-trigger";
 import { NOTIFICATION_TYPE, NOTIFICATION_CONFIG } from "@/lib/notificaciones/types";
 
+type StockAlertProduct = {
+  id: number;
+  nombre: string;
+  stockDisponibleUnits: number;
+  stockMinUnits: number;
+};
+
+type StockAlertConfig = {
+  minStockGlobal: number;
+  notificarStockBajo?: boolean;
+};
+
+type QueueNotification = {
+  type: NOTIFICATION_TYPE;
+  title: string;
+  message: string;
+  data: {
+    productId: number;
+  };
+};
+
 // 1. EVALUADOR DE STOCK: Decide si hay que generar una alerta
-export function evaluateStockAlert(productoActualizado: any, configGlobal: any) {
+export function evaluateStockAlert(productoActualizado: StockAlertProduct, configGlobal: StockAlertConfig) {
   const stockActual = productoActualizado.stockDisponibleUnits;
   const umbralAlerta = productoActualizado.stockMinUnits > 0
     ? productoActualizado.stockMinUnits
@@ -32,7 +53,7 @@ export function evaluateStockAlert(productoActualizado: any, configGlobal: any) 
 }
 
 // 2. PROCESADOR DE COLAS: Guarda en DB y emite Sockets (ahora acepta sucursalId)
-export async function processNotificationQueue(queue: any[], sucursalId: number = 1) {
+export async function processNotificationQueue(queue: QueueNotification[], sucursalId: number = 1) {
   for (const notif of queue) {
     try {
       const fingerprint = `${notif.type}:PROD_${notif.data.productId}:SUC_${sucursalId}`;

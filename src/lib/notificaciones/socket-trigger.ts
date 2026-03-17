@@ -6,7 +6,7 @@ interface NotificationPayload {
   title?: string;
   message: string;
   branch?: string;
-  data?: any;
+  data?: Record<string, unknown>;
 }
 
 export async function sendNotification({ id, type, title, message, branch, data }: NotificationPayload) {

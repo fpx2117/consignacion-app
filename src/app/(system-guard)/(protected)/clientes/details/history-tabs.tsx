@@ -21,7 +21,7 @@ interface HistoryProps {
 }
 
 export function ClientHistoryTabs({ consignaciones, pagos, ventas }: HistoryProps) {
-    const { formatDate } = useTimezone();
+    const { formatDate, formatDateTime } = useTimezone();
 
     // Función auxiliar para verificar estado sin errores de TS
     const isAbierta = (estado: string) => {
@@ -106,6 +106,7 @@ export function ClientHistoryTabs({ consignaciones, pagos, ventas }: HistoryProp
                                     date={p.fecha}
                                     amount={Number(p.monto)}
                                     subtitle={p.metodo ?? "Efectivo"}
+                                    formatter={formatDateTime}
                                 />
                             ))}
                         </div>
@@ -142,6 +143,7 @@ export function ClientHistoryTabs({ consignaciones, pagos, ventas }: HistoryProp
                                     date={v.fecha}
                                     amount={Number(v.total)}
                                     subtitle={`${v.detalles?.length ?? "-"} artículos`}
+                                    formatter={formatDateTime}
                                 />
                             ))}
                         </div>
@@ -178,10 +180,12 @@ interface MobileCardProps {
     amount?: number;
     subtitle?: string;
     link?: string;
+    formatter?: (value: string | Date | null | undefined) => string;
 }
 
-function MobileCard({ title, date, status, statusColor, amount, subtitle, link }: MobileCardProps) {
+function MobileCard({ title, date, status, statusColor, amount, subtitle, link, formatter }: MobileCardProps) {
     const { formatDate } = useTimezone();
+    const formatValue = formatter ?? formatDate;
     const content = (
         <div className="flex items-center justify-between p-4">
             <div className="space-y-1">
@@ -189,7 +193,7 @@ function MobileCard({ title, date, status, statusColor, amount, subtitle, link }
                     <span className="font-bold text-sm">{title}</span>
                     {status && <Badge variant={statusColor} className="text-[10px] px-1.5 h-5">{status}</Badge>}
                 </div>
-                <p className="text-xs text-muted-foreground">{formatDate(date)} • {subtitle || "Sin detalle"}</p>
+                <p className="text-xs text-muted-foreground">{formatValue(date)} • {subtitle || "Sin detalle"}</p>
             </div>
             <div className="text-right">
                 {amount !== undefined && (

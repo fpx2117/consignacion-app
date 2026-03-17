@@ -6,7 +6,7 @@ import { hashCode } from "@/lib/share-links";
 
 import { getBranding } from "@/lib/reports/get-branding";
 import { buildConsignacionHtml } from "@/lib/reports/base/remito-template";
-import { getConfiguredTz } from "@/lib/get-configured-tz";
+import { resolveTimezone } from "@/lib/get-configured-tz";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -37,6 +37,13 @@ function safeFilename(input: string) {
     .trim()
     .replace(/\s+/g, "-")
     .slice(0, 60);
+}
+
+async function resolveRemitoTimezone(consignacion: { sucursalId: number }) {
+  // Consignacion no persiste hoy un usuario creador/dueno confiable para el remito.
+  // Para no inferir dueños desde relaciones operativas indirectas, este recurso
+  // resuelve por sucursal y deja el fallback tecnico encapsulado en el resolver central.
+  return resolveTimezone({ sucursalId: consignacion.sucursalId });
 }
 
 export async function GET(
@@ -79,7 +86,7 @@ export async function GET(
 
     if (!consignacion) return NextResponse.json({ error: "No encontrada" }, { status: 404 });
 
-    const zonaHoraria = await getConfiguredTz(consignacion.sucursalId);
+    const timezone = await resolveRemitoTimezone(consignacion);
 
     // ✅ Branding desde la DB del environment del cliente
     const branding = await getBranding();
@@ -90,7 +97,7 @@ export async function GET(
     });
 
     const page = await browser.newPage();
-    await page.setContent(await buildConsignacionHtml({ ...consignacion, zonaHoraria }, branding), {
+    await page.setContent(await buildConsignacionHtml({ ...consignacion, zonaHoraria: timezone.tz }, branding), {
       waitUntil: "domcontentloaded",
       timeout: 30000,
     });
@@ -105,7 +112,7 @@ export async function GET(
     browser = null;
 
     const clienteNombre = safeFilename(consignacion.cliente?.nombre || "Cliente");
-    const folioFormateado = String((consignacion as any).numeroFolio ?? consignacion.id).padStart(4, "0");
+    const folioFormateado = String(consignacion.numeroFolio ?? consignacion.id).padStart(4, "0");
     const fileName = `Remito-${clienteNombre || "Cliente"}-${folioFormateado}.pdf`;
 
     return new NextResponse(Buffer.from(pdfUint8Array), {

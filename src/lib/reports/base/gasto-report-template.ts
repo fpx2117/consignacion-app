@@ -1,6 +1,6 @@
 import { reportThemeCss } from "@/lib/reports/report-theme";
 import { getReportHeadAssets } from "@/lib/reports/tailwind-inline";
-import { brandInitials, escapeAttr, escapeHtml, formatDateAR, formatMoneyARS } from "@/lib/reports/template-helpers";
+import { brandInitials, escapeAttr, escapeHtml, formatDateAR, formatMoneyARS, resolveReportTimezone } from "@/lib/reports/template-helpers";
 import type { BrandingDTO } from "@/lib/reports/types";
 import { generateBarcodeHtml } from "@/lib/reports/barcode-helper";
 
@@ -14,11 +14,11 @@ export interface GastoReportDTO {
     categoria: string;
     esRecurrente: boolean;
     frecuencia: string;
-    zonaHoraria?: string;
+    zonaHoraria: string;
 }
 
 export async function buildGastoHtml(data: GastoReportDTO, branding: BrandingDTO) {
-    const tz = data.zonaHoraria ?? "America/Argentina/Buenos_Aires";
+    const tz = resolveReportTimezone(data.zonaHoraria);
     const colorPrincipal = "bg-rose-600";
     const colorBorde = "border-rose-900";
     const brandName = branding.businessName || "Consignación";
@@ -58,7 +58,7 @@ export async function buildGastoHtml(data: GastoReportDTO, branding: BrandingDTO
           <div class="text-right">
             <h2 class="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] mb-1">ID Registro</h2>
             <p class="text-4xl font-black text-slate-900 tracking-tighter leading-none">#G-${String(data.id).padStart(4, "0")}</p>
-            <p class="text-[10px] font-bold text-slate-500 uppercase mt-3">Emitido: ${formatDateAR(new Date(), false, tz)}</p>
+            <p class="text-[10px] font-bold text-slate-500 uppercase mt-3">Emitido: ${formatDateAR(new Date(), true, tz)}</p>
           </div>
         </div>
 
@@ -76,12 +76,12 @@ export async function buildGastoHtml(data: GastoReportDTO, branding: BrandingDTO
                       </div>
                       <div>
                          <h4 class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Fecha Registro</h4>
-                          <span class="text-xs font-bold text-slate-600">${formatDateAR(data.fecha, false, tz)}</span>
+                          <span class="text-xs font-bold text-slate-600">${formatDateAR(data.fecha, true, tz)}</span>
                       </div>
                       ${data.fechaVencimiento ? `
                       <div>
                          <h4 class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Vencimiento</h4>
-                          <span class="text-xs font-bold text-orange-600">${formatDateAR(data.fechaVencimiento, false, tz)}</span>
+                          <span class="text-xs font-bold text-orange-600">${formatDateAR(data.fechaVencimiento, true, tz)}</span>
                       </div>
                       ` : ""}
                    </div>

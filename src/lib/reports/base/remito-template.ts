@@ -1,7 +1,7 @@
 // src/lib/reports/base/remito-template.ts
 import { reportThemeCss } from "@/lib/reports/report-theme";
 import { getReportHeadAssets } from "@/lib/reports/tailwind-inline";
-import { escapeHtml, escapeAttr, brandInitials, formatDateAR } from "@/lib/reports/template-helpers";
+import { escapeHtml, escapeAttr, brandInitials, formatDateAR, resolveReportTimezone } from "@/lib/reports/template-helpers";
 import type { BrandingDTO } from "@/lib/reports/types";
 import { generateQRHtml } from "@/lib/reports/qr-helper";
 
@@ -21,7 +21,7 @@ function asDetalles(arr: unknown[]): DetalleConsignacion[] {
 }
 
 type ConsignacionInput = {
-    zonaHoraria?: string;
+    zonaHoraria: string;
     detalles?: unknown[];
     numeroFolio?: number;
     id?: number;
@@ -31,7 +31,7 @@ type ConsignacionInput = {
 };
 
 export async function buildConsignacionHtml(consignacion: ConsignacionInput, branding: BrandingDTO): Promise<string> {
-    const tz = consignacion.zonaHoraria ?? "America/Argentina/Buenos_Aires";
+    const tz = resolveReportTimezone(consignacion.zonaHoraria);
     const brandName = branding.businessName || "Comercio";
     const badge = brandInitials(brandName);
     const metaLine = [branding.address, branding.phone]

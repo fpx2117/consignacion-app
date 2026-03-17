@@ -23,7 +23,7 @@ interface AuditParams {
     userId?: number;
     action: AuditAction | string;
     module: AuditModule | string;
-    details?: any;
+    details?: Record<string, unknown>;
     ipAddress?: string;
     userAgent?: string;
 }

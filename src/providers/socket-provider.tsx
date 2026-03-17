@@ -25,6 +25,7 @@ function isPublicRoute(path: string | null): boolean {
 
 export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
   const pathname = usePathname();
+  const initialPathnameRef = useRef(pathname);
   const socketRef = useRef<Socket | null>(null);
   const [socket, setSocket] = useState<Socket | null>(null);
   const [isConnected, setIsConnected] = useState(false);
@@ -33,7 +34,7 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
   // No depende de pathname — el socket persiste entre navegaciones.
   useEffect(() => {
     // No conectar si la ruta inicial ya es pública
-    if (isPublicRoute(pathname)) return;
+    if (isPublicRoute(initialPathnameRef.current)) return;
 
     let cancelled = false;
 
@@ -107,7 +108,7 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
       }
       setSocket(null);
     };
-  }, []); // ✅ Sin pathname en las dependencias — reconexión solo al montar/desmontar
+  }, []); // ✅ Sin reconectar en cada navegación
 
   // ✅ Efecto de guarda de ruta: observa pathname pero SOLO desconecta.
   // No reconecta — el provider se desmontará si el usuario navega a /login.

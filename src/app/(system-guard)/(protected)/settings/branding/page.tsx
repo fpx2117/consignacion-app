@@ -176,6 +176,7 @@ export default function BrandingPage() {
       metodoPago: "Efectivo",
       clienteNombre: "Juan Pérez",
       clienteTelefono: "+54 351 555-1234",
+      zonaHoraria: Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC",
       items: [
         { producto: "Sky Vodka Raspberry", cantidad: 1, precioUnitario: 12000, descuento: 0, subtotal: 12000 },
         { producto: "Speeds XL", cantidad: 2, precioUnitario: 4500, descuento: 0, subtotal: 9000 },

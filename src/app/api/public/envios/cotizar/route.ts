@@ -39,7 +39,7 @@ export async function POST(req: Request) {
         const tarifas = await andreaniService.cotizarEnvio(codigoPostal, subtotal, pesoKg);
 
         return NextResponse.json({ data: tarifas });
-    } catch (error: any) {
+    } catch (error: unknown) {
         console.error("Error al cotizar envío:", error);
         return NextResponse.json({ error: "Error al cotizar el envío" }, { status: 500 });
     }

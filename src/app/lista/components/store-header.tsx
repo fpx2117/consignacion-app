@@ -2,11 +2,12 @@
 
 import Image from "next/image";
 import { PackageOpen } from "lucide-react";
+import type { PublicCatalogConfig } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { getThemeStyles } from "../lib/theme-utils";
 
 interface StoreHeaderProps {
-    config: any;
+    config: PublicCatalogConfig;
     cartCount: number;
     onOpenCart: () => void;
 }

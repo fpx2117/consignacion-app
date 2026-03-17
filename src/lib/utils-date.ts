@@ -13,7 +13,9 @@
  *   - Para rangos de día/mes:  startOfDayAR(d, tz) / startOfMonthAR(d, tz)
  */
 
-export const TZ_AR = "America/Argentina/Buenos_Aires";
+import { TECHNICAL_FALLBACK_TZ } from "@/lib/timezone-constants";
+
+export const TZ_AR = TECHNICAL_FALLBACK_TZ;
 
 // ── Helpers internos ──────────────────────────────────────────────────────────
 
@@ -198,6 +200,75 @@ export function formatDateTimeAR(
   }
 
   return d.toLocaleString("es-AR", base);
+}
+
+export function formatDateInputAR(
+  dateStr: string | Date | null | undefined,
+  tz = TZ_AR,
+): string {
+  if (!dateStr) return "";
+  const d = typeof dateStr === "string" ? new Date(dateStr) : dateStr;
+  if (isNaN(d.getTime())) return "";
+
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: tz,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(d);
+
+  const year = parts.find((p) => p.type === "year")?.value;
+  const month = parts.find((p) => p.type === "month")?.value;
+  const day = parts.find((p) => p.type === "day")?.value;
+
+  return year && month && day ? `${year}-${month}-${day}` : "";
+}
+
+export function formatTimeInputAR(
+  dateStr: string | Date | null | undefined,
+  tz = TZ_AR,
+): string {
+  if (!dateStr) return "";
+  const d = typeof dateStr === "string" ? new Date(dateStr) : dateStr;
+  if (isNaN(d.getTime())) return "";
+
+  return new Intl.DateTimeFormat("en-GB", {
+    timeZone: tz,
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).format(d);
+}
+
+export function parseDateInputAR(value: string, tz = TZ_AR): Date {
+  const [yearStr, monthStr, dayStr] = value.split("-");
+  const year = Number(yearStr);
+  const month = Number(monthStr);
+  const day = Number(dayStr);
+
+  if (!year || !month || !day) {
+    throw new Error(`Fecha invalida: ${value}`);
+  }
+
+  const ref = new Date(Date.UTC(year, month - 1, day, 12, 0, 0));
+  return startOfDayAR(ref, tz);
+}
+
+export function parseDateTimeInputAR(
+  dateValue: string,
+  timeValue = "00:00",
+  tz = TZ_AR,
+): Date {
+  const base = parseDateInputAR(dateValue, tz);
+  const [hoursStr, minutesStr] = timeValue.split(":");
+  const hours = Number(hoursStr);
+  const minutes = Number(minutesStr);
+
+  if (!Number.isFinite(hours) || !Number.isFinite(minutes) || hours < 0 || hours > 23 || minutes < 0 || minutes > 59) {
+    throw new Error(`Hora invalida: ${timeValue}`);
+  }
+
+  return new Date(base.getTime() + (hours * 60 + minutes) * 60_000);
 }
 
 // ── 5. Comparaciones ──────────────────────────────────────────────────────────

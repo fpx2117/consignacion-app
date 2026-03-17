@@ -33,7 +33,7 @@ export function buildHistoryInventoryHtml(
   // --- 1. CÁLCULOS ---
   const stats = movimientos.reduce(
     (acc, curr) => {
-      const cant = Math.abs(Number((curr as any).cantidad) || 0);
+      const cant = Math.abs(Number(curr.cantidad) || 0);
       if (curr.tipo === TipoMovimientoStock.ENTRADA) acc.entradas += cant;
       else acc.salidas += cant;
       return acc;
@@ -155,7 +155,7 @@ export function buildHistoryInventoryHtml(
 
             <tbody class="text-xs">
               ${movimientos
-      .map((m: any) => {
+      .map((m) => {
         const isEntrada = m.tipo === TipoMovimientoStock.ENTRADA;
         const date = new Date(m.createdAt);
         const day = date.getDate().toString().padStart(2, "0");

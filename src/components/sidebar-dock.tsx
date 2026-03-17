@@ -278,7 +278,7 @@ export function SidebarDock({ initialUserData }: SidebarDockProps = {}) {
 
       try {
         const res = await apiService.getConfiguracionGeneral();
-        const value = res?.usarControlDeCaja ?? res?.data?.usarControlDeCaja ?? true;
+        const value = res?.usarControlDeCaja ?? true;
         configCache = { value, ts: Date.now() };
         setUsarControlDeCaja(value);
         localStorage.setItem(`config-caja-${activeSucursalId}`, String(value));

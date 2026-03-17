@@ -2,9 +2,9 @@
 // Funciones compartidas para el modulo de pedidos de reposicion programados
 
 import { prisma } from "@/lib/prisma";
+import { resolveTimezone } from "@/lib/get-configured-tz";
 import { NOTIFICATION_TYPE } from "@/lib/notificaciones/types";
-import { nowAR } from "@/lib/utils-date";
-import { getConfiguredTz } from "@/lib/get-configured-tz";
+import { formatDateSafe, nowAR } from "@/lib/utils-date";
 
 /**
  * Verifica pedidos PROGRAMADO/POSTERGADO cuya fechaEsperada ya paso,
@@ -16,8 +16,8 @@ import { getConfiguredTz } from "@/lib/get-configured-tz";
  * @returns cantidad de pedidos actualizados
  */
 export async function checkAndUpdateVencidos(sucursalId?: number): Promise<{ count: number; ids: number[] }> {
-  const tz = sucursalId !== undefined ? await getConfiguredTz(sucursalId) : undefined;
-  const now = nowAR(tz);
+  const resolvedTimezone = sucursalId !== undefined ? await resolveTimezone({ sucursalId }) : null;
+  const now = nowAR(resolvedTimezone?.tz);
 
   const pedidosAVencer = await prisma.pedidoEsperado.findMany({
     where: {
@@ -33,6 +33,11 @@ export async function checkAndUpdateVencidos(sucursalId?: number): Promise<{ cou
   }
 
   const ids = pedidosAVencer.map((p) => p.id);
+  const timezonesBySucursal = new Map<number, string>();
+
+  if (resolvedTimezone && sucursalId !== undefined) {
+    timezonesBySucursal.set(sucursalId, resolvedTimezone.tz);
+  }
 
   // Actualizar estados a VENCIDO
   await prisma.pedidoEsperado.updateMany({
@@ -43,14 +48,25 @@ export async function checkAndUpdateVencidos(sucursalId?: number): Promise<{ cou
   // Crear notificaciones in-app (upsert idempotente por fingerprint)
   // Cada pedido tiene su propia notification; si ya existe, la reactiva como no leida
   await Promise.all(
-    pedidosAVencer.map((pedido) => {
+    pedidosAVencer.map(async (pedido) => {
       const fingerprint = `PEDIDO_VENCIDO_${pedido.id}`;
-      const fechaFormateada = pedido.fechaEsperada.toLocaleDateString("es-AR", {
-        day: "2-digit",
-        month: "2-digit",
-        year: "numeric",
-        timeZone: "America/Argentina/Buenos_Aires",
-      });
+      let pedidoTz = timezonesBySucursal.get(pedido.sucursalId);
+
+      if (!pedidoTz) {
+        const timezone = await resolveTimezone({ sucursalId: pedido.sucursalId });
+        pedidoTz = timezone.tz;
+        timezonesBySucursal.set(pedido.sucursalId, pedidoTz);
+      }
+
+      const fechaFormateada = formatDateSafe(
+        pedido.fechaEsperada,
+        {
+          day: "2-digit",
+          month: "2-digit",
+          year: "numeric",
+        },
+        pedidoTz,
+      );
 
       return prisma.notification.upsert({
         where: { fingerprint },

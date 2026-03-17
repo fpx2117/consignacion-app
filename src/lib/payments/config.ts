@@ -32,7 +32,7 @@ const paymentConfigSchema = z.object({
 export type PaymentConfig = z.infer<typeof paymentConfigSchema>;
 
 function loadPaymentConfig(): PaymentConfig {
-    const result = paymentConfigSchema.safeParse({
+    const rawConfig = {
         mp: {
             accessToken: process.env.MP_ACCESS_TOKEN,
             publicKey: process.env.MP_PUBLIC_KEY,
@@ -51,7 +51,8 @@ function loadPaymentConfig(): PaymentConfig {
         featureFlags: {
             publicCheckoutV2: process.env.PUBLIC_CHECKOUT_V2,
         },
-    });
+    };
+    const result = paymentConfigSchema.safeParse(rawConfig);
 
     if (!result.success) {
         console.error("❌ Invalid payment configuration:", result.error.format());
@@ -61,9 +62,30 @@ function loadPaymentConfig(): PaymentConfig {
         }
     }
 
-    return result.success
-        ? result.data
-        : (result.error as any); // Fallback for dev if not total failure
+    if (result.success) {
+        return result.data;
+    }
+
+    return {
+        mp: {
+            accessToken: String(rawConfig.mp.accessToken ?? ""),
+            publicKey: String(rawConfig.mp.publicKey ?? ""),
+            webhookSecret: String(rawConfig.mp.webhookSecret ?? ""),
+        },
+        paypal: {
+            clientId: String(rawConfig.paypal.clientId ?? ""),
+            secret: String(rawConfig.paypal.secret ?? ""),
+            webhookId: String(rawConfig.paypal.webhookId ?? ""),
+            mode: rawConfig.paypal.mode === "live" ? "live" : "sandbox",
+            apiUrl: rawConfig.paypal.apiUrl,
+        },
+        business: {
+            defaultTrialDays: Number(rawConfig.business.defaultTrialDays ?? 7),
+        },
+        featureFlags: {
+            publicCheckoutV2: String(rawConfig.featureFlags.publicCheckoutV2 ?? "").toLowerCase() === "true",
+        },
+    };
 }
 
 export const paymentConfig = loadPaymentConfig();

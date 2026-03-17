@@ -5,6 +5,7 @@ import { MotivoMovimientoStock, TipoMovimientoStock } from "@prisma/client";
 import { z } from "zod";
 import { buildSucursalWhere, isGlobalSucursalView } from "@/lib/sucursalScope";
 import { nowAR } from "@/lib/utils-date";
+import { resolveTimezoneForAuth } from "@/lib/get-configured-tz";
 
 const ventaAnulacionSchema = z.object({
   motivo: z.string().trim().min(1).optional(),
@@ -87,6 +88,8 @@ export async function DELETE(
   }
 
   try {
+    const timezone = await resolveTimezoneForAuth(auth);
+
     const venta = await prisma.venta.findFirst({
       where: { id, sucursalId: auth.activeSucursalId },
       include: { detalles: true },
@@ -174,7 +177,7 @@ export async function DELETE(
         data: {
           anulada: true,
           motivoAnulacion: motivo,
-          fechaAnulacion: nowAR(),
+          fechaAnulacion: nowAR(timezone.tz),
         },
       });
     });

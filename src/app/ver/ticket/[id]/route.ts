@@ -7,7 +7,7 @@ import { buildVentaHtmlAsync } from "@/lib/reports/base/venta-report-template";
 import { getBranding } from "@/lib/reports/get-branding";
 import { prisma } from "@/lib/prisma";
 import { hashCode } from "@/lib/share-links";
-import { getConfiguredTz } from "@/lib/get-configured-tz";
+import { resolveTimezone } from "@/lib/get-configured-tz";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -74,13 +74,19 @@ export async function GET(
 
     const ventaRaw = await prisma.venta.findUnique({
       where: { id },
-      include: { cliente: true, detalles: { include: { producto: true } } },
+      include: {
+        cliente: true,
+        detalles: { include: { producto: true } },
+        sesionCaja: { select: { usuarioId: true } },
+      },
     });
 
     if (!ventaRaw) return NextResponse.json({ error: "Venta no encontrada" }, { status: 404 });
 
-    // Leer timezone configurada para la sucursal de esta venta
-    const zonaHoraria = await getConfiguredTz(ventaRaw.sucursalId);
+    const timezone = await resolveTimezone({
+      userId: ventaRaw.sesionCaja?.usuarioId ?? null,
+      sucursalId: ventaRaw.sucursalId,
+    });
 
     // ── URL del catálogo público para el QR del ticket ─────────────────────────
     const catalogUrl = `${getPublicOrigin(request)}/lista?sucursalId=${ventaRaw.sucursalId}`;
@@ -94,7 +100,7 @@ export async function GET(
       metodoPago: String(ventaRaw.metodoPago ?? "EFECTIVO"),
       clienteNombre: ventaRaw.cliente?.nombre || "Consumidor Final",
       clienteTelefono: ventaRaw.cliente?.telefono || "",
-      zonaHoraria,
+      zonaHoraria: timezone.tz,
       catalogUrl,
       items: ventaRaw.detalles.map((d) => ({
         producto: d.producto.nombre,

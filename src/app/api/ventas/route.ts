@@ -14,7 +14,7 @@ import { sendNotification } from "@/lib/notificaciones/socket-trigger";
 import { obtenerConfiguracionGlobal } from "@/lib/config";
 import { evaluateStockAlert, processNotificationQueue } from "@/lib/notificaciones/stock-alerts";
 import { nowAR } from "@/lib/utils-date";
-import { getConfiguredTz } from "@/lib/get-configured-tz";
+import { resolveTimezoneForAuth } from "@/lib/get-configured-tz";
 import { buildSucursalWhere, isGlobalSucursalView } from "@/lib/sucursalScope";
 
 const MAX_VENTA_RETRIES = 3;
@@ -44,6 +44,32 @@ type VentaTransactionResult = {
   notificationsQueue: NotificationQueueItem[];
 };
 
+type VentasRouteDeps = {
+  prisma: typeof prisma;
+  requireAuth: typeof requireAuth;
+  buildSucursalWhere: typeof buildSucursalWhere;
+  isGlobalSucursalView: typeof isGlobalSucursalView;
+  obtenerConfiguracionGlobal: typeof obtenerConfiguracionGlobal;
+  resolveTimezoneForAuth: typeof resolveTimezoneForAuth;
+  nowAR: typeof nowAR;
+  evaluateStockAlert: typeof evaluateStockAlert;
+  processNotificationQueue: typeof processNotificationQueue;
+  sendNotification: typeof sendNotification;
+};
+
+const defaultDeps: VentasRouteDeps = {
+  prisma,
+  requireAuth,
+  buildSucursalWhere,
+  isGlobalSucursalView,
+  obtenerConfiguracionGlobal,
+  resolveTimezoneForAuth,
+  nowAR,
+  evaluateStockAlert,
+  processNotificationQueue,
+  sendNotification,
+};
+
 function isRetriableVentaError(error: unknown) {
   if (error instanceof Prisma.PrismaClientKnownRequestError) {
     return error.code === "P2002" || error.code === "P2034";
@@ -57,11 +83,15 @@ function getErrorMessage(error: unknown) {
 }
 
 export async function GET() {
-  const auth = await requireAuth();
-  if (!auth.ok) return auth.res;
-  const sucursalWhere = buildSucursalWhere(auth);
+  return handleGetVentas();
+}
 
-  const ventas = await prisma.venta.findMany({
+export async function handleGetVentas(deps: VentasRouteDeps = defaultDeps) {
+  const auth = await deps.requireAuth();
+  if (!auth.ok) return auth.res;
+  const sucursalWhere = deps.buildSucursalWhere(auth);
+
+  const ventas = await deps.prisma.venta.findMany({
     where: sucursalWhere,
     orderBy: { id: "desc" },
     include: { cliente: true, detalles: { include: { producto: true } } },
@@ -72,9 +102,13 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
-  const auth = await requireAuth();
+  return handlePostVenta(req);
+}
+
+export async function handlePostVenta(req: Request, deps: VentasRouteDeps = defaultDeps) {
+  const auth = await deps.requireAuth();
   if (!auth.ok) return auth.res;
-  if (isGlobalSucursalView(auth)) {
+  if (deps.isGlobalSucursalView(auth)) {
     return NextResponse.json({ error: "Vista global en modo solo lectura. Selecciona una sucursal para registrar ventas." }, { status: 409 });
   }
 
@@ -102,15 +136,15 @@ export async function POST(req: Request) {
     const { clienteId, descuentoGlobal, items, metodoPago } = parsed.data;
 
     // ✅ 1. TRAER CONFIGURACIÓN Y TIMEZONE PRIMERO
-    const [configGlobal, tzVenta] = await Promise.all([
-      obtenerConfiguracionGlobal(auth.activeSucursalId),
-      getConfiguredTz(auth.activeSucursalId),
+    const [configGlobal, timezone] = await Promise.all([
+      deps.obtenerConfiguracionGlobal(auth.activeSucursalId),
+      deps.resolveTimezoneForAuth(auth),
     ]);
     // Asumimos que si no existe el campo en DB aún, por defecto es estricto (true)
     const usaCaja = configGlobal.usarControlDeCaja ?? true;
 
     // ✅ 2. VERIFICAR SESIÓN DE CAJA (Condicional)
-    const sesionActiva = await prisma.sesionCaja.findFirst({
+    const sesionActiva = await deps.prisma.sesionCaja.findFirst({
       where: {
         usuarioId: usuarioId,
         estado: "ABIERTA",
@@ -128,12 +162,12 @@ export async function POST(req: Request) {
     let notificationsQueue: NotificationQueueItem[] = [];
 
     // Lógica de Cliente - Filtrado por sucursal
-    let finalClienteId = clienteId;
-    if (!finalClienteId) {
-      const consumidor = await prisma.cliente.findFirst({
+      let finalClienteId = clienteId;
+      if (!finalClienteId) {
+      const consumidor = await deps.prisma.cliente.findFirst({
         where: { nombre: "Consumidor Final", sucursalId: auth.activeSucursalId },
       });
-      finalClienteId = consumidor ? consumidor.id : (await prisma.cliente.create({
+      finalClienteId = consumidor ? consumidor.id : (await deps.prisma.cliente.create({
         data: {
           nombre: "Consumidor Final",
           direccion: "Venta Mostrador",
@@ -148,7 +182,7 @@ export async function POST(req: Request) {
 
     for (let attempt = 1; attempt <= MAX_VENTA_RETRIES; attempt++) {
       try {
-        result = await prisma.$transaction(async (tx) => {
+        result = await deps.prisma.$transaction(async (tx) => {
           let totalVenta = 0;
           const txNotificationsQueue: NotificationQueueItem[] = [];
           const detallesData = [];
@@ -224,7 +258,7 @@ export async function POST(req: Request) {
               }
             });
 
-            const alerta = evaluateStockAlert(productoDespues, configGlobal);
+            const alerta = deps.evaluateStockAlert(productoDespues, configGlobal);
             if (alerta) txNotificationsQueue.push(alerta);
 
             const precioVenta = Number(stockSucursalInfo.precioVentaOverride ?? stockSucursalInfo.producto.precioVenta);
@@ -268,7 +302,7 @@ export async function POST(req: Request) {
               numeroVenta: nextNumeroVenta,
               metodoPago: metodoPago ?? MetodoPago.EFECTIVO,
               sesionCajaId: sesionActiva?.id || null,
-              fecha: nowAR(tzVenta),
+                fecha: deps.nowAR(timezone.tz),
               total: totalFinal,
               descuentoGlobal: descGlobalFinal,
               detalles: { create: detallesData },
@@ -282,7 +316,7 @@ export async function POST(req: Request) {
               sucursalId: auth.activeSucursalId,
               tipo: "VENTA",
               sesionCajaId: sesionActiva?.id || null,
-              fecha: nowAR(tzVenta),
+                fecha: deps.nowAR(timezone.tz),
               monto: totalFinal,
               metodo: metodoPago ?? MetodoPago.EFECTIVO,
             },
@@ -307,7 +341,7 @@ export async function POST(req: Request) {
     }
 
     // Post-Procesamiento
-    await processNotificationQueue(notificationsQueue, auth.activeSucursalId);
+    await deps.processNotificationQueue(notificationsQueue, auth.activeSucursalId);
 
     // Mensaje de notificación adaptado (Solo si la configuración lo permite)
     if (configGlobal.notificarVentas !== false) {
@@ -315,7 +349,7 @@ export async function POST(req: Request) {
       const clientName = result.venta.cliente?.nombre || "Consumidor Final";
       const clientId = result.venta.clienteId;
 
-      const dbNotif = await prisma.notification.create({
+      const dbNotif = await deps.prisma.notification.create({
         data: {
           type: "NEW_ORDER",
           title: "Venta Exitosa",
@@ -327,7 +361,7 @@ export async function POST(req: Request) {
       }).catch(() => null);
 
       // 2. Emisión en tiempo real (Socket)
-      sendNotification({
+      deps.sendNotification({
         id: dbNotif?.id, // Pasamos el ID real para que useNotifications lo indexe bien
         type: "NEW_ORDER",
         title: "Venta Exitosa",

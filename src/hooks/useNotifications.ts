@@ -33,6 +33,38 @@ type NotificationsCache = {
 
 let notificationsCache: NotificationsCache | null = null;
 
+type NotificationWithFingerprint = AppNotification & {
+  fingerprint?: string;
+};
+
+type SocketNotificationPayload = {
+  id?: number | string;
+  type: string;
+  title: string;
+  message?: string;
+  description?: string;
+  data?: {
+    ventaId?: number;
+    consignacionId?: number;
+    productId?: number;
+  };
+};
+
+function parseHistoricalNotification(notification: NotificationWithFingerprint): AppNotification {
+  let ventaId: number | undefined;
+  let consignacionId: number | undefined;
+
+  if (notification.fingerprint) {
+    if (notification.fingerprint.startsWith("SALE_")) {
+      ventaId = parseInt(notification.fingerprint.replace("SALE_", ""), 10);
+    } else if (notification.fingerprint.startsWith("CONSIGNMENT_ALERT_")) {
+      consignacionId = parseInt(notification.fingerprint.split("_")[2], 10);
+    }
+  }
+
+  return { ...notification, ventaId, consignacionId };
+}
+
 export function useNotifications({ limit = 50, onlyUnreadOnLoad = false, ttlMs = 30_000 }: UseNotificationsProps = {}) {
   const { socket, isConnected } = useSocket();
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
@@ -68,18 +100,7 @@ export function useNotifications({ limit = 50, onlyUnreadOnLoad = false, ttlMs =
 
       if (data.data) {
         // Parse fingerprint for historical sales
-        const mappedData = data.data.map((n: any) => {
-          let ventaId;
-          let consignacionId;
-          if (n.fingerprint) {
-            if (n.fingerprint.startsWith("SALE_")) {
-              ventaId = parseInt(n.fingerprint.replace("SALE_", ""), 10);
-            } else if (n.fingerprint.startsWith("CONSIGNMENT_ALERT_")) {
-              consignacionId = parseInt(n.fingerprint.split("_")[2], 10);
-            }
-          }
-          return { ...n, ventaId, consignacionId };
-        });
+        const mappedData = (data.data as NotificationWithFingerprint[]).map(parseHistoricalNotification);
         setNotifications(mappedData);
         setUnreadCount(data.unreadCount || 0);
         notificationsCache = {
@@ -104,7 +125,7 @@ export function useNotifications({ limit = 50, onlyUnreadOnLoad = false, ttlMs =
   useEffect(() => {
     if (!socket) return;
 
-    socket.on("new-notification", (newNotif: any) => {
+    socket.on("new-notification", (newNotif: SocketNotificationPayload) => {
       // 1. Agregamos la nueva al principio de la lista
       setNotifications((prev) => {
         // Evitamos duplicados visuales si el socket manda lo mismo rápido
@@ -125,10 +146,12 @@ export function useNotifications({ limit = 50, onlyUnreadOnLoad = false, ttlMs =
           id: Number(newNotif.id) || Date.now(), // Fallback por si no viene ID
           type: newNotif.type,
           title: newNotif.title,
-          description: newNotif.message || newNotif.description, // Adaptar según qué mande tu backend
+          description: newNotif.message || newNotif.description || "Nueva notificación",
           read: false,
           createdAt: new Date().toISOString(),
-          producto: newNotif.data ? { id: newNotif.data.productId, nombre: "..." } : undefined,
+          producto: typeof newNotif.data?.productId === "number"
+            ? { id: newNotif.data.productId, nombre: "..." }
+            : undefined,
           ventaId,
           consignacionId,
         };

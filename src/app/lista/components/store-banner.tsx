@@ -3,11 +3,13 @@
 import Image from "next/image";
 import * as React from "react";
 import { motion, AnimatePresence } from "motion/react";
+import type { PublicCatalogBanner, PublicCatalogConfig } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { getThemeStyles } from "../lib/theme-utils";
 
-export function StoreBanner({ config }: { config: any }) {
-    const isSliderMode = config.isBannerSlider && Array.isArray(config.banners) && config.banners.length > 0;
+export function StoreBanner({ config }: { config: PublicCatalogConfig }) {
+    const banners = Array.isArray(config.banners) ? config.banners : [];
+    const isSliderMode = Boolean(config.isBannerSlider) && banners.length > 0;
     const staticBannerSrc = config.bannerUrl || (config.bannerData ? `data:${config.bannerMime};base64,${config.bannerData}` : null);
 
     const [currentSlide, setCurrentSlide] = React.useState(0);
@@ -16,10 +18,10 @@ export function StoreBanner({ config }: { config: any }) {
         if (!isSliderMode) return;
 
         const timer = setInterval(() => {
-            setCurrentSlide((prev) => (prev + 1) % config.banners.length);
+            setCurrentSlide((prev) => (prev + 1) % banners.length);
         }, 5000);
         return () => clearInterval(timer);
-    }, [isSliderMode, config.banners?.length]);
+    }, [banners.length, isSliderMode]);
 
     if (!isSliderMode && !staticBannerSrc) return null;
 
@@ -33,7 +35,7 @@ export function StoreBanner({ config }: { config: any }) {
                     radiusClass,
                     theme !== 'minimal' && theme !== 'luxury' ? "border-2 sm:border-4 border-primary/10" : ""
                 )}
-                style={{ backgroundColor: config.secondaryColor }}
+                style={{ backgroundColor: config.secondaryColor ?? undefined }}
             >
                 {/* Images Container */}
                 <div className="absolute inset-0 w-full h-full">
@@ -48,7 +50,7 @@ export function StoreBanner({ config }: { config: any }) {
                                 className="absolute inset-0"
                             >
                                 <Image
-                                    src={config.banners[currentSlide].url || `data:${config.banners[currentSlide].bannerMime};base64,${config.banners[currentSlide].bannerData}`}
+                                    src={banners[currentSlide].url || `data:${banners[currentSlide].bannerMime};base64,${banners[currentSlide].bannerData}`}
                                     alt={`Banner Slide ${currentSlide + 1}`}
                                     fill
                                     unoptimized
@@ -91,9 +93,9 @@ export function StoreBanner({ config }: { config: any }) {
                 </div>
 
                 {/* Slider Indicators */}
-                {isSliderMode && config.banners.length > 1 && (
+                {isSliderMode && banners.length > 1 && (
                     <div className="absolute bottom-4 left-0 right-0 flex justify-center gap-2 z-10">
-                        {config.banners.map((_: any, idx: number) => (
+                        {banners.map((_: PublicCatalogBanner, idx: number) => (
                             <button
                                 key={idx}
                                 onClick={() => setCurrentSlide(idx)}

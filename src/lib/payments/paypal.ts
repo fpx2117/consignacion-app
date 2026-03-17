@@ -38,8 +38,8 @@ export async function getPayPalAccessToken() {
         const data = await response.json();
         console.log("✅ PayPal Access Token retrieved successfully [Mode: %s]", paymentConfig.paypal.mode);
         return data.access_token;
-    } catch (error: any) {
-        console.error("❌ PayPal request failed:", error.message);
+    } catch (error: unknown) {
+        console.error("❌ PayPal request failed:", error instanceof Error ? error.message : error);
         throw error;
     }
 }

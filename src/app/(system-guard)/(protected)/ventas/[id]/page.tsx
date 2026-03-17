@@ -23,6 +23,7 @@ import {
 import { toast } from "sonner";
 
 import { apiService } from "@/lib/apiService";
+import { useTimezone } from "@/hooks/useTimezone";
 import type { Venta, VentaDetalle } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -54,17 +55,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-// --- Helpers ---
-function formatDate(d: string | Date) {
-  return new Date(d).toLocaleDateString("es-AR", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit"
-  });
-}
-
 const formatCurrency = (value: number) => {
   return new Intl.NumberFormat("es-AR", {
     style: "currency",
@@ -74,6 +64,7 @@ const formatCurrency = (value: number) => {
 };
 
 export default function VentaDetailPage() {
+  const { formatWithOptions } = useTimezone();
   const params = useParams<{ id: string }>();
   const router = useRouter();
   const id = Number(params.id);
@@ -330,17 +321,33 @@ export default function VentaDetailPage() {
             </h1>
             <p className="text-sm text-muted-foreground flex items-center gap-1 mt-1">
               <Clock className="h-3.5 w-3.5" /> Procesada el{" "}
-              {venta?.fecha ? formatDate(venta.fecha) : "-"} hs
+              {venta?.fecha
+                ? formatWithOptions(venta.fecha, {
+                    day: "2-digit",
+                    month: "short",
+                    year: "numeric",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                    hour12: false,
+                  })
+                : "-"}
             </p>
             {isAnulada && venta?.motivoAnulacion && (
               <p className="text-xs text-[color:var(--status-danger)] font-medium mt-1 flex items-center gap-1">
                 <AlertTriangle className="h-3 w-3" />
                 Motivo: {venta.motivoAnulacion}
                 {venta.fechaAnulacion && (
-                  <span className="text-muted-foreground font-normal ml-1">
-                    — {formatDate(venta.fechaAnulacion)}
-                  </span>
-                )}
+                    <span className="text-muted-foreground font-normal ml-1">
+                     — {formatWithOptions(venta.fechaAnulacion, {
+                        day: "2-digit",
+                        month: "short",
+                        year: "numeric",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                        hour12: false,
+                      })}
+                   </span>
+                 )}
               </p>
             )}
             {isAnulada && perdidaRotura > 0 && (

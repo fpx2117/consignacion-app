@@ -5,6 +5,7 @@ import {
   PublicCatalogError,
   trackPublicCatalogVisit,
 } from "@/lib/public-catalog";
+import type { PublicCatalogData } from "@/lib/types";
 
 type SearchParams = {
   sucursalId?: string;
@@ -28,7 +29,7 @@ export default async function PublicCatalogPage({
     }
   }
 
-  let initialData: any | null = null;
+  let initialData: PublicCatalogData | null = null;
   let initialError: string | null = null;
 
   try {
@@ -37,7 +38,7 @@ export default async function PublicCatalogPage({
     if (initialData?.config?.sucursalId) {
       void trackPublicCatalogVisit(initialData.config.sucursalId, h).catch(() => {});
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     if (error instanceof PublicCatalogError) {
       initialError = error.message;
     } else {

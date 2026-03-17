@@ -3,7 +3,26 @@ import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/auth/require-auth";
 import { isGlobalSucursalView } from "@/lib/sucursalScope";
 import { EstadoGasto, FrecuenciaGasto } from "@prisma/client";
-import { nowAR } from "@/lib/utils-date";
+import { nowAR, parseDateTimeInputAR } from "@/lib/utils-date";
+import { resolveTimezoneForAuth } from "@/lib/get-configured-tz";
+
+type GastosRouteDeps = {
+    prisma: typeof prisma;
+    requireAuth: typeof requireAuth;
+    isGlobalSucursalView: typeof isGlobalSucursalView;
+    resolveTimezoneForAuth: typeof resolveTimezoneForAuth;
+    nowAR: typeof nowAR;
+    parseDateTimeInputAR: typeof parseDateTimeInputAR;
+};
+
+const defaultDeps: GastosRouteDeps = {
+    prisma,
+    requireAuth,
+    isGlobalSucursalView,
+    resolveTimezoneForAuth,
+    nowAR,
+    parseDateTimeInputAR,
+};
 
 export async function GET(req: Request) {
     const auth = await requireAuth();
@@ -104,10 +123,10 @@ export async function GET(req: Request) {
     }
 }
 
-export async function POST(req: Request) {
-    const auth = await requireAuth();
+export async function handlePostGasto(req: Request, deps: GastosRouteDeps = defaultDeps) {
+    const auth = await deps.requireAuth();
     if (!auth.ok) return auth.res;
-    if (isGlobalSucursalView(auth)) {
+    if (deps.isGlobalSucursalView(auth)) {
         return NextResponse.json({ error: "Vista global en modo solo lectura. Selecciona una sucursal para crear gastos." }, { status: 409 });
     }
 
@@ -121,7 +140,9 @@ export async function POST(req: Request) {
             monto,
             motivo,
             fecha,
+            hora,
             fechaVencimiento,
+            horaVencimiento,
             estado,
             esRecurrente,
             frecuencia,
@@ -136,10 +157,15 @@ export async function POST(req: Request) {
             );
         }
 
-        const startDate = fecha ? new Date(fecha) : nowAR();
-        const endDate = fechaVencimiento ? new Date(fechaVencimiento) : null;
         const sucursalId = auth.activeSucursalId;
         const userId = Number(auth.user.sub);
+        const timezone = await deps.resolveTimezoneForAuth(auth);
+        const startDate = fecha
+            ? deps.parseDateTimeInputAR(fecha, typeof hora === "string" && hora ? hora : "00:00", timezone.tz)
+            : deps.nowAR(timezone.tz);
+        const endDate = fechaVencimiento
+            ? deps.parseDateTimeInputAR(fechaVencimiento, typeof horaVencimiento === "string" && horaVencimiento ? horaVencimiento : "23:59", timezone.tz)
+            : null;
 
         const esCompartido =
             Array.isArray(sucursalesCompartir) && sucursalesCompartir.length > 1;
@@ -164,7 +190,7 @@ export async function POST(req: Request) {
             // Crear cada cuota individualmente para poder crear los GastoSucursal asociados
             for (let index = 0; index < dates.length; index++) {
                 const d = dates[index];
-                const gasto = await prisma.gasto.create({
+                const gasto = await deps.prisma.gasto.create({
                     data: {
                         monto: Number(monto),
                         motivo,
@@ -184,7 +210,7 @@ export async function POST(req: Request) {
                 });
 
                 if (esCompartido) {
-                    await prisma.gastoSucursal.createMany({
+                    await deps.prisma.gastoSucursal.createMany({
                         data: sucursalesCompartir.map((sid: number) => ({
                             gastoId: gasto.id,
                             sucursalId: sid,
@@ -201,7 +227,7 @@ export async function POST(req: Request) {
         }
 
         // Caso normal (único)
-        const nuevoGasto = await prisma.gasto.create({
+        const nuevoGasto = await deps.prisma.gasto.create({
             data: {
                 monto: Number(monto),
                 motivo,
@@ -222,7 +248,7 @@ export async function POST(req: Request) {
         });
 
         if (esCompartido) {
-            await prisma.gastoSucursal.createMany({
+            await deps.prisma.gastoSucursal.createMany({
                 data: sucursalesCompartir.map((sid: number) => ({
                     gastoId: nuevoGasto.id,
                     sucursalId: sid,
@@ -239,4 +265,8 @@ export async function POST(req: Request) {
             { status: 500 }
         );
     }
+}
+
+export async function POST(req: Request) {
+    return handlePostGasto(req);
 }

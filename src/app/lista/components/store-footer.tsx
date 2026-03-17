@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { PackageOpen, Instagram, Facebook, MessageCircle } from "lucide-react";
+import type { PublicCatalogConfig } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 function normalizeUrl(url?: string | null) {
@@ -17,7 +18,7 @@ function normalizeWhatsApp(value?: string | null) {
   return String(value).replace(/\D/g, "");
 }
 
-export function StoreFooter({ config }: { config: any }) {
+export function StoreFooter({ config }: { config: PublicCatalogConfig }) {
   const theme = config.themeIdentifier || "modern";
   const instagramHref = normalizeUrl(config.instagramUrl);
   const facebookHref = normalizeUrl(config.facebookUrl);

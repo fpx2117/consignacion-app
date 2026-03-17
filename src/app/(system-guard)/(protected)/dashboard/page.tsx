@@ -44,9 +44,10 @@ const KpiSortableGrid = dynamic(
   }
 );
 
-import { formatNumber, formatMoney, formatDate } from "@/lib/utils-format";
+import { formatNumber, formatMoney } from "@/lib/utils-format";
 
 import { DashboardPeriod, DashboardFilter } from "@/lib/types";
+import { useTimezone } from "@/hooks/useTimezone";
 import { cn } from "@/lib/utils";
 import { useSucursalStore } from "@/store/useSucursalStore";
 import type { KpiConfig } from "./components/kpi-sortable-grid";
@@ -109,6 +110,7 @@ const PERIOD_LABEL: Record<DashboardPeriod, string> = {
 };
 
 export default function DashboardPage() {
+  const { formatDateTime } = useTimezone();
   const activeSucursalId = useSucursalStore((s) => s.activeSucursalId);
   const [period, setPeriod] = React.useState<DashboardPeriod>("month");
   const [filter, setFilter] = React.useState<DashboardFilter>("all");
@@ -256,7 +258,7 @@ export default function DashboardPage() {
     }
 
     return items;
-  }, [kpis, filter, loading, maskMoney]);
+  }, [kpis, filter, loading, maskMoney, period]);
 
   // --- KPIs RENTABILIDAD (array filtrado) ---
   const financeKpis: KpiConfig[] = React.useMemo(() => {
@@ -631,7 +633,7 @@ export default function DashboardPage() {
                         <div>
                           <div className="font-bold text-sm tracking-tight">{g.motivo}</div>
                           <div className="flex items-center gap-2 text-[10px] font-bold text-[color:var(--status-warning)] uppercase">
-                            <Calendar className="h-3 w-3" /> {formatDate(g.fechaVencimiento)}
+                            <Calendar className="h-3 w-3" /> {formatDateTime(g.fechaVencimiento)}
                           </div>
                         </div>
                       </div>

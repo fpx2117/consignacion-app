@@ -1,3 +1,5 @@
+import { TECHNICAL_FALLBACK_TZ } from "@/lib/timezone-constants";
+
 export function escapeHtml(value: unknown): string {
   return String(value ?? "")
     .replaceAll("&", "&amp;")
@@ -14,7 +16,7 @@ export function escapeAttr(value: unknown): string {
 export function formatDateAR(
   date?: string | Date | null,
   withTime = false,
-  tz = "America/Argentina/Buenos_Aires",
+  tz = TECHNICAL_FALLBACK_TZ,
 ): string {
   if (!date) return "-";
   const parsed = new Date(date);
@@ -29,6 +31,10 @@ export function formatDateAR(
   return withTime
     ? parsed.toLocaleString("es-AR", opts)
     : parsed.toLocaleDateString("es-AR", opts);
+}
+
+export function resolveReportTimezone(tz?: string | null): string {
+  return tz ?? TECHNICAL_FALLBACK_TZ;
 }
 
 export function formatMoneyARS(amount: number, maximumFractionDigits = 2): string {

@@ -1,11 +1,12 @@
 // src/app/ver/inventario/[id]/pdf/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import puppeteer, { Browser } from "puppeteer";
+import { requireAuth } from "@/lib/auth/require-auth";
+import { resolveTimezone, resolveTimezoneForAuth } from "@/lib/get-configured-tz";
 import { prisma } from "@/lib/prisma";
 
 import { getBranding } from "@/lib/reports/get-branding";
 import { buildInventoryHtml, type InventoryGroup } from "@/lib/reports/base/inventory-report-template";
-import { getConfiguredTz } from "@/lib/get-configured-tz";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -93,13 +94,19 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
     }).filter(g => g.productos.length > 0);
 
     // 5. Branding + timezone
-    const branding = await getBranding();
-    // Para inventario usamos sucursal 1 como referencia (o la primera sucursal activa)
-    const firstSucursalId = sucursales[0]?.id ?? 1;
-    const zonaHoraria = await getConfiguredTz(firstSucursalId);
+    const auth = await requireAuth();
+    const requestedSucursalId = isGeneral ? 0 : (sucursales[0]?.id ?? null);
+    const timezone = auth.ok
+      ? await resolveTimezoneForAuth({
+          user: auth.user,
+          activeSucursalId: requestedSucursalId ?? auth.activeSucursalId,
+        })
+      : await resolveTimezone({ sucursalId: requestedSucursalId });
+    const brandingSucursalId = isGeneral ? (timezone.sucursalId ?? sucursales[0]?.id) : sucursales[0]?.id;
+    const branding = await getBranding(brandingSucursalId);
 
     // 6. Generar HTML
-    const htmlContent = await buildInventoryHtml(groups, branding, zonaHoraria);
+    const htmlContent = await buildInventoryHtml(groups, branding, timezone.tz);
 
     browser = await puppeteer.launch({
       headless: true,

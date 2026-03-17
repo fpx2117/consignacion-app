@@ -4,7 +4,25 @@ import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/auth/require-auth";
 import type { JwtPayloadUser } from "@/lib/auth/core";
 import { nowAR, getDayOfWeekAR, getTimeStringAR } from "@/lib/utils-date";
-import { getConfiguredTz } from "@/lib/get-configured-tz";
+import { resolveTimezoneForAuth } from "@/lib/get-configured-tz";
+
+type TurnoRouteDeps = {
+  prisma: typeof prisma;
+  requireAuth: typeof requireAuth;
+  resolveTimezoneForAuth: typeof resolveTimezoneForAuth;
+  nowAR: typeof nowAR;
+  getDayOfWeekAR: typeof getDayOfWeekAR;
+  getTimeStringAR: typeof getTimeStringAR;
+};
+
+const defaultDeps: TurnoRouteDeps = {
+  prisma,
+  requireAuth,
+  resolveTimezoneForAuth,
+  nowAR,
+  getDayOfWeekAR,
+  getTimeStringAR,
+};
 
 type AbrirTurnoBody = {
   cajaId?: number;
@@ -39,13 +57,12 @@ function getUsuarioIdFuerte(userPayload: JwtPayloadUser) {
   return parsed;
 }
 
-async function validarHorarioLaboral(usuarioId: number, sucursalId: number): Promise<ValidacionHorario> {
-  const tz = await getConfiguredTz(sucursalId);
-  const ahora = nowAR(tz);
-  const diaSemana = getDayOfWeekAR(ahora, tz);
-  const horaActual = getTimeStringAR(ahora, tz);
+async function validarHorarioLaboral(deps: TurnoRouteDeps, usuarioId: number, tz: string): Promise<ValidacionHorario> {
+  const ahora = deps.nowAR(tz);
+  const diaSemana = deps.getDayOfWeekAR(ahora, tz);
+  const horaActual = deps.getTimeStringAR(ahora, tz);
 
-  const horario = await prisma.horarioLaboral.findUnique({
+  const horario = await deps.prisma.horarioLaboral.findUnique({
     where: { usuarioId_diaSemana: { usuarioId, diaSemana } },
   });
 
@@ -65,13 +82,18 @@ async function validarHorarioLaboral(usuarioId: number, sucursalId: number): Pro
 }
 
 export async function GET() {
-  const auth = await requireAuth();
+  return handleGetTurno();
+}
+
+export async function handleGetTurno(deps: TurnoRouteDeps = defaultDeps) {
+  const auth = await deps.requireAuth();
   if (!auth.ok) return auth.res;
 
   try {
     const usuarioId = getUsuarioIdFuerte(auth.user);
+    const timezone = await deps.resolveTimezoneForAuth(auth);
 
-    const sesionAbierta = await prisma.sesionCaja.findFirst({
+    const sesionAbierta = await deps.prisma.sesionCaja.findFirst({
       where: { usuarioId, estado: "ABIERTA", caja: { sucursalId: auth.activeSucursalId } },
       include: {
         caja: true,
@@ -81,10 +103,9 @@ export async function GET() {
       },
     });
 
-    const tzGet = await getConfiguredTz(auth.activeSucursalId);
-    const ahora = nowAR(tzGet);
-    const horarioHoy = await prisma.horarioLaboral.findUnique({
-      where: { usuarioId_diaSemana: { usuarioId, diaSemana: getDayOfWeekAR(ahora, tzGet) } },
+    const ahora = deps.nowAR(timezone.tz);
+    const horarioHoy = await deps.prisma.horarioLaboral.findUnique({
+      where: { usuarioId_diaSemana: { usuarioId, diaSemana: deps.getDayOfWeekAR(ahora, timezone.tz) } },
     });
 
     let horaFinCalculada = horarioHoy?.horaFin;
@@ -119,11 +140,16 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
-  const auth = await requireAuth();
+  return handlePostTurno(req);
+}
+
+export async function handlePostTurno(req: Request, deps: TurnoRouteDeps = defaultDeps) {
+  const auth = await deps.requireAuth();
   if (!auth.ok) return auth.res;
 
   try {
     const usuarioId = getUsuarioIdFuerte(auth.user);
+    const timezone = await deps.resolveTimezoneForAuth(auth);
     const { cajaId, montoInicial } = (await req.json()) as AbrirTurnoBody;
     const cajaIdNumerico = typeof cajaId === "number" ? cajaId : Number.NaN;
     const montoInicialNumerico = typeof montoInicial === "number" ? montoInicial : Number.NaN;
@@ -132,24 +158,24 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Payload invalido." }, { status: 400 });
     }
 
-    const verificacion = await validarHorarioLaboral(usuarioId, auth.activeSucursalId);
+    const verificacion = await validarHorarioLaboral(deps, usuarioId, timezone.tz);
     if (!verificacion.permitido) {
       return NextResponse.json({ error: verificacion.error }, { status: 403 });
     }
 
-    const cajaSelect = await prisma.caja.findUnique({ where: { id: cajaIdNumerico } });
+    const cajaSelect = await deps.prisma.caja.findUnique({ where: { id: cajaIdNumerico } });
     if (!cajaSelect || cajaSelect.sucursalId !== auth.activeSucursalId) {
       return NextResponse.json({ error: "Caja no valida para esta sucursal." }, { status: 403 });
     }
 
-    const activa = await prisma.sesionCaja.findFirst({
+    const activa = await deps.prisma.sesionCaja.findFirst({
       where: { usuarioId, estado: "ABIERTA" },
     });
     if (activa) {
       return NextResponse.json({ error: "Ya tienes una sesion abierta." }, { status: 403 });
     }
 
-    const nueva = await prisma.sesionCaja.create({
+    const nueva = await deps.prisma.sesionCaja.create({
       data: {
         cajaId: cajaIdNumerico,
         usuarioId,
@@ -166,19 +192,24 @@ export async function POST(req: Request) {
 }
 
 export async function PATCH(req: Request) {
-  const auth = await requireAuth();
+  return handlePatchTurno(req);
+}
+
+export async function handlePatchTurno(req: Request, deps: TurnoRouteDeps = defaultDeps) {
+  const auth = await deps.requireAuth();
   if (!auth.ok) return auth.res;
 
   try {
     const { minutos } = (await req.json()) as ExtenderTurnoBody;
     const usuarioId = getUsuarioIdFuerte(auth.user);
+    const timezone = await deps.resolveTimezoneForAuth(auth);
     const minutosExtra = typeof minutos === "number" ? minutos : Number.NaN;
 
     if (!Number.isFinite(minutosExtra) || minutosExtra <= 0) {
       return NextResponse.json({ error: "Minutos invalidos." }, { status: 400 });
     }
 
-    const sesion = await prisma.sesionCaja.findFirst({
+    const sesion = await deps.prisma.sesionCaja.findFirst({
       where: { usuarioId, estado: "ABIERTA", caja: { sucursalId: auth.activeSucursalId } },
     });
 
@@ -186,10 +217,10 @@ export async function PATCH(req: Request) {
       return NextResponse.json({ error: "No hay sesion para extender." }, { status: 404 });
     }
 
-    const timeStamp = getTimeStringAR(nowAR());
+    const timeStamp = deps.getTimeStringAR(deps.nowAR(timezone.tz), timezone.tz);
     const tagExtension = `[EXTENSIÓN ${minutosExtra}MIN: ${timeStamp}]`;
 
-    const actualizada = await prisma.sesionCaja.update({
+    const actualizada = await deps.prisma.sesionCaja.update({
       where: { id: sesion.id },
       data: {
         observaciones: sesion.observaciones
@@ -206,11 +237,16 @@ export async function PATCH(req: Request) {
 }
 
 export async function PUT(req: Request) {
-  const auth = await requireAuth();
+  return handlePutTurno(req);
+}
+
+export async function handlePutTurno(req: Request, deps: TurnoRouteDeps = defaultDeps) {
+  const auth = await deps.requireAuth();
   if (!auth.ok) return auth.res;
 
   try {
     const usuarioId = getUsuarioIdFuerte(auth.user);
+    const timezone = await deps.resolveTimezoneForAuth(auth);
     const { montoReal, observaciones } = (await req.json()) as CerrarTurnoBody;
     const montoRealNumerico = typeof montoReal === "number" ? montoReal : Number.NaN;
 
@@ -218,7 +254,7 @@ export async function PUT(req: Request) {
       return NextResponse.json({ error: "Monto real invalido." }, { status: 400 });
     }
 
-    const sesion = await prisma.sesionCaja.findFirst({
+    const sesion = await deps.prisma.sesionCaja.findFirst({
       where: { usuarioId, estado: "ABIERTA", caja: { sucursalId: auth.activeSucursalId } },
       include: {
         ventas: { where: { tipo: "CASUAL" } },
@@ -252,14 +288,14 @@ export async function PUT(req: Request) {
       .filter(Boolean)
       .join(" | ");
 
-    const cerrada = await prisma.sesionCaja.update({
+    const cerrada = await deps.prisma.sesionCaja.update({
       where: { id: sesion.id },
-      data: {
-        estado: "CERRADA",
-        fechaCierre: nowAR(),
-        montoFinalEsperado: esperado,
-        montoFinalReal: montoRealNumerico,
-        diferencia,
+        data: {
+          estado: "CERRADA",
+          fechaCierre: deps.nowAR(timezone.tz),
+          montoFinalEsperado: esperado,
+          montoFinalReal: montoRealNumerico,
+          diferencia,
         observaciones: observacionesFinales || null,
       },
     });
