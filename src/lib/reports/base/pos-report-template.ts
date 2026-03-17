@@ -22,6 +22,7 @@ export type PosReportData = {
   period: string;
   periodLabel: string;
   fechaGeneracion: string;
+  scopeLabel?: string;
   // Resumen
   totalVentas: number;
   cantidadVentas: number;
@@ -29,6 +30,7 @@ export type PosReportData = {
   ingresosCaja: number;
   ticketPromedio: number;
   gastosTotal: number;
+  gastosDesglose?: { propios: number; compartidos: number; isGlobal: boolean };
   catalogoVisitas: number;
   // Desglose por método de pago
   pagosPorMetodo: { metodo: string; total: number; cantidad: number }[];
@@ -105,6 +107,11 @@ export function buildPosReportHtml(data: PosReportData, branding: BrandingDTO): 
   // ─ Utilidad neta = ganancia - gastos
   const utilidadNeta = data.totalGanancia - data.gastosTotal;
   const rentabilidadNeta = data.totalVentas > 0 ? Math.round((utilidadNeta / data.totalVentas) * 100) : 0;
+  const gastosSubtitle = data.gastosDesglose
+    ? data.gastosDesglose.isGlobal
+      ? `No compartidos: ${fmt(data.gastosDesglose.propios)} · Compartidos: ${fmt(data.gastosDesglose.compartidos)}`
+      : `Propios: ${fmt(data.gastosDesglose.propios)} · Compartidos: ${fmt(data.gastosDesglose.compartidos)}`
+    : null;
 
   // ─ Por método de pago (chips horizontales compactos con ícono SVG)
   const metodosHtml = data.pagosPorMetodo.length > 0
@@ -184,6 +191,7 @@ export function buildPosReportHtml(data: PosReportData, branding: BrandingDTO): 
       <div>
         <h1 class="text-2xl font-black tracking-tight text-slate-900">${escapeHtml(brandName)}</h1>
         <p class="text-xs font-bold text-slate-400 uppercase tracking-[0.2em]">Reporte de Ventas · POS</p>
+        ${data.scopeLabel ? `<p class="text-[10px] font-semibold text-slate-400 mt-1">${escapeHtml(data.scopeLabel)}</p>` : ""}
         ${metaLine ? `<p class="text-[10px] font-semibold text-slate-400 mt-1">${metaLine}</p>` : ""}
       </div>
     </div>
@@ -226,6 +234,7 @@ export function buildPosReportHtml(data: PosReportData, branding: BrandingDTO): 
         <p class="text-[10px] mt-1" style="color:${utilidadNeta >= 0 ? '#059669' : '#e11d48'}">
           Utilidad neta: ${fmt(utilidadNeta)}
         </p>
+        ${gastosSubtitle ? `<p class="text-[10px] text-slate-400 mt-1">${escapeHtml(gastosSubtitle)}</p>` : ""}
       </div>
     </div>
 
