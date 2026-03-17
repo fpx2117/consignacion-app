@@ -53,10 +53,10 @@ export async function GET(
         const hasCatalogVisitModel = "catalogVisit" in prisma;
 
         // Fetch data in parallel
-        const [ventasAgg, pagosAgg, ventasConDetalles, pagosPorMetodo, gastosAgg, catalogVisitsCount] = await Promise.all([
+        const [ventasAgg, pagosAgg, ventasConDetalles, pagosPorMetodo, gastosPropiosAgg, gastosLinksData, catalogVisitsCount] = await Promise.all([
             // Totales de ventas directas
             prisma.venta.aggregate({
-                where: { ...sucursalWhere, fecha: dateWhere, liquidacionId: null },
+                where: { ...sucursalWhere, fecha: dateWhere, liquidacionId: null, anulada: false },
                 _sum: { total: true, descuentoGlobal: true },
                 _count: { _all: true },
             }),
@@ -70,7 +70,7 @@ export async function GET(
 
             // Ventas con sus detalles para ganancia, top productos y tendencia
             prisma.venta.findMany({
-                where: { ...sucursalWhere, fecha: dateWhere, liquidacionId: null },
+                where: { ...sucursalWhere, fecha: dateWhere, liquidacionId: null, anulada: false },
                 select: {
                     fecha: true,
                     total: true,
@@ -91,16 +91,25 @@ export async function GET(
             // Por método de pago
             prisma.venta.groupBy({
                 by: ["metodoPago"],
-                where: { ...sucursalWhere, fecha: dateWhere, liquidacionId: null },
+                where: { ...sucursalWhere, fecha: dateWhere, liquidacionId: null, anulada: false },
                 _sum: { total: true, descuentoGlobal: true },
                 _count: { _all: true },
             }),
 
-            // Gastos totales del período para esta sucursal
+            // Gastos propios PAGADO no compartidos de esta sucursal
             prisma.gasto.aggregate({
-                where: { sucursalId, ...(start ? { fecha: { gte: start } } : {}) },
+                where: { sucursalId, esCompartido: false, fecha: dateWhere, estado: "PAGADO" },
                 _sum: { monto: true },
                 _count: { _all: true },
+            }),
+
+            // Participación proporcional en gastos compartidos (desde otras sucursales o propios)
+            prisma.gastoSucursal.findMany({
+                where: {
+                    sucursalId,
+                    gasto: { fecha: dateWhere, estado: "PAGADO", esCompartido: true },
+                },
+                select: { montoProporcional: true },
             }),
 
             // Visitas al catálogo del período
@@ -167,6 +176,13 @@ export async function GET(
         const totalVentasNeto = totalVentasBruto - totalDescuentosGlob;
         const cantidadVentas = ventasAgg._count?._all ?? 0;
 
+        // Gastos: propios no compartidos + participación proporcional en compartidos
+        const totalGastosPropios = Number(gastosPropiosAgg._sum?.monto ?? 0);
+        const totalGastosLinks = (gastosLinksData as any[]).reduce(
+            (acc: number, g: any) => acc + Number(g.montoProporcional), 0
+        );
+        const gastosTotal = totalGastosPropios + totalGastosLinks;
+
         const reportData: PosReportData = {
             period,
             periodLabel: PERIOD_LABELS[period],
@@ -176,7 +192,7 @@ export async function GET(
             totalGanancia,
             ingresosCaja: Number(pagosAgg._sum?.monto ?? 0),
             ticketPromedio: cantidadVentas > 0 ? totalVentasNeto / cantidadVentas : 0,
-            gastosTotal: Number(gastosAgg._sum?.monto ?? 0),
+            gastosTotal,
             catalogoVisitas: Number(catalogVisitsCount ?? 0),
             pagosPorMetodo: pagosPorMetodo.map(m => ({
                 metodo: m.metodoPago,
