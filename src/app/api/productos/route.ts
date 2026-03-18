@@ -49,6 +49,7 @@ export async function GET(req: Request) {
     const limitParam = searchParams.get("limit");
     const search = searchParams.get("search")?.trim() || "";
     const categoriaId = searchParams.get("categoriaId")?.trim() || "";
+    const scope = searchParams.get("scope")?.trim() || "default";
 
     const isPaginated = pageParam !== null || limitParam !== null;
 
@@ -64,22 +65,36 @@ export async function GET(req: Request) {
     const limit = Math.min(200, Math.max(1, parseInt(limitParam || "50", 10) || 50));
     const skip = (page - 1) * limit;
 
-    // Where con filtros
-    const where: Prisma.ProductoWhereInput = {
-      activo: true,
-      ...sucursalWhere,
-    };
+    const whereClauses: Prisma.ProductoWhereInput[] = [{ activo: true }];
+    const canUseSharedBranchScope = !isGlobal && scope === "branch-stock" && Number.isFinite(requestedSucursalId) && requestedSucursalId > 0;
+
+    if (canUseSharedBranchScope) {
+      whereClauses.push({
+        OR: [
+          { sucursalId: requestedSucursalId },
+          { stockSucursals: { some: { sucursalId: requestedSucursalId } } },
+        ],
+      });
+    } else if (Object.keys(sucursalWhere).length > 0) {
+      whereClauses.push(sucursalWhere);
+    }
 
     if (search) {
-      where.OR = [
-        { nombre: { contains: search, mode: "insensitive" } },
-        { codigoBarra: { contains: search, mode: "insensitive" } },
-      ];
+      whereClauses.push({
+        OR: [
+          { nombre: { contains: search, mode: "insensitive" } },
+          { codigoBarra: { contains: search, mode: "insensitive" } },
+        ],
+      });
     }
 
     if (categoriaId && Number.isFinite(Number(categoriaId))) {
-      where.categoriaId = Number(categoriaId);
+      whereClauses.push({ categoriaId: Number(categoriaId) });
     }
+
+    const where: Prisma.ProductoWhereInput = whereClauses.length === 1
+      ? whereClauses[0]
+      : { AND: whereClauses };
 
     const includeConfig = {
       categoria: true,

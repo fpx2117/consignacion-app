@@ -91,6 +91,7 @@ export default function NuevaVentaPage() {
           page,
           limit: 50,
           search: search || undefined,
+          scope: "branch-stock",
         });
         const activos = (res.data ?? []).filter((p) => p.activo !== false) as ProductoConStock[];
         setProductos(activos);
