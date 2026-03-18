@@ -422,12 +422,14 @@ export const apiService = {
     limit?: number;
     search?: string;
     categoriaId?: number | null;
+    scope?: "default" | "branch-stock";
   }) {
     const sp = new URLSearchParams();
     if (params.page !== undefined) sp.set("page", String(params.page));
     if (params.limit !== undefined) sp.set("limit", String(params.limit));
     if (params.search) sp.set("search", params.search);
     if (params.categoriaId) sp.set("categoriaId", String(params.categoriaId));
+    if (params.scope && params.scope !== "default") sp.set("scope", params.scope);
     const qs = sp.toString();
     const response = await apiRequest<Producto[]>(`${API_ROUTES.PRODUCTOS}${qs ? `?${qs}` : ""}`);
     const metadata = response as ApiResponse<Producto[]> & Partial<Omit<ProductosPaginadosResponse, "data">>;
