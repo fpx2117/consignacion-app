@@ -15,8 +15,7 @@ import { getCategoryColorByKey, getCategoryColorByName } from "@/lib/category-co
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { Sheet, SheetContent } from "@/components/ui/sheet";
 import {
   Table,
   TableBody,
@@ -56,8 +55,6 @@ import {
   MoreVertical,
   Eye,
   EyeOff,
-  AlertTriangle,
-  XCircle,
 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
@@ -76,6 +73,8 @@ import { AjustarStockDialog } from "./ajustar-stock-dialog";
 import { ProductosFilters } from "./productos-filters";
 import { DownloadInventoryButton } from "@/components/download-inventory-button";
 import HistoryReportDialog from "./historial-report-dialog";
+import { ProductosAgotadosSheetContent } from "./productos-agotados-sheet-content";
+import { ProductosBajoStockSheetContent } from "./productos-bajo-stock-sheet-content";
 
 // --- Interfaces ---
 interface StatCardProps {
@@ -330,6 +329,28 @@ export function ProductosView() {
     valorVenta: statsItems?.reduce((acc, i) => acc + (Number(i.precioVenta) * i.stockDisponibleUnits), 0) || 0,
     utilidad: statsItems?.reduce((acc, i) => acc + ((Number(i.precioVenta) - Number(i.precioCosto)) * i.stockDisponibleUnits), 0) || 0
   }), [items, serverTotal, statsItems, isLowStock, isOutOfStock]);
+
+  const lowStockItems = React.useMemo(
+    () => statsItems?.filter((item) => isLowStock(item)) ?? [],
+    [statsItems, isLowStock],
+  );
+
+  const outOfStockItems = React.useMemo(
+    () => statsItems?.filter((item) => isOutOfStock(item)) ?? [],
+    [statsItems, isOutOfStock],
+  );
+
+  const renderStockDrawerContent = () => {
+    if (stockDrawer === "out") {
+      return <ProductosAgotadosSheetContent productos={outOfStockItems} onStockUpdated={reload} />;
+    }
+
+    if (stockDrawer === "low") {
+      return <ProductosBajoStockSheetContent productos={lowStockItems} onStockUpdated={reload} />;
+    }
+
+    return null;
+  };
 
   return (
     <div className="max-w-[1600px] mx-auto space-y-8 p-6 md:p-10 pb-20 text-foreground selection:bg-primary/20 font-sans">
@@ -595,19 +616,13 @@ export function ProductosView() {
       <Sheet open={stockDrawer !== null} onOpenChange={(open) => !open && setStockDrawer(null)}>
         <SheetContent
           side="bottom"
+          overlayClassName="backdrop-blur-0 sm:backdrop-blur-[2px]"
           className={cn(
             "sm:hidden rounded-t-3xl p-0 flex flex-col",
             "max-h-[90dvh] h-auto"
           )}
         >
-          <StockDrawerInner
-            stockDrawer={stockDrawer}
-            stats={stats}
-            statsItems={statsItems}
-            isOutOfStock={isOutOfStock}
-            isLowStock={isLowStock}
-            onStockUpdated={reload}
-          />
+          {renderStockDrawerContent()}
         </SheetContent>
         <SheetContent
           side="right"
@@ -616,154 +631,10 @@ export function ProductosView() {
             "w-[380px] max-w-[90vw] p-0 h-full overflow-x-hidden"
           )}
         >
-          <StockDrawerInner
-            stockDrawer={stockDrawer}
-            stats={stats}
-            statsItems={statsItems}
-            isOutOfStock={isOutOfStock}
-            isLowStock={isLowStock}
-            onStockUpdated={reload}
-          />
+          {renderStockDrawerContent()}
         </SheetContent>
       </Sheet>
     </div>
-  );
-}
-
-// --- STOCK DRAWER INNER (compartido entre bottom sheet mobile y right panel desktop) ---
-
-function StockDrawerInner({
-  stockDrawer,
-  stats,
-  statsItems,
-  isOutOfStock,
-  isLowStock,
-  onStockUpdated,
-}: {
-  stockDrawer: "low" | "out" | null;
-  stats: { lowStock: number; outOfStock: number };
-  statsItems: ProductoViewItem[] | undefined;
-  isOutOfStock: (p: ProductoViewItem) => boolean;
-  isLowStock: (p: ProductoViewItem) => boolean;
-  onStockUpdated: () => void;
-}) {
-  const isOut = stockDrawer === "out";
-  const count = isOut ? stats.outOfStock : stats.lowStock;
-  const productos = isOut
-    ? statsItems?.filter(i => isOutOfStock(i))
-    : statsItems?.filter(i => isLowStock(i));
-
-  return (
-    <>
-      {/* Header fijo — nunca scrollea */}
-      <SheetHeader className="flex-shrink-0 p-5 pb-4 border-b border-border/60">
-        <div className="flex items-center gap-3">
-          <div className={cn(
-            "p-2 rounded-xl flex-shrink-0",
-            isOut ? "bg-red-100 dark:bg-red-900/20" : "bg-orange-100 dark:bg-orange-900/20"
-          )}>
-            {isOut
-              ? <XCircle className="h-5 w-5 text-red-500" />
-              : <AlertTriangle className="h-5 w-5 text-orange-500" />
-            }
-          </div>
-          <div className="min-w-0">
-            <SheetTitle className="text-base font-black leading-tight">
-              {isOut ? "Productos Agotados" : "Productos con Stock Bajo"}
-            </SheetTitle>
-            <SheetDescription className="text-xs mt-0.5">
-              {count} producto{count !== 1 ? "s" : ""}{" "}
-              {isOut ? "sin stock disponible" : "por debajo del mínimo"}
-            </SheetDescription>
-          </div>
-        </div>
-      </SheetHeader>
-
-      {/* Lista scrolleable — ocupa todo el espacio restante */}
-      <ScrollArea className="flex-1 min-h-0">
-        <div className="p-4 space-y-2 pb-8">
-          {productos && productos.length > 0 ? (
-            productos.map((p) => (
-              <div
-                key={p.id}
-                className={cn(
-                  "flex items-start gap-3 p-3 rounded-xl border transition-colors",
-                  isOut
-                    ? "bg-red-50/50 dark:bg-red-900/10 border-red-100 dark:border-red-900/30"
-                    : "bg-orange-50/50 dark:bg-orange-900/10 border-orange-100 dark:border-orange-900/30"
-                )}
-              >
-                {/* Badge de stock — siempre visible, no se comprime */}
-                <div className={cn(
-                  "flex-shrink-0 w-9 h-9 rounded-lg flex items-center justify-center text-sm font-black mt-0.5",
-                  isOut
-                    ? "bg-red-100 dark:bg-red-900/30 text-red-600"
-                    : "bg-orange-100 dark:bg-orange-900/30 text-orange-600"
-                )}>
-                  {p.stockDisponibleUnits}
-                </div>
-
-                {/* Info — ocupa todo el ancho restante */}
-                <div className="min-w-0 flex-1 overflow-hidden">
-                  {/* Línea 1: nombre */}
-                  <p className="text-sm font-semibold text-foreground leading-snug break-words">
-                    {p.nombre}
-                  </p>
-                  {/* Línea 2: categoría + stock mínimo */}
-                  <p className="text-xs text-muted-foreground mt-0.5 truncate">
-                    {p.categoria?.nombre ?? "Sin categoría"}
-                    {!isOut && p.stockMinUnits > 0 && (
-                      <span className="ml-1.5 text-orange-500 font-medium">
-                        · mín. {p.stockMinUnits}
-                      </span>
-                    )}
-                  </p>
-                  {/* Línea 3: precio + código de barra */}
-                  <div className="flex items-center gap-2 mt-1 flex-wrap">
-                    <span className="text-xs font-black text-foreground">
-                      {formatMoney(Number(p.precioVenta))}
-                    </span>
-                    {p.codigoBarra && (
-                      <span className="text-[10px] text-muted-foreground/50 font-mono truncate">
-                        {p.codigoBarra}
-                      </span>
-                    )}
-                  </div>
-                </div>
-
-                {/* Botón ajustar stock */}
-                <AjustarStockDialog
-                  producto={p as unknown as import("@/lib/types").Producto}
-                  onUpdated={onStockUpdated}
-                  trigger={
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className={cn(
-                        "flex-shrink-0 h-8 w-8 p-0 rounded-lg border",
-                        isOut
-                          ? "border-red-200 dark:border-red-800 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20"
-                          : "border-orange-200 dark:border-orange-800 text-orange-500 hover:bg-orange-50 dark:hover:bg-orange-900/20"
-                      )}
-                    >
-                      <ArrowRightLeft className="h-3.5 w-3.5" />
-                    </Button>
-                  }
-                />
-              </div>
-            ))
-          ) : (
-            /* Estado vacío */
-            <div className="flex flex-col items-center justify-center py-16 gap-3 text-muted-foreground">
-              <Package className="h-12 w-12 opacity-20" />
-              <p className="text-sm font-medium text-center">
-                {isOut ? "Sin productos agotados 🎉" : "Stock en niveles saludables 🎉"}
-              </p>
-            </div>
-          )}
-        </div>
-      </ScrollArea>
-    </>
   );
 }
 
