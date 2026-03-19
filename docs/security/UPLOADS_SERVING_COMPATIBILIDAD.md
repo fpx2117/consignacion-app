@@ -12,8 +12,9 @@ Mientras existan registros historicos apuntando a `/uploads/<archivo>`, se manti
 
 1. El backend deja de generar URLs nuevas bajo `/uploads/`.
 2. El helper de borrado sigue reconociendo `/uploads/<archivo>` para no dejar basura al editar o desactivar productos existentes.
-3. Los recursos legacy no se reexponen por `src/app/api/files/[...path]/route.ts`; el handler nuevo solo resuelve nombres opacos emitidos por el servidor.
-4. La migracion fisica de `public/uploads` a almacenamiento controlado queda diferida a una tarea operativa explicita para no reescribir URLs historicas sin inventario previo.
+3. `src/app/api/files/[...path]/route.ts` mantiene compatibilidad transitoria solo para nombres legacy ya emitidos historicamente por ese mismo endpoint (por ejemplo `timestamp-slug.ext`), siempre restringidos a la misma allowlist de tipos servibles.
+4. Los recursos legacy de `public/uploads` no se reexponen por `api/files`; siguen dependiendo de su ruta historica o de una migracion operativa explicita.
+5. La migracion fisica de `public/uploads` a almacenamiento controlado queda diferida a una tarea operativa explicita para no reescribir URLs historicas sin inventario previo.
 
 ## Riesgo residual aceptado
 

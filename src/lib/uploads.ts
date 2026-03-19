@@ -67,6 +67,7 @@ const SERVABLE_EXTENSIONS = new Set(
 );
 
 const OPAQUE_UPLOAD_FILENAME_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\.(jpg|png|webp|gif)$/i;
+const LEGACY_API_UPLOAD_FILENAME_REGEX = /^\d{13}-[a-z0-9][a-z0-9._-]{0,180}\.(jpg|jpeg|png|webp|gif)$/i;
 
 export type UploadValidationSuccess = {
   ok: true;
@@ -114,6 +115,10 @@ export function isOpaqueUploadFilename(filename: string): boolean {
   return OPAQUE_UPLOAD_FILENAME_REGEX.test(filename);
 }
 
+export function isLegacyApiUploadFilename(filename: string): boolean {
+  return LEGACY_API_UPLOAD_FILENAME_REGEX.test(filename);
+}
+
 export function getUploadUrl(filename: string): string {
   return `/api/files/${filename}`;
 }
@@ -124,7 +129,7 @@ export function resolveServableUploadResource(segments: string[]): ServableUploa
   }
 
   const candidate = segments[0]?.trim();
-  if (!candidate || !isOpaqueUploadFilename(candidate)) {
+  if (!candidate || (!isOpaqueUploadFilename(candidate) && !isLegacyApiUploadFilename(candidate))) {
     return { ok: false };
   }
 

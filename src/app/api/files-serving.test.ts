@@ -54,3 +54,19 @@ test("handleGetFile rechaza tipos existentes fuera de la allowlist servible", as
 
   assert.equal(response.status, 404);
 });
+
+test("handleGetFile mantiene compatibilidad transitoria para nombres legacy de api/files", async () => {
+  const uploadDir = await mkdtemp(path.join(tmpdir(), "consignacion-files-"));
+  const filename = "1772837979983-e6c14d0f_3d7a_4f25_8712_a5468b554bc5.png";
+  await writeFile(path.join(uploadDir, filename), PNG_BUFFER);
+
+  const response = await handleGetFile(
+    new Request(`http://localhost/api/files/${filename}`),
+    { path: [filename] },
+    { lstat, readFile, uploadDir },
+  );
+
+  assert.equal(response.status, 200);
+  assert.equal(response.headers.get("Content-Type"), "image/png");
+  assert.equal(Buffer.from(await response.arrayBuffer()).equals(PNG_BUFFER), true);
+});
