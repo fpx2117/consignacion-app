@@ -89,3 +89,15 @@ test("resolveServableUploadResource rechaza rutas ambiguas y traversal", () => {
   assert.deepEqual(resolveServableUploadResource(["nested/file.png"]), { ok: false });
   assert.deepEqual(resolveServableUploadResource(["legacy-name.png"]), { ok: false });
 });
+
+test("resolveServableUploadResource acepta nombres legacy emitidos historicamente por api/files", () => {
+  const resource = resolveServableUploadResource([
+    "1772837979983-e6c14d0f_3d7a_4f25_8712_a5468b554bc5.png",
+  ]);
+
+  assert.deepEqual(resource, {
+    ok: true,
+    contentType: "image/png",
+    filename: "1772837979983-e6c14d0f_3d7a_4f25_8712_a5468b554bc5.png",
+  });
+});
