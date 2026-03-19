@@ -1,38 +1,138 @@
-import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
-import { prisma } from "@/lib/prisma";
-import { setAuthCookie, signUserJwt } from "@/lib/auth/core";
+import { NextResponse } from "next/server";
+import { getAuthRateLimitDecision, getRequestIp, normalizeIdentity } from "@/lib/auth-rate-limit";
+import { buildAuthThrottledResponse, reportAuthRateLimitEvent } from "@/lib/auth-security-monitor";
+import { getRealClientData } from "@/lib/clientData";
+import { getSessionHash } from "@/lib/security/session-hash";
 
 type LoginBody = {
   email?: string;
   password?: string;
 };
 
-export async function POST(req: Request) {
-  const body = (await req.json().catch(() => null)) as LoginBody | null;
+type LoginUser = {
+  id: number;
+  email: string;
+  hash: string;
+  rol: "ADMIN" | "EMPLEADO";
+  nombre: string;
+  sucursalId: number | null;
+  activo: boolean;
+};
 
-  const email = String(body?.email || "").toLowerCase().trim();
+type ClientData = Awaited<ReturnType<typeof getRealClientData>>;
+
+type LoginRouteDeps = {
+  findUserByEmail: (email: string) => Promise<LoginUser | null>;
+  comparePassword: (password: string, hash: string) => Promise<boolean>;
+  signUserJwt: (payload: {
+    sub: string;
+    email: string;
+    rol: "ADMIN" | "EMPLEADO";
+    nombre: string;
+    sucursalId: number | null;
+  }) => Promise<string>;
+  setAuthCookie: (token: string) => Promise<unknown>;
+  setActiveSucursalCookie: (sucursalId: number | null) => Promise<void>;
+  getRateLimitDecision: (req: Request, email: string | null) => ReturnType<typeof getAuthRateLimitDecision>;
+  getClientData: () => Promise<ClientData>;
+  createUserSession: (input: { user: LoginUser; token: string; clientData: ClientData }) => Promise<void>;
+  recordAuditLog: (input: {
+    userId?: number;
+    action: string;
+    module: string;
+    details?: Record<string, unknown>;
+    ipAddress?: string;
+    userAgent?: string;
+  }) => Promise<unknown>;
+};
+
+const INVALID_LOGIN_MESSAGE = "Credenciales invalidas";
+
+const defaultDeps: LoginRouteDeps = {
+  findUserByEmail: async (email) => {
+    const { prisma } = await import("@/lib/prisma");
+    return prisma.usuario.findUnique({ where: { email } });
+  },
+  comparePassword: async (password, hash) => bcrypt.compare(password, hash),
+  signUserJwt: async (payload) => {
+    const { signUserJwt } = await import("@/lib/auth/core");
+    return signUserJwt(payload);
+  },
+  setAuthCookie: async (token) => {
+    const { setAuthCookie } = await import("@/lib/auth/core");
+    await setAuthCookie(token);
+  },
+  setActiveSucursalCookie: async (sucursalId) => {
+    const { cookies: cookiesApi } = await import("next/headers");
+    const cookieStore = await cookiesApi();
+    cookieStore.set("active_sucursal_id", String(sucursalId || 1), {
+      path: "/",
+      maxAge: 30 * 24 * 60 * 60,
+      sameSite: "lax",
+    });
+  },
+  getRateLimitDecision: (req, email) => getAuthRateLimitDecision({
+    endpoint: "login",
+    ip: getRequestIp(req),
+    identity: email,
+  }),
+  getClientData: getRealClientData,
+  createUserSession: async ({ user, token, clientData }) => {
+    const { prisma } = await import("@/lib/prisma");
+    await prisma.userSession.create({
+      data: {
+        userId: user.id,
+        token: getSessionHash(token),
+        userAgent: clientData.userAgent,
+        ipAddress: clientData.ip,
+        browser: clientData.browser,
+        os: clientData.os,
+        device: clientData.device,
+        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+      },
+    });
+  },
+  recordAuditLog: async (input) => {
+    const { recordAuditLog } = await import("@/lib/audit");
+    await recordAuditLog(input);
+  },
+};
+
+export async function handlePostLogin(req: Request, deps: LoginRouteDeps = defaultDeps) {
+  const body = (await req.json().catch(() => null)) as LoginBody | null;
+  const email = normalizeIdentity(body?.email);
   const password = String(body?.password || "");
+
+  const rateLimitDecision = deps.getRateLimitDecision(req, email);
+  await reportAuthRateLimitEvent({
+    decision: rateLimitDecision,
+    identity: email,
+    recordAuditLog: deps.recordAuditLog,
+  });
+
+  if (!rateLimitDecision.allowed) {
+    return buildAuthThrottledResponse(rateLimitDecision.headers);
+  }
 
   if (!email || !password) {
     return NextResponse.json(
       { error: "Email y password requeridos" },
-      { status: 400 }
+      { status: 400 },
     );
   }
 
-  const user = await prisma.usuario.findUnique({ where: { email } });
-
+  const user = await deps.findUserByEmail(email);
   if (!user || !user.activo) {
-    return NextResponse.json({ error: "Credenciales inválidas" }, { status: 401 });
+    return NextResponse.json({ error: INVALID_LOGIN_MESSAGE }, { status: 401 });
   }
 
-  const ok = await bcrypt.compare(password, user.hash);
-  if (!ok) {
-    return NextResponse.json({ error: "Credenciales inválidas" }, { status: 401 });
+  const passwordMatches = await deps.comparePassword(password, user.hash);
+  if (!passwordMatches) {
+    return NextResponse.json({ error: INVALID_LOGIN_MESSAGE }, { status: 401 });
   }
 
-  const token = await signUserJwt({
+  const token = await deps.signUserJwt({
     sub: String(user.id),
     email: user.email,
     rol: user.rol,
@@ -40,42 +140,19 @@ export async function POST(req: Request) {
     sucursalId: user.sucursalId,
   });
 
-  // ✅ IMPORTANTÍSIMO
-  await setAuthCookie(token);
+  await deps.setAuthCookie(token);
+  await deps.setActiveSucursalCookie(user.sucursalId);
 
-  // Setear cookie de sucursal activa al login
-  const { cookies: cookiesApi } = await import("next/headers");
-  const cookieStore = await cookiesApi();
-  cookieStore.set("active_sucursal_id", String(user.sucursalId || 1), {
-    path: "/",
-    maxAge: 30 * 24 * 60 * 60,
-    sameSite: "lax",
-  });
-
-  // --- NUEVO: Seguimiento de Sesión y Auditoría ---
   try {
-    const { getRealClientData } = await import("@/lib/clientData");
-    const { getSessionHash } = await import("@/lib/security/session-hash");
-    const clientData = await getRealClientData();
-    const sessionToken = getSessionHash(token);
+    const clientData = await deps.getClientData();
 
-    // Crear sesión en DB
-    await prisma.userSession.create({
-      data: {
-        userId: user.id,
-        token: sessionToken,
-        userAgent: clientData.userAgent,
-        ipAddress: clientData.ip,
-        browser: clientData.browser,
-        os: clientData.os,
-        device: clientData.device,
-        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 días
-      },
+    await deps.createUserSession({
+      user,
+      token,
+      clientData,
     });
 
-    // Registrar en auditoría
-    const { recordAuditLog } = await import("@/lib/audit");
-    await recordAuditLog({
+    await deps.recordAuditLog({
       userId: user.id,
       action: "LOGIN",
       module: "AUTH",
@@ -86,11 +163,20 @@ export async function POST(req: Request) {
   } catch (error) {
     console.error(
       "Error logging session:",
-      error instanceof Error ? error.message : error
+      error instanceof Error ? error.message : error,
     );
   }
 
   return NextResponse.json({
-    data: { id: user.id, nombre: user.nombre, email: user.email, rol: user.rol },
+    data: {
+      id: user.id,
+      nombre: user.nombre,
+      email: user.email,
+      rol: user.rol,
+    },
   });
+}
+
+export async function POST(req: Request) {
+  return handlePostLogin(req);
 }

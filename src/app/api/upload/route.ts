@@ -4,25 +4,38 @@ import { NextResponse } from "next/server";
 import { writeFile, mkdir } from "fs/promises";
 import path from "path";
 import { requireAuth, requireRole } from "@/lib/auth/require-auth";
+import {
+    buildOpaqueUploadFilename,
+    getUploadStorageDir,
+    getUploadUrl,
+    validateUploadCandidate,
+} from "@/lib/uploads";
 
-// En Railway: UPLOAD_DIR=/app/uploads (volumen persistente montado)
-// En local:   guarda en public/uploads (servido estático por Next.js)
-const UPLOAD_DIR = process.env.UPLOAD_DIR
-    ? process.env.UPLOAD_DIR
-    : path.join(process.cwd(), "public", "uploads");
+type UploadDeps = {
+    mkdir: typeof mkdir;
+    requireAuth: typeof requireAuth;
+    requireRole: typeof requireRole;
+    writeFile: typeof writeFile;
+    uploadDir: string;
+};
 
-// Si hay UPLOAD_DIR configurado usamos el endpoint /api/files/ para servir
-const USE_API_SERVE = Boolean(process.env.UPLOAD_DIR);
+const defaultDeps: UploadDeps = {
+    mkdir,
+    requireAuth,
+    requireRole,
+    writeFile,
+    uploadDir: getUploadStorageDir(),
+};
 
-export async function POST(req: Request) {
+export async function handleUpload(req: Request, deps: UploadDeps = defaultDeps) {
+    const auth = await deps.requireAuth();
+    if (!auth.ok) return auth.res;
+
+    if (!deps.requireRole(auth.user, ["ADMIN"])) {
+        return NextResponse.json({ error: "No tienes permisos" }, { status: 403 });
+    }
+
     try {
-        const auth = await requireAuth();
-        if (!auth.ok) return auth.res;
-
-        if (!requireRole(auth.user, ["ADMIN"])) {
-            return NextResponse.json({ error: "No tienes permisos" }, { status: 403 });
-        }
-
         const formData = await req.formData();
         const file = formData.get("file") as File | null;
 
@@ -30,26 +43,32 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: "No se encontró el archivo" }, { status: 400 });
         }
 
+        if (file.size <= 0) {
+            return NextResponse.json({ error: "El archivo esta vacio" }, { status: 400 });
+        }
+
         const bytes = await file.arrayBuffer();
         const buffer = Buffer.from(bytes);
+        const validation = validateUploadCandidate({
+            buffer,
+            declaredMimeType: file.type,
+            originalFilename: file.name,
+            size: file.size,
+            useCase: "product-image",
+        });
 
-        // Crear directorio si no existe
-        await mkdir(UPLOAD_DIR, { recursive: true });
+        if (!validation.ok) {
+            return NextResponse.json({ error: validation.error }, { status: validation.status });
+        }
 
-        // Generar nombre de archivo único
-        const timestamp = Date.now();
-        const sanitizedName = file.name.replace(/[^a-z0-9.]/gi, "_").toLowerCase();
-        const filename = `${timestamp}-${sanitizedName}`;
-        const filePath = path.join(UPLOAD_DIR, filename);
+        await deps.mkdir(deps.uploadDir, { recursive: true });
 
-        // Escribir el archivo en el volumen
-        await writeFile(filePath, buffer);
+        const filename = buildOpaqueUploadFilename(validation.normalizedExtension);
+        const filePath = path.join(deps.uploadDir, filename);
 
-        // En Railway usamos /api/files/ para servir desde el volumen.
-        // En local usamos /uploads/ (carpeta public, servida estáticamente por Next.js).
-        const url = USE_API_SERVE
-            ? `/api/files/${filename}`
-            : `/uploads/${filename}`;
+        await deps.writeFile(filePath, buffer);
+
+        const url = getUploadUrl(filename);
 
         return NextResponse.json({ success: true, url, filename });
     } catch (error) {
@@ -59,4 +78,8 @@ export async function POST(req: Request) {
             { status: 500 }
         );
     }
+}
+
+export async function POST(req: Request) {
+    return handleUpload(req);
 }

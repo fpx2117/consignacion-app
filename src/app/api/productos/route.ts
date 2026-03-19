@@ -9,7 +9,7 @@ import { sendNotification } from "@/lib/notificaciones/socket-trigger";
 import { NOTIFICATION_TYPE } from "@/lib/notificaciones/types";
 import { obtenerConfiguracionGlobal } from "@/lib/config";
 import { checkProductLimit } from "@/lib/subscriptions/require-subscription";
-import { buildSucursalWhere, isGlobalSucursalView } from "@/lib/sucursalScope";
+import { buildSucursalWhere, isGlobalSucursalView, resolveRequestedSucursalId } from "@/lib/sucursalScope";
 
 type ProductoCreateBody = CreateProductoInput & {
   subcategoriaId?: number | null;
@@ -36,10 +36,7 @@ export async function GET(req: Request) {
     const sucursalParam = searchParams.get("sucursalId");
     const sucursalParamNum = sucursalParam ? Number(sucursalParam) : NaN;
 
-    const requestedSucursalId =
-      auth.user.rol === "ADMIN" && Number.isFinite(sucursalParamNum) && sucursalParamNum > 0
-        ? sucursalParamNum
-        : auth.activeSucursalId;
+    const requestedSucursalId = resolveRequestedSucursalId(auth, sucursalParamNum);
     const requestedAuth = { ...auth, activeSucursalId: requestedSucursalId };
     const isGlobal = isGlobalSucursalView(requestedAuth);
     const sucursalWhere = buildSucursalWhere(requestedAuth);

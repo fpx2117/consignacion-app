@@ -7,6 +7,7 @@ import { prisma } from "@/lib/prisma";
 import { getBranding } from "@/lib/reports/get-branding";
 import { buildConsigReportHtml, type ConsigReportData, type ConsigClienteRow, type ConsigTopProducto } from "@/lib/reports/base/consignacion-report-template";
 import { nowAR, startOfDayAR, startOfWeekAR, startOfMonthAR, formatDateTimeAR } from "@/lib/utils-date";
+import { resolveRequestedSucursalId } from "@/lib/sucursalScope";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -44,9 +45,9 @@ export async function GET(
         const auth = await requireAuth();
         const authUserId = auth.ok ? Number(auth.user.sub) : null;
         const userId = Number.isFinite(authUserId) ? authUserId : null;
-        const scopedSucursalId = auth.ok && auth.user.rol !== "ADMIN"
-            ? (auth.user.sucursalId ?? auth.activeSucursalId)
-            : (Number.isFinite(requestedSucursalId) && requestedSucursalId >= 0 ? requestedSucursalId : 1);
+        const scopedSucursalId = auth.ok
+            ? resolveRequestedSucursalId(auth, requestedSucursalId)
+            : 1;
         const isGlobal = scopedSucursalId === 0;
 
         if (!code) {

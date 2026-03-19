@@ -2,8 +2,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import puppeteer, { Browser } from "puppeteer";
 import { requireAuth } from "@/lib/auth/require-auth";
-import { resolveTimezone, resolveTimezoneForAuth } from "@/lib/get-configured-tz";
+import { resolveTimezoneForAuth } from "@/lib/get-configured-tz";
 import { prisma } from "@/lib/prisma";
+import { resolveRequestedSucursalId } from "@/lib/sucursalScope";
 
 import { getBranding } from "@/lib/reports/get-branding";
 import { buildInventoryHtml, type InventoryGroup } from "@/lib/reports/base/inventory-report-template";
@@ -15,16 +16,20 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
   let browser: Browser | null = null;
 
   try {
+    const auth = await requireAuth();
+    if (!auth.ok) return auth.res;
+
     const { id } = await params;
 
-    // 1. Determinar si es vista General o Específica
-    const isGeneral = id === "all" || id === "0";
+    const requestedPathSucursalId = id === "all" ? 0 : Number(id);
+    const scopedSucursalId = resolveRequestedSucursalId(auth, requestedPathSucursalId);
+    const isGeneral = scopedSucursalId === 0;
 
     // 2. Obtener sucursales (Filtradas si no es general)
     const sucursales = await prisma.sucursal.findMany({
       where: {
         activa: true,
-        ...(!isGeneral && !isNaN(Number(id)) ? { id: Number(id) } : {})
+        ...(!isGeneral ? { id: scopedSucursalId } : {})
       },
       orderBy: { id: "asc" },
     });
@@ -94,14 +99,11 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
     }).filter(g => g.productos.length > 0);
 
     // 5. Branding + timezone
-    const auth = await requireAuth();
     const requestedSucursalId = isGeneral ? 0 : (sucursales[0]?.id ?? null);
-    const timezone = auth.ok
-      ? await resolveTimezoneForAuth({
-          user: auth.user,
-          activeSucursalId: requestedSucursalId ?? auth.activeSucursalId,
-        })
-      : await resolveTimezone({ sucursalId: requestedSucursalId });
+    const timezone = await resolveTimezoneForAuth({
+      user: auth.user,
+      activeSucursalId: requestedSucursalId ?? auth.activeSucursalId,
+    });
     const brandingSucursalId = isGeneral ? (timezone.sucursalId ?? sucursales[0]?.id) : sucursales[0]?.id;
     const branding = await getBranding(brandingSucursalId);
 
