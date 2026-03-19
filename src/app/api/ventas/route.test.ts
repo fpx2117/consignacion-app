@@ -15,6 +15,8 @@ const okAuth: VentaAuth = {
     sucursalId: 3,
   },
   activeSucursalId: 3,
+  allowedSucursalIds: [3],
+  isGlobalView: false,
   token: "token",
 };
 

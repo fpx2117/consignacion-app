@@ -13,6 +13,8 @@ const okAuth = {
     sucursalId: 2,
   },
   activeSucursalId: 2,
+  allowedSucursalIds: [2],
+  isGlobalView: false,
   token: "token",
 };
 
