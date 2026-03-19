@@ -1,25 +1,22 @@
 // src/lib/file-utils.ts
 
 import { unlink } from "fs/promises";
-import path from "path";
+import { resolveStoredUploadPathFromUrl } from "@/lib/uploads";
 
 function isNodeError(error: unknown): error is NodeJS.ErrnoException {
     return error instanceof Error;
 }
 
 /**
- * Elimina un archivo físico de la carpeta public/uploads
- * @param url La URL guardada en la base de datos (ej: /uploads/abc.png)
+ * Elimina un archivo físico guardado por el flujo de uploads.
+ * @param url La URL guardada en la base de datos (ej: /api/files/uuid.png o /uploads/legacy.png)
  */
 export async function deleteFileSystemImage(url: string | null | undefined) {
     if (!url) return;
 
     try {
-        // Solo permitimos borrar si la URL empieza con /uploads/
-        if (!url.startsWith("/uploads/")) return;
-
-        const filename = url.replace("/uploads/", "");
-        const filePath = path.join(process.cwd(), "public", "uploads", filename);
+        const filePath = resolveStoredUploadPathFromUrl(url);
+        if (!filePath) return;
 
         await unlink(filePath);
         console.log(`Archivo eliminado: ${filePath}`);

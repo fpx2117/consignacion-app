@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth/require-auth";
 import { prisma } from "@/lib/prisma";
+import { canAccessSucursalId } from "@/lib/sucursalScope";
 
 export async function POST(req: Request) {
   const auth = await requireAuth();
@@ -33,6 +34,13 @@ export async function POST(req: Request) {
       sameSite: "lax",
     });
     return response;
+  }
+
+  if (!canAccessSucursalId(auth, sucursalId)) {
+    return NextResponse.json(
+      { error: "Sucursal no autorizada" },
+      { status: 403 }
+    );
   }
 
   // Verificar que la sucursal existe y está activa

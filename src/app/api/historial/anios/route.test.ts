@@ -15,6 +15,8 @@ const okAuth: HistorialAuth = {
     sucursalId: null,
   },
   activeSucursalId: 0,
+  allowedSucursalIds: [1, 2],
+  isGlobalView: true,
   token: "token",
 };
 
