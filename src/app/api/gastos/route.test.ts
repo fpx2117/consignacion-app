@@ -15,6 +15,8 @@ const okAuth: GastoAuth = {
     sucursalId: 6,
   },
   activeSucursalId: 6,
+  allowedSucursalIds: [6],
+  isGlobalView: false,
   token: "token",
 };
 

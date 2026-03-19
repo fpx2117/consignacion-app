@@ -7,6 +7,7 @@ import { resolveTimezone } from "@/lib/get-configured-tz";
 import { prisma } from "@/lib/prisma";
 import { getBranding } from "@/lib/reports/get-branding";
 import { buildPosReportHtml, type PosReportData } from "@/lib/reports/base/pos-report-template";
+import { resolveRequestedSucursalId } from "@/lib/sucursalScope";
 import { nowAR, startOfDayAR, startOfWeekAR, startOfMonthAR, formatDateTimeAR } from "@/lib/utils-date";
 
 export const dynamic = "force-dynamic";
@@ -59,9 +60,9 @@ export async function GET(
         const auth = await requireAuth();
         const authUserId = auth.ok ? Number(auth.user.sub) : null;
         const userId = Number.isFinite(authUserId) ? authUserId : null;
-        const scopedSucursalId = auth.ok && auth.user.rol !== "ADMIN"
-            ? (auth.user.sucursalId ?? auth.activeSucursalId)
-            : (Number.isFinite(requestedSucursalId) && requestedSucursalId >= 0 ? requestedSucursalId : 1);
+        const scopedSucursalId = auth.ok
+            ? resolveRequestedSucursalId(auth, requestedSucursalId)
+            : 1;
         const isGlobal = scopedSucursalId === 0;
 
         if (!code) {

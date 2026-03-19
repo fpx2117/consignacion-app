@@ -1,6 +1,7 @@
 import { cache } from "react";
 import { NextResponse } from "next/server";
 import { getAuthTokenFromCookies, verifyUserJwt } from "@/lib/auth/core";
+import { resolveEffectiveSucursalContext } from "@/lib/sucursalScope";
 
 /* ============================
    AUTH GUARD
@@ -19,6 +20,31 @@ const validateSession = cache(async (token: string) => {
     where: { token: sessionToken },
     select: { isActive: true },
   });
+});
+
+const getAllowedSucursalIdsForUser = cache(async (userId: number, rol: "ADMIN" | "EMPLEADO", fallbackSucursalId: number | null) => {
+  const { prisma } = await import("@/lib/prisma");
+
+  if (rol === "ADMIN") {
+    const sucursales = await prisma.sucursal.findMany({
+      where: { activa: true },
+      select: { id: true },
+      orderBy: { id: "asc" },
+    });
+
+    return sucursales.map((sucursal) => sucursal.id);
+  }
+
+  if (typeof fallbackSucursalId !== "number" || !Number.isInteger(fallbackSucursalId) || fallbackSucursalId <= 0) {
+    return [];
+  }
+
+  const sucursal = await prisma.sucursal.findFirst({
+    where: { id: fallbackSucursalId, activa: true },
+    select: { id: true },
+  });
+
+  return sucursal ? [sucursal.id] : [];
 });
 
 export async function requireAuth() {
@@ -56,37 +82,51 @@ export async function requireAuth() {
       };
     }
 
-    // Resolviendo la sucursal activa — prioridad: header > cookie > JWT
+    const authUserId = Number(user.sub);
+    const allowedSucursalIds = await getAllowedSucursalIdsForUser(
+      Number.isFinite(authUserId) ? authUserId : 0,
+      user.rol,
+      user.sucursalId,
+    );
+
     const { cookies, headers } = await import("next/headers");
     const cookieStore = await cookies();
     const headerStore = await headers();
     const reqCookie = cookieStore.get("active_sucursal_id")?.value;
     const reqHeader = headerStore.get("x-sucursal-id");
-    let activeSucursalId = user.sucursalId || 1;
+    const resolvedSucursalContext = resolveEffectiveSucursalContext({
+      user,
+      allowedSucursalIds,
+      cookieSucursalId: reqCookie,
+      jwtSucursalId: user.sucursalId,
+      clientRequestedSucursalId: reqHeader,
+    });
 
-    // 1. Si hay header x-sucursal-id, intentamos usarlo (para admin o empleado)
-    if (reqHeader) {
-      const parsedHeader = parseInt(reqHeader, 10);
-      if (Number.isFinite(parsedHeader) && parsedHeader >= 0) {
-        activeSucursalId = parsedHeader;
-      }
+    if (!resolvedSucursalContext) {
+      const response = NextResponse.json(
+        { error: "Sucursal activa no autorizada" },
+        { status: 403 },
+      );
+
+      response.cookies.set("active_sucursal_id", "", {
+        maxAge: 0,
+        path: "/",
+        sameSite: "lax",
+      });
+
+      return {
+        ok: false as const,
+        res: response,
+      };
     }
-
-    // 2. Si es ADMIN, también respetamos la cookie si no hubo header válido
-    if (user.rol === "ADMIN") {
-      const parsedCookie = reqCookie ? parseInt(reqCookie, 10) : NaN;
-      if (Number.isFinite(parsedCookie) && parsedCookie >= 0 && !reqHeader) {
-        activeSucursalId = parsedCookie;
-      }
-    }
-
-    // 3. EMPLEADO: solo header o JWT (no usamos cookie para evitar persistencia no intencionada)
 
     return {
       ok: true as const,
       user,
       token,
-      activeSucursalId
+      activeSucursalId: resolvedSucursalContext.activeSucursalId,
+      allowedSucursalIds: resolvedSucursalContext.allowedSucursalIds,
+      isGlobalView: resolvedSucursalContext.isGlobalView,
     };
   } catch {
     return {

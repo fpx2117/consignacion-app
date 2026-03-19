@@ -17,6 +17,8 @@ const okAuth: TurnoAuth = {
     sucursalId: 4,
   },
   activeSucursalId: 4,
+  allowedSucursalIds: [4],
+  isGlobalView: false,
   token: "token",
 };
 

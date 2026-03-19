@@ -1,55 +1,63 @@
 // src/app/api/files/[...path]/route.ts
-// Sirve archivos del volumen persistente de Railway en /app/uploads
+// Sirve uploads validados desde almacenamiento controlado.
 
 import { NextRequest, NextResponse } from "next/server";
-import { readFile } from "fs/promises";
+import { lstat, readFile } from "fs/promises";
 import path from "path";
+import { getUploadStorageDir, resolveServableUploadResource } from "@/lib/uploads";
 
 export const dynamic = "force-dynamic";
 
-const UPLOAD_DIR = process.env.UPLOAD_DIR
-    ? process.env.UPLOAD_DIR
-    : path.join(process.cwd(), "public", "uploads");
-
-const MIME_MAP: Record<string, string> = {
-    jpg: "image/jpeg",
-    jpeg: "image/jpeg",
-    png: "image/png",
-    gif: "image/gif",
-    webp: "image/webp",
-    svg: "image/svg+xml",
-    pdf: "application/pdf",
+type FileServeDeps = {
+    lstat: typeof lstat;
+    readFile: typeof readFile;
+    uploadDir: string;
 };
 
-export async function GET(
-    _req: NextRequest,
-    { params }: { params: Promise<{ path: string[] }> }
+const defaultDeps: FileServeDeps = {
+    lstat,
+    readFile,
+    uploadDir: getUploadStorageDir(),
+};
+
+export async function handleGetFile(
+    _req: Request,
+    params: { path: string[] },
+    deps: FileServeDeps = defaultDeps,
 ) {
+    const resource = resolveServableUploadResource(params.path);
+    if (!resource.ok) {
+        return NextResponse.json({ error: "Archivo no encontrado" }, { status: 404 });
+    }
+
     try {
-        // En Next.js 15+ los params son una Promise
-        const { path: segments } = await params;
-        const filename = segments.join("/");
+        const filePath = path.join(deps.uploadDir, resource.filename);
+        const fileStats = await deps.lstat(filePath);
 
-        // Security: evitar path traversal
-        const safePath = path.normalize(filename).replace(/^(\.\.(\/|\\|$))+/, "");
-        const filePath = path.join(UPLOAD_DIR, safePath);
-
-        if (!filePath.startsWith(UPLOAD_DIR)) {
-            return NextResponse.json({ error: "Acceso no permitido" }, { status: 403 });
+        if (!fileStats.isFile() || fileStats.isSymbolicLink()) {
+            return NextResponse.json({ error: "Archivo no encontrado" }, { status: 404 });
         }
 
-        const fileBuffer = await readFile(filePath);
-        const ext = safePath.split(".").pop()?.toLowerCase() ?? "";
-        const contentType = MIME_MAP[ext] ?? "application/octet-stream";
+        const fileBuffer = await deps.readFile(filePath);
 
         return new NextResponse(fileBuffer, {
             status: 200,
             headers: {
-                "Content-Type": contentType,
+                "Content-Type": resource.contentType,
                 "Cache-Control": "public, max-age=31536000, immutable",
+                "Content-Disposition": `inline; filename="${resource.filename}"`,
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "X-Content-Type-Options": "nosniff",
             },
         });
     } catch {
         return NextResponse.json({ error: "Archivo no encontrado" }, { status: 404 });
     }
+}
+
+export async function GET(
+    req: NextRequest,
+    { params }: { params: Promise<{ path: string[] }> }
+) {
+    return handleGetFile(req, await params);
 }

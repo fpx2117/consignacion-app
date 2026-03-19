@@ -3,6 +3,7 @@
 import { requireAuth } from "@/lib/auth/require-auth";
 import { getDashboardKpis, getDashboardTopProductos, getDashboardTopConsignados, getDashboardTendencia } from "@/lib/kpi-logic";
 import { prisma } from "@/lib/prisma";
+import { resolveRequestedSucursalId } from "@/lib/sucursalScope";
 import type {
   DashboardPeriod,
   DashboardKpis,
@@ -10,26 +11,6 @@ import type {
   DashboardTopProductos,
   DashboardTendencia,
 } from "@/lib/types";
-
-function resolveActiveSucursalId(
-  user: { rol: string; sucursalId?: number | null },
-  fallbackSucursalId: number,
-  requestedSucursalId?: number
-) {
-  if (user.rol !== "ADMIN") {
-    return user.sucursalId || 1;
-  }
-
-  if (typeof requestedSucursalId === "number" && Number.isFinite(requestedSucursalId) && requestedSucursalId >= 0) {
-    return requestedSucursalId;
-  }
-
-  if (typeof fallbackSucursalId === "number" && Number.isFinite(fallbackSucursalId) && fallbackSucursalId >= 0) {
-    return fallbackSucursalId;
-  }
-
-  return user.sucursalId || 1;
-}
 
 /** Lanza UnauthorizedError si la sesión no es válida */
 class UnauthorizedError extends Error {
@@ -54,9 +35,9 @@ export async function fetchDashboardKpis(
   const auth = await requireAuth();
   if (!auth.ok) throw new UnauthorizedError();
 
-  const { user, activeSucursalId } = auth;
+  const { user } = auth;
   const isAdmin = user.rol === "ADMIN";
-  const scopedSucursalId = resolveActiveSucursalId(user, activeSucursalId, requestedSucursalId);
+  const scopedSucursalId = resolveRequestedSucursalId(auth, requestedSucursalId);
   const userId = Number(user.sub);
   const stats = await getDashboardKpis(scopedSucursalId, period, isAdmin, Number.isFinite(userId) ? userId : undefined);
 
@@ -132,8 +113,8 @@ export async function fetchDashboardConsignaciones(
   const auth = await requireAuth();
   if (!auth.ok) throw new UnauthorizedError();
 
-  const { user, activeSucursalId } = auth;
-  const scopedSucursalId = resolveActiveSucursalId(user, activeSucursalId, requestedSucursalId);
+  const { user } = auth;
+  const scopedSucursalId = resolveRequestedSucursalId(auth, requestedSucursalId);
   const safeLimit = Math.min(limit, 50);
   const isGlobal = user.rol === "ADMIN" && scopedSucursalId === 0;
   const sucursalWhere = isGlobal ? {} : { sucursalId: scopedSucursalId };
@@ -202,10 +183,10 @@ export async function fetchDashboardTopProductos(
   const auth = await requireAuth();
   if (!auth.ok) throw new UnauthorizedError();
 
-  const { user, activeSucursalId } = auth;
+  const { user } = auth;
   const isAdmin = user.rol === "ADMIN";
   const safeLimit = Math.min(limit, 50);
-  const scopedSucursalId = resolveActiveSucursalId(user, activeSucursalId, requestedSucursalId);
+  const scopedSucursalId = resolveRequestedSucursalId(auth, requestedSucursalId);
   const userId = Number(user.sub);
 
   const [topVendidos, topConsignados] = await Promise.all([
@@ -235,9 +216,9 @@ export async function fetchDashboardTendencia(
   const auth = await requireAuth();
   if (!auth.ok) throw new UnauthorizedError();
 
-  const { user, activeSucursalId } = auth;
+  const { user } = auth;
   const isAdmin = user.rol === "ADMIN";
-  const scopedSucursalId = resolveActiveSucursalId(user, activeSucursalId, requestedSucursalId);
+  const scopedSucursalId = resolveRequestedSucursalId(auth, requestedSucursalId);
   const userId = Number(user.sub);
 
   const data = await getDashboardTendencia(scopedSucursalId, period, isAdmin, Number.isFinite(userId) ? userId : undefined);
