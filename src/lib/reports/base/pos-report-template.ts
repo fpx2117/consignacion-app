@@ -26,7 +26,10 @@ export type PosReportData = {
   // Resumen
   totalVentas: number;
   cantidadVentas: number;
-  totalGanancia: number;
+  totalGanancia: number;      // Ganancia Bruta = Σ(subtotal - costo×U) - Desc.Global
+  gananciaNeta?: number;     // Ganancia Neta = Bruta - Roturas (sin gastos operativos)
+  utilidadNeta?: number;      // Utilidad Neta = Bruta - Gastos - Roturas (resultado final)
+  perdidaRotura?: number;     // Pérdida por roturas en ventas anuladas
   ingresosCaja: number;
   ticketPromedio: number;
   gastosTotal: number;
@@ -103,9 +106,11 @@ export function buildPosReportHtml(data: PosReportData, branding: BrandingDTO): 
     ? Math.round((data.totalGanancia / data.totalVentas) * 100)
     : 0;
 
+  // Usar los valores calculados en el route (ya incluyen roturas)
+  const utilidadNeta = data.utilidadNeta ?? (data.totalGanancia - data.gastosTotal);
+  const gananciaNeta = data.gananciaNeta ?? data.totalGanancia;
+  const perdidaRotura = data.perdidaRotura ?? 0;
 
-  // ─ Utilidad neta = ganancia - gastos
-  const utilidadNeta = data.totalGanancia - data.gastosTotal;
   const gastosSubtitle = data.gastosDesglose
     ? data.gastosDesglose.isGlobal
       ? `No compartidos: ${fmt(data.gastosDesglose.propios)} · Compartidos: ${fmt(data.gastosDesglose.compartidos)}`
@@ -201,17 +206,98 @@ export function buildPosReportHtml(data: PosReportData, branding: BrandingDTO): 
     </div>
   </div>
 
-  <!-- KPIs PRINCIPALES — 3 cols x 2 filas, cada uno con accent propio -->
+  <!-- KPIs PRINCIPALES — Rentabilidad -->
+  <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Rentabilidad</p>
   <div class="grid grid-cols-3 gap-4 mb-6">
 
-    <!-- Ventas Totales — accent primary -->
+    <!-- Ganancia Bruta -->
+    <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+      <div style="height:3px;background:#059669"></div>
+      <div class="p-5">
+        <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Ganancia Bruta</p>
+        <p class="text-2xl font-black text-slate-900 money leading-tight">${fmt(data.totalGanancia)}</p>
+        <p class="text-[10px] text-slate-400 mt-1">Σ(Subtotal − Costo×U) − Desc.Global</p>
+        <p class="text-[10px] text-slate-400">${rentabilidad}% margen sobre ventas</p>
+      </div>
+    </div>
+
+    <!-- Ganancia Neta -->
+    <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+      <div style="height:3px;background:#0369a1"></div>
+      <div class="p-5">
+        <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Ganancia Neta</p>
+        <p class="text-2xl font-black text-slate-900 money leading-tight">${fmt(gananciaNeta)}</p>
+        <p class="text-[10px] text-slate-400 mt-1">Bruta − Roturas</p>
+        ${perdidaRotura > 0 ? `<p class="text-[9px] text-rose-400 mt-0.5">− ${fmt(perdidaRotura)} en roturas</p>` : ""}
+      </div>
+    </div>
+
+    <!-- Utilidad Neta -->
     <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
       <div style="height:3px;background:${primaryColor}"></div>
+      <div class="p-5">
+        <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Utilidad Neta</p>
+        <p class="text-2xl font-black money leading-tight" style="color:${utilidadNeta >= 0 ? '#059669' : '#e11d48'}">${fmt(utilidadNeta)}</p>
+        <p class="text-[10px] text-slate-400 mt-1">Bruta − Gastos − Roturas</p>
+        ${gastosSubtitle ? `<p class="text-[9px] text-slate-400 mt-0.5">${escapeHtml(gastosSubtitle)}</p>` : ""}
+      </div>
+    </div>
+  </div>
+
+  <!-- KPIs PRINCIPALES — Operaciones -->
+  <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Operaciones</p>
+  <div class="grid grid-cols-3 gap-4 mb-6">
+
+    <!-- Ventas Totales -->
+    <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+      <div style="height:3px;background:#64748b"></div>
       <div class="p-5">
         <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Ventas Totales</p>
         <p class="text-2xl font-black text-slate-900 money leading-tight">${fmt(data.totalVentas)}</p>
         <p class="text-[10px] text-slate-400 mt-1">${formatNumberAR(data.cantidadVentas)} transacciones</p>
       </div>
+    </div>
+
+    <!-- Gastos Totales -->
+    <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+      <div style="height:3px;background:#e11d48"></div>
+      <div class="p-5">
+        <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Gastos Totales</p>
+        <p class="text-2xl font-black text-slate-900 money leading-tight">${fmt(data.gastosTotal)}</p>
+        <p class="text-[10px] text-slate-400 mt-1">Propios + Compartidos(proporción)</p>
+      </div>
+    </div>
+
+    <!-- Ticket Promedio -->
+    <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+      <div style="height:3px;background:#d97706"></div>
+      <div class="p-5">
+        <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Ticket Promedio</p>
+        <p class="text-2xl font-black text-slate-900 money leading-tight">${fmt(data.ticketPromedio)}</p>
+        <p class="text-[10px] text-slate-400 mt-1">por transacción</p>
+      </div>
+    </div>
+
+    <!-- Cobros en Caja — accent sky -->
+    <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+      <div style="height:3px;background:#0369a1"></div>
+      <div class="p-5">
+        <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Cobros en Caja</p>
+        <p class="text-xl font-black text-slate-900 money leading-tight">${fmt(data.ingresosCaja)}</p>
+        <p class="text-[10px] text-slate-400 mt-1">pagos tipo venta procesados</p>
+      </div>
+    </div>
+
+    <!-- Visitas Catálogo — accent violet -->
+    <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+      <div style="height:3px;background:#7c3aed"></div>
+      <div class="p-5">
+        <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Visitas Catálogo</p>
+        <p class="text-2xl font-black text-slate-900 money leading-tight">${formatNumberAR(data.catalogoVisitas)}</p>
+        <p class="text-[10px] text-slate-400 mt-1">visitas en el período</p>
+      </div>
+    </div>
+  </div>
     </div>
 
     <!-- Ganancia Bruta — accent emerald -->

@@ -78,7 +78,7 @@ export async function GET(
         const catalogVisitDelegate = getCatalogVisitDelegate();
 
         // Fetch data in parallel
-        const [ventasAgg, pagosAgg, ventasConDetalles, pagosPorMetodo, gastosPropiosAgg, gastosLinksData, catalogVisitsCount] = await Promise.all([
+        const [ventasAgg, pagosAgg, ventasConDetalles, pagosPorMetodo, gastosPropiosAgg, gastosLinksData, catalogVisitsCount, roturasData] = await Promise.all([
             // Totales de ventas directas
             prisma.venta.aggregate({
                 where: { ...sucursalWhere, fecha: dateWhere, liquidacionId: null, anulada: false },
@@ -150,6 +150,18 @@ export async function GET(
                     where: { ...sucursalWhere, ...(start ? { visitedAt: { gte: start } } : {}) },
                 })
                 : Promise.resolve(0),
+
+            // Pérdida por roturas en ventas anuladas del período
+            prisma.ventaDetalle.findMany({
+                where: {
+                    esRotura: true,
+                    venta: { ...sucursalWhere, anulada: true, fechaAnulacion: dateWhere },
+                },
+                select: {
+                    units: true,
+                    producto: { select: { precioCosto: true } },
+                },
+            }),
         ]);
 
         // Procesar ventas para KPIs, Top Productos y Tendencia
@@ -217,6 +229,17 @@ export async function GET(
             );
         const gastosTotal = totalGastosPropios + totalGastosLinks;
 
+        // Pérdida por roturas en ventas anuladas del período
+        const perdidaRotura = (roturasData as { units: number; producto: { precioCosto: unknown } | null }[]).reduce(
+            (acc: number, det) => acc + (Number(det.producto?.precioCosto || 0) * det.units),
+            0
+        );
+
+        // Ganancia Neta = Bruta - Roturas (sin restar gastos operativos)
+        const gananciaNeta = totalGanancia - perdidaRotura;
+        // Utilidad Neta = Bruta - Gastos - Roturas (resultado final)
+        const utilidadNeta = totalGanancia - gastosTotal - perdidaRotura;
+
         const reportData: PosReportData = {
             period,
             periodLabel: PERIOD_LABELS[period],
@@ -225,6 +248,9 @@ export async function GET(
             totalVentas: totalVentasNeto,
             cantidadVentas,
             totalGanancia,
+            gananciaNeta,
+            utilidadNeta,
+            perdidaRotura,
             ingresosCaja: Number(pagosAgg._sum?.monto ?? 0),
             ticketPromedio: cantidadVentas > 0 ? totalVentasNeto / cantidadVentas : 0,
             gastosTotal,
