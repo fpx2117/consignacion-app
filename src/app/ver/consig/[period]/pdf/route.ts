@@ -340,7 +340,7 @@ export async function GET(
         const page = await browser.newPage();
         await page.setContent(htmlContent, { waitUntil: "domcontentloaded" });
         await page.emulateMediaType("screen");
-        const pdfBytes = await page.pdf({ format: "A4", printBackground: true, margin: { top: "0", bottom: "0", left: "0", right: "0" } });
+        const pdfBytes = await page.pdf({ format: "A4", printBackground: true, margin: { top: "10mm", bottom: "10mm", left: "10mm", right: "10mm" } });
         await browser.close();
         browser = null;
 
