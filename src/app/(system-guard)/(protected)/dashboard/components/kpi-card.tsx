@@ -10,6 +10,7 @@ interface KpiCardProps {
   title: string;
   value: string | number;
   subtitle: string;
+  formula?: string;
   icon: React.ElementType;
   loading: boolean;
   emphasis?: boolean;
@@ -20,6 +21,7 @@ export function KpiCard({
   title,
   value,
   subtitle,
+  formula,
   icon: Icon,
   loading,
   emphasis,
@@ -100,6 +102,11 @@ export function KpiCard({
             <p className="text-[10px] sm:text-xs font-medium text-muted-foreground/70 tracking-wide mt-1 truncate">
               {subtitle}
             </p>
+            {formula && (
+              <p className="text-[9px] sm:text-[10px] font-mono text-muted-foreground/50 tracking-wide mt-0.5 truncate">
+                {formula}
+              </p>
+            )}
           </div>
         </div>
 

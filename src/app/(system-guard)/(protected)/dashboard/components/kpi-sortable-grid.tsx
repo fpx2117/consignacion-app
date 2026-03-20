@@ -30,6 +30,7 @@ export interface KpiConfig {
   title: string;
   value: string;
   subtitle: string;
+  formula?: string;
   icon: React.ElementType;
   loading: boolean;
   emphasis?: boolean;
@@ -64,6 +65,7 @@ export function SortableKpiCard({ kpi }: { kpi: KpiConfig }) {
         title={kpi.title}
         value={kpi.value}
         subtitle={kpi.subtitle}
+        formula={kpi.formula}
         icon={kpi.icon}
         emphasis={kpi.emphasis}
         variant={kpi.variant}
@@ -139,6 +141,7 @@ export function KpiSortableGrid({
               title={activeKpi.title}
               value={activeKpi.value}
               subtitle={activeKpi.subtitle}
+              formula={activeKpi.formula}
               icon={activeKpi.icon}
               emphasis={activeKpi.emphasis}
               variant={activeKpi.variant}

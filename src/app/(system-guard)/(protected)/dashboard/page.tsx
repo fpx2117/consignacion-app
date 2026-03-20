@@ -175,6 +175,7 @@ export default function DashboardPage() {
   const gananciaTotal = kpis?.finanzas?.ganancia?.total ?? 0;
   const gananciaConsig = kpis?.finanzas?.ganancia?.porConsignacion ?? 0;
   const gananciaPOS = kpis?.finanzas?.ganancia?.porVentaDirecta ?? 0;
+  const gananciaNetaSinGastos = kpis?.finanzas?.ganancia?.netaSinGastos ?? 0;
 
   // Ganancia mostrada según filtro
   let displayedGanancia = gananciaTotal;
@@ -264,16 +265,28 @@ export default function DashboardPage() {
   const financeKpis: KpiConfig[] = React.useMemo(() => {
     const items: KpiConfig[] = [];
 
-    // Siempre visible: Ganancia principal (NETA)
+    // Siempre visible: Utilidad Neta (resultado final después de gastos)
     items.push({
-      key: "ganancia-neta",
-      title: "Ganancia Neta",
+      key: "utilidad-neta",
+      title: "Utilidad Neta",
       value: maskMoney(displayedGanancia),
-      subtitle: "Utilidad final (Bruta - Gastos)",
+      subtitle: "Resultado final",
+      formula: "Bruta − Gastos − Roturas",
       icon: TrendingUp,
       loading,
       variant: "success",
       emphasis: true,
+    });
+
+    // Siempre visible: Ganancia Neta (sin restar gastos operativos)
+    items.push({
+      key: "ganancia-neta",
+      title: "Ganancia Neta",
+      value: maskMoney(gananciaNetaSinGastos),
+      subtitle: "De operaciones de venta",
+      formula: "Bruta − Roturas",
+      icon: Activity,
+      loading,
     });
 
     // Solo en "all": desglose por canal y Bruta/Gastos
@@ -283,7 +296,8 @@ export default function DashboardPage() {
           key: "ganancia-bruta",
           title: "Ganancia Bruta",
           value: maskMoney(kpis?.finanzas?.ganancia?.bruta ?? 0),
-          subtitle: `Ventas - Costos`,
+          subtitle: "Utilidad de ventas",
+          formula: "Σ(Subtotal − Costo×U) − Desc.Global",
           icon: Activity,
           loading,
         },
@@ -292,6 +306,7 @@ export default function DashboardPage() {
           title: "Gastos Totales",
           value: maskMoney(kpis?.finanzas?.ganancia?.gastos ?? 0),
           subtitle: `${kpis?.gastos?.cantidad ?? 0} registros pagados`,
+          formula: "Propios + Compartidos(proporción)",
           icon: Wallet,
           loading,
           variant: (kpis?.finanzas?.ganancia?.gastos ?? 0) > 0 ? "warning" : "default",
@@ -349,7 +364,7 @@ export default function DashboardPage() {
     }
 
     return items;
-  }, [kpis, filter, loading, displayedGanancia, maskMoney, ventasStats, pagosStats]);
+  }, [kpis, filter, loading, displayedGanancia, gananciaNetaSinGastos, maskMoney, ventasStats, pagosStats]);
 
   const allVisibleKpis = React.useMemo(
     () => [...operativeKpis, ...financeKpis],
