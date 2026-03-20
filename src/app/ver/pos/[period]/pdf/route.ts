@@ -159,7 +159,8 @@ export async function GET(
                 },
                 select: {
                     units: true,
-                    producto: { select: { precioCosto: true } },
+                    producto: { select: { nombre: true, precioCosto: true } },
+                    venta: { select: { id: true } },
                 },
             }),
         ]);
@@ -240,6 +241,17 @@ export async function GET(
         // Utilidad Neta = Bruta - Gastos - Roturas (resultado final)
         const utilidadNeta = totalGanancia - gastosTotal - perdidaRotura;
 
+        // Detalle de roturas para el reporte
+        const roturasDetalle = (roturasData as { units: number; producto: { nombre: string; precioCosto: unknown } | null; venta: { id: number } }[]).map(d => {
+            const costoUnitario = Number(d.producto?.precioCosto || 0);
+            return {
+                nombre: d.producto?.nombre ?? "Producto eliminado",
+                units: d.units,
+                costoUnitario,
+                perdida: costoUnitario * d.units,
+            };
+        });
+
         const reportData: PosReportData = {
             period,
             periodLabel: PERIOD_LABELS[period],
@@ -251,6 +263,7 @@ export async function GET(
             gananciaNeta,
             utilidadNeta,
             perdidaRotura,
+            roturasDetalle,
             ingresosCaja: Number(pagosAgg._sum?.monto ?? 0),
             ticketPromedio: cantidadVentas > 0 ? totalVentasNeto / cantidadVentas : 0,
             gastosTotal,
