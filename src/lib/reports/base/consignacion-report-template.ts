@@ -160,7 +160,7 @@ export function buildConsigReportHtml(data: ConsigReportData, branding: Branding
   ${getReportHeadAssets(`
     ${reportThemeCss(primaryColor)}
     .money { font-feature-settings: "tnum"; font-variant-numeric: tabular-nums; }
-    @page { margin: 0; size: A4; }
+    @page { margin: 10mm; size: A4; }
     table { border-collapse: separate; border-spacing: 0 0.3rem; }
   `)}
 </head>
