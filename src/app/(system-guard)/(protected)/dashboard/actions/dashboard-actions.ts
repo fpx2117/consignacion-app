@@ -78,6 +78,7 @@ export async function fetchDashboardKpis(
         total: stats.finanzas.ganancia.neta,
         bruta: stats.finanzas.ganancia.bruta,
         neta: stats.finanzas.ganancia.neta,
+        netaSinGastos: stats.finanzas.ganancia.netaSinGastos,
         gastos: stats.finanzas.ganancia.gastos,
         porConsignacion: stats.finanzas.ganancia.porConsig,
         porVentaDirecta: stats.finanzas.ganancia.porPos,

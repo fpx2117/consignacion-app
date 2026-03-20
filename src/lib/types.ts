@@ -774,6 +774,7 @@ export type DashboardKpis = {
       total: number;
       bruta: number;
       neta: number;
+      netaSinGastos: number;
       gastos: number;
       porConsignacion: number;
       porVentaDirecta: number;

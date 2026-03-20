@@ -162,6 +162,7 @@ export async function GET(
         const gananciaDirecta  = kpis.finanzas.ganancia.porPos;
         const totalGastos      = kpis.gastos.total;
         const utilidadNeta     = kpis.finanzas.ganancia.neta;
+        const gananciaNeta     = kpis.finanzas.ganancia.netaSinGastos;
         const unitsPendientes  = kpis.consignacionUnits?.pendientes ?? 0;
 
         // 3. Tendencia (aggregate by date string)
@@ -223,6 +224,7 @@ export async function GET(
             periodLabel: getPeriodLabel(period),
             fechaGeneracion: formatDateTimeAR(new Date(), true, tz),
             gananciaBruta,
+            gananciaNeta,
             gananciaConsignacion: gananciaConsig,
             gananciaDirecta,
             gastos: totalGastos,

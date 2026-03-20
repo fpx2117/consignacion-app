@@ -333,6 +333,7 @@ export const getDashboardKpis = unstable_cache(
             ganancia: {
                 bruta: gananciaBruta,
                 neta: gananciaBruta - totalGastos - perdidaRotura,
+                netaSinGastos: gananciaBruta - perdidaRotura,
                 gastos: totalGastos,
                 perdidaRotura,
                 porConsig: gananciaConsig,

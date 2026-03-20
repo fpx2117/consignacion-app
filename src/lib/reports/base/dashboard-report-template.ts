@@ -12,6 +12,7 @@ export type DashboardReportData = {
 
     // Finanzas
     gananciaBruta: number;
+    gananciaNeta: number;
     gananciaConsignacion: number;
     gananciaDirecta: number;
     gastos: number;
@@ -51,12 +52,13 @@ function statusBadge(label: string, bg: string, text: string): string {
     return `<span style="display:inline-block;padding:1px 6px;border-radius:4px;font-size:9px;font-weight:700;background:${bg};color:${text};margin-left:6px;vertical-align:middle;">${label}</span>`;
 }
 
-function kpiBox(label: string, value: string, accent: string, sub?: string, badge?: string): string {
+function kpiBox(label: string, value: string, accent: string, sub?: string, badge?: string, formula?: string): string {
     return `
     <div style="background:${REPORT_COLORS.surface}; border:1px solid ${REPORT_COLORS.line}; border-radius:10px; padding:14px 16px; min-width:140px; flex:1;">
       <div style="font-size:10px; font-weight:700; color:${accent}; text-transform:uppercase; letter-spacing:.06em; margin-bottom:4px;">${escapeHtml(label)}</div>
       <div style="font-size:20px; font-weight:800; color:${REPORT_COLORS.text}; line-height:1.1;">${escapeHtml(value)}${badge ?? ""}</div>
       ${sub ? `<div style="font-size:10px; color:${REPORT_COLORS.textMuted}; margin-top:3px;">${escapeHtml(sub)}</div>` : ""}
+      ${formula ? `<div style="font-size:9px; color:${REPORT_COLORS.textSubtle}; margin-top:2px; font-family:monospace;">${escapeHtml(formula)}</div>` : ""}
     </div>`;
 }
 
@@ -120,14 +122,15 @@ export function buildDashboardReportHtml(data: DashboardReportData, branding: Br
 
   ${sectionTitle("Rentabilidad", color)}
   <div class="kpi-row">
-    ${kpiBox("Ganancia Bruta", fmt(data.gananciaBruta), REPORT_COLORS.success, "Ventas − Costos")}
-    ${kpiBox("Gastos Totales", fmt(data.gastos), REPORT_COLORS.danger, "Egresos del período", gastosBadge)}
-    ${kpiBox("Ganancia Neta", fmt(data.utilidadNeta), color, "Bruta − Gastos", utilidadBadge)}
-    ${kpiBox("Movimiento Total", fmt(data.ingresosCaja), REPORT_COLORS.accentViolet, `${fmtN(data.cantidadPagos)} transacciones`)}
+    ${kpiBox("Ganancia Bruta", fmt(data.gananciaBruta), REPORT_COLORS.success, "Utilidad de ventas", undefined, "Σ(Subtotal − Costo×U) − Desc.Global")}
+    ${kpiBox("Ganancia Neta", fmt(data.gananciaNeta), REPORT_COLORS.info, "Sin restar gastos", undefined, "Bruta − Roturas")}
+    ${kpiBox("Gastos Totales", fmt(data.gastos), REPORT_COLORS.danger, "Egresos del período", gastosBadge, "Propios + Compartidos(proporción)")}
+    ${kpiBox("Utilidad Neta", fmt(data.utilidadNeta), color, "Resultado final", utilidadBadge, "Bruta − Gastos − Roturas")}
   </div>
   <div class="kpi-row" style="margin-top:10px;">
     ${kpiBox("Por Consignación", fmt(data.gananciaConsignacion), REPORT_COLORS.info, `${pctConsig}% de bruta`)}
     ${kpiBox("Ventas Directas", fmt(data.gananciaDirecta), REPORT_COLORS.accentAmber, `${pctDirecta}% de bruta`)}
+    ${kpiBox("Movimiento Total", fmt(data.ingresosCaja), REPORT_COLORS.accentViolet, `${fmtN(data.cantidadPagos)} transacciones`)}
     ${kpiBox("Ventas Registradas", fmtN(data.cantidadVentas), color, "Operaciones en el período")}
   </div>
 
