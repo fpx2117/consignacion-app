@@ -365,7 +365,7 @@ export function NotificationsAnimatedPanel({
           </div>
         ) : (
           <div className="h-full overflow-y-auto p-4 space-y-2.5 scrollbar-hide">
-            <AnimatedList delay={40}>
+            <AnimatedList delay={40} reverse={false}>
               {filteredNotifications.map((n) => (
                 <NotificationItem
                   key={n.id}
