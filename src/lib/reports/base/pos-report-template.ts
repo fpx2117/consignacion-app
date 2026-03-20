@@ -300,6 +300,28 @@ export function buildPosReportHtml(data: PosReportData, branding: BrandingDTO): 
     </div>
   </div>
 
+  <!-- MÉTODOS DE PAGO -->
+  <div class="mb-6">
+    <h3 class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Métodos de Pago</h3>
+    ${metodosHtml}
+  </div>
+
+  <!-- TOP PRODUCTOS -->
+  <div class="mb-6">
+    <h3 class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 pl-1">Top Productos Vendidos</h3>
+    <table class="w-full">
+      <thead>
+        <tr class="text-[9px] text-slate-400 uppercase font-bold tracking-wider">
+          <th class="py-2 pl-4 text-left">Producto</th>
+          <th class="py-2 text-center">Uds.</th>
+          <th class="py-2 text-right">Total</th>
+          <th class="py-2 pr-4 text-right">Ganancia</th>
+        </tr>
+      </thead>
+      <tbody class="text-xs">${topHtml}</tbody>
+    </table>
+  </div>
+
   <!-- PÉRDIDA POR ROTURAS — rojo, solo si hay roturas -->
   ${(data.roturasDetalle && data.roturasDetalle.length > 0) ? `
   <div class="mb-6">
@@ -333,28 +355,6 @@ export function buildPosReportHtml(data: PosReportData, branding: BrandingDTO): 
     </div>
   </div>
   ` : ""}
-
-  <!-- MÉTODOS DE PAGO -->
-  <div class="mb-6">
-    <h3 class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Métodos de Pago</h3>
-    ${metodosHtml}
-  </div>
-
-  <!-- TOP PRODUCTOS -->
-  <div class="mb-6">
-    <h3 class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 pl-1">Top Productos Vendidos</h3>
-    <table class="w-full">
-      <thead>
-        <tr class="text-[9px] text-slate-400 uppercase font-bold tracking-wider">
-          <th class="py-2 pl-4 text-left">Producto</th>
-          <th class="py-2 text-center">Uds.</th>
-          <th class="py-2 text-right">Total</th>
-          <th class="py-2 pr-4 text-right">Ganancia</th>
-        </tr>
-      </thead>
-      <tbody class="text-xs">${topHtml}</tbody>
-    </table>
-  </div>
 
   <!-- TENDENCIA -->
   <div class="mb-8">
