@@ -103,6 +103,9 @@ export function buildDashboardReportHtml(data: DashboardReportData, branding: Br
     th.right { text-align:right; }
     .tag { display:inline-block; padding:2px 8px; border-radius:99px; font-size:10px; font-weight:700; }
     .badge-period { background:${color}18; color:${color}; padding:3px 10px; border-radius:6px; font-size:10px; font-weight:700; margin-left:8px; vertical-align:middle; }
+    /* Evitar que las secciones se corten entre páginas */
+    .no-break { break-inside: avoid; page-break-inside: avoid; -webkit-column-break-inside: avoid; }
+    .no-break table tbody tr { break-inside: avoid; page-break-inside: avoid; }
     `;
 
     return `<!DOCTYPE html>
@@ -121,91 +124,105 @@ export function buildDashboardReportHtml(data: DashboardReportData, branding: Br
   <div style="font-size:10px; color:${REPORT_COLORS.textSubtle}; margin-bottom:18px;">Generado el ${escapeHtml(data.fechaGeneracion)}</div>
 
   ${sectionTitle("Rentabilidad", color)}
-  <div class="kpi-row">
-    ${kpiBox("Ganancia Bruta", fmt(data.gananciaBruta), REPORT_COLORS.success, "Utilidad de ventas", undefined, "Σ(Subtotal − Costo×U) − Desc.Global")}
-    ${kpiBox("Ganancia Neta", fmt(data.gananciaNeta), REPORT_COLORS.info, "Sin restar gastos", undefined, "Bruta − Roturas")}
-    ${kpiBox("Gastos Totales", fmt(data.gastos), REPORT_COLORS.danger, "Egresos del período", gastosBadge, "Propios + Compartidos(proporción)")}
-    ${kpiBox("Utilidad Neta", fmt(data.utilidadNeta), color, "Resultado final", utilidadBadge, "Bruta − Gastos − Roturas")}
-  </div>
-  <div class="kpi-row" style="margin-top:10px;">
-    ${kpiBox("Por Consignación", fmt(data.gananciaConsignacion), REPORT_COLORS.info, `${pctConsig}% de bruta`)}
-    ${kpiBox("Ventas Directas", fmt(data.gananciaDirecta), REPORT_COLORS.accentAmber, `${pctDirecta}% de bruta`)}
-    ${kpiBox("Movimiento Total", fmt(data.ingresosCaja), REPORT_COLORS.accentViolet, `${fmtN(data.cantidadPagos)} transacciones`)}
-    ${kpiBox("Ventas Registradas", fmtN(data.cantidadVentas), color, "Operaciones en el período")}
+  <div class="no-break">
+    <div class="kpi-row">
+      ${kpiBox("Ganancia Bruta", fmt(data.gananciaBruta), REPORT_COLORS.success, "Utilidad de ventas", undefined, "Σ(Subtotal − Costo×U) − Desc.Global")}
+      ${kpiBox("Ganancia Neta", fmt(data.gananciaNeta), REPORT_COLORS.info, "Sin restar gastos", undefined, "Bruta − Roturas")}
+      ${kpiBox("Gastos Totales", fmt(data.gastos), REPORT_COLORS.danger, "Egresos del período", gastosBadge, "Propios + Compartidos(proporción)")}
+      ${kpiBox("Utilidad Neta", fmt(data.utilidadNeta), color, "Resultado final", utilidadBadge, "Bruta − Gastos − Roturas")}
+    </div>
+    <div class="kpi-row" style="margin-top:10px;">
+      ${kpiBox("Por Consignación", fmt(data.gananciaConsignacion), REPORT_COLORS.info, `${pctConsig}% de bruta`)}
+      ${kpiBox("Ventas Directas", fmt(data.gananciaDirecta), REPORT_COLORS.accentAmber, `${pctDirecta}% de bruta`)}
+      ${kpiBox("Movimiento Total", fmt(data.ingresosCaja), REPORT_COLORS.accentViolet, `${fmtN(data.cantidadPagos)} transacciones`)}
+      ${kpiBox("Ventas Registradas", fmtN(data.cantidadVentas), color, "Operaciones en el período")}
+    </div>
   </div>
 
   ${sectionTitle("Canal Digital", color)}
-  <div class="kpi-row">
-    ${kpiBox("Visitas de Catalogo", fmtN(data.catalogoVisitas), REPORT_COLORS.accentBlue, "Catalogo publico")}
-    ${kpiBox("Visitantes Unicos", fmtN(data.catalogoVisitantesUnicos), REPORT_COLORS.info, "Estimado deduplicado")}
-    ${kpiBox("En Catalogo", fmtN(data.catalogoProductosVisibles ?? 0) + " prod.", REPORT_COLORS.successStrong, "Activos con stock")}
+  <div class="no-break">
+    <div class="kpi-row">
+      ${kpiBox("Visitas de Catalogo", fmtN(data.catalogoVisitas), REPORT_COLORS.accentBlue, "Catalogo publico")}
+      ${kpiBox("Visitantes Unicos", fmtN(data.catalogoVisitantesUnicos), REPORT_COLORS.info, "Estimado deduplicado")}
+      ${kpiBox("En Catalogo", fmtN(data.catalogoProductosVisibles ?? 0) + " prod.", REPORT_COLORS.successStrong, "Activos con stock")}
+    </div>
   </div>
 
   ${data.gastosDetalle.length > 0 ? `
-  ${sectionTitle("Detalle de Gastos", REPORT_COLORS.danger)}
-  <table>
-    <thead>
-      <tr>
-        <th>Fecha</th>
-        <th>Concepto</th>
-        <th>Categoría</th>
-        <th style="text-align:center;">Tipo</th>
-        <th class="right">Monto</th>
-      </tr>
-    </thead>
-    <tbody>
-      ${data.gastosDetalle.map((g) => `
-      <tr>
-        <td style="padding:5px 8px; font-size:11px; border-bottom:1px solid ${REPORT_COLORS.lineSoft}; white-space:nowrap;">${escapeHtml(g.fecha)}</td>
-        <td style="padding:5px 8px; font-size:11px; border-bottom:1px solid ${REPORT_COLORS.lineSoft};">${escapeHtml(g.motivo)}</td>
-        <td style="padding:5px 8px; font-size:11px; border-bottom:1px solid ${REPORT_COLORS.lineSoft};">${escapeHtml(g.categoria)}</td>
-        <td style="padding:5px 8px; font-size:10px; border-bottom:1px solid ${REPORT_COLORS.lineSoft}; text-align:center;">
-          <span style="background:${g.esCompartido ? REPORT_COLORS.sharedBg : REPORT_COLORS.ownBg}; color:${g.esCompartido ? REPORT_COLORS.sharedText : REPORT_COLORS.ownText}; padding:2px 6px; border-radius:4px; font-weight:700; font-size:9px; text-transform:uppercase;">
-            ${g.esCompartido ? "Compartido" : "Propio"}
-          </span>
-        </td>
-        <td style="padding:5px 8px; font-size:11px; border-bottom:1px solid ${REPORT_COLORS.lineSoft}; text-align:right; font-weight:700; color:${REPORT_COLORS.danger};">${escapeHtml(fmt(g.monto))}</td>
-      </tr>`).join("")}
-    </tbody>
-    <tfoot>
-      <tr>
-        <td colspan="4" style="padding:6px 8px; font-size:11px; font-weight:700; text-align:right; border-top:2px solid ${REPORT_COLORS.line};">Total Gastos:</td>
-        <td style="padding:6px 8px; font-size:12px; font-weight:800; text-align:right; border-top:2px solid ${REPORT_COLORS.line}; color:${REPORT_COLORS.danger};">${escapeHtml(fmt(data.gastos))}</td>
-      </tr>
-    </tfoot>
-  </table>
+  <div class="no-break">
+    ${sectionTitle("Detalle de Gastos", REPORT_COLORS.danger)}
+    <table>
+      <thead>
+        <tr>
+          <th>Fecha</th>
+          <th>Concepto</th>
+          <th>Categoría</th>
+          <th style="text-align:center;">Tipo</th>
+          <th class="right">Monto</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${data.gastosDetalle.map((g) => `
+        <tr>
+          <td style="padding:5px 8px; font-size:11px; border-bottom:1px solid ${REPORT_COLORS.lineSoft}; white-space:nowrap;">${escapeHtml(g.fecha)}</td>
+          <td style="padding:5px 8px; font-size:11px; border-bottom:1px solid ${REPORT_COLORS.lineSoft};">${escapeHtml(g.motivo)}</td>
+          <td style="padding:5px 8px; font-size:11px; border-bottom:1px solid ${REPORT_COLORS.lineSoft};">${escapeHtml(g.categoria)}</td>
+          <td style="padding:5px 8px; font-size:10px; border-bottom:1px solid ${REPORT_COLORS.lineSoft}; text-align:center;">
+            <span style="background:${g.esCompartido ? REPORT_COLORS.sharedBg : REPORT_COLORS.ownBg}; color:${g.esCompartido ? REPORT_COLORS.sharedText : REPORT_COLORS.ownText}; padding:2px 6px; border-radius:4px; font-weight:700; font-size:9px; text-transform:uppercase;">
+              ${g.esCompartido ? "Compartido" : "Propio"}
+            </span>
+          </td>
+          <td style="padding:5px 8px; font-size:11px; border-bottom:1px solid ${REPORT_COLORS.lineSoft}; text-align:right; font-weight:700; color:${REPORT_COLORS.danger};">${escapeHtml(fmt(g.monto))}</td>
+        </tr>`).join("")}
+      </tbody>
+      <tfoot>
+        <tr>
+          <td colspan="4" style="padding:6px 8px; font-size:11px; font-weight:700; text-align:right; border-top:2px solid ${REPORT_COLORS.line};">Total Gastos:</td>
+          <td style="padding:6px 8px; font-size:12px; font-weight:800; text-align:right; border-top:2px solid ${REPORT_COLORS.line}; color:${REPORT_COLORS.danger};">${escapeHtml(fmt(data.gastos))}</td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
   ` : ""}
 
   ${sectionTitle("Stock", color)}
-  <div class="kpi-row">
-    ${kpiBox("Stock Disponible", fmtN(data.stockDisponible) + " u.", REPORT_COLORS.info, "En depósito")}
-    ${kpiBox("Stock en Calle", fmtN(data.stockConsignado) + " u.", REPORT_COLORS.warning, "Consignado a clientes")}
+  <div class="no-break">
+    <div class="kpi-row">
+      ${kpiBox("Stock Disponible", fmtN(data.stockDisponible) + " u.", REPORT_COLORS.info, "En depósito")}
+      ${kpiBox("Stock en Calle", fmtN(data.stockConsignado) + " u.", REPORT_COLORS.warning, "Consignado a clientes")}
+    </div>
   </div>
 
   ${sectionTitle("Consignaciones", color)}
-  <div class="kpi-row">
-    ${kpiBox("Abiertas", fmtN(data.consignacionesAbiertas), REPORT_COLORS.successStrong, "Activas")}
-    ${kpiBox("Cerradas", fmtN(data.consignacionesCerradas), REPORT_COLORS.textMuted, "Históricas")}
-    ${kpiBox("Unidades Pendientes", fmtN(data.unitsPendientes) + " u.", REPORT_COLORS.danger, "Sin liquidar")}
+  <div class="no-break">
+    <div class="kpi-row">
+      ${kpiBox("Abiertas", fmtN(data.consignacionesAbiertas), REPORT_COLORS.successStrong, "Activas")}
+      ${kpiBox("Cerradas", fmtN(data.consignacionesCerradas), REPORT_COLORS.textMuted, "Históricas")}
+      ${kpiBox("Unidades Pendientes", fmtN(data.unitsPendientes) + " u.", REPORT_COLORS.danger, "Sin liquidar")}
+    </div>
   </div>
 
   ${sectionTitle("Finanzas Adicionales", color)}
-  <div class="kpi-row">
-    ${kpiBox("Saldo Global", fmt(data.saldoGlobal ?? 0), REPORT_COLORS.danger, "Deuda acumulada en clientes")}
+  <div class="no-break">
+    <div class="kpi-row">
+      ${kpiBox("Saldo Global", fmt(data.saldoGlobal ?? 0), REPORT_COLORS.danger, "Deuda acumulada en clientes")}
+    </div>
   </div>
 
   ${data.tendencia.length > 0 ? `
-  ${sectionTitle("Tendencia Diaria", color)}
-  <table>
-    <thead>
-      <tr>
-        <th>Fecha</th>
-        <th class="right">Ventas ($)</th>
-        <th class="right">Cobros ($)</th>
-      </tr>
-    </thead>
-    <tbody>${tendenciaRows}</tbody>
-  </table>
+  <div class="no-break">
+    ${sectionTitle("Tendencia Diaria", color)}
+    <table>
+      <thead>
+        <tr>
+          <th>Fecha</th>
+          <th class="right">Ventas ($)</th>
+          <th class="right">Cobros ($)</th>
+        </tr>
+      </thead>
+      <tbody>${tendenciaRows}</tbody>
+    </table>
+  </div>
   ` : ""}
 
   ${brandingFooterHtml(branding)}

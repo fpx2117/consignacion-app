@@ -182,6 +182,9 @@ export function buildPosReportHtml(data: PosReportData, branding: BrandingDTO): 
     .money { font-feature-settings: "tnum"; font-variant-numeric: tabular-nums; }
     @page { margin: 0; size: A4; }
     table { border-collapse: separate; border-spacing: 0 0.35rem; }
+    /* Evitar que las secciones se corten entre páginas */
+    .no-break { break-inside: avoid; page-break-inside: avoid; -webkit-column-break-inside: avoid; }
+    .no-break table tbody tr { break-inside: avoid; page-break-inside: avoid; }
   `)}
 </head>
 <body class="p-10 bg-white text-slate-900 max-w-[210mm] mx-auto border-t-[12px]" style="border-top-color:${primaryColor}">
@@ -209,7 +212,7 @@ export function buildPosReportHtml(data: PosReportData, branding: BrandingDTO): 
 
   <!-- KPIs PRINCIPALES — Rentabilidad -->
   <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Rentabilidad</p>
-  <div class="grid grid-cols-3 gap-4 mb-6">
+  <div class="grid grid-cols-3 gap-4 mb-6 no-break">
 
     <!-- Ganancia Bruta -->
     <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
@@ -247,7 +250,7 @@ export function buildPosReportHtml(data: PosReportData, branding: BrandingDTO): 
 
   <!-- KPIs PRINCIPALES — Operaciones -->
   <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Operaciones</p>
-  <div class="grid grid-cols-3 gap-4 mb-6">
+  <div class="grid grid-cols-3 gap-4 mb-6 no-break">
 
     <!-- Ventas Totales -->
     <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
@@ -301,13 +304,13 @@ export function buildPosReportHtml(data: PosReportData, branding: BrandingDTO): 
   </div>
 
   <!-- MÉTODOS DE PAGO -->
-  <div class="mb-6">
+  <div class="mb-6 no-break">
     <h3 class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Métodos de Pago</h3>
     ${metodosHtml}
   </div>
 
   <!-- TOP PRODUCTOS -->
-  <div class="mb-6">
+  <div class="mb-6 no-break">
     <h3 class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 pl-1">Top Productos Vendidos</h3>
     <table class="w-full">
       <thead>
@@ -324,7 +327,7 @@ export function buildPosReportHtml(data: PosReportData, branding: BrandingDTO): 
 
   <!-- PÉRDIDA POR ROTURAS — rojo, solo si hay roturas -->
   ${(data.roturasDetalle && data.roturasDetalle.length > 0) ? `
-  <div class="mb-6">
+  <div class="mb-6 no-break">
     <h3 class="text-[10px] font-black uppercase tracking-widest mb-3 pl-1" style="color:#e11d48">Pérdida por Roturas</h3>
     <div class="bg-white rounded-2xl border-2 overflow-hidden" style="border-color:#fecdd3">
       <table class="w-full">
