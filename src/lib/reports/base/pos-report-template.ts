@@ -30,6 +30,7 @@ export type PosReportData = {
   gananciaNeta?: number;     // Ganancia Neta = Bruta - Roturas (sin gastos operativos)
   utilidadNeta?: number;      // Utilidad Neta = Bruta - Gastos - Roturas (resultado final)
   perdidaRotura?: number;     // Pérdida por roturas en ventas anuladas
+  roturasDetalle?: { nombre: string; units: number; costoUnitario: number; perdida: number }[]; // Detalle de items rotos
   ingresosCaja: number;
   ticketPromedio: number;
   gastosTotal: number;
@@ -298,62 +299,40 @@ export function buildPosReportHtml(data: PosReportData, branding: BrandingDTO): 
       </div>
     </div>
   </div>
-    </div>
 
-    <!-- Ganancia Bruta — accent emerald -->
-    <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-      <div style="height:3px;background:#059669"></div>
-      <div class="p-5">
-        <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Ganancia Bruta</p>
-        <p class="text-2xl font-black text-slate-900 money leading-tight">${fmt(data.totalGanancia)}</p>
-        <p class="text-[10px] text-slate-400 mt-1">${rentabilidad}% margen s/ventas</p>
-      </div>
+  <!-- PÉRDIDA POR ROTURAS — rojo, solo si hay roturas -->
+  ${(data.roturasDetalle && data.roturasDetalle.length > 0) ? `
+  <div class="mb-6">
+    <h3 class="text-[10px] font-black uppercase tracking-widest mb-3 pl-1" style="color:#e11d48">Pérdida por Roturas</h3>
+    <div class="bg-white rounded-2xl border-2 overflow-hidden" style="border-color:#fecdd3">
+      <table class="w-full">
+        <thead>
+          <tr class="text-[9px] text-slate-400 uppercase font-bold tracking-wider" style="background:#fef2f2">
+            <th class="py-2 pl-4 text-left">Item</th>
+            <th class="py-2 text-center">Cantidad</th>
+            <th class="py-2 text-right pr-4">Costo Unit.</th>
+            <th class="py-2 text-right pr-4">Pérdida</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${data.roturasDetalle.map(r => `
+          <tr class="border-t border-slate-100">
+            <td class="py-2.5 pl-4 text-[11px] font-bold text-slate-700">${escapeHtml(r.nombre)}</td>
+            <td class="py-2.5 text-center text-[11px] text-slate-600">${r.units} u.</td>
+            <td class="py-2.5 text-right pr-4 text-[11px] text-slate-600">${fmt(r.costoUnitario)}</td>
+            <td class="py-2.5 text-right pr-4 text-[11px] font-black" style="color:#e11d48">${fmt(r.perdida)}</td>
+          </tr>`).join("")}
+        </tbody>
+        <tfoot>
+          <tr class="border-t-2 font-bold" style="border-color:#fecdd3;background:#fef2f2">
+            <td class="py-2 pl-4 text-[11px] text-slate-700" colspan="3">Total Pérdida por Roturas</td>
+            <td class="py-2 text-right pr-4 text-[11px] font-black" style="color:#e11d48">${fmt(data.perdidaRotura ?? 0)}</td>
+          </tr>
+        </tfoot>
+      </table>
     </div>
-
-    <!-- Gastos Totales — accent rose -->
-    <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-      <div style="height:3px;background:#e11d48"></div>
-      <div class="p-5">
-        <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Gastos Totales</p>
-        <p class="text-2xl font-black text-slate-900 money leading-tight">${fmt(data.gastosTotal)}</p>
-        <p class="text-[10px] mt-1" style="color:${utilidadNeta >= 0 ? '#059669' : '#e11d48'}">
-          Utilidad neta: ${fmt(utilidadNeta)}
-        </p>
-        ${gastosSubtitle ? `<p class="text-[10px] text-slate-400 mt-1">${escapeHtml(gastosSubtitle)}</p>` : ""}
-      </div>
-    </div>
-
-    <!-- Ticket Promedio — accent amber -->
-    <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-      <div style="height:3px;background:#d97706"></div>
-      <div class="p-5">
-        <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Ticket Promedio</p>
-        <p class="text-2xl font-black text-slate-900 money leading-tight">${fmt(data.ticketPromedio)}</p>
-        <p class="text-[10px] text-slate-400 mt-1">por transacción</p>
-      </div>
-    </div>
-
-    <!-- Cobros en Caja — accent sky -->
-    <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-      <div style="height:3px;background:#0369a1"></div>
-      <div class="p-5">
-        <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Cobros en Caja</p>
-        <p class="text-xl font-black text-slate-900 money leading-tight">${fmt(data.ingresosCaja)}</p>
-        <p class="text-[10px] text-slate-400 mt-1">pagos tipo venta procesados</p>
-      </div>
-    </div>
-
-    <!-- Visitas Catálogo — accent violet -->
-    <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-      <div style="height:3px;background:#7c3aed"></div>
-      <div class="p-5">
-        <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Visitas Catálogo</p>
-        <p class="text-2xl font-black text-slate-900 leading-tight">${formatNumberAR(data.catalogoVisitas)}</p>
-        <p class="text-[10px] text-slate-400 mt-1">visitas en el período</p>
-      </div>
-    </div>
-
   </div>
+  ` : ""}
 
   <!-- MÉTODOS DE PAGO -->
   <div class="mb-6">
