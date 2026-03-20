@@ -180,7 +180,8 @@ export function buildPosReportHtml(data: PosReportData, branding: BrandingDTO): 
   ${getReportHeadAssets(`
     ${reportThemeCss(primaryColor)}
     .money { font-feature-settings: "tnum"; font-variant-numeric: tabular-nums; }
-    @page { margin: 0; size: A4; }
+    @page { margin: 15mm 0 10mm 0; size: A4; }
+    @page :first { margin-top: 0; }
     table { border-collapse: separate; border-spacing: 0 0.35rem; }
     /* Evitar que las secciones se corten entre páginas */
     .no-break { break-inside: avoid; page-break-inside: avoid; -webkit-column-break-inside: avoid; }
