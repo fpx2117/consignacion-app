@@ -187,7 +187,7 @@ export function buildPosReportHtml(data: PosReportData, branding: BrandingDTO): 
     .no-break table tbody tr { break-inside: avoid; page-break-inside: avoid; }
   `)}
 </head>
-<body class="p-8 bg-white text-slate-900 w-full border-t-[12px]" style="border-top-color:${primaryColor}">
+<body class="p-10 bg-white text-slate-900 max-w-[210mm] mx-auto border-t-[12px]" style="border-top-color:${primaryColor}">
 
   <!-- HEADER -->
   <div class="flex justify-between items-start border-b-2 border-slate-100 pb-8 mb-8">
