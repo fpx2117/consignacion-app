@@ -90,7 +90,6 @@ export async function GET(
 
         // 1. Usar getDashboardKpis como única fuente de verdad para KPIs financieros
         //    (garantiza consistencia exacta con el Dashboard UI)
-        const kpiPeriod = period === "all" ? "month" : period;
         const [
             kpis,
             consigCerradas,
@@ -98,7 +97,7 @@ export async function GET(
             gastosPropiosDetalle,
             gastosLinksDetalle,
         ] = await Promise.all([
-            getDashboardKpis(scopedSucursalId, kpiPeriod, isGlobal, userId ?? undefined),
+            getDashboardKpis(scopedSucursalId, period, isGlobal, userId ?? undefined),
 
             // Consignaciones cerradas (kpi-logic no lo expone)
             prisma.consignacion.count({ where: { ...sucursalWhere, estado: "CERRADA" } }),
@@ -233,11 +232,13 @@ export async function GET(
             cantidadPagos: kpis.finanzas.pagos.cantidad,
             catalogoVisitas: kpis.catalogo?.visitas ?? 0,
             catalogoVisitantesUnicos: kpis.catalogo?.visitantesUnicos ?? 0,
+            catalogoProductosVisibles: kpis.catalogo?.productosVisibles ?? 0,
             stockDisponible: kpis.stock?.disponible ?? 0,
             stockConsignado: kpis.stock?.consignado ?? 0,
             consignacionesAbiertas: kpis.countAbiertas,
             consignacionesCerradas: consigCerradas,
             unitsPendientes,
+            saldoGlobal: kpis.finanzas.saldoClientesTotal ?? 0,
             tendencia,
             gastosDetalle,
         };

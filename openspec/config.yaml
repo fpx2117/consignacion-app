@@ -1,0 +1,31 @@
+# openspec/config.yaml
+schema: spec-driven
+
+context: |
+  Tech stack: Next.js 16 / React 19 / Prisma 7 (PostgreSQL) / TypeScript 5.9
+  Architecture: App Router, Server Actions, Server Components, Zustand stores
+  Testing: ESLint 9, sin framework de testing dedicado
+  Style: Tailwind CSS 4, shadcn/ui, Radix UI, class-variance-authority
+
+rules:
+  proposal:
+    - Incluir un plan de reversión (rollback) para cambios riesgosos
+    - Identificar los módulos/paquetes afectados
+  specs:
+    - Usar el formato Dado/Cuando/Entonces (Given/When/Then) para los escenarios
+    - Usar las palabras clave del RFC 2119 (DEBE, DEBERÁ, DEBERÍA, PODRÁ)
+  design:
+    - Incluir diagramas de secuencia para flujos complejos
+    - Documentar las decisiones de arquitectura con su respectiva justificación
+  tasks:
+    - Agrupar las tareas por fase (infraestructura, implementación, pruebas)
+    - Usar numeración jerárquica (1.1, 1.2, etc.)
+    - Mantener las tareas lo suficientemente pequeñas como para completarlas en una sola sesión
+  apply:
+    - Seguir los patrones de código y convenciones existentes
+    - Cargar las habilidades de programación (coding skills) relevantes para el stack del proyecto
+  verify:
+    - Ejecutar pruebas si existe la infraestructura de pruebas
+    - Comparar la implementación contra cada escenario de las especificaciones
+  archive:
+    - Advertir antes de fusionar deltas destructivos (eliminaciones grandes)

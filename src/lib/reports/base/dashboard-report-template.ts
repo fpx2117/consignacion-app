@@ -23,6 +23,7 @@ export type DashboardReportData = {
     // Catalogo publico
     catalogoVisitas: number;
     catalogoVisitantesUnicos: number;
+    catalogoProductosVisibles?: number;
 
     // Stock
     stockDisponible: number;
@@ -35,6 +36,9 @@ export type DashboardReportData = {
 
     // Tendencia (optional, can be empty array for "all" period)
     tendencia: { date: string; ventasTotal: number; pagosTotal: number }[];
+
+    // Finanzas adicionales
+    saldoGlobal?: number;
 
     // Gastos detallados
     gastosDetalle: { motivo: string; categoria: string; monto: number; fecha: string; esCompartido: boolean }[];
@@ -119,7 +123,7 @@ export function buildDashboardReportHtml(data: DashboardReportData, branding: Br
     ${kpiBox("Ganancia Bruta", fmt(data.gananciaBruta), REPORT_COLORS.success, "Ventas − Costos")}
     ${kpiBox("Gastos Totales", fmt(data.gastos), REPORT_COLORS.danger, "Egresos del período", gastosBadge)}
     ${kpiBox("Ganancia Neta", fmt(data.utilidadNeta), color, "Bruta − Gastos", utilidadBadge)}
-    ${kpiBox("Ingresos en Caja", fmt(data.ingresosCaja), REPORT_COLORS.accentViolet, `${fmtN(data.cantidadPagos)} transacciones`)}
+    ${kpiBox("Movimiento Total", fmt(data.ingresosCaja), REPORT_COLORS.accentViolet, `${fmtN(data.cantidadPagos)} transacciones`)}
   </div>
   <div class="kpi-row" style="margin-top:10px;">
     ${kpiBox("Por Consignación", fmt(data.gananciaConsignacion), REPORT_COLORS.info, `${pctConsig}% de bruta`)}
@@ -131,6 +135,7 @@ export function buildDashboardReportHtml(data: DashboardReportData, branding: Br
   <div class="kpi-row">
     ${kpiBox("Visitas de Catalogo", fmtN(data.catalogoVisitas), REPORT_COLORS.accentBlue, "Catalogo publico")}
     ${kpiBox("Visitantes Unicos", fmtN(data.catalogoVisitantesUnicos), REPORT_COLORS.info, "Estimado deduplicado")}
+    ${kpiBox("En Catalogo", fmtN(data.catalogoProductosVisibles ?? 0) + " prod.", REPORT_COLORS.successStrong, "Activos con stock")}
   </div>
 
   ${data.gastosDetalle.length > 0 ? `
@@ -179,6 +184,11 @@ export function buildDashboardReportHtml(data: DashboardReportData, branding: Br
     ${kpiBox("Abiertas", fmtN(data.consignacionesAbiertas), REPORT_COLORS.successStrong, "Activas")}
     ${kpiBox("Cerradas", fmtN(data.consignacionesCerradas), REPORT_COLORS.textMuted, "Históricas")}
     ${kpiBox("Unidades Pendientes", fmtN(data.unitsPendientes) + " u.", REPORT_COLORS.danger, "Sin liquidar")}
+  </div>
+
+  ${sectionTitle("Finanzas Adicionales", color)}
+  <div class="kpi-row">
+    ${kpiBox("Saldo Global", fmt(data.saldoGlobal ?? 0), REPORT_COLORS.danger, "Deuda acumulada en clientes")}
   </div>
 
   ${data.tendencia.length > 0 ? `
