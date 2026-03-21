@@ -328,8 +328,8 @@ export function buildPosReportHtml(data: PosReportData, branding: BrandingDTO): 
 
   <!-- PÉRDIDA POR ROTURAS — rojo, solo si hay roturas -->
   ${(data.roturasDetalle && data.roturasDetalle.length > 0) ? `
-  <div class="mb-6 no-break">
-    <h3 class="text-[10px] font-black uppercase tracking-widest mb-3 pl-1" style="color:#e11d48">Pérdida por Roturas</h3>
+  <div class="mb-6 no-break" style="break-inside:avoid;page-break-inside:avoid">
+    <h3 class="text-[10px] font-black uppercase tracking-widest mb-3 pl-1" style="color:#e11d48;break-after:avoid;page-break-after:avoid">Pérdida por Roturas</h3>
     <div class="bg-white rounded-2xl border-2 overflow-hidden" style="border-color:#fecdd3">
       <table class="w-full">
         <thead>
