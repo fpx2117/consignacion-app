@@ -53,12 +53,22 @@ function toInt(v: string): number | undefined {
   return Number.isFinite(n) ? Math.trunc(n) : undefined;
 }
 
+export interface ProductoCreado {
+  id: number;
+  nombre: string;
+  sku?: string | null;
+  codigoBarra?: string | null;
+  stockDisponibleUnits: number;
+}
+
 export function CreateProductoDialog({
   trigger,
   onCreated,
+  onProductoCreado,
 }: {
   trigger?: React.ReactNode;
   onCreated?: () => void;
+  onProductoCreado?: (producto: ProductoCreado) => void;
 }) {
   const [open, setOpen] = React.useState(false);
   const [saving, setSaving] = React.useState(false);
@@ -139,10 +149,19 @@ export function CreateProductoDialog({
         subcategoriaId: subcategoriaId ? Number(subcategoriaId) : undefined,
       };
 
-      await apiService.createProducto(payload as unknown as CreateProductoInput);
+      const created = await apiService.createProducto(payload as unknown as CreateProductoInput);
       toast.success("Producto creado con éxito");
       setOpen(false);
       onCreated?.();
+      if (onProductoCreado && created) {
+        onProductoCreado({
+          id: Number(created.id),
+          nombre: created.nombre,
+          sku: created.sku ?? null,
+          codigoBarra: created.codigoBarra ?? null,
+          stockDisponibleUnits: Number((created as { stockDisponibleUnits?: unknown }).stockDisponibleUnits ?? 0),
+        });
+      }
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : "Error al crear producto");
     } finally {
