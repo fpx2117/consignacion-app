@@ -4,6 +4,7 @@ import * as React from "react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useSucursalStore } from "@/store/useSucursalStore";
+import { apiService } from "@/lib/apiService";
 import {
   Dialog,
   DialogContent,
@@ -36,6 +37,14 @@ interface ProductoBasico {
   sku?: string | null;
   codigoBarra?: string | null;
   stockDisponibleUnits: number;
+  imagenUrl?: string | null;
+  categoriaId?: number | null;
+  categoriaNombre?: string | null;
+}
+
+interface CategoriaBasica {
+  id: number;
+  nombre: string;
 }
 
 interface ItemSeleccionado {
@@ -43,6 +52,7 @@ interface ItemSeleccionado {
   nombre: string;
   sku?: string | null;
   cantidadEsperada: number;
+  imagenUrl?: string | null;
 }
 
 interface CrearPedidoDialogProps {
@@ -65,17 +75,20 @@ export function CrearPedidoDialog({ open, onOpenChange, onSuccess }: CrearPedido
   );
 
   const [productos, setProductos] = React.useState<ProductoBasico[]>([]);
+  const [categorias, setCategorias] = React.useState<CategoriaBasica[]>([]);
   const [loadingProductos, setLoadingProductos] = React.useState(false);
   const [busqueda, setBusqueda] = React.useState("");
+  const [categoriaFiltro, setCategoriaFiltro] = React.useState<number | null>(null);
   const [itemsSeleccionados, setItemsSeleccionados] = React.useState<ItemSeleccionado[]>([]);
   const [fechaEsperada, setFechaEsperada] = React.useState("");
   const [observaciones, setObservaciones] = React.useState("");
   const [saving, setSaving] = React.useState(false);
 
-  // Cargar productos al abrir
+  // Cargar productos y categorías al abrir
   React.useEffect(() => {
     if (!open) {
       setBusqueda("");
+      setCategoriaFiltro(null);
       setItemsSeleccionados([]);
       setFechaEsperada("");
       setObservaciones("");
@@ -87,15 +100,14 @@ export function CrearPedidoDialog({ open, onOpenChange, onSuccess }: CrearPedido
       ? `/api/productos?sucursalId=${activeSucursalId}`
       : "/api/productos";
 
-    fetch(url, { headers: sucursalHeaders })
-      .then(async (r) => {
-        const json = await r.json().catch(() => ({}));
-        if (!r.ok) throw new Error(json?.error || "Error interno al obtener productos");
-        return json;
-      })
-      .then((data) => {
+    Promise.all([
+      fetch(url, { headers: sucursalHeaders }).then((r) => r.json()),
+      apiService.getCategorias(),
+    ])
+      .then(([data, cats]) => {
         const arr = Array.isArray(data) ? data : Array.isArray(data?.data) ? data.data : [];
         setProductos(arr.filter((p: { activo?: boolean }) => p.activo !== false));
+        setCategorias(Array.isArray(cats) ? cats.map((c: { id: unknown; nombre: string }) => ({ id: Number(c.id), nombre: c.nombre })) : []);
       })
       .catch((err: unknown) => {
         setProductos([]);
@@ -104,19 +116,22 @@ export function CrearPedidoDialog({ open, onOpenChange, onSuccess }: CrearPedido
       .finally(() => setLoadingProductos(false));
   }, [open, activeSucursalId, sucursalHeaders]);
 
-  // Filtrado de productos por búsqueda
+  // Filtrado: muestra resultados si hay búsqueda o categoría seleccionada
+  const hayFiltroActivo = busqueda.trim().length > 0 || categoriaFiltro !== null;
+
   const productosFiltrados = React.useMemo(() => {
-    if (!busqueda.trim()) return [];
-    const term = busqueda.toLowerCase();
-    return productos
-      .filter(
-        (p) =>
-          p.nombre.toLowerCase().includes(term) ||
-          (p.sku && p.sku.toLowerCase().includes(term)) ||
-          (p.codigoBarra && p.codigoBarra.toLowerCase().includes(term))
-      )
-      .slice(0, 8);
-  }, [productos, busqueda]);
+    if (!hayFiltroActivo) return [];
+    const term = busqueda.toLowerCase().trim();
+    return productos.filter((p) => {
+      const matchCategoria = categoriaFiltro === null || p.categoriaId === categoriaFiltro;
+      const matchBusqueda =
+        !term ||
+        p.nombre.toLowerCase().includes(term) ||
+        (p.sku && p.sku.toLowerCase().includes(term)) ||
+        (p.codigoBarra && p.codigoBarra.toLowerCase().includes(term));
+      return matchCategoria && matchBusqueda;
+    });
+  }, [productos, busqueda, categoriaFiltro, hayFiltroActivo]);
 
   const yaSeleccionado = (id: number) => itemsSeleccionados.some((i) => i.productoId === id);
 
@@ -124,7 +139,7 @@ export function CrearPedidoDialog({ open, onOpenChange, onSuccess }: CrearPedido
     if (yaSeleccionado(p.id)) return;
     setItemsSeleccionados((prev) => [
       ...prev,
-      { productoId: p.id, nombre: p.nombre, sku: p.sku ?? p.codigoBarra, cantidadEsperada: 1 },
+      { productoId: p.id, nombre: p.nombre, sku: p.sku ?? p.codigoBarra, cantidadEsperada: 1, imagenUrl: p.imagenUrl },
     ]);
     setBusqueda("");
   }
@@ -139,14 +154,7 @@ export function CrearPedidoDialog({ open, onOpenChange, onSuccess }: CrearPedido
     );
   }
 
-  function handleProductoCreado(p: ProductoCreado) {
-    if (yaSeleccionado(p.id)) return;
-    setItemsSeleccionados((prev) => [
-      ...prev,
-      { productoId: p.id, nombre: p.nombre, sku: p.sku ?? p.codigoBarra, cantidadEsperada: 1 },
-    ]);
-    setBusqueda("");
-    // Recargar lista de productos
+  function recargarProductos() {
     const url = activeSucursalId ? `/api/productos?sucursalId=${activeSucursalId}` : "/api/productos";
     fetch(url, { headers: sucursalHeaders })
       .then((r) => r.json())
@@ -155,6 +163,16 @@ export function CrearPedidoDialog({ open, onOpenChange, onSuccess }: CrearPedido
         setProductos(arr.filter((p: { activo?: boolean }) => p.activo !== false));
       })
       .catch(() => {});
+  }
+
+  function handleProductoCreado(p: ProductoCreado) {
+    if (yaSeleccionado(p.id)) return;
+    setItemsSeleccionados((prev) => [
+      ...prev,
+      { productoId: p.id, nombre: p.nombre, sku: p.sku ?? p.codigoBarra, cantidadEsperada: 1, imagenUrl: null },
+    ]);
+    setBusqueda("");
+    recargarProductos();
   }
 
   const canSubmit =
@@ -205,7 +223,7 @@ export function CrearPedidoDialog({ open, onOpenChange, onSuccess }: CrearPedido
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[560px] p-0 overflow-hidden border-none shadow-2xl bg-background">
+      <DialogContent className="sm:max-w-[620px] p-0 overflow-hidden border-none shadow-2xl bg-background">
         <DialogHeader className="p-6 pb-3 border-b bg-muted/20">
           <div className="flex items-center gap-2 text-primary">
             <ClipboardList className="h-5 w-5" />
@@ -221,6 +239,41 @@ export function CrearPedidoDialog({ open, onOpenChange, onSuccess }: CrearPedido
           {/* BUSCADOR DE PRODUCTOS */}
           <div className="space-y-2">
             <Label className="text-xs font-bold uppercase text-muted-foreground">Agregar Productos</Label>
+
+            {/* Filtros por categoría */}
+            {categorias.length > 0 && (
+              <div className="flex flex-wrap gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => setCategoriaFiltro(null)}
+                  className={cn(
+                    "px-2.5 py-1 rounded-full text-[11px] font-bold transition-colors",
+                    categoriaFiltro === null
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-muted/60 text-muted-foreground hover:bg-muted"
+                  )}
+                >
+                  Todas
+                </button>
+                {categorias.map((cat) => (
+                  <button
+                    key={cat.id}
+                    type="button"
+                    onClick={() => setCategoriaFiltro(categoriaFiltro === cat.id ? null : cat.id)}
+                    className={cn(
+                      "px-2.5 py-1 rounded-full text-[11px] font-bold transition-colors",
+                      categoriaFiltro === cat.id
+                        ? "bg-primary text-primary-foreground"
+                        : "bg-muted/60 text-muted-foreground hover:bg-muted"
+                    )}
+                  >
+                    {cat.nombre}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {/* Input búsqueda */}
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
               <Input
@@ -235,18 +288,18 @@ export function CrearPedidoDialog({ open, onOpenChange, onSuccess }: CrearPedido
               )}
             </div>
 
-            {/* Resultados de búsqueda */}
-            {busqueda.trim().length > 0 && (
-              <div className="border border-border/60 rounded-xl overflow-hidden bg-background shadow-md">
+            {/* Resultados */}
+            {hayFiltroActivo && (
+              <div className="border border-border/60 rounded-xl overflow-hidden bg-background shadow-md max-h-64 overflow-y-auto">
                 {productosFiltrados.length === 0 ? (
                   <div className="p-4 text-sm text-muted-foreground text-center space-y-2">
-                    <p>Sin resultados para &quot;{busqueda}&quot;</p>
+                    <p>Sin resultados{busqueda ? ` para "${busqueda}"` : ""}</p>
                     <CreateProductoDialog
                       onProductoCreado={handleProductoCreado}
                       trigger={
                         <button type="button" className="flex items-center gap-2 mx-auto text-xs font-bold text-primary hover:underline">
                           <Plus className="h-3.5 w-3.5" />
-                          Crear &quot;{busqueda}&quot; como nuevo producto
+                          {busqueda ? `Crear "${busqueda}" como nuevo producto` : "Crear nuevo producto"}
                         </button>
                       }
                     />
@@ -261,31 +314,46 @@ export function CrearPedidoDialog({ open, onOpenChange, onSuccess }: CrearPedido
                         onClick={() => agregarProducto(p)}
                         disabled={selected}
                         className={cn(
-                          "w-full flex items-center justify-between px-4 py-3 text-sm text-left border-b border-border/40 last:border-0 transition-colors",
+                          "w-full flex items-center gap-3 px-4 py-3 text-sm text-left border-b border-border/40 last:border-0 transition-colors",
                           selected
                             ? "opacity-40 cursor-not-allowed bg-muted/30"
                             : "hover:bg-muted/50 cursor-pointer"
                         )}
                       >
-                        <div className="flex items-center gap-3">
-                          <div className="h-8 w-8 rounded-lg bg-muted/60 flex items-center justify-center shrink-0">
+                        {/* Imagen o ícono */}
+                        <div className="h-10 w-10 rounded-lg bg-muted/60 flex items-center justify-center shrink-0 overflow-hidden">
+                          {p.imagenUrl ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img src={p.imagenUrl} alt={p.nombre} className="h-10 w-10 object-cover" />
+                          ) : (
                             <Package className="h-4 w-4 text-muted-foreground" />
-                          </div>
-                          <div>
-                            <p className="font-semibold text-foreground">{p.nombre}</p>
+                          )}
+                        </div>
+
+                        {/* Nombre completo + SKU */}
+                        <div className="flex-1 min-w-0">
+                          <p className="font-semibold text-foreground text-sm leading-tight">{p.nombre}</p>
+                          <div className="flex items-center gap-2 mt-0.5">
+                            {p.categoriaNombre && (
+                              <span className="text-[10px] font-bold text-muted-foreground/70 bg-muted/60 px-1.5 py-0.5 rounded-full">
+                                {p.categoriaNombre}
+                              </span>
+                            )}
                             {p.sku && (
-                              <p className="text-[10px] font-mono text-muted-foreground">{p.sku}</p>
+                              <span className="text-[10px] font-mono text-muted-foreground">{p.sku}</span>
                             )}
                           </div>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs text-muted-foreground">
+
+                        {/* Stock + acción */}
+                        <div className="flex items-center gap-2 shrink-0">
+                          <span className="text-xs text-muted-foreground whitespace-nowrap">
                             Stock: {p.stockDisponibleUnits}
                           </span>
                           {selected ? (
                             <span className="text-[10px] font-bold text-[color:var(--status-success-strong)] bg-[color:var(--status-success-strong)]/10 px-1.5 py-0.5 rounded-md">Agregado</span>
                           ) : (
-                            <Plus className="h-4 w-4 text-primary" />
+                            <Plus className="h-4 w-4 text-primary shrink-0" />
                           )}
                         </div>
                       </button>
@@ -319,8 +387,18 @@ export function CrearPedidoDialog({ open, onOpenChange, onSuccess }: CrearPedido
                     key={item.productoId}
                     className="flex items-center gap-3 p-2 rounded-lg bg-background border border-border/40"
                   >
+                    {/* Imagen miniatura */}
+                    <div className="h-9 w-9 rounded-lg bg-muted/60 flex items-center justify-center shrink-0 overflow-hidden">
+                      {item.imagenUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={item.imagenUrl} alt={item.nombre} className="h-9 w-9 object-cover" />
+                      ) : (
+                        <Package className="h-4 w-4 text-muted-foreground" />
+                      )}
+                    </div>
+
                     <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-sm text-foreground truncate">{item.nombre}</p>
+                      <p className="font-semibold text-sm text-foreground leading-tight">{item.nombre}</p>
                       {item.sku && (
                         <p className="text-[10px] font-mono text-muted-foreground">{item.sku}</p>
                       )}
