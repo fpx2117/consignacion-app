@@ -77,6 +77,17 @@ export async function GET(
 
         const catalogVisitDelegate = getCatalogVisitDelegate();
 
+        // Verificar si el catálogo es compartido (separarListaPorSucursal: false)
+        const sharedCatalogConfig = await prisma.configuracion.findFirst({
+            where: { mostrarListaPrecios: true, separarListaPorSucursal: false },
+            select: { sucursalId: true },
+        });
+        const hasSharedCatalog = Boolean(sharedCatalogConfig);
+        const catalogVisitWhere = {
+            ...(!isGlobal && !hasSharedCatalog ? sucursalWhere : {}),
+            ...(start ? { visitedAt: { gte: start } } : {}),
+        };
+
         // Fetch data in parallel
         const [ventasAgg, pagosAgg, ventasConDetalles, pagosPorMetodo, gastosPropiosAgg, gastosLinksData, catalogVisitsCount, roturasData] = await Promise.all([
             // Totales de ventas directas
@@ -144,11 +155,9 @@ export async function GET(
                     select: { montoProporcional: true },
                 }),
 
-            // Visitas al catálogo del período
+            // Visitas al catálogo del período (respeta catálogo compartido)
             catalogVisitDelegate
-                ? catalogVisitDelegate.count({
-                    where: { ...sucursalWhere, ...(start ? { visitedAt: { gte: start } } : {}) },
-                })
+                ? catalogVisitDelegate.count({ where: catalogVisitWhere })
                 : Promise.resolve(0),
 
             // Pérdida por roturas en ventas anuladas del período
