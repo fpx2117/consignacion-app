@@ -27,6 +27,8 @@ import {
   PackagePlus,
 } from "lucide-react";
 import { useTimezone } from "@/hooks/useTimezone";
+import { CreateProductoDialog } from "@/app/(system-guard)/(protected)/productos/components/create-producto-dialog";
+import type { ProductoCreado } from "@/app/(system-guard)/(protected)/productos/components/create-producto-dialog";
 
 interface ProductoBasico {
   id: number;
@@ -137,6 +139,24 @@ export function CrearPedidoDialog({ open, onOpenChange, onSuccess }: CrearPedido
     );
   }
 
+  function handleProductoCreado(p: ProductoCreado) {
+    if (yaSeleccionado(p.id)) return;
+    setItemsSeleccionados((prev) => [
+      ...prev,
+      { productoId: p.id, nombre: p.nombre, sku: p.sku ?? p.codigoBarra, cantidadEsperada: 1 },
+    ]);
+    setBusqueda("");
+    // Recargar lista de productos
+    const url = activeSucursalId ? `/api/productos?sucursalId=${activeSucursalId}` : "/api/productos";
+    fetch(url, { headers: sucursalHeaders })
+      .then((r) => r.json())
+      .then((data) => {
+        const arr = Array.isArray(data) ? data : Array.isArray(data?.data) ? data.data : [];
+        setProductos(arr.filter((p: { activo?: boolean }) => p.activo !== false));
+      })
+      .catch(() => {});
+  }
+
   const canSubmit =
     itemsSeleccionados.length > 0 &&
     itemsSeleccionados.every((i) => i.cantidadEsperada > 0) &&
@@ -219,8 +239,17 @@ export function CrearPedidoDialog({ open, onOpenChange, onSuccess }: CrearPedido
             {busqueda.trim().length > 0 && (
               <div className="border border-border/60 rounded-xl overflow-hidden bg-background shadow-md">
                 {productosFiltrados.length === 0 ? (
-                  <div className="p-4 text-sm text-muted-foreground text-center">
-                    Sin resultados para &quot;{busqueda}&quot;
+                  <div className="p-4 text-sm text-muted-foreground text-center space-y-2">
+                    <p>Sin resultados para &quot;{busqueda}&quot;</p>
+                    <CreateProductoDialog
+                      onProductoCreado={handleProductoCreado}
+                      trigger={
+                        <button type="button" className="flex items-center gap-2 mx-auto text-xs font-bold text-primary hover:underline">
+                          <Plus className="h-3.5 w-3.5" />
+                          Crear &quot;{busqueda}&quot; como nuevo producto
+                        </button>
+                      }
+                    />
                   </div>
                 ) : (
                   productosFiltrados.map((p) => {
@@ -266,6 +295,17 @@ export function CrearPedidoDialog({ open, onOpenChange, onSuccess }: CrearPedido
               </div>
             )}
           </div>
+
+          {/* CREAR NUEVO PRODUCTO */}
+          <CreateProductoDialog
+            onProductoCreado={handleProductoCreado}
+            trigger={
+              <button type="button" className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground hover:text-primary transition-colors">
+                <Plus className="h-3.5 w-3.5" />
+                Crear nuevo producto y agregarlo
+              </button>
+            }
+          />
 
           {/* LISTA DE ITEMS SELECCIONADOS */}
           {itemsSeleccionados.length > 0 && (
