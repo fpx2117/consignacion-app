@@ -79,6 +79,7 @@ export async function GET(req: NextRequest) {
             id: true,
             nombre: true,
             sku: true,
+            imagenUrl: true,
             stockSucursals: {
               ...(isGlobal ? {} : { where: { sucursalId } }),
               select: { stockDisponibleUnits: true },
@@ -100,6 +101,7 @@ export async function GET(req: NextRequest) {
             id: item.productoId,
             nombre: producto?.nombre ?? "Producto eliminado",
             sku: producto?.sku ?? null,
+            imagenUrl: producto?.imagenUrl ?? null,
             stockDisponibleUnits: isGlobal
               ? (producto?.stockSucursals?.reduce((acc, s) => acc + (s.stockDisponibleUnits || 0), 0) ?? 0)
               : (producto?.stockSucursals?.[0]?.stockDisponibleUnits ?? 0),

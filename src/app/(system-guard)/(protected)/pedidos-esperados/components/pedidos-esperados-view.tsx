@@ -59,6 +59,14 @@ import {
   CheckCheck,
   PackageSearch,
   Trash2,
+  ZoomIn,
+  X,
+  Package,
+  Hash,
+  ArrowDownToLine,
+  CheckCircle2,
+  Clock,
+  MinusCircle,
 } from "lucide-react";
 
 // Sub-components
@@ -516,6 +524,36 @@ export function PedidosEsperadosView() {
 
 // ─── SUB-COMPONENTS ───────────────────────────────────────────────────────────
 
+const ITEM_ESTADO_CONFIG: Record<
+  string,
+  { label: string; icon: React.ElementType; className: string; dot: string }
+> = {
+  PENDIENTE: {
+    label: "Pendiente",
+    icon: Clock,
+    className: "bg-[color:var(--theme-ocean-primary)]/10 text-[color:var(--theme-ocean-primary)] border-[color:var(--theme-ocean-primary)]/20",
+    dot: "bg-[color:var(--theme-ocean-primary)]",
+  },
+  CONFIRMADO: {
+    label: "Confirmado",
+    icon: CheckCircle2,
+    className: "bg-[color:var(--status-success-strong)]/10 text-[color:var(--status-success-strong)] border-[color:var(--status-success-strong)]/20",
+    dot: "bg-[color:var(--status-success-strong)]",
+  },
+  PARCIAL: {
+    label: "Parcial",
+    icon: ArrowDownToLine,
+    className: "bg-yellow-500/10 text-yellow-700 border-yellow-500/20 dark:text-yellow-400",
+    dot: "bg-yellow-500",
+  },
+  CANCELADO: {
+    label: "Cancelado",
+    icon: MinusCircle,
+    className: "bg-muted/40 text-muted-foreground border-border/40 line-through",
+    dot: "bg-muted-foreground/50",
+  },
+};
+
 function PedidoDetalleDialog({
   pedido,
   open,
@@ -525,55 +563,228 @@ function PedidoDetalleDialog({
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
+  const [visorImagen, setVisorImagen] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    if (!open) setVisorImagen(null);
+  }, [open]);
+
   if (!pedido) return null;
 
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[700px] rounded-2xl">
-        <DialogHeader>
-          <DialogTitle className="text-xl font-black">Detalle del pedido #{pedido.id}</DialogTitle>
-          <DialogDescription>
-            Fecha esperada: {formatFecha(pedido.fechaEsperada)} - Estado: {pedido.estado}
-          </DialogDescription>
-        </DialogHeader>
+  const totalEsperado = pedido.items.reduce((a, i) => a + i.cantidadEsperada, 0);
+  const totalRecibido = pedido.items.reduce((a, i) => a + i.cantidadRecibida, 0);
+  const pctRecibido = totalEsperado > 0 ? Math.round((totalRecibido / totalEsperado) * 100) : 0;
 
-        <div className="space-y-4 max-h-[65vh] overflow-y-auto">
-          <div className="rounded-xl border border-border/60 overflow-hidden">
-            <Table>
-              <TableHeader className="bg-muted/30">
-                <TableRow>
-                  <TableHead>Producto</TableHead>
-                  <TableHead>SKU</TableHead>
-                  <TableHead className="text-center">Esperada</TableHead>
-                  <TableHead className="text-center">Recibida</TableHead>
-                  <TableHead>Estado</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {pedido.items.map((item) => (
-                  <TableRow key={item.id}>
-                    <TableCell className="font-medium">{item.producto.nombre}</TableCell>
-                    <TableCell className="text-xs text-muted-foreground">{item.producto.sku ?? "-"}</TableCell>
-                    <TableCell className="text-center font-bold tabular-nums">{item.cantidadEsperada}</TableCell>
-                    <TableCell className="text-center font-bold tabular-nums">{item.cantidadRecibida}</TableCell>
-                    <TableCell>
-                      <Badge variant="outline" className="font-semibold">{item.estado}</Badge>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+  return (
+    <>
+      {/* Lightbox */}
+      {visorImagen && (
+        <div
+          className="fixed inset-0 z-[200] flex items-center justify-center bg-black/80 backdrop-blur-sm"
+          onClick={() => setVisorImagen(null)}
+        >
+          <button
+            type="button"
+            onClick={() => setVisorImagen(null)}
+            className="absolute top-4 right-4 text-white/70 hover:text-white bg-white/10 hover:bg-white/20 rounded-full p-2 transition-colors"
+          >
+            <X className="h-5 w-5" />
+          </button>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={visorImagen}
+            alt="Imagen ampliada"
+            className="max-h-[85vh] max-w-[85vw] object-contain rounded-xl shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          />
+        </div>
+      )}
+
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="sm:max-w-[680px] p-0 overflow-hidden border-none shadow-2xl bg-background rounded-2xl">
+
+          {/* HEADER */}
+          <DialogHeader className="p-6 pb-4 border-b bg-gradient-to-r from-primary/5 via-primary/3 to-transparent">
+            <div className="flex items-start justify-between gap-3">
+              <div className="space-y-1.5">
+                <div className="flex items-center gap-2.5">
+                  <div className="h-9 w-9 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+                    <ClipboardList className="h-5 w-5 text-primary" />
+                  </div>
+                  <div>
+                    <DialogTitle className="text-xl font-black tracking-tight">
+                      Pedido #{pedido.id}
+                    </DialogTitle>
+                    <DialogDescription className="text-xs mt-0.5 text-muted-foreground">
+                      {formatFecha(pedido.fechaEsperada)} · {pedido.items.length} producto{pedido.items.length !== 1 ? "s" : ""}
+                    </DialogDescription>
+                  </div>
+                </div>
+              </div>
+              <PedidoEstadoBadge estado={pedido.estado} />
+            </div>
+
+            {/* Barra de progreso */}
+            {pedido.estado !== "CANCELADO" && (
+              <div className="mt-4 space-y-1.5">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="font-bold text-muted-foreground uppercase tracking-wider">Recepción de stock</span>
+                  <span className="font-black text-foreground tabular-nums">
+                    {totalRecibido} / {totalEsperado} unidades ({pctRecibido}%)
+                  </span>
+                </div>
+                <div className="h-2 rounded-full bg-muted/50 overflow-hidden">
+                  <div
+                    className={cn(
+                      "h-full rounded-full transition-all",
+                      pctRecibido === 100
+                        ? "bg-[color:var(--status-success-strong)]"
+                        : pctRecibido > 0
+                        ? "bg-yellow-500"
+                        : "bg-[color:var(--theme-ocean-primary)]"
+                    )}
+                    style={{ width: `${pctRecibido}%` }}
+                  />
+                </div>
+              </div>
+            )}
+          </DialogHeader>
+
+          {/* CUERPO */}
+          <div className="p-5 space-y-3 max-h-[55vh] overflow-y-auto">
+            {pedido.items.map((item) => {
+              const estadoCfg = ITEM_ESTADO_CONFIG[item.estado] ?? ITEM_ESTADO_CONFIG.PENDIENTE;
+              const IconEstado = estadoCfg.icon;
+              const imgUrl = (item.producto as { imagenUrl?: string | null }).imagenUrl ?? null;
+
+              return (
+                <div
+                  key={item.id}
+                  className={cn(
+                    "flex items-center gap-3 p-3 rounded-xl border transition-colors",
+                    item.estado === "CANCELADO"
+                      ? "bg-muted/10 border-border/30 opacity-60"
+                      : item.estado === "CONFIRMADO"
+                      ? "bg-[color:var(--status-success-strong)]/5 border-[color:var(--status-success-strong)]/15"
+                      : item.estado === "PARCIAL"
+                      ? "bg-yellow-500/5 border-yellow-500/15"
+                      : "bg-background border-border/40 hover:border-border/70"
+                  )}
+                >
+                  {/* Imagen del producto */}
+                  <button
+                    type="button"
+                    onClick={() => { if (imgUrl) setVisorImagen(imgUrl); }}
+                    className={cn(
+                      "h-14 w-14 rounded-xl shrink-0 overflow-hidden border border-border/30 bg-muted/50 flex items-center justify-center",
+                      imgUrl ? "cursor-zoom-in group relative hover:ring-2 hover:ring-primary/40 transition-all" : "cursor-default"
+                    )}
+                  >
+                    {imgUrl ? (
+                      <div className="relative h-14 w-14">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={imgUrl} alt={item.producto.nombre} className="h-14 w-14 object-cover" />
+                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/35 transition-colors flex items-center justify-center">
+                          <ZoomIn className="h-4 w-4 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                        </div>
+                      </div>
+                    ) : (
+                      <Package className="h-5 w-5 text-muted-foreground/50" />
+                    )}
+                  </button>
+
+                  {/* Info del producto */}
+                  <div className="flex-1 min-w-0 space-y-0.5">
+                    <p className="font-bold text-sm text-foreground leading-tight">{item.producto.nombre}</p>
+                    {item.producto.sku && (
+                      <div className="flex items-center gap-1 text-[10px] text-muted-foreground font-mono">
+                        <Hash className="h-2.5 w-2.5" />
+                        {item.producto.sku}
+                      </div>
+                    )}
+                    {/* Estado badge */}
+                    <div className="pt-0.5">
+                      <Badge
+                        variant="outline"
+                        className={cn("text-[10px] px-1.5 py-0 h-5 font-bold border gap-1 uppercase", estadoCfg.className)}
+                      >
+                        <span className={cn("h-1.5 w-1.5 rounded-full shrink-0", estadoCfg.dot)} />
+                        <IconEstado className="h-2.5 w-2.5" />
+                        {estadoCfg.label}
+                      </Badge>
+                    </div>
+                  </div>
+
+                  {/* Cantidades */}
+                  <div className="flex items-center gap-2 shrink-0">
+                    <div className="text-center min-w-[44px]">
+                      <p className="text-[10px] font-bold uppercase text-muted-foreground tracking-wider">Esp.</p>
+                      <p className="text-lg font-black tabular-nums text-foreground">{item.cantidadEsperada}</p>
+                    </div>
+                    <div className={cn(
+                      "h-8 w-px rounded-full",
+                      item.cantidadRecibida === item.cantidadEsperada
+                        ? "bg-[color:var(--status-success-strong)]/40"
+                        : item.cantidadRecibida > 0
+                        ? "bg-yellow-500/40"
+                        : "bg-border/60"
+                    )} />
+                    <div className="text-center min-w-[44px]">
+                      <p className="text-[10px] font-bold uppercase text-muted-foreground tracking-wider">Recib.</p>
+                      <p className={cn(
+                        "text-lg font-black tabular-nums",
+                        item.cantidadRecibida === item.cantidadEsperada
+                          ? "text-[color:var(--status-success-strong)]"
+                          : item.cantidadRecibida > 0
+                          ? "text-yellow-600 dark:text-yellow-400"
+                          : "text-muted-foreground"
+                      )}>
+                        {item.cantidadRecibida}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+
+            {/* Observaciones */}
+            {pedido.observaciones && (
+              <div className="rounded-xl border border-border/50 p-3.5 bg-muted/20 mt-2">
+                <p className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider mb-1.5">Observaciones</p>
+                <p className="text-sm text-foreground/80 italic">{pedido.observaciones}</p>
+              </div>
+            )}
           </div>
 
-          {pedido.observaciones && (
-            <div className="rounded-xl border border-border/60 p-3 bg-muted/20">
-              <p className="text-xs uppercase font-bold text-muted-foreground mb-1">Observaciones</p>
-              <p className="text-sm">{pedido.observaciones}</p>
+          {/* FOOTER con totales */}
+          <div className="px-5 py-4 border-t bg-muted/10 flex items-center justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <div className="text-center">
+                <p className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider">Esperado</p>
+                <p className="text-xl font-black tabular-nums text-foreground">{totalEsperado}</p>
+              </div>
+              <div className="h-8 w-px bg-border/60 rounded-full" />
+              <div className="text-center">
+                <p className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider">Recibido</p>
+                <p className={cn(
+                  "text-xl font-black tabular-nums",
+                  totalRecibido === totalEsperado
+                    ? "text-[color:var(--status-success-strong)]"
+                    : totalRecibido > 0
+                    ? "text-yellow-600 dark:text-yellow-400"
+                    : "text-muted-foreground"
+                )}>
+                  {totalRecibido}
+                </p>
+              </div>
             </div>
-          )}
-        </div>
-      </DialogContent>
-    </Dialog>
+            <Button variant="outline" className="rounded-xl h-9" onClick={() => onOpenChange(false)}>
+              Cerrar
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
 

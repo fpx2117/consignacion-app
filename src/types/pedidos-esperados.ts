@@ -19,6 +19,7 @@ export interface PedidoEsperadoItemProducto {
   id: number;
   nombre: string;
   sku: string | null;
+  imagenUrl?: string | null;
   stockDisponibleUnits: number;
 }
 
