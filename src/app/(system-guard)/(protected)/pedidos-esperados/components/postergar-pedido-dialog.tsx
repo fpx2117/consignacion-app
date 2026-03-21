@@ -77,7 +77,7 @@ export function PostergarPedidoDialog({
           ...sucursalHeaders,
         },
         body: JSON.stringify({
-          nuevaFecha: `${nuevaFecha}T12:00:00.000Z`,
+          nuevaFecha: `${nuevaFecha}T23:59:59.000Z`,
           motivo: motivo.trim() || undefined,
         }),
       });
