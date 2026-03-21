@@ -151,7 +151,7 @@ export function CrearPedidoDialog({ open, onOpenChange, onSuccess }: CrearPedido
     try {
       const payload = {
         sucursalId: activeSucursalId,
-        fechaEsperada: `${fechaEsperada}T12:00:00.000Z`,
+        fechaEsperada: `${fechaEsperada}T23:59:59.000Z`,
         observaciones: observaciones.trim() || undefined,
         items: itemsSeleccionados.map((i) => ({
           productoId: i.productoId,
