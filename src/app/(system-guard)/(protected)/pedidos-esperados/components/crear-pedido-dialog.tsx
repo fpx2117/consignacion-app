@@ -26,6 +26,7 @@ import {
   ClipboardList,
   PackagePlus,
 } from "lucide-react";
+import { useTimezone } from "@/hooks/useTimezone";
 
 interface ProductoBasico {
   id: number;
@@ -48,12 +49,13 @@ interface CrearPedidoDialogProps {
   onSuccess: () => void;
 }
 
-// Fecha minima: hoy
-function getTodayStr() {
-  return new Date().toISOString().split("T")[0];
+// Fecha mínima: hoy en el timezone configurado
+function getTodayStr(tz: string) {
+  return new Intl.DateTimeFormat("en-CA", { timeZone: tz }).format(new Date());
 }
 
 export function CrearPedidoDialog({ open, onOpenChange, onSuccess }: CrearPedidoDialogProps) {
+  const { tz } = useTimezone();
   const activeSucursalId = useSucursalStore((s) => s.activeSucursalId);
   const sucursalHeaders = React.useMemo<Record<string, string>>(
     () => activeSucursalId ? { "x-sucursal-id": String(activeSucursalId) } : {} as Record<string, string>,
@@ -139,7 +141,7 @@ export function CrearPedidoDialog({ open, onOpenChange, onSuccess }: CrearPedido
     itemsSeleccionados.length > 0 &&
     itemsSeleccionados.every((i) => i.cantidadEsperada > 0) &&
     fechaEsperada !== "" &&
-    fechaEsperada >= getTodayStr();
+    fechaEsperada >= getTodayStr(tz);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -149,7 +151,7 @@ export function CrearPedidoDialog({ open, onOpenChange, onSuccess }: CrearPedido
     try {
       const payload = {
         sucursalId: activeSucursalId,
-        fechaEsperada: new Date(fechaEsperada).toISOString(),
+        fechaEsperada: `${fechaEsperada}T12:00:00.000Z`,
         observaciones: observaciones.trim() || undefined,
         items: itemsSeleccionados.map((i) => ({
           productoId: i.productoId,
@@ -319,13 +321,13 @@ export function CrearPedidoDialog({ open, onOpenChange, onSuccess }: CrearPedido
               <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
               <Input
                 type="date"
-                min={getTodayStr()}
+                min={getTodayStr(tz)}
                 value={fechaEsperada}
                 onChange={(e) => setFechaEsperada(e.target.value)}
                 className="pl-9 h-11 bg-muted/30 border-transparent"
               />
             </div>
-            {fechaEsperada && fechaEsperada < getTodayStr() && (
+            {fechaEsperada && fechaEsperada < getTodayStr(tz) && (
               <p className="text-xs text-[color:var(--status-danger)] font-bold">La fecha debe ser hoy o en el futuro</p>
             )}
           </div>

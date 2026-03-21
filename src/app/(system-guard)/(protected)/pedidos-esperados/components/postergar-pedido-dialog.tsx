@@ -17,6 +17,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { CalendarClock, Loader2, X } from "lucide-react";
+import { useTimezone } from "@/hooks/useTimezone";
 
 interface PostergarPedidoDialogProps {
   pedido: PedidoEsperado | null;
@@ -25,10 +26,10 @@ interface PostergarPedidoDialogProps {
   onSuccess: () => void;
 }
 
-function getTomorrowStr() {
+function getTomorrowStr(tz: string) {
   const d = new Date();
   d.setDate(d.getDate() + 1);
-  return d.toISOString().split("T")[0];
+  return new Intl.DateTimeFormat("en-CA", { timeZone: tz }).format(d);
 }
 
 function formatFechaCorta(fechaISO: string) {
@@ -43,6 +44,7 @@ export function PostergarPedidoDialog({
   onOpenChange,
   onSuccess,
 }: PostergarPedidoDialogProps) {
+  const { tz } = useTimezone();
   const activeSucursalId = useSucursalStore((s) => s.activeSucursalId);
   const sucursalHeaders = React.useMemo<Record<string, string>>(
     () => activeSucursalId ? { "x-sucursal-id": String(activeSucursalId) } : {} as Record<string, string>,
@@ -59,7 +61,7 @@ export function PostergarPedidoDialog({
     }
   }, [open]);
 
-  const minFecha = getTomorrowStr();
+  const minFecha = getTomorrowStr(tz);
   const canSubmit = nuevaFecha !== "" && nuevaFecha >= minFecha;
 
   async function handleSubmit(e: React.FormEvent) {
@@ -75,7 +77,7 @@ export function PostergarPedidoDialog({
           ...sucursalHeaders,
         },
         body: JSON.stringify({
-          nuevaFecha: new Date(nuevaFecha).toISOString(),
+          nuevaFecha: `${nuevaFecha}T12:00:00.000Z`,
           motivo: motivo.trim() || undefined,
         }),
       });
