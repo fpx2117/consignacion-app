@@ -23,7 +23,6 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     const conCostos = req.nextUrl.searchParams.get("conCostos") !== "false";
     const conValuacion = req.nextUrl.searchParams.get("conValuacion") !== "false";
     const soloConStock = req.nextUrl.searchParams.get("soloConStock") === "true";
-    const baseUrl = req.nextUrl.origin;
 
     const requestedPathSucursalId = id === "all" ? 0 : Number(id);
     const scopedSucursalId = resolveRequestedSucursalId(auth, requestedPathSucursalId);
@@ -112,7 +111,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     const branding = await getBranding(brandingSucursalId);
 
     // 6. Generar HTML
-    const htmlContent = await buildInventoryHtml(groups, branding, timezone.tz, conCostos, conValuacion, baseUrl);
+    const htmlContent = await buildInventoryHtml(groups, branding, timezone.tz, conCostos, conValuacion);
 
     browser = await puppeteer.launch({
       headless: true,

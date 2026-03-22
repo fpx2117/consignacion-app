@@ -32,15 +32,38 @@ export interface InventoryGroup {
   productos: ProductoInventario[];
 }
 
-async function fetchImageAsBase64(url: string, baseUrl: string): Promise<string> {
+async function fetchImageAsBase64(url: string): Promise<string> {
   try {
-    const absoluteUrl = url.startsWith("http") ? url : `${baseUrl}${url}`;
-    const res = await fetch(absoluteUrl, { signal: AbortSignal.timeout(8000) });
-    if (!res.ok) return "";
-    const contentType = res.headers.get("content-type") || "image/jpeg";
-    const mimeType = contentType.split(";")[0].trim();
-    const buf = await res.arrayBuffer();
-    return `data:${mimeType};base64,${Buffer.from(buf).toString("base64")}`;
+    // URLs locales (/api/files/<filename>) → leer directo del filesystem
+    // evita problemas de red en Railway/Puppeteer
+    const localMatch = url.match(/^\/api\/files\/([^/?#]+)$/);
+    if (localMatch) {
+      const { readFile } = await import("fs/promises");
+      const path = await import("path");
+      const { getUploadStorageDir } = await import("@/lib/uploads");
+      const filename = localMatch[1];
+      const ext = filename.split(".").pop()?.toLowerCase() ?? "";
+      const mimeMap: Record<string, string> = {
+        jpg: "image/jpeg", jpeg: "image/jpeg", png: "image/png",
+        webp: "image/webp", gif: "image/gif", avif: "image/avif",
+      };
+      const mime = mimeMap[ext] ?? "image/jpeg";
+      const filePath = path.join(getUploadStorageDir(), filename);
+      const buf = await readFile(filePath);
+      return `data:${mime};base64,${buf.toString("base64")}`;
+    }
+
+    // URLs externas (http/https) → fetch normal
+    if (url.startsWith("http")) {
+      const res = await fetch(url, { signal: AbortSignal.timeout(8000) });
+      if (!res.ok) return "";
+      const contentType = res.headers.get("content-type") || "image/jpeg";
+      const mimeType = contentType.split(";")[0].trim();
+      const buf = await res.arrayBuffer();
+      return `data:${mimeType};base64,${Buffer.from(buf).toString("base64")}`;
+    }
+
+    return "";
   } catch {
     return "";
   }
@@ -52,7 +75,6 @@ export async function buildInventoryHtml(
   zonaHoraria: string,
   conCostos = true,
   conValuacion = true,
-  baseUrl = "",
 ) {
   const tz = resolveReportTimezone(zonaHoraria);
   // --- 1. PROCESAMIENTO Y CÁLCULOS GLOBALES ---
@@ -142,7 +164,7 @@ export async function buildInventoryHtml(
       if (imgUrl && !imageMap.has(imgUrl)) {
         imageMap.set(imgUrl, ""); // reservar slot
         imagePromises.push(
-          fetchImageAsBase64(imgUrl, baseUrl).then((dataUrl) => {
+          fetchImageAsBase64(imgUrl).then((dataUrl) => {
             imageMap.set(imgUrl, dataUrl);
           })
         );
