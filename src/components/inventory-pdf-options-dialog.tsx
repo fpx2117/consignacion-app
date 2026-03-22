@@ -10,7 +10,7 @@ import {
   DialogClose,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { BarChart3, FileText, Loader2, Package, X } from "lucide-react";
+import { BarChart3, FileText, Loader2, Package, PackageX, X } from "lucide-react";
 import { useSucursalStore } from "@/store/useSucursalStore";
 import { cn } from "@/lib/utils";
 
@@ -62,6 +62,7 @@ const OPCIONES: {
 export function InventoryPdfOptionsDialog({ open, onOpenChange }: Props) {
   const activeSucursalId = useSucursalStore((state) => state.activeSucursalId);
   const [loading, setLoading] = useState<Opcion | null>(null);
+  const [soloConStock, setSoloConStock] = useState(false);
 
   const handleOpen = (opcion: Opcion) => {
     if (loading) return;
@@ -78,6 +79,7 @@ export function InventoryPdfOptionsDialog({ open, onOpenChange }: Props) {
       params.set("conCostos", "false");
       params.set("conValuacion", "false");
     }
+    params.set("soloConStock", soloConStock ? "true" : "false");
 
     window.open(
       `/ver/inventario/${activeSucursalId}/pdf?${params.toString()}`,
@@ -159,6 +161,50 @@ export function InventoryPdfOptionsDialog({ open, onOpenChange }: Props) {
               </button>
             );
           })}
+        </div>
+
+        {/* Toggle stock */}
+        <div className="px-5 pb-3">
+          <button
+            type="button"
+            onClick={() => setSoloConStock((v) => !v)}
+            disabled={loading !== null}
+            className={cn(
+              "w-full flex items-center gap-3 rounded-2xl border-2 px-4 py-3 text-left transition-all",
+              soloConStock
+                ? "border-amber-400 bg-amber-50 dark:bg-amber-950"
+                : "border-border/60 bg-muted/30 hover:border-border",
+              loading !== null && "opacity-40 cursor-not-allowed"
+            )}
+          >
+            <div className={cn(
+              "flex-shrink-0 w-8 h-8 rounded-xl flex items-center justify-center",
+              soloConStock ? "bg-amber-100 dark:bg-amber-900" : "bg-muted"
+            )}>
+              {soloConStock
+                ? <Package className="h-4 w-4 text-amber-600" />
+                : <PackageX className="h-4 w-4 text-muted-foreground" />
+              }
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="font-bold text-xs text-foreground">
+                {soloConStock ? "Solo productos con stock" : "Todos los productos (con y sin stock)"}
+              </p>
+              <p className="text-[10px] text-muted-foreground mt-0.5">
+                {soloConStock ? "Los agotados no aparecerán en el PDF." : "Los agotados se muestran al final con indicador rojo."}
+              </p>
+            </div>
+            {/* pill on/off */}
+            <div className={cn(
+              "flex-shrink-0 w-8 h-5 rounded-full transition-colors relative",
+              soloConStock ? "bg-amber-400" : "bg-muted-foreground/30"
+            )}>
+              <div className={cn(
+                "absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-all",
+                soloConStock ? "left-3.5" : "left-0.5"
+              )} />
+            </div>
+          </button>
         </div>
 
         <div className="px-5 pb-5">
