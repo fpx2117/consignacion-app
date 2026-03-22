@@ -117,14 +117,10 @@ export function ProductosView() {
   const [subCategoryFilter, setSubCategoryFilter] = React.useState("all");
   const [expiryFilter, setExpiryFilter] = React.useState("all");
 
-  // Paginación server-side
+  // Paginación
   const [serverPage, setServerPage] = React.useState(1);
   const [serverTotal, setServerTotal] = React.useState(0);
   const [serverTotalPages, setServerTotalPages] = React.useState(1);
-  const SERVER_LIMIT = 30;
-
-  // Paginación client-side y ordenamiento (sobre los datos del servidor)
-  const [currentPage, setCurrentPage] = React.useState(1);
   const [itemsPerPage, setItemsPerPage] = React.useState(10);
   const [sortConfig, setSortConfig] = React.useState<SortConfig>({ key: "nombre", direction: "asc" });
   const [showSensitiveData, setShowSensitiveData] = React.useState(false);
@@ -143,14 +139,14 @@ export function ProductosView() {
     return cat?.id ?? null;
   }, [categoryFilter, allCategories]);
 
-  const load = React.useCallback(async (page: number = 1, search: string = "", categoriaId: number | null = null) => {
+  const load = React.useCallback(async (page: number = 1, search: string = "", categoriaId: number | null = null, limit: number = 10) => {
     setLoading(true);
     try {
       // Cache buster para evitar respuestas stale al cambiar de sucursal
       const bust = `_t=${Date.now()}`;
       const sp = new URLSearchParams();
       sp.set("page", String(page));
-      sp.set("limit", String(SERVER_LIMIT));
+      sp.set("limit", String(limit));
       if (search) sp.set("search", search);
       if (categoriaId) sp.set("categoriaId", String(categoriaId));
       sp.set("_t", String(Date.now()));
@@ -210,24 +206,22 @@ export function ProductosView() {
       setExpiryFilter("all");
       setQ("");
       setDebouncedQ("");
-      setCurrentPage(1);
       setServerPage(1);
       // Cargar con filtros limpios directamente (sin depender de estados recién seteados)
-      load(1, "", null);
+      load(1, "", null, itemsPerPage);
     }
-  }, [activeSucursalId, load]);
+  }, [activeSucursalId, load, itemsPerPage]);
 
   // Al cambiar filtros de búsqueda/categoría (sin cambio de sucursal)
   React.useEffect(() => {
-    load(1, debouncedQ, serverCategoriaId);
-    setCurrentPage(1);
+    load(1, debouncedQ, serverCategoriaId, itemsPerPage);
     setServerPage(1);
-  }, [debouncedQ, serverCategoriaId, load]);
+  }, [debouncedQ, serverCategoriaId, itemsPerPage, load]);
 
   // Wrapper sin argumentos para subcomponentes (reload de la página actual)
   const reload = React.useCallback(() => {
-    load(serverPage, debouncedQ, serverCategoriaId);
-  }, [load, serverPage, debouncedQ, serverCategoriaId]);
+    load(serverPage, debouncedQ, serverCategoriaId, itemsPerPage);
+  }, [load, serverPage, debouncedQ, serverCategoriaId, itemsPerPage]);
 
   // --- Lógica de Negocio ---
   const isLowStock = React.useCallback((p: ProductoViewItem) => {
@@ -301,18 +295,6 @@ export function ProductosView() {
     }
     return sortableItems;
   }, [filtered, sortConfig]);
-
-  // Paginación
-  const totalPages = Math.ceil(sorted.length / itemsPerPage);
-  const paginatedItems = React.useMemo(() => {
-    const start = (currentPage - 1) * itemsPerPage;
-    return sorted.slice(start, start + itemsPerPage);
-  }, [sorted, currentPage, itemsPerPage]);
-
-  // Reseteo de página al filtrar
-  React.useEffect(() => {
-    setCurrentPage(1);
-  }, [q, stockFilter, categoryFilter, expiryFilter, itemsPerPage]);
 
   const handleSort = (key: SortKey) => {
     setSortConfig((current) => ({
@@ -535,10 +517,10 @@ export function ProductosView() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {paginatedItems.map((p, idx) => (
+                    {sorted.map((p, idx) => (
                       <ProductoRow key={p.id} p={p} idx={idx} load={reload} isLow={isLowStock(p)} isOut={isOutOfStock(p)} />
                     ))}
-                    {paginatedItems.length === 0 && (
+                    {sorted.length === 0 && (
                       <TableRow>
                         <TableCell colSpan={7} className="h-[300px] text-center">
                           <div className="flex flex-col items-center justify-center gap-3 text-muted-foreground opacity-60">
@@ -554,20 +536,17 @@ export function ProductosView() {
                   </TableBody>
                 </Table>
 
-                {/* PAGINACIÃ“N (Desktop) */}
+                {/* PAGINACIÓN (Desktop) */}
                 {filtered.length > 0 && (
                   <PaginationControls
-                    currentPage={currentPage}
-                    totalPages={totalPages}
                     itemsPerPage={itemsPerPage}
-                    setItemsPerPage={setItemsPerPage}
-                    setCurrentPage={setCurrentPage}
+                    setItemsPerPage={(v) => { setItemsPerPage(v); load(1, debouncedQ, serverCategoriaId, v); setServerPage(1); }}
                     totalItems={serverTotal || filtered.length}
-                    currentItems={paginatedItems.length}
+                    currentItems={sorted.length}
                     serverPage={serverPage}
                     serverTotalPages={serverTotalPages}
-                    onServerPrev={() => { load(Math.max(1, serverPage - 1), debouncedQ, serverCategoriaId); setCurrentPage(1); }}
-                    onServerNext={() => { load(Math.min(serverTotalPages, serverPage + 1), debouncedQ, serverCategoriaId); setCurrentPage(1); }}
+                    onServerPrev={() => { load(Math.max(1, serverPage - 1), debouncedQ, serverCategoriaId, itemsPerPage); setServerPage(p => Math.max(1, p - 1)); }}
+                    onServerNext={() => { load(Math.min(serverTotalPages, serverPage + 1), debouncedQ, serverCategoriaId, itemsPerPage); setServerPage(p => Math.min(serverTotalPages, p + 1)); }}
                   />
                 )}
               </Card>
@@ -575,11 +554,11 @@ export function ProductosView() {
 
             {/* --- VISTA MOBILE (CARDS) --- */}
             <div className="md:hidden space-y-4">
-              {paginatedItems.map((p, idx) => (
+              {sorted.map((p, idx) => (
                 <MobileProductCard key={p.id} p={p} idx={idx} load={reload} isLow={isLowStock(p)} isOut={isOutOfStock(p)} />
               ))}
 
-              {paginatedItems.length === 0 && (
+              {sorted.length === 0 && (
                 <div className="flex flex-col items-center justify-center gap-3 text-muted-foreground opacity-60 py-20 text-center">
                   <Search className="h-12 w-12 stroke-[1.5]" />
                   <p className="text-lg font-medium">No se encontraron productos</p>
@@ -589,21 +568,18 @@ export function ProductosView() {
                 </div>
               )}
 
-              {/* PAGINACIÃ“N (Mobile) */}
+              {/* PAGINACIÓN (Mobile) */}
               {filtered.length > 0 && (
                 <PaginationControls
-                  currentPage={currentPage}
-                  totalPages={totalPages}
                   itemsPerPage={itemsPerPage}
-                  setItemsPerPage={setItemsPerPage}
-                  setCurrentPage={setCurrentPage}
+                  setItemsPerPage={(v) => { setItemsPerPage(v); load(1, debouncedQ, serverCategoriaId, v); setServerPage(1); }}
                   totalItems={serverTotal || filtered.length}
-                  currentItems={paginatedItems.length}
+                  currentItems={sorted.length}
                   isMobile
                   serverPage={serverPage}
                   serverTotalPages={serverTotalPages}
-                  onServerPrev={() => { load(Math.max(1, serverPage - 1), debouncedQ, serverCategoriaId); setCurrentPage(1); }}
-                  onServerNext={() => { load(Math.min(serverTotalPages, serverPage + 1), debouncedQ, serverCategoriaId); setCurrentPage(1); }}
+                  onServerPrev={() => { load(Math.max(1, serverPage - 1), debouncedQ, serverCategoriaId, itemsPerPage); setServerPage(p => Math.max(1, p - 1)); }}
+                  onServerNext={() => { load(Math.min(serverTotalPages, serverPage + 1), debouncedQ, serverCategoriaId, itemsPerPage); setServerPage(p => Math.min(serverTotalPages, p + 1)); }}
                 />
               )}
             </div>
@@ -641,15 +617,12 @@ export function ProductosView() {
 // --- SUB COMPONENTS ---
 
 function PaginationControls({
-  currentPage, totalPages, itemsPerPage, setItemsPerPage, setCurrentPage,
+  itemsPerPage, setItemsPerPage,
   totalItems, currentItems, isMobile = false,
   serverPage, serverTotalPages, onServerPrev, onServerNext,
 }: {
-  currentPage: number;
-  totalPages: number;
   itemsPerPage: number;
   setItemsPerPage: (v: number) => void;
-  setCurrentPage: React.Dispatch<React.SetStateAction<number>>;
   totalItems: number;
   currentItems: number;
   isMobile?: boolean;
@@ -658,67 +631,48 @@ function PaginationControls({
   onServerPrev?: () => void;
   onServerNext?: () => void;
 }) {
-  const hasServerPages = serverTotalPages !== undefined && serverTotalPages > 1;
+  const page = serverPage ?? 1;
+  const totalPages = serverTotalPages ?? 1;
 
   return (
-    <div className={cn("flex flex-col gap-2 p-4 border-t border-border/60 bg-muted/20", isMobile && "border rounded-xl bg-card")}>
-      {/* Fila principal de paginación */}
-      <div className={cn("flex items-center justify-between gap-4", isMobile && "flex-col")}>
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <span>Mostrando {currentItems} de <span className="font-bold text-foreground">{totalItems}</span></span>
-        </div>
-
-        <div className={cn("flex items-center gap-4", isMobile && "w-full justify-between")}>
-          {!isMobile && (
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-muted-foreground">Filas:</span>
-              <Select value={itemsPerPage.toString()} onValueChange={(v) => setItemsPerPage(Number(v))}>
-                <SelectTrigger className="h-8 w-[70px] text-xs font-bold">
-                  <SelectValue placeholder="10" />
-                </SelectTrigger>
-                <SelectContent side="top">
-                  <SelectItem value="5">5</SelectItem>
-                  <SelectItem value="10">10</SelectItem>
-                  <SelectItem value="20">20</SelectItem>
-                  <SelectItem value="50">50</SelectItem>
-                  <SelectItem value="100">100</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          )}
-
-          <div className="flex items-center gap-1">
-            <Button variant="outline" size="icon" className="h-8 w-8 rounded-lg" onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1}>
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-            <div className="flex items-center gap-1 px-2">
-              <span className="text-sm font-bold">{currentPage}</span>
-              <span className="text-sm text-muted-foreground">/</span>
-              <span className="text-sm text-muted-foreground">{totalPages}</span>
-            </div>
-            <Button variant="outline" size="icon" className="h-8 w-8 rounded-lg" onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages}>
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-          </div>
-        </div>
+    <div className={cn("flex items-center justify-between gap-4 p-4 border-t border-border/60 bg-muted/20", isMobile && "flex-col border rounded-xl bg-card")}>
+      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+        <span>Mostrando {currentItems} de <span className="font-bold text-foreground">{totalItems}</span></span>
       </div>
 
-      {/* Navegación server-side (cuando hay más de una página en el servidor) */}
-      {hasServerPages && onServerPrev && onServerNext && (
-        <div className="flex items-center justify-center gap-3 pt-1 border-t border-border/40">
-          <Button variant="ghost" size="sm" onClick={onServerPrev} disabled={serverPage! <= 1}
-            className="h-7 text-xs font-semibold text-muted-foreground hover:text-foreground rounded-lg px-2.5 disabled:opacity-30">
-            <ChevronLeft className="h-3.5 w-3.5 mr-1" /> Anteriores
+      <div className={cn("flex items-center gap-4", isMobile && "w-full justify-between")}>
+        {!isMobile && (
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-muted-foreground">Filas:</span>
+            <Select value={itemsPerPage.toString()} onValueChange={(v) => setItemsPerPage(Number(v))}>
+              <SelectTrigger className="h-8 w-[80px] text-xs font-bold">
+                <SelectValue placeholder="10" />
+              </SelectTrigger>
+              <SelectContent side="top">
+                <SelectItem value="10">10</SelectItem>
+                <SelectItem value="20">20</SelectItem>
+                <SelectItem value="50">50</SelectItem>
+                <SelectItem value="100">100</SelectItem>
+                <SelectItem value="9999">Todos</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        )}
+
+        <div className="flex items-center gap-1">
+          <Button variant="outline" size="icon" className="h-8 w-8 rounded-lg" onClick={onServerPrev} disabled={!onServerPrev || page <= 1}>
+            <ChevronLeft className="h-4 w-4" />
           </Button>
-          <span className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest">
-            Lote {serverPage} / {serverTotalPages}
-          </span>
-          <Button variant="ghost" size="sm" onClick={onServerNext} disabled={serverPage! >= serverTotalPages!}
-            className="h-7 text-xs font-semibold text-muted-foreground hover:text-foreground rounded-lg px-2.5 disabled:opacity-30">
-            Siguientes <ChevronRight className="h-3.5 w-3.5 ml-1" />
+          <div className="flex items-center gap-1 px-2">
+            <span className="text-sm font-bold">{page}</span>
+            <span className="text-sm text-muted-foreground">/</span>
+            <span className="text-sm text-muted-foreground">{totalPages}</span>
+          </div>
+          <Button variant="outline" size="icon" className="h-8 w-8 rounded-lg" onClick={onServerNext} disabled={!onServerNext || page >= totalPages}>
+            <ChevronRight className="h-4 w-4" />
           </Button>
         </div>
-      )}
+      </div>
     </div>
   )
 }
