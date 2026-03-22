@@ -12,7 +12,7 @@ import { buildInventoryHtml, type InventoryGroup } from "@/lib/reports/base/inve
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
-export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   let browser: Browser | null = null;
 
   try {
@@ -20,6 +20,8 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
     if (!auth.ok) return auth.res;
 
     const { id } = await params;
+    const conCostos = req.nextUrl.searchParams.get("conCostos") !== "false";
+    const conValuacion = req.nextUrl.searchParams.get("conValuacion") !== "false";
 
     const requestedPathSucursalId = id === "all" ? 0 : Number(id);
     const scopedSucursalId = resolveRequestedSucursalId(auth, requestedPathSucursalId);
@@ -108,7 +110,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
     const branding = await getBranding(brandingSucursalId);
 
     // 6. Generar HTML
-    const htmlContent = await buildInventoryHtml(groups, branding, timezone.tz);
+    const htmlContent = await buildInventoryHtml(groups, branding, timezone.tz, conCostos, conValuacion);
 
     browser = await puppeteer.launch({
       headless: true,
