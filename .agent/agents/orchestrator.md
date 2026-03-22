@@ -120,8 +120,6 @@ Before I coordinate the agents, I need to understand your requirements better:
 | `project-planner` | Planning | Task breakdown, milestones, roadmap |
 | `seo-specialist` | SEO & Marketing | SEO optimization, meta tags, analytics |
 | `game-developer` | Game Development | Unity, Godot, Unreal, Phaser, multiplayer |
-| `abogado-nna` | Legal NNA Defense | Constitución Argentina, CP, CPP, delitos informáticos, grooming, CSAIM, protección de menores |
-| `forense-digital-nna` | Informática Forense | Preservación evidencia, análisis dispositivos, rastreo online, CSAIM |
 
 ---
 
@@ -149,8 +147,6 @@ Before I coordinate the agents, I need to understand your requirements better:
 | `explorer-agent` | Codebase discovery | ❌ Write operations |
 | `penetration-tester` | Security testing | ❌ Feature code |
 | `game-developer` | Game logic, scenes, assets | ❌ Web/mobile components |
-| `abogado-nna` | Defensa legal NNA, estrategias | ❌ Código de aplicación |
-| `forense-digital-nna` | Análisis forense digital, evidencia | ❌ Estrategias legales |
 
 ### File Type Ownership
 
