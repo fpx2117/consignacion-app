@@ -354,12 +354,18 @@ function GastoModal({ open, onOpenChange, onSuccess, categorias, editingGasto, a
                         />
                     </div>
 
+                    {categorias.length === 0 && (
+                        <div className="rounded-xl bg-amber-500/10 border border-amber-500/30 px-4 py-3 text-sm font-medium text-amber-700 dark:text-amber-400">
+                            Esta sucursal no tiene categorías de gastos. Cerrá este diálogo y creá una categoría primero.
+                        </div>
+                    )}
+
                     <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-1.5">
                             <label className="text-[10px] uppercase font-black tracking-widest text-muted-foreground ml-1">Categoría</label>
-                            <Select value={formData.categoriaGastoId} onValueChange={(v) => setFormData({ ...formData, categoriaGastoId: v })}>
+                            <Select value={formData.categoriaGastoId} onValueChange={(v) => setFormData({ ...formData, categoriaGastoId: v })} disabled={categorias.length === 0}>
                                 <SelectTrigger className="rounded-xl bg-muted/30 border-transparent h-11 font-bold">
-                                    <SelectValue placeholder="Elegir..." />
+                                    <SelectValue placeholder={categorias.length === 0 ? "Sin categorías" : "Elegir..."} />
                                 </SelectTrigger>
                                 <SelectContent>
                                     {categorias.map((c) => (
@@ -505,7 +511,7 @@ function GastoModal({ open, onOpenChange, onSuccess, categorias, editingGasto, a
 
                     <div className="pt-4">
                         <Button
-                            disabled={loading || (esCompartido && selectedSucursales.length < 2)}
+                            disabled={loading || categorias.length === 0 || (esCompartido && selectedSucursales.length < 2)}
                             type="submit"
                             className="w-full h-12 rounded-2xl font-black text-base shadow-lg shadow-primary/20"
                         >
