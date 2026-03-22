@@ -26,16 +26,16 @@ interface StockDrawerProductListProps {
 
 const drawerStyles = {
   out: {
-    iconWrapper: "bg-red-100 dark:bg-red-900/20",
-    item: "bg-red-50/50 dark:bg-red-900/10 border-red-100 dark:border-red-900/30",
-    stockBadge: "bg-red-100 dark:bg-red-900/30 text-red-600",
-    actionButton: "border-red-200 dark:border-red-800 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20",
+    iconWrapper: "bg-red-100 dark:bg-red-950/70",
+    item: "bg-red-50 dark:bg-red-950/50 border-red-100 dark:border-red-900/60",
+    stockBadge: "bg-red-100 dark:bg-red-900/70 text-red-600 dark:text-red-400",
+    actionButton: "border-red-200 dark:border-red-800 text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/40",
   },
   low: {
-    iconWrapper: "bg-orange-100 dark:bg-orange-900/20",
-    item: "bg-orange-50/50 dark:bg-orange-900/10 border-orange-100 dark:border-orange-900/30",
-    stockBadge: "bg-orange-100 dark:bg-orange-900/30 text-orange-600",
-    actionButton: "border-orange-200 dark:border-orange-800 text-orange-500 hover:bg-orange-50 dark:hover:bg-orange-900/20",
+    iconWrapper: "bg-orange-100 dark:bg-orange-950/70",
+    item: "bg-orange-50 dark:bg-orange-950/50 border-orange-100 dark:border-orange-900/60",
+    stockBadge: "bg-orange-100 dark:bg-orange-900/70 text-orange-600 dark:text-orange-400",
+    actionButton: "border-orange-200 dark:border-orange-800 text-orange-500 dark:text-orange-400 hover:bg-orange-50 dark:hover:bg-orange-900/40",
   },
 } as const;
 
