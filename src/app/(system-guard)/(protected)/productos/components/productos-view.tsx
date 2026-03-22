@@ -592,7 +592,7 @@ export function ProductosView() {
       <Sheet open={stockDrawer !== null} onOpenChange={(open) => !open && setStockDrawer(null)}>
         <SheetContent
           side="bottom"
-          overlayClassName="backdrop-blur-0 sm:backdrop-blur-[2px]"
+          overlayClassName="backdrop-blur-none sm:hidden"
           className={cn(
             "sm:hidden rounded-t-3xl p-0 flex flex-col",
             "max-h-[90dvh] h-auto"
@@ -602,7 +602,7 @@ export function ProductosView() {
         </SheetContent>
         <SheetContent
           side="right"
-          overlayClassName="backdrop-blur-0 sm:backdrop-blur-[2px]"
+          overlayClassName="hidden sm:block sm:backdrop-blur-[2px]"
           className={cn(
             "hidden sm:flex flex-col",
             "w-[380px] max-w-[90vw] p-0 h-full overflow-x-hidden"
