@@ -602,6 +602,7 @@ export function ProductosView() {
         </SheetContent>
         <SheetContent
           side="right"
+          overlayClassName="backdrop-blur-0 sm:backdrop-blur-[2px]"
           className={cn(
             "hidden sm:flex flex-col",
             "w-[380px] max-w-[90vw] p-0 h-full overflow-x-hidden"
