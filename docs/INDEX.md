@@ -8,7 +8,6 @@ Este directorio centraliza la documentacion tecnica del sistema.
 - `docs/API_REFERENCIA_TECNICA.md`: referencia endpoint por endpoint con contratos de request/response/error.
 - `docs/ADR/0001-servidor-custom-next-socketio.md`: decision de arquitectura del runtime HTTP + tiempo real.
 - `docs/CHANGELOG.md`: historial semantico de cambios de documentacion/arquitectura.
-- `docs/MATRIZ_SKILLS_AGENTES_PROMPTS.md`: puntero local a la biblioteca global de referencias en `.config/opencode/referencias`.
 
 
 ## Orden sugerido de lectura
