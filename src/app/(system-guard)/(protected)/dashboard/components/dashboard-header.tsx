@@ -71,13 +71,20 @@ export function DashboardHeader({
     const key: DownloadKey = `${type}-${targetPeriod}`;
     if (downloading) return;
     setDownloading(key);
+    // Abrir la ventana sincrónicamente para que los navegadores móviles
+    // la consideren parte del gesto del usuario (evita el bloqueo de popups).
+    const newWindow = window.open("", "_blank");
     try {
       const url = type === "pos"
         ? await apiService.getPosReporteUrl(targetPeriod)
         : await apiService.getConsigReporteUrl(targetPeriod);
-      window.open(url, "_blank");
+      if (newWindow) {
+        newWindow.location.href = url;
+      } else {
+        window.location.href = url;
+      }
     } catch {
-      // silently ignore — /x/ will show error state
+      newWindow?.close();
     } finally {
       setDownloading(null);
     }
