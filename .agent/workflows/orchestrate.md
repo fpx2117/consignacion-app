@@ -33,6 +33,8 @@ $ARGUMENTS
 | **Full Stack** | project-planner, frontend-specialist, backend-specialist, devops-engineer |
 | **Debug** | debugger, explorer-agent, test-engineer |
 | **Security** | security-auditor, penetration-tester, devops-engineer |
+| **Casos NNA/Legal** | abogado-nna, forense-digital-nna, project-planner |
+| **Forense Digital NNA** | forense-digital-nna, security-auditor, abogado-nna |
 
 ---
 
@@ -82,7 +84,7 @@ Do you approve? (Y/N)
 
 > ✅ After user approval, invoke multiple agents in PARALLEL.
 
-## Available Agents (17 total)
+## Available Agents (19 total)
 
 | Agent | Domain | Use When |
 |-------|--------|----------|
@@ -102,6 +104,8 @@ Do you approve? (Y/N)
 | `debugger` | Debug | Error analysis |
 | `game-developer` | Games | Unity, Godot |
 | `orchestrator` | Meta | Coordination |
+| `abogado-nna` | Legal | Defensa de NNA víctimas de delitos digitales |
+| `forense-digital-nna` | Forense | Análisis forense digital en casos NNA |
 
 ---
 
@@ -120,6 +124,7 @@ Identify ALL domains this task touches:
 □ Performance  → performance-optimizer
 □ SEO          → seo-specialist
 □ Planning     → project-planner
+□ Legal NNA    → abogado-nna, forense-digital-nna
 ```
 
 ### Step 2: Phase Detection
