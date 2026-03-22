@@ -139,6 +139,15 @@ export async function PUT(req: Request, { params }: RouteParams) {
           },
         });
 
+        // Sincronizar StockSucursal (reverso)
+        await tx.stockSucursal.update({
+          where: { productoId_sucursalId: { productoId: det.productoId, sucursalId: liqExistente.consignacion.sucursalId } },
+          data: {
+            stockConsignadoUnits: { increment: item.unitsVendidas + item.unitsDevueltas },
+            ...(item.unitsDevueltas > 0 ? { stockDisponibleUnits: { decrement: item.unitsDevueltas } } : {}),
+          },
+        });
+
         // Auditoría Reversa: Lo que se devolvió al almacén, ahora se "des-devuelve" (Sale)
         if (item.unitsDevueltas > 0) {
           await tx.movimientoStock.create({
@@ -225,6 +234,15 @@ export async function PUT(req: Request, { params }: RouteParams) {
         // Aplicar nuevo stock
         const productoDespues = await tx.producto.update({
           where: { id: det.productoId },
+          data: {
+            stockConsignadoUnits: { decrement: vendidas + devueltas },
+            ...(devueltas > 0 ? { stockDisponibleUnits: { increment: devueltas } } : {}),
+          },
+        });
+
+        // Sincronizar StockSucursal
+        await tx.stockSucursal.update({
+          where: { productoId_sucursalId: { productoId: det.productoId, sucursalId: liqExistente.consignacion.sucursalId } },
           data: {
             stockConsignadoUnits: { decrement: vendidas + devueltas },
             ...(devueltas > 0 ? { stockDisponibleUnits: { increment: devueltas } } : {}),

@@ -166,6 +166,12 @@ export async function POST(req: Request, { params }: RouteParams) {
           },
         });
 
+        // c2. Sincronizar stockDisponibleUnits del Producto global
+        await tx.producto.update({
+          where: { id: item.productoId },
+          data: { stockDisponibleUnits: { increment: input.cantidadRecibida } },
+        });
+
         // d. Actualizar PedidoEsperadoItem estado y cantidadRecibida
         const estadoItem: EstadoItemPedido = input.cantidadRecibida >= item.cantidadEsperada
           ? EstadoItemPedido.CONFIRMADO
