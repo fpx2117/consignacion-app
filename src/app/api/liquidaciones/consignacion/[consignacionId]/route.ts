@@ -118,6 +118,15 @@ export async function POST(req: Request, { params }: RouteParams) {
           },
         });
 
+        // Sincronizar StockSucursal
+        await tx.stockSucursal.update({
+          where: { productoId_sucursalId: { productoId: det.productoId, sucursalId: consignacion.sucursalId } },
+          data: {
+            stockConsignadoUnits: { decrement: vendidas + devueltas },
+            ...(devueltas > 0 ? { stockDisponibleUnits: { increment: devueltas } } : {}),
+          },
+        });
+
         // ✅ Auditoría de Stock: Devolución (Vuelve al almacén disponible)
         if (devueltas > 0) {
           await tx.movimientoStock.create({
