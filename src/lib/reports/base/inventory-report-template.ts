@@ -32,9 +32,10 @@ export interface InventoryGroup {
   productos: ProductoInventario[];
 }
 
-async function fetchImageAsBase64(url: string): Promise<string> {
+async function fetchImageAsBase64(url: string, baseUrl: string): Promise<string> {
   try {
-    const res = await fetch(url, { signal: AbortSignal.timeout(8000) });
+    const absoluteUrl = url.startsWith("http") ? url : `${baseUrl}${url}`;
+    const res = await fetch(absoluteUrl, { signal: AbortSignal.timeout(8000) });
     if (!res.ok) return "";
     const contentType = res.headers.get("content-type") || "image/jpeg";
     const mimeType = contentType.split(";")[0].trim();
@@ -51,6 +52,7 @@ export async function buildInventoryHtml(
   zonaHoraria: string,
   conCostos = true,
   conValuacion = true,
+  baseUrl = "",
 ) {
   const tz = resolveReportTimezone(zonaHoraria);
   // --- 1. PROCESAMIENTO Y CÁLCULOS GLOBALES ---
@@ -140,7 +142,7 @@ export async function buildInventoryHtml(
       if (imgUrl && !imageMap.has(imgUrl)) {
         imageMap.set(imgUrl, ""); // reservar slot
         imagePromises.push(
-          fetchImageAsBase64(imgUrl).then((dataUrl) => {
+          fetchImageAsBase64(imgUrl, baseUrl).then((dataUrl) => {
             imageMap.set(imgUrl, dataUrl);
           })
         );

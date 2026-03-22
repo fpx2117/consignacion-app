@@ -22,6 +22,8 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     const { id } = await params;
     const conCostos = req.nextUrl.searchParams.get("conCostos") !== "false";
     const conValuacion = req.nextUrl.searchParams.get("conValuacion") !== "false";
+    const soloConStock = req.nextUrl.searchParams.get("soloConStock") === "true";
+    const baseUrl = req.nextUrl.origin;
 
     const requestedPathSucursalId = id === "all" ? 0 : Number(id);
     const scopedSucursalId = resolveRequestedSucursalId(auth, requestedPathSucursalId);
@@ -91,8 +93,8 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
       const conStock = todosMapeados.filter(p => p.stockDisponibleUnits > 0);
       const agotados = todosMapeados.filter(p => p.stockDisponibleUnits === 0);
 
-      // Ordenar: primero los que tienen stock, luego los agotados al final
-      const productosOrdenados = [...conStock, ...agotados];
+      // Ordenar: primero los que tienen stock, luego los agotados al final (si se incluyen)
+      const productosOrdenados = soloConStock ? conStock : [...conStock, ...agotados];
 
       return {
         sucursal: suc.nombre,
@@ -110,7 +112,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     const branding = await getBranding(brandingSucursalId);
 
     // 6. Generar HTML
-    const htmlContent = await buildInventoryHtml(groups, branding, timezone.tz, conCostos, conValuacion);
+    const htmlContent = await buildInventoryHtml(groups, branding, timezone.tz, conCostos, conValuacion, baseUrl);
 
     browser = await puppeteer.launch({
       headless: true,
