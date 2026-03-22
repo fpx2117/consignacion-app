@@ -87,7 +87,6 @@ export function ProductSearchModal({
               if (p.categoria?.nombre?.toLowerCase().includes(q)) return 1;
               return 0;
             }}
-            onValueChange={handleSearchInput}
           >
             {/* ── Header ────────────────────────────────────────────────── */}
             <div className="flex items-center h-14 border-b border-border/60">
@@ -103,6 +102,7 @@ export function ProductSearchModal({
                 <CommandPrimitive.Input
                   placeholder="Nombre del producto o código de barra..."
                   autoFocus
+                  onValueChange={handleSearchInput}
                   className="flex-1 bg-transparent text-sm font-medium text-foreground placeholder:text-muted-foreground/40 outline-none border-none ring-0 w-0 min-w-0"
                 />
               </div>
