@@ -1,6 +1,5 @@
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
-import { unstable_cache } from "next/cache";
 import { differenceInDays } from "date-fns";
 import { nowAR, startOfDayAR, startOfWeekAR, startOfMonthAR } from "@/lib/utils-date";
 import { resolveTimezone } from "@/lib/get-configured-tz";
@@ -45,13 +44,7 @@ async function resolveKpiTimezone(sucursalId: number, userId?: number | null) {
  * Centraliza la lógica de filtrado por sucursal, periodos y fórmulas de rentabilidad.
  */
 
-/**
- * getDashboardKpis — envuelta en unstable_cache con revalidate: 60s.
- * Múltiples usuarios viendo el dashboard comparten la misma respuesta cacheada
- * durante 60 segundos. Se invalida con revalidateTag('dashboard').
- */
-export const getDashboardKpis = unstable_cache(
-  async (sucursalId: number, period: DashboardPeriod, isAdmin: boolean = false, userId?: number | null) => {
+export async function getDashboardKpis(sucursalId: number, period: DashboardPeriod, isAdmin: boolean = false, userId?: number | null) {
     const timezone = await resolveKpiTimezone(sucursalId, userId);
     const tz = timezone.tz;
     const now = nowAR(tz);
@@ -251,12 +244,19 @@ export const getDashboardKpis = unstable_cache(
     let gananciaConsig = 0;
     let gananciaPos = 0;
 
+    let unitsVendidasTotal = 0;
+    let unitsVendidasPos = 0;
+    let unitsVendidasConsig = 0;
+
     for (const v of ventasData) {
         let gananciaVenta = 0;
         for (const det of v.detalles) {
             const subtotalItem = Number(det.subtotal);
             const costoItem = Number(det.producto?.precioCosto || 0) * det.units;
             gananciaVenta += (subtotalItem - costoItem);
+            unitsVendidasTotal += det.units;
+            if (v.tipo === "LIQUIDACION") unitsVendidasConsig += det.units;
+            else unitsVendidasPos += det.units;
         }
         gananciaVenta -= Number(v.descuentoGlobal || 0);
 
@@ -323,7 +323,8 @@ export const getDashboardKpis = unstable_cache(
             ventas: {
                 total: ventasAgg.reduce((acc: number, v) => acc + Number(v._sum?.total || 0), 0),
                 cantidad: ventasAgg.reduce((acc: number, v) => acc + (v._count?._all || 0), 0),
-                porTipo: ventasAgg.reduce<Record<string, number>>((acc, v) => ({ ...acc, [v.tipo]: Number(v._sum?.total || 0) }), {})
+                porTipo: ventasAgg.reduce<Record<string, number>>((acc, v) => ({ ...acc, [v.tipo]: Number(v._sum?.total || 0) }), {}),
+                unitsVendidas: { total: unitsVendidasTotal, soloPos: unitsVendidasPos, soloConsig: unitsVendidasConsig }
             },
             pagos: {
                 total: Number(pagosAgg._sum?.monto || 0),
@@ -359,13 +360,7 @@ export const getDashboardKpis = unstable_cache(
             monto: Number(g.monto)
         }))
     };
-  },
-  ["dashboard-kpis"],
-  {
-    revalidate: 60,
-    tags: ["dashboard", "kpis"],
-  }
-);
+}
 
 /**
  * REPORTE DE TENDENCIA DIARIA

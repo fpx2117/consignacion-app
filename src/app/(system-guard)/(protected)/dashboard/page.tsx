@@ -27,7 +27,7 @@ import {
 import {
   Handshake, AlertTriangle, Boxes, Wallet,
   TrendingUp, Activity, Store, Package,
-  Calendar, Receipt, Settings2, RotateCcw, BarChart3, Check, X, Shield
+  Calendar, Receipt, Settings2, RotateCcw, BarChart3, Check, X, Shield, ShoppingCart
 } from "lucide-react";
 // ✅ @dnd-kit carga lazy — fuera del bundle inicial del dashboard
 const KpiSortableGrid = dynamic(
@@ -257,6 +257,26 @@ export default function DashboardPage() {
         loading,
       });
     }
+
+    // Unidades vendidas — filtrado por canal
+    const unitsVendidas = kpis?.finanzas?.ventas?.unitsVendidas;
+    let unitsValue = unitsVendidas?.total ?? 0;
+    let unitsSubtitle = `Unidades vendidas · ${PERIOD_LABEL[period]}`;
+    if (filter === "pos") {
+      unitsValue = unitsVendidas?.soloPos ?? 0;
+      unitsSubtitle = `Unidades POS · ${PERIOD_LABEL[period]}`;
+    } else if (filter === "consignacion") {
+      unitsValue = unitsVendidas?.soloConsig ?? 0;
+      unitsSubtitle = `Unidades liquidadas · ${PERIOD_LABEL[period]}`;
+    }
+    items.push({
+      key: "unidades-vendidas",
+      title: "Unidades Vendidas",
+      value: formatNumber(unitsValue),
+      subtitle: unitsSubtitle,
+      icon: ShoppingCart,
+      loading,
+    });
 
     return items;
   }, [kpis, filter, loading, maskMoney, period]);

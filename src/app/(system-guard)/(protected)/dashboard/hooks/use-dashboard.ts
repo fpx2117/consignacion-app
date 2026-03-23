@@ -11,6 +11,8 @@ import {
   fetchDashboardTendencia,
 } from "../actions/dashboard-actions";
 
+const POLL_INTERVAL_MS = 15_000;
+
 export function useDashboard(period: DashboardPeriod) {
   const activeSucursalId = useSucursalStore((s) => s.activeSucursalId);
   const [data, setData] = React.useState({
@@ -22,6 +24,7 @@ export function useDashboard(period: DashboardPeriod) {
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
 
+  // Carga inicial y cambios de periodo/sucursal: muestra skeleton (loading=true)
   const loadAll = React.useCallback(async () => {
     setLoading(true);
     setError(null);
@@ -45,9 +48,35 @@ export function useDashboard(period: DashboardPeriod) {
     }
   }, [period, activeSucursalId]);
 
+  // Refresco silencioso: no activa skeleton, actualiza datos en background
+  const silentRefresh = React.useCallback(async () => {
+    try {
+      const [k, c, t] = await Promise.all([
+        fetchDashboardKpis(period, activeSucursalId),
+        fetchDashboardConsignaciones(5, activeSucursalId),
+        fetchDashboardTopProductos(period, 5, activeSucursalId),
+      ]);
+
+      let trData: DashboardTendencia | null = null;
+      if (period !== "all") {
+        trData = await fetchDashboardTendencia(period as Exclude<DashboardPeriod, "all">, activeSucursalId);
+      }
+
+      setData({ kpis: k, consig: c, top: t, trend: trData });
+    } catch {
+      // En polling silencioso ignoramos errores transitorios
+    }
+  }, [period, activeSucursalId]);
+
   React.useEffect(() => {
     loadAll();
-  }, [loadAll]); // activeSucursalId ya está en useCallback — no duplicar
+  }, [loadAll]);
+
+  // Polling cada 15s — refresco silencioso sin parpadeo de skeleton
+  React.useEffect(() => {
+    const id = setInterval(silentRefresh, POLL_INTERVAL_MS);
+    return () => clearInterval(id);
+  }, [silentRefresh]);
 
   return { ...data, loading, error, refresh: loadAll };
 }

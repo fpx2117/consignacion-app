@@ -763,6 +763,7 @@ export type DashboardKpis = {
       total: number;
       soloVenta?: number;   // Ventas directas POS (tipo CASUAL)
       soloConsig?: number;  // Liquidaciones de consignación (tipo LIQUIDACION)
+      unitsVendidas?: { total: number; soloPos: number; soloConsig: number };
     };
     pagos: {
       cantidad: number;

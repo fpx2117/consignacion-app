@@ -67,6 +67,7 @@ export async function fetchDashboardKpis(
         total: stats.finanzas.ventas.total,
         soloVenta: stats.finanzas.ventas.porTipo?.["CASUAL"] ?? 0,
         soloConsig: stats.finanzas.ventas.porTipo?.["LIQUIDACION"] ?? 0,
+        unitsVendidas: stats.finanzas.ventas.unitsVendidas,
       },
       pagos: {
         cantidad: stats.finanzas.pagos.cantidad,

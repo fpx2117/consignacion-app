@@ -504,7 +504,7 @@ export async function POST(req: Request, { params }: RouteParams) {
       return { liquidacion, cerrada };
     });
 
-    // âœ… DISPARAR ALERTAS
+    // ✅ DISPARAR ALERTAS
     await processNotificationQueue(notificationsQueue, auth.activeSucursalId);
 
     return NextResponse.json({ data: result }, { status: 201 });
