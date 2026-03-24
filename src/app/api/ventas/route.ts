@@ -220,20 +220,19 @@ export async function handlePostVenta(req: Request, deps: VentasRouteDeps = defa
               throw new Error(`No se pudo confirmar stock para el producto #${item.productoId}.`);
             }
 
-            const affectedProducto = await tx.producto.updateMany({
-              where: {
-                id: item.productoId,
-                stockDisponibleUnits: { gte: item.units },
-              },
-              data: { stockDisponibleUnits: { decrement: item.units } },
+            // Sincronizar el campo legacy Producto.stockDisponibleUnits sumando todos los StockSucursal
+            const allStocksSucursal = await tx.stockSucursal.findMany({
+              where: { productoId: item.productoId },
+              select: { stockDisponibleUnits: true },
             });
+            const nuevoStockGlobal = allStocksSucursal.reduce(
+              (acc, s) => acc + (s.stockDisponibleUnits ?? 0),
+              0
+            );
 
-            if (affectedProducto.count === 0) {
-              throw new Error(`Inconsistencia de stock para "${stockSucursalInfo.producto.nombre}".`);
-            }
-
-            const productoDespues = await tx.producto.findUnique({
+            const productoDespues = await tx.producto.update({
               where: { id: item.productoId },
+              data: { stockDisponibleUnits: nuevoStockGlobal },
             });
 
             if (!productoDespues) {
