@@ -10,6 +10,7 @@ import { NOTIFICATION_TYPE } from "@/lib/notificaciones/types";
 import { obtenerConfiguracionGlobal } from "@/lib/config";
 import { checkProductLimit } from "@/lib/subscriptions/require-subscription";
 import { buildSucursalWhere, isGlobalSucursalView, resolveRequestedSucursalId } from "@/lib/sucursalScope";
+import { calcularDescuentoEfectivo } from "@/lib/descuento-utils";
 
 type ProductoCreateBody = CreateProductoInput & {
   subcategoriaId?: number | null;
@@ -107,6 +108,8 @@ export async function GET(req: Request) {
       const stockConsignadoGlobal = p.stockSucursals.reduce((acc, s) => acc + (s.stockConsignadoUnits || 0), 0);
       const stockMinGlobal = p.stockSucursals.reduce((acc, s) => acc + (s.stockMinUnits || 0), 0);
 
+      const precioEfectivo = Number(branchStock?.precioVentaOverride ?? p.precioVenta);
+
       return {
         ...p,
         stockDisponibleUnits: isGlobal
@@ -118,6 +121,15 @@ export async function GET(req: Request) {
         stockMinUnits: isGlobal
           ? stockMinGlobal
           : (branchStock?.stockMinUnits ?? p.stockMinUnits),
+        descuentoEfectivo: calcularDescuentoEfectivo({
+          descuentoActivo: p.descuentoActivo,
+          tipoDescuento: p.tipoDescuento,
+          descuentoPorcentaje: p.descuentoPorcentaje ? Number(p.descuentoPorcentaje) : null,
+          descuentoMonto: p.descuentoMonto ? Number(p.descuentoMonto) : null,
+          descuentoDesde: p.descuentoDesde,
+          descuentoHasta: p.descuentoHasta,
+          precioVenta: precioEfectivo,
+        }),
       };
     };
 
@@ -231,6 +243,12 @@ export async function POST(req: Request) {
           fechaVencimiento: data.fechaVencimiento ? new Date(data.fechaVencimiento) : null,
           imagenUrl: data.imagenUrl || null,
           sucursalId,
+          tipoDescuento: data.tipoDescuento ?? "porcentaje",
+          descuentoPorcentaje: data.descuentoPorcentaje ?? null,
+          descuentoMonto: data.descuentoMonto ?? null,
+          descuentoActivo: data.descuentoActivo ?? false,
+          descuentoDesde: data.descuentoDesde ? new Date(data.descuentoDesde) : null,
+          descuentoHasta: data.descuentoHasta ? new Date(data.descuentoHasta) : null,
         },
         include: { categoria: true, subcategoria: true }
       });

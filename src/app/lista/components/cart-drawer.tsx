@@ -75,7 +75,10 @@ export function CartDrawer({
         }
     }, [isOpen]);
 
-    const subtotalProductos = cart.reduce((a, b) => a + (Number(b.precioVenta) * b.quantity), 0);
+    const subtotalProductos = cart.reduce((a, b) => {
+        const precioUnitario = b.descuentoEfectivo?.precioFinal ?? Number(b.precioVenta);
+        return a + (precioUnitario * b.quantity);
+    }, 0);
     const interest = config.convertirTienda ? (subtotalProductos * ((config.porcentajeInteresTarjeta ?? 0) / 100)) : 0;
     const totalParcial = subtotalProductos + interest;
     const totalFinal = totalParcial + (envioData.costo || 0);

@@ -237,6 +237,12 @@ model Producto {
   sucursalId           Int?                  @default(1)
   imagenUrl            String?
   subcategoriaId       Int?
+  descuentoPorcentaje  Decimal?              @db.Decimal(5, 2)
+  descuentoMonto       Decimal?              @db.Decimal(10, 2)
+  tipoDescuento        String                @default("porcentaje")
+  descuentoActivo      Boolean               @default(false)
+  descuentoDesde       DateTime?
+  descuentoHasta       DateTime?
   subcategoria         Subcategoria?         @relation(fields: [subcategoriaId], references: [id])
   consignacionDetalles ConsignacionDetalle[]
   movimientoStocks     MovimientoStock[]
