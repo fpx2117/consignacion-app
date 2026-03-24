@@ -169,6 +169,22 @@ export async function PUT(req: Request, { params }: RouteParams) {
         }
       });
 
+      // 3.5. Sincronizar Producto.stockDisponibleUnits con la suma de todas las sucursales
+      if (nuevoStock !== undefined) {
+        const allStocksSucursal = await tx.stockSucursal.findMany({
+          where: { productoId: id },
+          select: { stockDisponibleUnits: true },
+        });
+        const stockGlobalSincronizado = allStocksSucursal.reduce(
+          (acc, s) => acc + (s.stockDisponibleUnits ?? 0),
+          0
+        );
+        await tx.producto.update({
+          where: { id },
+          data: { stockDisponibleUnits: stockGlobalSincronizado },
+        });
+      }
+
       // 4. Si hubo cambio de stock y tenemos información del movimiento, registrarlo
       if (movimientoInfo && nuevoStock !== undefined) {
         const stockPrevio = anterior?.stockDisponibleUnits ?? 0;
@@ -195,6 +211,8 @@ export async function PUT(req: Request, { params }: RouteParams) {
         stockDisponibleUnits: stockSucursalUpdate.stockDisponibleUnits,
         stockConsignadoUnits: stockSucursalUpdate.stockConsignadoUnits,
         stockMinUnits: stockSucursalUpdate.stockMinUnits,
+        // Nota: productoUpdate.stockDisponibleUnits fue sincronizado al global arriba,
+        // pero devolvemos el valor de la sucursal activa para el UI
       };
     });
 
