@@ -14,7 +14,6 @@ export interface VentaReportDTO {
   clienteNombre: string;
   clienteTelefono: string;
   zonaHoraria: string;
-  /** URL pública del catálogo online del negocio (ej: https://dominio/lista?sucursalId=1). Si se provee, se embebe como QR. */
   catalogUrl?: string;
   items: Array<{
     producto: string;
@@ -25,250 +24,202 @@ export interface VentaReportDTO {
   }>;
 }
 
-// ✅ NUEVO FORMATO DE TICKET: SERIE + NÚMERO
 const getTicketDetails = (id: number, numeroVenta?: number | null) => {
-  const numberToUse = (typeof numeroVenta === 'number' && numeroVenta > 0) ? numeroVenta : id;
-
+  const numberToUse = (typeof numeroVenta === "number" && numeroVenta > 0) ? numeroVenta : id;
   const LIMITE_POR_SERIE = 1000;
   const serie = Math.floor((numberToUse - 1) / LIMITE_POR_SERIE) + 1;
   const numero = ((numberToUse - 1) % LIMITE_POR_SERIE) + 1;
-
   return {
     serie: String(serie).padStart(2, "0"),
     numero: String(numero).padStart(4, "0"),
-    full: `${String(serie).padStart(2, "0")}-${String(numero).padStart(4, "0")}`,
   };
 };
 
-// SVG inline para íconos de método de pago (16x16, sin clases Tailwind)
-function getMetodoPagoIcon(metodo: string): string {
+function getMetodoPagoLabel(metodo: string): string {
   const m = metodo.toUpperCase();
-  if (m === "EFECTIVO" || m === "CASH") {
-    // Billete: rectángulo con líneas horizontales
-    return `<svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" style="display:inline-block;vertical-align:middle;flex-shrink:0">
-      <rect x="1" y="4" width="14" height="8" rx="1.5" stroke="currentColor" stroke-width="1.4" fill="none"/>
-      <circle cx="8" cy="8" r="2" stroke="currentColor" stroke-width="1.2" fill="none"/>
-      <line x1="3.5" y1="4" x2="3.5" y2="12" stroke="currentColor" stroke-width="1.2"/>
-      <line x1="12.5" y1="4" x2="12.5" y2="12" stroke="currentColor" stroke-width="1.2"/>
-    </svg>`;
-  }
-  if (m === "TARJETA" || m === "CARD") {
-    // Tarjeta de crédito
-    return `<svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" style="display:inline-block;vertical-align:middle;flex-shrink:0">
-      <rect x="1" y="3" width="14" height="10" rx="1.5" stroke="currentColor" stroke-width="1.4" fill="none"/>
-      <line x1="1" y1="6.5" x2="15" y2="6.5" stroke="currentColor" stroke-width="1.6"/>
-      <rect x="3" y="9" width="3.5" height="1.5" rx="0.5" fill="currentColor"/>
-    </svg>`;
-  }
-  if (m === "TRANSFERENCIA" || m === "TRANSFER") {
-    // Flechas de transferencia
-    return `<svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" style="display:inline-block;vertical-align:middle;flex-shrink:0">
-      <path d="M2 5.5H12M12 5.5L9.5 3M12 5.5L9.5 8" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
-      <path d="M14 10.5H4M4 10.5L6.5 8M4 10.5L6.5 13" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
-    </svg>`;
-  }
-  // Default: círculo simple
-  return `<svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" style="display:inline-block;vertical-align:middle;flex-shrink:0">
-    <circle cx="8" cy="8" r="5" stroke="currentColor" stroke-width="1.4" fill="none"/>
-  </svg>`;
+  if (m === "EFECTIVO") return "Efectivo";
+  if (m === "TARJETA") return "Tarjeta";
+  if (m === "TRANSFERENCIA") return "Transferencia";
+  return metodo;
 }
 
 function buildVentaBody(data: VentaReportDTO, branding: BrandingDTO, qrHtml: string): string {
   const ticket = getTicketDetails(data.id, data.numeroVenta);
   const tz = resolveReportTimezone(data.zonaHoraria);
 
-  // Color primario del branding (con fallback)
-  const primaryColor = branding.primaryColor ?? "#4f46e5";
-  const primaryBorderColor = branding.primaryColor ?? "#312e81";
-
-  // Branding values (dinámicos)
-  const brandName = branding.businessName || "Consignación";
+  const primary = branding.primaryColor ?? "#4f46e5";
+  const brandName = branding.businessName || "Negocio";
   const brandBadge = brandInitials(brandName);
   const footerText = branding.footerText ? escapeHtml(branding.footerText) : "";
-  const metaLine = [branding.address, branding.phone].filter((v) => typeof v === "string" && v.trim().length > 0);
+  const metaLine = [branding.address, branding.phone]
+    .filter((v): v is string => typeof v === "string" && v.trim().length > 0)
+    .map((x) => escapeHtml(x))
+    .join("&nbsp;&middot;&nbsp;");
 
-  const metodoPagoIcon = getMetodoPagoIcon(data.metodoPago);
+  const metodoPago = getMetodoPagoLabel(data.metodoPago);
+  const hasDescuentoGlobal = (data.descuentoGlobal ?? 0) > 0;
+  const subtotalBruto = data.items.reduce((a, i) => a + i.precioUnitario * i.cantidad, 0);
+  const totalDescuentoItems = data.items.reduce((a, i) => a + i.descuento, 0);
 
-  return `
-    <!DOCTYPE html>
-    <html>
-      <head>
-        <meta charset="utf-8" />
-        ${getReportHeadAssets(`
-          ${reportThemeCss(primaryColor)}
-          .money { font-feature-settings: "tnum"; font-variant-numeric: tabular-nums; }
-          @page { margin: 0; size: A4; }
-        `)}
-      </head>
+  const itemRows = data.items.map((item, idx) => {
+    const bg = idx % 2 === 0 ? "#f8fafc" : "#ffffff";
+    const hasDesc = item.descuento > 0;
+    return `
+      <tr style="background:${bg}">
+        <td style="padding:7px 8px 7px 12px;font-weight:600;color:#1e293b;font-size:11px;max-width:200px;word-break:break-word">${escapeHtml(item.producto)}</td>
+        <td style="padding:7px 8px;text-align:center;font-weight:700;color:#475569;font-size:11px">${item.cantidad}</td>
+        <td style="padding:7px 8px;text-align:right;color:#64748b;font-size:11px;white-space:nowrap">${formatMoneyARS(item.precioUnitario)}</td>
+        <td style="padding:7px 8px;text-align:right;font-weight:700;font-size:11px;white-space:nowrap;color:${hasDesc ? "#059669" : "#cbd5e1"}">${hasDesc ? `-${formatMoneyARS(item.descuento)}` : "—"}</td>
+        <td style="padding:7px 12px 7px 8px;text-align:right;font-weight:800;font-size:11px;white-space:nowrap;color:#0f172a">${formatMoneyARS(item.subtotal)}</td>
+      </tr>`;
+  }).join("");
 
-      <body class="p-8 bg-white text-slate-900 max-w-[210mm] mx-auto border-t-[12px]" style="border-top-color:${primaryBorderColor}">
-        
-        <div class="flex justify-between items-start border-b-2 border-slate-100 pb-8 mb-8">
-          <div class="flex items-center gap-4">
-            
-            ${branding.logoBase64
-    ? `<img src="${escapeAttr(branding.logoBase64)}" class="w-12 h-12 rounded-2xl object-contain bg-white border border-slate-100 shadow-lg" />`
-    : `<div class="w-12 h-12 bg-slate-900 text-white flex items-center justify-center rounded-2xl font-black text-xl shadow-lg">${escapeHtml(
-      brandBadge
-    )}</div>`
-  }
+  return `<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8"/>
+  ${getReportHeadAssets(`
+    ${reportThemeCss(primary)}
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    @page { size: A4; margin: 12mm 12mm 10mm 12mm; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #fff; color: #0f172a; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .money { font-variant-numeric: tabular-nums; font-feature-settings: "tnum"; }
+  `)}
+</head>
+<body>
 
-            <div>
-              <h1 class="text-2xl font-black tracking-tight text-slate-900">${escapeHtml(brandName)}</h1>
-              <p class="text-xs font-bold text-slate-400 uppercase tracking-[0.2em]">
-                Ticket de Venta
-              </p>
+  <!-- ══ HEADER ══════════════════════════════════════════════════ -->
+  <div style="display:flex;justify-content:space-between;align-items:flex-start;padding-bottom:14px;border-bottom:2px solid #e2e8f0;margin-bottom:14px">
 
-              ${metaLine.length
-    ? `<p class="text-[10px] font-semibold text-slate-400 mt-1">${metaLine
-      .map((x) => escapeHtml(String(x)))
-      .join(" · ")}</p>`
-    : ``
-  }
-            </div>
-          </div>
+    <!-- Logo + nombre -->
+    <div style="display:flex;align-items:center;gap:12px">
+      ${branding.logoBase64
+        ? `<img src="${escapeAttr(branding.logoBase64)}" style="width:44px;height:44px;border-radius:10px;object-fit:contain;border:1px solid #e2e8f0"/>`
+        : `<div style="width:44px;height:44px;background:#0f172a;color:#fff;border-radius:10px;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:16px">${escapeHtml(brandBadge)}</div>`
+      }
+      <div>
+        <div style="font-size:17px;font-weight:900;color:#0f172a;letter-spacing:-0.3px">${escapeHtml(brandName)}</div>
+        <div style="font-size:9px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:1.5px;margin-top:1px">Ticket de Venta</div>
+        ${metaLine ? `<div style="font-size:9px;color:#94a3b8;margin-top:3px">${metaLine}</div>` : ""}
+      </div>
+    </div>
 
-          <div class="text-right">
-            <h2 class="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] mb-1">N° de Ticket</h2>
-            
-            <div class="flex flex-col items-end">
-              <span class="text-[10px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded mb-1">SERIE ${ticket.serie}</span>
-              <p class="text-5xl font-black text-slate-900 tracking-tighter leading-none">#${ticket.numero}</p>
-            </div>
-            
-            <div class="flex flex-col gap-1 mt-3">
-              <p class="text-[10px] font-bold text-slate-500 uppercase">Fecha: ${formatDateAR(data.fecha, true, tz)}</p>
-            </div>
-          </div>
-        </div>
+    <!-- Número de ticket -->
+    <div style="text-align:right">
+      <div style="font-size:8px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:2px">N° de Ticket</div>
+      <div style="font-size:9px;font-weight:700;color:#94a3b8;background:#f1f5f9;display:inline-block;padding:1px 7px;border-radius:4px;margin-bottom:3px">SERIE ${ticket.serie}</div>
+      <div style="font-size:32px;font-weight:900;color:#0f172a;line-height:1;letter-spacing:-1px">#${ticket.numero}</div>
+      <div style="font-size:9px;color:#64748b;margin-top:4px">${formatDateAR(data.fecha, true, tz)}</div>
+    </div>
+  </div>
 
-        <div class="grid grid-cols-2 gap-8 mb-10">
-          
-          <div class="bg-slate-50 rounded-3xl p-8 border border-slate-100 flex flex-col justify-center">
-            <h3 class="text-[10px] font-black text-slate-300 uppercase tracking-widest mb-2">Cliente</h3>
-            <p class="text-xl font-black text-slate-800 tracking-tight mb-1 truncate">${escapeHtml(data.clienteNombre)}</p>
-            <div class="flex items-center gap-2">
-              <span class="w-2 h-2 rounded-full" style="background-color:${primaryColor}"></span>
-              <p class="text-xs font-semibold text-slate-500 uppercase">${escapeHtml(data.clienteTelefono)}</p>
-            </div>
-          </div>
+  <!-- ══ CLIENTE + TOTAL ════════════════════════════════════════ -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
 
-          <div class="rounded-3xl p-8 text-white flex flex-col justify-center items-end shadow-2xl relative overflow-hidden" style="background-color:${primaryColor}">
-            <h3 class="text-[10px] font-black text-white/60 uppercase tracking-widest mb-1 relative z-10">Total Abonado</h3>
-            <p class="text-5xl font-black money tracking-tighter relative z-10">${formatMoneyARS(data.total)}</p>
-            
-            <div class="flex items-center gap-2 mt-4 border-t border-white/20 pt-3 w-full justify-end relative z-10">
-              <span class="text-[10px] uppercase font-bold text-white/60">Método de Pago:</span>
-              <span class="flex items-center gap-1.5 px-2 py-0.5 bg-white/20 rounded text-[10px] font-bold uppercase tracking-wider">
-                <span style="color:rgba(255,255,255,0.9)">${metodoPagoIcon}</span>
-                ${escapeHtml(data.metodoPago)}
-              </span>
-            </div>
-            <div class="absolute -bottom-4 -left-4 w-24 h-24 bg-white/10 rounded-full blur-2xl"></div>
-          </div>
-        </div>
+    <!-- Cliente -->
+    <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:12px 14px">
+      <div style="font-size:8px;font-weight:900;color:#94a3b8;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:5px">Cliente</div>
+      <div style="font-size:14px;font-weight:900;color:#1e293b;letter-spacing:-0.2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(data.clienteNombre)}</div>
+      ${data.clienteTelefono ? `<div style="font-size:10px;color:#64748b;margin-top:3px">${escapeHtml(data.clienteTelefono)}</div>` : ""}
+    </div>
 
-        <div class="mb-12">
-          <h3 class="text-xs font-black text-slate-900 uppercase tracking-[0.2em] mb-6 flex items-center gap-3">
-            <span class="flex-none w-8 h-px bg-slate-200"></span> 
-            Detalle de Items
-            <span class="flex-1 h-px bg-slate-200"></span> 
-          </h3>
+    <!-- Total -->
+    <div style="background:${primary};border-radius:12px;padding:12px 14px;display:flex;flex-direction:column;justify-content:center;align-items:flex-end;position:relative;overflow:hidden">
+      <div style="font-size:8px;font-weight:900;color:rgba(255,255,255,0.6);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:4px;position:relative;z-index:1">Total Abonado</div>
+      <div class="money" style="font-size:28px;font-weight:900;color:#fff;letter-spacing:-1px;line-height:1;position:relative;z-index:1">${formatMoneyARS(data.total)}</div>
+      <div style="margin-top:8px;padding-top:7px;border-top:1px solid rgba(255,255,255,0.2);display:flex;align-items:center;gap:6px;position:relative;z-index:1">
+        <span style="font-size:9px;font-weight:700;color:rgba(255,255,255,0.6);text-transform:uppercase">Pago:</span>
+        <span style="font-size:10px;font-weight:800;color:#fff;background:rgba(255,255,255,0.2);padding:2px 8px;border-radius:6px">${escapeHtml(metodoPago)}</span>
+      </div>
+      <div style="position:absolute;bottom:-10px;left:-10px;width:60px;height:60px;background:rgba(255,255,255,0.08);border-radius:50%"></div>
+    </div>
+  </div>
 
-          <table class="w-full text-left border-separate border-spacing-y-2">
-            <thead>
-              <tr class="text-[9px] text-slate-400 uppercase font-black tracking-widest">
-                <th class="py-2 pl-4">Producto</th>
-                <th class="py-2 text-center">Cant.</th>
-                <th class="py-2 text-right">Precio Unit.</th>
-                <th class="py-2 text-right">Desc.</th>
-                <th class="py-2 text-right pr-4">Subtotal</th>
-              </tr>
-            </thead>
-            <tbody class="text-sm">
-              ${data.items
-    .map(
-      (item) => `
-                <tr class="group hover:bg-slate-50/50 transition-colors">
-                  <td class="py-4 pl-4 font-bold text-slate-700 bg-slate-50 rounded-l-xl border-y border-l border-slate-100">
-                    ${escapeHtml(item.producto)}
-                  </td>
-                  <td class="py-4 text-center bg-slate-50 border-y border-slate-100">
-                    <div class="inline-flex items-center justify-center w-8 h-8 rounded-lg font-black text-xs" style="background-color:${primaryColor}1a;color:${primaryColor}">
-                      ${item.cantidad}
-                    </div>
-                  </td>
-                  <td class="py-4 text-right money text-slate-400 bg-slate-50 border-y border-slate-100">
-                    ${formatMoneyARS(item.precioUnitario)}
-                  </td>
-                  <td class="py-4 text-right money text-emerald-600 bg-slate-50 border-y border-slate-100 font-bold">
-                    ${item.descuento > 0 ? `-${formatMoneyARS(item.descuento)}` : "-"}
-                  </td>
-                  <td class="py-4 text-right pr-4 font-black money border-y border-r border-slate-100 bg-slate-50 rounded-r-xl text-slate-900">
-                    ${formatMoneyARS(item.subtotal)}
-                  </td>
-                </tr>
-              `
-    )
-    .join("")}
-              ${data.descuentoGlobal && data.descuentoGlobal > 0 ? `
-                <tr>
-                  <td colspan="4" class="py-3 text-right font-black text-emerald-600 uppercase tracking-widest text-[9px] pr-4">
-                    Descuento General
-                  </td>
-                  <td class="py-3 text-right pr-4 font-black money text-emerald-600 bg-emerald-50 rounded-xl border border-emerald-100">
-                    -${formatMoneyARS(data.descuentoGlobal)}
-                  </td>
-                </tr>
-              ` : ""}
-            </tbody>
-          </table>
-        </div>
+  <!-- ══ TABLA DE ÍTEMS ══════════════════════════════════════════ -->
+  <div style="margin-bottom:12px">
+    <div style="font-size:9px;font-weight:900;color:#0f172a;text-transform:uppercase;letter-spacing:1.5px;display:flex;align-items:center;gap:8px;margin-bottom:8px">
+      <span style="flex:none;width:20px;height:1px;background:#e2e8f0"></span>
+      Detalle de Items
+      <span style="flex:1;height:1px;background:#e2e8f0"></span>
+    </div>
 
-        <div class="mt-auto border-t border-slate-100 pt-6">
-          <div class="flex justify-between items-center">
-            ${qrHtml
-              ? `<div style="display:flex;align-items:center;gap:12px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:10px 14px">
-                  ${qrHtml}
-                  <div>
-                    <p style="font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:.08em;color:#94a3b8;margin-bottom:2px">Catálogo online</p>
-                    <p style="font-size:8px;color:#64748b;line-height:1.5">Escaneá para ver<br>todos nuestros productos</p>
-                  </div>
-                </div>`
-              : `<div></div>`
-            }
-            <div class="text-right">
-              <p class="text-xs font-bold text-slate-400">Gracias por su compra</p>
-              ${footerText ? `<p class="text-[10px] font-semibold text-slate-400 mt-1">${footerText}</p>` : ``}
-              <p class="text-3xl font-black money text-slate-900 mt-2">${formatMoneyARS(data.total)}</p>
-            </div>
-          </div>
-        </div>
-      </body>
-    </html>
-  `;
+    <table style="width:100%;border-collapse:collapse;border-radius:10px;overflow:hidden">
+      <thead>
+        <tr style="background:#f1f5f9">
+          <th style="padding:7px 8px 7px 12px;text-align:left;font-size:9px;font-weight:900;color:#64748b;text-transform:uppercase;letter-spacing:1px">Producto</th>
+          <th style="padding:7px 8px;text-align:center;font-size:9px;font-weight:900;color:#64748b;text-transform:uppercase;letter-spacing:1px">Cant.</th>
+          <th style="padding:7px 8px;text-align:right;font-size:9px;font-weight:900;color:#64748b;text-transform:uppercase;letter-spacing:1px">P. Unit.</th>
+          <th style="padding:7px 8px;text-align:right;font-size:9px;font-weight:900;color:#64748b;text-transform:uppercase;letter-spacing:1px">Desc.</th>
+          <th style="padding:7px 12px 7px 8px;text-align:right;font-size:9px;font-weight:900;color:#64748b;text-transform:uppercase;letter-spacing:1px">Subtotal</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${itemRows}
+        ${totalDescuentoItems > 0 ? `
+        <tr style="background:#f0fdf4">
+          <td colspan="3" style="padding:7px 8px 7px 12px;font-size:10px;font-weight:700;color:#059669">Descuentos aplicados</td>
+          <td colspan="2" style="padding:7px 12px 7px 8px;text-align:right;font-size:11px;font-weight:900;color:#059669" class="money">-${formatMoneyARS(totalDescuentoItems)}</td>
+        </tr>` : ""}
+        ${hasDescuentoGlobal ? `
+        <tr style="background:#f0fdf4">
+          <td colspan="3" style="padding:7px 8px 7px 12px;font-size:10px;font-weight:700;color:#059669">Descuento general</td>
+          <td colspan="2" style="padding:7px 12px 7px 8px;text-align:right;font-size:11px;font-weight:900;color:#059669" class="money">-${formatMoneyARS(data.descuentoGlobal!)}</td>
+        </tr>` : ""}
+      </tbody>
+    </table>
+
+    <!-- Totales resumen -->
+    <div style="margin-top:8px;display:flex;flex-direction:column;align-items:flex-end;gap:3px">
+      ${subtotalBruto !== data.total ? `
+      <div style="display:flex;gap:24px;font-size:10px;color:#64748b">
+        <span>Subtotal</span>
+        <span class="money" style="font-weight:600">${formatMoneyARS(subtotalBruto)}</span>
+      </div>` : ""}
+      ${totalDescuentoItems > 0 ? `
+      <div style="display:flex;gap:24px;font-size:10px;color:#059669">
+        <span>Descuentos</span>
+        <span class="money" style="font-weight:700">-${formatMoneyARS(totalDescuentoItems)}</span>
+      </div>` : ""}
+      ${hasDescuentoGlobal ? `
+      <div style="display:flex;gap:24px;font-size:10px;color:#059669">
+        <span>Dto. general</span>
+        <span class="money" style="font-weight:700">-${formatMoneyARS(data.descuentoGlobal!)}</span>
+      </div>` : ""}
+      <div style="display:flex;gap:24px;padding-top:6px;border-top:2px solid #e2e8f0;margin-top:2px">
+        <span style="font-size:12px;font-weight:900;color:#0f172a">TOTAL</span>
+        <span class="money" style="font-size:16px;font-weight:900;color:#0f172a">${formatMoneyARS(data.total)}</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ FOOTER ═════════════════════════════════════════════════ -->
+  <div style="border-top:1px solid #e2e8f0;padding-top:10px;display:flex;justify-content:space-between;align-items:center">
+    ${qrHtml ? `
+    <div style="display:flex;align-items:center;gap:10px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:8px 12px">
+      ${qrHtml}
+      <div>
+        <div style="font-size:8px;font-weight:900;text-transform:uppercase;letter-spacing:1px;color:#94a3b8;margin-bottom:2px">Catálogo online</div>
+        <div style="font-size:8px;color:#64748b;line-height:1.5">Escaneá para ver<br>todos nuestros productos</div>
+      </div>
+    </div>` : `<div></div>`}
+    <div style="text-align:right">
+      <div style="font-size:10px;font-weight:600;color:#94a3b8">Gracias por su compra</div>
+      ${footerText ? `<div style="font-size:9px;color:#94a3b8;margin-top:2px">${footerText}</div>` : ""}
+    </div>
+  </div>
+
+</body>
+</html>`;
 }
 
-/**
- * Versión async: incluye QR con la URL pública del comprobante (shareUrl).
- * Si no se provee shareUrl, el footer no muestra QR.
- * Usar en API routes (server-side / Puppeteer).
- */
 export async function buildVentaHtmlAsync(data: VentaReportDTO, branding: BrandingDTO): Promise<string> {
   let qrHtml = "";
   if (data.catalogUrl) {
-    qrHtml = await generateQRHtml(data.catalogUrl, {
-      size: 72,
-      darkColor: "#0f172a",
-    });
+    qrHtml = await generateQRHtml(data.catalogUrl, { size: 60, darkColor: "#0f172a" });
   }
   return buildVentaBody(data, branding, qrHtml);
 }
 
-/**
- * Versión sync: sin QR (para preview en cliente / useMemo).
- * Mantener compatibilidad con la página de branding.
- */
 export function buildVentaHtml(data: VentaReportDTO, branding: BrandingDTO): string {
   return buildVentaBody(data, branding, "");
 }
