@@ -341,6 +341,17 @@ export default function NuevaVentaPage() {
 
   const getDiscountMeta = React.useCallback(
     (item: CartItem) => {
+      // Prioridad: descuento de catálogo del producto
+      if (item.producto.descuentoEfectivo) {
+        return {
+          totalSubQty: 0,
+          bestDiscountPct: item.producto.descuentoEfectivo.porcentaje,
+          nextDiscountPct: null,
+          nextDiscountQty: null,
+          subcategoriaNombre: item.producto.subcategoria?.nombre ?? "marca",
+        };
+      }
+
       const subcategoryId = item.producto.subcategoriaId;
       const totalSubQty = subcategoryId ? (subcategoryQtyMap.get(subcategoryId) ?? 0) : 0;
       const descuentos = item.producto.subcategoria?.descuentos as DescuentoNivel[] | null | undefined;
@@ -361,21 +372,24 @@ export default function NuevaVentaPage() {
   const totalDescuento = React.useMemo(
     () =>
       cart.reduce((accumulator, item) => {
-        const subcategoryId = item.producto.subcategoriaId;
-        if (!subcategoryId) {
-          return accumulator;
+        const precio = Number(item.producto.precioVenta);
+
+        // Descuento de catálogo del producto (porcentaje o monto fijo)
+        if (item.producto.descuentoEfectivo) {
+          return accumulator + item.producto.descuentoEfectivo.montoDescuento * item.quantity;
         }
+
+        // Descuento por tiers de subcategoría
+        const subcategoryId = item.producto.subcategoriaId;
+        if (!subcategoryId) return accumulator;
 
         const totalSubQty = subcategoryQtyMap.get(subcategoryId) ?? 0;
         const subDescuentos = item.producto.subcategoria?.descuentos as DescuentoNivel[] | null | undefined;
         const best = getBestDiscount(subDescuentos, totalSubQty);
 
-        if (!best) {
-          return accumulator;
-        }
+        if (!best) return accumulator;
 
-        const descuentoItem = Number(item.producto.precioVenta) * item.quantity * (best.porcentaje / 100);
-        return accumulator + descuentoItem;
+        return accumulator + precio * item.quantity * (best.porcentaje / 100);
       }, 0),
     [cart, subcategoryQtyMap],
   );
@@ -465,16 +479,22 @@ export default function NuevaVentaPage() {
       const payload: CreateVentaDirectaInput = {
         clienteId: finalClienteId,
         items: cart.map((item) => {
-          const subcategoryId = item.producto.subcategoriaId;
+          const precio = Number(item.producto.precioVenta);
           let discountForItem = 0;
 
-          if (subcategoryId) {
-            const totalSubQty = subcategoryQtyMap.get(subcategoryId) ?? 0;
-            const subDescuentos = item.producto.subcategoria?.descuentos as DescuentoNivel[] | null | undefined;
-            const best = getBestDiscount(subDescuentos, totalSubQty);
-
-            if (best) {
-              discountForItem = Number(item.producto.precioVenta) * item.quantity * (best.porcentaje / 100);
+          // Prioridad 1: descuento de catálogo del producto
+          if (item.producto.descuentoEfectivo) {
+            discountForItem = item.producto.descuentoEfectivo.montoDescuento * item.quantity;
+          } else {
+            // Prioridad 2: tiers por subcategoría
+            const subcategoryId = item.producto.subcategoriaId;
+            if (subcategoryId) {
+              const totalSubQty = subcategoryQtyMap.get(subcategoryId) ?? 0;
+              const subDescuentos = item.producto.subcategoria?.descuentos as DescuentoNivel[] | null | undefined;
+              const best = getBestDiscount(subDescuentos, totalSubQty);
+              if (best) {
+                discountForItem = precio * item.quantity * (best.porcentaje / 100);
+              }
             }
           }
 
