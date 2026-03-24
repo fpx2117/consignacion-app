@@ -34,8 +34,10 @@ import {
   Calendar,
   Layers,
   AlertCircle,
-  Plus
+  Plus,
+  Percent,
 } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
 import { CreateCategoriaDialog } from "./create-categoria-dialog";
 import { toast } from "sonner";
 
@@ -82,6 +84,14 @@ export function CreateProductoDialog({
   const [stockMinUnits, setStockMinUnits] = React.useState("");
   const [fechaVencimiento, setFechaVencimiento] = React.useState("");
 
+  // Descuento
+  const [descuentoActivo, setDescuentoActivo] = React.useState(false);
+  const [tipoDescuento, setTipoDescuento] = React.useState<"porcentaje" | "monto">("porcentaje");
+  const [descuentoPorcentaje, setDescuentoPorcentaje] = React.useState("");
+  const [descuentoMonto, setDescuentoMonto] = React.useState("");
+  const [descuentoDesde, setDescuentoDesde] = React.useState("");
+  const [descuentoHasta, setDescuentoHasta] = React.useState("");
+
   // Categorías
   const [categorias, setCategorias] = React.useState<{ id: number | string; nombre: string; color?: string }[]>([]);
   const [categoriaId, setCategoriaId] = React.useState<string>("");
@@ -98,6 +108,12 @@ export function CreateProductoDialog({
       setStockMinUnits("");
       setFechaVencimiento("");
       setCategoriaId("");
+      setDescuentoActivo(false);
+      setTipoDescuento("porcentaje");
+      setDescuentoPorcentaje("");
+      setDescuentoMonto("");
+      setDescuentoDesde("");
+      setDescuentoHasta("");
 
       apiService.getCategorias()
         .then((data) => {
@@ -136,6 +152,8 @@ export function CreateProductoDialog({
     if (!canSubmit || saving) return;
     setSaving(true);
     try {
+      const dpct = toNumber(descuentoPorcentaje);
+      const dmonto = toNumber(descuentoMonto);
       const payload = {
         nombre: nombre.trim(),
         codigoBarra: codigoBarra.trim() || undefined,
@@ -147,6 +165,12 @@ export function CreateProductoDialog({
         fechaVencimiento: fechaVencimiento || null,
         categoriaId: Number(categoriaId),
         subcategoriaId: subcategoriaId ? Number(subcategoriaId) : undefined,
+        descuentoActivo,
+        tipoDescuento,
+        descuentoPorcentaje: tipoDescuento === "porcentaje" ? (dpct ?? null) : null,
+        descuentoMonto: tipoDescuento === "monto" ? (dmonto ?? null) : null,
+        descuentoDesde: descuentoDesde ? new Date(descuentoDesde).toISOString() : null,
+        descuentoHasta: descuentoHasta ? new Date(descuentoHasta).toISOString() : null,
       };
 
       const created = await apiService.createProducto(payload as unknown as CreateProductoInput);
@@ -326,6 +350,128 @@ export function CreateProductoDialog({
                 <Input value={stockMinUnits} onChange={(e) => setStockMinUnits(e.target.value)} className="pl-9 h-11 bg-[color:var(--status-warning)]/5 border-[color:var(--status-warning)]/20" placeholder="5" inputMode="numeric" />
               </div>
             </div>
+          </div>
+
+          {/* Sección Descuento */}
+          <div className="rounded-xl border border-dashed border-muted-foreground/30 p-4 space-y-3 bg-muted/10">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Percent className="h-4 w-4 text-muted-foreground" />
+                <span className="text-xs font-bold uppercase text-muted-foreground">Descuento en catálogo</span>
+              </div>
+              <Switch checked={descuentoActivo} onCheckedChange={setDescuentoActivo} />
+            </div>
+
+            {descuentoActivo && (
+              <div className="space-y-3 animate-in fade-in slide-in-from-top-2 duration-200">
+                {/* Selector de tipo */}
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setTipoDescuento("porcentaje")}
+                    className={cn(
+                      "h-9 rounded-lg text-xs font-bold border transition-colors",
+                      tipoDescuento === "porcentaje"
+                        ? "bg-destructive text-white border-destructive"
+                        : "bg-muted/30 text-muted-foreground border-muted-foreground/20 hover:border-muted-foreground/40"
+                    )}
+                  >
+                    % Porcentaje
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setTipoDescuento("monto")}
+                    className={cn(
+                      "h-9 rounded-lg text-xs font-bold border transition-colors",
+                      tipoDescuento === "monto"
+                        ? "bg-destructive text-white border-destructive"
+                        : "bg-muted/30 text-muted-foreground border-muted-foreground/20 hover:border-muted-foreground/40"
+                    )}
+                  >
+                    $ Monto fijo
+                  </button>
+                </div>
+
+                <div className="space-y-2">
+                  {tipoDescuento === "porcentaje" ? (
+                    <>
+                      <Label className="text-xs font-bold uppercase text-muted-foreground">Porcentaje (%)</Label>
+                      <div className="relative">
+                        <Percent className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          type="number"
+                          min={1}
+                          max={99}
+                          value={descuentoPorcentaje}
+                          onChange={(e) => setDescuentoPorcentaje(e.target.value)}
+                          className="pl-9 h-11 bg-muted/30"
+                          placeholder="ej: 20"
+                          inputMode="numeric"
+                        />
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <Label className="text-xs font-bold uppercase text-muted-foreground">Monto de descuento ($)</Label>
+                      <div className="relative">
+                        <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          type="number"
+                          min={0.01}
+                          value={descuentoMonto}
+                          onChange={(e) => setDescuentoMonto(e.target.value)}
+                          className="pl-9 h-11 bg-muted/30"
+                          placeholder="ej: 500"
+                          inputMode="decimal"
+                        />
+                      </div>
+                    </>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-2">
+                    <Label className="text-xs font-bold uppercase text-muted-foreground">Desde (opcional)</Label>
+                    <Input
+                      type="datetime-local"
+                      value={descuentoDesde}
+                      onChange={(e) => setDescuentoDesde(e.target.value)}
+                      className="h-11 bg-muted/30"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-xs font-bold uppercase text-muted-foreground">Hasta (opcional)</Label>
+                    <Input
+                      type="datetime-local"
+                      value={descuentoHasta}
+                      onChange={(e) => setDescuentoHasta(e.target.value)}
+                      className="h-11 bg-muted/30"
+                    />
+                  </div>
+                </div>
+
+                {/* Preview de precio */}
+                {(() => {
+                  const dpct = toNumber(descuentoPorcentaje);
+                  const dmonto = toNumber(descuentoMonto);
+                  const precioFinal = tipoDescuento === "porcentaje"
+                    ? (dpct && pv > 0 ? pv * (1 - dpct / 100) : null)
+                    : (dmonto && pv > 0 ? pv - Math.min(dmonto, pv) : null);
+                  if (!precioFinal || pv <= 0) return null;
+                  const ahorro = pv - precioFinal;
+                  const pctCalc = Math.round((ahorro / pv) * 100);
+                  return (
+                    <div className="rounded-lg bg-destructive/5 border border-destructive/20 px-3 py-2 flex items-center justify-between">
+                      <span className="text-xs text-muted-foreground line-through">${pv.toLocaleString("es-AR")}</span>
+                      <span className="text-sm font-black text-destructive">${precioFinal.toLocaleString("es-AR")}</span>
+                      <span className="text-xs font-bold text-destructive bg-destructive/10 px-2 py-0.5 rounded-full">
+                        -{pctCalc}%
+                      </span>
+                    </div>
+                  );
+                })()}
+              </div>
+            )}
           </div>
 
           <div className="flex gap-3 pt-4">

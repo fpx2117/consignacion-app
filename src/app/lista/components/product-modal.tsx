@@ -32,6 +32,7 @@ export function ProductModal({ product, isOpen, onClose, config, isConsigne, onA
         ? basePrice * (1 + ((config.porcentajeAumentoConsignacion ?? 0) / 100))
         : basePrice;
     const isAvailable = product.stockDisponibleUnits > 0;
+    const descuento = product.descuentoEfectivo;
 
     return (
         <AnimatePresence>
@@ -109,13 +110,34 @@ export function ProductModal({ product, isOpen, onClose, config, isConsigne, onA
                                 </div>
 
                                 <div className="flex flex-col gap-1 mb-8 pb-8 border-b border-border/70">
-                                    <span className="text-3xl sm:text-4xl font-black text-foreground tracking-tight">
-                                        ${displayedPrice.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
-                                    </span>
-                                    {isConsigne && (
-                                        <span className="text-sm font-semibold text-muted-foreground/80 line-through">
-                                            Precio general: ${basePrice.toLocaleString('es-AR')}
-                                        </span>
+                                    {descuento ? (
+                                        <>
+                                            <div className="flex items-center gap-3">
+                                                <span className="text-sm font-semibold text-muted-foreground/80 line-through">
+                                                    ${descuento.precioOriginal.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                                                </span>
+                                                <Badge variant="destructive" className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5">
+                                                    -{descuento.porcentaje}% OFF
+                                                </Badge>
+                                            </div>
+                                            <span className="text-3xl sm:text-4xl font-black text-destructive tracking-tight">
+                                                ${descuento.precioFinal.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                                            </span>
+                                            <span className="text-sm font-semibold text-[color:var(--status-success-strong)]">
+                                                Ahorrás ${(descuento.precioOriginal - descuento.precioFinal).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                                            </span>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <span className="text-3xl sm:text-4xl font-black text-foreground tracking-tight">
+                                                ${displayedPrice.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                                            </span>
+                                            {isConsigne && (
+                                                <span className="text-sm font-semibold text-muted-foreground/80 line-through">
+                                                    Precio general: ${basePrice.toLocaleString('es-AR')}
+                                                </span>
+                                            )}
+                                        </>
                                     )}
                                 </div>
 

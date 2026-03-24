@@ -300,6 +300,14 @@ export type DescuentoNivel = {
   porcentaje: number;
 };
 
+export type DescuentoEfectivo = {
+  tipo: "porcentaje" | "monto";
+  porcentaje: number;
+  precioOriginal: number;
+  precioFinal: number;
+  montoDescuento: number;
+};
+
 export type Producto = {
   id: ID;
   nombre: string;
@@ -322,6 +330,15 @@ export type Producto = {
   updatedAt: ISODateString;
   movimientoStocks?: MovimientoStock[];
   notifications?: Notification[];
+  // Descuento directo sobre el producto
+  tipoDescuento?: "porcentaje" | "monto";
+  descuentoPorcentaje?: number | null;
+  descuentoMonto?: number | null;
+  descuentoActivo?: boolean;
+  descuentoDesde?: ISODateString | null;
+  descuentoHasta?: ISODateString | null;
+  // Campo calculado por el backend — el frontend no evalúa vigencia
+  descuentoEfectivo?: DescuentoEfectivo | null;
 };
 
 export type PublicCatalogSubcategory = {
@@ -344,6 +361,7 @@ export type PublicCatalogProduct = Pick<
   subcategoriaId: ID | null;
   categoria?: Pick<Categoria, "id" | "nombre"> | null;
   subcategoria?: PublicCatalogSubcategory | null;
+  descuentoEfectivo?: DescuentoEfectivo | null;
 };
 
 export type PublicCatalogBanner = {
@@ -650,6 +668,13 @@ export type CreateProductoInput = {
   fechaVencimiento?: ISODateString | null;
   categoriaId?: ID | null;
   imagenUrl?: string | null;
+  // Descuento en catálogo
+  tipoDescuento?: "porcentaje" | "monto";
+  descuentoPorcentaje?: number | null;
+  descuentoMonto?: number | null;
+  descuentoActivo?: boolean;
+  descuentoDesde?: ISODateString | null;
+  descuentoHasta?: ISODateString | null;
 };
 
 export type UpdateProductoInput = Partial<CreateProductoInput> & {

@@ -3,6 +3,7 @@ import { unstable_cache } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { registerCatalogVisit } from "@/lib/analytics/catalog-visit";
 import type { PublicCatalogData } from "@/lib/types";
+import { calcularDescuentoEfectivo } from "@/lib/descuento-utils";
 
 function readOptionalString(record: Record<string, unknown> | null | undefined, key: string) {
   const value = record?.[key];
@@ -57,6 +58,12 @@ export async function getPublicCatalogDataRaw(sucursalId: number | null): Promis
         categoriaId: true,
         subcategoriaId: true,
         stockDisponibleUnits: true,
+        descuentoActivo: true,
+        tipoDescuento: true,
+        descuentoPorcentaje: true,
+        descuentoMonto: true,
+        descuentoDesde: true,
+        descuentoHasta: true,
         categoria: {
           select: {
             id: true,
@@ -84,8 +91,23 @@ export async function getPublicCatalogDataRaw(sucursalId: number | null): Promis
 
   const brandingExtra = config.sucursal.branding as Record<string, unknown> | null | undefined;
 
+  const ahora = new Date();
+
+  const productosConDescuento = productos.map((p) => ({
+    ...p,
+    descuentoEfectivo: calcularDescuentoEfectivo({
+      descuentoActivo: p.descuentoActivo,
+      tipoDescuento: p.tipoDescuento,
+      descuentoPorcentaje: p.descuentoPorcentaje ? Number(p.descuentoPorcentaje) : null,
+      descuentoMonto: p.descuentoMonto ? Number(p.descuentoMonto) : null,
+      descuentoDesde: p.descuentoDesde,
+      descuentoHasta: p.descuentoHasta,
+      precioVenta: Number(p.precioVenta),
+    }, ahora),
+  }));
+
   const payload: PublicCatalogData = {
-    productos,
+    productos: productosConDescuento,
     categorias,
     config: {
       sucursalId: config.sucursalId,

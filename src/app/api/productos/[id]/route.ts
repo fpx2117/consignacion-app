@@ -12,6 +12,7 @@ import { sendNotification } from "@/lib/notificaciones/socket-trigger";
 import { NOTIFICATION_TYPE } from "@/lib/notificaciones/types";
 import { obtenerConfiguracionGlobal } from "@/lib/config";
 import { canAccessSucursalResource, isGlobalSucursalView } from "@/lib/sucursalScope";
+import { calcularDescuentoEfectivo } from "@/lib/descuento-utils";
 
 type RouteParams = { params: Promise<{ id: string }> };
 
@@ -60,6 +61,8 @@ export async function GET(_: Request, { params }: RouteParams) {
     const stockConsignadoGlobal = producto.stockSucursals.reduce((acc, s) => acc + (s.stockConsignadoUnits || 0), 0);
     const stockMinGlobal = producto.stockSucursals.reduce((acc, s) => acc + (s.stockMinUnits || 0), 0);
 
+    const precioEfectivo = Number(branchStock?.precioVentaOverride ?? producto.precioVenta);
+
     const data = {
       ...producto,
       stockDisponibleUnits: isGlobal
@@ -71,6 +74,15 @@ export async function GET(_: Request, { params }: RouteParams) {
       stockMinUnits: isGlobal
         ? stockMinGlobal
         : (branchStock?.stockMinUnits ?? producto.stockMinUnits),
+      descuentoEfectivo: calcularDescuentoEfectivo({
+        descuentoActivo: producto.descuentoActivo,
+        tipoDescuento: producto.tipoDescuento,
+        descuentoPorcentaje: producto.descuentoPorcentaje ? Number(producto.descuentoPorcentaje) : null,
+        descuentoMonto: producto.descuentoMonto ? Number(producto.descuentoMonto) : null,
+        descuentoDesde: producto.descuentoDesde,
+        descuentoHasta: producto.descuentoHasta,
+        precioVenta: precioEfectivo,
+      }),
     };
 
     return NextResponse.json({ data });
@@ -143,6 +155,10 @@ export async function PUT(req: Request, { params }: RouteParams) {
           ...parsed.data,
           subcategoriaId: body.subcategoriaId !== undefined ? body.subcategoriaId : undefined,
           fechaVencimiento: parsed.data.fechaVencimiento ? new Date(parsed.data.fechaVencimiento) : undefined,
+          tipoDescuento: parsed.data.tipoDescuento ?? undefined,
+          descuentoMonto: parsed.data.descuentoMonto !== undefined ? parsed.data.descuentoMonto : undefined,
+          descuentoDesde: parsed.data.descuentoDesde ? new Date(parsed.data.descuentoDesde) : parsed.data.descuentoDesde === null ? null : undefined,
+          descuentoHasta: parsed.data.descuentoHasta ? new Date(parsed.data.descuentoHasta) : parsed.data.descuentoHasta === null ? null : undefined,
         },
       });
 

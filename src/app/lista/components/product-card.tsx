@@ -36,6 +36,7 @@ export function ProductCard({
     const pct = Number(config.porcentajeAumentoConsignacion) || 0;
     const displayedPrice = isConsigne ? basePrice * (1 + pct / 100) : basePrice;
     const isAvailable = product.stockDisponibleUnits > 0;
+    const descuento = product.descuentoEfectivo;
 
     return (
         <motion.div
@@ -89,7 +90,7 @@ export function ProductCard({
                         </div>
                     )}
 
-                    {/* Badge de Stock */}
+                    {/* Badge de Stock + Descuento */}
                     {isGrid && (
                         <div className="absolute top-4 left-4 flex flex-col gap-1.5 z-10">
                             {isAvailable ? (
@@ -99,6 +100,11 @@ export function ProductCard({
                             ) : (
                                 <Badge variant="destructive" className="bg-foreground text-[color:var(--ui-fx-white)] border-transparent px-3 py-1 rounded-full flex items-center gap-1.5 shadow-sm text-[10px] font-black uppercase tracking-wider">
                                     <XCircle className="h-3 w-3" /> AGOTADO
+                                </Badge>
+                            )}
+                            {descuento && (
+                                <Badge variant="destructive" className="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider shadow-sm">
+                                    -{descuento.porcentaje}% OFF
                                 </Badge>
                             )}
                         </div>
@@ -134,13 +140,26 @@ export function ProductCard({
                         isGrid ? "mt-2 sm:mt-4" : "mt-auto"
                     )}>
                         <div className="flex flex-col min-w-0">
-                            <span className="text-base sm:text-xl font-black text-foreground tracking-tight truncate">
-                                ${displayedPrice.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
-                            </span>
-                            {isConsigne && (
-                                <span className="text-[10px] sm:text-xs font-semibold text-muted-foreground/80 line-through">
-                                    ${basePrice.toLocaleString('es-AR')}
-                                </span>
+                            {descuento ? (
+                                <>
+                                    <span className="text-base sm:text-xl font-black text-destructive tracking-tight truncate">
+                                        ${descuento.precioFinal.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                                    </span>
+                                    <span className="text-[10px] sm:text-xs font-semibold text-muted-foreground/80 line-through">
+                                        ${descuento.precioOriginal.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                                    </span>
+                                </>
+                            ) : (
+                                <>
+                                    <span className="text-base sm:text-xl font-black text-foreground tracking-tight truncate">
+                                        ${displayedPrice.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                                    </span>
+                                    {isConsigne && (
+                                        <span className="text-[10px] sm:text-xs font-semibold text-muted-foreground/80 line-through">
+                                            ${basePrice.toLocaleString('es-AR')}
+                                        </span>
+                                    )}
+                                </>
                             )}
                         </div>
 

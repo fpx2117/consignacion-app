@@ -16,6 +16,7 @@ import { evaluateStockAlert, processNotificationQueue } from "@/lib/notificacion
 import { nowAR } from "@/lib/utils-date";
 import { resolveTimezoneForAuth } from "@/lib/get-configured-tz";
 import { buildSucursalWhere, isGlobalSucursalView } from "@/lib/sucursalScope";
+import { calcularDescuentoEfectivo } from "@/lib/descuento-utils";
 
 const MAX_VENTA_RETRIES = 3;
 const createVentaSchema = z.object({
@@ -261,7 +262,25 @@ export async function handlePostVenta(req: Request, deps: VentasRouteDeps = defa
             if (alerta) txNotificationsQueue.push(alerta);
 
             const precioVenta = Number(stockSucursalInfo.precioVentaOverride ?? stockSucursalInfo.producto.precioVenta);
-            const descuento = Number(item.descuento || 0);
+
+            // Si no viene descuento manual del POS, aplicar el descuento de catálogo del producto
+            let descuento = Number(item.descuento || 0);
+            if (descuento === 0) {
+              const prod = stockSucursalInfo.producto;
+              const descuentoAuto = calcularDescuentoEfectivo({
+                descuentoActivo: prod.descuentoActivo,
+                tipoDescuento: prod.tipoDescuento,
+                descuentoPorcentaje: prod.descuentoPorcentaje ? Number(prod.descuentoPorcentaje) : null,
+                descuentoMonto: prod.descuentoMonto ? Number(prod.descuentoMonto) : null,
+                descuentoDesde: prod.descuentoDesde,
+                descuentoHasta: prod.descuentoHasta,
+                precioVenta,
+              });
+              if (descuentoAuto) {
+                descuento = descuentoAuto.montoDescuento * item.units;
+              }
+            }
+
             const subtotal = (precioVenta * item.units) - descuento;
             totalVenta += subtotal;
 

@@ -1,20 +1,43 @@
 import { z } from "zod";
 
-export const createProductoSchema = z.object({
-  nombre: z.string().min(1, "El nombre es requerido"),
-  descripcion: z.string().nullish(),
-  codigoBarra: z.string().nullish(),
-  sku: z.string().nullish(),
-  precioVenta: z.number().positive(),
-  precioCosto: z.number().min(0),
-  iva: z.number().default(21.0),
-  stockDisponibleUnits: z.number().int().min(0).default(0),
-  stockMinUnits: z.number().int().min(0).default(0),
-  packSizeUnits: z.number().int().positive().nullish(),
-  fechaVencimiento: z.string().nullish(),
-  categoriaId: z.number().int().nullish(),
-  imagenUrl: z.string().nullish(),
-});
+const descuentoFields = {
+  tipoDescuento: z.enum(["porcentaje", "monto"]).optional().default("porcentaje"),
+  descuentoPorcentaje: z.number().min(1).max(99).nullable().optional(),
+  descuentoMonto: z.number().min(0.01).nullable().optional(),
+  descuentoActivo: z.boolean().optional().default(false),
+  descuentoDesde: z.string().datetime({ offset: true }).nullable().optional(),
+  descuentoHasta: z.string().datetime({ offset: true }).nullable().optional(),
+};
+
+export const createProductoSchema = z
+  .object({
+    nombre: z.string().min(1, "El nombre es requerido"),
+    descripcion: z.string().nullish(),
+    codigoBarra: z.string().nullish(),
+    sku: z.string().nullish(),
+    precioVenta: z.number().positive(),
+    precioCosto: z.number().min(0),
+    iva: z.number().default(21.0),
+    stockDisponibleUnits: z.number().int().min(0).default(0),
+    stockMinUnits: z.number().int().min(0).default(0),
+    packSizeUnits: z.number().int().positive().nullish(),
+    fechaVencimiento: z.string().nullish(),
+    categoriaId: z.number().int().nullish(),
+    imagenUrl: z.string().nullish(),
+    ...descuentoFields,
+  })
+  .refine(
+    (data) => {
+      if (data.descuentoDesde && data.descuentoHasta) {
+        return new Date(data.descuentoHasta) > new Date(data.descuentoDesde);
+      }
+      return true;
+    },
+    {
+      message: "La fecha de fin debe ser posterior a la fecha de inicio",
+      path: ["descuentoHasta"],
+    }
+  );
 
 // Corregimos el UpdateProductoInput para que acepte NULL explícitamente
 export const updateProductoSchema = createProductoSchema.partial().extend({
