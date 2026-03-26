@@ -47,7 +47,12 @@ export async function proxy(request: NextRequest) {
             }
         }
     } catch {
-        // Token inválido → dejar pasar, el layout se encarga de redirigir a login
+        // Token inválido (firma incorrecta, expirado, etc.) → limpiar cookie y redirigir a login
+        const url = request.nextUrl.clone();
+        url.pathname = "/login";
+        const response = NextResponse.redirect(url);
+        response.cookies.set(cookieName, "", { maxAge: 0, path: "/" });
+        return response;
     }
 
     return NextResponse.next();
