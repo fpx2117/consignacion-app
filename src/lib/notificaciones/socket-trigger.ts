@@ -10,7 +10,7 @@ interface NotificationPayload {
 }
 
 export async function sendNotification({ id, type, title, message, branch, data }: NotificationPayload) {
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+  const baseUrl = process.env.APP_URL || process.env.NEXT_PUBLIC_BASE_URL || process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
   const dispatchSecret = process.env.SOCKET_DISPATCH_SECRET || process.env.CRON_SECRET;
 
   try {
