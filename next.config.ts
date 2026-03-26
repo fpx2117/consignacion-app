@@ -34,6 +34,20 @@ const nextConfig: NextConfig = {
           },
         ],
       },
+      // ✅ No cachear respuestas de API en CDN
+      {
+        source: "/api/(.*)",
+        headers: [
+          {
+            key: "Cache-Control",
+            value: "no-store",
+          },
+          {
+            key: "Surrogate-Control",
+            value: "no-store",
+          },
+        ],
+      },
       // ✅ Cache moderado para archivos de la API de imágenes
       {
         source: "/api/files/(.*)",
