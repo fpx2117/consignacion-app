@@ -299,7 +299,7 @@ function GastoModal({ open, onOpenChange, onSuccess, categorias, editingGasto, a
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="sm:max-w-[500px] rounded-[2rem]">
+            <DialogContent className="w-[95vw] sm:max-w-[500px] rounded-[2rem] max-h-[85dvh] overflow-y-auto custom-scrollbar p-5 sm:p-6">
                 <DialogHeader>
                     <DialogTitle className="text-2xl font-black tracking-tight">
                         {editingGasto ? "Editar Gasto" : "Registrar Gasto"}
@@ -509,7 +509,7 @@ function GastoModal({ open, onOpenChange, onSuccess, categorias, editingGasto, a
                         </div>
                     )}
 
-                    <div className="pt-4">
+                    <div className="pt-4 pb-4 sm:pb-0">
                         <Button
                             disabled={loading || categorias.length === 0 || (esCompartido && selectedSucursales.length < 2)}
                             type="submit"
@@ -567,7 +567,7 @@ function CategoriasModal({ open, onOpenChange, categorias, onSuccess }: Categori
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="sm:max-w-[400px] rounded-[2rem]">
+            <DialogContent className="w-[95vw] sm:max-w-[400px] rounded-[2rem] max-h-[85dvh] overflow-y-auto custom-scrollbar p-5 sm:p-6">
                 <DialogHeader>
                     <DialogTitle className="text-2xl font-black tracking-tight">Categorías de Gasto</DialogTitle>
                 </DialogHeader>
@@ -688,9 +688,9 @@ function ShareGastoModal({ open, onOpenChange, gasto }: ShareGastoModalProps) {
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="sm:max-w-[450px] rounded-[2.5rem] p-0 overflow-hidden border-none shadow-2xl animate-in zoom-in-95 duration-200">
+            <DialogContent className="w-[95vw] sm:max-w-[450px] rounded-[2.5rem] p-0 max-h-[85dvh] overflow-y-auto custom-scrollbar border-none shadow-2xl animate-in zoom-in-95 duration-200">
                 {/* Premium Gradient Header */}
-                <div className="bg-gradient-to-br from-primary via-primary/90 to-primary/80 p-8 pb-14 text-primary-foreground relative">
+                <div className="bg-gradient-to-br from-primary via-primary/90 to-primary/80 p-8 pb-14 text-primary-foreground relative shrink-0">
                     <div className="absolute top-0 right-0 w-32 h-32 bg-card/10 rounded-full -mr-16 -mt-16 blur-3xl" />
                     <div className="absolute bottom-0 left-0 w-24 h-24 bg-card/5 rounded-full -ml-12 -mb-12 blur-2xl" />
 
@@ -714,7 +714,7 @@ function ShareGastoModal({ open, onOpenChange, gasto }: ShareGastoModalProps) {
                 </div>
 
                 {/* Main Content with Glass-like transition */}
-                <div className="p-8 -mt-10 bg-background rounded-t-[3rem] shadow-[0_-15px_40px_-15px_rgba(0,0,0,0.1)] relative z-20 space-y-8">
+                <div className="p-8 -mt-10 bg-background rounded-t-[3rem] shadow-[0_-15px_40px_-15px_rgba(0,0,0,0.1)] relative z-20 space-y-8 pb-12 sm:pb-8">
                     <Tabs defaultValue="manual" className="w-full">
                         <TabsList className="grid w-full grid-cols-2 rounded-2xl h-14 bg-muted/30 p-1.5 mb-2">
                             <TabsTrigger value="manual" className="rounded-xl font-bold text-xs uppercase tracking-widest data-[state=active]:bg-card data-[state=active]:shadow-lg data-[state=active]:text-primary transition-all duration-300">
