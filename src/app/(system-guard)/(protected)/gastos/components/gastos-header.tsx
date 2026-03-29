@@ -24,19 +24,19 @@ export function GastosHeader({ onOpenCategories, onOpenNew }: GastosHeaderProps)
         </h1>
       </div>
 
-      <div className="flex items-center gap-3 w-full md:w-auto">
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full md:w-auto">
         <Button
           variant="outline"
           onClick={onOpenCategories}
-          className="flex-1 md:flex-none rounded-2xl h-12 md:h-14 font-bold text-xs uppercase tracking-widest border-primary/20 hover:bg-primary/5 transition-all"
+          className="w-full sm:w-auto rounded-2xl h-12 md:h-14 font-bold text-[10px] sm:text-xs uppercase tracking-normal sm:tracking-widest border-primary/20 hover:bg-primary/5 transition-all"
         >
           Categorias
         </Button>
         <Button
           onClick={onOpenNew}
-          className="flex-[1.5] md:flex-none bg-primary hover:bg-primary/90 text-primary-foreground rounded-2xl h-12 md:h-14 font-bold text-xs uppercase tracking-widest gap-2 shadow-xl shadow-primary/20 active:scale-95 transition-all"
+          className="w-full sm:w-auto bg-primary hover:bg-primary/90 text-primary-foreground rounded-2xl h-12 md:h-14 font-bold text-[10px] sm:text-xs uppercase tracking-normal sm:tracking-widest gap-2 shadow-xl shadow-primary/20 active:scale-95 transition-all"
         >
-          <Plus className="h-4 w-4" /> Nuevo Gasto
+          <Plus className="h-4 w-4 shrink-0" /> Nuevo Gasto
         </Button>
       </div>
     </div>

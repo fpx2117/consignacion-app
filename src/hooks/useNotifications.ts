@@ -33,6 +33,10 @@ type NotificationsCache = {
 
 let notificationsCache: NotificationsCache | null = null;
 
+export function clearNotificationsCache() {
+  notificationsCache = null;
+}
+
 type NotificationWithFingerprint = AppNotification & {
   fingerprint?: string;
 };
@@ -215,13 +219,18 @@ export function useNotifications({ limit = 50, onlyUnreadOnLoad = false, ttlMs =
     }
   };
 
+  const forceRefresh = useCallback(() => {
+    lastFetchRef.current = 0;
+    return fetchNotifications();
+  }, [fetchNotifications]);
+
   return {
     notifications,
     unreadCount,
     loading,
     isConnected,
-    markAllAsRead, // 👈 ¡Aquí está la función que te faltaba!
+    markAllAsRead,
     hasUnread: unreadCount > 0,
-    refresh: fetchNotifications,
+    refresh: forceRefresh,
   };
 }
