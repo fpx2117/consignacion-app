@@ -344,22 +344,29 @@ export function CatalogClient({
             return matchesSearch && matchesCategory;
         });
 
-        switch (sortBy) {
-            case "price_asc":
-                result.sort((a, b) => Number(a.precioVenta) - Number(b.precioVenta));
-                break;
-            case "price_desc":
-                result.sort((a, b) => Number(b.precioVenta) - Number(a.precioVenta));
-                break;
-            case "name_asc":
-                result.sort((a, b) => a.nombre.localeCompare(b.nombre));
-                break;
-            case "name_desc":
-                result.sort((a, b) => b.nombre.localeCompare(a.nombre));
-                break;
-            default:
-                break;
-        }
+        result.sort((a, b) => {
+            const stockA = a.stockDisponibleUnits > 0 ? 1 : 0;
+            const stockB = b.stockDisponibleUnits > 0 ? 1 : 0;
+
+            // Prioridad 1: Productos con stock primero
+            if (stockA !== stockB) {
+                return stockB - stockA; // 1 (tiene) vs 0 (no tiene) -> -1 (a sube)
+            }
+
+            // Prioridad 2: Orden seleccionado por el usuario
+            switch (sortBy) {
+                case "price_asc":
+                    return Number(a.precioVenta) - Number(b.precioVenta);
+                case "price_desc":
+                    return Number(b.precioVenta) - Number(a.precioVenta);
+                case "name_asc":
+                    return a.nombre.localeCompare(b.nombre);
+                case "name_desc":
+                    return b.nombre.localeCompare(a.nombre);
+                default:
+                    return 0;
+            }
+        });
 
         return result;
     }, [products, deferredSearchTerm, selectedSubcategory, selectedCategory, sortBy]);

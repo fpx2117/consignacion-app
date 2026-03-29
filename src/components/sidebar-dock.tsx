@@ -28,7 +28,7 @@ import { SidebarDropdownGroup } from "@/components/sidebar/sidebar-dropdown-grou
 import { SidebarIconLink } from "@/components/sidebar/sidebar-icon-link";
 import type { SidebarNavItem } from "@/components/sidebar/types";
 
-import { useNotifications } from "@/hooks/useNotifications";
+import { useNotifications, clearNotificationsCache } from "@/hooks/useNotifications";
 import { useBroadcastChannel } from "@/hooks/useBroadcastChannel";
 import { useSucursalStore } from "@/store/useSucursalStore";
 import { apiService } from "@/lib/apiService";
@@ -157,7 +157,11 @@ export function SidebarDock({ initialUserData }: SidebarDockProps = {}) {
   const setPedidosVencidosCount = useSucursalStore((s) => s.setPedidosVencidosCount);
 
   useBroadcastChannel({
-    "sucursal-changed": () => router.refresh(),
+    "sucursal-changed": () => {
+      clearNotificationsCache();
+      notificationsState.refresh();
+      router.refresh();
+    },
     "plan-changed": () => router.refresh(),
     "session-revoked": () => router.push("/login"),
   });
@@ -229,6 +233,16 @@ export function SidebarDock({ initialUserData }: SidebarDockProps = {}) {
       });
     }
   }, [initialUserData, hydrate]);
+
+  // Refrescar notificaciones cuando cambia la sucursal activa (mismo tab)
+  const prevSucursalIdRef = React.useRef<number | null>(null);
+  React.useEffect(() => {
+    if (prevSucursalIdRef.current !== null && prevSucursalIdRef.current !== activeSucursalId) {
+      clearNotificationsCache();
+      notificationsState.refresh();
+    }
+    prevSucursalIdRef.current = activeSucursalId;
+  }, [activeSucursalId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   React.useEffect(() => {
     setThemeMounted(true);
