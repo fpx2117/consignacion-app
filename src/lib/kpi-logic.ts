@@ -29,6 +29,22 @@ type GastoCompartidoPendienteRecord = Prisma.GastoSucursalGetPayload<{
   include: { gasto: { include: { categoria: true } } };
 }>;
 
+const buildIncludedExpenseWhere = (
+  baseWhere: Prisma.GastoWhereInput = {}
+): Prisma.GastoWhereInput => ({
+  ...baseWhere,
+  OR: [
+    { estado: "PAGADO" },
+    { estado: "PENDIENTE", esRecurrente: true },
+  ],
+});
+
+const buildIncludedSharedExpenseWhere = (
+  baseWhere: Prisma.GastoWhereInput = {}
+): Prisma.GastoSucursalWhereInput => ({
+  gasto: buildIncludedExpenseWhere(baseWhere),
+});
+
 function getCatalogVisitDelegate(): CatalogVisitDelegate | null {
   return "catalogVisit" in prisma
     ? ((prisma as unknown as { catalogVisit?: CatalogVisitDelegate }).catalogVisit ?? null)
@@ -37,6 +53,29 @@ function getCatalogVisitDelegate(): CatalogVisitDelegate | null {
 
 async function resolveKpiTimezone(sucursalId: number, userId?: number | null) {
   return resolveTimezone({ userId: userId ?? null, sucursalId });
+}
+
+function resolvePeriodDateWhere(period: DashboardPeriod, now: Date, tz: string) {
+  if (period === "all") return undefined;
+
+  if (period === "today") {
+    const start = startOfDayAR(now, tz);
+    return { gte: start, lt: new Date(start.getTime() + 86_400_000) };
+  }
+
+  if (period === "week") {
+    const start = startOfWeekAR(now, tz);
+    return { gte: start, lt: new Date(start.getTime() + (7 * 86_400_000)) };
+  }
+
+  const start = startOfMonthAR(now, tz);
+  const nextMonthReference = new Date(now);
+  nextMonthReference.setMonth(nextMonthReference.getMonth() + 1);
+
+  return {
+    gte: start,
+    lt: startOfMonthAR(nextMonthReference, tz),
+  };
 }
 
 /**
@@ -48,13 +87,7 @@ export async function getDashboardKpis(sucursalId: number, period: DashboardPeri
     const timezone = await resolveKpiTimezone(sucursalId, userId);
     const tz = timezone.tz;
     const now = nowAR(tz);
-    let start: Date | undefined;
-
-    if (period === "today") start = startOfDayAR(now, tz);
-    else if (period === "week") start = startOfWeekAR(now, tz);
-    else if (period === "month") start = startOfMonthAR(now, tz);
-
-    const dateWhere = start ? { gte: start } : undefined;
+    const dateWhere = resolvePeriodDateWhere(period, now, tz);
 
     // Si sucursalId es 0 y es admin, no filtramos por sucursal (Vista Global)
     const isGlobal = sucursalId === 0 && isAdmin;
@@ -148,15 +181,15 @@ export async function getDashboardKpis(sucursalId: number, period: DashboardPeri
                 }
             }
         }),
-        // 7. Gastos propios PAGADO no compartidos (o todos si global)
+        // 7. Gastos propios incluidos en rentabilidad (pagados + recurrentes pendientes; o todos si global)
         isGlobal
             ? prisma.gasto.aggregate({
-                where: { fecha: dateWhere, estado: "PAGADO" },
+                where: buildIncludedExpenseWhere({ fecha: dateWhere }),
                 _sum: { monto: true },
                 _count: { _all: true }
             })
             : prisma.gasto.aggregate({
-                where: { sucursalId, esCompartido: false, fecha: dateWhere, estado: "PAGADO" },
+                where: buildIncludedExpenseWhere({ sucursalId, esCompartido: false, fecha: dateWhere }),
                 _sum: { monto: true },
                 _count: { _all: true }
             }),
@@ -166,7 +199,7 @@ export async function getDashboardKpis(sucursalId: number, period: DashboardPeri
             : prisma.gastoSucursal.findMany({
                 where: {
                     sucursalId,
-                    gasto: { fecha: dateWhere, estado: "PAGADO", esCompartido: true }
+                    ...buildIncludedSharedExpenseWhere({ fecha: dateWhere, esCompartido: true })
                 },
                 select: { montoProporcional: true }
             }),
@@ -278,7 +311,7 @@ export async function getDashboardKpis(sucursalId: number, period: DashboardPeri
         (unitsPendientesAgg._sum.unitsDevueltasAcum ?? 0)
     );
 
-    // --- GASTOS TOTALES (propios no compartidos + participación proporcional en compartidos) ---
+    // --- GASTOS TOTALES (pagados + recurrentes pendientes del período, con proporción en compartidos) ---
     const totalGastosPropios = Number(gastosPropiosAgg._sum?.monto || 0);
     const totalGastosLinks = (gastosLinksData as GastoLinkRecord[]).reduce(
         (acc: number, g) => acc + Number(g.montoProporcional), 0
@@ -370,18 +403,15 @@ export async function getDashboardTendencia(sucursalId: number, period: Dashboar
     const timezone = await resolveKpiTimezone(sucursalId, userId);
     const tz = timezone.tz;
     const now = nowAR(tz);
-    let start: Date;
-
-    if (period === "today") start = startOfDayAR(now, tz);
-    else if (period === "week") start = startOfWeekAR(now, tz);
-    else start = startOfMonthAR(now, tz);
+    const dateWhere = resolvePeriodDateWhere(period, now, tz) ?? { gte: startOfMonthAR(now, tz) };
+    const start = dateWhere.gte;
 
     const sucursalWhere = isGlobal ? {} : { sucursalId };
     const days = differenceInDays(now, start) + 1;
 
     const [ventas, pagos] = await Promise.all([
         prisma.venta.findMany({
-            where: { ...sucursalWhere, fecha: { gte: start }, anulada: false },
+            where: { ...sucursalWhere, fecha: dateWhere, anulada: false },
             select: {
                 fecha: true,
                 total: true,
@@ -391,7 +421,7 @@ export async function getDashboardTendencia(sucursalId: number, period: Dashboar
             }
         }),
         prisma.pago.findMany({
-            where: { ...sucursalWhere, fecha: { gte: start } },
+            where: { ...sucursalWhere, fecha: dateWhere },
             select: { fecha: true, monto: true, tipo: true }
         }),
     ]);
@@ -448,14 +478,9 @@ export async function getDashboardTopProductos(sucursalId: number, period: Dashb
     const timezone = await resolveKpiTimezone(sucursalId, userId);
     const tz = timezone.tz;
     const now = nowAR(tz);
-    let start: Date | undefined;
-
-    if (period === "today") start = startOfDayAR(now, tz);
-    else if (period === "week") start = startOfWeekAR(now, tz);
-    else if (period === "month") start = startOfMonthAR(now, tz);
 
     const sucursalWhere = isGlobal ? {} : { sucursalId };
-    const dateWhere = start ? { gte: start } : undefined;
+    const dateWhere = resolvePeriodDateWhere(period, now, tz);
 
     const [liqItems, posItems] = await Promise.all([
         prisma.liquidacionItem.findMany({
@@ -529,14 +554,9 @@ export async function getDashboardTopConsignados(
     const timezone = await resolveKpiTimezone(sucursalId, userId);
     const tz = timezone.tz;
     const now = nowAR(tz);
-    let start: Date | undefined;
-
-    if (period === "today") start = startOfDayAR(now, tz);
-    else if (period === "week") start = startOfWeekAR(now, tz);
-    else if (period === "month") start = startOfMonthAR(now, tz);
 
     const sucursalWhere = isGlobal ? {} : { sucursalId };
-    const dateWhere = start ? { gte: start } : undefined;
+    const dateWhere = resolvePeriodDateWhere(period, now, tz);
 
     const detalles = await prisma.consignacionDetalle.findMany({
         where: {
