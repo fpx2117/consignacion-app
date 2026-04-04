@@ -24,13 +24,39 @@ function addOccurrence(date: Date, frecuencia: FrecuenciaGasto) {
   return next;
 }
 
-function buildOccurrences(startDate: Date, endDate: Date, frecuencia: FrecuenciaGasto) {
+function alignMonthlyDay(date: Date, dayOfMonth: number | null) {
+  if (!dayOfMonth) return new Date(date);
+
+  const aligned = new Date(date);
+  const lastDayOfMonth = new Date(
+    aligned.getFullYear(),
+    aligned.getMonth() + 1,
+    0,
+  ).getDate();
+
+  aligned.setDate(Math.min(dayOfMonth, lastDayOfMonth));
+  return aligned;
+}
+
+function buildOccurrences(
+  startDate: Date,
+  endDate: Date,
+  frecuencia: FrecuenciaGasto,
+  dayOfMonth: number | null,
+) {
   const dates: Date[] = [];
-  let current = new Date(startDate);
+  let current =
+    frecuencia === "MENSUAL"
+      ? alignMonthlyDay(startDate, dayOfMonth)
+      : new Date(startDate);
 
   while (current <= endDate) {
     dates.push(new Date(current));
     current = addOccurrence(current, frecuencia);
+
+    if (frecuencia === "MENSUAL") {
+      current = alignMonthlyDay(current, dayOfMonth);
+    }
   }
 
   return dates;
@@ -66,14 +92,14 @@ async function findLegacyGastos(target: string | undefined) {
   });
 }
 
-async function migrateLegacyGasto(gasto: LegacyGasto) {
+async function migrateLegacyGasto(gasto: LegacyGasto, dayOfMonth: number | null) {
   const endDate = gasto.fechaVencimiento;
 
   if (!endDate) {
     throw new Error(`Gasto ${gasto.id} sin fecha final`);
   }
 
-  const dates = buildOccurrences(gasto.fecha, endDate, gasto.frecuencia);
+  const dates = buildOccurrences(gasto.fecha, endDate, gasto.frecuencia, dayOfMonth);
 
   if (dates.length <= 1) {
     return {
@@ -147,7 +173,9 @@ async function migrateLegacyGasto(gasto: LegacyGasto) {
 async function main() {
   const args = process.argv.slice(2);
   const apply = args.includes("--apply");
+  const dayArg = args.find((arg) => arg.startsWith("--day="));
   const target = args.find((arg) => !arg.startsWith("--"));
+  const dayOfMonth = dayArg ? Number(dayArg.split("=")[1]) : null;
   const legacyGastos = await findLegacyGastos(target);
 
   if (legacyGastos.length === 0) {
@@ -177,7 +205,7 @@ async function main() {
   const results = [];
 
   for (const gasto of legacyGastos) {
-    results.push(await migrateLegacyGasto(gasto));
+    results.push(await migrateLegacyGasto(gasto, dayOfMonth));
   }
 
   console.log("Migración completada:");
