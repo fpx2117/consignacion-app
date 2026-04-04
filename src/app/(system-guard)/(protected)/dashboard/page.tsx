@@ -11,7 +11,7 @@ const TendenciaSection = dynamic(
   () => import("./components/tendencia-section").then(m => m.TendenciaSection),
   { ssr: false, loading: () => <div className="rounded-xl border bg-card h-64 animate-pulse" /> }
 );
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
@@ -27,7 +27,7 @@ import {
 import {
   Handshake, AlertTriangle, Boxes, Wallet,
   TrendingUp, Activity, Store, Package,
-  Calendar, Receipt, Settings2, RotateCcw, BarChart3, Check, X, Shield, ShoppingCart
+  Calendar, Settings2, RotateCcw, BarChart3, Check, X, Shield, ShoppingCart
 } from "lucide-react";
 // ✅ @dnd-kit carga lazy — fuera del bundle inicial del dashboard
 const KpiSortableGrid = dynamic(
@@ -47,7 +47,7 @@ const KpiSortableGrid = dynamic(
 import { formatNumber, formatMoney } from "@/lib/utils-format";
 
 import { DashboardPeriod, DashboardFilter } from "@/lib/types";
-import { useTimezone } from "@/hooks/useTimezone";
+// import { useTimezone } from "@/hooks/useTimezone";
 import { cn } from "@/lib/utils";
 import { useSucursalStore } from "@/store/useSucursalStore";
 import type { KpiConfig } from "./components/kpi-sortable-grid";
@@ -110,7 +110,7 @@ const PERIOD_LABEL: Record<DashboardPeriod, string> = {
 };
 
 export default function DashboardPage() {
-  const { formatDateTime } = useTimezone();
+  // const { formatDateTime } = useTimezone(); // Unused
   const activeSucursalId = useSucursalStore((s) => s.activeSucursalId);
   const [period, setPeriod] = React.useState<DashboardPeriod>("month");
   const [filter, setFilter] = React.useState<DashboardFilter>("all");
@@ -330,6 +330,16 @@ export default function DashboardPage() {
           icon: Wallet,
           loading,
           variant: (kpis?.finanzas?.ganancia?.gastos ?? 0) > 0 ? "warning" : "default",
+        },
+        {
+          key: "proximos-vencimientos",
+          title: "Próx. Vencimientos",
+          value: maskMoney((kpis?.proximosVencimientos || []).reduce((acc, g) => acc + Number(g.monto), 0)),
+          subtitle: `${kpis?.proximosVencimientos?.length ?? 0} gastos pendientes`,
+          formula: "Pagos futuros y adeudados",
+          icon: Calendar,
+          loading,
+          variant: (kpis?.proximosVencimientos?.length ?? 0) > 0 ? "warning" : "default",
         }
       );
     }
@@ -643,46 +653,6 @@ export default function DashboardPage() {
           )}
           <div className="space-y-8">
             <TopProductsSection top={top} loading={loading} filter={filter} />
-
-            {/* PRÓXIMOS VENCIMIENTOS (GASTOS) */}
-            {filter === "all" && (kpis?.proximosVencimientos?.length ?? 0) > 0 && (
-              <Card className="rounded-[2rem] border-border/50 bg-card shadow-xl overflow-hidden">
-                <CardHeader className="flex flex-row items-center justify-between pb-2">
-                  <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-2xl bg-[color:var(--status-warning)]/10 flex items-center justify-center">
-                      <Calendar className="h-5 w-5 text-[color:var(--status-warning)]" />
-                    </div>
-                    <div>
-                      <CardTitle className="text-xl font-black">Próximos Vencimientos</CardTitle>
-                      <p className="text-xs text-muted-foreground font-medium uppercase tracking-widest">Gastos Pendientes</p>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent className="pt-4 space-y-3">
-                  {kpis?.proximosVencimientos.map((g) => (
-                    <div key={g.id} className="flex items-center justify-between p-3.5 bg-muted/30 rounded-2xl border border-transparent hover:border-[color:var(--status-warning)]/20 transition-all">
-                      <div className="flex items-center gap-4">
-                        <div className="h-10 w-10 rounded-xl bg-background flex items-center justify-center shadow-sm">
-                          <Receipt className="h-5 w-5 text-muted-foreground" />
-                        </div>
-                        <div>
-                          <div className="font-bold text-sm tracking-tight">{g.motivo}</div>
-                          <div className="flex items-center gap-2 text-[10px] font-bold text-[color:var(--status-warning)] uppercase">
-                            <Calendar className="h-3 w-3" /> {formatDateTime(g.fechaVencimiento)}
-                          </div>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <div className="font-black text-sm">{maskMoney(Number(g.monto))}</div>
-                        <Badge variant="outline" className="text-[9px] font-bold uppercase rounded-md py-0 h-4 border-[color:var(--status-warning)]/30 text-[color:var(--status-warning)]">
-                          {g.categoria?.nombre}
-                        </Badge>
-                      </div>
-                    </div>
-                  ))}
-                </CardContent>
-              </Card>
-            )}
           </div>
         </div>
 
