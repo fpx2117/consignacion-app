@@ -1,6 +1,8 @@
 import {
   AlertTriangle,
   Calendar,
+  CheckCircle2,
+  CircleDashed,
   Edit2,
   GitFork,
   MoreVertical,
@@ -50,6 +52,7 @@ type GastosListProps = {
   loading: boolean;
   activeSucursalId?: number;
   onShare: (gasto: GastoItem) => void;
+  onToggleEstado: (gasto: GastoItem) => void;
   onEdit: (gasto: GastoItem) => void;
   onDelete: (id: number) => void;
 };
@@ -59,6 +62,7 @@ export function GastosList({
   loading,
   activeSucursalId,
   onShare,
+  onToggleEstado,
   onEdit,
   onDelete,
 }: GastosListProps) {
@@ -193,6 +197,20 @@ export function GastosList({
 
                     {isOwner && (
                       <>
+                        <DropdownMenuItem
+                          onClick={() => onToggleEstado(g)}
+                          className="gap-3 py-3 rounded-xl font-bold cursor-pointer focus:bg-[color:var(--status-warning)]/10 focus:text-[color:var(--status-warning)] transition-colors"
+                        >
+                          <div className="h-8 w-8 rounded-lg bg-[color:var(--status-warning)]/10 flex items-center justify-center">
+                            {g.estado === "PAGADO" ? (
+                              <CircleDashed className="h-4 w-4 text-[color:var(--status-warning)]" />
+                            ) : (
+                              <CheckCircle2 className="h-4 w-4 text-[color:var(--status-success-strong)]" />
+                            )}
+                          </div>
+                          {g.estado === "PAGADO" ? "Marcar como Pendiente" : "Marcar como Pagado"}
+                        </DropdownMenuItem>
+
                         <DropdownMenuItem
                           onClick={() => onEdit(g)}
                           className="gap-3 py-3 rounded-xl font-bold cursor-pointer focus:bg-[color:var(--theme-ocean-primary)]/10 focus:text-[color:var(--theme-ocean-primary)] transition-colors"

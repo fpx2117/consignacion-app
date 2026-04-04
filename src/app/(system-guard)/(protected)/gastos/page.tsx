@@ -98,6 +98,22 @@ export default function GastosPage() {
         }
     };
 
+    const handleToggleEstado = async (gasto: Gasto) => {
+        const nextEstado = gasto.estado === "PAGADO" ? "PENDIENTE" : "PAGADO";
+
+        try {
+            await apiService.updateGasto(gasto.id, { estado: nextEstado });
+            toast.success(
+                nextEstado === "PAGADO"
+                    ? "Gasto marcado como pagado"
+                    : "Gasto marcado como pendiente"
+            );
+            loadData();
+        } catch {
+            toast.error("Error al actualizar el estado del gasto");
+        }
+    };
+
     const totalPagado = gastos
         .filter((g) => g.estado === "PAGADO")
         .reduce((acc, g) => acc + Number(g.monto), 0);
@@ -131,6 +147,7 @@ export default function GastosPage() {
                 loading={loading}
                 activeSucursalId={activeSucursalId}
                 onShare={(gasto) => handleShareClick(gasto as Gasto)}
+                onToggleEstado={(gasto) => handleToggleEstado(gasto as Gasto)}
                 onEdit={(gasto) => {
                     setEditingGasto(gasto as Gasto);
                     setModalOpen(true);
@@ -385,6 +402,11 @@ function GastoModal({ open, onOpenChange, onSuccess, categorias, editingGasto, a
                                     <SelectItem value="PENDIENTE" className="font-bold text-[color:var(--status-warning)]">PENDIENTE</SelectItem>
                                 </SelectContent>
                             </Select>
+                            <p className="px-1 text-[10px] font-bold text-muted-foreground/80">
+                                {formData.estado === "PAGADO"
+                                    ? "Lo tomamos como abonado y cierra esa cuota para el sistema."
+                                    : "Queda como deuda pendiente hasta marcarlo como pagado."}
+                            </p>
                         </div>
                     </div>
 
