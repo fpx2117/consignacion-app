@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { revalidateTag } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/auth/require-auth";
 import { isGlobalSucursalView } from "@/lib/sucursalScope";
@@ -60,6 +61,9 @@ export async function POST(req: NextRequest) {
         ...(descuentos && { descuentos }),
       },
     });
+
+    // Invalidar caché del catálogo público tras crear subcategoría con descuentos
+    revalidateTag("public-catalog", "default");
 
     return NextResponse.json(nuevaSubcategoria);
   } catch {

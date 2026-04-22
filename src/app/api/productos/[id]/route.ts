@@ -1,6 +1,7 @@
 // src/app/api/productos/[id]/route.ts
 
 import { NextResponse } from "next/server";
+import { revalidateTag } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { Prisma, TipoMovimientoStock, MotivoMovimientoStock } from "@prisma/client";
 import { requireAuth, requireRole } from "@/lib/auth/require-auth";
@@ -260,6 +261,9 @@ export async function PUT(req: Request, { params }: RouteParams) {
       }
     }
 
+    // Invalidar caché del catálogo público para que los cambios (precio, descuento, imagen, etc.) se reflejen de inmediato
+    revalidateTag("public-catalog", "default");
+
     return NextResponse.json({ data: updated });
 
   } catch (error) {
@@ -310,6 +314,9 @@ export async function DELETE(_: Request, { params }: RouteParams) {
         data: { imagenUrl: null }
       });
     }
+
+    // Invalidar caché del catálogo público tras desactivar producto
+    revalidateTag("public-catalog", "default");
 
     return NextResponse.json({ data: { success: true, message: "Producto desactivado e imagen eliminada" } });
   } catch (error) {
