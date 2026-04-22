@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { revalidateTag } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/auth/require-auth";
 import { isGlobalSucursalView } from "@/lib/sucursalScope";
@@ -35,6 +36,9 @@ export async function PATCH(
       },
     });
 
+    // Invalidar caché del catálogo público (los descuentos por tiers afectan la tienda)
+    revalidateTag("public-catalog", "default");
+
     return NextResponse.json(subcategoria);
   } catch {
     return NextResponse.json(
@@ -62,6 +66,9 @@ export async function DELETE(
     await prisma.subcategoria.delete({
       where: { id },
     });
+
+    // Invalidar caché del catálogo público tras eliminar subcategoría
+    revalidateTag("public-catalog", "default");
 
     return NextResponse.json({ ok: true });
   } catch (err) {

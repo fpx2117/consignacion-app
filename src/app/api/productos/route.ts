@@ -1,6 +1,7 @@
 // src/app/api/productos/route.ts
 
 import { NextResponse } from "next/server";
+import { revalidateTag } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { Prisma, TipoMovimientoStock, MotivoMovimientoStock } from "@prisma/client";
 import { requireAuth, requireRole } from "@/lib/auth/require-auth";
@@ -304,6 +305,9 @@ export async function POST(req: Request) {
         data: { productId: created.id }
       });
     }
+
+    // Invalidar caché del catálogo público para que el nuevo producto aparezca de inmediato
+    revalidateTag("public-catalog", "default");
 
     return NextResponse.json({ data: created }, { status: 201 });
 
