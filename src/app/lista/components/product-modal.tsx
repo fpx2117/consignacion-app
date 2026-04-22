@@ -117,7 +117,7 @@ export function ProductModal({ product, isOpen, onClose, config, isConsigne, onA
                                                     ${descuento.precioOriginal.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
                                                 </span>
                                                 <Badge variant="destructive" className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5">
-                                                    -{descuento.porcentaje}% OFF
+                                                    -{Math.abs(descuento.porcentaje)}% OFF
                                                 </Badge>
                                             </div>
                                             <span className="text-3xl sm:text-4xl font-black text-destructive tracking-tight">
