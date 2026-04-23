@@ -6,6 +6,7 @@ import { motion } from "motion/react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { buildCatalogProductInquiryUrl } from "@/lib/catalog-whatsapp";
 import { cn } from "@/lib/utils";
 import { getThemeStyles } from "../lib/theme-utils";
 import type { PublicCatalogConfig, PublicCatalogProduct } from "@/lib/types";
@@ -173,9 +174,8 @@ export function ProductCard({
                                 )}
                                 onClick={(e) => {
                                     e.stopPropagation();
-                                    const template = config.whatsappMessage || "Hola, estoy buscando {nombre_producto}";
-                                    const message = template.replace("{nombre_producto}", product.nombre);
-                                    const url = `https://wa.me/${config.whatsappNumber}?text=${encodeURIComponent(message)}`;
+                                    const url = buildCatalogProductInquiryUrl(config.whatsappNumber, config.whatsappMessage, product.nombre);
+                                    if (!url) return;
                                     window.open(url, '_blank');
                                 }}
                             >
