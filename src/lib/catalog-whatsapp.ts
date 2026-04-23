@@ -44,12 +44,12 @@ export function buildCatalogProductInquiryUrl(phone: string | null | undefined, 
 
 function resolveDeliveryLabel(envioData: PublicCheckoutShippingData) {
   switch (envioData.metodoEnvio) {
-    case "DOMICILIO":
-      return "Envio a domicilio";
-    case "SUCURSAL":
-      return "Retiro en sucursal";
+    case "UBER_FLASH":
+      return "Envio por Uber Flash";
+    case "ENCOMIENDA":
+      return "Envio por encomienda";
     case "RETIRO_LOCAL":
-      return "Retiro en local";
+      return "Retiro por el local";
     default:
       return "A definir";
   }
@@ -87,12 +87,12 @@ export function buildCatalogCartWhatsappMessage({
 
   lines.push(`Entrega: ${resolveDeliveryLabel(envioData)}`);
 
-  if (envioData.metodoEnvio === "DOMICILIO") {
+  if (envioData.metodoEnvio === "UBER_FLASH" || envioData.metodoEnvio === "ENCOMIENDA") {
     if (clienteData.direccion?.trim()) {
       lines.push(`Direccion: ${clienteData.direccion.trim()}`);
     }
-    if (clienteData.codigoPostal?.trim()) {
-      lines.push(`Codigo Postal: ${clienteData.codigoPostal.trim()}`);
+    if (clienteData.altura?.trim()) {
+      lines.push(`Altura: ${clienteData.altura.trim()}`);
     }
     if (clienteData.localidad?.trim()) {
       lines.push(`Localidad: ${clienteData.localidad.trim()}`);
@@ -100,6 +100,7 @@ export function buildCatalogCartWhatsappMessage({
     if (clienteData.provincia?.trim()) {
       lines.push(`Provincia: ${clienteData.provincia.trim()}`);
     }
+    lines.push("", "Aclaracion: El costo del envio se cobra aparte del producto. Espero indicaciones por WhatsApp para coordinar el despacho.");
   }
 
   lines.push("", "Productos:", itemsText, "", `Total estimado: ${formatMoney(total)}`);
