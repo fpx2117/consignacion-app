@@ -16,6 +16,7 @@ interface StoreHeaderProps {
 export function StoreHeader({ config, cartCount, onOpenCart }: StoreHeaderProps) {
     const { theme, radiusClass, headerBgClass } = getThemeStyles(config.themeIdentifier);
     const logoSrc = config.logoUrl || (config.logoData ? `data:${config.logoMime};base64,${config.logoData}` : null);
+    const cartEnabled = Boolean(config.convertirTienda);
 
     return (
         <header className={cn(
@@ -59,21 +60,23 @@ export function StoreHeader({ config, cartCount, onOpenCart }: StoreHeaderProps)
                 </div>
 
                 <div className="flex items-center shrink-0">
-                    <Button
-                        type="button"
-                        variant="outline"
-                        onClick={onOpenCart}
-                        className={cn(
-                            "relative h-10 px-3 sm:h-11 sm:px-4 border-border/70 bg-[color:rgba(var(--store-surface-rgb),0.8)] backdrop-blur-md font-bold text-foreground hover:bg-foreground hover:text-[color:var(--ui-fx-white)]",
-                            radiusClass,
-                        )}
-                    >
-                        <ShoppingCart className="h-4 w-4 sm:h-5 sm:w-5" />
-                        <span className="ml-2 hidden sm:inline">Carrito</span>
-                        <span className="ml-2 inline-flex min-w-6 h-6 items-center justify-center rounded-full bg-foreground px-1.5 text-[10px] font-black text-[color:var(--ui-fx-white)]">
-                            {cartCount}
-                        </span>
-                    </Button>
+                    {cartEnabled ? (
+                        <Button
+                            type="button"
+                            variant="outline"
+                            onClick={onOpenCart}
+                            className={cn(
+                                "relative h-10 px-3 sm:h-11 sm:px-4 border-border/70 bg-[color:rgba(var(--store-surface-rgb),0.8)] backdrop-blur-md font-bold text-foreground hover:bg-foreground hover:text-[color:var(--ui-fx-white)]",
+                                radiusClass,
+                            )}
+                        >
+                            <ShoppingCart className="h-4 w-4 sm:h-5 sm:w-5" />
+                            <span className="ml-2 hidden sm:inline">Carrito</span>
+                            <span className="ml-2 inline-flex min-w-6 h-6 items-center justify-center rounded-full bg-foreground px-1.5 text-[10px] font-black text-[color:var(--ui-fx-white)]">
+                                {cartCount}
+                            </span>
+                        </Button>
+                    ) : null}
                 </div>
             </div>
         </header>

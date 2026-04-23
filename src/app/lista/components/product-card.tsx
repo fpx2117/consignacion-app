@@ -38,6 +38,7 @@ export function ProductCard({
     const displayedPrice = isConsigne ? basePrice * (1 + pct / 100) : basePrice;
     const isAvailable = product.stockDisponibleUnits > 0;
     const descuento = product.descuentoEfectivo;
+    const cartEnabled = Boolean(config.convertirTienda);
 
     return (
         <motion.div
@@ -164,7 +165,7 @@ export function ProductCard({
                             )}
                         </div>
 
-                        {config.whatsappNumber && (
+                        {!cartEnabled && config.whatsappNumber && (
                             <Button
                                 size="icon"
                                 variant="outline"
@@ -185,7 +186,7 @@ export function ProductCard({
                             </Button>
                         )}
 
-                        {config.convertirTienda && (
+                        {cartEnabled && (
                             <Button
                                 size="icon"
                                 className={cn(
