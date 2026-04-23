@@ -104,7 +104,7 @@ export function ProductCard({
                             )}
                             {descuento && (
                                 <Badge variant="destructive" className="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider shadow-sm">
-                                    -{Math.abs(descuento.porcentaje)}% OFF
+                                    {Math.abs(descuento.porcentaje)}% OFF
                                 </Badge>
                             )}
                         </div>
