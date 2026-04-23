@@ -433,9 +433,10 @@ export type PublicCheckoutCustomerData = {
   localidad?: string | null;
   codigoPostal?: string | null;
   direccion?: string | null;
+  altura?: string | null;
 };
 
-export type PublicCheckoutShippingMethod = "DOMICILIO" | "SUCURSAL" | "RETIRO_LOCAL";
+export type PublicCheckoutShippingMethod = "RETIRO_LOCAL" | "UBER_FLASH" | "ENCOMIENDA";
 
 export type PublicCheckoutShippingData = {
   metodoEnvio: PublicCheckoutShippingMethod | null;

@@ -11,6 +11,7 @@ import {
   Trash2,
   Truck,
   XCircle,
+  Package,
 } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import Image from "next/image";
@@ -64,6 +65,7 @@ export function CartDrawer({
     localidad: "",
     codigoPostal: "",
     direccion: "",
+    altura: "",
   });
   const [envioData, setEnvioData] = React.useState<PublicCheckoutShippingData>({
     metodoEnvio: null,
@@ -106,9 +108,9 @@ export function CartDrawer({
       return;
     }
 
-    if (envioData.metodoEnvio === "DOMICILIO") {
-      if (!clienteData.direccion?.trim() || !clienteData.codigoPostal?.trim()) {
-        toast.error("Para envio a domicilio necesitamos direccion y codigo postal.");
+    if (envioData.metodoEnvio === "UBER_FLASH" || envioData.metodoEnvio === "ENCOMIENDA") {
+      if (!clienteData.direccion?.trim() || !clienteData.altura?.trim() || !clienteData.localidad?.trim() || !clienteData.provincia?.trim()) {
+        toast.error("Para este envio necesitamos domicilio, altura, localidad y provincia.");
         return;
       }
     }
@@ -117,6 +119,8 @@ export function CartDrawer({
   };
 
   const canSendWhatsapp = Boolean(config.whatsappNumber?.trim());
+  const requiresDeliveryAddress = envioData.metodoEnvio === "UBER_FLASH" || envioData.metodoEnvio === "ENCOMIENDA";
+  const selectedDeliveryNeedsDisclaimer = envioData.metodoEnvio === "UBER_FLASH" || envioData.metodoEnvio === "ENCOMIENDA";
 
   return (
     <AnimatePresence>
@@ -258,18 +262,18 @@ export function CartDrawer({
               {step === 2 && (
                 <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4">
                   <div className="space-y-1">
-                    <Label>Nombre completo *</Label>
-                    <Input name="nombre" value={clienteData.nombre} onChange={handleInputChange} placeholder="Ej. Juan Perez" />
+                    <Label className="text-sm font-bold text-foreground">Nombre completo *</Label>
+                    <Input className="border-border/80 bg-background/90 text-foreground placeholder:text-muted-foreground" name="nombre" value={clienteData.nombre} onChange={handleInputChange} placeholder="Ej. Juan Perez" />
                   </div>
                   <div className="space-y-1">
-                    <Label>Telefono</Label>
-                    <Input name="telefono" value={clienteData.telefono ?? ""} onChange={handleInputChange} placeholder="11 1234 5678" />
+                    <Label className="text-sm font-bold text-foreground">Telefono</Label>
+                    <Input className="border-border/80 bg-background/90 text-foreground placeholder:text-muted-foreground" name="telefono" value={clienteData.telefono ?? ""} onChange={handleInputChange} placeholder="11 1234 5678" />
                   </div>
                   <div className="space-y-1">
-                    <Label>Email</Label>
-                    <Input type="email" name="email" value={clienteData.email} onChange={handleInputChange} placeholder="Opcional" />
+                    <Label className="text-sm font-bold text-foreground">Email</Label>
+                    <Input className="border-border/80 bg-background/90 text-foreground placeholder:text-muted-foreground" type="email" name="email" value={clienteData.email} onChange={handleInputChange} placeholder="Opcional" />
                   </div>
-                  <div className="rounded-xl border border-border/70 bg-muted/20 p-4 text-sm text-muted-foreground">
+                  <div className="rounded-xl border border-border/70 bg-muted/20 p-4 text-sm text-foreground/80">
                     Vamos a preparar un mensaje con tus productos para abrirlo directamente en WhatsApp.
                   </div>
                 </motion.div>
@@ -292,68 +296,74 @@ export function CartDrawer({
                           <Store className="h-5 w-5 text-muted-foreground" />
                         </div>
                         <div>
-                          <p className="font-bold text-foreground">Retiro en local</p>
-                          <p className="text-xs text-muted-foreground">Paso a buscarlo por el local</p>
+                          <p className="font-bold text-foreground">Retiro por el local</p>
+                          <p className="text-xs text-muted-foreground">Pasás a buscarlo por el local</p>
                         </div>
                       </div>
                     </div>
 
                     <div
-                      onClick={() => setEnvioData({ metodoEnvio: "DOMICILIO", costo: 0 })}
+                      onClick={() => setEnvioData({ metodoEnvio: "UBER_FLASH", costo: 0 })}
                       className={cn(
                         "p-4 border rounded-xl cursor-pointer flex items-center justify-between transition-all",
-                        envioData.metodoEnvio === "DOMICILIO" ? "border-primary bg-primary/5 ring-1 ring-primary/20" : "hover:border-border",
+                        envioData.metodoEnvio === "UBER_FLASH" ? "border-primary bg-primary/5 ring-1 ring-primary/20" : "hover:border-border bg-background/70",
                       )}
                     >
                       <div className="flex gap-4 items-center">
-                        <div className="bg-[color:var(--theme-ocean-primary)]/80 p-2 border border-[color:var(--theme-ocean-primary)] rounded-full shadow-sm text-[color:var(--theme-ocean-primary)]">
+                        <div className="bg-primary/12 p-2 border border-primary/25 rounded-full shadow-sm text-primary">
                           <Truck className="h-5 w-5" />
                         </div>
                         <div>
-                          <p className="font-bold text-foreground">Envio a domicilio</p>
-                          <p className="text-xs text-muted-foreground">Te contactamos para coordinarlo</p>
+                          <p className="font-bold text-foreground">Envio por Uber Flash</p>
+                          <p className="text-xs text-muted-foreground">Coordinamos por WhatsApp y el envio se cobra aparte</p>
                         </div>
                       </div>
                     </div>
 
                     <div
-                      onClick={() => setEnvioData({ metodoEnvio: "SUCURSAL", costo: 0 })}
+                      onClick={() => setEnvioData({ metodoEnvio: "ENCOMIENDA", costo: 0 })}
                       className={cn(
                         "p-4 border rounded-xl cursor-pointer flex items-center justify-between transition-all",
-                        envioData.metodoEnvio === "SUCURSAL" ? "border-primary bg-primary/5 ring-1 ring-primary/20" : "hover:border-border",
+                        envioData.metodoEnvio === "ENCOMIENDA" ? "border-primary bg-primary/5 ring-1 ring-primary/20" : "hover:border-border bg-background/70",
                       )}
                     >
                       <div className="flex gap-4 items-center">
-                        <div className="bg-[color:var(--theme-ocean-primary)]/80 p-2 border border-[color:var(--theme-ocean-primary)] rounded-full shadow-sm text-[color:var(--theme-ocean-primary)]">
-                          <Store className="h-5 w-5" />
+                        <div className="bg-primary/12 p-2 border border-primary/25 rounded-full shadow-sm text-primary">
+                          <Package className="h-5 w-5" />
                         </div>
                         <div>
-                          <p className="font-bold text-foreground">Retiro en sucursal</p>
-                          <p className="text-xs text-muted-foreground">Coordinamos sucursal por WhatsApp</p>
+                          <p className="font-bold text-foreground">Envio por encomienda</p>
+                          <p className="text-xs text-muted-foreground">Se coordina por WhatsApp y el envio se cobra aparte</p>
                         </div>
                       </div>
                     </div>
                   </div>
 
-                  {envioData.metodoEnvio === "DOMICILIO" ? (
+                  {selectedDeliveryNeedsDisclaimer ? (
+                    <div className="rounded-xl border border-amber-300/50 bg-amber-50 p-4 text-sm text-amber-950">
+                      El costo del envio no esta incluido en el total de productos. Te vamos a indicar por WhatsApp los pasos a seguir y el valor final del envio.
+                    </div>
+                  ) : null}
+
+                  {requiresDeliveryAddress ? (
                     <div className="space-y-4 border-t border-border/70 pt-4">
                       <div className="space-y-1">
-                        <Label>Direccion *</Label>
-                        <Input name="direccion" value={clienteData.direccion ?? ""} onChange={handleInputChange} placeholder="Calle y numero" />
+                        <Label className="text-sm font-bold text-foreground">Domicilio *</Label>
+                        <Input className="border-border/80 bg-background/90 text-foreground placeholder:text-muted-foreground" name="direccion" value={clienteData.direccion ?? ""} onChange={handleInputChange} placeholder="Ej. Av. Santa Fe" />
                       </div>
                       <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-1">
-                          <Label>Codigo postal *</Label>
-                          <Input name="codigoPostal" value={clienteData.codigoPostal ?? ""} onChange={handleInputChange} placeholder="1000" />
+                          <Label className="text-sm font-bold text-foreground">Altura *</Label>
+                          <Input className="border-border/80 bg-background/90 text-foreground placeholder:text-muted-foreground" name="altura" value={clienteData.altura ?? ""} onChange={handleInputChange} placeholder="1234" />
                         </div>
                         <div className="space-y-1">
-                          <Label>Localidad</Label>
-                          <Input name="localidad" value={clienteData.localidad ?? ""} onChange={handleInputChange} placeholder="Ciudad" />
+                          <Label className="text-sm font-bold text-foreground">Localidad *</Label>
+                          <Input className="border-border/80 bg-background/90 text-foreground placeholder:text-muted-foreground" name="localidad" value={clienteData.localidad ?? ""} onChange={handleInputChange} placeholder="Ciudad" />
                         </div>
                       </div>
                       <div className="space-y-1">
-                        <Label>Provincia</Label>
-                        <Input name="provincia" value={clienteData.provincia ?? ""} onChange={handleInputChange} placeholder="Provincia" />
+                        <Label className="text-sm font-bold text-foreground">Provincia *</Label>
+                        <Input className="border-border/80 bg-background/90 text-foreground placeholder:text-muted-foreground" name="provincia" value={clienteData.provincia ?? ""} onChange={handleInputChange} placeholder="Provincia" />
                       </div>
                     </div>
                   ) : null}
