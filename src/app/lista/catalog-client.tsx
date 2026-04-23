@@ -6,6 +6,7 @@ import { CheckCircle2, Loader2, XCircle } from "lucide-react";
 import { motion } from "motion/react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { buildCatalogCartWhatsappUrl } from "@/lib/catalog-whatsapp";
 import { cn } from "@/lib/utils";
 import type {
     CatalogCartItem,
@@ -39,6 +40,7 @@ const ProductModal = dynamic(
 );
 
 const CHECKOUT_TOKEN_STORAGE_KEY = "public_checkout_token_v2";
+const CART_STORAGE_KEY_PREFIX = "public_catalog_cart_v1";
 const CHECKOUT_POLL_INTERVAL_MS = 2000;
 const CHECKOUT_POLL_TIMEOUT_MS = 90000;
 
@@ -83,12 +85,17 @@ export function CatalogClient({
     const [isCartOpen, setIsCartOpen] = React.useState(false);
     const [checkoutLoading, setCheckoutLoading] = React.useState(false);
     const [checkoutFeedback, setCheckoutFeedback] = React.useState<CheckoutFeedbackState | null>(null);
+    const [cartHydrated, setCartHydrated] = React.useState(false);
 
     const handledReturnRef = React.useRef<string | null>(null);
 
     const getSucursalIdForCheckout = React.useCallback(() => {
         return sucursalId ?? 1;
     }, [sucursalId]);
+
+    const getCartStorageKey = React.useCallback(() => {
+        return `${CART_STORAGE_KEY_PREFIX}:${getSucursalIdForCheckout()}`;
+    }, [getSucursalIdForCheckout]);
 
     const saveCheckoutToken = React.useCallback((token: string, storeSucursalId: number) => {
         if (typeof window === "undefined") return;
@@ -148,12 +155,53 @@ export function CatalogClient({
         fetchData();
     }, [initialData, initialError, sucursalId]);
 
+    React.useEffect(() => {
+        if (typeof window === "undefined") return;
+
+        const raw = window.localStorage.getItem(getCartStorageKey());
+        if (!raw) {
+            setCart([]);
+            setCartHydrated(true);
+            return;
+        }
+
+        try {
+            const parsed = JSON.parse(raw) as CatalogCartItem[];
+            setCart(Array.isArray(parsed) ? parsed : []);
+        } catch {
+            window.localStorage.removeItem(getCartStorageKey());
+            setCart([]);
+        } finally {
+            setCartHydrated(true);
+        }
+    }, [getCartStorageKey]);
+
+    React.useEffect(() => {
+        if (typeof window === "undefined" || !cartHydrated) return;
+        window.localStorage.setItem(getCartStorageKey(), JSON.stringify(cart));
+    }, [cart, cartHydrated, getCartStorageKey]);
+
     // --- Configuración e Inyección de Estilos ---
     const config: PublicCatalogConfig = data?.config ?? { sucursalId: sucursalId ?? 1 };
     const { theme: _theme, pageBgClass } = getThemeStyles(config.themeIdentifier);
     const products = React.useMemo(() => data?.productos || [], [data?.productos]);
     const categories = React.useMemo(() => data?.categorias || [], [data?.categorias]);
     const deferredSearchTerm = React.useDeferredValue(searchTerm);
+
+    React.useEffect(() => {
+        if (!cartHydrated || !products.length) return;
+
+        setCart(prev => prev.flatMap((item) => {
+            const freshProduct = products.find((product) => product.id === item.id);
+            if (!freshProduct || freshProduct.stockDisponibleUnits <= 0) return [];
+
+            return [{
+                ...freshProduct,
+                quantity: Math.min(item.quantity, freshProduct.stockDisponibleUnits),
+                pricingMode: item.pricingMode ?? "default",
+            }];
+        }));
+    }, [cartHydrated, products]);
 
     const categoryCounts = React.useMemo(() => {
         return products.reduce<Record<number, number>>((acc, product) => {
@@ -209,14 +257,26 @@ export function CatalogClient({
     // --- Lógica del Carrito ---
     // 👇 Modificado para recibir "quantity" desde el Modal
     const addToCart = (product: PublicCatalogProduct, quantity: number = 1) => {
+        const maxStock = Math.max(0, product.stockDisponibleUnits || 0);
+        if (maxStock <= 0) {
+            toast.error("Este producto no tiene stock disponible.");
+            return;
+        }
+
         setCart(prev => {
             const existing = prev.find(item => item.id === product.id);
             if (existing) {
-                return prev.map(item => item.id === product.id ? { ...item, quantity: item.quantity + quantity } : item);
+                const nextQuantity = Math.min(existing.quantity + quantity, maxStock);
+                return prev.map(item => item.id === product.id ? { ...item, quantity: nextQuantity } : item);
             }
-            return [...prev, { ...product, quantity: quantity }];
+            return [...prev, {
+                ...product,
+                quantity: Math.min(quantity, maxStock),
+                pricingMode: isConsigne ? "consigne" : "default",
+            }];
         });
-        toast.success(`${product.nombre} añadido al carrito`);
+
+        toast.success(`${product.nombre} anadido al carrito`);
     };
 
     const removeFromCart = (id: number) => {
@@ -226,7 +286,7 @@ export function CatalogClient({
     const updateQuantity = (id: number, delta: number) => {
         setCart(prev => prev.map(item => {
             if (item.id === id) {
-                const newQty = Math.max(1, item.quantity + delta);
+                const newQty = Math.max(1, Math.min(item.stockDisponibleUnits, item.quantity + delta));
                 return { ...item, quantity: newQty };
             }
             return item;
@@ -236,26 +296,33 @@ export function CatalogClient({
     const handleCheckout = async (clienteData: PublicCheckoutCustomerData, envioData: PublicCheckoutShippingData) => {
         setCheckoutLoading(true);
         try {
-            const targetSucursalId = getSucursalIdForCheckout();
-            const res = await apiService.createPublicCheckout({
-                items: cart,
-                sucursalId: targetSucursalId,
+            const targetUrl = typeof window !== "undefined"
+                ? window.location.href
+                : null;
+
+            const whatsappUrl = buildCatalogCartWhatsappUrl({
+                config,
+                cart,
                 clienteData,
-                envioData
+                envioData,
+                tiendaUrl: targetUrl,
             });
 
-            const checkoutToken = res?.checkout_token;
-            if (checkoutToken) {
-                saveCheckoutToken(checkoutToken, targetSucursalId);
+            if (!whatsappUrl) {
+                toast.error("No hay un numero de WhatsApp configurado para esta tienda.");
+                return;
             }
 
-            if (res?.init_point) {
-                window.location.href = res.init_point;
-            } else {
-                toast.error("No se pudo obtener el link de pago");
-            }
+            window.open(whatsappUrl, "_blank", "noopener,noreferrer");
+            setCart([]);
+            setIsCartOpen(false);
+            setCheckoutFeedback({
+                kind: "success",
+                message: "Abrimos WhatsApp con tu pedido listo para enviar.",
+            });
+            toast.success("Pedido preparado para WhatsApp");
         } catch (err: unknown) {
-            toast.error(err instanceof Error ? err.message : "Error al iniciar el pago");
+            toast.error(err instanceof Error ? err.message : "Error al preparar el pedido");
         } finally {
             setCheckoutLoading(false);
         }

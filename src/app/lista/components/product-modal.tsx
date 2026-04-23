@@ -5,6 +5,7 @@ import { XCircle, ShoppingCart, PackageOpen, CheckCircle2 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { buildCatalogProductInquiryUrl } from "@/lib/catalog-whatsapp";
 import { cn } from "@/lib/utils";
 import { getThemeStyles } from "../lib/theme-utils";
 import type {
@@ -151,9 +152,8 @@ export function ProductModal({ product, isOpen, onClose, config, isConsigne, onA
                                             buttonRadiusClass
                                         )}
                                         onClick={() => {
-                                            const template = config.whatsappMessage || "Hola, estoy buscando {nombre_producto}";
-                                            const message = template.replace("{nombre_producto}", product.nombre);
-                                            const url = `https://wa.me/${config.whatsappNumber}?text=${encodeURIComponent(message)}`;
+                                            const url = buildCatalogProductInquiryUrl(config.whatsappNumber, config.whatsappMessage, product.nombre);
+                                            if (!url) return;
                                             window.open(url, '_blank');
                                         }}
                                     >

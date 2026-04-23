@@ -414,6 +414,7 @@ export type PublicCatalogData = {
 
 export type CatalogCartItem = PublicCatalogProduct & {
   quantity: number;
+  pricingMode?: "default" | "consigne";
 };
 
 export type PublicCatalogSortBy =
