@@ -21,6 +21,11 @@ type ProductForList = {
     stockDisponibleUnits?: number;
     categoria?: { nombre?: string | null } | null;
     subcategoria?: { nombre?: string | null } | null;
+    descuentoEfectivo?: {
+        porcentaje: number;
+        precioOriginal: number;
+        precioFinal: number;
+    } | null;
 };
 
 export function ProductListGenerator({ value, onChange }: ProductListGeneratorProps) {
@@ -62,13 +67,18 @@ export function ProductListGenerator({ value, onChange }: ProductListGeneratorPr
                     }
 
                     grouped[cat][sub].forEach((p) => {
-                        const priceFormatted = new Intl.NumberFormat("es-AR", {
+                        const formatPrice = (value: number) => new Intl.NumberFormat("es-AR", {
                             style: "currency",
                             currency: "ARS",
                             maximumFractionDigits: 0,
                         })
-                            .format(Number(p.precioVenta))
+                            .format(value)
                             .replace(/\$\s+/u, "$");
+
+                        const descuento = p.descuentoEfectivo;
+                        const priceFormatted = descuento
+                            ? `~${formatPrice(Number(descuento.precioOriginal))}~ ${formatPrice(Number(descuento.precioFinal))} (${Math.abs(Number(descuento.porcentaje))}% OFF)`
+                            : formatPrice(Number(p.precioVenta));
 
                         text += `  ${p.nombre} — ${priceFormatted}\n`;
                     });
