@@ -34,6 +34,7 @@ export function ProductModal({ product, isOpen, onClose, config, isConsigne, onA
         : basePrice;
     const isAvailable = product.stockDisponibleUnits > 0;
     const descuento = product.descuentoEfectivo;
+    const cartEnabled = Boolean(config.convertirTienda);
 
     return (
         <AnimatePresence>
@@ -144,7 +145,7 @@ export function ProductModal({ product, isOpen, onClose, config, isConsigne, onA
 
                                 {/* 👇 ACÁ ESTÁ LA MAGIA: Controles de Carrito protegidos por la configuración */}
                                 {/* Botón WhatsApp */}
-                                {config.whatsappNumber && (
+                                {!cartEnabled && config.whatsappNumber && (
                                     <Button
                                         variant="outline"
                                         className={cn(
@@ -164,7 +165,7 @@ export function ProductModal({ product, isOpen, onClose, config, isConsigne, onA
                                 )}
 
                                 {/* Botón Añadir */}
-                                {config.convertirTienda && (
+                                {cartEnabled && (
                                     <Button
                                         className={cn(
                                             "h-14 flex-1 text-base font-black shadow-xl transition-all duration-300",
