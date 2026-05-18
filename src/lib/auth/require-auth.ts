@@ -18,7 +18,7 @@ const validateSession = cache(async (token: string) => {
   const sessionToken = getSessionHash(token);
   return prisma.userSession.findUnique({
     where: { token: sessionToken },
-    select: { isActive: true },
+    select: { isActive: true, expiresAt: true },
   });
 });
 
@@ -66,7 +66,7 @@ export async function requireAuth() {
     // ✅ VERIFICACIÓN DE SESIÓN EN BASE DE DATOS (memoizada por request)
     const session = await validateSession(token);
 
-    if (!session || !session.isActive) {
+    if (!session || !session.isActive || session.expiresAt < new Date()) {
       const response = NextResponse.json(
         { error: "Sesión inválida o revocada" },
         { status: 401 }

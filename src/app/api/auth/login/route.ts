@@ -8,6 +8,7 @@ import { getSessionHash } from "@/lib/security/session-hash";
 type LoginBody = {
   email?: string;
   password?: string;
+  remember?: boolean;
 };
 
 type LoginUser = {
@@ -32,11 +33,11 @@ type LoginRouteDeps = {
     nombre: string;
     sucursalId: number | null;
   }) => Promise<string>;
-  setAuthCookie: (token: string) => Promise<unknown>;
+  setAuthCookie: (token: string, remember?: boolean) => Promise<unknown>;
   setActiveSucursalCookie: (sucursalId: number | null) => Promise<void>;
   getRateLimitDecision: (req: Request, email: string | null) => ReturnType<typeof getAuthRateLimitDecision>;
   getClientData: () => Promise<ClientData>;
-  createUserSession: (input: { user: LoginUser; token: string; clientData: ClientData }) => Promise<void>;
+  createUserSession: (input: { user: LoginUser; token: string; clientData: ClientData; remember: boolean }) => Promise<void>;
   recordAuditLog: (input: {
     userId?: number;
     action: string;
@@ -59,9 +60,9 @@ const defaultDeps: LoginRouteDeps = {
     const { signUserJwt } = await import("@/lib/auth/core");
     return signUserJwt(payload);
   },
-  setAuthCookie: async (token) => {
+  setAuthCookie: async (token, remember) => {
     const { setAuthCookie } = await import("@/lib/auth/core");
-    await setAuthCookie(token);
+    await setAuthCookie(token, remember);
   },
   setActiveSucursalCookie: async (sucursalId) => {
     const { cookies: cookiesApi } = await import("next/headers");
@@ -78,8 +79,12 @@ const defaultDeps: LoginRouteDeps = {
     identity: email,
   }),
   getClientData: getRealClientData,
-  createUserSession: async ({ user, token, clientData }) => {
+  createUserSession: async ({ user, token, clientData, remember }) => {
     const { prisma } = await import("@/lib/prisma");
+    // remember=true → 7 días; remember=false → 1 día (sesión corta, sin persistencia)
+    const sessionDurationMs = remember
+      ? 7 * 24 * 60 * 60 * 1000
+      : 24 * 60 * 60 * 1000;
     await prisma.userSession.create({
       data: {
         userId: user.id,
@@ -89,7 +94,7 @@ const defaultDeps: LoginRouteDeps = {
         browser: clientData.browser,
         os: clientData.os,
         device: clientData.device,
-        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+        expiresAt: new Date(Date.now() + sessionDurationMs),
       },
     });
   },
@@ -103,6 +108,7 @@ export async function handlePostLogin(req: Request, deps: LoginRouteDeps = defau
   const body = (await req.json().catch(() => null)) as LoginBody | null;
   const email = normalizeIdentity(body?.email);
   const password = String(body?.password || "");
+  const remember = body?.remember !== false; // por defecto true si no viene
 
   const rateLimitDecision = deps.getRateLimitDecision(req, email);
   await reportAuthRateLimitEvent({
@@ -140,7 +146,7 @@ export async function handlePostLogin(req: Request, deps: LoginRouteDeps = defau
     sucursalId: user.sucursalId,
   });
 
-  await deps.setAuthCookie(token);
+  await deps.setAuthCookie(token, remember);
   await deps.setActiveSucursalCookie(user.sucursalId);
 
   try {
@@ -150,6 +156,7 @@ export async function handlePostLogin(req: Request, deps: LoginRouteDeps = defau
       user,
       token,
       clientData,
+      remember,
     });
 
     await deps.recordAuditLog({

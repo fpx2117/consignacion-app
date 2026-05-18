@@ -62,6 +62,7 @@ export function LoginForm() {
       const payload: LoginInput = {
         email: cleanEmail,
         password,
+        remember,
       };
 
       // ✅ Usa apiService (cookie HttpOnly seteada por el backend)
