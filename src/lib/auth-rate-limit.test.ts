@@ -15,7 +15,7 @@ test.afterEach(() => {
 test("getAuthRateLimitDecision bloquea login por combinacion IP e identidad", () => {
   const now = 1_700_000_000_000;
 
-  for (let attempt = 1; attempt <= 5; attempt += 1) {
+  for (let attempt = 1; attempt <= 10; attempt += 1) {
     const decision = getAuthRateLimitDecision({
       endpoint: "login",
       ip: "203.0.113.10",

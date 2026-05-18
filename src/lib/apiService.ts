@@ -51,6 +51,27 @@ import type {
 
 export type ProductoWithImage = Producto & { imagenUrl?: string | null };
 
+export class ApiRequestError extends Error {
+  status: number;
+  retryAfterSeconds: number | null;
+  remainingAttempts: number | null;
+
+  constructor(
+    message: string,
+    options: {
+      status: number;
+      retryAfterSeconds?: number | null;
+      remainingAttempts?: number | null;
+    },
+  ) {
+    super(message);
+    this.name = "ApiRequestError";
+    this.status = options.status;
+    this.retryAfterSeconds = options.retryAfterSeconds ?? null;
+    this.remainingAttempts = options.remainingAttempts ?? null;
+  }
+}
+
 type ProductosPaginadosResponse = {
   data: Producto[];
   total: number;
@@ -116,7 +137,17 @@ async function apiRequest<T>(path: string, init?: RequestInit): Promise<ApiRespo
       const j = await res.json();
       msg = j?.error ?? j?.message ?? msg;
     } catch { }
-    throw new Error(msg);
+
+    const retryAfterSeconds = parseNumericHeader(res.headers.get("Retry-After"));
+    const remainingAttempts = parseNumericHeader(
+      res.headers.get("X-Auth-Remaining-Attempts") ?? res.headers.get("X-RateLimit-Remaining"),
+    );
+
+    throw new ApiRequestError(msg, {
+      status: res.status,
+      retryAfterSeconds,
+      remainingAttempts,
+    });
   }
 
   return (await res.json()) as ApiResponse<T>;
@@ -140,6 +171,15 @@ function getObjectUrl(value: unknown): string | null {
   if (!value || typeof value !== "object") return null;
   const maybeUrl = (value as { url?: unknown }).url;
   return typeof maybeUrl === "string" && maybeUrl.trim().length > 0 ? maybeUrl : null;
+}
+
+function parseNumericHeader(value: string | null): number | null {
+  if (!value) {
+    return null;
+  }
+
+  const parsed = Number.parseInt(value, 10);
+  return Number.isFinite(parsed) ? parsed : null;
 }
 
 /* =========================

@@ -55,6 +55,8 @@ export type AuthRateLimitInput = {
 
 const DEFAULT_WINDOW_MINUTES = 15;
 const NEAR_LIMIT_REMAINING_THRESHOLD = 1;
+const DEFAULT_LOGIN_IP_MAX = 30;
+const DEFAULT_LOGIN_IDENTITY_MAX = 10;
 
 const FALLBACK_IP = "127.0.0.1";
 
@@ -175,13 +177,13 @@ function buildRules(
         {
           name: "ip",
           value: ip,
-          max: readEnvInt("AUTH_RATE_LIMIT_LOGIN_IP_MAX", 20),
+          max: readEnvInt("AUTH_RATE_LIMIT_LOGIN_IP_MAX", DEFAULT_LOGIN_IP_MAX),
           windowMs: readEnvInt("AUTH_RATE_LIMIT_LOGIN_IP_WINDOW_MS", DEFAULT_WINDOW_MINUTES * 60_000),
         },
         {
           name: "identity",
           value: identity ? `${ip}:${identity}` : null,
-          max: readEnvInt("AUTH_RATE_LIMIT_LOGIN_IDENTITY_MAX", 5),
+          max: readEnvInt("AUTH_RATE_LIMIT_LOGIN_IDENTITY_MAX", DEFAULT_LOGIN_IDENTITY_MAX),
           windowMs: readEnvInt("AUTH_RATE_LIMIT_LOGIN_IDENTITY_WINDOW_MS", DEFAULT_WINDOW_MINUTES * 60_000),
         },
       ];

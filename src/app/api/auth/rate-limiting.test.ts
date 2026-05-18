@@ -79,6 +79,62 @@ test("handlePostLogin devuelve 429 seguro cuando el rate limit bloquea el intent
   assert.equal(response.headers.get("Retry-After"), "120");
 });
 
+test("handlePostLogin expone intentos restantes cuando las credenciales son invalidas", async () => {
+  const response = await handlePostLogin(new Request("http://localhost/api/auth/login", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email: "ana@example.com", password: "incorrecta" }),
+  }), {
+    findUserByEmail: async () => ({
+      id: 7,
+      email: "ana@example.com",
+      hash: "hash",
+      rol: "ADMIN",
+      nombre: "Ana",
+      sucursalId: 1,
+      activo: true,
+    }),
+    comparePassword: async () => false,
+    signUserJwt: async () => "jwt",
+    setAuthCookie: async () => undefined,
+    setActiveSucursalCookie: async () => undefined,
+    getRateLimitDecision: () => ({
+      ...buildAllowedDecision("login"),
+      matchedRules: [
+        {
+          name: "identity",
+          limit: 10,
+          remaining: 6,
+          resetAt: 1_700_000_000_000,
+          retryAfterSeconds: 900,
+          count: 4,
+          blockedCount: 0,
+          keyFingerprint: "abc123",
+        },
+      ],
+      headers: {
+        "Retry-After": "900",
+        "X-RateLimit-Limit": "10",
+        "X-RateLimit-Remaining": "6",
+        "X-RateLimit-Reset": "1700000000000",
+      },
+    }),
+    getClientData: async () => ({
+      ip: "203.0.113.5",
+      userAgent: "test",
+      browser: "Chrome",
+      os: "Linux",
+      device: "Desktop",
+    }),
+    createUserSession: async () => undefined,
+    recordAuditLog: async () => undefined,
+  });
+
+  assert.equal(response.status, 401);
+  assert.equal(response.headers.get("X-Auth-Remaining-Attempts"), "6");
+  assert.equal((await response.json()).error, "Credenciales invalidas");
+});
+
 test("handlePostForgotPassword mantiene respuesta anti-enumeracion para cuenta inexistente", async () => {
   let tokenRotated = false;
 
