@@ -1,11 +1,12 @@
 "use client";
 
 import type React from "react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
-import { apiService } from "@/lib/apiService";
+import { ApiRequestError, apiService } from "@/lib/apiService";
 import type { LoginInput } from "@/lib/types";
+import { cn } from "@/lib/utils";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -39,11 +40,6 @@ export function LoginForm() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    if (error) setError(null);
-     
-  }, [email, password, error]);
-
   const handleCapsLock = (e: React.KeyboardEvent<HTMLInputElement>) => {
     const isCapsOn = e.getModifierState?.("CapsLock") ?? false;
     setCapsLockOn(isCapsOn);
@@ -71,11 +67,7 @@ export function LoginForm() {
       router.push(callbackUrl);
       router.refresh();
     } catch (err: unknown) {
-      // Si tu apiRequest tira Error(msg), lo capturamos acá
-      const msg =
-        err instanceof Error && err.message.length > 0
-          ? err.message
-          : "Credenciales inválidas. Verificá tu correo y contraseña.";
+      const msg = getLoginErrorMessage(err);
       setError(msg);
     } finally {
       setLoading(false);
@@ -101,7 +93,7 @@ export function LoginForm() {
 
       <CardContent className="space-y-5">
         {error && (
-          <Alert variant="destructive" className="border-destructive/30">
+          <Alert variant="destructive" className="border-destructive/30" aria-live="assertive">
             <AlertDescription className="text-sm">{error}</AlertDescription>
           </Alert>
         )}
@@ -154,8 +146,13 @@ export function LoginForm() {
                 onKeyUp={handleCapsLock}
                 onKeyDown={handleCapsLock}
                 disabled={loading}
+                aria-invalid={Boolean(error)}
+                aria-describedby={error ? "login-password-feedback" : undefined}
                 required
-                className="pl-9 pr-10"
+                className={cn(
+                  "pl-9 pr-10",
+                  error && "border-destructive/70 focus-visible:ring-destructive/40",
+                )}
               />
 
               <button
@@ -175,6 +172,12 @@ export function LoginForm() {
 
             {capsLockOn && (
               <p className="text-xs text-[color:var(--status-warning)]">⚠️ Bloq Mayús activado</p>
+            )}
+
+            {error && (
+              <p id="login-password-feedback" className="text-xs font-medium text-destructive">
+                {error}
+              </p>
             )}
           </div>
 
@@ -221,4 +224,39 @@ export function LoginForm() {
       </CardContent>
     </Card>
   );
+}
+
+function getLoginErrorMessage(error: unknown) {
+  if (error instanceof ApiRequestError) {
+    if (error.status === 429) {
+      return error.retryAfterSeconds && error.retryAfterSeconds > 0
+        ? `Demasiados intentos de inicio de sesion. Espera ${formatRetryAfter(error.retryAfterSeconds)} antes de volver a intentar.`
+        : "Demasiados intentos de inicio de sesion. Espera un momento antes de volver a intentar.";
+    }
+
+    if (error.status === 401) {
+      return typeof error.remainingAttempts === "number" && error.remainingAttempts >= 0
+        ? `Correo o contrasena incorrectos. Te quedan ${formatRemainingAttempts(error.remainingAttempts)} antes del bloqueo temporal.`
+        : "Correo o contrasena incorrectos. Revisa tus datos e intenta de nuevo.";
+    }
+  }
+
+  if (error instanceof Error && error.message.length > 0) {
+    return error.message;
+  }
+
+  return "No se pudo iniciar sesion. Intenta nuevamente.";
+}
+
+function formatRetryAfter(retryAfterSeconds: number) {
+  if (retryAfterSeconds < 60) {
+    return `${retryAfterSeconds} segundo${retryAfterSeconds === 1 ? "" : "s"}`;
+  }
+
+  const minutes = Math.ceil(retryAfterSeconds / 60);
+  return `${minutes} minuto${minutes === 1 ? "" : "s"}`;
+}
+
+function formatRemainingAttempts(remainingAttempts: number) {
+  return `${remainingAttempts} intento${remainingAttempts === 1 ? "" : "s"}`;
 }

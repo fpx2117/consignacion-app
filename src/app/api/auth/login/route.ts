@@ -49,6 +49,7 @@ type LoginRouteDeps = {
 };
 
 const INVALID_LOGIN_MESSAGE = "Credenciales invalidas";
+const REMAINING_ATTEMPTS_HEADER = "X-Auth-Remaining-Attempts";
 
 const defaultDeps: LoginRouteDeps = {
   findUserByEmail: async (email) => {
@@ -130,12 +131,12 @@ export async function handlePostLogin(req: Request, deps: LoginRouteDeps = defau
 
   const user = await deps.findUserByEmail(email);
   if (!user || !user.activo) {
-    return NextResponse.json({ error: INVALID_LOGIN_MESSAGE }, { status: 401 });
+    return buildInvalidLoginResponse(rateLimitDecision);
   }
 
   const passwordMatches = await deps.comparePassword(password, user.hash);
   if (!passwordMatches) {
-    return NextResponse.json({ error: INVALID_LOGIN_MESSAGE }, { status: 401 });
+    return buildInvalidLoginResponse(rateLimitDecision);
   }
 
   const token = await deps.signUserJwt({
@@ -186,4 +187,18 @@ export async function handlePostLogin(req: Request, deps: LoginRouteDeps = defau
 
 export async function POST(req: Request) {
   return handlePostLogin(req);
+}
+
+function buildInvalidLoginResponse(rateLimitDecision: ReturnType<LoginRouteDeps["getRateLimitDecision"]>) {
+  const headers = new Headers(rateLimitDecision.headers);
+  const remainingAttempts = rateLimitDecision.matchedRules.find((rule) => rule.name === "identity")?.remaining;
+
+  if (typeof remainingAttempts === "number") {
+    headers.set(REMAINING_ATTEMPTS_HEADER, String(remainingAttempts));
+  }
+
+  return NextResponse.json(
+    { error: INVALID_LOGIN_MESSAGE },
+    { status: 401, headers },
+  );
 }
