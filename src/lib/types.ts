@@ -643,7 +643,8 @@ export type CrearMovimientoCajaInput = {
 
 export type LoginInput = {
   email: string;
-  password: string
+  password: string;
+  remember?: boolean;
 };
 
 export type CreateClienteInput = {
