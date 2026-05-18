@@ -17,9 +17,10 @@ type CartListProps = {
   getDiscountInfo: (item: CartItem) => CartDiscountInfo;
   onRemoveItem: (productId: number) => void;
   onUpdateQuantity: (productId: number, delta: number) => void;
+  onSetQuantity: (productId: number, qty: number) => void;
 };
 
-export function CartList({ cart, getDiscountInfo, onRemoveItem, onUpdateQuantity }: CartListProps) {
+export function CartList({ cart, getDiscountInfo, onRemoveItem, onUpdateQuantity, onSetQuantity }: CartListProps) {
   if (cart.length === 0) {
     return (
       <div className="h-full flex flex-col items-center justify-center text-muted-foreground/30 gap-3" role="status">
@@ -50,6 +51,7 @@ export function CartList({ cart, getDiscountInfo, onRemoveItem, onUpdateQuantity
                 isLast={idx === cart.length - 1}
                 onRemove={onRemoveItem}
                 onUpdateQuantity={onUpdateQuantity}
+                onSetQuantity={onSetQuantity}
                 {...discountInfo}
               />
             </motion.div>

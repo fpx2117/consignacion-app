@@ -323,6 +323,16 @@ export default function NuevaVentaPage() {
     );
   }, []);
 
+  const setQuantity = React.useCallback((productId: number, qty: number) => {
+    setCart((previous) =>
+      previous.map((item) => {
+        if (item.producto.id !== productId) return item;
+        const maxStock = item.producto.stockDisponibleUnits ?? 9999;
+        return { ...item, quantity: Math.min(Math.max(1, qty), maxStock) };
+      })
+    );
+  }, []);
+
   const totalSinInteres = React.useMemo(
     () => cart.reduce((accumulator, current) => accumulator + Number(current.producto.precioVenta) * current.quantity, 0),
     [cart],
@@ -676,7 +686,7 @@ export default function NuevaVentaPage() {
           </section>
 
           <section className="flex-1 overflow-y-auto p-3 bg-muted/5" aria-label="Listado de carrito">
-            <CartList cart={cart} getDiscountInfo={getDiscountMeta} onRemoveItem={removeItem} onUpdateQuantity={updateQuantity} />
+            <CartList cart={cart} getDiscountInfo={getDiscountMeta} onRemoveItem={removeItem} onUpdateQuantity={updateQuantity} onSetQuantity={setQuantity} />
           </section>
         </section>
 
