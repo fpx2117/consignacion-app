@@ -54,19 +54,22 @@ export async function POST(req: Request) {
             );
         }
 
-        // 4. Verificar que no haya otra suscripción activa
+        // 4. Verificar que no haya otra suscripción activa (cualquier estado)
+        //    La restricción @unique en Subscription.userId impide tener más de una fila,
+        //    así que si hay una suscripción cancelada/vencida debemos eliminarla primero.
         const existing = await prisma.subscription.findFirst({
-            where: {
-                userId,
-                status: { in: ["ACTIVO", "PRUEBA"] },
-            },
+            where: { userId },
         });
 
         if (existing) {
-            return NextResponse.json(
-                { error: "Ya tenés una suscripción activa. No podés canjear un código ahora." },
-                { status: 409 }
-            );
+            if (existing.status === EstadoSuscripcion.ACTIVO || existing.status === EstadoSuscripcion.PRUEBA) {
+                return NextResponse.json(
+                    { error: "Ya tenés una suscripción activa. No podés canjear un código ahora." },
+                    { status: 409 }
+                );
+            }
+            // Si está CANCELADO / VENCIDO / ATRASADO / INCOMPLETO →
+            // se eliminará dentro de la transacción antes de crear la nueva.
         }
 
         // 5. Crear suscripción con trial
@@ -74,6 +77,15 @@ export async function POST(req: Request) {
         trialEndsAt.setDate(trialEndsAt.getDate() + promo.durationDays);
 
         const subscription = await prisma.$transaction(async (tx) => {
+            // Eliminar suscripción vieja (cancelada/vencida) si existe
+            //    Usamos deleteMany para tolerar condiciones de carrera: si otro request
+            //    ya la borró, no queremos que falle la transacción.
+            if (existing) {
+                await tx.subscription.deleteMany({
+                    where: { userId, id: existing.id },
+                });
+            }
+
             // Incrementar uso del código
             await tx.promoCode.update({
                 where: { id: promo.id },
