@@ -39,8 +39,7 @@ async function fetchImageAsBase64(url: string): Promise<string> {
     const localMatch = url.match(/^\/api\/files\/([^/?#]+)$/);
     if (localMatch) {
       const { readFile } = await import("fs/promises");
-      const path = await import("path");
-      const { getUploadStorageDir } = await import("@/lib/uploads");
+      const { resolveUploadFilesystemCandidates } = await import("@/lib/uploads");
       const filename = localMatch[1];
       const ext = filename.split(".").pop()?.toLowerCase() ?? "";
       const mimeMap: Record<string, string> = {
@@ -48,9 +47,16 @@ async function fetchImageAsBase64(url: string): Promise<string> {
         webp: "image/webp", gif: "image/gif", avif: "image/avif",
       };
       const mime = mimeMap[ext] ?? "image/jpeg";
-      const filePath = path.join(getUploadStorageDir(), filename);
-      const buf = await readFile(filePath);
-      return `data:${mime};base64,${buf.toString("base64")}`;
+      for (const filePath of resolveUploadFilesystemCandidates(filename)) {
+        try {
+          const buf = await readFile(filePath);
+          return `data:${mime};base64,${buf.toString("base64")}`;
+        } catch {
+          continue;
+        }
+      }
+
+      return "";
     }
 
     // URLs externas (http/https) → fetch normal

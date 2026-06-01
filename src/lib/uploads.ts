@@ -1,5 +1,6 @@
 import path from "path";
 import { randomUUID } from "crypto";
+import { existsSync } from "fs";
 
 export type UploadUseCase = "product-image";
 
@@ -93,14 +94,35 @@ export type RejectedUploadResource = {
   ok: false;
 };
 
+export function resolveUploadFilesystemCandidates(filename: string): string[] {
+  const primaryDir = getUploadStorageDir();
+  const candidates = [path.join(primaryDir, filename)];
+
+  if (isLegacyApiUploadFilename(filename)) {
+    const legacyDir = getLegacyPublicUploadDir();
+    if (legacyDir !== primaryDir) {
+      candidates.push(path.join(legacyDir, filename));
+    }
+  }
+
+  return candidates;
+}
+
 export function getUploadPolicy(useCase: UploadUseCase): UploadPolicy {
   return UPLOAD_POLICIES[useCase];
 }
 
 export function getUploadStorageDir(): string {
-  return process.env.UPLOAD_DIR
-    ? path.resolve(process.env.UPLOAD_DIR)
-    : path.join(process.cwd(), "storage", "uploads");
+  if (process.env.UPLOAD_DIR) {
+    return path.resolve(process.env.UPLOAD_DIR);
+  }
+
+  const storageDir = path.join(process.cwd(), "storage", "uploads");
+  if (existsSync(storageDir)) {
+    return storageDir;
+  }
+
+  return getLegacyPublicUploadDir();
 }
 
 export function getLegacyPublicUploadDir(): string {
@@ -225,11 +247,12 @@ export function resolveStoredUploadPathFromUrl(url: string): string | null {
 
   if (url.startsWith("/api/files/")) {
     const filename = url.slice("/api/files/".length);
-    if (!isOpaqueUploadFilename(filename)) {
+    if (!isOpaqueUploadFilename(filename) && !isLegacyApiUploadFilename(filename)) {
       return null;
     }
 
-    return path.join(getUploadStorageDir(), filename);
+    const candidates = resolveUploadFilesystemCandidates(filename);
+    return candidates.find((candidate) => existsSync(candidate)) ?? candidates[0] ?? null;
   }
 
   if (url.startsWith("/uploads/")) {

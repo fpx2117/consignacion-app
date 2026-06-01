@@ -1,14 +1,11 @@
 "use client";
 
 import Image from "next/image";
-import { ShoppingCart, CheckCircle2, XCircle, PackageOpen, Eye } from "lucide-react";
+import { ShoppingCart, Eye, PackageOpen } from "lucide-react";
 import { motion } from "motion/react";
-import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { buildCatalogProductInquiryUrl } from "@/lib/catalog-whatsapp";
+import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import { getThemeStyles } from "../lib/theme-utils";
 import type { PublicCatalogConfig, PublicCatalogProduct } from "@/lib/types";
 
 interface ProductCardProps {
@@ -19,6 +16,7 @@ interface ProductCardProps {
     onAddToCart: (product: PublicCatalogProduct, quantity?: number) => void;
     onViewProduct?: (product: PublicCatalogProduct) => void;
     index: number;
+    compact?: boolean;
 }
 
 export function ProductCard({
@@ -28,187 +26,209 @@ export function ProductCard({
     viewMode,
     onAddToCart,
     onViewProduct,
-    index
+    index,
+    compact = false,
 }: ProductCardProps) {
-    const { radiusClass, buttonHoverClass, cardBgClass } = getThemeStyles(config.themeIdentifier);
     const isGrid = viewMode === "grid";
-
     const basePrice = Number(product.precioVenta);
     const pct = Number(config.porcentajeAumentoConsignacion) || 0;
     const displayedPrice = isConsigne ? basePrice * (1 + pct / 100) : basePrice;
     const isAvailable = product.stockDisponibleUnits > 0;
     const descuento = product.descuentoEfectivo;
     const cartEnabled = Boolean(config.convertirTienda);
+    const finalPrice = descuento ? descuento.precioFinal : displayedPrice;
 
+    const formatPrice = (val: number) =>
+        val.toLocaleString("es-AR", { minimumFractionDigits: 2 });
+
+    if (isGrid) {
+        return (
+            <motion.div
+                initial={{ opacity: 0, y: 16 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: (index % 8) * 0.04 }}
+                className="h-full"
+            >
+                <div
+                    onClick={() => onViewProduct?.(product)}
+                    className="group relative flex h-full cursor-pointer flex-col overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-black/[0.04] transition-all duration-300 hover:shadow-md hover:ring-black/[0.08]"
+                >
+                    {/* Image */}
+                    <div className={cn(
+                        "relative w-full overflow-hidden bg-gray-50",
+                        compact ? "aspect-square" : "aspect-[4/5]",
+                    )}>
+                        {product.imagenUrl ? (
+                                <div className="relative w-full h-full">
+                                    <Image
+                                        src={product.imagenUrl}
+                                        alt={product.nombre}
+                                        fill
+                                        unoptimized
+                                        sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+                                        className="object-cover transition-transform duration-500 group-hover:scale-105"
+                                    />
+                                </div>
+                        ) : (
+                            <div className="flex h-full w-full items-center justify-center text-gray-300">
+                                <PackageOpen className="h-10 w-10" />
+                            </div>
+                        )}
+
+                        {/* Badges */}
+                        <div className="absolute left-3 top-3 flex flex-col gap-1.5">
+                            {!isAvailable && (
+                                <Badge variant="destructive" className="bg-red-600 hover:bg-red-600 text-white border-0 text-[10px] font-medium px-2 py-0.5">
+                                    Agotado
+                                </Badge>
+                            )}
+                            {descuento && (
+                                <Badge className="bg-red-500 hover:bg-red-500 text-white border-0 text-[10px] font-bold px-2 py-0.5">
+                                    -{Math.abs(descuento.porcentaje)}%
+                                </Badge>
+                            )}
+                        </div>
+
+                        {/* Quick view overlay */}
+                        <div className="absolute inset-0 flex items-end justify-end p-3 opacity-0 transition-opacity duration-300 group-hover:opacity-100">
+                            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-white/90 text-gray-700 shadow-sm backdrop-blur-sm">
+                                <Eye className="h-4 w-4" />
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Content */}
+                    <div className="flex flex-1 flex-col p-4">
+                        {product.categoria?.nombre && (
+                            <span className="mb-1 text-[10px] font-medium uppercase tracking-wider text-gray-400">
+                                {product.categoria.nombre}
+                            </span>
+                        )}
+
+                        <h3 className="line-clamp-2 text-sm font-semibold leading-snug text-gray-900 group-hover:text-gray-700 transition-colors">
+                            {product.nombre}
+                        </h3>
+
+                        <div className="mt-auto pt-3 flex items-end justify-between">
+                            <div>
+                                {descuento ? (
+                                    <div className="flex items-baseline gap-2">
+                                        <span className="text-base font-bold text-gray-900">
+                                            ${formatPrice(finalPrice)}
+                                        </span>
+                                        <span className="text-xs text-gray-400 line-through">
+                                            ${formatPrice(descuento.precioOriginal)}
+                                        </span>
+                                    </div>
+                                ) : (
+                                    <span className="text-base font-bold text-gray-900">
+                                        ${formatPrice(displayedPrice)}
+                                    </span>
+                                )}
+                            </div>
+
+                            {isAvailable && cartEnabled && (
+                                <button
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        onAddToCart(product);
+                                    }}
+                                    className="flex h-8 w-8 items-center justify-center rounded-lg text-white
+                                               opacity-0 translate-x-1 group-hover:opacity-100 group-hover:translate-x-0
+                                               transition-all duration-300 active:scale-95
+                                               sm:h-9 sm:w-9"
+                                    style={{ backgroundColor: config.primaryColor || "#111827" }}
+                                    aria-label="Agregar al carrito"
+                                >
+                                    <ShoppingCart className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                                </button>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            </motion.div>
+        );
+    }
+
+    // List view
     return (
         <motion.div
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 16 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            transition={{ delay: (index % 8) * 0.05 }}
-            className="h-full"
+            transition={{ delay: (index % 4) * 0.05 }}
         >
-            <Card
+            <div
                 onClick={() => onViewProduct?.(product)}
-                className={cn(
-                    "overflow-hidden border border-border/60 transition-all duration-500 h-full flex group cursor-pointer relative",
-                    cardBgClass,
-                    radiusClass,
-                    isGrid
-                        ? "flex-col shadow-sm hover:shadow-2xl"
-                        : "flex-col sm:flex-row min-h-[290px] sm:h-36 p-2 sm:items-center shadow-md hover:shadow-lg"
-                )}
+                className="group flex cursor-pointer flex-col overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-black/[0.04] transition-all hover:shadow-md hover:ring-black/[0.08] sm:flex-row"
             >
-                {/* Contenedor de la Imagen */}
-                <div className={cn(
-                    "relative overflow-hidden shrink-0 flex items-center justify-center bg-foreground/5",
-                    isGrid
-                        ? "w-full aspect-square border-b border-border/10"
-                        : "w-full aspect-[4/3] sm:h-full sm:w-auto sm:aspect-square",
-                    (!isGrid) ? "rounded-xl" : ""
-                )}>
+                <div className="relative w-full shrink-0 overflow-hidden bg-gray-50 sm:w-56 sm:min-h-[220px]">
                     {product.imagenUrl ? (
-                        <>
+                        <div className="relative w-full h-full min-h-[200px] sm:min-h-[220px]">
                             <Image
                                 src={product.imagenUrl}
                                 alt={product.nombre}
                                 fill
-                                sizes={isGrid ? "(max-width: 1024px) 50vw, 25vw" : "(max-width: 1024px) 100vw, 33vw"}
-                                className="object-cover mix-blend-multiply transition-transform duration-700 group-hover:scale-110"
+                                unoptimized
+                                sizes="(max-width: 640px) 100vw, 220px"
+                                className="object-cover transition-transform duration-500 group-hover:scale-105"
                             />
-                            {/* Overlay "Ver detalle" */}
-                            <div className="absolute inset-0 bg-foreground/0 group-hover:bg-foreground/5 transition-colors duration-500 flex items-center justify-center">
-                                <span className={cn(
-                                    "bg-[color:rgba(var(--store-surface-rgb),0.95)] text-foreground text-[11px] uppercase tracking-widest font-bold px-5 py-2.5 opacity-0 group-hover:opacity-100 transition-all duration-500 transform translate-y-4 group-hover:translate-y-0 backdrop-blur-md shadow-lg hidden sm:flex items-center gap-2",
-                                    radiusClass
-                                )}>
-                                    <Eye className="h-3 w-3" /> Ver Detalle
-                                </span>
-                            </div>
-                        </>
+                        </div>
                     ) : (
-                        <div className="w-full h-full flex items-center justify-center opacity-10">
-                            <PackageOpen className="h-12 w-12" />
+                        <div className="flex h-full w-full items-center justify-center text-gray-300">
+                            <PackageOpen className="h-10 w-10" />
                         </div>
                     )}
-
-                    {/* Badge de Stock + Descuento */}
-                    {isGrid && (
-                        <div className="absolute top-4 left-4 flex flex-col gap-1.5 z-10">
-                            {isAvailable ? (
-                                <Badge className="bg-[color:var(--status-success-strong)] text-[color:var(--ui-fx-white)] border-transparent px-3 py-1 rounded-full flex items-center gap-1.5 shadow-sm text-[10px] font-black uppercase tracking-wider">
-                                    <CheckCircle2 className="h-3 w-3" /> STOCK
-                                </Badge>
-                            ) : (
-                                <Badge variant="destructive" className="bg-foreground text-[color:var(--ui-fx-white)] border-transparent px-3 py-1 rounded-full flex items-center gap-1.5 shadow-sm text-[10px] font-black uppercase tracking-wider">
-                                    <XCircle className="h-3 w-3" /> AGOTADO
-                                </Badge>
-                            )}
-                            {descuento && (
-                                <Badge variant="destructive" className="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider shadow-sm">
-                                    {Math.abs(descuento.porcentaje)}% OFF
-                                </Badge>
-                            )}
-                        </div>
-                    )}
+                    <div className="absolute left-3 top-3 flex flex-col gap-1.5">
+                        {!isAvailable && (
+                            <Badge variant="destructive" className="bg-red-600 text-white border-0 text-[10px] px-2">Agotado</Badge>
+                        )}
+                        {descuento && (
+                            <Badge className="bg-red-500 text-white border-0 text-[10px] font-bold px-2">-{Math.abs(descuento.porcentaje)}%</Badge>
+                        )}
+                    </div>
                 </div>
 
-                {/* Contenedor de la Información */}
-                <div className={cn(
-                    "flex flex-col flex-1 gap-1 sm:gap-2",
-                    isGrid ? "p-3 sm:p-4 lg:p-5 mt-auto z-10" : "px-3 sm:px-5 py-3 sm:py-2 justify-center h-full",
-                    cardBgClass
-                )}>
+                <div className="flex flex-1 flex-col justify-between p-5">
                     <div>
-                        <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-widest text-muted-foreground/80 mb-1 block">
-                            {product.categoria?.nombre || "Sin Categoría"}
-                        </span>
-                        <h3 className={cn(
-                            "font-bold leading-snug text-foreground group-hover:text-muted-foreground transition-colors",
-                            isGrid ? "text-sm sm:text-base lg:text-lg line-clamp-2" : "text-base line-clamp-2 sm:line-clamp-1"
-                        )}>
-                            {product.nombre}
-                        </h3>
-
-                        {!isGrid && (
-                            <span className={cn("text-xs font-bold mt-1.5 block uppercase tracking-wider", isAvailable ? "text-[color:var(--status-success-strong)]" : "text-muted-foreground/80")}>
-                                {isAvailable ? "En stock" : "Agotado"}
+                        {product.categoria?.nombre && (
+                            <span className="text-[10px] font-medium uppercase tracking-wider text-gray-400">
+                                {product.categoria.nombre}
                             </span>
                         )}
+                        <h3 className="mt-1 text-lg font-semibold text-gray-900">{product.nombre}</h3>
                     </div>
 
-                    <div className={cn(
-                        "flex items-center justify-between gap-1.5 sm:gap-4",
-                        isGrid ? "mt-2 sm:mt-4" : "mt-auto"
-                    )}>
-                        <div className="flex flex-col min-w-0">
+                    <div className="mt-4 flex items-center justify-between">
+                        <div>
                             {descuento ? (
-                                <>
-                                    <span className="text-base sm:text-xl font-black text-destructive tracking-tight truncate">
-                                        ${descuento.precioFinal.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
-                                    </span>
-                                    <span className="text-[10px] sm:text-xs font-semibold text-muted-foreground/80 line-through">
-                                        ${descuento.precioOriginal.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
-                                    </span>
-                                </>
+                                <div className="flex items-baseline gap-2">
+                                    <span className="text-xl font-bold text-gray-900">${formatPrice(finalPrice)}</span>
+                                    <span className="text-sm text-gray-400 line-through">${formatPrice(descuento.precioOriginal)}</span>
+                                </div>
                             ) : (
-                                <>
-                                    <span className="text-base sm:text-xl font-black text-foreground tracking-tight truncate">
-                                        ${displayedPrice.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
-                                    </span>
-                                    {isConsigne && (
-                                        <span className="text-[10px] sm:text-xs font-semibold text-muted-foreground/80 line-through">
-                                            ${basePrice.toLocaleString('es-AR')}
-                                        </span>
-                                    )}
-                                </>
+                                <span className="text-xl font-bold text-gray-900">${formatPrice(displayedPrice)}</span>
                             )}
                         </div>
-
-                        {!cartEnabled && config.whatsappNumber && (
+                        <div className="flex gap-2">
                             <Button
-                                size="icon"
                                 variant="outline"
-                                className={cn(
-                                    "h-8 w-8 sm:h-10 sm:w-10 border-[color:var(--status-success-strong)] hover:bg-[color:var(--status-success-strong)] text-[color:var(--status-success-strong)] transition-all duration-300 shrink-0",
-                                    radiusClass
-                                )}
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    const url = buildCatalogProductInquiryUrl(config.whatsappNumber, config.whatsappMessage, product.nombre);
-                                    if (!url) return;
-                                    window.open(url, '_blank');
-                                }}
+                                size="sm"
+                                className="text-xs text-gray-700 border-gray-300 bg-white hover:bg-gray-100 hover:text-gray-900 hover:border-gray-400"
+                                onClick={(e) => { e.stopPropagation(); onViewProduct?.(product); }}
                             >
-                                <svg viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4 sm:h-5 sm:w-5">
-                                    <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" />
-                                </svg>
+                                <Eye className="mr-1.5 h-3.5 w-3.5" /> Detalle
                             </Button>
-                        )}
-
-                        {cartEnabled && (
-                            <Button
-                                size="icon"
-                                className={cn(
-                                    "font-black shadow-md transition-all duration-300 shrink-0",
-                                    radiusClass,
-                                    buttonHoverClass,
-                                    isGrid
-                                        ? "h-8 w-8 sm:h-10 sm:w-10 bg-foreground text-[color:var(--ui-fx-white)]"
-                                        : "h-10 w-10 bg-foreground text-[color:var(--ui-fx-white)]"
-                                )}
-                                disabled={!isAvailable}
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    onAddToCart(product);
-                                }}
-                            >
-                                <ShoppingCart className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                            </Button>
-                        )}
+                            {cartEnabled && isAvailable && (
+                                <Button size="sm" className="text-xs text-white" style={{ backgroundColor: config.primaryColor || "#111827" }} onClick={(e) => { e.stopPropagation(); onAddToCart(product); }}>
+                                    <ShoppingCart className="mr-1.5 h-3.5 w-3.5" /> Agregar
+                                </Button>
+                            )}
+                        </div>
                     </div>
                 </div>
-            </Card>
+            </div>
         </motion.div>
     );
 }

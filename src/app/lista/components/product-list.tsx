@@ -12,9 +12,10 @@ interface ProductListProps {
     isConsigne: boolean;
     onAddToCart: (product: PublicCatalogProduct, quantity?: number) => void;
     onViewProduct: (product: PublicCatalogProduct) => void;
+    compact?: boolean;
 }
 
-export function ProductList({ products, config, viewMode, isConsigne, onAddToCart, onViewProduct }: ProductListProps) {
+export function ProductList({ products, config, viewMode, isConsigne, onAddToCart, onViewProduct, compact = false }: ProductListProps) {
     const isGrid = viewMode === "grid";
 
     if (!products || products.length === 0) {
@@ -30,8 +31,10 @@ export function ProductList({ products, config, viewMode, isConsigne, onAddToCar
         <div className={cn(
             "grid animate-in fade-in duration-500",
             isGrid
-                ? "grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3 xl:grid-cols-4 lg:gap-6"
-                : "grid-cols-1 gap-3 lg:grid-cols-2 lg:gap-4"
+                ? compact
+                    ? "grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4"
+                    : "grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 lg:gap-6"
+                : "grid-cols-1 gap-4 xl:grid-cols-2 xl:gap-5"
         )}>
             {products.map((product, idx) => (
                 <ProductCard
@@ -43,6 +46,7 @@ export function ProductList({ products, config, viewMode, isConsigne, onAddToCar
                     isConsigne={isConsigne}
                     onAddToCart={onAddToCart}
                     onViewProduct={onViewProduct}
+                    compact={compact}
                 />
             ))}
         </div>

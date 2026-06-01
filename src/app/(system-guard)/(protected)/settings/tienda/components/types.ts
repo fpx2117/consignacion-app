@@ -1,3 +1,5 @@
+import type { StorefrontContent } from "@/lib/storefront-content";
+
 export type StoreThemeId =
   | "modern"
   | "nature"
@@ -32,6 +34,7 @@ export type BrandingPreviewSettings = {
   bannerUrl?: string | null;
   typography?: string;
   isBannerSlider?: boolean;
+  storefrontContent?: StorefrontContent | null;
   storeName?: string;
   nombreTienda?: string;
   banners?: Array<{

@@ -138,27 +138,28 @@ model Cliente {
 }
 
 model Branding {
-  id              Int              @id @default(autoincrement())
-  businessName    String
-  primaryColor    String           @default("#111827")
-  footerText      String?
-  phone           String?
-  address         String?
-  updatedAt       DateTime         @updatedAt
-  logoData        Bytes?
-  logoMime        String?
-  sucursalId      Int              @unique @default(1)
-  bannerData      Bytes?
-  bannerMime      String?
-  isBannerSlider  Boolean          @default(false)
-  facebookUrl     String?
-  instagramUrl    String?
-  secondaryColor  String           @default("#3b82f6")
-  themeIdentifier String           @default("modern")
-  whatsappNumber  String?
-  whatsappMessage String?          @default("Hola, estoy buscando {nombre_producto}")
-  sucursal        Sucursal         @relation(fields: [sucursalId], references: [id])
-  banners         BrandingBanner[]
+  id                Int              @id @default(autoincrement())
+  businessName      String
+  primaryColor      String           @default("#111827")
+  footerText        String?
+  phone             String?
+  address           String?
+  updatedAt         DateTime         @updatedAt
+  logoData          Bytes?
+  logoMime          String?
+  sucursalId        Int              @unique @default(1)
+  bannerData        Bytes?
+  bannerMime        String?
+  isBannerSlider    Boolean          @default(false)
+  facebookUrl       String?
+  instagramUrl      String?
+  secondaryColor    String           @default("#3b82f6")
+  themeIdentifier   String           @default("modern")
+  whatsappNumber    String?
+  whatsappMessage   String?          @default("Hola, estoy buscando {nombre_producto}")
+  storefrontContent Json?
+  sucursal          Sucursal         @relation(fields: [sucursalId], references: [id])
+  banners           BrandingBanner[]
 }
 
 model BrandingBanner {
@@ -307,12 +308,12 @@ model MovimientoCaja {
 }
 
 model Categoria {
-  id         Int        @id @default(autoincrement())
-  nombre     String
-  color      String     @default("sky")
-  descuentos Json?
-  sucursalId Int        @default(1)
-  sucursal   Sucursal   @relation(fields: [sucursalId], references: [id])
+  id            Int            @id @default(autoincrement())
+  nombre        String
+  color         String         @default("sky")
+  descuentos    Json?
+  sucursalId    Int            @default(1)
+  sucursal      Sucursal       @relation(fields: [sucursalId], references: [id])
   subcategorias Subcategoria[]
   productos     Producto[]
 
@@ -451,24 +452,24 @@ model CheckoutIntent {
 }
 
 model Venta {
-  id            Int            @id @default(autoincrement())
-  clienteId     Int
-  liquidacionId Int?           @unique
-  fecha         DateTime       @default(now())
-  total         Decimal        @db.Decimal(10, 2)
-  descuentoGlobal Decimal        @default(0) @db.Decimal(10, 2)
-  sesionCajaId  Int?
-  tipo          TipoVenta      @default(CASUAL)
-  metodoPago    MetodoPago     @default(EFECTIVO)
-  sucursalId    Int            @default(1)
-  numeroVenta   Int?
-  cliente       Cliente        @relation(fields: [clienteId], references: [id])
-  liquidacion   Liquidacion?   @relation(fields: [liquidacionId], references: [id])
-  sesionCaja    SesionCaja?    @relation(fields: [sesionCajaId], references: [id], onDelete: Restrict)
-  sucursal      Sucursal       @relation(fields: [sucursalId], references: [id])
-  detalles      VentaDetalle[]
-  envio         Envio?
-  checkoutIntent CheckoutIntent?
+  id              Int             @id @default(autoincrement())
+  clienteId       Int
+  liquidacionId   Int?            @unique
+  fecha           DateTime        @default(now())
+  total           Decimal         @db.Decimal(10, 2)
+  descuentoGlobal Decimal         @default(0) @db.Decimal(10, 2)
+  sesionCajaId    Int?
+  tipo            TipoVenta       @default(CASUAL)
+  metodoPago      MetodoPago      @default(EFECTIVO)
+  sucursalId      Int             @default(1)
+  numeroVenta     Int?
+  cliente         Cliente         @relation(fields: [clienteId], references: [id])
+  liquidacion     Liquidacion?    @relation(fields: [liquidacionId], references: [id])
+  sesionCaja      SesionCaja?     @relation(fields: [sesionCajaId], references: [id], onDelete: Restrict)
+  sucursal        Sucursal        @relation(fields: [sucursalId], references: [id])
+  detalles        VentaDetalle[]
+  envio           Envio?
+  checkoutIntent  CheckoutIntent?
 
   // Anulación
   anulada         Boolean   @default(false)
@@ -487,12 +488,12 @@ model Envio {
   estado            String   @default("PENDIENTE") // PENDIENTE, ENVIADO, ENTREGADO, CANCELADO
   codigoSeguimiento String?
   costo             Decimal  @default(0) @db.Decimal(10, 2)
-  metodoEnvio       String   // DOMICILIO, SUCURSAL
-  direccionEnvio    Json     // Guardamos un snapshot de donde se manda (calle, numero, cp, provincia, depto...)
+  metodoEnvio       String // DOMICILIO, SUCURSAL
+  direccionEnvio    Json // Guardamos un snapshot de donde se manda (calle, numero, cp, provincia, depto...)
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
 
-  venta             Venta    @relation(fields: [ventaId], references: [id], onDelete: Cascade)
+  venta Venta @relation(fields: [ventaId], references: [id], onDelete: Cascade)
 }
 
 model VentaDetalle {
@@ -508,7 +509,7 @@ model VentaDetalle {
   venta          Venta    @relation(fields: [ventaId], references: [id], onDelete: Cascade)
 
   // Estado del item al anular
-  esRotura       Boolean  @default(false)
+  esRotura Boolean @default(false)
 
   @@index([ventaId])
   @@index([productoId])
@@ -599,23 +600,23 @@ model ResetPasswordToken {
 }
 
 model Sucursal {
-  id              Int               @id @default(autoincrement())
-  nombre          String
-  esPrincipal     Boolean           @default(false)
-  activa          Boolean           @default(true)
-  createdAt       DateTime          @default(now())
-  updatedAt       DateTime          @updatedAt
-  branding        Branding?
-  cajas           Caja[]
-  clientes        Cliente[]
-  configuracion   Configuracion?
-  consignaciones  Consignacion[]
-  movimientos     MovimientoStock[]
-  notifications   Notification[]
-  productos       Producto[]
-  stockProductos  StockSucursal[]
-  usuarios        Usuario[]
-  ventas          Venta[]
+  id                Int               @id @default(autoincrement())
+  nombre            String
+  esPrincipal       Boolean           @default(false)
+  activa            Boolean           @default(true)
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+  branding          Branding?
+  cajas             Caja[]
+  clientes          Cliente[]
+  configuracion     Configuracion?
+  consignaciones    Consignacion[]
+  movimientos       MovimientoStock[]
+  notifications     Notification[]
+  productos         Producto[]
+  stockProductos    StockSucursal[]
+  usuarios          Usuario[]
+  ventas            Venta[]
   gastos            Gasto[]
   categoriasGasto   CategoriaGasto[]
   categorias        Categoria[]
@@ -623,6 +624,17 @@ model Sucursal {
   gastosCompartidos GastoSucursal[]
   pedidosEsperados  PedidoEsperado[]
   catalogVisits     CatalogVisit[]
+  storeSettings     StoreSettings?
+}
+
+model StoreSettings {
+  id          Int      @id @default(autoincrement())
+  sucursalId  Int      @unique
+  themeConfig Json
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  sucursal Sucursal @relation(fields: [sucursalId], references: [id], onDelete: Cascade)
 }
 
 model StockSucursal {
@@ -641,20 +653,20 @@ model StockSucursal {
 }
 
 model Gasto {
-  id               Int             @id @default(autoincrement())
-  monto            Decimal         @db.Decimal(10, 2)
-  fecha            DateTime        @default(now())
-  fechaVencimiento DateTime?
-  motivo           String
-  estado           EstadoGasto     @default(PAGADO)
-  esRecurrente     Boolean         @default(false)
-  frecuencia       FrecuenciaGasto @default(UNICO)
-  categoriaGastoId Int
-  sucursalId       Int             @default(1)
-  userId           Int?
-  comprobanteUrl   String?
-  cuotaActual      Int?
-  cuotaTotal       Int?
+  id                    Int             @id @default(autoincrement())
+  monto                 Decimal         @db.Decimal(10, 2)
+  fecha                 DateTime        @default(now())
+  fechaVencimiento      DateTime?
+  motivo                String
+  estado                EstadoGasto     @default(PAGADO)
+  esRecurrente          Boolean         @default(false)
+  frecuencia            FrecuenciaGasto @default(UNICO)
+  categoriaGastoId      Int
+  sucursalId            Int             @default(1)
+  userId                Int?
+  comprobanteUrl        String?
+  cuotaActual           Int?
+  cuotaTotal            Int?
   recurrenciaId         String?
   esCompartido          Boolean         @default(false)
   createdAt             DateTime        @default(now())
@@ -830,17 +842,17 @@ enum EstadoItemPedido {
 }
 
 model PedidoEsperado {
-  id            Int                    @id @default(autoincrement())
+  id            Int                  @id @default(autoincrement())
   sucursalId    Int
   fechaEsperada DateTime
   observaciones String?
-  estado        EstadoPedidoEsperado   @default(PROGRAMADO)
+  estado        EstadoPedidoEsperado @default(PROGRAMADO)
   creadoPor     Int
-  createdAt     DateTime               @default(now())
-  updatedAt     DateTime               @updatedAt
+  createdAt     DateTime             @default(now())
+  updatedAt     DateTime             @updatedAt
 
-  sucursal      Sucursal               @relation(fields: [sucursalId], references: [id])
-  items         PedidoEsperadoItem[]
+  sucursal Sucursal             @relation(fields: [sucursalId], references: [id])
+  items    PedidoEsperadoItem[]
 
   @@index([sucursalId])
   @@index([estado])
@@ -848,15 +860,15 @@ model PedidoEsperado {
 }
 
 model PedidoEsperadoItem {
-  id               Int               @id @default(autoincrement())
+  id               Int              @id @default(autoincrement())
   pedidoId         Int
   productoId       Int
   cantidadEsperada Int
-  cantidadRecibida Int               @default(0)
-  estado           EstadoItemPedido  @default(PENDIENTE)
+  cantidadRecibida Int              @default(0)
+  estado           EstadoItemPedido @default(PENDIENTE)
 
-  pedido           PedidoEsperado    @relation(fields: [pedidoId], references: [id], onDelete: Cascade)
-  producto         Producto          @relation(fields: [productoId], references: [id])
+  pedido   PedidoEsperado @relation(fields: [pedidoId], references: [id], onDelete: Cascade)
+  producto Producto       @relation(fields: [productoId], references: [id])
 
   @@index([pedidoId])
   @@index([productoId])

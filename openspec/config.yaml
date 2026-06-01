@@ -6,6 +6,7 @@ context: |
   Architecture: App Router, Server Actions, Server Components, Zustand stores
   Testing: ESLint 9, sin framework de testing dedicado
   Style: Tailwind CSS 4, shadcn/ui, Radix UI, class-variance-authority
+  Project Goal: E-commerce store desde cero con sistema avanzado de settings para personalización (temas, colores, layout).
 
 rules:
   proposal:
@@ -15,6 +16,9 @@ rules:
     - Usar el formato Dado/Cuando/Entonces (Given/When/Then) para los escenarios
     - Usar las palabras clave del RFC 2119 (DEBE, DEBERÁ, DEBERÍA, PODRÁ)
   design:
+    - Asegurar que todo componente de UI reciba tokens de estilo o variables CSS inyectadas para permitir personalización de temas y colores.
+    - El diseño del layout DEBE ser modular, permitiendo reorganizar componentes a través del sistema de settings (p.ej. usando layouts dinámicos).
+    - Aislar la lógica del sistema de settings del e-commerce (carrito, productos) para mantener alta cohesión y bajo acoplamiento.
     - Incluir diagramas de secuencia para flujos complejos
     - Documentar las decisiones de arquitectura con su respectiva justificación
   tasks:
@@ -25,6 +29,7 @@ rules:
     - Seguir los patrones de código y convenciones existentes
     - Cargar las habilidades de programación (coding skills) relevantes para el stack del proyecto
   verify:
+    - Verificar que los componentes de la tienda apliquen correctamente los temas y colores configurados en el sistema de settings.
     - Ejecutar pruebas si existe la infraestructura de pruebas
     - Comparar la implementación contra cada escenario de las especificaciones
   archive:

@@ -178,7 +178,7 @@ export function CartDrawer({
                     </div>
                     <p className="text-xl font-bold text-foreground">Tu carrito esta vacio</p>
                     <p className="text-muted-foreground text-sm mt-2">Explorá la tienda y agregá los productos que quieras pedir por WhatsApp.</p>
-                    <Button onClick={onClose} variant="outline" className={cn("mt-6 font-bold", buttonRadiusClass)}>VOLVER A LA TIENDA</Button>
+                    <Button onClick={onClose} className={cn("mt-6 font-bold text-white", buttonRadiusClass)} style={{ backgroundColor: config.primaryColor || "#111827" }}>VOLVER A LA TIENDA</Button>
                   </motion.div>
                 ) : (
                   cart.map((item, index) => {
@@ -228,7 +228,7 @@ export function CartDrawer({
                               >
                                 -
                               </button>
-                              <span className="text-xs font-black w-4 text-center">{item.quantity}</span>
+                              <span className="text-xs font-black w-4 text-center text-foreground">{item.quantity}</span>
                               <button
                                 disabled={item.quantity >= item.stockDisponibleUnits}
                                 onClick={() => onUpdateQuantity(item.id, 1)}

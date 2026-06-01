@@ -1,0 +1,65 @@
+:root {
+  --storefront-font-heading: "Inter", sans-serif;
+  --storefront-font-body: "Inter", sans-serif;
+}
+
+[data-theme="modern"] {
+  --theme-primary: #111827;
+  --theme-secondary: #3b82f6;
+  --theme-bg: #ffffff;
+  --theme-text: #111827;
+}
+
+[data-theme="nature"] {
+  --theme-primary: #166534;
+  --theme-secondary: #22c55e;
+  --theme-bg: #f0fdf4;
+  --theme-text: #14532d;
+}
+
+[data-theme="ocean"] {
+  --theme-primary: #1e40af;
+  --theme-secondary: #06b6d4;
+  --theme-bg: #f0f9ff;
+  --theme-text: #1e3a5f;
+}
+
+[data-theme="sunset"] {
+  --theme-primary: #c2410c;
+  --theme-secondary: #f59e0b;
+  --theme-bg: #fffbeb;
+  --theme-text: #7c2d12;
+}
+
+[data-theme="luxury"] {
+  --theme-primary: #1e293b;
+  --theme-secondary: #c9a84c;
+  --theme-bg: #fafaf9;
+  --theme-text: #1c1917;
+}
+
+[data-theme="minimal"] {
+  --theme-primary: #000000;
+  --theme-secondary: #6b7280;
+  --theme-bg: #ffffff;
+  --theme-text: #000000;
+}
+
+[data-theme="barbie"] {
+  --theme-primary: #db2777;
+  --theme-secondary: #f472b6;
+  --theme-bg: #fdf2f8;
+  --theme-text: #831843;
+}
+
+[data-theme="tech"] {
+  --theme-primary: #6366f1;
+  --theme-secondary: #818cf8;
+  --theme-bg: #0f172a;
+  --theme-text: #f1f5f9;
+}
+
+[data-theme-custom="true"] {
+  --theme-primary: var(--branding-primary);
+  --theme-secondary: var(--branding-secondary);
+}

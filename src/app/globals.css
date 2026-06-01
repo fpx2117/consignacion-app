@@ -366,3 +366,34 @@
   animation: none;
   mix-blend-mode: normal;
 }
+
+/* Sonner Toast Animations */
+@keyframes toast-slide-in {
+  from {
+    transform: translateX(100%) scale(0.85);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0) scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes toast-slide-out {
+  from {
+    transform: translateX(0) scale(1);
+    opacity: 1;
+  }
+  to {
+    transform: translateX(100%) scale(0.85);
+    opacity: 0;
+  }
+}
+
+[data-sonner-toaster] [data-sonner-toast] {
+  animation: toast-slide-in 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+[data-sonner-toaster] [data-sonner-toast][data-removed] {
+  animation: toast-slide-out 0.28s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}

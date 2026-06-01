@@ -2,6 +2,7 @@ import { Prisma } from "@prisma/client";
 import { unstable_cache } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { registerCatalogVisit } from "@/lib/analytics/catalog-visit";
+import { normalizeStorefrontContent } from "@/lib/storefront-content";
 import type { PublicCatalogData } from "@/lib/types";
 import { calcularDescuentoEfectivo } from "@/lib/descuento-utils";
 
@@ -153,6 +154,9 @@ export async function getPublicCatalogDataRaw(sucursalId: number | null): Promis
       porcentajeAumentoConsignacion: config.porcentajeAumentoConsignacion,
       porcentajeInteresTarjeta: config.porcentajeInteresTarjeta,
       mpPublicKeyTienda: config.mpPublicKeyTienda,
+      storefrontContent: normalizeStorefrontContent(brandingExtra?.storefrontContent, {
+        storeName: config.sucursal.branding?.businessName || config.sucursal.nombre,
+      }),
     },
   };
 

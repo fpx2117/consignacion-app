@@ -49,7 +49,17 @@ export default function RootLayout({
         >
           <PerformanceVitals />
           {children}
-          <Toaster richColors position="top-right" />
+          <Toaster
+            position="bottom-right"
+            richColors
+            closeButton
+            expand={false}
+            visibleToasts={3}
+            toastOptions={{
+              className: "!text-sm !font-medium !rounded-xl !shadow-lg !border !border-gray-100",
+              duration: 4000,
+            }}
+          />
         </ThemeProvider>
       </body>
     </html>
