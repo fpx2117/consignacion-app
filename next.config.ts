@@ -9,6 +9,8 @@ const nextConfig: NextConfig = {
 
   // ✅ Security headers + Cache headers para assets estáticos
   async headers() {
+    const isProduction = process.env.NODE_ENV === "production";
+
     return [
       {
         source: "/(.*)",
@@ -24,16 +26,20 @@ const nextConfig: NextConfig = {
           { key: "X-XSS-Protection", value: "1; mode=block" },
         ],
       },
-      // ✅ Cache agresivo para assets estáticos inmutables de Next.js
-      {
-        source: "/_next/static/(.*)",
-        headers: [
-          {
-            key: "Cache-Control",
-            value: "public, max-age=31536000, immutable",
-          },
-        ],
-      },
+      // ✅ Cache agresivo solo en producción para assets inmutables de Next.js
+      ...(isProduction
+        ? [
+            {
+              source: "/_next/static/(.*)",
+              headers: [
+                {
+                  key: "Cache-Control",
+                  value: "public, max-age=31536000, immutable",
+                },
+              ],
+            },
+          ]
+        : []),
       // ✅ No cachear respuestas de API en CDN
       {
         source: "/api/(.*)",

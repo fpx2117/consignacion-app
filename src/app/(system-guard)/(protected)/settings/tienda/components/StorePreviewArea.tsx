@@ -7,6 +7,9 @@ import { StoreBanner } from "@/app/lista/components/store-banner";
 import { StoreFilters } from "@/app/lista/components/store-filters";
 import { ProductList } from "@/app/lista/components/product-list";
 import { StoreFooter } from "@/app/lista/components/store-footer";
+import { StoreCategorySidebar } from "@/app/lista/components/store-category-sidebar";
+import { StorefrontSections } from "@/app/lista/components/storefront-sections";
+import { getThemeStyles } from "@/app/lista/lib/theme-utils";
 import type { PublicCatalogSortBy } from "@/lib/types";
 import type { BrandingPreviewSettings, StoreLayoutConfig, StoreLayoutMode } from "./types";
 
@@ -19,6 +22,7 @@ type PreviewProduct = {
     stockDisponibleUnits: number;
     categoriaId: number;
     subcategoriaId: number | null;
+    categoria?: { id: number; nombre: string };
 };
 
 type PreviewCategory = {
@@ -125,19 +129,24 @@ export function StorePreviewArea({ branding, config, mode }: StorePreviewProps) 
     const isMobile = mode === "mobile";
 
     const mergedConfig = { sucursalId: 1, ...config, ...branding };
-    const theme = mergedConfig.themeIdentifier || "modern";
+    const { pageBgClass } = getThemeStyles(mergedConfig.themeIdentifier);
 
-    // 2. Scoped CSS variables
     const cssColorToRgb = (color: string) => {
-        if (typeof window === "undefined") return "0, 0, 0";
-        const probe = document.createElement("span");
-        probe.style.color = color || "hsl(var(--foreground))";
-        document.body.appendChild(probe);
-        const computed = getComputedStyle(probe).color;
-        document.body.removeChild(probe);
-        const matches = computed.match(/\d+/g);
-        if (!matches || matches.length < 3) return "0, 0, 0";
-        return `${matches[0]}, ${matches[1]}, ${matches[2]}`;
+        const normalized = (color || "").trim();
+        const hex = normalized.startsWith("#") ? normalized.slice(1) : normalized;
+
+        if (hex.length === 3) {
+            const expanded = hex.split("").map((char) => char + char).join("");
+            const int = Number.parseInt(expanded, 16);
+            return `${(int >> 16) & 255}, ${(int >> 8) & 255}, ${int & 255}`;
+        }
+
+        if (hex.length === 6) {
+            const int = Number.parseInt(hex, 16);
+            return `${(int >> 16) & 255}, ${(int >> 8) & 255}, ${int & 255}`;
+        }
+
+        return "0, 0, 0";
     };
 
     const getContrastColor = (color: string) => {
@@ -171,14 +180,14 @@ export function StorePreviewArea({ branding, config, mode }: StorePreviewProps) 
         }
     }, [selectedCategory]);
 
-    const categories: PreviewCategory[] = [
+    const categories = React.useMemo<PreviewCategory[]>(() => [
         { id: 1, nombre: "Remeras", negocioId: 1, subcategorias: [{ id: 11, nombre: "Basicas" }, { id: 12, nombre: "Oversize" }] },
         { id: 2, nombre: "Pantalones", negocioId: 1, subcategorias: [{ id: 21, nombre: "Jean" }, { id: 22, nombre: "Sastrero" }] },
         { id: 3, nombre: "Accesorios", negocioId: 1, subcategorias: [{ id: 31, nombre: "Gorras" }] },
         { id: 4, nombre: "Zapatillas", negocioId: 1, subcategorias: [] },
-    ];
+    ], []);
 
-    const products: PreviewProduct[] = [
+    const products = React.useMemo<PreviewProduct[]>(() => [
         {
             id: 1,
             nombre: "Remera Relaxed Fit",
@@ -188,6 +197,7 @@ export function StorePreviewArea({ branding, config, mode }: StorePreviewProps) 
             stockDisponibleUnits: 8,
             categoriaId: 1,
             subcategoriaId: 11,
+            categoria: { id: 1, nombre: "Remeras" },
         },
         {
             id: 2,
@@ -198,6 +208,7 @@ export function StorePreviewArea({ branding, config, mode }: StorePreviewProps) 
             stockDisponibleUnits: 5,
             categoriaId: 2,
             subcategoriaId: 21,
+            categoria: { id: 2, nombre: "Pantalones" },
         },
         {
             id: 3,
@@ -208,6 +219,7 @@ export function StorePreviewArea({ branding, config, mode }: StorePreviewProps) 
             stockDisponibleUnits: 3,
             categoriaId: 1,
             subcategoriaId: 12,
+            categoria: { id: 1, nombre: "Remeras" },
         },
         {
             id: 4,
@@ -218,16 +230,36 @@ export function StorePreviewArea({ branding, config, mode }: StorePreviewProps) 
             stockDisponibleUnits: 11,
             categoriaId: 3,
             subcategoriaId: 31,
+            categoria: { id: 3, nombre: "Accesorios" },
         },
-    ];
+    ], []);
 
-    const filteredProducts = products.filter((p) => {
-        const matchesSearch = p.nombre.toLowerCase().includes(searchTerm.toLowerCase());
-        const matchesCategory = !selectedCategory || p.categoriaId === selectedCategory;
-        const matchesSubcategory = !selectedSubcategory || p.subcategoriaId === selectedSubcategory;
-        const matchesConsigne = !isConsigne || typeof p.costoConsignacion === "number";
-        return matchesSearch && matchesCategory && matchesSubcategory && matchesConsigne;
-    });
+    const filteredProducts = React.useMemo(() => {
+        const result = products.filter((p) => {
+            const matchesSearch = p.nombre.toLowerCase().includes(searchTerm.toLowerCase());
+            const matchesCategory = !selectedCategory || p.categoriaId === selectedCategory;
+            const matchesSubcategory = !selectedSubcategory || p.subcategoriaId === selectedSubcategory;
+            const matchesConsigne = !isConsigne || typeof p.costoConsignacion === "number";
+            return matchesSearch && matchesCategory && matchesSubcategory && matchesConsigne;
+        });
+
+        result.sort((a, b) => {
+            switch (sortBy) {
+                case "price_asc":
+                    return a.precioVenta - b.precioVenta;
+                case "price_desc":
+                    return b.precioVenta - a.precioVenta;
+                case "name_asc":
+                    return a.nombre.localeCompare(b.nombre);
+                case "name_desc":
+                    return b.nombre.localeCompare(a.nombre);
+                default:
+                    return 0;
+            }
+        });
+
+        return result;
+    }, [products, isConsigne, searchTerm, selectedCategory, selectedSubcategory, sortBy]);
 
     React.useEffect(() => {
         if (mergedConfig.typography) {
@@ -243,8 +275,6 @@ export function StorePreviewArea({ branding, config, mode }: StorePreviewProps) 
             }
         }
     }, [mergedConfig.typography]);
-
-    const pageBgClass = theme === "minimal" ? "bg-card" : "bg-muted/40";
 
     return (
         <div
@@ -283,6 +313,8 @@ export function StorePreviewArea({ branding, config, mode }: StorePreviewProps) 
                     config={mergedConfig}
                     cartCount={2}
                     onOpenCart={() => {}}
+                    categories={categories}
+                    onSelectCategory={(id) => setSelectedCategory(id)}
                 />
 
                 <main
@@ -291,35 +323,78 @@ export function StorePreviewArea({ branding, config, mode }: StorePreviewProps) 
                         isMobile ? "px-3 py-4 gap-4" : "px-4 md:px-8 py-8 gap-6"
                     )}
                 >
-                    <StoreBanner config={mergedConfig} />
-
-                    <StoreFilters
+                    <StoreBanner
                         config={mergedConfig}
-                        products={products}
-                        searchTerm={searchTerm}
-                        setSearchTerm={setSearchTerm}
-                        viewMode={viewMode}
-                        setViewMode={setViewMode}
-                        categories={categories}
-                        selectedCategory={selectedCategory}
-                        setSelectedCategory={setSelectedCategory}
-                        selectedSubcategory={selectedSubcategory}
-                        setSelectedSubcategory={setSelectedSubcategory}
-                        isConsigne={isConsigne}
-                        setIsConsigne={setIsConsigne}
-                        sortBy={sortBy}
-                        setSortBy={setSortBy}
+                        productsCount={products.length}
+                        categoriesCount={categories.length}
+                        onPrimaryAction={() => setSelectedCategory(null)}
+                        onSecondaryAction={() => setSelectedCategory(categories[0]?.id ?? null)}
                     />
 
-                    <div className={isMobile ? "preview-mobile-product-list" : undefined}>
-                        <ProductList
-                            products={filteredProducts}
+                    <StorefrontSections
+                        config={mergedConfig}
+                        products={products}
+                        categories={categories}
+                        onSelectCategory={(id) => setSelectedCategory(id)}
+                        onScrollToCatalog={() => {}}
+                        onOpenProduct={() => {}}
+                        onAddToCart={() => {}}
+                        isConsigne={isConsigne}
+                    />
+
+                    <div className="flex flex-col lg:flex-row gap-6 lg:gap-8 items-start relative w-full">
+                        <StoreCategorySidebar
                             config={mergedConfig}
-                            onViewProduct={() => {}}
-                            viewMode={viewMode}
-                            isConsigne={isConsigne}
-                            onAddToCart={() => {}}
+                            categories={categories}
+                            categoryCounts={products.reduce<Record<number, number>>((acc, product) => {
+                                acc[product.categoriaId] = (acc[product.categoriaId] || 0) + 1;
+                                return acc;
+                            }, {})}
+                            selectedCategory={selectedCategory}
+                            setSelectedCategory={(id) => {
+                                setSelectedCategory(id);
+                                setSelectedSubcategory(null);
+                            }}
+                            selectedSubcategory={selectedSubcategory}
+                            setSelectedSubcategory={setSelectedSubcategory}
+                            totalProducts={products.length}
+                            allProducts={products}
                         />
+
+                        <div className="flex-1 flex flex-col gap-5 sm:gap-8 min-w-0 w-full">
+                            <StoreFilters
+                                config={mergedConfig}
+                                products={products}
+                                visibleCount={filteredProducts.length}
+                                searchTerm={searchTerm}
+                                setSearchTerm={setSearchTerm}
+                                viewMode={viewMode}
+                                setViewMode={setViewMode}
+                                categories={categories}
+                                selectedCategory={selectedCategory}
+                                setSelectedCategory={(id) => {
+                                    setSelectedCategory(id);
+                                    setSelectedSubcategory(null);
+                                }}
+                                selectedSubcategory={selectedSubcategory}
+                                setSelectedSubcategory={setSelectedSubcategory}
+                                isConsigne={isConsigne}
+                                setIsConsigne={setIsConsigne}
+                                sortBy={sortBy}
+                                setSortBy={setSortBy}
+                            />
+
+                            <div className={isMobile ? "preview-mobile-product-list" : undefined}>
+                                <ProductList
+                                    products={filteredProducts}
+                                    config={mergedConfig}
+                                    onViewProduct={() => {}}
+                                    viewMode={viewMode}
+                                    isConsigne={isConsigne}
+                                    onAddToCart={() => {}}
+                                />
+                            </div>
+                        </div>
                     </div>
                 </main>
 

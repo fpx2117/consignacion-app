@@ -22,7 +22,9 @@ import {
 } from "lucide-react";
 
 import { apiService } from "@/lib/apiService";
+import { createDefaultStorefrontContent } from "@/lib/storefront-content";
 import { TIENDA_TUTORIAL } from "@/lib/tutorial-content";
+import type { Categoria } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 import { Button } from "@/components/ui/button";
@@ -30,12 +32,13 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { TutorialButton } from "@/components/ui/tutorial-button";
 
 import { BrandingTab } from "./components/BrandingTab";
+import { HomeTab } from "./components/HomeTab";
 import { LayoutTab } from "./components/LayoutTab";
 import { SocialTab } from "./components/SocialTab";
 import { StorePreviewArea } from "./components/StorePreviewArea";
 import { ThemesTab } from "./components/ThemesTab";
 
-type SettingCategory = "branding" | "layout" | "themes" | "social";
+type SettingCategory = "branding" | "home" | "layout" | "themes" | "social";
 
 type BrandingSettings = {
   businessName?: string;
@@ -58,6 +61,7 @@ type BrandingSettings = {
   typography?: string;
   isBannerSlider?: boolean;
   banners?: Array<{ bannerData: string; bannerMime: string }>;
+  storefrontContent?: ReturnType<typeof createDefaultStorefrontContent> | null;
   [key: string]: unknown;
 };
 
@@ -81,6 +85,12 @@ const CATEGORIES: Array<{
     label: "Identidad",
     description: "Logo, colores y tipografia",
     icon: Palette,
+  },
+  {
+    id: "home",
+    label: "Home",
+    description: "Hero, bloques y textos comerciales",
+    icon: Sparkles,
   },
   {
     id: "layout",
@@ -123,6 +133,7 @@ const DEFAULT_BRANDING: BrandingSettings = {
   typography: "Inter",
   isBannerSlider: false,
   banners: [],
+  storefrontContent: createDefaultStorefrontContent(),
 };
 
 const DEFAULT_CONFIG: StoreConfig = {
@@ -153,6 +164,7 @@ export default function TiendaSettingsPage() {
 
   const [branding, setBranding] = React.useState<BrandingSettings>(DEFAULT_BRANDING);
   const [config, setConfig] = React.useState<StoreConfig>(DEFAULT_CONFIG);
+  const [categoriesPreview, setCategoriesPreview] = React.useState<Categoria[]>([]);
 
   const setBrandingWithDirty = React.useCallback(
     (value: React.SetStateAction<BrandingSettings>) => {
@@ -173,18 +185,27 @@ export default function TiendaSettingsPage() {
   const loadData = React.useCallback(async () => {
     setLoading(true);
     try {
-      const [brandingRes, configRes] = await Promise.all([
+      const [brandingRes, configRes, categoriasRes] = await Promise.all([
         apiService.getBranding(),
         apiService.getConfiguracionGeneral(),
+        apiService.getCategorias(),
       ]);
 
       if (brandingRes) {
-        setBranding((prev) => ({ ...prev, ...(brandingRes as Partial<BrandingSettings>) }));
+        setBranding((prev) => ({
+          ...prev,
+          ...(brandingRes as Partial<BrandingSettings>),
+          storefrontContent: brandingRes?.storefrontContent
+            ? brandingRes.storefrontContent
+            : prev.storefrontContent,
+        }));
       }
 
       if (configRes) {
         setConfig((prev) => ({ ...prev, ...(configRes as Partial<StoreConfig>) }));
       }
+
+      setCategoriesPreview(Array.isArray(categoriasRes) ? categoriasRes : []);
 
       setIsDirty(false);
     } catch {
@@ -560,6 +581,13 @@ export default function TiendaSettingsPage() {
                     branding={branding}
                     setBranding={setBrandingWithDirty}
                     handleImageUpload={handleImageUpload}
+                  />
+                )}
+                {activeTab === "home" && (
+                  <HomeTab
+                    branding={branding}
+                    setBranding={setBrandingWithDirty}
+                    categoriesPreview={categoriesPreview}
                   />
                 )}
                 {activeTab === "layout" && (

@@ -88,6 +88,7 @@ export function CatalogClient({
     const [cartHydrated, setCartHydrated] = React.useState(false);
 
     const handledReturnRef = React.useRef<string | null>(null);
+    const catalogSectionRef = React.useRef<HTMLElement | null>(null);
 
     const getSucursalIdForCheckout = React.useCallback(() => {
         return sucursalId ?? 1;
@@ -96,16 +97,6 @@ export function CatalogClient({
     const getCartStorageKey = React.useCallback(() => {
         return `${CART_STORAGE_KEY_PREFIX}:${getSucursalIdForCheckout()}`;
     }, [getSucursalIdForCheckout]);
-
-    const saveCheckoutToken = React.useCallback((token: string, storeSucursalId: number) => {
-        if (typeof window === "undefined") return;
-        const payload: StoredCheckoutToken = {
-            token,
-            sucursalId: storeSucursalId,
-            createdAt: Date.now(),
-        };
-        window.localStorage.setItem(CHECKOUT_TOKEN_STORAGE_KEY, JSON.stringify(payload));
-    }, []);
 
     const clearCheckoutToken = React.useCallback(() => {
         if (typeof window === "undefined") return;
@@ -189,6 +180,12 @@ export function CatalogClient({
     const deferredSearchTerm = React.useDeferredValue(searchTerm);
 
     React.useEffect(() => {
+        if (config.tiendaLayout === "grid" || config.tiendaLayout === "list") {
+            setViewMode(config.tiendaLayout);
+        }
+    }, [config.tiendaLayout]);
+
+    React.useEffect(() => {
         if (!cartHydrated || !products.length) return;
 
         setCart(prev => prev.flatMap((item) => {
@@ -216,6 +213,15 @@ export function CatalogClient({
         () => cart.reduce((total, item) => total + item.quantity, 0),
         [cart]
     );
+
+    const handleSelectCategory = React.useCallback((id: number | null) => {
+        setSelectedCategory(id);
+        setSelectedSubcategory(null);
+    }, []);
+
+    const scrollToCatalog = React.useCallback(() => {
+        catalogSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, []);
 
     React.useEffect(() => {
         const hexToRgb = (hex: string) => {
@@ -267,7 +273,11 @@ export function CatalogClient({
             const existing = prev.find(item => item.id === product.id);
             if (existing) {
                 const nextQuantity = Math.min(existing.quantity + quantity, maxStock);
-                return prev.map(item => item.id === product.id ? { ...item, quantity: nextQuantity } : item);
+                return prev.map(item => item.id === product.id ? {
+                    ...item,
+                    quantity: nextQuantity,
+                    pricingMode: isConsigne ? "consigne" : "default",
+                } : item);
             }
             return [...prev, {
                 ...product,
@@ -441,7 +451,7 @@ export function CatalogClient({
     // --- Render Loading/Error ---
     if (loading) {
         return (
-            <div className="min-h-screen flex flex-col items-center justify-center bg-[color:var(--store-canvas)] text-foreground p-6">
+            <div suppressHydrationWarning className="min-h-screen flex flex-col items-center justify-center bg-[color:var(--store-canvas)] text-foreground p-6">
                 <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 2, ease: "linear" }}>
                     <Loader2 className="h-10 w-10 text-foreground" />
                 </motion.div>
@@ -452,7 +462,7 @@ export function CatalogClient({
 
     if (error) {
         return (
-            <div className="min-h-screen flex flex-col items-center justify-center bg-[color:var(--store-canvas)] p-6 text-center text-foreground">
+            <div suppressHydrationWarning className="min-h-screen flex flex-col items-center justify-center bg-[color:var(--store-canvas)] p-6 text-center text-foreground">
                 <div className="bg-destructive/10 p-4 rounded-full mb-4">
                     <XCircle className="h-12 w-12 text-destructive" />
                 </div>
@@ -465,6 +475,7 @@ export function CatalogClient({
 
     return (
         <div
+            suppressHydrationWarning
             className={cn(
                 "min-h-screen selection:bg-foreground selection:text-[color:var(--ui-fx-white)] transition-colors duration-500 store-theme-root",
                 pageBgClass
@@ -482,9 +493,9 @@ export function CatalogClient({
                     <div
                         className={cn(
                             "rounded-xl border px-4 py-3 text-sm flex items-center gap-3",
-                            checkoutFeedback.kind === "polling" && "bg-[color:var(--theme-ocean-primary)] border-[color:var(--theme-ocean-primary)] text-[color:var(--theme-ocean-primary)]",
-                            checkoutFeedback.kind === "success" && "bg-[color:var(--status-success-strong)] border-[color:var(--status-success-strong)] text-[color:var(--status-success-strong)]",
-                            checkoutFeedback.kind === "error" && "bg-[color:var(--status-danger)] border-[color:var(--status-danger)] text-[color:var(--status-danger)]",
+                            checkoutFeedback.kind === "polling" && "border-sky-500/20 bg-sky-500/10 text-sky-900",
+                            checkoutFeedback.kind === "success" && "border-emerald-500/20 bg-emerald-500/10 text-emerald-900",
+                            checkoutFeedback.kind === "error" && "border-red-500/20 bg-red-500/10 text-red-900",
                         )}
                     >
                         {checkoutFeedback.kind === "polling" && <Loader2 className="h-4 w-4 animate-spin" />}
@@ -494,7 +505,20 @@ export function CatalogClient({
                     </div>
                 ) : null}
 
-                <StoreBanner config={config} />
+                <StoreBanner
+                    config={config}
+                    productsCount={products.length}
+                    categoriesCount={categories.length}
+                    onPrimaryAction={scrollToCatalog}
+                    onSecondaryAction={scrollToCatalog}
+                />
+
+                <section ref={catalogSectionRef} className="flex flex-col gap-4 scroll-mt-40">
+                    <div>
+                        <h2 className="text-xl font-bold tracking-tight text-gray-900 sm:text-2xl">
+                            Catálogo
+                        </h2>
+                    </div>
 
                 <div className="flex flex-col lg:flex-row gap-6 lg:gap-8 items-start relative w-full">
                         <StoreCategorySidebar
@@ -502,10 +526,7 @@ export function CatalogClient({
                             categories={categories}
                             categoryCounts={categoryCounts}
                             selectedCategory={selectedCategory}
-                            setSelectedCategory={(id) => {
-                                setSelectedCategory(id);
-                                setSelectedSubcategory(null); // Reset subcategory when category changes
-                            }}
+                            setSelectedCategory={handleSelectCategory}
                             selectedSubcategory={selectedSubcategory}
                             setSelectedSubcategory={setSelectedSubcategory}
                             totalProducts={products.length}
@@ -516,16 +537,14 @@ export function CatalogClient({
                         <StoreFilters
                             config={config}
                             products={products}
+                            visibleCount={filteredProducts.length}
                             searchTerm={searchTerm}
                             setSearchTerm={setSearchTerm}
                             viewMode={viewMode}
                             setViewMode={setViewMode}
                             categories={categories}
                             selectedCategory={selectedCategory}
-                            setSelectedCategory={(id) => {
-                                setSelectedCategory(id);
-                                setSelectedSubcategory(null);
-                            }}
+                            setSelectedCategory={handleSelectCategory}
                             selectedSubcategory={selectedSubcategory}
                             setSelectedSubcategory={setSelectedSubcategory}
                             isConsigne={isConsigne}
@@ -544,20 +563,10 @@ export function CatalogClient({
                         />
                     </div>
                 </div>
+                </section>
             </main>
 
             <StoreFooter config={config} />
-
-            <div className="pb-8 sm:pb-10 px-4">
-                <div className="mx-auto max-w-3xl flex justify-center">
-                    <a
-                        href="/login"
-                        className="text-xs sm:text-sm text-muted-foreground/80 hover:text-foreground transition-colors underline underline-offset-4"
-                    >
-                        Panel Administrador
-                    </a>
-                </div>
-            </div>
 
             <CartDrawer
                 isOpen={isCartOpen}

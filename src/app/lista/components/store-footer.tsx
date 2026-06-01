@@ -1,103 +1,129 @@
 "use client";
 
 import Image from "next/image";
-import { PackageOpen, Instagram, Facebook, MessageCircle } from "lucide-react";
+import { Store, Instagram, Facebook, MessageCircle, Phone, MapPin } from "lucide-react";
 import type { PublicCatalogConfig } from "@/lib/types";
-import { cn } from "@/lib/utils";
 
 function normalizeUrl(url?: string | null) {
-  if (!url) return "";
-  const trimmed = String(url).trim();
-  if (!trimmed) return "";
-  if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) return trimmed;
-  return `https://${trimmed}`;
+    if (!url) return "";
+    const trimmed = String(url).trim();
+    if (!trimmed) return "";
+    if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) return trimmed;
+    return `https://${trimmed}`;
 }
 
 function normalizeWhatsApp(value?: string | null) {
-  if (!value) return "";
-  return String(value).replace(/\D/g, "");
+    if (!value) return "";
+    return String(value).replace(/\D/g, "");
 }
 
 export function StoreFooter({ config }: { config: PublicCatalogConfig }) {
-  const theme = config.themeIdentifier || "modern";
-  const instagramHref = normalizeUrl(config.instagramUrl);
-  const facebookHref = normalizeUrl(config.facebookUrl);
-  const youtubeHref = normalizeUrl(config.youtubeUrl);
-  const tiktokHref = normalizeUrl(config.tiktokUrl);
-  const mapsHref = normalizeUrl(config.googleMapsUrl);
-  const whatsappNumber = normalizeWhatsApp(config.whatsappNumber);
-  const whatsappHref = whatsappNumber ? `https://wa.me/${whatsappNumber}` : "";
-  const logoSrc = config.logoUrl || (config.logoData ? `data:${config.logoMime};base64,${config.logoData}` : null);
+    const logoSrc = config.logoUrl || (config.logoData ? `data:${config.logoMime};base64,${config.logoData}` : null);
+    const year = new Date().getFullYear();
 
+    const instagramHref = normalizeUrl(config.instagramUrl);
+    const facebookHref = normalizeUrl(config.facebookUrl);
+    const whatsappNumber = normalizeWhatsApp(config.whatsappNumber);
+    const whatsappHref = whatsappNumber ? `https://wa.me/${whatsappNumber}` : "";
+    const hasSocialLinks = instagramHref || facebookHref || whatsappHref;
+    const hasContact = config.phone || config.address || config.whatsappNumber;
 
-  return (
-    <footer className={cn(
-      "mt-12 sm:mt-20 border-t border-border py-10 sm:py-16 text-center text-foreground",
-      theme === 'modern' ? "bg-[color:var(--store-surface)]" :
-        theme === 'minimal' ? "bg-[color:var(--store-canvas)] sm:py-24" :
-          "bg-gradient-to-b from-primary/10 to-secondary/10 border-t-4 border-primary/20"
-    )}>
-      <div className="container mx-auto px-4 flex flex-col items-center gap-8">
-        <div className="flex items-center gap-3">
-          {logoSrc ? (
-            <Image
-              src={logoSrc}
-              alt="Logo corporativo"
-              width={96}
-              height={32}
-              unoptimized
-              className="h-8 w-auto max-w-24 opacity-80 object-contain"
-            />
-          ) : (
-            <PackageOpen className="h-8 w-8 text-primary/40" />
-          )}
-          <span className="font-black text-xl tracking-tighter text-foreground">{config.businessName}</span>
-        </div>
+    return (
+        <footer className="border-t border-gray-200 bg-gray-50 mt-16">
+            <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-12">
+                <div className="grid gap-8 sm:grid-cols-3">
+                    {/* Brand */}
+                    <div className="space-y-3">
+                        <div className="flex items-center gap-3">
+                            {logoSrc ? (
+                                <Image src={logoSrc} alt="Logo" width={36} height={36} unoptimized className="h-8 w-8 rounded-lg object-contain" />
+                            ) : (
+                                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gray-900 text-white">
+                                    <Store className="h-4 w-4" />
+                                </div>
+                            )}
+                            <span className="text-base font-bold text-gray-900">{config.businessName || "Tienda"}</span>
+                        </div>
+                        <p className="text-sm text-gray-500 max-w-xs">
+                            Productos seleccionados con los mejores precios y atención personalizada.
+                        </p>
+                    </div>
 
-        <div className="flex flex-wrap justify-center gap-3 sm:gap-4">
-          {instagramHref && (
-            <a href={instagramHref} target="_blank" rel="noopener noreferrer" className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-[color:var(--store-surface)] border border-border shadow-sm flex items-center justify-center text-[color:var(--brand-instagram)] hover:scale-110 transition-transform" aria-label="Instagram">
-              <Instagram className="h-5 w-5 sm:h-6 sm:w-6" />
-            </a>
-          )}
-          {facebookHref && (
-            <a href={facebookHref} target="_blank" rel="noopener noreferrer" className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-[color:var(--store-surface)] border border-border shadow-sm flex items-center justify-center text-[color:var(--theme-ocean-primary)] hover:scale-110 transition-transform" aria-label="Facebook">
-              <Facebook className="h-5 w-5 sm:h-6 sm:w-6" />
-            </a>
-          )}
-          {whatsappHref && (
-            <a href={whatsappHref} target="_blank" rel="noopener noreferrer" className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-[color:var(--store-surface)] border border-border shadow-sm flex items-center justify-center text-[color:var(--status-success-strong)] hover:scale-110 transition-transform" aria-label="WhatsApp">
-              <MessageCircle className="h-5 w-5 sm:h-6 sm:w-6" />
-            </a>
-          )}
-          {tiktokHref && (
-            <a href={tiktokHref} target="_blank" rel="noopener noreferrer" className="h-10 px-3 sm:h-12 sm:px-4 rounded-2xl bg-[color:var(--store-surface)] border border-border shadow-sm flex items-center justify-center text-foreground text-[11px] sm:text-xs font-bold hover:scale-105 transition-transform" aria-label="TikTok">
-              TikTok
-            </a>
-          )}
-          {youtubeHref && (
-            <a href={youtubeHref} target="_blank" rel="noopener noreferrer" className="h-10 px-3 sm:h-12 sm:px-4 rounded-2xl bg-[color:var(--store-surface)] border border-border shadow-sm flex items-center justify-center text-[color:var(--status-danger)] text-[11px] sm:text-xs font-bold hover:scale-105 transition-transform" aria-label="YouTube">
-              YouTube
-            </a>
-          )}
-          {mapsHref && (
-            <a href={mapsHref} target="_blank" rel="noopener noreferrer" className="h-10 px-3 sm:h-12 sm:px-4 rounded-2xl bg-[color:var(--store-surface)] border border-border shadow-sm flex items-center justify-center text-foreground text-[11px] sm:text-xs font-bold hover:scale-105 transition-transform" aria-label="Ubicacion">
-              Ubicacion
-            </a>
-          )}
-        </div>
+                    {/* Contact */}
+                    {hasContact && (
+                        <div className="space-y-3">
+                            <h4 className="text-sm font-semibold text-gray-900">Contacto</h4>
+                            <div className="space-y-2">
+                                {config.phone && (
+                                    <a href={`tel:${config.phone}`} className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-900 transition-colors">
+                                        <Phone className="h-3.5 w-3.5 flex-shrink-0" />
+                                        {config.phone}
+                                    </a>
+                                )}
+                                {whatsappHref && (
+                                    <a href={whatsappHref} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-900 transition-colors">
+                                        <MessageCircle className="h-3.5 w-3.5 flex-shrink-0" />
+                                        WhatsApp
+                                    </a>
+                                )}
+                                {config.address && (
+                                    <div className="flex items-start gap-2 text-sm text-gray-500">
+                                        <MapPin className="h-3.5 w-3.5 flex-shrink-0 mt-0.5" />
+                                        {config.address}
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    )}
 
-        {config.address && (
-          <div className="max-w-md space-y-2">
-            <p className="text-sm font-bold leading-relaxed text-foreground">
-              {config.address && <span>{config.address}</span>}
-            </p>
-          </div>
-        )}
-        <div className="max-w-xs space-y-2">
-          <p className="text-[10px] uppercase font-black tracking-widest text-foreground">{config.footerText || `© 2026 ${config.businessName}`}</p>
-        </div>
-      </div>
-    </footer>
-  );
+                    {/* Social + Copyright */}
+                    <div className="space-y-4">
+                        {hasSocialLinks && (
+                            <div className="space-y-3">
+                                <h4 className="text-sm font-semibold text-gray-900">Seguinos</h4>
+                                <div className="flex items-center gap-2">
+                                    {instagramHref && (
+                                        <a href={instagramHref} target="_blank" rel="noopener noreferrer" className="flex h-9 w-9 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-500 hover:text-gray-900 hover:border-gray-300 transition-colors">
+                                            <Instagram className="h-4 w-4" />
+                                        </a>
+                                    )}
+                                    {facebookHref && (
+                                        <a href={facebookHref} target="_blank" rel="noopener noreferrer" className="flex h-9 w-9 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-500 hover:text-gray-900 hover:border-gray-300 transition-colors">
+                                            <Facebook className="h-4 w-4" />
+                                        </a>
+                                    )}
+                                    {whatsappHref && (
+                                        <a href={whatsappHref} target="_blank" rel="noopener noreferrer" className="flex h-9 w-9 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-500 hover:text-gray-900 hover:border-gray-300 transition-colors">
+                                            <MessageCircle className="h-4 w-4" />
+                                        </a>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+
+                        {!hasContact && (
+                            <p className="text-xs text-gray-400">
+                                &copy; {year} {config.businessName || "Tienda"}
+                            </p>
+                        )}
+                    </div>
+                </div>
+
+                {/* Bottom bar */}
+                <div className="mt-8 pt-6 border-t border-gray-200 flex flex-col sm:flex-row items-center justify-between gap-2">
+                    <p className="text-xs text-gray-400">
+                        &copy; {year} {config.businessName || "Tienda"}. Todos los derechos reservados.
+                    </p>
+                    <div className="flex items-center gap-3">
+                        {config.footerText && (
+                            <p className="text-xs text-gray-400">{config.footerText}</p>
+                        )}
+                        <a href="/login" className="text-xs text-gray-400 hover:text-gray-700 transition-colors underline underline-offset-4">
+                            Panel Administrador
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </footer>
+    );
 }

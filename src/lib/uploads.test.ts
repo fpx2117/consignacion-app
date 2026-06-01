@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   buildOpaqueUploadFilename,
+  resolveStoredUploadPathFromUrl,
   resolveServableUploadResource,
   validateUploadCandidate,
 } from "@/lib/uploads";
@@ -100,4 +101,13 @@ test("resolveServableUploadResource acepta nombres legacy emitidos historicament
     contentType: "image/png",
     filename: "1772837979983-e6c14d0f_3d7a_4f25_8712_a5468b554bc5.png",
   });
+});
+
+test("resolveStoredUploadPathFromUrl acepta nombres legacy servidos por api/files", () => {
+  const result = resolveStoredUploadPathFromUrl(
+    "/api/files/1772837979983-e6c14d0f_3d7a_4f25_8712_a5468b554bc5.png"
+  );
+
+  assert.equal(typeof result, "string");
+  assert.match(result ?? "", /1772837979983-e6c14d0f_3d7a_4f25_8712_a5468b554bc5\.png$/);
 });

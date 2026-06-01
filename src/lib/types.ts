@@ -6,6 +6,8 @@ import { AppNotification } from "@/types/notification";
     DEFINICIONES BÁSICAS
 ========================= */
 export type ID = number;
+import type { StorefrontContent } from "@/lib/storefront-content";
+
 export type ISODateString = string;
 export type Money = number;
 
@@ -165,6 +167,7 @@ export type BrandingSettings = {
   typography?: string | null;
   isBannerSlider?: boolean;
   banners?: BrandingBanner[];
+  storefrontContent?: StorefrontContent | null;
 };
 
 export type AuditLogEntry = {
@@ -404,6 +407,7 @@ export type PublicCatalogConfig = {
   porcentajeAumentoConsignacion?: number;
   porcentajeInteresTarjeta?: number;
   mpPublicKeyTienda?: string | null;
+  storefrontContent?: StorefrontContent | null;
 };
 
 export type PublicCatalogData = {

@@ -1,7 +1,9 @@
 import { Prisma } from "@prisma/client";
 import { NextResponse } from "next/server";
+import { revalidateTag } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireAuth, requireRole } from "@/lib/auth/require-auth";
+import type { StorefrontContent } from "@/lib/storefront-content";
 
 type BrandingBannerInput = {
   bannerData?: string;
@@ -26,6 +28,7 @@ type BrandingBody = {
   bannerMime?: string | null;
   isBannerSlider?: boolean;
   banners?: BrandingBannerInput[];
+  storefrontContent?: StorefrontContent | null;
 };
 
 type BrandingWithBanners = Prisma.BrandingGetPayload<{ include: { banners: true } }>;
@@ -106,9 +109,10 @@ export async function PUT(req: Request) {
       bannerMime,
       isBannerSlider,
       banners,
+      storefrontContent,
     } = body;
 
-    const updateData: Prisma.BrandingUncheckedUpdateInput = {
+    const updateData: Record<string, unknown> = {
       ...(businessName !== undefined && { businessName }),
       ...(primaryColor !== undefined && { primaryColor }),
       ...(secondaryColor !== undefined && { secondaryColor }),
@@ -121,6 +125,7 @@ export async function PUT(req: Request) {
       ...(whatsappMessage !== undefined && { whatsappMessage }),
       ...(themeIdentifier !== undefined && { themeIdentifier }),
       ...(isBannerSlider !== undefined && { isBannerSlider }),
+      ...(storefrontContent !== undefined && { storefrontContent: storefrontContent ?? Prisma.JsonNull }),
     };
 
     if (typeof logoData === "string" && typeof logoMime === "string") {
@@ -141,7 +146,7 @@ export async function PUT(req: Request) {
 
     const brandingActualizado = await prisma.branding.upsert({
       where: { sucursalId: auth.activeSucursalId },
-      update: updateData,
+      update: updateData as Prisma.BrandingUncheckedUpdateInput,
       create: {
         sucursalId: auth.activeSucursalId,
         businessName: businessName ?? "Mi Tienda",
@@ -156,13 +161,14 @@ export async function PUT(req: Request) {
         whatsappMessage: whatsappMessage ?? "Hola, estoy buscando {nombre_producto}",
         themeIdentifier: themeIdentifier ?? "modern",
         isBannerSlider: isBannerSlider ?? false,
+        storefrontContent: storefrontContent ?? Prisma.JsonNull,
         ...(typeof logoData === "string" && typeof logoMime === "string"
           ? { logoData: Buffer.from(logoData, "base64"), logoMime }
           : {}),
         ...(typeof bannerData === "string" && typeof bannerMime === "string"
           ? { bannerData: Buffer.from(bannerData, "base64"), bannerMime }
           : {}),
-      },
+      } as Prisma.BrandingUncheckedCreateInput,
     });
 
     if (Array.isArray(banners)) {
@@ -191,6 +197,8 @@ export async function PUT(req: Request) {
         },
       },
     });
+
+    revalidateTag("public-catalog", "default");
 
     return NextResponse.json({
       message: "Branding actualizado correctamente",

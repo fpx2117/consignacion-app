@@ -13,19 +13,23 @@ const config: Config = {
 
   theme: {
     extend: {
+      fontFamily: {
+        sans: ["var(--font-main)", "sans-serif"],
+        heading: ["var(--font-heading)", "sans-serif"],
+      },
       // ✅ Variables de colores compatibles con Shadcn/UI
       colors: {
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",
-        background: "hsl(var(--background))",
+        background: "var(--color-background, hsl(var(--background)))",
         foreground: "hsl(var(--foreground))",
         primary: {
-          DEFAULT: "hsl(var(--primary))",
+          DEFAULT: "var(--color-primary, hsl(var(--primary)))",
           foreground: "hsl(var(--primary-foreground))",
         },
         secondary: {
-          DEFAULT: "hsl(var(--secondary))",
+          DEFAULT: "var(--color-secondary, hsl(var(--secondary)))",
           foreground: "hsl(var(--secondary-foreground))",
         },
         destructive: {

@@ -4,7 +4,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { lstat, readFile } from "fs/promises";
 import path from "path";
-import { getUploadStorageDir, resolveServableUploadResource } from "@/lib/uploads";
+import { getUploadStorageDir, resolveServableUploadResource, resolveUploadFilesystemCandidates } from "@/lib/uploads";
 
 export const dynamic = "force-dynamic";
 
@@ -31,25 +31,36 @@ export async function handleGetFile(
     }
 
     try {
-        const filePath = path.join(deps.uploadDir, resource.filename);
-        const fileStats = await deps.lstat(filePath);
+        const candidatePaths = deps.uploadDir === getUploadStorageDir()
+            ? resolveUploadFilesystemCandidates(resource.filename)
+            : [path.join(deps.uploadDir, resource.filename)];
 
-        if (!fileStats.isFile() || fileStats.isSymbolicLink()) {
-            return NextResponse.json({ error: "Archivo no encontrado" }, { status: 404 });
+        for (const filePath of candidatePaths) {
+            try {
+                const fileStats = await deps.lstat(filePath);
+
+                if (!fileStats.isFile() || fileStats.isSymbolicLink()) {
+                    continue;
+                }
+
+                const fileBuffer = await deps.readFile(filePath);
+
+                return new NextResponse(fileBuffer, {
+                    status: 200,
+                    headers: {
+                        "Content-Type": resource.contentType,
+                        "Cache-Control": "public, max-age=31536000, immutable",
+                        "Content-Disposition": `inline; filename="${resource.filename}"`,
+                        "Cross-Origin-Resource-Policy": "same-origin",
+                        "X-Content-Type-Options": "nosniff",
+                    },
+                });
+            } catch {
+                continue;
+            }
         }
 
-        const fileBuffer = await deps.readFile(filePath);
-
-        return new NextResponse(fileBuffer, {
-            status: 200,
-            headers: {
-                "Content-Type": resource.contentType,
-                "Cache-Control": "public, max-age=31536000, immutable",
-                "Content-Disposition": `inline; filename="${resource.filename}"`,
-                "Cross-Origin-Resource-Policy": "same-origin",
-                "X-Content-Type-Options": "nosniff",
-            },
-        });
+        return NextResponse.json({ error: "Archivo no encontrado" }, { status: 404 });
     } catch {
         return NextResponse.json({ error: "Archivo no encontrado" }, { status: 404 });
     }
