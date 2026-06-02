@@ -1,4 +1,4 @@
--- AlterTable (idempotente: la columna puede existir de un deploy previo)
+-- AlterTable (idempotente)
 ALTER TABLE "Branding"
 ADD COLUMN IF NOT EXISTS "storefrontContent" JSONB;
 
@@ -13,10 +13,28 @@ CREATE TABLE IF NOT EXISTS "StoreSettings" (
     CONSTRAINT "StoreSettings_pkey" PRIMARY KEY ("id")
 );
 
--- CreateIndex (idempotente)
-CREATE UNIQUE INDEX IF NOT EXISTS "StoreSettings_sucursalId_key" ON "StoreSettings"("sucursalId");
+-- CreateIndex (idempotente, compatible con cualquier versión de PostgreSQL)
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_indexes
+        WHERE indexname = 'StoreSettings_sucursalId_key'
+    ) THEN
+        CREATE UNIQUE INDEX "StoreSettings_sucursalId_key"
+        ON "StoreSettings"("sucursalId");
+    END IF;
+END $$;
 
--- AddForeignKey (idempotente)
-ALTER TABLE "StoreSettings"
-ADD CONSTRAINT IF NOT EXISTS "StoreSettings_sucursalId_fkey"
-FOREIGN KEY ("sucursalId") REFERENCES "Sucursal"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+-- AddForeignKey (idempotente, compatible con cualquier versión de PostgreSQL)
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint
+        WHERE conname = 'StoreSettings_sucursalId_fkey'
+    ) THEN
+        ALTER TABLE "StoreSettings"
+        ADD CONSTRAINT "StoreSettings_sucursalId_fkey"
+        FOREIGN KEY ("sucursalId") REFERENCES "Sucursal"("id")
+        ON DELETE CASCADE ON UPDATE CASCADE;
+    END IF;
+END $$;
