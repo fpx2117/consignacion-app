@@ -313,8 +313,6 @@ export function StorePreviewArea({ branding, config, mode }: StorePreviewProps) 
                     config={mergedConfig}
                     cartCount={2}
                     onOpenCart={() => {}}
-                    categories={categories}
-                    onSelectCategory={(id) => setSelectedCategory(id)}
                 />
 
                 <main
