@@ -4,8 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "tsx server.ts",
-    "build": "prisma generate && next build",
-    "start": "node scripts/clear-failed-migration.js && prisma migrate deploy && cross-env NODE_ENV=production tsx server.ts",
+    "build": "echo \"DELETE FROM _prisma_migrations WHERE migration_name = '20260523120000_add_storefront_content_to_branding';\" | npx prisma db execute --stdin 2>/dev/null; prisma generate && next build",
+    "start": "echo \"DELETE FROM _prisma_migrations WHERE migration_name = '20260523120000_add_storefront_content_to_branding';\" | npx prisma db execute --stdin 2>/dev/null; npx prisma migrate deploy && cross-env NODE_ENV=production tsx server.ts",
     "lint": "eslint",
     "seed": "prisma db seed",
     "security:audit": "npm audit --omit=dev --audit-level=high",
