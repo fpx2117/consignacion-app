@@ -96,11 +96,11 @@ export function StoreHeader({ config, cartCount, onOpenCart, searchTerm, onSearc
                 INFO DEL COMERCIO (Mobile: superpuesta | Desktop: debajo del banner)
             ══════════════════════════════════════ */}
             <div className="relative z-10">
-                {/* ─── MOBILE: info superpuesta con -mt ─── */}
-                <div className="lg:hidden px-4 -mt-10 pb-3">
-                    <div className="flex items-end gap-3">
-                        {/* Logo */}
-                        <div className="flex-shrink-0 w-20 h-20 rounded-2xl overflow-hidden border-4 border-white shadow-lg bg-white">
+                {/* ─── MOBILE: logo flotante + nombre debajo ─── */}
+                <div className="lg:hidden px-4 pb-4">
+                    {/* Fila 1: Logo (sobresale sobre el banner) + botón carrito */}
+                    <div className="flex items-end justify-between">
+                        <div className="flex-shrink-0 w-20 h-20 -mt-10 rounded-2xl overflow-hidden border-4 border-white shadow-lg bg-white">
                             {hasLogo ? (
                                 <Image src={logoSrc!} alt={storeName} width={80} height={80} unoptimized className="w-full h-full object-cover" />
                             ) : (
@@ -109,41 +109,12 @@ export function StoreHeader({ config, cartCount, onOpenCart, searchTerm, onSearc
                                 </div>
                             )}
                         </div>
-                        {/* Nombre + info */}
-                        <div className="flex-1 min-w-0 pb-1">
-                            <div className="flex items-center gap-1.5">
-                                <h1 className="font-bold text-xl text-[var(--store-text,#0F172A)] leading-tight truncate">{storeName}</h1>
-                                <BadgeCheck className="h-5 w-5 flex-shrink-0" style={{ color: "var(--store-primary,#007AFF)" }} />
-                            </div>
-                            <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-1 text-xs text-[var(--store-muted,#8A8F98)]">
-                                {openingHours && (
-                                    <span className="flex items-center gap-1">
-                                        <Clock className="h-3 w-3 flex-shrink-0" />{openingHours}
-                                    </span>
-                                )}
-                                {addressText && (
-                                    <span className="flex items-center gap-1">
-                                        <MapPin className="h-3 w-3 flex-shrink-0" />
-                                        <span className="truncate max-w-[160px]">{addressText}</span>
-                                    </span>
-                                )}
-                            </div>
-                            {/* Descripción + badge (Home tab) */}
-                            {heroBadge && (
-                                <span className="inline-block mt-1.5 text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full"
-                                    style={{ backgroundColor: "var(--store-primary,#007AFF)", color: "#fff" }}
-                                >{heroBadge}</span>
-                            )}
-                            {storeDescription && (
-                                <p className="mt-1 text-xs text-[var(--store-muted,#8A8F98)] leading-snug line-clamp-2">{storeDescription}</p>
-                            )}
-                        </div>
                         {/* Botón carrito mobile */}
                         {cartEnabled && (
                             <button
                                 onClick={onOpenCart}
                                 aria-label="Abrir carrito"
-                                className="relative flex-shrink-0 w-12 h-12 rounded-full text-white shadow-lg flex items-center justify-center transition-all hover:scale-105 active:scale-95"
+                                className="relative flex-shrink-0 w-12 h-12 rounded-full text-white shadow-lg flex items-center justify-center transition-all hover:scale-105 active:scale-95 mb-1"
                                 style={{ backgroundColor: "var(--store-primary,#007AFF)" }}
                             >
                                 <ShoppingCart className="h-5 w-5" />
@@ -153,6 +124,35 @@ export function StoreHeader({ config, cartCount, onOpenCart, searchTerm, onSearc
                                     </span>
                                 )}
                             </button>
+                        )}
+                    </div>
+
+                    {/* Fila 2: Nombre + verificado + horarios + dirección */}
+                    <div className="mt-1">
+                        <div className="flex items-center gap-1.5">
+                            <h1 className="font-bold text-xl text-[var(--store-text,#0F172A)] leading-tight truncate">{storeName}</h1>
+                            <BadgeCheck className="h-5 w-5 flex-shrink-0" style={{ color: "var(--store-primary,#007AFF)" }} />
+                        </div>
+                        <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-1 text-xs text-[var(--store-muted,#8A8F98)]">
+                            {openingHours && (
+                                <span className="flex items-center gap-1">
+                                    <Clock className="h-3 w-3 flex-shrink-0" />{openingHours}
+                                </span>
+                            )}
+                            {addressText && (
+                                <span className="flex items-center gap-1">
+                                    <MapPin className="h-3 w-3 flex-shrink-0" />
+                                    <span className="truncate max-w-[160px]">{addressText}</span>
+                                </span>
+                            )}
+                        </div>
+                        {heroBadge && (
+                            <span className="inline-block mt-1.5 text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full"
+                                style={{ backgroundColor: "var(--store-primary,#007AFF)", color: "#fff" }}
+                            >{heroBadge}</span>
+                        )}
+                        {storeDescription && (
+                            <p className="mt-1 text-xs text-[var(--store-muted,#8A8F98)] leading-snug line-clamp-2">{storeDescription}</p>
                         )}
                     </div>
                 </div>
