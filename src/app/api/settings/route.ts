@@ -36,12 +36,15 @@ export async function GET(req: Request) {
       });
     }
 
+    // Mergear datos existentes con defaults para tolerar datos viejos incompletos
+    const parsed = onlineStoreSettingsSchema.safeParse(settings.onlineStoreConfig ?? {});
+    const onlineStoreConfig = parsed.success ? parsed.data : onlineStoreSettingsSchema.parse({});
+
     return NextResponse.json({
       data: {
         id: settings.id,
         themeConfig: settings.themeConfig,
-        // Pasar por Zod para asegurar que campos nuevos (ej: featuredProductIds) tengan defaults
-        onlineStoreConfig: onlineStoreSettingsSchema.parse(settings.onlineStoreConfig ?? {}),
+        onlineStoreConfig,
       },
     });
   } catch (error) {
