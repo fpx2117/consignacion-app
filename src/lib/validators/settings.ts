@@ -81,8 +81,8 @@ export const onlineStoreResponsiveSchema = z.object({
 
 export const onlineStoreSettingsSchema = z.object({
   storeName: z.string().default("Mi tienda"),
-  storeLogoUrl: z.string().optional(),
-  storeBannerUrl: z.string().optional(),
+  storeLogoUrl: z.string().nullable().optional(),
+  storeBannerUrl: z.string().nullable().optional(),
   description: z.string().default(""),
   openingHours: z.string().default(""),
   addressText: z.string().default(""),
