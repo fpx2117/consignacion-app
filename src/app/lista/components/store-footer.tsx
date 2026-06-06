@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { Store, Instagram, Facebook, MessageCircle, Phone, MapPin } from "lucide-react";
 import type { PublicCatalogConfig } from "@/lib/types";
+import { normalizeStorefrontContent } from "@/lib/storefront-content";
 
 function normalizeUrl(url?: string | null) {
     if (!url) return "";
@@ -20,6 +21,9 @@ function normalizeWhatsApp(value?: string | null) {
 export function StoreFooter({ config }: { config: PublicCatalogConfig }) {
     const logoSrc = config.logoUrl || (config.logoData ? `data:${config.logoMime};base64,${config.logoData}` : null);
     const year = new Date().getFullYear();
+    const content = normalizeStorefrontContent(config.storefrontContent, { storeName: config.businessName });
+    const footerTitle = content.footer?.title || config.businessName || "Tienda";
+    const footerDesc = content.footer?.description || "Productos seleccionados con los mejores precios y atención personalizada.";
 
     const instagramHref = normalizeUrl(config.instagramUrl);
     const facebookHref = normalizeUrl(config.facebookUrl);
@@ -42,11 +46,9 @@ export function StoreFooter({ config }: { config: PublicCatalogConfig }) {
                                     <Store className="h-4 w-4" />
                                 </div>
                             )}
-                            <span className="text-base font-bold text-gray-900">{config.businessName || "Tienda"}</span>
+                            <span className="text-base font-bold text-gray-900">{footerTitle}</span>
                         </div>
-                        <p className="text-sm text-gray-500 max-w-xs">
-                            Productos seleccionados con los mejores precios y atención personalizada.
-                        </p>
+                        <p className="text-sm text-gray-500 max-w-xs">{footerDesc}</p>
                     </div>
 
                     {/* Contact */}

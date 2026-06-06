@@ -82,6 +82,7 @@ type StoreConfig = {
   showWhatsappPreview: boolean;
   whatsappButtonText: string;
   desktopLayout: "mobile-centered" | "wide-ecommerce" | "with-cart-sidebar";
+  featuredProductIds: number[];
   [key: string]: unknown;
 };
 
@@ -178,6 +179,7 @@ const DEFAULT_CONFIG: StoreConfig = {
   showWhatsappPreview: true,
   whatsappButtonText: "Enviar pedido por WhatsApp",
   desktopLayout: "mobile-centered",
+  featuredProductIds: [],
 };
 
 function SkeletonBox({ className }: { className?: string }) {
@@ -282,6 +284,7 @@ export default function TiendaSettingsPage() {
           productLayout: ((olsCatalog.productLayout as StoreConfig["productLayout"]) ?? (configRes as Record<string, unknown>).productLayout as StoreConfig["productLayout"] ?? prev.productLayout),
           maxProductsPerSection: (olsCatalog.maxProductsPerSection as number | undefined) ?? (configRes as Record<string, unknown>).maxProductsPerSection as number ?? prev.maxProductsPerSection,
           addButtonPosition: ((olsCatalog.addButtonPosition as StoreConfig["addButtonPosition"]) ?? (configRes as Record<string, unknown>).addButtonPosition as StoreConfig["addButtonPosition"] ?? prev.addButtonPosition),
+          featuredProductIds: (Array.isArray(olsCatalog.featuredProductIds) ? olsCatalog.featuredProductIds as number[] : (configRes as Record<string, unknown>).featuredProductIds as number[] ?? prev.featuredProductIds),
           cartDisplayMode: ((olsCart.displayMode as StoreConfig["cartDisplayMode"]) ?? (configRes as Record<string, unknown>).cartDisplayMode as StoreConfig["cartDisplayMode"] ?? prev.cartDisplayMode),
           showWhatsappPreview: (olsCart.showWhatsappPreview as boolean | undefined) ?? (configRes as Record<string, unknown>).showWhatsappPreview as boolean ?? prev.showWhatsappPreview,
           whatsappButtonText: (olsCart.whatsappButtonText as string | undefined) ?? (configRes as Record<string, unknown>).whatsappButtonText as string ?? prev.whatsappButtonText,
@@ -362,6 +365,7 @@ export default function TiendaSettingsPage() {
           productLayout: config.productLayout,
           maxProductsPerSection: config.maxProductsPerSection,
           addButtonPosition: config.addButtonPosition,
+          featuredProductIds: config.featuredProductIds || [],
         },
         promotions: { enabled: true, items: [] },
         cart: {

@@ -23,11 +23,21 @@ export function StoreHeader({ config, cartCount, onOpenCart, searchTerm, onSearc
     const storeName = ols?.storeName || config.businessName || "Tienda";
     const openingHours = ols?.openingHours || "";
     const addressText = ols?.addressText || config.address || "";
+    const storeDescription = ols?.description || content.heroDescription || "";
+    const heroBadge = content.heroBadge || "";
+    const announcementText = content.announcementText || "";
     const hasBanner = Boolean(bannerSrc);
     const hasLogo = Boolean(logoSrc);
 
     return (
         <header className="relative bg-[var(--store-surface,#FFFFFF)]">
+            {/* ── Barra de anuncio (configurable desde Home tab) ── */}
+            {announcementText && (
+                <div className="text-center text-xs font-medium py-2 px-4 text-white" style={{ backgroundColor: "var(--store-primary,#007AFF)" }}>
+                    {announcementText}
+                </div>
+            )}
+
             {/* ══════════════════════════════════════
                 BANNER (visible en ambos breakpoints)
             ══════════════════════════════════════ */}
@@ -118,6 +128,15 @@ export function StoreHeader({ config, cartCount, onOpenCart, searchTerm, onSearc
                                     </span>
                                 )}
                             </div>
+                            {/* Descripción + badge (Home tab) */}
+                            {heroBadge && (
+                                <span className="inline-block mt-1.5 text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full"
+                                    style={{ backgroundColor: "var(--store-primary,#007AFF)", color: "#fff" }}
+                                >{heroBadge}</span>
+                            )}
+                            {storeDescription && (
+                                <p className="mt-1 text-xs text-[var(--store-muted,#8A8F98)] leading-snug line-clamp-2">{storeDescription}</p>
+                            )}
                         </div>
                         {/* Botón carrito mobile */}
                         {cartEnabled && (
@@ -175,6 +194,16 @@ export function StoreHeader({ config, cartCount, onOpenCart, searchTerm, onSearc
                                     </span>
                                 )}
                             </div>
+
+                            {/* Badge + descripción (Home tab) */}
+                            {heroBadge && (
+                                <span className="hidden xl:inline-block text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full flex-shrink-0"
+                                    style={{ backgroundColor: "var(--store-primary,#007AFF)", color: "#fff" }}
+                                >{heroBadge}</span>
+                            )}
+                            {storeDescription && (
+                                <span className="hidden lg:block text-xs text-[var(--store-muted,#8A8F98)] truncate max-w-[240px] flex-shrink">{storeDescription}</span>
+                            )}
 
                             {/* Spacer */}
                             <div className="flex-1" />

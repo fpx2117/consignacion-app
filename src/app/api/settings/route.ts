@@ -39,7 +39,8 @@ export async function GET(req: Request) {
       data: {
         id: settings.id,
         themeConfig: settings.themeConfig,
-        onlineStoreConfig: settings.onlineStoreConfig ?? onlineStoreSettingsSchema.parse({}),
+        // Pasar por Zod para asegurar que campos nuevos (ej: featuredProductIds) tengan defaults
+        onlineStoreConfig: onlineStoreSettingsSchema.parse(settings.onlineStoreConfig ?? {}),
       },
     });
   } catch (error) {
