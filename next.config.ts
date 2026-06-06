@@ -64,6 +64,16 @@ const nextConfig: NextConfig = {
           },
         ],
       },
+      // ✅ Cache para imágenes de branding (banner/logo)
+      {
+        source: "/api/public/branding-media",
+        headers: [
+          {
+            key: "Cache-Control",
+            value: "public, max-age=3600, s-maxage=86400, stale-while-revalidate=604800",
+          },
+        ],
+      },
     ];
   },
 

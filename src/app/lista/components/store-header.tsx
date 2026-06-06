@@ -38,9 +38,10 @@ export function StoreHeader({ config, cartCount, onOpenCart, searchTerm, onSearc
                             src={bannerSrc!}
                             alt={storeName}
                             fill
-                            unoptimized
+                            sizes="100vw"
                             className="object-cover"
                             priority
+                            quality={85}
                         />
                         <div className="absolute inset-0 bg-gradient-to-b from-black/10 via-black/5 to-black/50 lg:to-black/60" />
                     </>
@@ -91,7 +92,7 @@ export function StoreHeader({ config, cartCount, onOpenCart, searchTerm, onSearc
                         {/* Logo */}
                         <div className="flex-shrink-0 w-20 h-20 rounded-2xl overflow-hidden border-4 border-white shadow-lg bg-white">
                             {hasLogo ? (
-                                <Image src={logoSrc!} alt={storeName} width={80} height={80} unoptimized className="w-full h-full object-cover" />
+                                <Image src={logoSrc!} alt={storeName} width={80} height={80} className="w-full h-full object-cover" />
                             ) : (
                                 <div className="w-full h-full flex items-center justify-center text-white" style={{ backgroundColor: "var(--store-primary,#007AFF)" }}>
                                     <Store className="h-9 w-9" />
@@ -144,7 +145,7 @@ export function StoreHeader({ config, cartCount, onOpenCart, searchTerm, onSearc
                             {/* Logo pequeño */}
                             <div className="flex-shrink-0 w-10 h-10 rounded-xl overflow-hidden border border-gray-100 shadow-sm bg-white">
                                 {hasLogo ? (
-                                    <Image src={logoSrc!} alt={storeName} width={40} height={40} unoptimized className="w-full h-full object-cover" />
+                                    <Image src={logoSrc!} alt={storeName} width={40} height={40} className="w-full h-full object-cover" />
                                 ) : (
                                     <div className="w-full h-full flex items-center justify-center text-white" style={{ backgroundColor: "var(--store-primary,#007AFF)" }}>
                                         <Store className="h-5 w-5" />
