@@ -1,3 +1,5 @@
+"use client";
+
 import * as React from "react";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
@@ -5,101 +7,53 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
+    Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { LayoutGrid, Rows3, Store, Search, Tag, Percent, ExternalLink, CheckCircle2 } from "lucide-react";
+import {
+    Store, Search, Tag, Percent, ShoppingCart, Monitor, Star, Loader2,
+    Image, Eye, DollarSign, Package, Grid, List, ChevronDown, CheckCircle2,
+    Smartphone, MonitorSmartphone, PanelRight,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useSucursalStore } from "@/store/useSucursalStore";
 import type { StoreLayoutConfig } from "./types";
 
-/* ─── SVG Mockups ─── */
+type LayoutTabProps = { config: StoreLayoutConfig; setConfig: React.Dispatch<React.SetStateAction<StoreLayoutConfig>> };
 
-function GridMockup({ active }: { active?: boolean }) {
+// ─── Helpers de UI ──────────────────────────────────────────────────────────────────
+
+function SectionHeader({ icon: Icon, title, subtitle }: { icon: React.ComponentType<{ className?: string }>; title: string; subtitle?: string }) {
     return (
-        <svg viewBox="0 0 120 80" className="w-full h-full" aria-hidden>
-            {/* Search bar */}
-            <rect x="8" y="4" width="104" height="8" rx="4" fill="currentColor" opacity={active ? 0.18 : 0.1} />
-            <circle cx="14" cy="8" r="2" fill="currentColor" opacity={active ? 0.3 : 0.15} />
-
-            {/* Category pills */}
-            <rect x="8" y="16" width="20" height="5" rx="2.5" fill="currentColor" opacity={active ? 0.22 : 0.1} />
-            <rect x="31" y="16" width="16" height="5" rx="2.5" fill="currentColor" opacity={active ? 0.14 : 0.07} />
-            <rect x="50" y="16" width="18" height="5" rx="2.5" fill="currentColor" opacity={active ? 0.14 : 0.07} />
-
-            {/* Product cards — 2x2 grid */}
-            {[
-                [8, 26], [64, 26],
-                [8, 54], [64, 54],
-            ].map(([x, y], i) => (
-                <g key={i}>
-                    <rect x={x} y={y} width="48" height="24" rx="3" fill="currentColor" opacity={active ? 0.08 : 0.05} />
-                    {/* Image */}
-                    <rect x={x + 3} y={y + 3} width="42" height="11" rx="2" fill="currentColor" opacity={active ? 0.15 : 0.08} />
-                    {/* Title */}
-                    <rect x={x + 3} y={y + 17} width="24" height="2.5" rx="1" fill="currentColor" opacity={active ? 0.2 : 0.1} />
-                    {/* Price */}
-                    <rect x={x + 3} y={y + 21} width="14" height="2" rx="1" fill="currentColor" opacity={active ? 0.12 : 0.06} />
-                </g>
-            ))}
-        </svg>
+        <div className="flex items-center gap-2.5 mb-3">
+            <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                <Icon className="h-4 w-4 text-primary" />
+            </div>
+            <div>
+                <h3 className="text-sm font-bold text-foreground">{title}</h3>
+                {subtitle && <p className="text-[11px] text-muted-foreground">{subtitle}</p>}
+            </div>
+        </div>
     );
 }
 
-function ListMockup({ active }: { active?: boolean }) {
-    return (
-        <svg viewBox="0 0 120 80" className="w-full h-full" aria-hidden>
-            {/* Search bar */}
-            <rect x="8" y="4" width="104" height="8" rx="4" fill="currentColor" opacity={active ? 0.18 : 0.1} />
-            <circle cx="14" cy="8" r="2" fill="currentColor" opacity={active ? 0.3 : 0.15} />
-
-            {/* Category pills */}
-            <rect x="8" y="16" width="20" height="5" rx="2.5" fill="currentColor" opacity={active ? 0.22 : 0.1} />
-            <rect x="31" y="16" width="16" height="5" rx="2.5" fill="currentColor" opacity={active ? 0.14 : 0.07} />
-            <rect x="50" y="16" width="18" height="5" rx="2.5" fill="currentColor" opacity={active ? 0.14 : 0.07} />
-
-            {/* Product rows — 3 items */}
-            {[26, 44, 62].map((y, i) => (
-                <g key={i}>
-                    <rect x="8" y={y} width="104" height="14" rx="3" fill="currentColor" opacity={active ? 0.06 : 0.04} />
-                    {/* Thumbnail */}
-                    <rect x="11" y={y + 2} width="18" height="10" rx="2" fill="currentColor" opacity={active ? 0.18 : 0.09} />
-                    {/* Title */}
-                    <rect x="33" y={y + 3} width="32" height="2.5" rx="1" fill="currentColor" opacity={active ? 0.2 : 0.1} />
-                    {/* Subtitle */}
-                    <rect x="33" y={y + 7.5} width="20" height="2" rx="1" fill="currentColor" opacity={active ? 0.1 : 0.06} />
-                    {/* Price */}
-                    <rect x="90" y={y + 5} width="16" height="3" rx="1" fill="currentColor" opacity={active ? 0.15 : 0.08} />
-                </g>
-            ))}
-        </svg>
-    );
-}
-
-/* ─── Main Component ─── */
-
-function ToggleRow({ icon, label, description, checked, onChange }: {
-    icon: React.ReactNode;
-    label: string;
-    description: string;
-    checked: boolean;
-    onChange: (checked: boolean) => void;
+function ToggleCard({ icon: Icon, label, desc, checked, onChange, disabled }: {
+    icon: React.ComponentType<{ className?: string }>;
+    label: string; desc: string;
+    checked: boolean; onChange: (v: boolean) => void;
+    disabled?: boolean;
 }) {
     return (
-        <div className="flex items-center justify-between px-5 py-3.5 group">
-            <div className="flex items-center gap-3">
-                <div className={cn(
-                    "h-8 w-8 rounded-lg flex items-center justify-center shrink-0 transition-all duration-200",
-                    checked ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground/40"
-                )}>
-                    {icon}
+        <div className={cn(
+            "flex items-center justify-between p-4 rounded-xl border border-border/50 bg-card hover:bg-accent/30 transition-colors",
+            disabled && "opacity-50 pointer-events-none"
+        )}>
+            <div className="flex items-center gap-3 min-w-0">
+                <div className="h-9 w-9 rounded-lg bg-muted flex items-center justify-center flex-shrink-0">
+                    <Icon className="h-4 w-4 text-muted-foreground" />
                 </div>
-                <div>
-                    <Label className={cn("text-sm font-bold cursor-pointer transition-colors", !checked && "text-muted-foreground")}>{label}</Label>
-                    <p className="text-[11px] text-muted-foreground/70">{description}</p>
+                <div className="min-w-0">
+                    <p className="text-sm font-semibold text-foreground">{label}</p>
+                    <p className="text-[11px] text-muted-foreground">{desc}</p>
                 </div>
             </div>
             <Switch checked={checked} onCheckedChange={onChange} />
@@ -107,10 +61,109 @@ function ToggleRow({ icon, label, description, checked, onChange }: {
     );
 }
 
-type LayoutTabProps = {
-    config: StoreLayoutConfig;
-    setConfig: React.Dispatch<React.SetStateAction<StoreLayoutConfig>>;
-};
+function SelectCard({ icon: Icon, label, desc, value, onChange, options }: {
+    icon: React.ComponentType<{ className?: string }>;
+    label: string; desc: string;
+    value: string; onChange: (v: string) => void;
+    options: { value: string; label: string }[];
+}) {
+    return (
+        <div className="flex items-center justify-between p-4 rounded-xl border border-border/50 bg-card">
+            <div className="flex items-center gap-3 min-w-0">
+                <div className="h-9 w-9 rounded-lg bg-muted flex items-center justify-center flex-shrink-0">
+                    <Icon className="h-4 w-4 text-muted-foreground" />
+                </div>
+                <div className="min-w-0">
+                    <p className="text-sm font-semibold text-foreground">{label}</p>
+                    <p className="text-[11px] text-muted-foreground">{desc}</p>
+                </div>
+            </div>
+            <Select value={value} onValueChange={onChange}>
+                <SelectTrigger className="w-36 h-8 text-xs"><SelectValue /></SelectTrigger>
+                <SelectContent>{options.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent>
+            </Select>
+        </div>
+    );
+}
+
+// ─── Featured Products (misma lógica, más compacta) ─────────────────────────────────
+
+function FeaturedProductsSection({ featuredIds, onToggle }: { featuredIds: number[]; onToggle: (id: number) => void }) {
+    const [products, setProducts] = React.useState<Array<{ id: number; nombre: string }>>([]);
+    const [loading, setLoading] = React.useState(false);
+    const [search, setSearch] = React.useState("");
+    const [expanded, setExpanded] = React.useState(false);
+    const selectedCount = featuredIds.length;
+
+    React.useEffect(() => {
+        if (!expanded || products.length > 0) return;
+        setLoading(true);
+        fetch("/api/productos?sucursalId=0")
+            .then(r => r.ok ? r.json() : Promise.reject(r.status))
+            .then((res: any) => {
+                const list = Array.isArray(res) ? res : (res?.data || res?.productos || []);
+                setProducts(list.map((p: any) => ({ id: p.id, nombre: p.nombre })));
+            }).catch(() => {}).finally(() => setLoading(false));
+    }, [expanded, products.length]);
+
+    const filtered = search.trim() ? products.filter(p => p.nombre.toLowerCase().includes(search.toLowerCase())) : products;
+
+    return (
+        <div className="rounded-xl border border-border/50 bg-card overflow-hidden">
+            <button onClick={() => setExpanded(!expanded)} className="w-full flex items-center justify-between p-4 text-left hover:bg-accent/30 transition-colors">
+                <div className="flex items-center gap-3">
+                    <div className="h-9 w-9 rounded-lg bg-amber-100 flex items-center justify-center flex-shrink-0">
+                        <Star className="h-4 w-4 text-amber-600" />
+                    </div>
+                    <div>
+                        <p className="text-sm font-semibold text-foreground flex items-center gap-2">
+                            Productos Destacados
+                            {selectedCount > 0 && <Badge variant="secondary" className="text-[10px] h-4 px-1.5 rounded-full">{selectedCount}</Badge>}
+                        </p>
+                        <p className="text-[11px] text-muted-foreground">Seleccioná qué productos aparecen primero</p>
+                    </div>
+                </div>
+                <ChevronDown className={cn("h-4 w-4 text-muted-foreground transition-transform", expanded && "rotate-180")} />
+            </button>
+            {expanded && (
+                <div className="border-t border-border/50 px-4 pb-4 space-y-2">
+                    <div className="relative pt-3">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar productos..." className="pl-9 h-9 text-sm" />
+                    </div>
+                    <div className="max-h-48 overflow-y-auto -mx-1 px-1">
+                        {loading ? (
+                            <div className="flex justify-center py-6"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
+                        ) : filtered.length === 0 ? (
+                            <p className="text-center py-4 text-xs text-muted-foreground">Sin resultados</p>
+                        ) : (
+                            <div className="space-y-0.5">
+                                {filtered.map(p => {
+                                    const isSel = featuredIds.includes(p.id);
+                                    return (
+                                        <button key={p.id} onClick={() => onToggle(p.id)}
+                                            className={cn("w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-left text-sm transition-colors",
+                                                isSel ? "bg-amber-50 text-amber-900 font-medium" : "hover:bg-muted/50 text-foreground"
+                                            )}>
+                                            <div className={cn("h-4 w-4 rounded border-2 flex items-center justify-center flex-shrink-0 transition-all",
+                                                isSel ? "bg-amber-500 border-amber-500" : "border-gray-300"
+                                            )}>
+                                                {isSel && <CheckCircle2 className="h-3 w-3 text-white" />}
+                                            </div>
+                                            <span className="truncate flex-1">{p.nombre}</span>
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+}
+
+// ─── MAIN COMPONENT ─────────────────────────────────────────────────────────────────
 
 export function LayoutTab({ config, setConfig }: LayoutTabProps) {
     const activeSucursalId = useSucursalStore((s) => s.activeSucursalId);
@@ -118,334 +171,217 @@ export function LayoutTab({ config, setConfig }: LayoutTabProps) {
     const catalogoHref = activeSucursalId ? `/lista?sucursalId=${activeSucursalId}` : "/lista";
 
     return (
-        <div className={cn(
-            "space-y-4 transition-opacity duration-500",
-        )}>
-            {/* ── HERO: CATÁLOGO PÚBLICO ── */}
-            <section className={cn(
-                "relative rounded-2xl border-2 overflow-hidden transition-all duration-500",
-                isLive
-                    ? "border-[color:var(--status-success-strong)]/60 dark:border-[color:var(--status-success-strong)]/40 bg-gradient-to-br from-[color:var(--status-success-strong)] via-[color:var(--status-success-strong)]/50 to-background dark:from-[color:var(--status-success-strong)]/30 dark:via-[color:var(--status-success-strong)]/10 dark:to-background"
-                    : "border-border bg-muted/30"
-            )}>
-                {/* Glow effect when live */}
-                {isLive && (
-                    <div className="absolute inset-0 bg-gradient-to-r from-[color:var(--status-success-strong)]/5 via-transparent to-[color:var(--status-success-strong)]/5 pointer-events-none" />
-                )}
+        <div className="space-y-6">
 
-                <div className="relative p-5 flex items-center justify-between gap-4">
-                    <div className="flex items-center gap-3.5 min-w-0">
-                        <div className={cn(
-                            "h-11 w-11 rounded-xl flex items-center justify-center shrink-0 transition-all duration-500",
-                            isLive
-                                ? "bg-[color:var(--status-success-strong)] text-[color:var(--ui-fx-white)] shadow-md shadow-emerald-500/25"
-                                : "bg-muted text-muted-foreground"
-                        )}>
-                            <Store className="h-5 w-5" />
-                        </div>
-                        <div className="min-w-0">
-                            <div className="flex items-center gap-2.5">
-                                <Label className="text-sm font-black">Catálogo Público</Label>
-                                {isLive ? (
-                                    <span className="flex items-center gap-1">
-                                        <span className="relative flex h-2 w-2">
-                                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[color:var(--status-success-strong)] opacity-75" />
-                                            <span className="relative inline-flex rounded-full h-2 w-2 bg-[color:var(--status-success-strong)]" />
-                                        </span>
-                                        <span className="text-[10px] font-bold text-[color:var(--status-success-strong)] dark:text-[color:var(--status-success-strong)]">En línea</span>
-                                    </span>
-                                ) : (
-                                    <span className="text-[10px] font-bold text-muted-foreground/60">Offline</span>
-                                )}
+            {/* ═══════════════════════════════════════════
+                 1. TIENDA (ON/OFF + DISTRIBUCIÓN)
+            ═══════════════════════════════════════════ */}
+            <section>
+                <SectionHeader icon={Store} title="Tienda" subtitle="Activación y tipo de catálogo" />
+                <div className="space-y-2">
+                    {/* Activar/Desactivar */}
+                    <div className={cn(
+                        "flex items-center justify-between p-4 rounded-xl border-2 transition-all",
+                        isLive ? "border-emerald-500/40 bg-emerald-50/30 dark:bg-emerald-950/10" : "border-border/50 bg-card"
+                    )}>
+                        <div className="flex items-center gap-3 min-w-0">
+                            <div className={cn("h-9 w-9 rounded-lg flex items-center justify-center flex-shrink-0 transition-colors",
+                                isLive ? "bg-emerald-500 text-white" : "bg-muted text-muted-foreground"
+                            )}>
+                                <Store className="h-4 w-4" />
                             </div>
-                            <p className="text-xs text-muted-foreground mt-0.5">
-                                {isLive
-                                    ? "Tu catálogo es visible públicamente"
-                                    : "Solo tú podés ver la tienda"}
-                            </p>
+                            <div>
+                                <p className="text-sm font-bold text-foreground flex items-center gap-2">
+                                    Catálogo Público
+                                    {isLive && <span className="relative flex h-1.5 w-1.5"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-500 opacity-75" /><span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500" /></span>}
+                                </p>
+                                <p className="text-[11px] text-muted-foreground">{isLive ? "Visible para todos" : "Solo visible para vos"}</p>
+                            </div>
                         </div>
-                    </div>
-
-                    <div className="flex items-center gap-3 shrink-0">
-                        {isLive && (
-                            <Button
-                                asChild
-                                variant="outline"
-                                size="sm"
-                                className="rounded-lg text-xs font-bold h-8 border-[color:var(--status-success-strong)] dark:border-[color:var(--status-success-strong)] text-[color:var(--status-success-strong)] dark:text-[color:var(--status-success-strong)] hover:bg-[color:var(--status-success-strong)] dark:hover:bg-[color:var(--status-success-strong)]/30 hidden sm:flex"
-                            >
-                                <a href={catalogoHref} target="_blank" rel="noopener noreferrer">
-                                    <ExternalLink className="h-3.5 w-3.5 mr-1.5" />
-                                    Ver tienda
-                                </a>
+                        <div className="flex items-center gap-3">
+                            <Button variant="ghost" size="sm" className="text-xs" asChild>
+                                <a href={catalogoHref} target="_blank" rel="noopener noreferrer">Ver tienda</a>
                             </Button>
-                        )}
-                        <Switch
-                            checked={isLive}
-                            onCheckedChange={(checked) => setConfig({ ...config, convertirTienda: checked })}
-                            className={cn(
-                                "scale-110 origin-center",
-                                isLive && "data-[state=checked]:bg-[color:var(--status-success-strong)]"
-                            )}
-                        />
+                            <Switch checked={isLive} onCheckedChange={(v) => setConfig({ ...config, convertirTienda: v })} />
+                        </div>
                     </div>
-                </div>
-            </section>
 
-            {/* ── DISTRIBUCIÓN DE PRODUCTOS ── */}
-            <section className={cn(
-                "rounded-2xl border overflow-hidden transition-all duration-300",
-                isLive ? "border-border bg-background" : "border-border/60 bg-muted/20"
-            )}>
-                <div className="px-5 py-3 border-b border-border/50 flex items-center gap-2">
-                    <LayoutGrid className={cn("h-3.5 w-3.5 transition-colors", isLive ? "text-primary" : "text-muted-foreground")} />
-                    <h3 className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Distribución</h3>
-                </div>
-
-                <div className={cn(
-                    "p-4 grid grid-cols-2 gap-3 transition-opacity duration-300",
-                    !isLive && "opacity-50 pointer-events-none"
-                )}>
-                    {/* Grid option */}
-                    <button
-                        onClick={() => setConfig({ ...config, tiendaLayout: 'grid' })}
-                        className={cn(
-                            "relative flex flex-col items-center gap-2.5 p-4 rounded-xl border-2 transition-all duration-200 cursor-pointer group active:scale-[0.97]",
-                            config.tiendaLayout === 'grid'
-                                ? "border-primary bg-primary/5 shadow-md shadow-primary/10 ring-1 ring-primary/20"
-                                : "border-border hover:border-primary/30 hover:shadow-sm"
-                        )}
-                    >
-                        {config.tiendaLayout === 'grid' && (
-                            <div className="absolute top-2.5 right-2.5">
-                                <CheckCircle2 className="h-4 w-4 text-primary" />
-                            </div>
-                        )}
-                        <div className={cn(
-                            "w-full h-20 rounded-lg overflow-hidden transition-colors duration-200",
-                            config.tiendaLayout === 'grid' ? "text-primary" : "text-muted-foreground group-hover:text-foreground/50"
-                        )}>
-                            <GridMockup active={config.tiendaLayout === 'grid'} />
-                        </div>
-                        <div className="text-center">
-                            <div className="flex items-center gap-1.5 justify-center">
-                                <LayoutGrid className="h-3.5 w-3.5" />
-                                <span className="text-xs font-black">Mosaico</span>
-                            </div>
-                            <p className="text-[10px] text-muted-foreground mt-0.5">2 columnas</p>
-                        </div>
-                    </button>
-
-                    {/* List option */}
-                    <button
-                        onClick={() => setConfig({ ...config, tiendaLayout: 'list' })}
-                        className={cn(
-                            "relative flex flex-col items-center gap-2.5 p-4 rounded-xl border-2 transition-all duration-200 cursor-pointer group active:scale-[0.97]",
-                            config.tiendaLayout === 'list'
-                                ? "border-primary bg-primary/5 shadow-md shadow-primary/10 ring-1 ring-primary/20"
-                                : "border-border hover:border-primary/30 hover:shadow-sm"
-                        )}
-                    >
-                        {config.tiendaLayout === 'list' && (
-                            <div className="absolute top-2.5 right-2.5">
-                                <CheckCircle2 className="h-4 w-4 text-primary" />
-                            </div>
-                        )}
-                        <div className={cn(
-                            "w-full h-20 rounded-lg overflow-hidden transition-colors duration-200",
-                            config.tiendaLayout === 'list' ? "text-primary" : "text-muted-foreground group-hover:text-foreground/50"
-                        )}>
-                            <ListMockup active={config.tiendaLayout === 'list'} />
-                        </div>
-                        <div className="text-center">
-                            <div className="flex items-center gap-1.5 justify-center">
-                                <Rows3 className="h-3.5 w-3.5" />
-                                <span className="text-xs font-black">Lista</span>
-                            </div>
-                            <p className="text-[10px] text-muted-foreground mt-0.5">1 columna</p>
-                        </div>
-                    </button>
-                </div>
-            </section>
-
-            {/* ── ELEMENTOS VISIBLES ── */}
-            <section className={cn(
-                "rounded-2xl border overflow-hidden transition-all duration-300",
-                isLive ? "border-border bg-background" : "border-border/60 bg-muted/20"
-            )}>
-                <div className="px-5 py-3 border-b border-border/50 flex items-center gap-2">
-                    <Tag className={cn("h-3.5 w-3.5 transition-colors", isLive ? "text-primary" : "text-muted-foreground")} />
-                    <h3 className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Elementos</h3>
-                </div>
-
-                <div className={cn(
-                    "divide-y divide-border/40 transition-opacity duration-300",
-                    !isLive && "opacity-50 pointer-events-none"
-                )}>
-                    {/* Buscador */}
-                    <div className="flex items-center justify-between px-5 py-3.5 group">
-                        <div className="flex items-center gap-3">
-                            <div className={cn(
-                                "h-8 w-8 rounded-lg flex items-center justify-center shrink-0 transition-all duration-200",
-                                config.mostrarBuscador
-                                    ? "bg-primary/10 text-primary"
-                                    : "bg-muted text-muted-foreground/40"
+                    {/* Grid vs Lista */}
+                    <div className="grid grid-cols-2 gap-2">
+                        <button onClick={() => setConfig({ ...config, tiendaLayout: "grid" })}
+                            className={cn("flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all text-center",
+                                config.tiendaLayout === "grid" ? "border-primary bg-primary/5" : "border-border/50 bg-card hover:bg-accent/30"
                             )}>
-                                <Search className="h-4 w-4" />
-                            </div>
+                            <Grid className={cn("h-5 w-5", config.tiendaLayout === "grid" ? "text-primary" : "text-muted-foreground")} />
                             <div>
-                                <Label className={cn(
-                                    "text-sm font-bold cursor-pointer transition-colors",
-                                    !config.mostrarBuscador && "text-muted-foreground"
-                                )}>Barra de Búsqueda</Label>
-                                <p className="text-[11px] text-muted-foreground/70">Buscar productos rápidamente</p>
+                                <p className="text-xs font-bold">Mosaico</p>
+                                <p className="text-[10px] text-muted-foreground">2 columnas</p>
                             </div>
-                        </div>
-                        <Switch
-                            checked={config.mostrarBuscador}
-                            onCheckedChange={(checked) => setConfig({ ...config, mostrarBuscador: checked })}
-                        />
-                    </div>
-
-                    {/* Categorías */}
-                    <div className="flex items-center justify-between px-5 py-3.5 group">
-                        <div className="flex items-center gap-3">
-                            <div className={cn(
-                                "h-8 w-8 rounded-lg flex items-center justify-center shrink-0 transition-all duration-200",
-                                config.mostrarCategoriasEnHeader
-                                    ? "bg-primary/10 text-primary"
-                                    : "bg-muted text-muted-foreground/40"
+                        </button>
+                        <button onClick={() => setConfig({ ...config, tiendaLayout: "list" })}
+                            className={cn("flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all text-center",
+                                config.tiendaLayout === "list" ? "border-primary bg-primary/5" : "border-border/50 bg-card hover:bg-accent/30"
                             )}>
-                                <Tag className="h-4 w-4" />
-                            </div>
+                            <List className={cn("h-5 w-5", config.tiendaLayout === "list" ? "text-primary" : "text-muted-foreground")} />
                             <div>
-                                <Label className={cn(
-                                    "text-sm font-bold cursor-pointer transition-colors",
-                                    !config.mostrarCategoriasEnHeader && "text-muted-foreground"
-                                )}>Filtro de Categorías</Label>
-                                <p className="text-[11px] text-muted-foreground/70">Chips de filtrado rápido</p>
+                                <p className="text-xs font-bold">Lista</p>
+                                <p className="text-[10px] text-muted-foreground">1 columna</p>
                             </div>
-                        </div>
-                        <Switch
-                            checked={config.mostrarCategoriasEnHeader}
-                            onCheckedChange={(checked) => setConfig({ ...config, mostrarCategoriasEnHeader: checked })}
-                        />
+                        </button>
                     </div>
 
-                    {/* Precios consignación */}
-                    <div className="flex items-center justify-between px-5 py-3.5 group">
-                        <div className="flex items-center gap-3">
-                            <div className={cn(
-                                "h-8 w-8 rounded-lg flex items-center justify-center shrink-0 transition-all duration-200",
-                                config.mostrarPreciosConsignacion
-                                    ? "bg-[color:var(--status-warning)] dark:bg-[color:var(--status-warning)]/30 text-[color:var(--status-warning)] dark:text-[color:var(--status-warning)]"
-                                    : "bg-muted text-muted-foreground/40"
+                    {/* Buscador + Categorías + Consignación */}
+                    <div className="flex flex-wrap gap-2">
+                        <BadgeButton icon={Search} label="Buscador" active={config.mostrarBuscador}
+                            onClick={() => setConfig({ ...config, mostrarBuscador: !config.mostrarBuscador })} />
+                        <BadgeButton icon={Tag} label="Categorías" active={config.mostrarCategoriasEnHeader}
+                            onClick={() => setConfig({ ...config, mostrarCategoriasEnHeader: !config.mostrarCategoriasEnHeader })} />
+                        <BadgeButton icon={Percent} label="Precio Consig." active={config.mostrarPreciosConsignacion}
+                            onClick={() => setConfig({ ...config, mostrarPreciosConsignacion: !config.mostrarPreciosConsignacion })} />
+                    </div>
+                </div>
+            </section>
+
+            {/* ═══════════════════════════════════════════
+                 2. CATÁLOGO (VISIBILIDAD + LAYOUT)
+            ═══════════════════════════════════════════ */}
+            <section>
+                <SectionHeader icon={Package} title="Catálogo de Productos" subtitle="Qué se ve en cada producto" />
+                <div className="space-y-2">
+                    <ToggleCard icon={Image} label="Imágenes" desc="Fotos de los productos" checked={config.showProductImages} onChange={(v) => setConfig({ ...config, showProductImages: v })} />
+                    <ToggleCard icon={DollarSign} label="Precios" desc="Precio visible en cada tarjeta" checked={config.showPrices} onChange={(v) => setConfig({ ...config, showPrices: v })} />
+                    <ToggleCard icon={Eye} label="Stock" desc="Cantidad disponible" checked={config.showStock} onChange={(v) => setConfig({ ...config, showStock: v })} />
+                    <ToggleCard icon={Search} label='Botón "Ver todo"' desc="Link para ver más por categoría" checked={config.showViewAll} onChange={(v) => setConfig({ ...config, showViewAll: v })} />
+
+                    <SelectCard icon={Grid} label="Layout de productos" desc="Cómo se ordenan las tarjetas"
+                        value={config.productLayout}
+                        onChange={(v) => setConfig({ ...config, productLayout: v as any })}
+                        options={[
+                            { value: "grid", label: "Grilla 2 cols" },
+                            { value: "horizontal", label: "Carrusel horizontal" },
+                            { value: "compact", label: "Listado compacto" },
+                        ]} />
+
+                    <div className="flex items-center justify-between p-4 rounded-xl border border-border/50 bg-card">
+                        <div className="flex items-center gap-3 min-w-0">
+                            <div className="h-9 w-9 rounded-lg bg-muted flex items-center justify-center flex-shrink-0"><Tag className="h-4 w-4 text-muted-foreground" /></div>
+                            <div className="min-w-0">
+                                <p className="text-sm font-semibold text-foreground">Máximo por sección</p>
+                                <p className="text-[11px] text-muted-foreground">Productos visibles por categoría</p>
+                            </div>
+                        </div>
+                        <Input type="number" min={1} max={50} value={config.maxProductsPerSection}
+                            onChange={(e) => setConfig({ ...config, maxProductsPerSection: Number(e.target.value) })}
+                            className="w-20 h-8 text-center text-sm" />
+                    </div>
+
+                    <SelectCard icon={ShoppingCart} label="Botón agregar" desc="Posición del botón + en la tarjeta"
+                        value={config.addButtonPosition}
+                        onChange={(v) => setConfig({ ...config, addButtonPosition: v as any })}
+                        options={[
+                            { value: "floating", label: "Sobre la imagen" },
+                            { value: "below", label: "Debajo del producto" },
+                        ]} />
+                </div>
+            </section>
+
+            {/* ═══════════════════════════════════════════
+                 3. CARRITO Y WHATSAPP
+            ═══════════════════════════════════════════ */}
+            <section>
+                <SectionHeader icon={ShoppingCart} title="Carrito y WhatsApp" subtitle="Checkout del pedido" />
+                <div className="space-y-2">
+                    <SelectCard icon={Smartphone} label="Tipo de carrito" desc="Cómo se muestra en el teléfono"
+                        value={config.cartDisplayMode}
+                        onChange={(v) => setConfig({ ...config, cartDisplayMode: v as any })}
+                        options={[
+                            { value: "bottom-sheet", label: "Bottom sheet" },
+                            { value: "modal", label: "Modal centrado" },
+                            { value: "drawer", label: "Drawer lateral" },
+                        ]} />
+
+                    <ToggleCard icon={Eye} label="Preview de WhatsApp" desc="Simulación del mensaje en el carrito"
+                        checked={config.showWhatsappPreview} onChange={(v) => setConfig({ ...config, showWhatsappPreview: v })} />
+
+                    <div className="flex items-center justify-between p-4 rounded-xl border border-border/50 bg-card">
+                        <div className="flex items-center gap-3 min-w-0">
+                            <div className="h-9 w-9 rounded-lg bg-muted flex items-center justify-center flex-shrink-0"><Tag className="h-4 w-4 text-muted-foreground" /></div>
+                            <div className="min-w-0 flex-1 mr-3">
+                                <p className="text-sm font-semibold text-foreground">Texto del botón final</p>
+                                <p className="text-[11px] text-muted-foreground">Botón verde de envío</p>
+                            </div>
+                        </div>
+                        <Input value={config.whatsappButtonText}
+                            onChange={(e) => setConfig({ ...config, whatsappButtonText: e.target.value })}
+                            className="h-8 text-sm w-44" />
+                    </div>
+                </div>
+            </section>
+
+            {/* ═══════════════════════════════════════════
+                 4. VISTA DESKTOP
+            ═══════════════════════════════════════════ */}
+            <section>
+                <SectionHeader icon={Monitor} title="Vista en Desktop" subtitle="Cómo se ve en pantallas grandes" />
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                    {([
+                        { value: "mobile-centered", icon: Smartphone, label: "App móvil", desc: "Centrado, tipo celular" },
+                        { value: "wide-ecommerce", icon: MonitorSmartphone, label: "Ecommerce", desc: "Ancho completo" },
+                        { value: "with-cart-sidebar", icon: PanelRight, label: "Carrito lateral", desc: "Panel derecho fijo" },
+                    ] as const).map(opt => (
+                        <button key={opt.value} onClick={() => setConfig({ ...config, desktopLayout: opt.value })}
+                            className={cn("flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all text-center",
+                                config.desktopLayout === opt.value ? "border-primary bg-primary/5" : "border-border/50 bg-card hover:bg-accent/30"
                             )}>
-                                <Percent className="h-4 w-4" />
-                            </div>
+                            <opt.icon className={cn("h-5 w-5", config.desktopLayout === opt.value ? "text-primary" : "text-muted-foreground")} />
                             <div>
-                                <div className="flex items-center gap-2">
-                                    <Label className={cn(
-                                        "text-sm font-bold cursor-pointer transition-colors",
-                                        !config.mostrarPreciosConsignacion && "text-muted-foreground"
-                                    )}>Costo de Consignación</Label>
-                                    {config.mostrarPreciosConsignacion && (
-                                        <Badge variant="secondary" className="text-[9px] bg-[color:var(--status-warning)] dark:bg-[color:var(--status-warning)]/30 text-[color:var(--status-warning)] dark:text-[color:var(--status-warning)] border-none h-4 px-1.5 rounded-md font-bold">Público</Badge>
-                                    )}
-                                </div>
-                                <p className="text-[11px] text-muted-foreground/70">Comisiones visibles a todos</p>
+                                <p className="text-xs font-bold">{opt.label}</p>
+                                <p className="text-[10px] text-muted-foreground">{opt.desc}</p>
                             </div>
-                        </div>
-                        <Switch
-                            checked={config.mostrarPreciosConsignacion}
-                            onCheckedChange={(checked) => setConfig({ ...config, mostrarPreciosConsignacion: checked })}
-                        />
-                    </div>
+                        </button>
+                    ))}
                 </div>
             </section>
 
-            {/* ── CATÁLOGO AVANZADO ── */}
-            <section className="rounded-2xl border overflow-hidden transition-all duration-300 border-border bg-background">
-                <div className="px-5 py-3 border-b border-border/50 flex items-center gap-2">
-                    <Tag className="h-3.5 w-3.5 text-primary" />
-                    <h3 className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Catálogo</h3>
-                </div>
-                <div className="divide-y divide-border/40">
-                    <ToggleRow icon={<Search className="h-4 w-4" />} label="Mostrar imágenes" description="Fotos de productos en las cards" checked={config.showProductImages} onChange={(v) => setConfig({ ...config, showProductImages: v })} />
-                    <ToggleRow icon={<Tag className="h-4 w-4" />} label="Mostrar precios" description="Precio visible en cada producto" checked={config.showPrices} onChange={(v) => setConfig({ ...config, showPrices: v })} />
-                    <ToggleRow icon={<Tag className="h-4 w-4" />} label="Mostrar stock" description="Cantidad disponible" checked={config.showStock} onChange={(v) => setConfig({ ...config, showStock: v })} />
-                    <ToggleRow icon={<ExternalLink className="h-4 w-4" />} label='Botón "Ver todo"' description="Link para ver todos los productos de una categoría" checked={config.showViewAll} onChange={(v) => setConfig({ ...config, showViewAll: v })} />
-                    <div className="px-5 py-3.5 flex items-center justify-between">
-                        <Label className="text-sm font-bold">Máximo por sección</Label>
-                        <Input type="number" min={1} max={50} value={config.maxProductsPerSection} onChange={(e) => setConfig({ ...config, maxProductsPerSection: Number(e.target.value) })} className="w-20 h-8 text-center text-sm" />
-                    </div>
-                    <div className="px-5 py-3.5 flex items-center justify-between">
-                        <Label className="text-sm font-bold">Layout de productos</Label>
-                        <Select value={config.productLayout} onValueChange={(v) => setConfig({ ...config, productLayout: v as any })}>
-                            <SelectTrigger className="w-44 h-8 text-xs"><SelectValue /></SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="grid">Grilla 2 columnas</SelectItem>
-                                <SelectItem value="horizontal">Carrusel horizontal</SelectItem>
-                                <SelectItem value="compact">Listado compacto</SelectItem>
-                            </SelectContent>
-                        </Select>
-                    </div>
-                    <div className="px-5 py-3.5 flex items-center justify-between">
-                        <Label className="text-sm font-bold">Posición botón agregar</Label>
-                        <Select value={config.addButtonPosition} onValueChange={(v) => setConfig({ ...config, addButtonPosition: v as any })}>
-                            <SelectTrigger className="w-44 h-8 text-xs"><SelectValue /></SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="floating">Flotante sobre imagen</SelectItem>
-                                <SelectItem value="below">Debajo del producto</SelectItem>
-                            </SelectContent>
-                        </Select>
-                    </div>
-                </div>
-            </section>
+            {/* ═══════════════════════════════════════════
+                 5. PRODUCTOS DESTACADOS
+            ═══════════════════════════════════════════ */}
+            <FeaturedProductsSection
+                featuredIds={config.featuredProductIds || []}
+                onToggle={(id) => {
+                    const ids = config.featuredProductIds || [];
+                    setConfig({ ...config, featuredProductIds: ids.includes(id) ? ids.filter(i => i !== id) : [...ids, id] });
+                }}
+            />
 
-            {/* ── CARRITO ── */}
-            <section className="rounded-2xl border overflow-hidden transition-all duration-300 border-border bg-background">
-                <div className="px-5 py-3 border-b border-border/50 flex items-center gap-2">
-                    <Tag className="h-3.5 w-3.5 text-primary" />
-                    <h3 className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Carrito y WhatsApp</h3>
+            {/* ─── VISTA PREVIA RÁPIDA ─── */}
+            <div className="rounded-xl border border-border/50 bg-muted/20 p-4 flex items-center justify-between">
+                <div>
+                    <p className="text-sm font-semibold text-foreground">¿Cómo se ve?</p>
+                    <p className="text-[11px] text-muted-foreground">Abrí la vista previa para ver los cambios</p>
                 </div>
-                <div className="divide-y divide-border/40">
-                    <div className="px-5 py-3.5 flex items-center justify-between">
-                        <Label className="text-sm font-bold">Tipo de carrito</Label>
-                        <Select value={config.cartDisplayMode} onValueChange={(v) => setConfig({ ...config, cartDisplayMode: v as any })}>
-                            <SelectTrigger className="w-44 h-8 text-xs"><SelectValue /></SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="bottom-sheet">Bottom sheet</SelectItem>
-                                <SelectItem value="modal">Modal centrado</SelectItem>
-                                <SelectItem value="drawer">Drawer lateral</SelectItem>
-                            </SelectContent>
-                        </Select>
-                    </div>
-                    <ToggleRow icon={<ExternalLink className="h-4 w-4" />} label="Preview WhatsApp" description="Mostrar simulación del mensaje en el carrito" checked={config.showWhatsappPreview} onChange={(v) => setConfig({ ...config, showWhatsappPreview: v })} />
-                    <div className="px-5 py-3.5 flex flex-col gap-2">
-                        <Label className="text-sm font-bold">Texto botón WhatsApp</Label>
-                        <Input value={config.whatsappButtonText} onChange={(e) => setConfig({ ...config, whatsappButtonText: e.target.value })} className="h-8 text-sm" />
-                    </div>
-                </div>
-            </section>
-
-            {/* ── RESPONSIVE ── */}
-            <section className="rounded-2xl border overflow-hidden transition-all duration-300 border-border bg-background">
-                <div className="px-5 py-3 border-b border-border/50 flex items-center gap-2">
-                    <Tag className="h-3.5 w-3.5 text-primary" />
-                    <h3 className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Vista Desktop</h3>
-                </div>
-                <div className="px-5 py-3.5">
-                    <Select value={config.desktopLayout} onValueChange={(v) => setConfig({ ...config, desktopLayout: v as any })}>
-                        <SelectTrigger className="w-full h-9 text-sm"><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="mobile-centered">Contenido centrado (tipo app)</SelectItem>
-                            <SelectItem value="wide-ecommerce">Layout ancho (ecommerce)</SelectItem>
-                            <SelectItem value="with-cart-sidebar">Catálogo + carrito lateral</SelectItem>
-                        </SelectContent>
-                    </Select>
-                </div>
-            </section>
+                <Button variant="outline" size="sm" className="text-xs" asChild>
+                    <a href={catalogoHref} target="_blank" rel="noopener noreferrer">Ver tienda en vivo →</a>
+                </Button>
+            </div>
         </div>
+    );
+}
+
+// ─── Badge toggle (píldora) ────────────────────────────────────────────────────────
+
+function BadgeButton({ icon: Icon, label, active, onClick }: {
+    icon: React.ComponentType<{ className?: string }>;
+    label: string; active: boolean; onClick: () => void;
+}) {
+    return (
+        <button onClick={onClick}
+            className={cn(
+                "flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-all",
+                active ? "bg-primary text-primary-foreground border-primary" : "bg-card text-muted-foreground border-border/50 hover:bg-accent"
+            )}>
+            <Icon className="h-3 w-3" />
+            {label}
+        </button>
     );
 }

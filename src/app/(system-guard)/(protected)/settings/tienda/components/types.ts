@@ -74,6 +74,8 @@ export type StoreLayoutConfig = {
   whatsappButtonText: string;
   // Online Store — Responsive
   desktopLayout: "mobile-centered" | "wide-ecommerce" | "with-cart-sidebar";
+  // Online Store — Destacados
+  featuredProductIds: number[];
 };
 
 export type OnlineStorePromoFormItem = {

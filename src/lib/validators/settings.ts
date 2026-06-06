@@ -41,6 +41,7 @@ export const onlineStoreCatalogSchema = z.object({
   productLayout: z.enum(["grid", "horizontal", "compact"]).default("grid"),
   maxProductsPerSection: z.number().int().min(1).max(50).default(6),
   addButtonPosition: z.enum(["floating", "below"]).default("floating"),
+  featuredProductIds: z.array(z.number().int()).default([]),
 });
 
 export const onlineStorePromoItemSchema = z.object({

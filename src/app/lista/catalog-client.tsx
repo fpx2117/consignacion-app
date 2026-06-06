@@ -521,6 +521,31 @@ export function CatalogClient({
                             <PromoCarousel items={promoItems} className="mt-4" />
                         )}
 
+                        {/* ── Productos Destacados ── */}
+                        {(() => {
+                            const featuredIds = ols?.catalog?.featuredProductIds || [];
+                            if (featuredIds.length === 0) return null;
+                            const featured = products.filter(p => featuredIds.includes(p.id));
+                            if (featured.length === 0) return null;
+                            return (
+                                <div className="mt-4">
+                                    <ProductSection
+                                        title="⭐ Destacados"
+                                        count={featured.length}
+                                        products={featured}
+                                        config={config}
+                                        viewMode="grid"
+                                        isConsigne={isConsigne}
+                                        onAddToCart={addToCart}
+                                        onViewProduct={(p) => setSelectedProduct(p)}
+                                        forceGrid
+                                        cart={cart}
+                                        onUpdateCartQuantity={handleUpdateCartQuantity}
+                                    />
+                                </div>
+                            );
+                        })()}
+
                         {/* ── Breadcrumb desktop (contexto de filtro activo) ── */}
                         {(selectedCategory || selectedSubcategory || deferredSearchTerm.trim()) && (
                             <div className="hidden lg:flex items-center gap-2 px-0 pt-5 pb-1 text-sm text-[var(--store-muted,#8A8F98)]">
