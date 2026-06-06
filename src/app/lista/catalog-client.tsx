@@ -28,7 +28,6 @@ import { ProductSection } from "./components/product-section";
 import { SearchBar } from "./components/search-bar";
 import { StoreFooter } from "./components/store-footer";
 import { DesktopCategorySidebar } from "./components/desktop-category-sidebar";
-import { getThemeStyles } from "./lib/theme-utils";
 
 const CartDrawer = dynamic(
   () => import("./components/cart-drawer").then((m) => m.CartDrawer),
@@ -151,7 +150,6 @@ export function CatalogClient({
 
     // ── Config y datos derivados ──
     const config: PublicCatalogConfig = data?.config ?? { sucursalId: sucursalId ?? 1 };
-    const { pageBgClass } = getThemeStyles(config.themeIdentifier);
     const products = React.useMemo(() => data?.productos || [], [data?.productos]);
     const categories = React.useMemo(() => data?.categorias || [], [data?.categorias]);
     const deferredSearchTerm = React.useDeferredValue(searchTerm);
@@ -370,7 +368,7 @@ export function CatalogClient({
     // ── LOADING ──
     if (loading) {
         return (
-            <div suppressHydrationWarning className="min-h-screen flex flex-col items-center justify-center bg-[var(--store-background,#F5F6F8)] p-6">
+            <div suppressHydrationWarning className="min-h-screen flex flex-col items-center justify-center bg-white p-6">
                 <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 2, ease: "linear" }}>
                     <Loader2 className="h-10 w-10 text-[var(--store-primary,#007AFF)]" />
                 </motion.div>
@@ -382,7 +380,7 @@ export function CatalogClient({
     // ── ERROR ──
     if (error) {
         return (
-            <div suppressHydrationWarning className="min-h-screen flex flex-col items-center justify-center bg-[var(--store-background,#F5F6F8)] p-6 text-center">
+            <div suppressHydrationWarning className="min-h-screen flex flex-col items-center justify-center bg-white p-6 text-center">
                 <div className="bg-red-50 p-4 rounded-full mb-4"><XCircle className="h-12 w-12 text-red-500" /></div>
                 <h1 className="text-2xl font-bold mb-2 text-[var(--store-text,#0F172A)]">¡Ups!</h1>
                 <p className="text-[var(--store-muted,#8A8F98)] max-w-md">{error}</p>
@@ -397,9 +395,9 @@ export function CatalogClient({
     return (
         <div
             suppressHydrationWarning
-            className={cn("min-h-screen transition-colors duration-300 store-theme-root", pageBgClass)}
+            className={cn("min-h-screen transition-colors duration-300")}
             style={{
-                backgroundColor: "var(--store-background,#F5F6F8)",
+                backgroundColor: "#FFFFFF",
                 fontFamily: config.typography ? `"${config.typography}", sans-serif` : undefined,
             }}
         >
