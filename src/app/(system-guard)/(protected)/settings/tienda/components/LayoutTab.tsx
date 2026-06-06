@@ -206,34 +206,8 @@ export function LayoutTab({ config, setConfig }: LayoutTabProps) {
                         </div>
                     </div>
 
-                    {/* Grid vs Lista */}
-                    <div className="grid grid-cols-2 gap-2">
-                        <button onClick={() => setConfig({ ...config, tiendaLayout: "grid" })}
-                            className={cn("flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all text-center",
-                                config.tiendaLayout === "grid" ? "border-primary bg-primary/5" : "border-border/50 bg-card hover:bg-accent/30"
-                            )}>
-                            <Grid className={cn("h-5 w-5", config.tiendaLayout === "grid" ? "text-primary" : "text-muted-foreground")} />
-                            <div>
-                                <p className="text-xs font-bold">Mosaico</p>
-                                <p className="text-[10px] text-muted-foreground">2 columnas</p>
-                            </div>
-                        </button>
-                        <button onClick={() => setConfig({ ...config, tiendaLayout: "list" })}
-                            className={cn("flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all text-center",
-                                config.tiendaLayout === "list" ? "border-primary bg-primary/5" : "border-border/50 bg-card hover:bg-accent/30"
-                            )}>
-                            <List className={cn("h-5 w-5", config.tiendaLayout === "list" ? "text-primary" : "text-muted-foreground")} />
-                            <div>
-                                <p className="text-xs font-bold">Lista</p>
-                                <p className="text-[10px] text-muted-foreground">1 columna</p>
-                            </div>
-                        </button>
-                    </div>
-
                     {/* Buscador + Categorías + Consignación */}
                     <div className="flex flex-wrap gap-2">
-                        <BadgeButton icon={Search} label="Buscador" active={config.mostrarBuscador}
-                            onClick={() => setConfig({ ...config, mostrarBuscador: !config.mostrarBuscador })} />
                         <BadgeButton icon={Tag} label="Categorías" active={config.mostrarCategoriasEnHeader}
                             onClick={() => setConfig({ ...config, mostrarCategoriasEnHeader: !config.mostrarCategoriasEnHeader })} />
                         <BadgeButton icon={Percent} label="Precio Consig." active={config.mostrarPreciosConsignacion}
@@ -319,32 +293,7 @@ export function LayoutTab({ config, setConfig }: LayoutTabProps) {
             </section>
 
             {/* ═══════════════════════════════════════════
-                 4. VISTA DESKTOP
-            ═══════════════════════════════════════════ */}
-            <section>
-                <SectionHeader icon={Monitor} title="Vista en Desktop" subtitle="Cómo se ve en pantallas grandes" />
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                    {([
-                        { value: "mobile-centered", icon: Smartphone, label: "App móvil", desc: "Centrado, tipo celular" },
-                        { value: "wide-ecommerce", icon: MonitorSmartphone, label: "Ecommerce", desc: "Ancho completo" },
-                        { value: "with-cart-sidebar", icon: PanelRight, label: "Carrito lateral", desc: "Panel derecho fijo" },
-                    ] as const).map(opt => (
-                        <button key={opt.value} onClick={() => setConfig({ ...config, desktopLayout: opt.value })}
-                            className={cn("flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all text-center",
-                                config.desktopLayout === opt.value ? "border-primary bg-primary/5" : "border-border/50 bg-card hover:bg-accent/30"
-                            )}>
-                            <opt.icon className={cn("h-5 w-5", config.desktopLayout === opt.value ? "text-primary" : "text-muted-foreground")} />
-                            <div>
-                                <p className="text-xs font-bold">{opt.label}</p>
-                                <p className="text-[10px] text-muted-foreground">{opt.desc}</p>
-                            </div>
-                        </button>
-                    ))}
-                </div>
-            </section>
-
-            {/* ═══════════════════════════════════════════
-                 5. PRODUCTOS DESTACADOS
+                 4. PRODUCTOS DESTACADOS
             ═══════════════════════════════════════════ */}
             <FeaturedProductsSection
                 featuredIds={config.featuredProductIds || []}
