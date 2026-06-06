@@ -20,14 +20,15 @@ import type {
 
 import { apiService } from "@/lib/apiService";
 
-// Importación de componentes refactorizados
+// Componentes
 import { StoreHeader } from "./components/store-header";
-import { StoreBanner } from "./components/store-banner";
-import { StoreFilters } from "./components/store-filters";
-import { ProductList } from "./components/product-list";
+import { CategoryTabs } from "./components/category-tabs";
+import { PromoCarousel } from "./components/promo-carousel";
+import { ProductSection } from "./components/product-section";
+import { SearchBar } from "./components/search-bar";
 import { StoreFooter } from "./components/store-footer";
+import { DesktopCategorySidebar } from "./components/desktop-category-sidebar";
 import { getThemeStyles } from "./lib/theme-utils";
-import { StoreCategorySidebar } from "./components/store-category-sidebar";
 
 const CartDrawer = dynamic(
   () => import("./components/cart-drawer").then((m) => m.CartDrawer),
@@ -39,21 +40,16 @@ const ProductModal = dynamic(
   { ssr: false }
 );
 
+// ─── Constantes ───────────────────────────────────────────────────────────────
 const CHECKOUT_TOKEN_STORAGE_KEY = "public_checkout_token_v2";
 const CART_STORAGE_KEY_PREFIX = "public_catalog_cart_v1";
 const CHECKOUT_POLL_INTERVAL_MS = 2000;
 const CHECKOUT_POLL_TIMEOUT_MS = 90000;
 
-type CheckoutFeedbackState = {
-    kind: "polling" | "success" | "error";
-    message: string;
-};
+type CheckoutFeedbackState = { kind: "polling" | "success" | "error"; message: string };
+type StoredCheckoutToken = { token: string; sucursalId: number; createdAt: number };
 
-type StoredCheckoutToken = {
-    token: string;
-    sucursalId: number;
-    createdAt: number;
-};
+// ─────────────────────────────────────────────────────────────────────────────
 
 export function CatalogClient({
     initialData,
@@ -66,21 +62,20 @@ export function CatalogClient({
     sucursalId: number | null;
     checkoutReturnStatus: string | null;
 }) {
-    // --- Estados de Datos ---
+    // ── Datos ──
     const [data, setData] = React.useState<PublicCatalogData | null>(initialData);
     const [loading, setLoading] = React.useState(!initialData && !initialError);
     const [error, setError] = React.useState<string | null>(initialError);
 
-    // --- Estados de UI/Filtros ---
+    // ── Filtros ──
     const [searchTerm, setSearchTerm] = React.useState("");
     const [selectedCategory, setSelectedCategory] = React.useState<number | null>(null);
     const [selectedSubcategory, setSelectedSubcategory] = React.useState<number | null>(null);
-    const [viewMode, setViewMode] = React.useState<"grid" | "list">("grid");
     const [isConsigne, setIsConsigne] = React.useState(false);
     const [selectedProduct, setSelectedProduct] = React.useState<PublicCatalogProduct | null>(null);
-    const [sortBy, setSortBy] = React.useState<PublicCatalogSortBy>("relevance");
+    const [sortBy] = React.useState<PublicCatalogSortBy>("relevance");
 
-    // --- Estados del Carrito ---
+    // ── Carrito ──
     const [cart, setCart] = React.useState<CatalogCartItem[]>([]);
     const [isCartOpen, setIsCartOpen] = React.useState(false);
     const [checkoutLoading, setCheckoutLoading] = React.useState(false);
@@ -88,37 +83,28 @@ export function CatalogClient({
     const [cartHydrated, setCartHydrated] = React.useState(false);
 
     const handledReturnRef = React.useRef<string | null>(null);
-    const catalogSectionRef = React.useRef<HTMLElement | null>(null);
 
-    const getSucursalIdForCheckout = React.useCallback(() => {
-        return sucursalId ?? 1;
-    }, [sucursalId]);
-
-    const getCartStorageKey = React.useCallback(() => {
-        return `${CART_STORAGE_KEY_PREFIX}:${getSucursalIdForCheckout()}`;
-    }, [getSucursalIdForCheckout]);
-
+    // ── Storage helpers ──
+    const getSucursalIdForCheckout = React.useCallback(() => sucursalId ?? 1, [sucursalId]);
+    const getCartStorageKey = React.useCallback(
+        () => `${CART_STORAGE_KEY_PREFIX}:${getSucursalIdForCheckout()}`,
+        [getSucursalIdForCheckout]
+    );
     const clearCheckoutToken = React.useCallback(() => {
-        if (typeof window === "undefined") return;
-        window.localStorage.removeItem(CHECKOUT_TOKEN_STORAGE_KEY);
+        if (typeof window !== "undefined") window.localStorage.removeItem(CHECKOUT_TOKEN_STORAGE_KEY);
     }, []);
-
     const readCheckoutToken = React.useCallback((storeSucursalId: number): string | null => {
         if (typeof window === "undefined") return null;
-
         const raw = window.localStorage.getItem(CHECKOUT_TOKEN_STORAGE_KEY);
         if (!raw) return null;
-
         try {
             const parsed = JSON.parse(raw) as StoredCheckoutToken;
             const expired = Date.now() - Number(parsed.createdAt || 0) > 24 * 60 * 60 * 1000;
-            const mismatchedSucursal = Number(parsed.sucursalId) !== Number(storeSucursalId);
-
-            if (!parsed.token || expired || mismatchedSucursal) {
+            const mismatch = Number(parsed.sucursalId) !== Number(storeSucursalId);
+            if (!parsed.token || expired || mismatch) {
                 window.localStorage.removeItem(CHECKOUT_TOKEN_STORAGE_KEY);
                 return null;
             }
-
             return parsed.token;
         } catch {
             window.localStorage.removeItem(CHECKOUT_TOKEN_STORAGE_KEY);
@@ -126,13 +112,9 @@ export function CatalogClient({
         }
     }, []);
 
-    // --- Fetch Data ---
+    // ── Fetch datos ──
     React.useEffect(() => {
-        if (initialData || initialError) {
-            setLoading(false);
-            return;
-        }
-
+        if (initialData || initialError) { setLoading(false); return; }
         const fetchData = async () => {
             try {
                 const res = await apiService.getPublicListaPrecios(sucursalId ?? undefined);
@@ -146,16 +128,11 @@ export function CatalogClient({
         fetchData();
     }, [initialData, initialError, sucursalId]);
 
+    // ── Carrito persistido ──
     React.useEffect(() => {
         if (typeof window === "undefined") return;
-
         const raw = window.localStorage.getItem(getCartStorageKey());
-        if (!raw) {
-            setCart([]);
-            setCartHydrated(true);
-            return;
-        }
-
+        if (!raw) { setCart([]); setCartHydrated(true); return; }
         try {
             const parsed = JSON.parse(raw) as CatalogCartItem[];
             setCart(Array.isArray(parsed) ? parsed : []);
@@ -172,164 +149,132 @@ export function CatalogClient({
         window.localStorage.setItem(getCartStorageKey(), JSON.stringify(cart));
     }, [cart, cartHydrated, getCartStorageKey]);
 
-    // --- Configuración e Inyección de Estilos ---
+    // ── Config y datos derivados ──
     const config: PublicCatalogConfig = data?.config ?? { sucursalId: sucursalId ?? 1 };
-    const { theme: _theme, pageBgClass } = getThemeStyles(config.themeIdentifier);
+    const { pageBgClass } = getThemeStyles(config.themeIdentifier);
     const products = React.useMemo(() => data?.productos || [], [data?.productos]);
     const categories = React.useMemo(() => data?.categorias || [], [data?.categorias]);
     const deferredSearchTerm = React.useDeferredValue(searchTerm);
 
-    React.useEffect(() => {
-        if (config.tiendaLayout === "grid" || config.tiendaLayout === "list") {
-            setViewMode(config.tiendaLayout);
-        }
-    }, [config.tiendaLayout]);
+    const ols = config.onlineStoreConfig;
+    const showCategories = ols?.catalog?.showCategories ?? true;
+    const promoEnabled = ols?.promotions?.enabled ?? false;
+    const promoItems = ols?.promotions?.items ?? [];
+    const maxPerSection = ols?.catalog?.maxProductsPerSection ?? 8;
+    const cartEnabled = Boolean(config.convertirTienda);
 
+    // Sincronizar carrito con stock actualizado
     React.useEffect(() => {
         if (!cartHydrated || !products.length) return;
-
         setCart(prev => prev.flatMap((item) => {
-            const freshProduct = products.find((product) => product.id === item.id);
-            if (!freshProduct || freshProduct.stockDisponibleUnits <= 0) return [];
-
-            return [{
-                ...freshProduct,
-                quantity: Math.min(item.quantity, freshProduct.stockDisponibleUnits),
-                pricingMode: item.pricingMode ?? "default",
-            }];
+            const fresh = products.find((p) => p.id === item.id);
+            if (!fresh || fresh.stockDisponibleUnits <= 0) return [];
+            return [{ ...fresh, quantity: Math.min(item.quantity, fresh.stockDisponibleUnits), pricingMode: item.pricingMode ?? "default" }];
         }));
     }, [cartHydrated, products]);
 
-    const categoryCounts = React.useMemo(() => {
-        return products.reduce<Record<number, number>>((acc, product) => {
-            const catId = product.categoriaId;
-            if (catId === null) return acc;
-            acc[catId] = (acc[catId] || 0) + 1;
-            return acc;
-        }, {});
-    }, [products]);
+    const cartCount = React.useMemo(() => cart.reduce((t, i) => t + i.quantity, 0), [cart]);
 
-    const cartCount = React.useMemo(
-        () => cart.reduce((total, item) => total + item.quantity, 0),
-        [cart]
-    );
-
+    // ── Handlers de filtros ──
     const handleSelectCategory = React.useCallback((id: number | null) => {
         setSelectedCategory(id);
         setSelectedSubcategory(null);
     }, []);
 
-    const scrollToCatalog = React.useCallback(() => {
-        catalogSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    const handleSelectSubcategory = React.useCallback((id: number | null) => {
+        setSelectedSubcategory(id);
     }, []);
 
+    // ── Inyección de CSS variables dinámicas ──
     React.useEffect(() => {
         const hexToRgb = (hex: string) => {
-            const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-            return result ? `${parseInt(result[1], 16)}, ${parseInt(result[2], 16)}, ${parseInt(result[3], 16)}` : "0, 0, 0";
+            const r = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+            return r ? `${parseInt(r[1], 16)}, ${parseInt(r[2], 16)}, ${parseInt(r[3], 16)}` : "0, 0, 0";
         };
-
-        const getContrastColor = (hex: string) => {
-            const [red = 0, green = 0, blue = 0] = hexToRgb(hex).split(",").map((value) => parseInt(value, 10));
-            const brightness = (red * 299 + green * 587 + blue * 114) / 1000;
-            return brightness > 155 ? 'hsl(var(--foreground))' : 'hsl(var(--background))';
+        const contrast = (hex: string) => {
+            const [r = 0, g = 0, b = 0] = hexToRgb(hex).split(",").map(Number);
+            return (r * 299 + g * 587 + b * 114) / 1000 > 155 ? "hsl(var(--foreground))" : "hsl(var(--background))";
         };
-
         if (config.primaryColor) {
-            document.documentElement.style.setProperty('--primary', config.primaryColor);
-            document.documentElement.style.setProperty('--primary-rgb', hexToRgb(config.primaryColor));
-            document.documentElement.style.setProperty('--primary-foreground', getContrastColor(config.primaryColor));
+            document.documentElement.style.setProperty("--primary", config.primaryColor);
+            document.documentElement.style.setProperty("--primary-rgb", hexToRgb(config.primaryColor));
+            document.documentElement.style.setProperty("--primary-foreground", contrast(config.primaryColor));
         }
         if (config.secondaryColor) {
-            document.documentElement.style.setProperty('--secondary', config.secondaryColor);
-            document.documentElement.style.setProperty('--secondary-foreground', getContrastColor(config.secondaryColor));
+            document.documentElement.style.setProperty("--secondary", config.secondaryColor);
+            document.documentElement.style.setProperty("--secondary-foreground", contrast(config.secondaryColor));
         }
-
-        // --- Inyección Dinámica de Google Fonts ---
         if (config.typography) {
-            const fontName = config.typography;
-            const linkId = `google-font-${fontName.replace(/\s+/g, '-').toLowerCase()}`;
-
+            const linkId = `gf-${config.typography.replace(/\s+/g, "-").toLowerCase()}`;
             if (!document.getElementById(linkId)) {
-                const link = document.createElement('link');
+                const link = document.createElement("link");
                 link.id = linkId;
-                link.rel = 'stylesheet';
-                link.href = `https://fonts.googleapis.com/css2?family=${fontName.replace(/\s+/g, '+')}:wght@300;400;500;600;700;800;900&display=swap`;
+                link.rel = "stylesheet";
+                link.href = `https://fonts.googleapis.com/css2?family=${config.typography.replace(/\s+/g, "+")}:wght@300;400;500;600;700;800;900&display=swap`;
                 document.head.appendChild(link);
             }
         }
     }, [config.primaryColor, config.secondaryColor, config.typography]);
 
-    // --- Lógica del Carrito ---
-    // 👇 Modificado para recibir "quantity" desde el Modal
-    const addToCart = (product: PublicCatalogProduct, quantity: number = 1) => {
+    // ── Lógica del Carrito ──
+    const addToCart = (product: PublicCatalogProduct, quantity = 1) => {
         const maxStock = Math.max(0, product.stockDisponibleUnits || 0);
-        if (maxStock <= 0) {
-            toast.error("Este producto no tiene stock disponible.");
-            return;
-        }
-
+        if (maxStock <= 0) { toast.error("Este producto no tiene stock disponible."); return; }
         setCart(prev => {
-            const existing = prev.find(item => item.id === product.id);
+            const existing = prev.find(i => i.id === product.id);
             if (existing) {
-                const nextQuantity = Math.min(existing.quantity + quantity, maxStock);
-                return prev.map(item => item.id === product.id ? {
-                    ...item,
-                    quantity: nextQuantity,
-                    pricingMode: isConsigne ? "consigne" : "default",
-                } : item);
+                return prev.map(i => i.id === product.id
+                    ? { ...i, quantity: Math.min(i.quantity + quantity, maxStock), pricingMode: isConsigne ? "consigne" : "default" }
+                    : i
+                );
             }
-            return [...prev, {
-                ...product,
-                quantity: Math.min(quantity, maxStock),
-                pricingMode: isConsigne ? "consigne" : "default",
-            }];
+            return [...prev, { ...product, quantity: Math.min(quantity, maxStock), pricingMode: isConsigne ? "consigne" : "default" }];
         });
-
-        toast.success(`${product.nombre} anadido al carrito`);
+        toast.success(`${product.nombre} agregado al carrito`);
     };
 
-    const removeFromCart = (id: number) => {
-        setCart(prev => prev.filter(item => item.id !== id));
-    };
+    const removeFromCart = (id: number) => setCart(prev => prev.filter(i => i.id !== id));
 
     const updateQuantity = (id: number, delta: number) => {
-        setCart(prev => prev.map(item => {
-            if (item.id === id) {
-                const newQty = Math.max(1, Math.min(item.stockDisponibleUnits, item.quantity + delta));
-                return { ...item, quantity: newQty };
-            }
-            return item;
+        setCart(prev => prev.map(i => {
+            if (i.id !== id) return i;
+            return { ...i, quantity: Math.max(1, Math.min(i.stockDisponibleUnits, i.quantity + delta)) };
         }));
     };
+
+    // Seteo directo desde el stepper de las cards (0 = eliminar)
+    const handleUpdateCartQuantity = React.useCallback((productId: number, newQty: number) => {
+        if (newQty <= 0) {
+            setCart(prev => prev.filter(i => i.id !== productId));
+            return;
+        }
+        const product = products.find(p => p.id === productId);
+        if (!product) return;
+        const max = Math.max(1, product.stockDisponibleUnits ?? 999);
+        setCart(prev => {
+            const existing = prev.find(i => i.id === productId);
+            if (existing) {
+                return prev.map(i =>
+                    i.id === productId ? { ...i, quantity: Math.min(newQty, max), pricingMode: isConsigne ? "consigne" : "default" } : i
+                );
+            }
+            // No está en el carrito → agregar
+            return [...prev, { ...product, quantity: Math.min(newQty, max), pricingMode: isConsigne ? "consigne" : "default" }];
+        });
+    }, [products, isConsigne]);
 
     const handleCheckout = async (clienteData: PublicCheckoutCustomerData, envioData: PublicCheckoutShippingData) => {
         setCheckoutLoading(true);
         try {
-            const targetUrl = typeof window !== "undefined"
-                ? window.location.href
-                : null;
-
             const whatsappUrl = buildCatalogCartWhatsappUrl({
-                config,
-                cart,
-                clienteData,
-                envioData,
-                tiendaUrl: targetUrl,
+                config, cart, clienteData, envioData,
+                tiendaUrl: typeof window !== "undefined" ? window.location.href : null,
             });
-
-            if (!whatsappUrl) {
-                toast.error("No hay un numero de WhatsApp configurado para esta tienda.");
-                return;
-            }
-
+            if (!whatsappUrl) { toast.error("No hay un número de WhatsApp configurado."); return; }
             window.open(whatsappUrl, "_blank", "noopener,noreferrer");
             setCart([]);
             setIsCartOpen(false);
-            setCheckoutFeedback({
-                kind: "success",
-                message: "Abrimos WhatsApp con tu pedido listo para enviar.",
-            });
+            setCheckoutFeedback({ kind: "success", message: "Abrimos WhatsApp con tu pedido listo para enviar." });
             toast.success("Pedido preparado para WhatsApp");
         } catch (err: unknown) {
             toast.error(err instanceof Error ? err.message : "Error al preparar el pedido");
@@ -338,236 +283,399 @@ export function CatalogClient({
         }
     };
 
+    // ── Polling de checkout ──
     React.useEffect(() => {
         if (!checkoutReturnStatus) return;
-
-        const targetSucursalId = getSucursalIdForCheckout();
-        const dedupeKey = `${checkoutReturnStatus}:${targetSucursalId}`;
-        if (handledReturnRef.current === dedupeKey) return;
-        handledReturnRef.current = dedupeKey;
-
-        const checkoutToken = readCheckoutToken(targetSucursalId);
-        if (!checkoutToken) return;
-
+        const targetId = getSucursalIdForCheckout();
+        const key = `${checkoutReturnStatus}:${targetId}`;
+        if (handledReturnRef.current === key) return;
+        handledReturnRef.current = key;
+        const token = readCheckoutToken(targetId);
+        if (!token) return;
         let cancelled = false;
-
-        const runStatusPolling = async () => {
-            setCheckoutFeedback({
-                kind: "polling",
-                message: "Estamos confirmando tu pago. Esto puede tardar unos segundos...",
-            });
-
-            const startTime = Date.now();
-            while (!cancelled && Date.now() - startTime < CHECKOUT_POLL_TIMEOUT_MS) {
+        const poll = async () => {
+            setCheckoutFeedback({ kind: "polling", message: "Confirmando tu pago..." });
+            const start = Date.now();
+            while (!cancelled && Date.now() - start < CHECKOUT_POLL_TIMEOUT_MS) {
                 try {
-                    const statusRes = await apiService.getPublicCheckoutStatus(checkoutToken);
-
-                    if (statusRes?.status === "PAID") {
-                        clearCheckoutToken();
-                        setCheckoutFeedback({
-                            kind: "success",
-                            message: "Pago confirmado. Tu compra fue procesada con exito.",
-                        });
-                        toast.success("Pago confirmado");
-                        return;
-                    }
-
-                    if (statusRes?.status === "FAILED") {
-                        clearCheckoutToken();
-                        setCheckoutFeedback({
-                            kind: "error",
-                            message: statusRes?.reason || "No se pudo confirmar el pago. Intenta nuevamente.",
-                        });
-                        toast.error("No se pudo confirmar el pago");
-                        return;
-                    }
-                } catch {
-                    // Seguimos reintentando hasta timeout para no cortar por errores transitorios.
-                }
-
-                await new Promise((resolve) => setTimeout(resolve, CHECKOUT_POLL_INTERVAL_MS));
+                    const res = await apiService.getPublicCheckoutStatus(token);
+                    if (res?.status === "PAID") { clearCheckoutToken(); setCheckoutFeedback({ kind: "success", message: "¡Pago confirmado!" }); return; }
+                    if (res?.status === "FAILED") { clearCheckoutToken(); setCheckoutFeedback({ kind: "error", message: res?.reason || "No se pudo confirmar el pago." }); return; }
+                } catch { /* retry */ }
+                await new Promise(r => setTimeout(r, CHECKOUT_POLL_INTERVAL_MS));
             }
-
-            if (!cancelled) {
-                setCheckoutFeedback({
-                    kind: "error",
-                    message: "La confirmacion esta demorando mas de lo esperado. Revisaremos el estado automaticamente.",
-                });
-                toast.message("Seguimos confirmando tu pago");
-            }
+            if (!cancelled) setCheckoutFeedback({ kind: "error", message: "La confirmación está demorando. Revisaremos el estado." });
         };
-
-        runStatusPolling();
-
-        return () => {
-            cancelled = true;
-        };
+        poll();
+        return () => { cancelled = true; };
     }, [checkoutReturnStatus, clearCheckoutToken, getSucursalIdForCheckout, readCheckoutToken]);
 
-    // --- Motor de Filtrado y Ordenamiento Avanzado (E-commerce Style) ---
+    // ── Motor de filtrado ──
     const filteredProducts = React.useMemo(() => {
         if (!products.length) return [];
-
-        const normalizedSearch = deferredSearchTerm.trim().toLowerCase();
-
+        const q = deferredSearchTerm.trim().toLowerCase();
         const result = products.filter((p) => {
-            const matchesSearch = p.nombre.toLowerCase().includes(normalizedSearch);
-
-            if (selectedSubcategory) {
-                return matchesSearch && p.subcategoriaId === selectedSubcategory;
-            }
-
-            const matchesCategory = !selectedCategory || p.categoriaId === selectedCategory;
-            return matchesSearch && matchesCategory;
+            const matchSearch = !q || p.nombre.toLowerCase().includes(q);
+            if (selectedSubcategory) return matchSearch && p.subcategoriaId === selectedSubcategory;
+            const matchCat = !selectedCategory || p.categoriaId === selectedCategory;
+            return matchSearch && matchCat;
         });
-
         result.sort((a, b) => {
-            const stockA = a.stockDisponibleUnits > 0 ? 1 : 0;
-            const stockB = b.stockDisponibleUnits > 0 ? 1 : 0;
-
-            // Prioridad 1: Productos con stock primero
-            if (stockA !== stockB) {
-                return stockB - stockA; // 1 (tiene) vs 0 (no tiene) -> -1 (a sube)
-            }
-
-            // Prioridad 2: Orden seleccionado por el usuario
-            switch (sortBy) {
-                case "price_asc":
-                    return Number(a.precioVenta) - Number(b.precioVenta);
-                case "price_desc":
-                    return Number(b.precioVenta) - Number(a.precioVenta);
-                case "name_asc":
-                    return a.nombre.localeCompare(b.nombre);
-                case "name_desc":
-                    return b.nombre.localeCompare(a.nombre);
-                default:
-                    return 0;
-            }
+            const sa = a.stockDisponibleUnits > 0 ? 1 : 0;
+            const sb = b.stockDisponibleUnits > 0 ? 1 : 0;
+            return sb - sa;
         });
-
         return result;
-    }, [products, deferredSearchTerm, selectedSubcategory, selectedCategory, sortBy]);
+    }, [products, deferredSearchTerm, selectedSubcategory, selectedCategory]);
 
-    // --- Render Loading/Error ---
+    // ── Secciones por categoría (vista "todas") ──
+    const productsByCategory = React.useMemo(() => {
+        if (!showCategories || categories.length === 0) return [];
+        return categories
+            .map((cat) => ({
+                category: cat,
+                products: filteredProducts.filter((p) => p.categoriaId === cat.id).slice(0, maxPerSection),
+                total: filteredProducts.filter((p) => p.categoriaId === cat.id).length,
+            }))
+            .filter((s) => s.products.length > 0);
+    }, [categories, filteredProducts, showCategories, maxPerSection]);
+
+    const uncategorizedProducts = React.useMemo(() => {
+        if (!showCategories || categories.length === 0) return filteredProducts.slice(0, maxPerSection * 2);
+        return filteredProducts
+            .filter((p) => !p.categoriaId || !categories.find((c) => c.id === p.categoriaId))
+            .slice(0, maxPerSection);
+    }, [filteredProducts, categories, showCategories, maxPerSection]);
+
+    // ── Determinar si hay filtro activo ──
+    const hasActiveFilter = Boolean(deferredSearchTerm.trim() || selectedCategory || !showCategories || categories.length === 0);
+
+    // ── Nombre del contexto actual (para el título de la sección) ──
+    const activeTitle = React.useMemo(() => {
+        if (deferredSearchTerm.trim()) return `Resultados para "${deferredSearchTerm}"`;
+        if (selectedSubcategory) {
+            const cat = categories.find((c) => c.id === selectedCategory);
+            const sub = cat?.subcategorias?.find((s) => s.id === selectedSubcategory);
+            return sub?.nombre ?? "Productos";
+        }
+        if (selectedCategory) return categories.find((c) => c.id === selectedCategory)?.nombre ?? "Productos";
+        return "Todos los productos";
+    }, [deferredSearchTerm, selectedCategory, selectedSubcategory, categories]);
+
+    // ── Consigne (mantener compatibilidad) ──
+    React.useEffect(() => {
+        if (config.mostrarPreciosConsignacion === false) setIsConsigne(false);
+    }, [config.mostrarPreciosConsignacion]);
+
+    // ── LOADING ──
     if (loading) {
         return (
-            <div suppressHydrationWarning className="min-h-screen flex flex-col items-center justify-center bg-[color:var(--store-canvas)] text-foreground p-6">
+            <div suppressHydrationWarning className="min-h-screen flex flex-col items-center justify-center bg-[var(--store-background,#F5F6F8)] p-6">
                 <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 2, ease: "linear" }}>
-                    <Loader2 className="h-10 w-10 text-foreground" />
+                    <Loader2 className="h-10 w-10 text-[var(--store-primary,#007AFF)]" />
                 </motion.div>
-                <p className="mt-4 text-muted-foreground animate-pulse font-medium">Cargando catálogo exclusivo...</p>
+                <p className="mt-4 text-[var(--store-muted,#8A8F98)] animate-pulse font-medium">Cargando catálogo...</p>
             </div>
         );
     }
 
+    // ── ERROR ──
     if (error) {
         return (
-            <div suppressHydrationWarning className="min-h-screen flex flex-col items-center justify-center bg-[color:var(--store-canvas)] p-6 text-center text-foreground">
-                <div className="bg-destructive/10 p-4 rounded-full mb-4">
-                    <XCircle className="h-12 w-12 text-destructive" />
-                </div>
-                <h1 className="text-2xl font-bold mb-2">Ops!</h1>
-                <p className="text-muted-foreground max-w-md">{error}</p>
-                <Button variant="outline" className="mt-6 border-border" onClick={() => window.location.reload()}>Reintentar</Button>
+            <div suppressHydrationWarning className="min-h-screen flex flex-col items-center justify-center bg-[var(--store-background,#F5F6F8)] p-6 text-center">
+                <div className="bg-red-50 p-4 rounded-full mb-4"><XCircle className="h-12 w-12 text-red-500" /></div>
+                <h1 className="text-2xl font-bold mb-2 text-[var(--store-text,#0F172A)]">¡Ups!</h1>
+                <p className="text-[var(--store-muted,#8A8F98)] max-w-md">{error}</p>
+                <Button variant="outline" className="mt-6" onClick={() => window.location.reload()}>Reintentar</Button>
             </div>
         );
     }
 
+    // ═══════════════════════════════════════════════════════════════
+    //  RENDER PRINCIPAL
+    // ═══════════════════════════════════════════════════════════════
     return (
         <div
             suppressHydrationWarning
-            className={cn(
-                "min-h-screen selection:bg-foreground selection:text-[color:var(--ui-fx-white)] transition-colors duration-500 store-theme-root",
-                pageBgClass
-            )}
-            style={{ fontFamily: config.typography ? `"${config.typography}", sans-serif` : undefined }}
+            className={cn("min-h-screen transition-colors duration-300 store-theme-root", pageBgClass)}
+            style={{
+                backgroundColor: "var(--store-background,#F5F6F8)",
+                fontFamily: config.typography ? `"${config.typography}", sans-serif` : undefined,
+            }}
         >
+            {/* ── Header (mobile + desktop sticky nav) ── */}
             <StoreHeader
                 config={config}
                 cartCount={cartCount}
                 onOpenCart={() => setIsCartOpen(true)}
+                searchTerm={searchTerm}
+                onSearchChange={setSearchTerm}
             />
 
-            <main className="container mx-auto px-3 sm:px-5 md:px-8 py-5 md:py-10 flex flex-col gap-5 sm:gap-8 min-h-[60vh]">
-                {checkoutFeedback ? (
-                    <div
-                        className={cn(
-                            "rounded-xl border px-4 py-3 text-sm flex items-center gap-3",
-                            checkoutFeedback.kind === "polling" && "border-sky-500/20 bg-sky-500/10 text-sky-900",
-                            checkoutFeedback.kind === "success" && "border-emerald-500/20 bg-emerald-500/10 text-emerald-900",
-                            checkoutFeedback.kind === "error" && "border-red-500/20 bg-red-500/10 text-red-900",
+            {/* ══════════════════════════════════════════════
+                CONTENEDOR PRINCIPAL
+                Mobile: columna simple
+                Desktop: max-w centrado + 2 cols (sidebar | content)
+            ══════════════════════════════════════════════ */}
+            <div className="max-w-screen-2xl mx-auto px-0 lg:px-6 xl:px-8">
+                <div className="flex gap-6 xl:gap-8 items-start">
+
+                    {/* ── SIDEBAR DE CATEGORÍAS (desktop only) ── */}
+                    {showCategories && categories.length > 0 && (
+                        <div className="hidden lg:block pt-6">
+                            <DesktopCategorySidebar
+                                categories={categories}
+                                allProducts={products}
+                                selectedCategory={selectedCategory}
+                                selectedSubcategory={selectedSubcategory}
+                                onSelectCategory={handleSelectCategory}
+                                onSelectSubcategory={handleSelectSubcategory}
+                                totalProducts={products.length}
+                            />
+                        </div>
+                    )}
+
+                    {/* ── ÁREA PRINCIPAL DE CONTENIDO ── */}
+                    <div className="flex-1 min-w-0 pb-24 lg:pb-10">
+
+                        {/* Feedback de checkout */}
+                        {checkoutFeedback && (
+                            <div className="px-4 pt-4 lg:pt-6">
+                                <div className={cn(
+                                    "rounded-2xl border px-4 py-3 text-sm flex items-center gap-3",
+                                    checkoutFeedback.kind === "polling" && "border-sky-200 bg-sky-50 text-sky-800",
+                                    checkoutFeedback.kind === "success" && "border-emerald-200 bg-emerald-50 text-emerald-800",
+                                    checkoutFeedback.kind === "error" && "border-red-200 bg-red-50 text-red-800",
+                                )}>
+                                    {checkoutFeedback.kind === "polling" && <Loader2 className="h-4 w-4 animate-spin flex-shrink-0" />}
+                                    {checkoutFeedback.kind === "success" && <CheckCircle2 className="h-4 w-4 flex-shrink-0" />}
+                                    {checkoutFeedback.kind === "error" && <XCircle className="h-4 w-4 flex-shrink-0" />}
+                                    <span>{checkoutFeedback.message}</span>
+                                </div>
+                            </div>
                         )}
-                    >
-                        {checkoutFeedback.kind === "polling" && <Loader2 className="h-4 w-4 animate-spin" />}
-                        {checkoutFeedback.kind === "success" && <CheckCircle2 className="h-4 w-4" />}
-                        {checkoutFeedback.kind === "error" && <XCircle className="h-4 w-4" />}
-                        <span>{checkoutFeedback.message}</span>
-                    </div>
-                ) : null}
 
-                <StoreBanner
-                    config={config}
-                    productsCount={products.length}
-                    categoriesCount={categories.length}
-                    onPrimaryAction={scrollToCatalog}
-                    onSecondaryAction={scrollToCatalog}
-                />
+                        {/* ── Buscador (mobile) ── */}
+                        <div className="px-4 pt-4 pb-2 lg:hidden">
+                            <SearchBar
+                                value={searchTerm}
+                                onChange={setSearchTerm}
+                                placeholder={ols?.storeName ? `Buscar en ${ols.storeName}...` : "Buscar productos..."}
+                            />
+                        </div>
 
-                <section ref={catalogSectionRef} className="flex flex-col gap-4 scroll-mt-40">
-                    <div>
-                        <h2 className="text-xl font-bold tracking-tight text-gray-900 sm:text-2xl">
-                            Catálogo
-                        </h2>
-                    </div>
+                        {/* ── CategoryTabs (MOBILE only — desktop tiene sidebar) ── */}
+                        {showCategories && categories.length > 0 && (
+                            <div className="lg:hidden">
+                                <CategoryTabs
+                                    categories={categories}
+                                    selectedCategory={selectedCategory}
+                                    onSelectCategory={handleSelectCategory}
+                                    className="mt-2"
+                                    allProducts={products}
+                                />
+                                {/* Subcategorías mobile: chips horizontales */}
+                                {selectedCategory !== null && (() => {
+                                    const cat = categories.find(c => c.id === selectedCategory);
+                                    const subs = cat?.subcategorias?.filter(s =>
+                                        products.some(p => p.subcategoriaId === s.id)
+                                    ) ?? [];
+                                    if (subs.length === 0) return null;
+                                    return (
+                                        <div className="flex overflow-x-auto gap-2 px-4 py-2.5 scrollbar-hide" style={{ scrollbarWidth: "none" }}>
+                                            <button
+                                                onClick={() => setSelectedSubcategory(null)}
+                                                className={cn(
+                                                    "flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all",
+                                                    selectedSubcategory === null
+                                                        ? "text-white border-transparent"
+                                                        : "text-[var(--store-muted,#8A8F98)] border-gray-200 bg-white"
+                                                )}
+                                                style={selectedSubcategory === null ? { backgroundColor: "var(--store-primary,#007AFF)" } : undefined}
+                                            >
+                                                Todo
+                                            </button>
+                                            {subs.map(sub => (
+                                                <button
+                                                    key={sub.id}
+                                                    onClick={() => setSelectedSubcategory(selectedSubcategory === sub.id ? null : sub.id)}
+                                                    className={cn(
+                                                        "flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all whitespace-nowrap",
+                                                        selectedSubcategory === sub.id
+                                                            ? "text-white border-transparent"
+                                                            : "text-[var(--store-muted,#8A8F98)] border-gray-200 bg-white"
+                                                    )}
+                                                    style={selectedSubcategory === sub.id ? { backgroundColor: "var(--store-primary,#007AFF)" } : undefined}
+                                                >
+                                                    {sub.nombre}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    );
+                                })()}
+                            </div>
+                        )}
 
-                <div className="flex flex-col lg:flex-row gap-6 lg:gap-8 items-start relative w-full">
-                        <StoreCategorySidebar
-                            config={config}
-                            categories={categories}
-                            categoryCounts={categoryCounts}
-                            selectedCategory={selectedCategory}
-                            setSelectedCategory={handleSelectCategory}
-                            selectedSubcategory={selectedSubcategory}
-                            setSelectedSubcategory={setSelectedSubcategory}
-                            totalProducts={products.length}
-                            allProducts={products}
-                        />
+                        {/* ── Promociones visuales ── */}
+                        {promoEnabled && promoItems.length > 0 && (
+                            <PromoCarousel items={promoItems} className="mt-4" />
+                        )}
 
-                    <div className="flex-1 flex flex-col gap-5 sm:gap-8 min-w-0 w-full">
-                        <StoreFilters
-                            config={config}
-                            products={products}
-                            visibleCount={filteredProducts.length}
-                            searchTerm={searchTerm}
-                            setSearchTerm={setSearchTerm}
-                            viewMode={viewMode}
-                            setViewMode={setViewMode}
-                            categories={categories}
-                            selectedCategory={selectedCategory}
-                            setSelectedCategory={handleSelectCategory}
-                            selectedSubcategory={selectedSubcategory}
-                            setSelectedSubcategory={setSelectedSubcategory}
-                            isConsigne={isConsigne}
-                            setIsConsigne={setIsConsigne}
-                            sortBy={sortBy}
-                            setSortBy={setSortBy}
-                        />
+                        {/* ── Breadcrumb desktop (contexto de filtro activo) ── */}
+                        {(selectedCategory || selectedSubcategory || deferredSearchTerm.trim()) && (
+                            <div className="hidden lg:flex items-center gap-2 px-0 pt-5 pb-1 text-sm text-[var(--store-muted,#8A8F98)]">
+                                <button
+                                    onClick={() => { handleSelectCategory(null); setSearchTerm(""); }}
+                                    className="hover:text-[var(--store-text,#0F172A)] transition-colors"
+                                >
+                                    Todos
+                                </button>
+                                {selectedCategory && (
+                                    <>
+                                        <span>/</span>
+                                        <button
+                                            onClick={() => handleSelectCategory(selectedCategory)}
+                                            className="hover:text-[var(--store-text,#0F172A)] transition-colors"
+                                        >
+                                            {categories.find(c => c.id === selectedCategory)?.nombre}
+                                        </button>
+                                    </>
+                                )}
+                                {selectedSubcategory && (() => {
+                                    const cat = categories.find(c => c.id === selectedCategory);
+                                    const sub = cat?.subcategorias?.find(s => s.id === selectedSubcategory);
+                                    return sub ? (
+                                        <>
+                                            <span>/</span>
+                                            <span className="text-[var(--store-text,#0F172A)] font-medium">{sub.nombre}</span>
+                                        </>
+                                    ) : null;
+                                })()}
+                                {deferredSearchTerm.trim() && (
+                                    <>
+                                        <span>/</span>
+                                        <span className="text-[var(--store-text,#0F172A)] font-medium">
+                                            &ldquo;{deferredSearchTerm}&rdquo;
+                                        </span>
+                                    </>
+                                )}
+                            </div>
+                        )}
 
-                        <ProductList
-                            products={filteredProducts}
-                            config={config}
-                            onViewProduct={(product) => setSelectedProduct(product)}
-                            viewMode={viewMode}
-                            isConsigne={isConsigne}
-                            onAddToCart={addToCart}
-                        />
+                        {/* ═══════════════════════════════════════════
+                            SECCIONES DE PRODUCTOS
+                        ═══════════════════════════════════════════ */}
+                        <div className="mt-4 space-y-8 lg:space-y-10 lg:pt-4">
+
+                            {/* Vista filtrada (búsqueda, categoría, subcategoría) */}
+                            {hasActiveFilter ? (
+                                <ProductSection
+                                    title={activeTitle}
+                                    count={filteredProducts.length}
+                                    products={filteredProducts}
+                                    config={config}
+                                    viewMode="grid"
+                                    isConsigne={isConsigne}
+                                    onAddToCart={addToCart}
+                                    onViewProduct={(p) => setSelectedProduct(p)}
+                                    onViewAll={selectedCategory !== null ? () => handleSelectCategory(null) : undefined}
+                                    forceGrid
+                                    cart={cart}
+                                    onUpdateCartQuantity={handleUpdateCartQuantity}
+                                />
+                            ) : (
+                                /* Vista "todas las categorías" */
+                                <>
+                                    {productsByCategory.map(({ category, products: catProducts, total }) => (
+                                        <ProductSection
+                                            key={category.id}
+                                            title={category.nombre}
+                                            count={total}
+                                            products={catProducts}
+                                            config={config}
+                                            viewMode="grid"
+                                            isConsigne={isConsigne}
+                                            onAddToCart={addToCart}
+                                            onViewProduct={(p) => setSelectedProduct(p)}
+                                            onViewAll={() => handleSelectCategory(category.id)}
+                                            forceGrid
+                                            cart={cart}
+                                            onUpdateCartQuantity={handleUpdateCartQuantity}
+                                        />
+                                    ))}
+
+                                    {uncategorizedProducts.length > 0 && (
+                                        <ProductSection
+                                            title="Otros productos"
+                                            count={uncategorizedProducts.length}
+                                            products={uncategorizedProducts}
+                                            config={config}
+                                            viewMode="grid"
+                                            isConsigne={isConsigne}
+                                            onAddToCart={addToCart}
+                                            onViewProduct={(p) => setSelectedProduct(p)}
+                                            forceGrid
+                                            cart={cart}
+                                            onUpdateCartQuantity={handleUpdateCartQuantity}
+                                        />
+                                    )}
+
+                                    {productsByCategory.length === 0 && uncategorizedProducts.length === 0 && products.length > 0 && (
+                                        <div className="px-4 py-16 text-center">
+                                            <p className="text-[var(--store-muted,#8A8F98)]">No hay productos disponibles en este momento.</p>
+                                        </div>
+                                    )}
+                                </>
+                            )}
+
+                            {/* Sin resultados de búsqueda */}
+                            {filteredProducts.length === 0 && deferredSearchTerm.trim() && (
+                                <div className="px-4 py-16 text-center">
+                                    <p className="text-xl font-bold text-[var(--store-text,#0F172A)] mb-2">Sin resultados</p>
+                                    <p className="text-[var(--store-muted,#8A8F98)] text-sm mb-4">
+                                        No encontramos productos para &ldquo;{deferredSearchTerm}&rdquo;
+                                    </p>
+                                    <button
+                                        onClick={() => setSearchTerm("")}
+                                        className="text-sm font-semibold text-[var(--store-primary,#007AFF)] hover:opacity-80 transition-opacity"
+                                    >
+                                        Limpiar búsqueda
+                                    </button>
+                                </div>
+                            )}
+                        </div>
                     </div>
                 </div>
-                </section>
-            </main>
 
-            <StoreFooter config={config} />
+            </div>
 
+            {/* Footer — full width, fuera del contenedor centrado */}
+            <div className="mt-12 lg:mt-16">
+                <StoreFooter config={config} />
+            </div>
+
+            {/* ── Botón flotante de carrito (mobile) ── */}
+            {cartEnabled && cartCount > 0 && !isCartOpen && (
+                <motion.div
+                    initial={{ scale: 0, opacity: 0, y: 20 }}
+                    animate={{ scale: 1, opacity: 1, y: 0 }}
+                    exit={{ scale: 0, opacity: 0, y: 20 }}
+                    className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 lg:hidden"
+                >
+                    <button
+                        onClick={() => setIsCartOpen(true)}
+                        className="flex items-center gap-3 px-6 py-3.5 rounded-full text-white font-bold shadow-2xl transition-all hover:scale-105 active:scale-95"
+                        style={{ backgroundColor: "var(--store-primary,#007AFF)" }}
+                    >
+                        <span className="bg-white/25 rounded-full w-6 h-6 flex items-center justify-center text-xs font-black">
+                            {cartCount}
+                        </span>
+                        <span>Ver pedido</span>
+                    </button>
+                </motion.div>
+            )}
+
+            {/* ── CartDrawer ── */}
             <CartDrawer
                 isOpen={isCartOpen}
                 onClose={() => setIsCartOpen(false)}
@@ -579,7 +687,7 @@ export function CatalogClient({
                 loading={checkoutLoading}
             />
 
-            {/* 👇 NUEVO: Componente del Modal para Ver Detalles */}
+            {/* ── Modal de producto ── */}
             <ProductModal
                 isOpen={!!selectedProduct}
                 product={selectedProduct}
@@ -591,4 +699,3 @@ export function CatalogClient({
         </div>
     );
 }
-

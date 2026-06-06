@@ -1,8 +1,16 @@
 import * as React from "react";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
 import { LayoutGrid, Rows3, Store, Search, Tag, Percent, ExternalLink, CheckCircle2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useSucursalStore } from "@/store/useSucursalStore";
@@ -72,6 +80,32 @@ function ListMockup({ active }: { active?: boolean }) {
 }
 
 /* ─── Main Component ─── */
+
+function ToggleRow({ icon, label, description, checked, onChange }: {
+    icon: React.ReactNode;
+    label: string;
+    description: string;
+    checked: boolean;
+    onChange: (checked: boolean) => void;
+}) {
+    return (
+        <div className="flex items-center justify-between px-5 py-3.5 group">
+            <div className="flex items-center gap-3">
+                <div className={cn(
+                    "h-8 w-8 rounded-lg flex items-center justify-center shrink-0 transition-all duration-200",
+                    checked ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground/40"
+                )}>
+                    {icon}
+                </div>
+                <div>
+                    <Label className={cn("text-sm font-bold cursor-pointer transition-colors", !checked && "text-muted-foreground")}>{label}</Label>
+                    <p className="text-[11px] text-muted-foreground/70">{description}</p>
+                </div>
+            </div>
+            <Switch checked={checked} onCheckedChange={onChange} />
+        </div>
+    );
+}
 
 type LayoutTabProps = {
     config: StoreLayoutConfig;
@@ -327,6 +361,78 @@ export function LayoutTab({ config, setConfig }: LayoutTabProps) {
                             onCheckedChange={(checked) => setConfig({ ...config, mostrarPreciosConsignacion: checked })}
                         />
                     </div>
+                </div>
+            </section>
+
+            {/* ── CATÁLOGO AVANZADO ── */}
+            <section className="rounded-2xl border overflow-hidden transition-all duration-300 border-border bg-background">
+                <div className="px-5 py-3 border-b border-border/50 flex items-center gap-2">
+                    <Tag className="h-3.5 w-3.5 text-primary" />
+                    <h3 className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Catálogo</h3>
+                </div>
+                <div className="divide-y divide-border/40">
+                    <ToggleRow icon={<Search className="h-4 w-4" />} label="Mostrar imágenes" description="Fotos de productos en las cards" checked={config.showProductImages} onChange={(v) => setConfig({ ...config, showProductImages: v })} />
+                    <ToggleRow icon={<Tag className="h-4 w-4" />} label="Mostrar precios" description="Precio visible en cada producto" checked={config.showPrices} onChange={(v) => setConfig({ ...config, showPrices: v })} />
+                    <ToggleRow icon={<Tag className="h-4 w-4" />} label="Mostrar stock" description="Cantidad disponible" checked={config.showStock} onChange={(v) => setConfig({ ...config, showStock: v })} />
+                    <ToggleRow icon={<ExternalLink className="h-4 w-4" />} label='Botón "Ver todo"' description="Link para ver todos los productos de una categoría" checked={config.showViewAll} onChange={(v) => setConfig({ ...config, showViewAll: v })} />
+                    <div className="px-5 py-3.5 flex items-center justify-between">
+                        <Label className="text-sm font-bold">Máximo por sección</Label>
+                        <Input type="number" min={1} max={50} value={config.maxProductsPerSection} onChange={(e) => setConfig({ ...config, maxProductsPerSection: Number(e.target.value) })} className="w-20 h-8 text-center text-sm" />
+                    </div>
+                    <div className="px-5 py-3.5 flex items-center justify-between">
+                        <Label className="text-sm font-bold">Posición botón agregar</Label>
+                        <Select value={config.addButtonPosition} onValueChange={(v) => setConfig({ ...config, addButtonPosition: v as any })}>
+                            <SelectTrigger className="w-44 h-8 text-xs"><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="floating">Flotante sobre imagen</SelectItem>
+                                <SelectItem value="below">Debajo del producto</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
+                </div>
+            </section>
+
+            {/* ── CARRITO ── */}
+            <section className="rounded-2xl border overflow-hidden transition-all duration-300 border-border bg-background">
+                <div className="px-5 py-3 border-b border-border/50 flex items-center gap-2">
+                    <Tag className="h-3.5 w-3.5 text-primary" />
+                    <h3 className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Carrito y WhatsApp</h3>
+                </div>
+                <div className="divide-y divide-border/40">
+                    <div className="px-5 py-3.5 flex items-center justify-between">
+                        <Label className="text-sm font-bold">Tipo de carrito</Label>
+                        <Select value={config.cartDisplayMode} onValueChange={(v) => setConfig({ ...config, cartDisplayMode: v as any })}>
+                            <SelectTrigger className="w-44 h-8 text-xs"><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="bottom-sheet">Bottom sheet</SelectItem>
+                                <SelectItem value="modal">Modal centrado</SelectItem>
+                                <SelectItem value="drawer">Drawer lateral</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
+                    <ToggleRow icon={<ExternalLink className="h-4 w-4" />} label="Preview WhatsApp" description="Mostrar simulación del mensaje en el carrito" checked={config.showWhatsappPreview} onChange={(v) => setConfig({ ...config, showWhatsappPreview: v })} />
+                    <div className="px-5 py-3.5 flex flex-col gap-2">
+                        <Label className="text-sm font-bold">Texto botón WhatsApp</Label>
+                        <Input value={config.whatsappButtonText} onChange={(e) => setConfig({ ...config, whatsappButtonText: e.target.value })} className="h-8 text-sm" />
+                    </div>
+                </div>
+            </section>
+
+            {/* ── RESPONSIVE ── */}
+            <section className="rounded-2xl border overflow-hidden transition-all duration-300 border-border bg-background">
+                <div className="px-5 py-3 border-b border-border/50 flex items-center gap-2">
+                    <Tag className="h-3.5 w-3.5 text-primary" />
+                    <h3 className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Vista Desktop</h3>
+                </div>
+                <div className="px-5 py-3.5">
+                    <Select value={config.desktopLayout} onValueChange={(v) => setConfig({ ...config, desktopLayout: v as any })}>
+                        <SelectTrigger className="w-full h-9 text-sm"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="mobile-centered">Contenido centrado (tipo app)</SelectItem>
+                            <SelectItem value="wide-ecommerce">Layout ancho (ecommerce)</SelectItem>
+                            <SelectItem value="with-cart-sidebar">Catálogo + carrito lateral</SelectItem>
+                        </SelectContent>
+                    </Select>
                 </div>
             </section>
         </div>

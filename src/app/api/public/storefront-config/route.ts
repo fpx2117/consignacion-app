@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { onlineStoreSettingsSchema } from "@/lib/validators/settings";
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -36,7 +37,7 @@ export async function GET(req: NextRequest) {
       }),
       prisma.storeSettings.findUnique({
         where: { sucursalId },
-        select: { themeConfig: true },
+        select: { themeConfig: true, onlineStoreConfig: true },
       }),
     ]);
 
@@ -47,6 +48,10 @@ export async function GET(req: NextRequest) {
     const logoBase64 = branding?.logoData
       ? Buffer.from(branding.logoData).toString("base64")
       : null;
+
+    const onlineStoreConfig = storeSettings?.onlineStoreConfig
+      ? storeSettings.onlineStoreConfig
+      : onlineStoreSettingsSchema.parse({});
 
     return NextResponse.json({
       businessName: branding?.businessName ?? null,
@@ -67,6 +72,7 @@ export async function GET(req: NextRequest) {
       instagramUrl: branding?.instagramUrl ?? null,
       isBannerSlider: branding?.isBannerSlider ?? false,
       storeSettings: storeSettings ?? null,
+      onlineStoreConfig,
     }, {
       headers: {
         "Cache-Control": "public, s-maxage=60, stale-while-revalidate=300",

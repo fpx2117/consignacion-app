@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth, requireRole } from "@/lib/auth/require-auth";
-import { storeThemeConfigSchema } from "@/lib/validators/settings";
+import { storeThemeConfigSchema, onlineStoreSettingsSchema } from "@/lib/validators/settings";
 
 export async function GET(req: Request) {
   try {
@@ -30,6 +30,7 @@ export async function GET(req: Request) {
         data: {
           id: null,
           themeConfig: storeThemeConfigSchema.parse({}),
+          onlineStoreConfig: onlineStoreSettingsSchema.parse({}),
         },
       });
     }
@@ -38,6 +39,7 @@ export async function GET(req: Request) {
       data: {
         id: settings.id,
         themeConfig: settings.themeConfig,
+        onlineStoreConfig: settings.onlineStoreConfig ?? onlineStoreSettingsSchema.parse({}),
       },
     });
   } catch (error) {
@@ -58,26 +60,32 @@ export async function PATCH(req: Request) {
 
   try {
     const body = await req.json();
-    const { themeConfig } = body;
+    const { themeConfig, onlineStoreConfig } = body;
 
-    if (!themeConfig) {
+    if (!themeConfig && !onlineStoreConfig) {
       return NextResponse.json(
         { error: "Faltan datos de configuración" },
         { status: 400 }
       );
     }
 
-    // Validar el payload con Zod
-    const parsedThemeConfig = storeThemeConfigSchema.parse(themeConfig);
+    const updateData: Record<string, unknown> = {};
+
+    if (themeConfig) {
+      updateData.themeConfig = storeThemeConfigSchema.parse(themeConfig);
+    }
+
+    if (onlineStoreConfig) {
+      updateData.onlineStoreConfig = onlineStoreSettingsSchema.parse(onlineStoreConfig);
+    }
 
     const updatedSettings = await prisma.storeSettings.upsert({
       where: { sucursalId: auth.activeSucursalId },
-      update: {
-        themeConfig: parsedThemeConfig,
-      },
+      update: updateData,
       create: {
         sucursalId: auth.activeSucursalId,
-        themeConfig: parsedThemeConfig,
+        themeConfig: storeThemeConfigSchema.parse(themeConfig || {}),
+        onlineStoreConfig: onlineStoreConfig ? onlineStoreSettingsSchema.parse(onlineStoreConfig) : undefined,
       },
     });
 

@@ -5,10 +5,17 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
     Image as ImageIcon, Palette, Trash2, FileText, Type, Check,
-    ChevronsUpDown, Upload, Camera, MapPin, Phone, Store, X
+    ChevronsUpDown, Upload, Camera, MapPin, Phone, Store, X, Layout
 } from "lucide-react";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import type { BrandingPreviewSettings } from "./types";
 
@@ -524,6 +531,119 @@ export function BrandingTab({ branding, setBranding, handleImageUpload }: Brandi
                                 placeholder="© 2026 Mi Marca. Todos los derechos reservados."
                                 className="h-10 rounded-lg border-border/60 text-sm"
                             />
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            {/* ── INFORMACIÓN DEL COMERCIO ────────────────────── */}
+            <section className="border border-border/50 rounded-xl overflow-hidden">
+                <div className="px-4 sm:px-6 py-4 border-b border-border/30">
+                    <div className="flex items-center gap-2.5">
+                        <Store className="h-4 w-4 text-muted-foreground" />
+                        <h3 className="text-sm font-semibold tracking-tight">Información del Comercio</h3>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-0.5 ml-[26px]">Visible en el header de la tienda online</p>
+                </div>
+                <div className="p-4 sm:p-6 space-y-5">
+                    <div className="space-y-1.5">
+                        <Label className="text-xs font-medium text-muted-foreground">Horarios de atención</Label>
+                        <Input
+                            value={(branding as any).openingHours || ""}
+                            onChange={(e) => setBranding({ ...branding, openingHours: e.target.value } as any)}
+                            placeholder="Lun a Vie 9-18hs / Sáb 9-13hs"
+                            className="h-10 rounded-lg border-border/60 text-sm"
+                        />
+                    </div>
+                    <div className="space-y-1.5">
+                        <Label className="text-xs font-medium text-muted-foreground">Dirección / Zona de entrega</Label>
+                        <Input
+                            value={(branding as any).addressText || ""}
+                            onChange={(e) => setBranding({ ...branding, addressText: e.target.value } as any)}
+                            placeholder="Palermo, CABA"
+                            className="h-10 rounded-lg border-border/60 text-sm"
+                        />
+                    </div>
+                    <div className="space-y-1.5">
+                        <Label className="text-xs font-medium text-muted-foreground">Descripción corta</Label>
+                        <Input
+                            value={(branding as any).description || ""}
+                            onChange={(e) => setBranding({ ...branding, description: e.target.value } as any)}
+                            placeholder="Breve descripción de tu comercio"
+                            className="h-10 rounded-lg border-border/60 text-sm"
+                        />
+                    </div>
+                </div>
+            </section>
+
+            {/* ── APARIENCIA VISUAL ──────────────────────────────── */}
+            <section className="border border-border/50 rounded-xl overflow-hidden">
+                <div className="px-4 sm:px-6 py-4 border-b border-border/30">
+                    <div className="flex items-center gap-2.5">
+                        <Layout className="h-4 w-4 text-muted-foreground" />
+                        <h3 className="text-sm font-semibold tracking-tight">Apariencia Visual</h3>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-0.5 ml-[26px]">Radio de bordes, sombras y estilos</p>
+                </div>
+                <div className="p-4 sm:p-6 space-y-5">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                        <div className="space-y-1.5">
+                            <Label className="text-xs font-medium text-muted-foreground">Modo visual</Label>
+                            <Select value={(branding as any).mode || "light"} onValueChange={(v) => setBranding({ ...branding, mode: v } as any)}>
+                                <SelectTrigger className="h-10 rounded-lg border-border/60 text-sm"><SelectValue /></SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="light">Claro</SelectItem>
+                                    <SelectItem value="dark">Oscuro</SelectItem>
+                                    <SelectItem value="system">Automático</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <div className="space-y-1.5">
+                            <Label className="text-xs font-medium text-muted-foreground">Radio de bordes</Label>
+                            <Select value={(branding as any).borderRadius || "2xl"} onValueChange={(v) => setBranding({ ...branding, borderRadius: v } as any)}>
+                                <SelectTrigger className="h-10 rounded-lg border-border/60 text-sm"><SelectValue /></SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="sm">Pequeño</SelectItem>
+                                    <SelectItem value="md">Medio</SelectItem>
+                                    <SelectItem value="lg">Grande</SelectItem>
+                                    <SelectItem value="xl">Extra grande</SelectItem>
+                                    <SelectItem value="2xl">2XL</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <div className="space-y-1.5">
+                            <Label className="text-xs font-medium text-muted-foreground">Intensidad sombras</Label>
+                            <Select value={(branding as any).shadow || "soft"} onValueChange={(v) => setBranding({ ...branding, shadow: v } as any)}>
+                                <SelectTrigger className="h-10 rounded-lg border-border/60 text-sm"><SelectValue /></SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="none">Sin sombra</SelectItem>
+                                    <SelectItem value="soft">Suave</SelectItem>
+                                    <SelectItem value="medium">Media</SelectItem>
+                                    <SelectItem value="strong">Fuerte</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <div className="space-y-1.5">
+                            <Label className="text-xs font-medium text-muted-foreground">Estilo de cards</Label>
+                            <Select value={(branding as any).cardStyle || "minimal"} onValueChange={(v) => setBranding({ ...branding, cardStyle: v } as any)}>
+                                <SelectTrigger className="h-10 rounded-lg border-border/60 text-sm"><SelectValue /></SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="minimal">Minimalista</SelectItem>
+                                    <SelectItem value="elevated">Elevada</SelectItem>
+                                    <SelectItem value="bordered">Bordeada</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <div className="space-y-1.5">
+                            <Label className="text-xs font-medium text-muted-foreground">Estilo de botones</Label>
+                            <Select value={(branding as any).buttonStyle || "pill"} onValueChange={(v) => setBranding({ ...branding, buttonStyle: v } as any)}>
+                                <SelectTrigger className="h-10 rounded-lg border-border/60 text-sm"><SelectValue /></SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="rounded">Redondeado</SelectItem>
+                                    <SelectItem value="pill">Pill</SelectItem>
+                                    <SelectItem value="soft-square">Cuadrado suave</SelectItem>
+                                </SelectContent>
+                            </Select>
                         </div>
                     </div>
                 </div>
