@@ -36,7 +36,7 @@ export function StoreFooter({ config }: { config: PublicCatalogConfig }) {
                     <div className="space-y-3">
                         <div className="flex items-center gap-3">
                             {logoSrc ? (
-                                <Image src={logoSrc} alt="Logo" width={36} height={36} unoptimized className="h-8 w-8 rounded-lg object-contain" />
+                                <Image src={logoSrc} alt="Logo" width={36} height={36} className="h-8 w-8 rounded-lg object-contain" />
                             ) : (
                                 <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gray-900 text-white">
                                     <Store className="h-4 w-4" />

@@ -123,37 +123,43 @@ const CATEGORIES: Array<{
   },
 ];
 
-const DEFAULT_BRANDING: BrandingSettings = {
-  businessName: "",
-  primaryColor: "var(--theme-modern-primary)",
-  secondaryColor: "var(--theme-modern-secondary)",
-  footerText: "",
-  phone: "",
-  address: "",
-  instagramUrl: "",
-  tiktokUrl: "",
-  facebookUrl: "",
-  youtubeUrl: "",
-  whatsappNumber: "",
-  googleMapsUrl: "",
-  themeIdentifier: "modern",
-  logoData: null,
-  logoMime: null,
-  bannerData: null,
-  bannerMime: null,
-  typography: "Inter",
-  isBannerSlider: false,
-  banners: [],
-  storefrontContent: createDefaultStorefrontContent(),
-  openingHours: "",
-  addressText: "",
-  description: "",
-  mode: "light",
-  borderRadius: "2xl",
-  shadow: "soft",
-  cardStyle: "minimal",
-  buttonStyle: "pill",
-};
+  // ── Defaults con todos los campos OLS ──
+  const DEFAULT_BRANDING: BrandingSettings = {
+    businessName: "",
+    primaryColor: "#007AFF",
+    secondaryColor: "#EAF3FF",
+    footerText: "",
+    phone: "",
+    address: "",
+    instagramUrl: "",
+    tiktokUrl: "",
+    facebookUrl: "",
+    youtubeUrl: "",
+    whatsappNumber: "",
+    googleMapsUrl: "",
+    themeIdentifier: "modern",
+    logoData: null,
+    logoMime: null,
+    bannerData: null,
+    bannerMime: null,
+    typography: "Inter",
+    isBannerSlider: false,
+    banners: [],
+    storefrontContent: createDefaultStorefrontContent(),
+    openingHours: "",
+    addressText: "",
+    description: "",
+    mode: "light",
+    borderRadius: "2xl",
+    shadow: "soft",
+    cardStyle: "minimal",
+    buttonStyle: "pill",
+    backgroundColor: "#F5F6F8",
+    surfaceColor: "#FFFFFF",
+    textColor: "#0F172A",
+    mutedTextColor: "#8A8F98",
+    whatsappColor: "#25D366",
+  };
 
 const DEFAULT_CONFIG: StoreConfig = {
   tiendaLayout: "grid",
@@ -221,18 +227,68 @@ export default function TiendaSettingsPage() {
         apiService.getCategorias(),
       ]);
 
+      // Cargar onlineStoreConfig guardado desde StoreSettings
+      let savedOls: Record<string, unknown> | null = null;
+      try {
+        const olsRes = await fetch("/api/settings");
+        if (olsRes.ok) {
+          const olsJson = await olsRes.json();
+          savedOls = olsJson?.data?.onlineStoreConfig ?? null;
+        }
+      } catch { /* si falla, usamos defaults */ }
+
+      // ── Poblar branding con datos de Branding + OLS ──
       if (brandingRes) {
+        const b = brandingRes as Record<string, unknown>;
+        const olsTheme = (savedOls?.theme ?? {}) as Record<string, unknown>;
+        const ols = savedOls ?? {};
         setBranding((prev) => ({
           ...prev,
           ...(brandingRes as Partial<BrandingSettings>),
-          storefrontContent: brandingRes?.storefrontContent
-            ? brandingRes.storefrontContent
-            : prev.storefrontContent,
+          storefrontContent: (b.storefrontContent as BrandingSettings["storefrontContent"]) ?? prev.storefrontContent,
+          // Sincronizar desde OLS si existe (prioridad sobre branding viejo)
+          businessName: (ols.storeName as string) || (b.businessName as string) || prev.businessName,
+          openingHours: (ols.openingHours as string) || (b.openingHours as string) || prev.openingHours || "",
+          addressText: (ols.addressText as string) || (b.addressText as string) || prev.addressText || "",
+          description: (ols.description as string) || (b.description as string) || prev.description || "",
+          primaryColor: (olsTheme.primaryColor as string) || (b.primaryColor as string) || prev.primaryColor || "#007AFF",
+          secondaryColor: (olsTheme.secondaryColor as string) || (b.secondaryColor as string) || prev.secondaryColor || "#EAF3FF",
+          backgroundColor: (olsTheme.backgroundColor as string) || prev.backgroundColor || "#F5F6F8",
+          surfaceColor: (olsTheme.surfaceColor as string) || prev.surfaceColor || "#FFFFFF",
+          textColor: (olsTheme.textColor as string) || prev.textColor || "#0F172A",
+          mutedTextColor: (olsTheme.mutedTextColor as string) || prev.mutedTextColor || "#8A8F98",
+          whatsappColor: (olsTheme.whatsappColor as string) || prev.whatsappColor || "#25D366",
+          mode: (olsTheme.mode as BrandingSettings["mode"]) || prev.mode,
+          borderRadius: (olsTheme.borderRadius as BrandingSettings["borderRadius"]) || prev.borderRadius,
+          shadow: (olsTheme.shadow as BrandingSettings["shadow"]) || prev.shadow,
+          cardStyle: (olsTheme.cardStyle as BrandingSettings["cardStyle"]) || prev.cardStyle,
+          buttonStyle: (olsTheme.buttonStyle as BrandingSettings["buttonStyle"]) || prev.buttonStyle,
         }));
       }
 
+      // ── Poblar config con datos de Configuracion + OLS ──
       if (configRes) {
-        setConfig((prev) => ({ ...prev, ...(configRes as Partial<StoreConfig>) }));
+        const olsCatalog = (savedOls?.catalog || {}) as Record<string, unknown>;
+        const olsCart = (savedOls?.cart || {}) as Record<string, unknown>;
+        const olsResponsive = (savedOls?.responsive || {}) as Record<string, unknown>;
+        setConfig((prev) => ({
+          ...prev,
+          ...(configRes as Partial<StoreConfig>),
+          // Sincronizar desde OLS (prioridad sobre config vieja)
+          showProductImages: (olsCatalog.showProductImages as boolean | undefined) ?? (configRes as Record<string, unknown>).showProductImages as boolean ?? prev.showProductImages,
+          showPrices: (olsCatalog.showPrices as boolean | undefined) ?? (configRes as Record<string, unknown>).showPrices as boolean ?? prev.showPrices,
+          showStock: (olsCatalog.showStock as boolean | undefined) ?? (configRes as Record<string, unknown>).showStock as boolean ?? prev.showStock,
+          showViewAll: (olsCatalog.showViewAll as boolean | undefined) ?? (configRes as Record<string, unknown>).showViewAll as boolean ?? prev.showViewAll,
+          productLayout: ((olsCatalog.productLayout as StoreConfig["productLayout"]) ?? (configRes as Record<string, unknown>).productLayout as StoreConfig["productLayout"] ?? prev.productLayout),
+          maxProductsPerSection: (olsCatalog.maxProductsPerSection as number | undefined) ?? (configRes as Record<string, unknown>).maxProductsPerSection as number ?? prev.maxProductsPerSection,
+          addButtonPosition: ((olsCatalog.addButtonPosition as StoreConfig["addButtonPosition"]) ?? (configRes as Record<string, unknown>).addButtonPosition as StoreConfig["addButtonPosition"] ?? prev.addButtonPosition),
+          cartDisplayMode: ((olsCart.displayMode as StoreConfig["cartDisplayMode"]) ?? (configRes as Record<string, unknown>).cartDisplayMode as StoreConfig["cartDisplayMode"] ?? prev.cartDisplayMode),
+          showWhatsappPreview: (olsCart.showWhatsappPreview as boolean | undefined) ?? (configRes as Record<string, unknown>).showWhatsappPreview as boolean ?? prev.showWhatsappPreview,
+          whatsappButtonText: (olsCart.whatsappButtonText as string | undefined) ?? (configRes as Record<string, unknown>).whatsappButtonText as string ?? prev.whatsappButtonText,
+          desktopLayout: ((olsResponsive.desktopLayout as StoreConfig["desktopLayout"]) ?? (configRes as Record<string, unknown>).desktopLayout as StoreConfig["desktopLayout"] ?? prev.desktopLayout),
+          // Sincronizar showCategories con mostrarCategoriasEnHeader
+          mostrarCategoriasEnHeader: (olsCatalog.showCategories as boolean) ?? (configRes as any).mostrarCategoriasEnHeader ?? prev.mostrarCategoriasEnHeader,
+        }));
       }
 
       setCategoriesPreview(Array.isArray(categoriasRes) ? categoriasRes : []);
@@ -286,11 +342,11 @@ export default function TiendaSettingsPage() {
         theme: {
           primaryColor: branding.primaryColor || "#007AFF",
           secondaryColor: branding.secondaryColor || "#EAF3FF",
-          backgroundColor: "#F5F6F8",
-          surfaceColor: "#FFFFFF",
-          textColor: "#0F172A",
-          mutedTextColor: "#8A8F98",
-          whatsappColor: "#25D366",
+          backgroundColor: (branding as any).backgroundColor || "#F5F6F8",
+          surfaceColor: (branding as any).surfaceColor || "#FFFFFF",
+          textColor: (branding as any).textColor || "#0F172A",
+          mutedTextColor: (branding as any).mutedTextColor || "#8A8F98",
+          whatsappColor: (branding as any).whatsappColor || "#25D366",
           mode: (branding as any).mode || "light",
           borderRadius: (branding as any).borderRadius || "2xl",
           shadow: (branding as any).shadow || "soft",

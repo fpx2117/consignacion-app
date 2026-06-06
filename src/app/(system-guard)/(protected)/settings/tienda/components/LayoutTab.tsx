@@ -380,6 +380,17 @@ export function LayoutTab({ config, setConfig }: LayoutTabProps) {
                         <Input type="number" min={1} max={50} value={config.maxProductsPerSection} onChange={(e) => setConfig({ ...config, maxProductsPerSection: Number(e.target.value) })} className="w-20 h-8 text-center text-sm" />
                     </div>
                     <div className="px-5 py-3.5 flex items-center justify-between">
+                        <Label className="text-sm font-bold">Layout de productos</Label>
+                        <Select value={config.productLayout} onValueChange={(v) => setConfig({ ...config, productLayout: v as any })}>
+                            <SelectTrigger className="w-44 h-8 text-xs"><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="grid">Grilla 2 columnas</SelectItem>
+                                <SelectItem value="horizontal">Carrusel horizontal</SelectItem>
+                                <SelectItem value="compact">Listado compacto</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
+                    <div className="px-5 py-3.5 flex items-center justify-between">
                         <Label className="text-sm font-bold">Posición botón agregar</Label>
                         <Select value={config.addButtonPosition} onValueChange={(v) => setConfig({ ...config, addButtonPosition: v as any })}>
                             <SelectTrigger className="w-44 h-8 text-xs"><SelectValue /></SelectTrigger>

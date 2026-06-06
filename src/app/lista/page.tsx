@@ -36,8 +36,6 @@ export default async function ListaPage() {
         primaryColor: true,
         secondaryColor: true,
         themeIdentifier: true,
-        bannerData: true,
-        bannerMime: true,
         logoData: true,
         logoMime: true,
       },
@@ -112,6 +110,9 @@ export default async function ListaPage() {
         href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap"
         rel="stylesheet"
       />
+      {/* Preload de imágenes del comercio para carga instantánea */}
+      <link rel="preload" as="image" href="/api/public/branding-media?type=banner&sucursalId=1" />
+      <link rel="preload" as="image" href="/api/public/branding-media?type=logo&sucursalId=1" />
       <style dangerouslySetInnerHTML={{ __html: cssVars }} />
       <div data-theme={themeId} data-theme-custom={hasCustomColors ? "true" : undefined} data-store-config="true">
         <CatalogClient
