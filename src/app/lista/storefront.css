@@ -6,7 +6,7 @@
   --store-primary: #007AFF;
   --store-primary-rgb: 0, 122, 255;
   --store-secondary: #EAF3FF;
-  --store-background: #F5F6F8;
+  --store-background: #FFFFFF;
   --store-surface: #FFFFFF;
   --store-surface-rgb: 255, 255, 255;
   --store-text: #0F172A;
@@ -96,7 +96,7 @@
   --store-primary: var(--store-primary-override, #007AFF);
   --store-primary-rgb: var(--store-primary-rgb-override, 0, 122, 255);
   --store-secondary: var(--store-secondary-override, #EAF3FF);
-  --store-background: var(--store-background-override, #F5F6F8);
+  --store-background: #FFFFFF;
   --store-surface: var(--store-surface-override, #FFFFFF);
   --store-surface-rgb: var(--store-surface-rgb-override, 255, 255, 255);
   --store-text: var(--store-text-override, #0F172A);

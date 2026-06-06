@@ -63,7 +63,7 @@ export default async function ListaPage() {
   const olsTheme = (ols?.theme || {}) as Record<string, string | undefined>;
   const storePrimary = olsTheme.primaryColor || "#007AFF";
   const storeSecondary = olsTheme.secondaryColor || "#EAF3FF";
-  const storeBg = olsTheme.backgroundColor || "#F5F6F8";
+  const storeBg = "#FFFFFF";
   const storeSurface = olsTheme.surfaceColor || "#FFFFFF";
   const storeText = olsTheme.textColor || "#0F172A";
   const storeMuted = olsTheme.mutedTextColor || "#8A8F98";
