@@ -385,8 +385,14 @@ export default function TiendaSettingsPage() {
         },
       };
 
+      // Limpiar campos binarios pesados (logo/banner) — ya están en DB, no hace falta reenviarlos
+      const cleanBranding = { ...branding } as Record<string, unknown>;
+      delete cleanBranding.logoData;
+      delete cleanBranding.bannerData;
+      delete cleanBranding.banners;
+
       await Promise.all([
-        apiService.actualizarBranding(branding),
+        apiService.actualizarBranding(cleanBranding as any),
         apiService.actualizarConfiguracionGeneral({
           tiendaLayout: config.tiendaLayout,
           mostrarCategoriasEnHeader: config.mostrarCategoriasEnHeader,
