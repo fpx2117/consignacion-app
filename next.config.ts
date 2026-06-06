@@ -54,13 +54,13 @@ const nextConfig: NextConfig = {
           },
         ],
       },
-      // ✅ Cache moderado para archivos de la API de imágenes
+      // ✅ Cache agresivo para archivos de producto (URL inmutable, nunca cambia)
       {
         source: "/api/files/(.*)",
         headers: [
           {
             key: "Cache-Control",
-            value: "public, max-age=3600, stale-while-revalidate=86400",
+            value: "public, max-age=31536000, immutable",
           },
         ],
       },
