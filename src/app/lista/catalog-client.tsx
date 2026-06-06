@@ -28,6 +28,7 @@ import { ProductSection } from "./components/product-section";
 import { SearchBar } from "./components/search-bar";
 import { StoreFooter } from "./components/store-footer";
 import { DesktopCategorySidebar } from "./components/desktop-category-sidebar";
+import { ProductCard } from "./components/product-card";
 
 const CartDrawer = dynamic(
   () => import("./components/cart-drawer").then((m) => m.CartDrawer),
@@ -525,21 +526,56 @@ export function CatalogClient({
                             if (featuredIds.length === 0) return null;
                             const featured = products.filter(p => featuredIds.includes(p.id));
                             if (featured.length === 0) return null;
+                            const useSlider = featured.length > 4;
                             return (
                                 <div className="mt-4">
-                                    <ProductSection
-                                        title="⭐ Destacados"
-                                        count={featured.length}
-                                        products={featured}
-                                        config={config}
-                                        viewMode="grid"
-                                        isConsigne={isConsigne}
-                                        onAddToCart={addToCart}
-                                        onViewProduct={(p) => setSelectedProduct(p)}
-                                        forceGrid
-                                        cart={cart}
-                                        onUpdateCartQuantity={handleUpdateCartQuantity}
-                                    />
+                                    {/* Encabezado */}
+                                    <div className="flex items-center justify-between px-4 mb-3">
+                                        <div className="flex items-baseline gap-2">
+                                            <h3 className="text-lg font-bold text-[var(--store-text,#0F172A)]">⭐ Destacados</h3>
+                                            <span className="text-sm text-[var(--store-muted,#8A8F98)]">{featured.length}</span>
+                                        </div>
+                                    </div>
+                                    {/* Slider horizontal (más de 4) */}
+                                    {useSlider ? (
+                                        <div className="flex overflow-x-auto gap-3 px-4 snap-x snap-mandatory pb-2"
+                                            style={{ scrollbarWidth: "none" }}>
+                                            {featured.map((product, index) => (
+                                                <div key={product.id} className="min-w-[160px] max-w-[180px] snap-start">
+                                                    <ProductCard
+                                                        product={product}
+                                                        config={config}
+                                                        isConsigne={isConsigne}
+                                                        viewMode="grid"
+                                                        onAddToCart={addToCart}
+                                                        onViewProduct={(p) => setSelectedProduct(p)}
+                                                        index={index}
+                                                        compact
+                                                        cartQuantity={cart.find(i => i.id === product.id)?.quantity ?? 0}
+                                                        onUpdateCartQuantity={handleUpdateCartQuantity}
+                                                    />
+                                                </div>
+                                            ))}
+                                        </div>
+                                    ) : (
+                                        /* Grilla (4 o menos) */
+                                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 px-4">
+                                            {featured.map((product, index) => (
+                                                <ProductCard
+                                                    key={product.id}
+                                                    product={product}
+                                                    config={config}
+                                                    isConsigne={isConsigne}
+                                                    viewMode="grid"
+                                                    onAddToCart={addToCart}
+                                                    onViewProduct={(p) => setSelectedProduct(p)}
+                                                    index={index}
+                                                    cartQuantity={cart.find(i => i.id === product.id)?.quantity ?? 0}
+                                                    onUpdateCartQuantity={handleUpdateCartQuantity}
+                                                />
+                                            ))}
+                                        </div>
+                                    )}
                                 </div>
                             );
                         })()}
