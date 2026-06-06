@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { revalidatePath } from "next/cache";
+import { revalidateTag } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireAuth, requireRole } from "@/lib/auth/require-auth";
 import { storeThemeConfigSchema, onlineStoreSettingsSchema } from "@/lib/validators/settings";
@@ -95,7 +95,7 @@ export async function PATCH(req: Request) {
     });
 
     // Limpiar cache del catálogo público para que /lista refleje los cambios
-    revalidatePath("/lista");
+    revalidateTag("public-catalog", "default");
 
     return NextResponse.json({
       message: "Configuración actualizada correctamente",
