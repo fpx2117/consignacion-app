@@ -43,7 +43,8 @@ const DEFAULT_SECTION = {
 } satisfies StorefrontSectionContent;
 
 function cleanString(value: unknown, fallback: string) {
-  return typeof value === "string" && value.trim().length > 0 ? value.trim() : fallback;
+  if (value === null || value === undefined) return fallback;
+  return typeof value === "string" ? value : fallback;
 }
 
 function normalizeSection(value: unknown, fallback: StorefrontSectionContent): StorefrontSectionContent {
