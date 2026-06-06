@@ -71,6 +71,17 @@ type StoreConfig = {
   convertirTienda: boolean;
   mostrarPreciosConsignacion: boolean;
   mostrarBuscador: boolean;
+  showProductImages: boolean;
+  showPrices: boolean;
+  showStock: boolean;
+  showViewAll: boolean;
+  productLayout: "grid" | "horizontal" | "compact";
+  maxProductsPerSection: number;
+  addButtonPosition: "floating" | "below";
+  cartDisplayMode: "bottom-sheet" | "modal" | "drawer";
+  showWhatsappPreview: boolean;
+  whatsappButtonText: string;
+  desktopLayout: "mobile-centered" | "wide-ecommerce" | "with-cart-sidebar";
   [key: string]: unknown;
 };
 
@@ -134,6 +145,14 @@ const DEFAULT_BRANDING: BrandingSettings = {
   isBannerSlider: false,
   banners: [],
   storefrontContent: createDefaultStorefrontContent(),
+  openingHours: "",
+  addressText: "",
+  description: "",
+  mode: "light",
+  borderRadius: "2xl",
+  shadow: "soft",
+  cardStyle: "minimal",
+  buttonStyle: "pill",
 };
 
 const DEFAULT_CONFIG: StoreConfig = {
@@ -142,6 +161,17 @@ const DEFAULT_CONFIG: StoreConfig = {
   convertirTienda: true,
   mostrarPreciosConsignacion: false,
   mostrarBuscador: true,
+  showProductImages: true,
+  showPrices: true,
+  showStock: false,
+  showViewAll: true,
+  productLayout: "grid",
+  maxProductsPerSection: 6,
+  addButtonPosition: "floating",
+  cartDisplayMode: "bottom-sheet",
+  showWhatsappPreview: true,
+  whatsappButtonText: "Enviar pedido por WhatsApp",
+  desktopLayout: "mobile-centered",
 };
 
 function SkeletonBox({ className }: { className?: string }) {
@@ -245,6 +275,56 @@ export default function TiendaSettingsPage() {
   const handleSave = React.useCallback(async () => {
     setSaving(true);
     try {
+      // Construir onlineStoreConfig desde branding + config + estado local
+      const builtOnlineStoreConfig = {
+        storeName: (branding as any).businessName || branding.storeName || "Mi tienda",
+        storeLogoUrl: branding.logoUrl || null,
+        storeBannerUrl: branding.bannerUrl || null,
+        description: (branding as any).description || "",
+        openingHours: (branding as any).openingHours || "",
+        addressText: (branding as any).addressText || branding.address || "",
+        theme: {
+          primaryColor: branding.primaryColor || "#007AFF",
+          secondaryColor: branding.secondaryColor || "#EAF3FF",
+          backgroundColor: "#F5F6F8",
+          surfaceColor: "#FFFFFF",
+          textColor: "#0F172A",
+          mutedTextColor: "#8A8F98",
+          whatsappColor: "#25D366",
+          mode: (branding as any).mode || "light",
+          borderRadius: (branding as any).borderRadius || "2xl",
+          shadow: (branding as any).shadow || "soft",
+          cardStyle: (branding as any).cardStyle || "minimal",
+          buttonStyle: (branding as any).buttonStyle || "pill",
+        },
+        catalog: {
+          showCategories: config.mostrarCategoriasEnHeader,
+          showProductImages: config.showProductImages,
+          showPrices: config.showPrices,
+          showStock: config.showStock,
+          showViewAll: config.showViewAll,
+          productLayout: config.productLayout,
+          maxProductsPerSection: config.maxProductsPerSection,
+          addButtonPosition: config.addButtonPosition,
+        },
+        promotions: { enabled: true, items: [] },
+        cart: {
+          displayMode: config.cartDisplayMode,
+          showWhatsappPreview: config.showWhatsappPreview,
+          whatsappButtonText: config.whatsappButtonText,
+          messageTemplate: {
+            greeting: "Hola",
+            intro: "Quisiera realizar el siguiente pedido:",
+            subtotalLabel: "Subtotal",
+            totalLabel: "Total",
+            footer: "",
+          },
+        },
+        responsive: {
+          desktopLayout: config.desktopLayout,
+        },
+      };
+
       await Promise.all([
         apiService.actualizarBranding(branding),
         apiService.actualizarConfiguracionGeneral({
@@ -253,6 +333,11 @@ export default function TiendaSettingsPage() {
           convertirTienda: config.convertirTienda,
           mostrarPreciosConsignacion: config.mostrarPreciosConsignacion,
           mostrarBuscador: config.mostrarBuscador,
+        }),
+        fetch("/api/settings", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ onlineStoreConfig: builtOnlineStoreConfig }),
         }),
       ]);
 

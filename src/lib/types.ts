@@ -170,6 +170,149 @@ export type BrandingSettings = {
   storefrontContent?: StorefrontContent | null;
 };
 
+// ============================================================
+// ONLINE STORE SETTINGS — Configuración visual completa
+// ============================================================
+
+export type OnlineStoreThemeMode = "light" | "dark" | "system";
+export type OnlineStoreBorderRadius = "sm" | "md" | "lg" | "xl" | "2xl";
+export type OnlineStoreShadow = "none" | "soft" | "medium" | "strong";
+export type OnlineStoreCardStyle = "minimal" | "elevated" | "bordered";
+export type OnlineStoreButtonStyle = "rounded" | "pill" | "soft-square";
+export type OnlineStoreProductLayout = "grid" | "horizontal" | "compact";
+export type OnlineStoreAddButtonPosition = "floating" | "below";
+export type OnlineStoreCartDisplayMode = "bottom-sheet" | "modal" | "drawer";
+export type OnlineStoreDesktopLayout = "mobile-centered" | "wide-ecommerce" | "with-cart-sidebar";
+
+export type OnlineStoreThemeSettings = {
+  primaryColor: string;
+  secondaryColor: string;
+  backgroundColor: string;
+  surfaceColor: string;
+  textColor: string;
+  mutedTextColor: string;
+  whatsappColor: string;
+  mode: OnlineStoreThemeMode;
+  borderRadius: OnlineStoreBorderRadius;
+  shadow: OnlineStoreShadow;
+  cardStyle: OnlineStoreCardStyle;
+  buttonStyle: OnlineStoreButtonStyle;
+};
+
+export type OnlineStoreCatalogSettings = {
+  showCategories: boolean;
+  showProductImages: boolean;
+  showPrices: boolean;
+  showStock: boolean;
+  showViewAll: boolean;
+  initialCategoryId?: string;
+  productLayout: OnlineStoreProductLayout;
+  maxProductsPerSection: number;
+  addButtonPosition: OnlineStoreAddButtonPosition;
+};
+
+export type OnlineStorePromoItem = {
+  id: string;
+  icon: string;
+  title: string;
+  description: string;
+  backgroundColor?: string;
+  textColor?: string;
+  order?: number;
+  visible?: boolean;
+};
+
+export type OnlineStorePromoSettings = {
+  enabled: boolean;
+  items: OnlineStorePromoItem[];
+};
+
+export type OnlineStoreCartMessageTemplate = {
+  greeting: string;
+  intro: string;
+  subtotalLabel: string;
+  totalLabel: string;
+  footer?: string;
+};
+
+export type OnlineStoreCartSettings = {
+  displayMode: OnlineStoreCartDisplayMode;
+  showWhatsappPreview: boolean;
+  whatsappButtonText: string;
+  messageTemplate: OnlineStoreCartMessageTemplate;
+};
+
+export type OnlineStoreResponsiveSettings = {
+  desktopLayout: OnlineStoreDesktopLayout;
+};
+
+export type OnlineStoreSettings = {
+  storeName: string;
+  storeLogoUrl?: string;
+  storeBannerUrl?: string;
+  description?: string;
+  openingHours?: string;
+  addressText?: string;
+  theme: OnlineStoreThemeSettings;
+  catalog: OnlineStoreCatalogSettings;
+  promotions: OnlineStorePromoSettings;
+  cart: OnlineStoreCartSettings;
+  responsive: OnlineStoreResponsiveSettings;
+};
+
+export const defaultOnlineStoreSettings: OnlineStoreSettings = {
+  storeName: "Mi tienda",
+  storeLogoUrl: undefined,
+  storeBannerUrl: undefined,
+  description: "",
+  openingHours: "",
+  addressText: "",
+  theme: {
+    primaryColor: "#007AFF",
+    secondaryColor: "#EAF3FF",
+    backgroundColor: "#F5F6F8",
+    surfaceColor: "#FFFFFF",
+    textColor: "#0F172A",
+    mutedTextColor: "#8A8F98",
+    whatsappColor: "#25D366",
+    mode: "light",
+    borderRadius: "2xl",
+    shadow: "soft",
+    cardStyle: "minimal",
+    buttonStyle: "pill",
+  },
+  catalog: {
+    showCategories: true,
+    showProductImages: true,
+    showPrices: true,
+    showStock: false,
+    showViewAll: true,
+    initialCategoryId: undefined,
+    productLayout: "grid",
+    maxProductsPerSection: 6,
+    addButtonPosition: "floating",
+  },
+  promotions: {
+    enabled: true,
+    items: [],
+  },
+  cart: {
+    displayMode: "bottom-sheet",
+    showWhatsappPreview: true,
+    whatsappButtonText: "Enviar pedido por WhatsApp",
+    messageTemplate: {
+      greeting: "Hola",
+      intro: "Quisiera realizar el siguiente pedido:",
+      subtotalLabel: "Subtotal",
+      totalLabel: "Total",
+      footer: "",
+    },
+  },
+  responsive: {
+    desktopLayout: "mobile-centered",
+  },
+};
+
 export type AuditLogEntry = {
   id: ID;
   createdAt: ISODateString;
@@ -408,6 +551,7 @@ export type PublicCatalogConfig = {
   porcentajeInteresTarjeta?: number;
   mpPublicKeyTienda?: string | null;
   storefrontContent?: StorefrontContent | null;
+  onlineStoreConfig?: OnlineStoreSettings | null;
 };
 
 export type PublicCatalogData = {

@@ -28,19 +28,25 @@ function getContrastColor(hex: string) {
 }
 
 export default async function ListaPage() {
-  const branding = await prisma.branding.findUnique({
-    where: { sucursalId: 1 },
-    select: {
-      businessName: true,
-      primaryColor: true,
-      secondaryColor: true,
-      themeIdentifier: true,
-      bannerData: true,
-      bannerMime: true,
-      logoData: true,
-      logoMime: true,
-    },
-  });
+  const [branding, storeSettings] = await Promise.all([
+    prisma.branding.findUnique({
+      where: { sucursalId: 1 },
+      select: {
+        businessName: true,
+        primaryColor: true,
+        secondaryColor: true,
+        themeIdentifier: true,
+        bannerData: true,
+        bannerMime: true,
+        logoData: true,
+        logoMime: true,
+      },
+    }),
+    prisma.storeSettings.findUnique({
+      where: { sucursalId: 1 },
+      select: { onlineStoreConfig: true },
+    }),
+  ]);
 
   const themeId = branding?.themeIdentifier || "modern";
   const primaryColor = branding?.primaryColor || "#111827";
@@ -53,6 +59,17 @@ export default async function ListaPage() {
 
   const brandingPrimaryRgb = hexToRgb(primaryColor);
   const brandingSecondaryRgb = hexToRgb(secondaryColor);
+
+  // Obtener colores de OnlineStoreSettings (si existen)
+  const ols = storeSettings?.onlineStoreConfig as Record<string, unknown> | null | undefined;
+  const olsTheme = (ols?.theme || {}) as Record<string, string | undefined>;
+  const storePrimary = olsTheme.primaryColor || "#007AFF";
+  const storeSecondary = olsTheme.secondaryColor || "#EAF3FF";
+  const storeBg = olsTheme.backgroundColor || "#F5F6F8";
+  const storeSurface = olsTheme.surfaceColor || "#FFFFFF";
+  const storeText = olsTheme.textColor || "#0F172A";
+  const storeMuted = olsTheme.mutedTextColor || "#8A8F98";
+  const storeWhatsapp = olsTheme.whatsappColor || "#25D366";
 
   const cssVars = `
 :root {
@@ -72,6 +89,18 @@ export default async function ListaPage() {
   --store-canvas: ${tc.bg};
   --store-surface: ${tc.bg === "#0f172a" ? "#1e293b" : "#ffffff"};
   --store-surface-rgb: ${hexToRgb(tc.bg === "#0f172a" ? "#1e293b" : "#ffffff")};
+
+  /* Online Store overrides */
+  --store-primary-override: ${storePrimary};
+  --store-primary-rgb-override: ${hexToRgb(storePrimary)};
+  --store-secondary-override: ${storeSecondary};
+  --store-background-override: ${storeBg};
+  --store-surface-override: ${storeSurface};
+  --store-surface-rgb-override: ${hexToRgb(storeSurface)};
+  --store-text-override: ${storeText};
+  --store-muted-override: ${storeMuted};
+  --store-whatsapp-override: ${storeWhatsapp};
+  --store-whatsapp-rgb-override: ${hexToRgb(storeWhatsapp)};
 }
 `;
 
@@ -84,7 +113,7 @@ export default async function ListaPage() {
         rel="stylesheet"
       />
       <style dangerouslySetInnerHTML={{ __html: cssVars }} />
-      <div data-theme={themeId} data-theme-custom={hasCustomColors ? "true" : undefined}>
+      <div data-theme={themeId} data-theme-custom={hasCustomColors ? "true" : undefined} data-store-config="true">
         <CatalogClient
           initialData={null}
           initialError={null}

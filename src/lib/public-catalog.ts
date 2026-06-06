@@ -22,8 +22,9 @@ export class PublicCatalogError extends Error {
 }
 
 export async function getPublicCatalogDataRaw(sucursalId: number | null): Promise<PublicCatalogData> {
+  const resolvedId = sucursalId || 1;
   const config = await prisma.configuracion.findUnique({
-    where: { sucursalId: sucursalId || 1 },
+    where: { sucursalId: resolvedId },
     include: {
       sucursal: {
         include: {
@@ -37,6 +38,12 @@ export async function getPublicCatalogDataRaw(sucursalId: number | null): Promis
         },
       },
     },
+  });
+
+  // Obtener StoreSettings con onlineStoreConfig
+  const storeSettings = await prisma.storeSettings.findUnique({
+    where: { sucursalId: resolvedId },
+    select: { onlineStoreConfig: true },
   });
 
   if (!config || !config.mostrarListaPrecios) {
@@ -157,6 +164,7 @@ export async function getPublicCatalogDataRaw(sucursalId: number | null): Promis
       storefrontContent: normalizeStorefrontContent(brandingExtra?.storefrontContent, {
         storeName: config.sucursal.branding?.businessName || config.sucursal.nombre,
       }),
+      onlineStoreConfig: (storeSettings?.onlineStoreConfig as any) ?? null,
     },
   };
 

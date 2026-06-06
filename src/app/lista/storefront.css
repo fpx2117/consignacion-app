@@ -1,6 +1,18 @@
 :root {
   --storefront-font-heading: "Inter", sans-serif;
   --storefront-font-body: "Inter", sans-serif;
+
+  /* Online Store CSS Variables — defaults (sobrescribibles via page.tsx) */
+  --store-primary: #007AFF;
+  --store-primary-rgb: 0, 122, 255;
+  --store-secondary: #EAF3FF;
+  --store-background: #F5F6F8;
+  --store-surface: #FFFFFF;
+  --store-surface-rgb: 255, 255, 255;
+  --store-text: #0F172A;
+  --store-muted: #8A8F98;
+  --store-whatsapp: #25D366;
+  --store-whatsapp-rgb: 37, 211, 102;
 }
 
 [data-theme="modern"] {
@@ -62,4 +74,33 @@
 [data-theme-custom="true"] {
   --theme-primary: var(--branding-primary);
   --theme-secondary: var(--branding-secondary);
+}
+
+/* ── Utilidades de scroll ── */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* ── Sidebar de categorías: highlight activo ── */
+.sidebar-item-active-bg {
+  background-color: var(--store-primary, #007AFF);
+  color: #fff;
+}
+
+/* Sobrescribir --store-* con colores del tema custom si existen */
+[data-store-config="true"] {
+  --store-primary: var(--store-primary-override, #007AFF);
+  --store-primary-rgb: var(--store-primary-rgb-override, 0, 122, 255);
+  --store-secondary: var(--store-secondary-override, #EAF3FF);
+  --store-background: var(--store-background-override, #F5F6F8);
+  --store-surface: var(--store-surface-override, #FFFFFF);
+  --store-surface-rgb: var(--store-surface-rgb-override, 255, 255, 255);
+  --store-text: var(--store-text-override, #0F172A);
+  --store-muted: var(--store-muted-override, #8A8F98);
+  --store-whatsapp: var(--store-whatsapp-override, #25D366);
+  --store-whatsapp-rgb: var(--store-whatsapp-rgb-override, 37, 211, 102);
 }

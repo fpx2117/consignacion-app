@@ -10,16 +10,15 @@ import {
   Store,
   Trash2,
   Truck,
-  XCircle,
+  X,
   Package,
 } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
-import Image from "next/image";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { getCatalogCartLineSubtotal, getCatalogCartSubtotal, getCatalogCartUnitPrice } from "@/lib/catalog-cart-pricing";
+import { getCatalogCartSubtotal } from "@/lib/catalog-cart-pricing";
 import type {
   CatalogCartItem,
   PublicCatalogConfig,
@@ -28,6 +27,9 @@ import type {
 } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { getThemeStyles } from "../lib/theme-utils";
+import { OrderItem } from "./order-item";
+import { OrderSummary } from "./order-summary";
+import { WhatsAppPreview } from "./whatsapp-preview";
 
 interface CartDrawerProps {
   isOpen: boolean;
@@ -44,6 +46,8 @@ const PRICING_CONTEXT = (config: PublicCatalogConfig) => ({
   porcentajeAumentoConsignacion: config.porcentajeAumentoConsignacion,
 });
 
+type DisplayMode = "bottom-sheet" | "modal" | "drawer";
+
 export function CartDrawer({
   isOpen,
   onClose,
@@ -54,8 +58,9 @@ export function CartDrawer({
   onCheckout,
   loading,
 }: CartDrawerProps) {
-  const { theme, radiusClass, buttonRadiusClass, buttonHoverClass, cardBgClass, pageBgClass } = getThemeStyles(config.themeIdentifier);
+  const { pageBgClass } = getThemeStyles(config.themeIdentifier);
   const [step, setStep] = React.useState(1);
+  const [showWhatsappPreviewToggle, setShowWhatsappPreviewToggle] = React.useState(true);
   const [clienteData, setClienteData] = React.useState<PublicCheckoutCustomerData>({
     nombre: "",
     email: "",
@@ -72,12 +77,39 @@ export function CartDrawer({
     costo: 0,
   });
 
+  const ols = config.onlineStoreConfig;
+  const displayMode: DisplayMode = ols?.cart?.displayMode ?? "bottom-sheet";
+  const showWhatsappPreviewSetting = ols?.cart?.showWhatsappPreview ?? true;
+  const whatsappButtonText = ols?.cart?.whatsappButtonText ?? "Enviar pedido por WhatsApp";
+  const [isMobile, setIsMobile] = React.useState(false);
+
+  React.useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 768);
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, []);
+
   React.useEffect(() => {
     if (!isOpen) {
       setStep(1);
       setEnvioData({ metodoEnvio: null, costo: 0 });
     }
   }, [isOpen]);
+
+  // Bloquear scroll del body cuando el drawer está abierto
+  React.useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => { document.body.style.overflow = ""; };
+  }, [isOpen]);
+
+  const effectiveMode: DisplayMode = isMobile ? "bottom-sheet" : displayMode;
+  const isBottomSheet = effectiveMode === "bottom-sheet";
+  const isModal = effectiveMode === "modal";
 
   const subtotalProductos = React.useMemo(
     () => getCatalogCartSubtotal(cart, PRICING_CONTEXT(config)),
@@ -89,11 +121,7 @@ export function CartDrawer({
   };
 
   const handleContinue = () => {
-    if (step === 1) {
-      setStep(2);
-      return;
-    }
-
+    if (step === 1) { setStep(2); return; }
     if (step === 2) {
       if (!clienteData.nombre.trim()) {
         toast.error("Por favor completá tu nombre.");
@@ -102,19 +130,16 @@ export function CartDrawer({
       setStep(3);
       return;
     }
-
     if (!envioData.metodoEnvio) {
-      toast.error("Seleccioná un metodo de entrega.");
+      toast.error("Seleccioná un método de entrega.");
       return;
     }
-
     if (envioData.metodoEnvio === "UBER_FLASH" || envioData.metodoEnvio === "ENCOMIENDA") {
       if (!clienteData.direccion?.trim() || !clienteData.altura?.trim() || !clienteData.localidad?.trim() || !clienteData.provincia?.trim()) {
-        toast.error("Para este envio necesitamos domicilio, altura, localidad y provincia.");
+        toast.error("Para este envío necesitamos domicilio, altura, localidad y provincia.");
         return;
       }
     }
-
     onCheckout(clienteData, envioData);
   };
 
@@ -122,303 +147,396 @@ export function CartDrawer({
   const requiresDeliveryAddress = envioData.metodoEnvio === "UBER_FLASH" || envioData.metodoEnvio === "ENCOMIENDA";
   const selectedDeliveryNeedsDisclaimer = envioData.metodoEnvio === "UBER_FLASH" || envioData.metodoEnvio === "ENCOMIENDA";
 
+  // Animaciones según modo
+  const panelAnim = isBottomSheet
+    ? {
+        initial: { y: "100%" as const },
+        animate: { y: 0 },
+        exit: { y: "100%" as const },
+        transition: { type: "spring" as const, damping: 30, stiffness: 300 },
+      }
+    : isModal
+      ? {
+          initial: { scale: 0.95, opacity: 0 },
+          animate: { scale: 1, opacity: 1 },
+          exit: { scale: 0.95, opacity: 0 },
+          transition: { type: "spring" as const, damping: 25, stiffness: 200 },
+        }
+      : {
+          initial: { x: "100%" as const },
+          animate: { x: 0 },
+          exit: { x: "100%" as const },
+          transition: { type: "spring" as const, damping: 28, stiffness: 250 },
+        };
+
+  const panelClass = isBottomSheet
+    ? cn(
+        "fixed bottom-0 left-0 right-0 z-[70] flex flex-col",
+        "max-h-[92vh] rounded-t-[28px]",
+        "shadow-[0_-8px_40px_rgba(0,0,0,0.15)]",
+        "bg-[var(--store-surface,#FFFFFF)]",
+        "sm:max-w-[430px] sm:mx-auto sm:left-0 sm:right-0"
+      )
+    : isModal
+      ? cn(
+          "fixed inset-0 m-auto w-full max-w-md h-[90vh] z-[70] flex flex-col",
+          "rounded-[28px] shadow-2xl overflow-hidden",
+          "bg-[var(--store-surface,#FFFFFF)]",
+          "border border-gray-100"
+        )
+      : cn(
+          "fixed top-0 right-0 bottom-0 w-full max-w-md z-[70] flex flex-col",
+          "bg-[var(--store-surface,#FFFFFF)]",
+          "md:m-3 md:rounded-[24px] md:h-[calc(100vh-24px)] shadow-[-16px_0_50px_rgba(0,0,0,0.08)]"
+        );
+
+  const stepLabels = ["Tu pedido", "Tus datos", "Entrega"];
+
   return (
     <AnimatePresence>
       {isOpen && (
         <>
+          {/* Overlay */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
             onClick={onClose}
-            className="fixed inset-0 bg-black/42 backdrop-blur-[3px] z-[60]"
+            className="fixed inset-0 bg-black/40 backdrop-blur-[2px] z-[60]"
           />
 
+          {/* Panel */}
           <motion.aside
-            initial={{ x: "100%" }}
-            animate={{ x: 0 }}
-            exit={{ x: "100%" }}
-            transition={{ type: "spring", damping: 25, stiffness: 200 }}
-            className={cn(
-              "fixed top-0 right-0 bottom-0 w-full max-w-lg backdrop-blur-xl z-[70] shadow-[-20px_0_50px_rgba(0,0,0,0.1)] flex flex-col",
-              pageBgClass,
-              theme === "modern" || theme === "barbie" || theme === "ocean"
-                ? "md:m-4 md:rounded-[2.5rem] md:h-[calc(100vh-2rem)]"
-                : theme === "minimal" || theme === "luxury"
-                  ? "md:border-l border-border"
-                  : "md:m-4 md:rounded-2xl md:h-[calc(100vh-2rem)] shadow-2xl border",
-            )}
+            {...panelAnim}
+            className={panelClass}
           >
-            <div className="px-4 sm:px-8 py-4 sm:py-6 flex items-center justify-between border-b border-border/50 gap-2">
+            {/* Barra de deslizamiento (solo bottom sheet) */}
+            {isBottomSheet && (
+              <div className="flex justify-center pt-3 pb-1 flex-shrink-0">
+                <div className="w-10 h-1 rounded-full bg-gray-200" />
+              </div>
+            )}
+
+            {/* ── Header del drawer ── */}
+            <div className="px-5 py-4 flex items-center justify-between flex-shrink-0">
               <div className="flex items-center gap-3">
                 {step > 1 && (
-                  <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full" onClick={() => setStep(step - 1)}>
+                  <button
+                    onClick={() => setStep(step - 1)}
+                    className="h-8 w-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-600 hover:bg-gray-200 transition-colors"
+                  >
                     <ArrowLeft className="h-4 w-4" />
-                  </Button>
+                  </button>
                 )}
-                <div className="flex flex-col">
-                  <h2 className="text-lg sm:text-xl font-black tracking-tight flex items-center gap-2 text-foreground">
-                    {step === 1 ? "TU CARRITO" : step === 2 ? "TUS DATOS" : "ENTREGA"}
-                    {step === 1 && <span className="text-primary bg-primary/10 px-2 py-0.5 rounded-full text-xs">{cart.length}</span>}
+                <div>
+                  <h2 className="text-xl font-black text-[var(--store-text,#0F172A)] leading-tight">
+                    {stepLabels[step - 1]}
                   </h2>
-                  <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-tighter">Paso {step} de 3</p>
+                  {step === 1 && cart.length > 0 && (
+                    <p className="text-sm text-[var(--store-muted,#8A8F98)]">
+                      {cart.length} {cart.length === 1 ? "producto" : "productos"}
+                    </p>
+                  )}
+                  {step > 1 && (
+                    <p className="text-xs text-[var(--store-muted,#8A8F98)] font-medium uppercase tracking-wide">
+                      Paso {step} de 3
+                    </p>
+                  )}
                 </div>
               </div>
-              <Button variant="ghost" size="icon" className="rounded-full hover:rotate-90 transition-transform duration-300" onClick={onClose}>
-                <XCircle className="h-6 w-6 text-muted-foreground/80" />
-              </Button>
+
+              {/* Botón cerrar circular */}
+              <button
+                onClick={onClose}
+                className="h-9 w-9 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 hover:bg-gray-200 transition-all hover:rotate-90 duration-300"
+                aria-label="Cerrar carrito"
+              >
+                <X className="h-4 w-4" />
+              </button>
             </div>
 
-            <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-4 space-y-4 custom-scrollbar">
+            {/* Separador */}
+            <div className="h-px bg-gray-100 mx-5 flex-shrink-0" />
+
+            {/* ── Contenido scrollable ── */}
+            <div className="flex-1 overflow-y-auto overscroll-contain">
+              {/* PASO 1: Resumen del pedido */}
               {step === 1 && (
                 cart.length === 0 ? (
-                  <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="h-full flex flex-col items-center justify-center text-center p-10">
-                    <div className="w-24 h-24 bg-muted/55 rounded-full flex items-center justify-center mb-6">
-                      <ShoppingBag className="h-10 w-10 text-muted-foreground" />
+                  <motion.div
+                    initial={{ opacity: 0, y: 16 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="h-full flex flex-col items-center justify-center text-center p-10 min-h-[300px]"
+                  >
+                    <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mb-5">
+                      <ShoppingBag className="h-9 w-9 text-gray-300" />
                     </div>
-                    <p className="text-xl font-bold text-foreground">Tu carrito esta vacio</p>
-                    <p className="text-muted-foreground text-sm mt-2">Explorá la tienda y agregá los productos que quieras pedir por WhatsApp.</p>
-                    <Button onClick={onClose} className={cn("mt-6 font-bold text-white", buttonRadiusClass)} style={{ backgroundColor: config.primaryColor || "#111827" }}>VOLVER A LA TIENDA</Button>
+                    <p className="text-lg font-bold text-[var(--store-text,#0F172A)]">Tu carrito está vacío</p>
+                    <p className="text-sm text-[var(--store-muted,#8A8F98)] mt-2 max-w-[220px]">
+                      Explorá el catálogo y agregá los productos que quieras pedir.
+                    </p>
+                    <button
+                      onClick={onClose}
+                      className="mt-6 px-6 py-2.5 rounded-full text-white text-sm font-bold transition-opacity hover:opacity-90"
+                      style={{ backgroundColor: "var(--store-primary,#007AFF)" }}
+                    >
+                      Ver catálogo
+                    </button>
                   </motion.div>
                 ) : (
-                  cart.map((item, index) => {
-                    const unitPrice = getCatalogCartUnitPrice(item, PRICING_CONTEXT(config));
-                    const lineSubtotal = getCatalogCartLineSubtotal(item, PRICING_CONTEXT(config));
-                    const originalUnitPrice = item.descuentoEfectivo?.precioOriginal != null ? Number(item.descuentoEfectivo.precioOriginal) : null;
-                    const hasDiscount = originalUnitPrice != null && originalUnitPrice > unitPrice;
+                  <div className="px-5 py-4 space-y-1">
+                    {/* Lista de productos */}
+                    <div className="divide-y divide-gray-100">
+                      {cart.map((item) => (
+                        <OrderItem
+                          key={item.id}
+                          item={item}
+                          onUpdateQuantity={(id, qty) => {
+                            const existing = cart.find((i) => i.id === id);
+                            if (existing) {
+                              const delta = qty - existing.quantity;
+                              onUpdateQuantity(id, delta);
+                            }
+                          }}
+                          onRemove={onRemove}
+                          showImage={ols?.catalog?.showProductImages ?? true}
+                        />
+                      ))}
+                    </div>
 
-                    return (
-                      <motion.div
-                        key={item.id}
-                        initial={{ opacity: 0, x: 20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: index * 0.05 }}
-                        className={cn(
-                          "relative group border border-border/70 p-3 shadow-sm hover:shadow-md transition-all flex gap-4",
-                          cardBgClass,
-                          radiusClass,
-                        )}
-                      >
-                        <div className={cn("h-24 w-24 bg-foreground/5 overflow-hidden shrink-0 border border-border/70 relative", radiusClass)}>
-                          {item.imagenUrl ? (
-                            <Image src={item.imagenUrl} alt={item.nombre} fill sizes="96px" className="object-cover group-hover:scale-110 transition-transform duration-500 mix-blend-multiply" />
-                          ) : null}
-                        </div>
+                    {/* Separador */}
+                    <div className="h-px bg-gray-100 my-3" />
 
-                        <div className="flex-1 flex flex-col justify-between gap-3">
-                          <div className="flex justify-between items-start gap-2">
-                            <div>
-                              <h4 className="font-bold text-sm text-foreground line-clamp-2 leading-tight">{item.nombre}</h4>
-                              <p className="text-[11px] text-muted-foreground mt-1">Stock disponible: {item.stockDisponibleUnits}</p>
-                            </div>
-                            <button
-                              onClick={() => onRemove(item.id)}
-                              className={cn("p-1.5 text-muted-foreground hover:text-[color:var(--status-danger)] hover:bg-[color:var(--status-danger)]/10 transition-colors", buttonRadiusClass)}
+                    {/* Toggle WhatsApp Preview */}
+                    {showWhatsappPreviewSetting && ols && (
+                      <div>
+                        <button
+                          onClick={() => setShowWhatsappPreviewToggle(!showWhatsappPreviewToggle)}
+                          className="text-xs text-[var(--store-muted,#8A8F98)] flex items-center gap-1.5 hover:text-[var(--store-text,#0F172A)] transition-colors w-full justify-center py-2"
+                        >
+                          <MessageCircle className="h-3.5 w-3.5" />
+                          {showWhatsappPreviewToggle ? "Ocultar" : "Mostrar"} mensaje de WhatsApp
+                        </button>
+
+                        <AnimatePresence>
+                          {showWhatsappPreviewToggle && (
+                            <motion.div
+                              initial={{ opacity: 0, height: 0 }}
+                              animate={{ opacity: 1, height: "auto" }}
+                              exit={{ opacity: 0, height: 0 }}
+                              transition={{ duration: 0.25 }}
+                              className="overflow-hidden"
                             >
-                              <Trash2 className="h-4 w-4" />
-                            </button>
-                          </div>
-
-                          <div className="flex items-end justify-between gap-3">
-                            <div className={cn("flex items-center gap-3 bg-muted/30 p-1 border border-border/70", buttonRadiusClass)}>
-                              <button
-                                disabled={item.quantity <= 1}
-                                onClick={() => onUpdateQuantity(item.id, -1)}
-                                className={cn("h-8 w-8 flex items-center justify-center shadow-sm hover:bg-muted/55 disabled:opacity-30 transition-all font-bold text-muted-foreground", cardBgClass, buttonRadiusClass)}
-                              >
-                                -
-                              </button>
-                              <span className="text-xs font-black w-4 text-center text-foreground">{item.quantity}</span>
-                              <button
-                                disabled={item.quantity >= item.stockDisponibleUnits}
-                                onClick={() => onUpdateQuantity(item.id, 1)}
-                                className={cn("h-8 w-8 flex items-center justify-center shadow-sm hover:bg-muted/55 disabled:opacity-30 transition-all font-bold text-muted-foreground", cardBgClass, buttonRadiusClass)}
-                              >
-                                +
-                              </button>
-                            </div>
-
-                            <div className="text-right">
-                              {hasDiscount ? (
-                                <p className="text-xs text-muted-foreground line-through font-medium">
-                                  ${originalUnitPrice?.toLocaleString("es-AR")} c/u
-                                </p>
-                              ) : null}
-                              <p className="text-xs text-muted-foreground font-medium">
-                                ${unitPrice.toLocaleString("es-AR", { minimumFractionDigits: 0, maximumFractionDigits: 2 })} c/u
-                              </p>
-                              <p className="font-black text-lg text-foreground">
-                                ${lineSubtotal.toLocaleString("es-AR", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
-                              </p>
-                            </div>
-                          </div>
-                        </div>
-                      </motion.div>
-                    );
-                  })
+                              <WhatsAppPreview
+                                settings={ols}
+                                cartItems={cart}
+                                subtotal={`$${subtotalProductos.toLocaleString("es-AR", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`}
+                                total={`$${subtotalProductos.toLocaleString("es-AR", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`}
+                                className="mt-2"
+                              />
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
+                      </div>
+                    )}
+                  </div>
                 )
               )}
 
+              {/* PASO 2: Datos del cliente */}
               {step === 2 && (
-                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4">
-                  <div className="space-y-1">
-                    <Label className="text-sm font-bold text-foreground">Nombre completo *</Label>
-                    <Input className="border-border/80 bg-background/90 text-foreground placeholder:text-muted-foreground" name="nombre" value={clienteData.nombre} onChange={handleInputChange} placeholder="Ej. Juan Perez" />
+                <motion.div
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  className="px-5 py-4 space-y-4"
+                >
+                  <div className="space-y-1.5">
+                    <Label className="text-sm font-semibold text-[var(--store-text,#0F172A)]">Nombre completo *</Label>
+                    <Input
+                      name="nombre"
+                      value={clienteData.nombre}
+                      onChange={handleInputChange}
+                      placeholder="Ej. Juan Pérez"
+                      className="h-12 rounded-xl border-gray-200 bg-gray-50 text-[var(--store-text,#0F172A)] placeholder:text-gray-400 focus-visible:ring-[var(--store-primary,#007AFF)]"
+                    />
                   </div>
-                  <div className="space-y-1">
-                    <Label className="text-sm font-bold text-foreground">Telefono</Label>
-                    <Input className="border-border/80 bg-background/90 text-foreground placeholder:text-muted-foreground" name="telefono" value={clienteData.telefono ?? ""} onChange={handleInputChange} placeholder="11 1234 5678" />
+                  <div className="space-y-1.5">
+                    <Label className="text-sm font-semibold text-[var(--store-text,#0F172A)]">Teléfono</Label>
+                    <Input
+                      name="telefono"
+                      value={clienteData.telefono ?? ""}
+                      onChange={handleInputChange}
+                      placeholder="11 1234-5678"
+                      className="h-12 rounded-xl border-gray-200 bg-gray-50 text-[var(--store-text,#0F172A)] placeholder:text-gray-400 focus-visible:ring-[var(--store-primary,#007AFF)]"
+                    />
                   </div>
-                  <div className="space-y-1">
-                    <Label className="text-sm font-bold text-foreground">Email</Label>
-                    <Input className="border-border/80 bg-background/90 text-foreground placeholder:text-muted-foreground" type="email" name="email" value={clienteData.email} onChange={handleInputChange} placeholder="Opcional" />
+                  <div className="space-y-1.5">
+                    <Label className="text-sm font-semibold text-[var(--store-text,#0F172A)]">Email</Label>
+                    <Input
+                      type="email"
+                      name="email"
+                      value={clienteData.email}
+                      onChange={handleInputChange}
+                      placeholder="Opcional"
+                      className="h-12 rounded-xl border-gray-200 bg-gray-50 text-[var(--store-text,#0F172A)] placeholder:text-gray-400 focus-visible:ring-[var(--store-primary,#007AFF)]"
+                    />
                   </div>
-                  <div className="rounded-xl border border-border/70 bg-muted/20 p-4 text-sm text-foreground/80">
-                    Vamos a preparar un mensaje con tus productos para abrirlo directamente en WhatsApp.
+                  <div className="rounded-2xl bg-blue-50 border border-blue-100 p-4 text-sm text-blue-700">
+                    Vamos a preparar un mensaje con tu pedido para enviarlo directamente por WhatsApp.
                   </div>
                 </motion.div>
               )}
 
+              {/* PASO 3: Método de entrega */}
               {step === 3 && (
-                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4">
-                  <h4 className="font-bold text-sm text-foreground mb-2">Seleccioná como querés recibir tu pedido</h4>
+                <motion.div
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  className="px-5 py-4 space-y-3"
+                >
+                  <h4 className="font-bold text-sm text-[var(--store-text,#0F172A)]">¿Cómo querés recibir tu pedido?</h4>
 
-                  <div className="space-y-3">
+                  {[
+                    {
+                      id: "RETIRO_LOCAL",
+                      icon: Store,
+                      title: "Retiro por el local",
+                      desc: "Pasás a buscarlo por el local",
+                      color: "bg-gray-100",
+                      textColor: "text-gray-600",
+                    },
+                    {
+                      id: "UBER_FLASH",
+                      icon: Truck,
+                      title: "Envío por Uber Flash",
+                      desc: "Coordinamos por WhatsApp, el envío se cobra aparte",
+                      color: "bg-blue-50",
+                      textColor: "text-blue-600",
+                    },
+                    {
+                      id: "ENCOMIENDA",
+                      icon: Package,
+                      title: "Envío por encomienda",
+                      desc: "Se coordina por WhatsApp, el envío se cobra aparte",
+                      color: "bg-purple-50",
+                      textColor: "text-purple-600",
+                    },
+                  ].map((option) => (
                     <div
-                      onClick={() => setEnvioData({ metodoEnvio: "RETIRO_LOCAL", costo: 0 })}
+                      key={option.id}
+                      onClick={() => setEnvioData({ metodoEnvio: option.id as "RETIRO_LOCAL" | "UBER_FLASH" | "ENCOMIENDA", costo: 0 })}
                       className={cn(
-                        "p-4 border rounded-xl cursor-pointer flex items-center justify-between transition-all",
-                        envioData.metodoEnvio === "RETIRO_LOCAL" ? "border-primary bg-primary/5 ring-1 ring-primary/20" : "hover:border-border",
+                        "p-4 border-2 rounded-2xl cursor-pointer flex items-center gap-4 transition-all",
+                        envioData.metodoEnvio === option.id
+                          ? "border-[var(--store-primary,#007AFF)] bg-[var(--store-primary,#007AFF)]/5"
+                          : "border-gray-100 hover:border-gray-200 bg-white"
                       )}
                     >
-                      <div className="flex gap-4 items-center">
-                        <div className="bg-[color:var(--store-surface)] p-2 border border-border rounded-full shadow-sm">
-                          <Store className="h-5 w-5 text-muted-foreground" />
-                        </div>
-                        <div>
-                          <p className="font-bold text-foreground">Retiro por el local</p>
-                          <p className="text-xs text-muted-foreground">Pasás a buscarlo por el local</p>
-                        </div>
+                      <div className={`${option.color} p-2.5 rounded-xl flex-shrink-0`}>
+                        <option.icon className={`h-5 w-5 ${option.textColor}`} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-bold text-sm text-[var(--store-text,#0F172A)]">{option.title}</p>
+                        <p className="text-xs text-[var(--store-muted,#8A8F98)] mt-0.5">{option.desc}</p>
+                      </div>
+                      <div className={cn(
+                        "h-5 w-5 rounded-full border-2 flex-shrink-0 transition-all",
+                        envioData.metodoEnvio === option.id
+                          ? "border-[var(--store-primary,#007AFF)]"
+                          : "border-gray-300"
+                      )}>
+                        {envioData.metodoEnvio === option.id && (
+                          <div className="h-full w-full rounded-full scale-[0.55]" style={{ backgroundColor: "var(--store-primary,#007AFF)" }} />
+                        )}
                       </div>
                     </div>
+                  ))}
 
-                    <div
-                      onClick={() => setEnvioData({ metodoEnvio: "UBER_FLASH", costo: 0 })}
-                      className={cn(
-                        "p-4 border rounded-xl cursor-pointer flex items-center justify-between transition-all",
-                        envioData.metodoEnvio === "UBER_FLASH" ? "border-primary bg-primary/5 ring-1 ring-primary/20" : "hover:border-border bg-background/70",
-                      )}
-                    >
-                      <div className="flex gap-4 items-center">
-                        <div className="bg-primary/12 p-2 border border-primary/25 rounded-full shadow-sm text-primary">
-                          <Truck className="h-5 w-5" />
-                        </div>
-                        <div>
-                          <p className="font-bold text-foreground">Envio por Uber Flash</p>
-                          <p className="text-xs text-muted-foreground">Coordinamos por WhatsApp y el envio se cobra aparte</p>
-                        </div>
-                      </div>
+                  {selectedDeliveryNeedsDisclaimer && (
+                    <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
+                      El costo del envío no está incluido en el total. Te informaremos el valor por WhatsApp.
                     </div>
+                  )}
 
-                    <div
-                      onClick={() => setEnvioData({ metodoEnvio: "ENCOMIENDA", costo: 0 })}
-                      className={cn(
-                        "p-4 border rounded-xl cursor-pointer flex items-center justify-between transition-all",
-                        envioData.metodoEnvio === "ENCOMIENDA" ? "border-primary bg-primary/5 ring-1 ring-primary/20" : "hover:border-border bg-background/70",
-                      )}
-                    >
-                      <div className="flex gap-4 items-center">
-                        <div className="bg-primary/12 p-2 border border-primary/25 rounded-full shadow-sm text-primary">
-                          <Package className="h-5 w-5" />
+                  {requiresDeliveryAddress && (
+                    <div className="space-y-3 pt-2">
+                      <div className="h-px bg-gray-100" />
+                      <div className="space-y-1.5">
+                        <Label className="text-sm font-semibold text-[var(--store-text,#0F172A)]">Domicilio *</Label>
+                        <Input name="direccion" value={clienteData.direccion ?? ""} onChange={handleInputChange} placeholder="Ej. Av. Santa Fe" className="h-12 rounded-xl border-gray-200 bg-gray-50" />
+                      </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-1.5">
+                          <Label className="text-sm font-semibold text-[var(--store-text,#0F172A)]">Altura *</Label>
+                          <Input name="altura" value={clienteData.altura ?? ""} onChange={handleInputChange} placeholder="1234" className="h-12 rounded-xl border-gray-200 bg-gray-50" />
                         </div>
-                        <div>
-                          <p className="font-bold text-foreground">Envio por encomienda</p>
-                          <p className="text-xs text-muted-foreground">Se coordina por WhatsApp y el envio se cobra aparte</p>
+                        <div className="space-y-1.5">
+                          <Label className="text-sm font-semibold text-[var(--store-text,#0F172A)]">Localidad *</Label>
+                          <Input name="localidad" value={clienteData.localidad ?? ""} onChange={handleInputChange} placeholder="Ciudad" className="h-12 rounded-xl border-gray-200 bg-gray-50" />
                         </div>
                       </div>
+                      <div className="space-y-1.5">
+                        <Label className="text-sm font-semibold text-[var(--store-text,#0F172A)]">Provincia *</Label>
+                        <Input name="provincia" value={clienteData.provincia ?? ""} onChange={handleInputChange} placeholder="Provincia" className="h-12 rounded-xl border-gray-200 bg-gray-50" />
+                      </div>
                     </div>
-                  </div>
+                  )}
 
-                  {selectedDeliveryNeedsDisclaimer ? (
-                    <div className="rounded-xl border border-amber-300/50 bg-amber-50 p-4 text-sm text-amber-950">
-                      El costo del envio no esta incluido en el total de productos. Te vamos a indicar por WhatsApp los pasos a seguir y el valor final del envio.
+                  {!canSendWhatsapp && (
+                    <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+                      No hay un número de WhatsApp configurado para esta tienda. Configuralo desde settings.
                     </div>
-                  ) : null}
-
-                  {requiresDeliveryAddress ? (
-                    <div className="space-y-4 border-t border-border/70 pt-4">
-                      <div className="space-y-1">
-                        <Label className="text-sm font-bold text-foreground">Domicilio *</Label>
-                        <Input className="border-border/80 bg-background/90 text-foreground placeholder:text-muted-foreground" name="direccion" value={clienteData.direccion ?? ""} onChange={handleInputChange} placeholder="Ej. Av. Santa Fe" />
-                      </div>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-1">
-                          <Label className="text-sm font-bold text-foreground">Altura *</Label>
-                          <Input className="border-border/80 bg-background/90 text-foreground placeholder:text-muted-foreground" name="altura" value={clienteData.altura ?? ""} onChange={handleInputChange} placeholder="1234" />
-                        </div>
-                        <div className="space-y-1">
-                          <Label className="text-sm font-bold text-foreground">Localidad *</Label>
-                          <Input className="border-border/80 bg-background/90 text-foreground placeholder:text-muted-foreground" name="localidad" value={clienteData.localidad ?? ""} onChange={handleInputChange} placeholder="Ciudad" />
-                        </div>
-                      </div>
-                      <div className="space-y-1">
-                        <Label className="text-sm font-bold text-foreground">Provincia *</Label>
-                        <Input className="border-border/80 bg-background/90 text-foreground placeholder:text-muted-foreground" name="provincia" value={clienteData.provincia ?? ""} onChange={handleInputChange} placeholder="Provincia" />
-                      </div>
-                    </div>
-                  ) : null}
-
-                  {!canSendWhatsapp ? (
-                    <div className="rounded-xl border border-[color:var(--status-danger)]/30 bg-[color:var(--status-danger)]/10 p-4 text-sm text-foreground">
-                      No hay un numero de WhatsApp configurado para esta tienda. Configuralo desde settings antes de usar este checkout.
-                    </div>
-                  ) : null}
+                  )}
                 </motion.div>
               )}
             </div>
 
-            {cart.length > 0 ? (
-              <div className={cn("p-4 sm:p-8 border-t border-border/70 space-y-4", cardBgClass)}>
-                <div className="space-y-2.5">
-                  <div className="flex justify-between text-sm text-muted-foreground font-medium">
-                    <span>Productos</span>
-                    <span className="text-foreground">${subtotalProductos.toLocaleString("es-AR", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}</span>
-                  </div>
-                  <div className="pt-4 flex justify-between items-end">
-                    <div>
-                      <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Total estimado</p>
-                      <p className="text-3xl font-black text-foreground tracking-tighter">
-                        ${subtotalProductos.toLocaleString("es-AR", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
-                      </p>
-                    </div>
-                  </div>
-                </div>
+            {/* ── Footer con resumen + botón ── */}
+            {cart.length > 0 && (
+              <div className="flex-shrink-0 border-t border-gray-100 bg-[var(--store-surface,#FFFFFF)] px-5 py-4 space-y-3">
+                {/* Resumen de precios en paso 1 */}
+                {step === 1 && ols && (
+                  <OrderSummary cartItems={cart} settings={ols} />
+                )}
 
-                <Button
-                  className={cn(
-                    "w-full h-14 sm:h-16 text-sm sm:text-md font-black shadow-xl transition-all gap-3 overflow-hidden group relative bg-primary hover:bg-primary/90 text-primary-foreground",
-                    buttonRadiusClass,
-                    buttonHoverClass,
-                  )}
+                {/* Botón principal */}
+                <button
                   onClick={handleContinue}
-                  disabled={loading || !canSendWhatsapp}
+                  disabled={loading || (step === 3 && !canSendWhatsapp)}
+                  className={cn(
+                    "w-full h-14 rounded-2xl text-white font-bold text-base flex items-center justify-center gap-2.5",
+                    "transition-all duration-200 hover:opacity-95 active:scale-[0.98]",
+                    "disabled:opacity-50 disabled:cursor-not-allowed",
+                    step === 3
+                      ? "shadow-[0_4px_20px_rgba(37,211,102,0.35)]"
+                      : "shadow-[0_4px_16px_rgba(0,0,0,0.15)]"
+                  )}
+                  style={{
+                    backgroundColor: step === 3
+                      ? "var(--store-whatsapp,#25D366)"
+                      : "var(--store-primary,#007AFF)",
+                  }}
                 >
                   {loading ? (
-                    <Loader2 className="h-6 w-6 animate-spin" />
+                    <Loader2 className="h-5 w-5 animate-spin" />
                   ) : step === 3 ? (
                     <>
-                      <span className="relative z-10">ENVIAR PEDIDO POR WHATSAPP</span>
-                      <MessageCircle className="h-5 w-5 relative z-10" />
+                      {/* Ícono WhatsApp SVG */}
+                      <svg viewBox="0 0 24 24" className="h-5 w-5 fill-white" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+                      </svg>
+                      <span>{whatsappButtonText}</span>
                     </>
                   ) : (
                     <>
-                      <span className="relative z-10">CONTINUAR</span>
-                      <ArrowRight className="h-5 w-5 group-hover:translate-x-1 transition-transform relative z-10" />
+                      <span>Continuar</span>
+                      <ArrowRight className="h-5 w-5" />
                     </>
                   )}
-                </Button>
+                </button>
               </div>
-            ) : null}
+            )}
           </motion.aside>
         </>
       )}
