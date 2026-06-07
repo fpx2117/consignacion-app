@@ -76,6 +76,7 @@ export type StoreLayoutConfig = {
   desktopLayout: "mobile-centered" | "wide-ecommerce" | "with-cart-sidebar";
   // Online Store — Destacados
   featuredProductIds: number[];
+  featuredSections: Array<{ title: string; productIds: number[] }>;
 };
 
 export type OnlineStorePromoFormItem = {

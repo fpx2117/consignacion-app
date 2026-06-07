@@ -42,6 +42,10 @@ export const onlineStoreCatalogSchema = z.object({
   maxProductsPerSection: z.number().int().min(1).max(50).default(6),
   addButtonPosition: z.enum(["floating", "below"]).default("floating"),
   featuredProductIds: z.array(z.number().int()).default([]),
+  featuredSections: z.array(z.object({
+    title: z.string().default("Destacados"),
+    productIds: z.array(z.number().int()).default([]),
+  })).default([]),
 });
 
 export const onlineStorePromoItemSchema = z.object({
