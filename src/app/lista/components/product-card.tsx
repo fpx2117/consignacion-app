@@ -152,7 +152,6 @@ export function ProductCard({
                                     src={product.imagenUrl}
                                     alt={product.nombre}
                                     fill
-                                    unoptimized
                                     loading="lazy"
                                     sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
                                     className="object-cover transition-transform duration-500 group-hover:scale-105"
@@ -265,7 +264,7 @@ export function ProductCard({
                 {showImages && (
                     <div className="relative w-28 sm:w-36 shrink-0 overflow-hidden bg-gray-50">
                         {product.imagenUrl ? (
-                            <Image src={product.imagenUrl} alt={product.nombre} fill unoptimized loading="lazy" sizes="144px" className="object-cover transition-transform duration-500 group-hover:scale-105" />
+                            <Image src={product.imagenUrl} alt={product.nombre} fill loading="lazy" sizes="144px" className="object-cover transition-transform duration-500 group-hover:scale-105" />
                         ) : (
                             <div className="flex h-full w-full min-h-[100px] items-center justify-center text-gray-200"><PackageOpen className="h-8 w-8" /></div>
                         )}
