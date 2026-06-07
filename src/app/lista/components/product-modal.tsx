@@ -61,20 +61,15 @@ export function ProductModal({ product, isOpen, onClose, config, isConsigne, onA
                             )}
                         >
                             {/* Botón Cerrar */}
-                            <Button
-                                variant="ghost"
-                                size="icon"
-                                className={cn(
-                                    "absolute top-3 right-3 sm:top-4 sm:right-4 z-10 backdrop-blur-md hover:bg-muted rounded-full h-9 w-9 sm:h-10 sm:w-10 text-foreground",
-                                    "bg-[color:rgba(var(--store-surface-rgb),0.72)]"
-                                )}
+                            <button
                                 onClick={onClose}
+                                className="absolute top-3 right-3 sm:top-4 sm:right-4 z-10 h-10 w-10 rounded-full bg-white/90 hover:bg-gray-100 flex items-center justify-center text-[var(--store-text,#0F172A)] shadow-sm transition-colors"
                             >
                                 <XCircle className="h-6 w-6" />
-                            </Button>
+                            </button>
 
                             {/* Lado Izquierdo: Imagen */}
-                            <div className="w-full md:w-1/2 bg-muted/40 flex items-center justify-center p-4 sm:p-8 aspect-square md:aspect-auto relative">
+                            <div className="w-full md:w-1/2 bg-gray-50 flex items-center justify-center p-4 sm:p-8 aspect-square md:aspect-auto relative">
                                 {product.imagenUrl ? (
                                     <Image
                                         src={product.imagenUrl}
@@ -91,27 +86,27 @@ export function ProductModal({ product, isOpen, onClose, config, isConsigne, onA
                             {/* Lado Derecho: Detalles */}
                             <div className="w-full md:w-1/2 p-4 sm:p-8 flex flex-col overflow-y-auto">
                                 <div>
-                                    <span className="text-xs font-black uppercase tracking-widest text-muted-foreground/80 mb-2 block">
+                                    <span className="text-xs font-bold uppercase tracking-widest text-[var(--store-muted,#8A8F98)] mb-2 block">
                                         {product.categoria?.nombre || "Sin Categoría"}
                                     </span>
-                                    <h2 className="text-xl sm:text-3xl font-black text-foreground leading-tight mb-4">
+                                    <h2 className="text-xl sm:text-3xl font-black text-[var(--store-text,#0F172A)] leading-tight mb-4">
                                         {product.nombre}
                                     </h2>
 
                                     <div className="mb-6">
                                         {isAvailable ? (
-                                            <Badge className="bg-[color:var(--status-success-strong)] hover:bg-[color:var(--status-success-strong)] text-[color:var(--ui-fx-white)] border-transparent px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider">
+                                            <Badge className="bg-emerald-500 hover:bg-emerald-500 text-white border-transparent px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider">
                                                 <CheckCircle2 className="h-3 w-3 mr-1" /> EN STOCK ({product.stockDisponibleUnits})
                                             </Badge>
                                         ) : (
-                                            <Badge variant="destructive" className="bg-foreground text-[color:var(--ui-fx-white)] border-transparent px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider">
+                                            <Badge className="bg-gray-800 text-white border-transparent px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider">
                                                 AGOTADO
                                             </Badge>
                                         )}
                                     </div>
                                 </div>
 
-                                <div className="flex flex-col gap-1 mb-8 pb-8 border-b border-border/70">
+                                <div className="flex flex-col gap-1 mb-8 pb-8 border-b border-gray-200">
                                     {descuento ? (
                                         <>
                                             <div className="flex items-center gap-3">
@@ -122,20 +117,20 @@ export function ProductModal({ product, isOpen, onClose, config, isConsigne, onA
                                                     {Math.abs(descuento.porcentaje)}% OFF
                                                 </Badge>
                                             </div>
-                                            <span className="text-3xl sm:text-4xl font-black text-destructive tracking-tight">
+                                            <span className="text-3xl sm:text-4xl font-black text-red-500 tracking-tight">
                                                 ${descuento.precioFinal.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
                                             </span>
-                                            <span className="text-sm font-semibold text-[color:var(--status-success-strong)]">
+                                            <span className="text-sm font-semibold text-emerald-600">
                                                 Ahorrás ${(descuento.precioOriginal - descuento.precioFinal).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
                                             </span>
                                         </>
                                     ) : (
                                         <>
-                                            <span className="text-3xl sm:text-4xl font-black text-foreground tracking-tight">
+                                            <span className="text-3xl sm:text-4xl font-black text-[var(--store-text,#0F172A)] tracking-tight">
                                                 ${displayedPrice.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
                                             </span>
                                             {isConsigne && (
-                                                <span className="text-sm font-semibold text-muted-foreground/80 line-through">
+                                                <span className="text-sm font-semibold text-[var(--store-muted,#8A8F98)] line-through">
                                                     Precio general: ${basePrice.toLocaleString('es-AR')}
                                                 </span>
                                             )}
@@ -149,7 +144,7 @@ export function ProductModal({ product, isOpen, onClose, config, isConsigne, onA
                                     <Button
                                         variant="outline"
                                         className={cn(
-                                            "h-14 px-6 border-[color:var(--status-success-strong)] hover:bg-[color:var(--status-success-strong)] text-[color:var(--status-success-strong)] transition-all duration-300",
+                                            "h-14 px-6 border-emerald-500 hover:bg-emerald-500 text-emerald-500 hover:text-white transition-all duration-300",
                                             buttonRadiusClass
                                         )}
                                         onClick={() => {
@@ -168,11 +163,12 @@ export function ProductModal({ product, isOpen, onClose, config, isConsigne, onA
                                 {cartEnabled && (
                                     <Button
                                         className={cn(
-                                            "h-14 flex-1 text-base font-black shadow-xl transition-all duration-300",
+                                            "h-14 flex-1 text-base font-bold shadow-xl transition-all duration-300",
                                             buttonRadiusClass,
                                             buttonHoverClass,
-                                            "bg-foreground text-[color:var(--ui-fx-white)] hover:bg-foreground/90"
+                                            "text-white hover:opacity-90"
                                         )}
+                                        style={{ backgroundColor: "var(--store-primary,#007AFF)" }}
                                         disabled={!isAvailable}
                                         onClick={() => {
                                             onAddToCart(product, quantity);
