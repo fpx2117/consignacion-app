@@ -209,7 +209,14 @@ export type OnlineStoreCatalogSettings = {
   productLayout: OnlineStoreProductLayout;
   maxProductsPerSection: number;
   addButtonPosition: OnlineStoreAddButtonPosition;
+  /** @deprecated usar featuredSections */
   featuredProductIds: number[];
+  featuredSections: OnlineStoreFeaturedSection[];
+};
+
+export type OnlineStoreFeaturedSection = {
+  title: string;
+  productIds: number[];
 };
 
 export type OnlineStorePromoItem = {
@@ -293,6 +300,7 @@ export const defaultOnlineStoreSettings: OnlineStoreSettings = {
     maxProductsPerSection: 6,
     addButtonPosition: "floating",
     featuredProductIds: [],
+    featuredSections: [],
   },
   promotions: {
     enabled: true,

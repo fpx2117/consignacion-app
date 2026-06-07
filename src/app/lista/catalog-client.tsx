@@ -520,70 +520,51 @@ export function CatalogClient({
                             <PromoCarousel items={promoItems} className="mt-4" />
                         )}
 
-                        {/* ── Productos Destacados ── */}
+                        {/* ── Secciones Destacadas ── */}
                         {(() => {
-                            const featuredIds = ols?.catalog?.featuredProductIds || [];
-                            if (featuredIds.length === 0) return null;
-                            const featured = products.filter(p => featuredIds.includes(p.id));
-                            if (featured.length === 0) return null;
-                            const useSlider = featured.length > 4;
-                            return (
-                                <div className="mt-4">
-                                    {/* Encabezado */}
-                                    <div className="flex items-center justify-between px-4 mb-3">
-                                        <div className="flex items-baseline gap-2">
-                                            <h3 className="text-lg font-bold text-[var(--store-text,#0F172A)]">⭐ Destacados</h3>
-                                            <span className="text-sm text-[var(--store-muted,#8A8F98)]">{featured.length}</span>
+                            const sections = ols?.catalog?.featuredSections || [];
+                            if (sections.length === 0) return null;
+                            return sections.map((section: { title: string; productIds: number[] }, si: number) => {
+                                const featured = products.filter(p => section.productIds.includes(p.id));
+                                if (featured.length === 0) return null;
+                                const useSlider = featured.length > 4;
+                                const title = section.title || "Destacados";
+                                return (
+                                    <div key={si} className="mt-4">
+                                        <div className="flex items-center justify-between px-4 mb-3">
+                                            <div className="flex items-baseline gap-2">
+                                                <h3 className="text-lg font-bold text-[var(--store-text,#0F172A)]">⭐ {title}</h3>
+                                                <span className="text-sm text-[var(--store-muted,#8A8F98)]">{featured.length}</span>
+                                            </div>
                                         </div>
-                                    </div>
-                                    {/* Slider horizontal (más de 4) */}
-                                    {useSlider ? (
-                                        <div
-                                            className="flex overflow-x-auto gap-3 px-4 snap-x snap-mandatory pb-2 scroll-pl-4"
-                                            style={{ scrollbarWidth: "none", WebkitOverflowScrolling: "touch" }}
-                                        >
-                                            {/* Espacio inicial para que la primera card no esté al borde */}
-                                            <div className="flex-shrink-0 w-0" />
-                                            {featured.map((product, index) => (
-                                                <div key={product.id} className="min-w-[150px] max-w-[160px] snap-start flex-shrink-0">
-                                                    <ProductCard
-                                                        product={product}
-                                                        config={config}
-                                                        isConsigne={isConsigne}
-                                                        viewMode="grid"
-                                                        onAddToCart={addToCart}
-                                                        onViewProduct={(p) => setSelectedProduct(p)}
-                                                        index={index}
-                                                        compact
+                                        {useSlider ? (
+                                            <div className="flex overflow-x-auto gap-3 px-4 snap-x snap-mandatory pb-2 scroll-pl-4"
+                                                style={{ scrollbarWidth: "none", WebkitOverflowScrolling: "touch" }}>
+                                                <div className="flex-shrink-0 w-0" />
+                                                {featured.map((product, index) => (
+                                                    <div key={product.id} className="min-w-[150px] max-w-[160px] snap-start flex-shrink-0">
+                                                        <ProductCard product={product} config={config} isConsigne={isConsigne} viewMode="grid"
+                                                            onAddToCart={addToCart} onViewProduct={(p) => setSelectedProduct(p)}
+                                                            index={index} compact
+                                                            cartQuantity={cart.find(i => i.id === product.id)?.quantity ?? 0}
+                                                            onUpdateCartQuantity={handleUpdateCartQuantity} />
+                                                    </div>
+                                                ))}
+                                                <div className="flex-shrink-0 w-2" />
+                                            </div>
+                                        ) : (
+                                            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 px-4">
+                                                {featured.map((product, index) => (
+                                                    <ProductCard key={product.id} product={product} config={config} isConsigne={isConsigne} viewMode="grid"
+                                                        onAddToCart={addToCart} onViewProduct={(p) => setSelectedProduct(p)} index={index}
                                                         cartQuantity={cart.find(i => i.id === product.id)?.quantity ?? 0}
-                                                        onUpdateCartQuantity={handleUpdateCartQuantity}
-                                                    />
-                                                </div>
-                                            ))}
-                                            {/* Espacio final para que la última card respire */}
-                                            <div className="flex-shrink-0 w-2" />
-                                        </div>
-                                    ) : (
-                                        /* Grilla (4 o menos) */
-                                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 px-4">
-                                            {featured.map((product, index) => (
-                                                <ProductCard
-                                                    key={product.id}
-                                                    product={product}
-                                                    config={config}
-                                                    isConsigne={isConsigne}
-                                                    viewMode="grid"
-                                                    onAddToCart={addToCart}
-                                                    onViewProduct={(p) => setSelectedProduct(p)}
-                                                    index={index}
-                                                    cartQuantity={cart.find(i => i.id === product.id)?.quantity ?? 0}
-                                                    onUpdateCartQuantity={handleUpdateCartQuantity}
-                                                />
-                                            ))}
-                                        </div>
-                                    )}
-                                </div>
-                            );
+                                                        onUpdateCartQuantity={handleUpdateCartQuantity} />
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                );
+                            });
                         })()}
 
                         {/* ── Breadcrumb desktop (contexto de filtro activo) ── */}

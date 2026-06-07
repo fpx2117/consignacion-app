@@ -12,7 +12,7 @@ import {
 import {
     Store, Search, Tag, Percent, ShoppingCart, Monitor, Star, Loader2,
     Image, Eye, DollarSign, Package, Grid, List, ChevronDown, CheckCircle2,
-    Smartphone, MonitorSmartphone, PanelRight,
+    Smartphone, MonitorSmartphone, PanelRight, X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useSucursalStore } from "@/store/useSucursalStore";
@@ -86,76 +86,90 @@ function SelectCard({ icon: Icon, label, desc, value, onChange, options }: {
     );
 }
 
-// ─── Featured Products (misma lógica, más compacta) ─────────────────────────────────
+// ─── Editor de secciones destacadas ───
+type FeaturedSection = { title: string; productIds: number[] };
 
-function FeaturedProductsSection({ featuredIds, onToggle }: { featuredIds: number[]; onToggle: (id: number) => void }) {
+function FeaturedSectionsEditor({ sections, onChange }: { sections: FeaturedSection[]; onChange: (s: FeaturedSection[]) => void }) {
     const [products, setProducts] = React.useState<Array<{ id: number; nombre: string }>>([]);
-    const [loading, setLoading] = React.useState(false);
-    const [search, setSearch] = React.useState("");
-    const [expanded, setExpanded] = React.useState(false);
-    const selectedCount = featuredIds.length;
+    const [loaded, setLoaded] = React.useState(false);
 
     React.useEffect(() => {
-        if (!expanded || products.length > 0) return;
-        setLoading(true);
+        if (loaded) return;
         fetch("/api/productos?sucursalId=0")
-            .then(r => r.ok ? r.json() : Promise.reject(r.status))
+            .then(r => r.ok ? r.json() : [])
             .then((res: any) => {
                 const list = Array.isArray(res) ? res : (res?.data || res?.productos || []);
                 setProducts(list.map((p: any) => ({ id: p.id, nombre: p.nombre })));
-            }).catch(() => {}).finally(() => setLoading(false));
-    }, [expanded, products.length]);
+                setLoaded(true);
+            }).catch(() => setLoaded(true));
+    }, [loaded]);
 
-    const filtered = search.trim() ? products.filter(p => p.nombre.toLowerCase().includes(search.toLowerCase())) : products;
+    const addSection = () => onChange([...sections, { title: "", productIds: [] }]);
+    const removeSection = (idx: number) => onChange(sections.filter((_, i) => i !== idx));
+    const updateSection = (idx: number, u: Partial<FeaturedSection>) => onChange(sections.map((s, i) => i === idx ? { ...s, ...u } : s));
+    const toggleProduct = (sectionIdx: number, productId: number) => {
+        const section = sections[sectionIdx];
+        const has = section.productIds.includes(productId);
+        updateSection(sectionIdx, { productIds: has ? section.productIds.filter(id => id !== productId) : [...section.productIds, productId] });
+    };
+    const total = sections.reduce((acc, s) => acc + s.productIds.length, 0);
+
+    return (
+        <div className="space-y-2">
+            <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                    <Star className="h-4 w-4 text-amber-500" />
+                    <span className="text-sm font-bold text-foreground">Secciones Destacadas</span>
+                    {total > 0 && <Badge variant="secondary" className="text-[10px] h-4 px-1.5 rounded-full">{total} prod.</Badge>}
+                </div>
+                <Button variant="outline" size="sm" className="text-xs h-7" onClick={addSection}>+ Sección</Button>
+            </div>
+            {sections.length === 0 && (
+                <p className="text-xs text-muted-foreground py-3 text-center border rounded-xl border-dashed">
+                    Agregá secciones como &ldquo;Perfumes&rdquo; o &ldquo;Ofertas&rdquo;
+                </p>
+            )}
+            {sections.map((section, idx) => <SectionEditor key={idx} section={section} products={products} onUpdate={u => updateSection(idx, u)} onToggle={id => toggleProduct(idx, id)} onRemove={() => removeSection(idx)} />)}
+        </div>
+    );
+}
+
+function SectionEditor({ section, products, onUpdate, onToggle, onRemove }: {
+    section: FeaturedSection; products: Array<{ id: number; nombre: string }>;
+    onUpdate: (u: Partial<FeaturedSection>) => void; onToggle: (id: number) => void; onRemove: () => void;
+}) {
+    const [expanded, setExpanded] = React.useState(false);
+    const [search, setSearch] = React.useState("");
+    const filtered = search.trim() ? products.filter(p => p.nombre.toLowerCase().includes(search.toLowerCase())) : products.slice(0, 50);
 
     return (
         <div className="rounded-xl border border-border/50 bg-card overflow-hidden">
-            <button onClick={() => setExpanded(!expanded)} className="w-full flex items-center justify-between p-4 text-left hover:bg-accent/30 transition-colors">
-                <div className="flex items-center gap-3">
-                    <div className="h-9 w-9 rounded-lg bg-amber-100 flex items-center justify-center flex-shrink-0">
-                        <Star className="h-4 w-4 text-amber-600" />
-                    </div>
-                    <div>
-                        <p className="text-sm font-semibold text-foreground flex items-center gap-2">
-                            Productos Destacados
-                            {selectedCount > 0 && <Badge variant="secondary" className="text-[10px] h-4 px-1.5 rounded-full">{selectedCount}</Badge>}
-                        </p>
-                        <p className="text-[11px] text-muted-foreground">Seleccioná qué productos aparecen primero</p>
-                    </div>
-                </div>
-                <ChevronDown className={cn("h-4 w-4 text-muted-foreground transition-transform", expanded && "rotate-180")} />
-            </button>
+            <div className="flex items-center gap-2 p-3">
+                <button onClick={() => setExpanded(!expanded)} className="flex-1 flex items-center gap-2 text-left min-w-0">
+                    <ChevronDown className={cn("h-4 w-4 text-muted-foreground flex-shrink-0 transition-transform", expanded && "rotate-180")} />
+                    <Input value={section.title} onChange={e => onUpdate({ title: e.target.value })} placeholder="Nombre de la sección" className="h-7 text-sm border-0 bg-transparent px-1 focus-visible:ring-0 font-semibold flex-1" onClick={e => e.stopPropagation()} />
+                </button>
+                <Badge variant="secondary" className="text-[10px] h-4 px-1.5 rounded-full flex-shrink-0">{section.productIds.length}</Badge>
+                <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-red-500 flex-shrink-0" onClick={onRemove}><X className="h-3.5 w-3.5" /></Button>
+            </div>
             {expanded && (
-                <div className="border-t border-border/50 px-4 pb-4 space-y-2">
-                    <div className="relative pt-3">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                        <Input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar productos..." className="pl-9 h-9 text-sm" />
-                    </div>
-                    <div className="max-h-48 overflow-y-auto -mx-1 px-1">
-                        {loading ? (
-                            <div className="flex justify-center py-6"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
-                        ) : filtered.length === 0 ? (
-                            <p className="text-center py-4 text-xs text-muted-foreground">Sin resultados</p>
-                        ) : (
-                            <div className="space-y-0.5">
-                                {filtered.map(p => {
-                                    const isSel = featuredIds.includes(p.id);
-                                    return (
-                                        <button key={p.id} onClick={() => onToggle(p.id)}
-                                            className={cn("w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-left text-sm transition-colors",
-                                                isSel ? "bg-amber-50 text-amber-900 font-medium" : "hover:bg-muted/50 text-foreground"
-                                            )}>
-                                            <div className={cn("h-4 w-4 rounded border-2 flex items-center justify-center flex-shrink-0 transition-all",
-                                                isSel ? "bg-amber-500 border-amber-500" : "border-gray-300"
-                                            )}>
-                                                {isSel && <CheckCircle2 className="h-3 w-3 text-white" />}
-                                            </div>
-                                            <span className="truncate flex-1">{p.nombre}</span>
-                                        </button>
-                                    );
-                                })}
-                            </div>
-                        )}
+                <div className="border-t border-border/50 px-3 pb-3 space-y-2">
+                    <div className="relative pt-2"><Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" /><Input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar..." className="pl-8 h-8 text-xs" /></div>
+                    <div className="max-h-40 overflow-y-auto">
+                        {filtered.map(p => {
+                            const isSel = section.productIds.includes(p.id);
+                            return (
+                                <button key={p.id} onClick={() => onToggle(p.id)}
+                                    className={cn("w-full flex items-center gap-2 px-2.5 py-1.5 rounded text-left text-xs transition-colors",
+                                        isSel ? "bg-amber-50 text-amber-900 font-medium" : "hover:bg-muted/50"
+                                    )}>
+                                    <div className={cn("h-3.5 w-3.5 rounded border flex items-center justify-center flex-shrink-0 transition-all", isSel ? "bg-amber-500 border-amber-500" : "border-gray-300")}>
+                                        {isSel && <CheckCircle2 className="h-2.5 w-2.5 text-white" />}
+                                    </div>
+                                    <span className="truncate flex-1">{p.nombre}</span>
+                                </button>
+                            );
+                        })}
                     </div>
                 </div>
             )}
@@ -295,12 +309,9 @@ export function LayoutTab({ config, setConfig }: LayoutTabProps) {
             {/* ═══════════════════════════════════════════
                  4. PRODUCTOS DESTACADOS
             ═══════════════════════════════════════════ */}
-            <FeaturedProductsSection
-                featuredIds={config.featuredProductIds || []}
-                onToggle={(id) => {
-                    const ids = config.featuredProductIds || [];
-                    setConfig({ ...config, featuredProductIds: ids.includes(id) ? ids.filter(i => i !== id) : [...ids, id] });
-                }}
+            <FeaturedSectionsEditor
+                sections={config.featuredSections || []}
+                onChange={(sections) => setConfig({ ...config, featuredSections: sections })}
             />
 
             {/* ─── VISTA PREVIA RÁPIDA ─── */}
