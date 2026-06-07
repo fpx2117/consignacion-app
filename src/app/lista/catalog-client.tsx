@@ -538,10 +538,14 @@ export function CatalogClient({
                                     </div>
                                     {/* Slider horizontal (más de 4) */}
                                     {useSlider ? (
-                                        <div className="flex overflow-x-auto gap-3 px-4 snap-x snap-mandatory pb-2"
-                                            style={{ scrollbarWidth: "none" }}>
+                                        <div
+                                            className="flex overflow-x-auto gap-3 px-4 snap-x snap-mandatory pb-2 scroll-pl-4"
+                                            style={{ scrollbarWidth: "none", WebkitOverflowScrolling: "touch" }}
+                                        >
+                                            {/* Espacio inicial para que la primera card no esté al borde */}
+                                            <div className="flex-shrink-0 w-0" />
                                             {featured.map((product, index) => (
-                                                <div key={product.id} className="min-w-[160px] max-w-[180px] snap-start">
+                                                <div key={product.id} className="min-w-[150px] max-w-[160px] snap-start flex-shrink-0">
                                                     <ProductCard
                                                         product={product}
                                                         config={config}
@@ -556,6 +560,8 @@ export function CatalogClient({
                                                     />
                                                 </div>
                                             ))}
+                                            {/* Espacio final para que la última card respire */}
+                                            <div className="flex-shrink-0 w-2" />
                                         </div>
                                     ) : (
                                         /* Grilla (4 o menos) */
