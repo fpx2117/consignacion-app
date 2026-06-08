@@ -90,7 +90,7 @@ function SelectCard({ icon: Icon, label, desc, value, onChange, options }: {
 type FeaturedSection = { title: string; productIds: number[] };
 
 function FeaturedSectionsEditor({ sections, onChange }: { sections: FeaturedSection[]; onChange: (s: FeaturedSection[]) => void }) {
-    const [products, setProducts] = React.useState<Array<{ id: number; nombre: string }>>([]);
+    const [products, setProducts] = React.useState<Array<{ id: number; nombre: string; stock: number; categoriaId: number | null; categoriaNombre: string }>>([]);
     const [loaded, setLoaded] = React.useState(false);
 
     React.useEffect(() => {
@@ -99,7 +99,12 @@ function FeaturedSectionsEditor({ sections, onChange }: { sections: FeaturedSect
             .then(r => r.ok ? r.json() : [])
             .then((res: any) => {
                 const list = Array.isArray(res) ? res : (res?.data || res?.productos || []);
-                setProducts(list.map((p: any) => ({ id: p.id, nombre: p.nombre })));
+                setProducts(list.map((p: any) => ({
+                    id: p.id, nombre: p.nombre,
+                    stock: p.stockDisponibleUnits ?? 0,
+                    categoriaId: p.categoriaId ?? null,
+                    categoriaNombre: p.categoria?.nombre || "",
+                })));
                 setLoaded(true);
             }).catch(() => setLoaded(true));
     }, [loaded]);
@@ -108,6 +113,8 @@ function FeaturedSectionsEditor({ sections, onChange }: { sections: FeaturedSect
     const removeSection = (idx: number) => onChange(sections.filter((_, i) => i !== idx));
     const updateSection = (idx: number, u: Partial<FeaturedSection>) => onChange(sections.map((s, i) => i === idx ? { ...s, ...u } : s));
     const toggleProduct = (sectionIdx: number, productId: number) => {
+        const product = products.find(p => p.id === productId);
+        if (product && product.stock <= 0) return; // sin stock = no seleccionable
         const section = sections[sectionIdx];
         const has = section.productIds.includes(productId);
         updateSection(sectionIdx, { productIds: has ? section.productIds.filter(id => id !== productId) : [...section.productIds, productId] });
@@ -135,12 +142,27 @@ function FeaturedSectionsEditor({ sections, onChange }: { sections: FeaturedSect
 }
 
 function SectionEditor({ section, products, onUpdate, onToggle, onRemove }: {
-    section: FeaturedSection; products: Array<{ id: number; nombre: string }>;
+    section: FeaturedSection; products: Array<{ id: number; nombre: string; stock: number; categoriaId: number | null; categoriaNombre: string }>;
     onUpdate: (u: Partial<FeaturedSection>) => void; onToggle: (id: number) => void; onRemove: () => void;
 }) {
     const [expanded, setExpanded] = React.useState(false);
     const [search, setSearch] = React.useState("");
-    const filtered = search.trim() ? products.filter(p => p.nombre.toLowerCase().includes(search.toLowerCase())) : products.slice(0, 50);
+    const [catFilter, setCatFilter] = React.useState<string>("");
+
+    // Categorías únicas de los productos
+    const categorias = React.useMemo(() => {
+        const cats = new Map<string, string>();
+        products.forEach(p => { if (p.categoriaNombre) cats.set(p.categoriaNombre, p.categoriaNombre); });
+        return Array.from(cats.values()).sort();
+    }, [products]);
+
+    const filtered = React.useMemo(() => {
+        let list = products;
+        if (catFilter) list = list.filter(p => p.categoriaNombre === catFilter);
+        if (search.trim()) list = list.filter(p => p.nombre.toLowerCase().includes(search.toLowerCase()));
+        // Ordenar: con stock primero, luego sin stock
+        return [...list].sort((a, b) => (b.stock > 0 ? 1 : 0) - (a.stock > 0 ? 1 : 0));
+    }, [products, search, catFilter]);
 
     return (
         <div className="rounded-xl border border-border/50 bg-card overflow-hidden">
@@ -154,19 +176,42 @@ function SectionEditor({ section, products, onUpdate, onToggle, onRemove }: {
             </div>
             {expanded && (
                 <div className="border-t border-border/50 px-3 pb-3 space-y-2">
-                    <div className="relative pt-2"><Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" /><Input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar..." className="pl-8 h-8 text-xs" /></div>
+                    {/* Buscador + filtro categoría */}
+                    <div className="flex gap-2 pt-2">
+                        <div className="relative flex-1">
+                            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                            <Input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar..." className="pl-8 h-8 text-xs" />
+                        </div>
+                        <Select value={catFilter} onValueChange={setCatFilter}>
+                            <SelectTrigger className="h-8 w-32 text-xs"><SelectValue placeholder="Categoría" /></SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="">Todas</SelectItem>
+                                {categorias.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                    {/* Lista */}
                     <div className="max-h-40 overflow-y-auto">
                         {filtered.map(p => {
                             const isSel = section.productIds.includes(p.id);
+                            const sinStock = p.stock <= 0;
                             return (
-                                <button key={p.id} onClick={() => onToggle(p.id)}
+                                <button key={p.id}
+                                    onClick={() => !sinStock && onToggle(p.id)}
+                                    disabled={sinStock}
                                     className={cn("w-full flex items-center gap-2 px-2.5 py-1.5 rounded text-left text-xs transition-colors",
+                                        sinStock ? "opacity-40 cursor-not-allowed text-muted-foreground" :
                                         isSel ? "bg-amber-50 text-amber-900 font-medium" : "hover:bg-muted/50"
                                     )}>
-                                    <div className={cn("h-3.5 w-3.5 rounded border flex items-center justify-center flex-shrink-0 transition-all", isSel ? "bg-amber-500 border-amber-500" : "border-gray-300")}>
-                                        {isSel && <CheckCircle2 className="h-2.5 w-2.5 text-white" />}
+                                    <div className={cn("h-3.5 w-3.5 rounded border flex items-center justify-center flex-shrink-0 transition-all",
+                                        sinStock ? "border-gray-200 bg-gray-100" :
+                                        isSel ? "bg-amber-500 border-amber-500" : "border-gray-300"
+                                    )}>
+                                        {isSel && !sinStock && <CheckCircle2 className="h-2.5 w-2.5 text-white" />}
                                     </div>
                                     <span className="truncate flex-1">{p.nombre}</span>
+                                    {sinStock && <span className="text-[9px] text-red-400 flex-shrink-0">agotado</span>}
+                                    {!sinStock && <span className="text-[9px] text-muted-foreground flex-shrink-0">{p.stock}</span>}
                                 </button>
                             );
                         })}
