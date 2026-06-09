@@ -87,7 +87,7 @@ function SelectCard({ icon: Icon, label, desc, value, onChange, options }: {
 }
 
 // ─── Editor de secciones destacadas ───
-type FeaturedSection = { title: string; productIds: number[] };
+type FeaturedSection = { title: string; productIds: number[]; displayMode: "slider-auto" | "slider-static" | "grid" };
 
 function FeaturedSectionsEditor({ sections, onChange }: { sections: FeaturedSection[]; onChange: (s: FeaturedSection[]) => void }) {
     const [products, setProducts] = React.useState<Array<{ id: number; nombre: string; stock: number; categoriaId: number | null; categoriaNombre: string }>>([]);
@@ -109,7 +109,7 @@ function FeaturedSectionsEditor({ sections, onChange }: { sections: FeaturedSect
             }).catch(() => {});
     }, [loaded]);
 
-    const addSection = () => onChange([...sections, { title: "", productIds: [] }]);
+    const addSection = () => onChange([...sections, { title: "", productIds: [], displayMode: "slider-static" }]);
     const removeSection = (idx: number) => onChange(sections.filter((_, i) => i !== idx));
     const updateSection = (idx: number, u: Partial<FeaturedSection>) => onChange(sections.map((s, i) => i === idx ? { ...s, ...u } : s));
     const toggleProduct = (sectionIdx: number, productId: number) => {
@@ -172,6 +172,14 @@ function SectionEditor({ section, products, onUpdate, onToggle, onRemove }: {
                     <Input value={section.title} onChange={e => onUpdate({ title: e.target.value })} placeholder="Nombre de la sección" className="h-7 text-sm border-0 bg-transparent px-1 focus-visible:ring-0 font-semibold flex-1" onClick={e => e.stopPropagation()} />
                 </button>
                 <Badge variant="secondary" className="text-[10px] h-4 px-1.5 rounded-full flex-shrink-0">{section.productIds.length}</Badge>
+                <Select value={section.displayMode || "slider-static"} onValueChange={(v) => onUpdate({ displayMode: v as any })}>
+                    <SelectTrigger className="h-7 w-24 text-[10px]"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="slider-auto">Slider auto</SelectItem>
+                        <SelectItem value="slider-static">Slider</SelectItem>
+                        <SelectItem value="grid">Grilla 6</SelectItem>
+                    </SelectContent>
+                </Select>
                 <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-red-500 flex-shrink-0" onClick={onRemove}><X className="h-3.5 w-3.5" /></Button>
             </div>
             {expanded && (

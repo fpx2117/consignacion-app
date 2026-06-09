@@ -45,6 +45,7 @@ export const onlineStoreCatalogSchema = z.object({
   featuredSections: z.array(z.object({
     title: z.string().default("Destacados"),
     productIds: z.array(z.number().int()).default([]),
+    displayMode: z.enum(["slider-auto", "slider-static", "grid"]).default("slider-static"),
   })).default([]),
 });
 
