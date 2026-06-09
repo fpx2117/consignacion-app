@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import dynamic from "next/dynamic";
-import { CheckCircle2, ChevronRight, Loader2, XCircle } from "lucide-react";
+import { CheckCircle2, ChevronLeft, ChevronRight, Loader2, XCircle } from "lucide-react";
 import { motion } from "motion/react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -771,28 +771,27 @@ function SliderRow({ products: items, config, isConsigne, addToCart, setSelected
 }) {
     const scrollRef = React.useRef<HTMLDivElement>(null);
 
+    const scrollBy = (amount: number) => {
+        scrollRef.current?.scrollBy({ left: amount, behavior: "smooth" });
+    };
+
     // Auto-scroll
     React.useEffect(() => {
         if (!autoScroll || !scrollRef.current) return;
         const el = scrollRef.current;
         let raf: number;
-        let lastTime = 0;
-        const speed = 0.5; // px per frame
-        const animate = (time: number) => {
-            if (lastTime && time - lastTime > 16) {
+        const speed = 1.2; // px por frame (~72px/s)
+        const animate = () => {
+            if (el.scrollLeft >= el.scrollWidth - el.clientWidth - 10) {
+                el.scrollLeft = 0;
+            } else {
                 el.scrollLeft += speed;
-                if (el.scrollLeft >= el.scrollWidth - el.clientWidth) {
-                    el.scrollLeft = 0;
-                }
-                lastTime = time;
             }
-            if (!lastTime) lastTime = time;
             raf = requestAnimationFrame(animate);
         };
         raf = requestAnimationFrame(animate);
-        // Pausar al hacer hover
         const pause = () => cancelAnimationFrame(raf);
-        const resume = () => { raf = requestAnimationFrame(animate); lastTime = 0; };
+        const resume = () => { raf = requestAnimationFrame(animate); };
         el.addEventListener("mouseenter", pause);
         el.addEventListener("mouseleave", resume);
         el.addEventListener("touchstart", pause, { passive: true });
@@ -805,8 +804,14 @@ function SliderRow({ products: items, config, isConsigne, addToCart, setSelected
     }, [autoScroll]);
 
     return (
-        <>
-            {/* Slider (mobile + desktop) */}
+        <div className="relative group">
+            {/* Flecha izquierda (desktop) */}
+            <button onClick={() => scrollBy(-300)}
+                className="hidden md:flex absolute left-0 top-1/2 -translate-y-1/2 z-10 h-10 w-10 rounded-full bg-white/90 shadow-lg items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-white"
+            >
+                <ChevronLeft className="h-5 w-5 text-gray-700" />
+            </button>
+            {/* Slider */}
             <div ref={scrollRef}
                 className="flex overflow-x-auto gap-3 px-4 snap-x snap-mandatory pb-2 scroll-pl-4"
                 style={{ scrollbarWidth: "none", WebkitOverflowScrolling: "touch" }}>
@@ -821,6 +826,12 @@ function SliderRow({ products: items, config, isConsigne, addToCart, setSelected
                 ))}
                 <div className="flex-shrink-0 w-2" />
             </div>
-        </>
+            {/* Flecha derecha (desktop) */}
+            <button onClick={() => scrollBy(300)}
+                className="hidden md:flex absolute right-0 top-1/2 -translate-y-1/2 z-10 h-10 w-10 rounded-full bg-white/90 shadow-lg items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-white"
+            >
+                <ChevronRight className="h-5 w-5 text-gray-700" />
+            </button>
+        </div>
     );
 }
