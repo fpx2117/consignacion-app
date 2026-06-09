@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import dynamic from "next/dynamic";
-import { CheckCircle2, Loader2, XCircle } from "lucide-react";
+import { CheckCircle2, ChevronRight, Loader2, XCircle } from "lucide-react";
 import { motion } from "motion/react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -615,23 +615,68 @@ export function CatalogClient({
                             ) : (
                                 /* Vista "todas las categorías" */
                                 <>
-                                    {productsByCategory.map(({ category, products: catProducts, total }) => (
-                                        <ProductSection
-                                            key={category.id}
-                                            title={category.nombre}
-                                            count={total}
-                                            products={catProducts}
-                                            config={config}
-                                            viewMode="grid"
-                                            isConsigne={isConsigne}
-                                            onAddToCart={addToCart}
-                                            onViewProduct={(p) => setSelectedProduct(p)}
-                                            onViewAll={() => handleSelectCategory(category.id)}
-                                            forceGrid
-                                            cart={cart}
-                                            onUpdateCartQuantity={handleUpdateCartQuantity}
-                                        />
-                                    ))}
+                                    {productsByCategory.map(({ category, products: catProducts, total }) => {
+                                        const isVirtual = (category as any).isVirtual;
+                                        const useSlider = isVirtual && catProducts.length > 4;
+                                        return (
+                                            <div key={category.id}>
+                                                {/* Encabezado */}
+                                                <div className="flex items-center justify-between px-4 mb-3">
+                                                    <div className="flex items-baseline gap-2">
+                                                        <h3 className="text-lg font-bold text-[var(--store-text,#0F172A)]">
+                                                            {isVirtual ? "⭐ " : ""}{category.nombre}
+                                                        </h3>
+                                                        <span className="text-sm text-[var(--store-muted,#8A8F98)]">{total}</span>
+                                                    </div>
+                                                    {!isVirtual && ols?.catalog?.showViewAll && (
+                                                        <button onClick={() => handleSelectCategory(category.id)}
+                                                            className="flex items-center gap-0.5 text-sm font-medium text-[var(--store-primary,#007AFF)] hover:opacity-80 transition-opacity whitespace-nowrap">
+                                                            Ver todo <ChevronRight className="h-4 w-4" />
+                                                        </button>
+                                                    )}
+                                                </div>
+                                                {/* Slider mobile para destacados, grilla desktop */}
+                                                {useSlider ? (
+                                                    <>
+                                                        {/* Mobile: slider horizontal */}
+                                                        <div className="flex lg:hidden overflow-x-auto gap-3 px-4 snap-x snap-mandatory pb-2 scroll-pl-4"
+                                                            style={{ scrollbarWidth: "none", WebkitOverflowScrolling: "touch" }}>
+                                                            <div className="flex-shrink-0 w-0" />
+                                                            {catProducts.map((product, index) => (
+                                                                <div key={product.id} className="min-w-[150px] max-w-[160px] snap-start flex-shrink-0">
+                                                                    <ProductCard product={product} config={config} isConsigne={isConsigne} viewMode="grid"
+                                                                        onAddToCart={addToCart} onViewProduct={(p) => setSelectedProduct(p)} index={index} compact
+                                                                        cartQuantity={cart.find(i => i.id === product.id)?.quantity ?? 0}
+                                                                        onUpdateCartQuantity={handleUpdateCartQuantity} />
+                                                                </div>
+                                                            ))}
+                                                            <div className="flex-shrink-0 w-2" />
+                                                        </div>
+                                                        {/* Desktop: grilla normal */}
+                                                        <div className="hidden lg:grid grid-cols-3 xl:grid-cols-4 gap-3 px-4">
+                                                            {catProducts.map((product, index) => (
+                                                                <ProductCard key={product.id} product={product} config={config} isConsigne={isConsigne} viewMode="grid"
+                                                                    onAddToCart={addToCart} onViewProduct={(p) => setSelectedProduct(p)} index={index}
+                                                                    cartQuantity={cart.find(i => i.id === product.id)?.quantity ?? 0}
+                                                                    onUpdateCartQuantity={handleUpdateCartQuantity} />
+                                                            ))}
+                                                        </div>
+                                                    </>
+                                                ) : (
+                                                    /* Grilla normal (real categories o virtual con pocos productos) */
+                                                    <ProductSection
+                                                        title={category.nombre}
+                                                        count={total}
+                                                        products={catProducts} config={config} viewMode="grid"
+                                                        isConsigne={isConsigne} onAddToCart={addToCart}
+                                                        onViewProduct={(p) => setSelectedProduct(p)}
+                                                        onViewAll={isVirtual ? undefined : () => handleSelectCategory(category.id)}
+                                                        forceGrid cart={cart} onUpdateCartQuantity={handleUpdateCartQuantity}
+                                                    />
+                                                )}
+                                            </div>
+                                        );
+                                    })}
 
                                     {uncategorizedProducts.length > 0 && (
                                         <ProductSection
