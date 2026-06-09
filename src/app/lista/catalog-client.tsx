@@ -806,13 +806,13 @@ function SliderRow({ products: items, config, isConsigne, addToCart, setSelected
 
     return (
         <>
-            {/* Mobile: slider */}
+            {/* Slider (mobile + desktop) */}
             <div ref={scrollRef}
-                className="flex lg:hidden overflow-x-auto gap-3 px-4 snap-x snap-mandatory pb-2 scroll-pl-4"
+                className="flex overflow-x-auto gap-3 px-4 snap-x snap-mandatory pb-2 scroll-pl-4"
                 style={{ scrollbarWidth: "none", WebkitOverflowScrolling: "touch" }}>
                 <div className="flex-shrink-0 w-0" />
                 {items.map((product, index) => (
-                    <div key={product.id} className="min-w-[150px] max-w-[160px] snap-start flex-shrink-0">
+                    <div key={product.id} className="min-w-[150px] max-w-[160px] sm:min-w-[180px] sm:max-w-[200px] snap-start flex-shrink-0">
                         <ProductCard product={product} config={config} isConsigne={isConsigne} viewMode="grid"
                             onAddToCart={addToCart} onViewProduct={setSelectedProduct} index={index} compact
                             cartQuantity={cart.find(i => i.id === product.id)?.quantity ?? 0}
@@ -820,15 +820,6 @@ function SliderRow({ products: items, config, isConsigne, addToCart, setSelected
                     </div>
                 ))}
                 <div className="flex-shrink-0 w-2" />
-            </div>
-            {/* Desktop: grilla */}
-            <div className="hidden lg:grid grid-cols-3 xl:grid-cols-4 gap-3 px-4">
-                {items.map((product, index) => (
-                    <ProductCard key={product.id} product={product} config={config} isConsigne={isConsigne} viewMode="grid"
-                        onAddToCart={addToCart} onViewProduct={setSelectedProduct} index={index}
-                        cartQuantity={cart.find(i => i.id === product.id)?.quantity ?? 0}
-                        onUpdateCartQuantity={handleUpdateCartQuantity} />
-                ))}
             </div>
         </>
     );
