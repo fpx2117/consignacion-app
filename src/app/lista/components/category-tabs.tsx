@@ -51,10 +51,13 @@ export function CategoryTabs({
     }
   }, [selectedCategory]);
 
-  // Solo categorías con productos
+  // Solo categorías con productos (virtuales siempre visibles)
   const filteredCategories = React.useMemo(() => {
-    if (!allProducts) return categories; // sin datos, mostrar todas
-    return categories.filter((c) => (categoryCounts[c.id] || 0) > 0);
+    if (!allProducts) return categories;
+    return categories.filter((c: any) => {
+      if (c.isVirtual) return true;
+      return (categoryCounts[c.id] || 0) > 0;
+    });
   }, [categories, categoryCounts, allProducts]);
 
   if (!categories || categories.length === 0) return null;

@@ -313,11 +313,12 @@ export function CatalogClient({
     const virtualCategories = React.useMemo(() => {
         const sections = ols?.catalog?.featuredSections || [];
         return sections
-            .map((s: { title: string; productIds: number[] }, i: number) => ({
-                id: -(i + 1), // IDs negativos = virtuales
-                nombre: "⭐ " + (s.title || "Destacados"),
+            .map((s: { title: string; productIds: number[]; displayMode?: string }, i: number) => ({
+                id: -(i + 1),
+                nombre: (s.title || "Destacados"),
                 isVirtual: true as const,
                 productIds: s.productIds,
+                displayMode: (s.displayMode || "slider-static") as "slider-auto" | "slider-static" | "grid",
             }))
             .filter(vc => vc.productIds.length > 0);
     }, [ols?.catalog?.featuredSections]);
@@ -352,6 +353,8 @@ export function CatalogClient({
     // ── Secciones por categoría (vista "todas") ──
     const productsByCategory = React.useMemo(() => {
         if (!showCategories) return [];
+        // IDs de productos ya usados en secciones virtuales (evitar duplicados)
+        const virtualProductIds = new Set(virtualCategories.flatMap(vc => vc.productIds));
         const virtualSections = virtualCategories.map(vc => ({
             category: vc,
             products: filteredProducts.filter(p => vc.productIds.includes(p.id)).slice(0, maxPerSection),
@@ -359,8 +362,8 @@ export function CatalogClient({
         })).filter(s => s.products.length > 0);
         const realSections = categories.map(cat => ({
             category: cat,
-            products: filteredProducts.filter(p => p.categoriaId === cat.id).slice(0, maxPerSection),
-            total: filteredProducts.filter(p => p.categoriaId === cat.id).length,
+            products: filteredProducts.filter(p => p.categoriaId === cat.id && !virtualProductIds.has(p.id)).slice(0, maxPerSection),
+            total: filteredProducts.filter(p => p.categoriaId === cat.id && !virtualProductIds.has(p.id)).length,
         })).filter(s => s.products.length > 0);
         return [...virtualSections, ...realSections];
     }, [categories, virtualCategories, filteredProducts, showCategories, maxPerSection]);
@@ -385,7 +388,7 @@ export function CatalogClient({
         }
         if (selectedCategory) {
             const vc = virtualCategories.find(c => c.id === selectedCategory);
-            if (vc) return vc.nombre.replace("⭐ ", "");
+            if (vc) return vc.nombre;
             return categories.find((c) => c.id === selectedCategory)?.nombre ?? "Productos";
         }
         return "Todos los productos";
@@ -617,61 +620,42 @@ export function CatalogClient({
                                 <>
                                     {productsByCategory.map(({ category, products: catProducts, total }) => {
                                         const isVirtual = (category as any).isVirtual;
-                                        const useSlider = isVirtual && catProducts.length > 4;
+                                        const mode = (category as any).displayMode || "slider-static";
+                                        const isSlider = isVirtual && mode !== "grid";
+                                        const isAuto = mode === "slider-auto";
                                         return (
                                             <div key={category.id}>
                                                 {/* Encabezado */}
                                                 <div className="flex items-center justify-between px-4 mb-3">
                                                     <div className="flex items-baseline gap-2">
                                                         <h3 className="text-lg font-bold text-[var(--store-text,#0F172A)]">
-                                                            {isVirtual ? "⭐ " : ""}{category.nombre}
+                                                            {category.nombre}
                                                         </h3>
                                                         <span className="text-sm text-[var(--store-muted,#8A8F98)]">{total}</span>
                                                     </div>
-                                                    {!isVirtual && ols?.catalog?.showViewAll && (
+                                                    {/* Ver todos (categorías reales o virtuales con modo grid) */}
+                                                    {(!isVirtual || !isSlider) && ols?.catalog?.showViewAll && (
                                                         <button onClick={() => handleSelectCategory(category.id)}
                                                             className="flex items-center gap-0.5 text-sm font-medium text-[var(--store-primary,#007AFF)] hover:opacity-80 transition-opacity whitespace-nowrap">
                                                             Ver todo <ChevronRight className="h-4 w-4" />
                                                         </button>
                                                     )}
                                                 </div>
-                                                {/* Slider mobile para destacados, grilla desktop */}
-                                                {useSlider ? (
-                                                    <>
-                                                        {/* Mobile: slider horizontal */}
-                                                        <div className="flex lg:hidden overflow-x-auto gap-3 px-4 snap-x snap-mandatory pb-2 scroll-pl-4"
-                                                            style={{ scrollbarWidth: "none", WebkitOverflowScrolling: "touch" }}>
-                                                            <div className="flex-shrink-0 w-0" />
-                                                            {catProducts.map((product, index) => (
-                                                                <div key={product.id} className="min-w-[150px] max-w-[160px] snap-start flex-shrink-0">
-                                                                    <ProductCard product={product} config={config} isConsigne={isConsigne} viewMode="grid"
-                                                                        onAddToCart={addToCart} onViewProduct={(p) => setSelectedProduct(p)} index={index} compact
-                                                                        cartQuantity={cart.find(i => i.id === product.id)?.quantity ?? 0}
-                                                                        onUpdateCartQuantity={handleUpdateCartQuantity} />
-                                                                </div>
-                                                            ))}
-                                                            <div className="flex-shrink-0 w-2" />
-                                                        </div>
-                                                        {/* Desktop: grilla normal */}
-                                                        <div className="hidden lg:grid grid-cols-3 xl:grid-cols-4 gap-3 px-4">
-                                                            {catProducts.map((product, index) => (
-                                                                <ProductCard key={product.id} product={product} config={config} isConsigne={isConsigne} viewMode="grid"
-                                                                    onAddToCart={addToCart} onViewProduct={(p) => setSelectedProduct(p)} index={index}
-                                                                    cartQuantity={cart.find(i => i.id === product.id)?.quantity ?? 0}
-                                                                    onUpdateCartQuantity={handleUpdateCartQuantity} />
-                                                            ))}
-                                                        </div>
-                                                    </>
+                                                {/* Slider (auto o static) */}
+                                                {isSlider ? (
+                                                    <SliderRow products={catProducts} config={config} isConsigne={isConsigne}
+                                                        addToCart={addToCart} setSelectedProduct={setSelectedProduct}
+                                                        cart={cart} handleUpdateCartQuantity={handleUpdateCartQuantity}
+                                                        autoScroll={isAuto} />
                                                 ) : (
-                                                    /* Grilla normal (real categories o virtual con pocos productos) */
+                                                    /* Grilla normal */
                                                     <ProductSection
-                                                        title={category.nombre}
-                                                        count={total}
+                                                        title="" count={0}
                                                         products={catProducts} config={config} viewMode="grid"
                                                         isConsigne={isConsigne} onAddToCart={addToCart}
                                                         onViewProduct={(p) => setSelectedProduct(p)}
-                                                        onViewAll={isVirtual ? undefined : () => handleSelectCategory(category.id)}
                                                         forceGrid cart={cart} onUpdateCartQuantity={handleUpdateCartQuantity}
+                                                        className="[&>div:first-child]:hidden"
                                                     />
                                                 )}
                                             </div>
@@ -771,5 +755,81 @@ export function CatalogClient({
                 onAddToCart={addToCart}
             />
         </div>
+    );
+}
+
+// ─── Slider horizontal con/sin auto-scroll ───
+function SliderRow({ products: items, config, isConsigne, addToCart, setSelectedProduct, cart, handleUpdateCartQuantity, autoScroll }: {
+    products: PublicCatalogProduct[];
+    config: PublicCatalogConfig;
+    isConsigne: boolean;
+    addToCart: (p: PublicCatalogProduct, q?: number) => void;
+    setSelectedProduct: (p: PublicCatalogProduct) => void;
+    cart: CatalogCartItem[];
+    handleUpdateCartQuantity: (id: number, qty: number) => void;
+    autoScroll: boolean;
+}) {
+    const scrollRef = React.useRef<HTMLDivElement>(null);
+
+    // Auto-scroll
+    React.useEffect(() => {
+        if (!autoScroll || !scrollRef.current) return;
+        const el = scrollRef.current;
+        let raf: number;
+        let lastTime = 0;
+        const speed = 0.5; // px per frame
+        const animate = (time: number) => {
+            if (lastTime && time - lastTime > 16) {
+                el.scrollLeft += speed;
+                if (el.scrollLeft >= el.scrollWidth - el.clientWidth) {
+                    el.scrollLeft = 0;
+                }
+                lastTime = time;
+            }
+            if (!lastTime) lastTime = time;
+            raf = requestAnimationFrame(animate);
+        };
+        raf = requestAnimationFrame(animate);
+        // Pausar al hacer hover
+        const pause = () => cancelAnimationFrame(raf);
+        const resume = () => { raf = requestAnimationFrame(animate); lastTime = 0; };
+        el.addEventListener("mouseenter", pause);
+        el.addEventListener("mouseleave", resume);
+        el.addEventListener("touchstart", pause, { passive: true });
+        el.addEventListener("touchend", resume);
+        return () => {
+            cancelAnimationFrame(raf);
+            el.removeEventListener("mouseenter", pause);
+            el.removeEventListener("mouseleave", resume);
+        };
+    }, [autoScroll]);
+
+    return (
+        <>
+            {/* Mobile: slider */}
+            <div ref={scrollRef}
+                className="flex lg:hidden overflow-x-auto gap-3 px-4 snap-x snap-mandatory pb-2 scroll-pl-4"
+                style={{ scrollbarWidth: "none", WebkitOverflowScrolling: "touch" }}>
+                <div className="flex-shrink-0 w-0" />
+                {items.map((product, index) => (
+                    <div key={product.id} className="min-w-[150px] max-w-[160px] snap-start flex-shrink-0">
+                        <ProductCard product={product} config={config} isConsigne={isConsigne} viewMode="grid"
+                            onAddToCart={addToCart} onViewProduct={setSelectedProduct} index={index} compact
+                            cartQuantity={cart.find(i => i.id === product.id)?.quantity ?? 0}
+                            onUpdateCartQuantity={handleUpdateCartQuantity} />
+                    </div>
+                ))}
+                <div className="flex-shrink-0 w-2" />
+            </div>
+            {/* Desktop: grilla */}
+            <div className="hidden lg:grid grid-cols-3 xl:grid-cols-4 gap-3 px-4">
+                {items.map((product, index) => (
+                    <ProductCard key={product.id} product={product} config={config} isConsigne={isConsigne} viewMode="grid"
+                        onAddToCart={addToCart} onViewProduct={setSelectedProduct} index={index}
+                        cartQuantity={cart.find(i => i.id === product.id)?.quantity ?? 0}
+                        onUpdateCartQuantity={handleUpdateCartQuantity} />
+                ))}
+            </div>
+        </>
     );
 }

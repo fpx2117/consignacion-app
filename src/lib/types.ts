@@ -217,6 +217,7 @@ export type OnlineStoreCatalogSettings = {
 export type OnlineStoreFeaturedSection = {
   title: string;
   productIds: number[];
+  displayMode: "slider-auto" | "slider-static" | "grid";
 };
 
 export type OnlineStorePromoItem = {
