@@ -309,13 +309,30 @@ export function CatalogClient({
         return () => { cancelled = true; };
     }, [checkoutReturnStatus, clearCheckoutToken, getSucursalIdForCheckout, readCheckoutToken]);
 
-    // ── Motor de filtrado ──
+    // ── Secciones destacadas como categorías virtuales ──
+    const virtualCategories = React.useMemo(() => {
+        const sections = ols?.catalog?.featuredSections || [];
+        return sections
+            .map((s: { title: string; productIds: number[] }, i: number) => ({
+                id: -(i + 1), // IDs negativos = virtuales
+                nombre: "⭐ " + (s.title || "Destacados"),
+                isVirtual: true as const,
+                productIds: s.productIds,
+            }))
+            .filter(vc => vc.productIds.length > 0);
+    }, [ols?.catalog?.featuredSections]);
+
+    // ── Motor de filtrado (soporta categorías virtuales) ──
     const filteredProducts = React.useMemo(() => {
         if (!products.length) return [];
         const q = deferredSearchTerm.trim().toLowerCase();
+        const activeVirtual = virtualCategories.find(vc => vc.id === selectedCategory);
+
         const result = products.filter((p) => {
             const matchSearch = !q || p.nombre.toLowerCase().includes(q);
             if (selectedSubcategory) return matchSearch && p.subcategoriaId === selectedSubcategory;
+            // Virtual: filtrar por lista de IDs
+            if (activeVirtual) return matchSearch && activeVirtual.productIds.includes(p.id);
             const matchCat = !selectedCategory || p.categoriaId === selectedCategory;
             return matchSearch && matchCat;
         });
@@ -325,19 +342,28 @@ export function CatalogClient({
             return sb - sa;
         });
         return result;
-    }, [products, deferredSearchTerm, selectedSubcategory, selectedCategory]);
+    }, [products, deferredSearchTerm, selectedSubcategory, selectedCategory, virtualCategories]);
+
+    // ── Categorías combinadas (virtuales + reales) para sidebar y tabs ──
+    const allCategories = React.useMemo(() => {
+        return [...virtualCategories, ...categories.map(c => ({ ...c, isVirtual: false as const }))];
+    }, [virtualCategories, categories]);
 
     // ── Secciones por categoría (vista "todas") ──
     const productsByCategory = React.useMemo(() => {
-        if (!showCategories || categories.length === 0) return [];
-        return categories
-            .map((cat) => ({
-                category: cat,
-                products: filteredProducts.filter((p) => p.categoriaId === cat.id).slice(0, maxPerSection),
-                total: filteredProducts.filter((p) => p.categoriaId === cat.id).length,
-            }))
-            .filter((s) => s.products.length > 0);
-    }, [categories, filteredProducts, showCategories, maxPerSection]);
+        if (!showCategories) return [];
+        const virtualSections = virtualCategories.map(vc => ({
+            category: vc,
+            products: filteredProducts.filter(p => vc.productIds.includes(p.id)).slice(0, maxPerSection),
+            total: filteredProducts.filter(p => vc.productIds.includes(p.id)).length,
+        })).filter(s => s.products.length > 0);
+        const realSections = categories.map(cat => ({
+            category: cat,
+            products: filteredProducts.filter(p => p.categoriaId === cat.id).slice(0, maxPerSection),
+            total: filteredProducts.filter(p => p.categoriaId === cat.id).length,
+        })).filter(s => s.products.length > 0);
+        return [...virtualSections, ...realSections];
+    }, [categories, virtualCategories, filteredProducts, showCategories, maxPerSection]);
 
     const uncategorizedProducts = React.useMemo(() => {
         if (!showCategories || categories.length === 0) return filteredProducts.slice(0, maxPerSection * 2);
@@ -357,7 +383,11 @@ export function CatalogClient({
             const sub = cat?.subcategorias?.find((s) => s.id === selectedSubcategory);
             return sub?.nombre ?? "Productos";
         }
-        if (selectedCategory) return categories.find((c) => c.id === selectedCategory)?.nombre ?? "Productos";
+        if (selectedCategory) {
+            const vc = virtualCategories.find(c => c.id === selectedCategory);
+            if (vc) return vc.nombre.replace("⭐ ", "");
+            return categories.find((c) => c.id === selectedCategory)?.nombre ?? "Productos";
+        }
         return "Todos los productos";
     }, [deferredSearchTerm, selectedCategory, selectedSubcategory, categories]);
 
@@ -420,10 +450,10 @@ export function CatalogClient({
                 <div className="flex gap-6 xl:gap-8 items-start">
 
                     {/* ── SIDEBAR DE CATEGORÍAS (desktop only) ── */}
-                    {showCategories && categories.length > 0 && (
+                    {showCategories && (
                         <div className="hidden lg:block pt-6">
                             <DesktopCategorySidebar
-                                categories={categories}
+                                categories={allCategories as any}
                                 allProducts={products}
                                 selectedCategory={selectedCategory}
                                 selectedSubcategory={selectedSubcategory}
@@ -464,10 +494,10 @@ export function CatalogClient({
                         </div>
 
                         {/* ── CategoryTabs (MOBILE only — desktop tiene sidebar) ── */}
-                        {showCategories && categories.length > 0 && (
+                        {showCategories && (
                             <div className="lg:hidden">
                                 <CategoryTabs
-                                    categories={categories}
+                                    categories={allCategories as any}
                                     selectedCategory={selectedCategory}
                                     onSelectCategory={handleSelectCategory}
                                     className="mt-2"
@@ -519,53 +549,6 @@ export function CatalogClient({
                         {promoEnabled && promoItems.length > 0 && (
                             <PromoCarousel items={promoItems} className="mt-4" />
                         )}
-
-                        {/* ── Secciones Destacadas ── */}
-                        {(() => {
-                            const sections = ols?.catalog?.featuredSections || [];
-                            if (sections.length === 0) return null;
-                            return sections.map((section: { title: string; productIds: number[] }, si: number) => {
-                                const featured = products.filter(p => section.productIds.includes(p.id));
-                                if (featured.length === 0) return null;
-                                const useSlider = featured.length > 4;
-                                const title = section.title || "Destacados";
-                                return (
-                                    <div key={si} className="mt-4">
-                                        <div className="flex items-center justify-between px-4 mb-3">
-                                            <div className="flex items-baseline gap-2">
-                                                <h3 className="text-lg font-bold text-[var(--store-text,#0F172A)]">⭐ {title}</h3>
-                                                <span className="text-sm text-[var(--store-muted,#8A8F98)]">{featured.length}</span>
-                                            </div>
-                                        </div>
-                                        {useSlider ? (
-                                            <div className="flex overflow-x-auto gap-3 px-4 snap-x snap-mandatory pb-2 scroll-pl-4"
-                                                style={{ scrollbarWidth: "none", WebkitOverflowScrolling: "touch" }}>
-                                                <div className="flex-shrink-0 w-0" />
-                                                {featured.map((product, index) => (
-                                                    <div key={product.id} className="min-w-[150px] max-w-[160px] snap-start flex-shrink-0">
-                                                        <ProductCard product={product} config={config} isConsigne={isConsigne} viewMode="grid"
-                                                            onAddToCart={addToCart} onViewProduct={(p) => setSelectedProduct(p)}
-                                                            index={index} compact
-                                                            cartQuantity={cart.find(i => i.id === product.id)?.quantity ?? 0}
-                                                            onUpdateCartQuantity={handleUpdateCartQuantity} />
-                                                    </div>
-                                                ))}
-                                                <div className="flex-shrink-0 w-2" />
-                                            </div>
-                                        ) : (
-                                            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 px-4">
-                                                {featured.map((product, index) => (
-                                                    <ProductCard key={product.id} product={product} config={config} isConsigne={isConsigne} viewMode="grid"
-                                                        onAddToCart={addToCart} onViewProduct={(p) => setSelectedProduct(p)} index={index}
-                                                        cartQuantity={cart.find(i => i.id === product.id)?.quantity ?? 0}
-                                                        onUpdateCartQuantity={handleUpdateCartQuantity} />
-                                                ))}
-                                            </div>
-                                        )}
-                                    </div>
-                                );
-                            });
-                        })()}
 
                         {/* ── Breadcrumb desktop (contexto de filtro activo) ── */}
                         {(selectedCategory || selectedSubcategory || deferredSearchTerm.trim()) && (

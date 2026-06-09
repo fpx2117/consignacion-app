@@ -44,8 +44,11 @@ export function DesktopCategorySidebar({
         }, {});
     }, [allProducts]);
 
-    // Solo categorías con productos
-    const activeCategories = categories.filter((c) => (categoryCounts[c.id] || 0) > 0);
+    // Virtuales siempre visibles, reales solo con productos
+    const activeCategories = categories.filter((c: any) => {
+        if (c.isVirtual) return true;
+        return (categoryCounts[c.id] || 0) > 0;
+    });
 
     return (
         <aside className="hidden lg:flex w-60 xl:w-64 shrink-0 flex-col gap-0.5 sticky top-6 self-start max-h-[calc(100vh-3rem)] overflow-y-auto pb-6 pr-1">
@@ -73,7 +76,7 @@ export function DesktopCategorySidebar({
 
             {/* Categorías con subcategorías expandibles */}
             {activeCategories.map((cat) => {
-                const count = categoryCounts[cat.id] || 0;
+                const count = (cat as any).isVirtual ? ((cat as any).productIds?.length || 0) : (categoryCounts[cat.id] || 0);
                 const isActive = selectedCategory === cat.id;
                 const hasSubs = cat.subcategorias && cat.subcategorias.length > 0;
                 const activeSubs = hasSubs

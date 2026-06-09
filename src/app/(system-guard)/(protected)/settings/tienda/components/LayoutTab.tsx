@@ -95,6 +95,7 @@ function FeaturedSectionsEditor({ sections, onChange }: { sections: FeaturedSect
 
     React.useEffect(() => {
         if (loaded) return;
+        setLoaded(true); // marcar como cargado para evitar loops
         fetch("/api/productos?sucursalId=0")
             .then(r => r.ok ? r.json() : [])
             .then((res: any) => {
@@ -105,8 +106,7 @@ function FeaturedSectionsEditor({ sections, onChange }: { sections: FeaturedSect
                     categoriaId: p.categoriaId ?? null,
                     categoriaNombre: p.categoria?.nombre || "",
                 })));
-                setLoaded(true);
-            }).catch(() => setLoaded(true));
+            }).catch(() => {});
     }, [loaded]);
 
     const addSection = () => onChange([...sections, { title: "", productIds: [] }]);
@@ -147,7 +147,7 @@ function SectionEditor({ section, products, onUpdate, onToggle, onRemove }: {
 }) {
     const [expanded, setExpanded] = React.useState(false);
     const [search, setSearch] = React.useState("");
-    const [catFilter, setCatFilter] = React.useState<string>("");
+    const [catFilter, setCatFilter] = React.useState<string>("all");
 
     // Categorías únicas de los productos
     const categorias = React.useMemo(() => {
@@ -158,7 +158,7 @@ function SectionEditor({ section, products, onUpdate, onToggle, onRemove }: {
 
     const filtered = React.useMemo(() => {
         let list = products;
-        if (catFilter) list = list.filter(p => p.categoriaNombre === catFilter);
+        if (catFilter && catFilter !== "all") list = list.filter(p => p.categoriaNombre === catFilter);
         if (search.trim()) list = list.filter(p => p.nombre.toLowerCase().includes(search.toLowerCase()));
         // Ordenar: con stock primero, luego sin stock
         return [...list].sort((a, b) => (b.stock > 0 ? 1 : 0) - (a.stock > 0 ? 1 : 0));
@@ -185,7 +185,7 @@ function SectionEditor({ section, products, onUpdate, onToggle, onRemove }: {
                         <Select value={catFilter} onValueChange={setCatFilter}>
                             <SelectTrigger className="h-8 w-32 text-xs"><SelectValue placeholder="Categoría" /></SelectTrigger>
                             <SelectContent>
-                                <SelectItem value="">Todas</SelectItem>
+                                <SelectItem value="all">Todas</SelectItem>
                                 {categorias.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
                             </SelectContent>
                         </Select>
