@@ -141,9 +141,19 @@ export function CreateProductoDialog({
 
   const pv = toNumber(precioVenta) || 0;
   const pc = toNumber(precioCosto) || 0;
-  const gananciaUnitaria = pv - pc;
-  const margenPorcentaje = pv > 0 ? (gananciaUnitaria / pv) * 100 : 0;
-  const esGananciaNegativa = pv > 0 && pc > 0 && gananciaUnitaria < 0;
+  const dpct = descuentoActivo && tipoDescuento === "porcentaje" ? (toNumber(descuentoPorcentaje) ?? 0) : 0;
+  const dmonto = descuentoActivo && tipoDescuento === "monto" ? (toNumber(descuentoMonto) ?? 0) : 0;
+  const precioEfectivo = descuentoActivo
+    ? tipoDescuento === "porcentaje" && dpct > 0
+      ? pv * (1 - dpct / 100)
+      : tipoDescuento === "monto" && dmonto > 0
+        ? Math.max(0, pv - Math.min(dmonto, pv))
+        : pv
+    : pv;
+  const gananciaUnitaria = precioEfectivo - pc;
+  const margenPorcentaje = precioEfectivo > 0 ? (gananciaUnitaria / precioEfectivo) * 100 : 0;
+  const esGananciaNegativa = precioEfectivo > 0 && pc > 0 && gananciaUnitaria < 0;
+  const muestraDescuento = descuentoActivo && ((tipoDescuento === "porcentaje" && dpct > 0) || (tipoDescuento === "monto" && dmonto > 0));
 
   const canSubmit = nombre.trim().length >= 2 && pv > 0 && pc > 0 && categoriaId !== "";
 
@@ -321,6 +331,9 @@ export function CreateProductoDialog({
                 <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
                   <TrendingUp className={`h-3.5 w-3.5 ${esGananciaNegativa ? 'text-destructive' : 'text-[color:var(--status-success-strong)]'}`} />
                   RENTABILIDAD ESTIMADA
+                  {muestraDescuento && (
+                    <span className="text-[10px] font-bold text-[color:var(--status-warning)] bg-[color:var(--status-warning)]/10 px-1.5 py-0.5 rounded-full">c/desc.</span>
+                  )}
                 </div>
                 <span className={`text-sm font-black ${esGananciaNegativa ? 'text-destructive' : 'text-[color:var(--status-success-strong)]'}`}>
                   $${gananciaUnitaria.toLocaleString()} (${margenPorcentaje.toFixed(1)}%)
@@ -328,7 +341,8 @@ export function CreateProductoDialog({
               </div>
               {esGananciaNegativa && (
                 <div className="flex items-center gap-1.5 text-destructive text-[10px] font-bold uppercase">
-                  <AlertCircle className="h-3 w-3" /> Atención: Precio de venta bajo el costo
+                  <AlertCircle className="h-3 w-3" />
+                  {muestraDescuento ? "Atención: Precio con descuento bajo el costo" : "Atención: Precio de venta bajo el costo"}
                 </div>
               )}
             </div>

@@ -166,9 +166,19 @@ export function EditProductoDialog({
 
   const pv = toNumber(precioVenta) || 0;
   const pc = toNumber(precioCosto) || 0;
-  const gananciaUnitaria = pv - pc;
-  const margenPorcentaje = pv > 0 ? (gananciaUnitaria / pv) * 100 : 0;
-  const esGananciaNegativa = pv > 0 && pc > 0 && gananciaUnitaria < 0;
+  const dpct = descuentoActivo && tipoDescuento === "porcentaje" ? (toNumber(descuentoPorcentaje) ?? 0) : 0;
+  const dmonto = descuentoActivo && tipoDescuento === "monto" ? (toNumber(descuentoMonto) ?? 0) : 0;
+  const precioEfectivo = descuentoActivo
+    ? tipoDescuento === "porcentaje" && dpct > 0
+      ? pv * (1 - dpct / 100)
+      : tipoDescuento === "monto" && dmonto > 0
+        ? Math.max(0, pv - Math.min(dmonto, pv))
+        : pv
+    : pv;
+  const gananciaUnitaria = precioEfectivo - pc;
+  const margenPorcentaje = precioEfectivo > 0 ? (gananciaUnitaria / precioEfectivo) * 100 : 0;
+  const esGananciaNegativa = precioEfectivo > 0 && pc > 0 && gananciaUnitaria < 0;
+  const muestraDescuento = descuentoActivo && ((tipoDescuento === "porcentaje" && dpct > 0) || (tipoDescuento === "monto" && dmonto > 0));
 
   const canSubmit = nombre.trim().length >= 2 && pv > 0 && pc > 0;
 
@@ -335,16 +345,24 @@ export function EditProductoDialog({
           </div>
 
           {(pv > 0 || pc > 0) && (
-            <div className={`rounded-xl border p-3 ${esGananciaNegativa ? 'bg-destructive/10 border-destructive/20' : 'bg-[color:var(--status-success-strong)]/5 border-[color:var(--status-success-strong)]/20'}`}>
+            <div className={`rounded-xl border p-3 space-y-2 ${esGananciaNegativa ? 'bg-destructive/10 border-destructive/20' : 'bg-[color:var(--status-success-strong)]/5 border-[color:var(--status-success-strong)]/20'}`}>
               <div className="flex justify-between items-center">
                 <div className="flex items-center gap-2 text-[10px] font-bold text-muted-foreground uppercase">
                   <TrendingUp className={`h-3 w-3 ${esGananciaNegativa ? 'text-destructive' : 'text-[color:var(--status-success-strong)]'}`} />
                   Rentabilidad Proyectada
+                  {muestraDescuento && (
+                    <span className="text-[9px] font-bold text-[color:var(--status-warning)] bg-[color:var(--status-warning)]/10 px-1.5 py-0.5 rounded-full">c/desc.</span>
+                  )}
                 </div>
                 <span className={`text-sm font-black ${esGananciaNegativa ? 'text-destructive' : 'text-[color:var(--status-success-strong)]'}`}>
                   $${gananciaUnitaria.toLocaleString()} (${margenPorcentaje.toFixed(1)}%)
                 </span>
               </div>
+              {esGananciaNegativa && (
+                <div className="flex items-center gap-1.5 text-destructive text-[10px] font-bold uppercase">
+                  {muestraDescuento ? "Atención: Precio con descuento bajo el costo" : "Atención: Precio de venta bajo el costo"}
+                </div>
+              )}
             </div>
           )}
 
