@@ -10,6 +10,7 @@ import { formatMoney } from "@/lib/utils-format";
 import { cn } from "@/lib/utils";
 import { formatDateSafe, isExpired as dateExpired, isExpiringSoon } from "@/lib/utils-date";
 import { getCategoryColorByKey, getCategoryColorByName } from "@/lib/category-colors";
+import { calcularDescuentoEfectivo } from "@/lib/descuento-utils";
 
 // UI Components
 import { Card } from "@/components/ui/card";
@@ -691,6 +692,19 @@ function SortableHead({ label, sortKey, currentSort, onSort, className }: { labe
 }
 
 function ProductoRow({ p, idx, load, isLow, isOut }: { p: ProductoViewItem; idx: number; load: () => void; isLow: boolean; isOut: boolean }) {
+  const desc = React.useMemo(() => calcularDescuentoEfectivo({
+    descuentoActivo: p.descuentoActivo ?? false,
+    tipoDescuento: p.tipoDescuento,
+    descuentoPorcentaje: p.descuentoPorcentaje ?? 0,
+    descuentoMonto: p.descuentoMonto ?? 0,
+    descuentoDesde: p.descuentoDesde ?? null,
+    descuentoHasta: p.descuentoHasta ?? null,
+    precioVenta: Number(p.precioVenta),
+  }), [p.descuentoActivo, p.tipoDescuento, p.descuentoPorcentaje, p.descuentoMonto, p.descuentoDesde, p.descuentoHasta, p.precioVenta]);
+
+  const precioEfectivo = desc?.precioFinal ?? Number(p.precioVenta);
+  const tieneDescuento = desc !== null;
+  const margenEfectivo = precioEfectivo - Number(p.precioCosto);
   return (
     <motion.tr
       initial={{ opacity: 0, y: 5 }}
@@ -787,9 +801,26 @@ function ProductoRow({ p, idx, load, isLow, isOut }: { p: ProductoViewItem; idx:
 
       <TableCell className="text-right pr-6">
         <div className="flex flex-col items-end gap-0.5">
-          <span className="font-black text-foreground text-sm tabular-nums">{formatMoney(p.precioVenta)}</span>
-          <span className="text-[10px] font-medium text-[color:var(--status-success-strong)] dark:text-[color:var(--status-success-strong)] bg-[color:var(--status-success-strong)]/10 px-1.5 rounded-md tabular-nums">
-            Margen: {formatMoney(Number(p.precioVenta) - Number(p.precioCosto))}
+          <div className="flex items-center gap-1.5">
+            {tieneDescuento && (
+              <span className="text-[9px] font-black text-destructive bg-destructive/10 px-1 py-0.5 rounded-full leading-none">
+                -{desc.porcentaje}%
+              </span>
+            )}
+            <span className={cn("font-black text-foreground text-sm tabular-nums", tieneDescuento && "line-through text-muted-foreground/60")}>{formatMoney(p.precioVenta)}</span>
+            {tieneDescuento && (
+              <span className="font-black text-destructive text-sm tabular-nums">{formatMoney(precioEfectivo)}</span>
+            )}
+          </div>
+          <span className={cn(
+            "text-[10px] font-medium px-1.5 rounded-md tabular-nums",
+            margenEfectivo < 0
+              ? "text-destructive bg-destructive/10"
+              : tieneDescuento
+                ? "text-[color:var(--status-warning)] bg-[color:var(--status-warning)]/10"
+                : "text-[color:var(--status-success-strong)] bg-[color:var(--status-success-strong)]/10"
+          )}>
+            Margen: {formatMoney(margenEfectivo)}
           </span>
         </div>
       </TableCell>
