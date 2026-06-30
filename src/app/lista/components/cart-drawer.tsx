@@ -27,6 +27,7 @@ import { cn } from "@/lib/utils";
 import { OrderItem } from "./order-item";
 import { OrderSummary } from "./order-summary";
 import { CheckoutTicketPreview } from "./checkout-ticket-preview";
+import { WhatsAppPreview } from "./whatsapp-preview";
 
 interface CartDrawerProps {
   isOpen: boolean;
@@ -41,7 +42,12 @@ interface CartDrawerProps {
 
 const PRICING_CONTEXT = (config: PublicCatalogConfig) => ({
   porcentajeAumentoConsignacion: config.porcentajeAumentoConsignacion,
+  porcentajeInteresTarjeta: config.porcentajeInteresTarjeta,
+  applyCardInterest: config.tiendaPaymentMode === "mercadopago",
 });
+
+const WHATSAPP_ICON_PATH =
+  "M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z";
 
 type DisplayMode = "bottom-sheet" | "modal" | "drawer";
 
@@ -75,8 +81,12 @@ export function CartDrawer({
 
   const ols = config.onlineStoreConfig;
   const displayMode: DisplayMode = ols?.cart?.displayMode ?? "bottom-sheet";
+  const isWhatsappMode = config.tiendaPaymentMode === "whatsapp";
+  const isMpMode = config.tiendaPaymentMode === "mercadopago";
   const showTicketPreviewSetting = ols?.cart?.showWhatsappPreview ?? true;
-  const checkoutButtonText = ols?.cart?.whatsappButtonText?.trim() || "Ir al pago";
+  const checkoutButtonText = isWhatsappMode
+    ? (ols?.cart?.whatsappButtonText?.trim() || "Enviar pedido por WhatsApp")
+    : "Ir al pago";
   const [isMobile, setIsMobile] = React.useState(false);
 
   React.useEffect(() => {
@@ -123,7 +133,7 @@ export function CartDrawer({
         toast.error("Por favor completá tu nombre.");
         return;
       }
-      if (!clienteData.email.trim()) {
+      if (isMpMode && !clienteData.email.trim()) {
         toast.error("Necesitamos tu email para generar el checkout.");
         return;
       }
@@ -307,7 +317,7 @@ export function CartDrawer({
                     {/* Separador */}
                     <div className="h-px bg-gray-100 my-3" />
 
-                    {/* Toggle ticket preview */}
+                    {/* Toggle de vista previa (ticket para Mercado Pago, mensaje para WhatsApp) */}
                     {showTicketPreviewSetting && ols && (
                       <div>
                         <button
@@ -315,7 +325,7 @@ export function CartDrawer({
                           className="text-xs text-[var(--store-muted,#8A8F98)] flex items-center gap-1.5 hover:text-[var(--store-text,#0F172A)] transition-colors w-full justify-center py-2"
                         >
                           <Receipt className="h-3.5 w-3.5" />
-                          {showTicketPreview ? "Ocultar" : "Mostrar"} vista previa del ticket
+                          {showTicketPreview ? "Ocultar" : "Mostrar"} {isWhatsappMode ? "mensaje de WhatsApp" : "vista previa del ticket"}
                         </button>
 
                         <AnimatePresence>
@@ -327,13 +337,26 @@ export function CartDrawer({
                               transition={{ duration: 0.25 }}
                               className="overflow-hidden"
                             >
+                              {isWhatsappMode ? (
+                                <WhatsAppPreview
+                                  settings={ols}
+                                  cartItems={cart}
+                                  subtotal={`$${subtotalProductos.toLocaleString("es-AR", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`}
+                                  total={`$${subtotalProductos.toLocaleString("es-AR", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`}
+                                  porcentajeAumentoConsignacion={config.porcentajeAumentoConsignacion}
+                                  className="mt-2"
+                                />
+                              ) : (
                               <CheckoutTicketPreview
                                 settings={ols}
                                 cartItems={cart}
                                 subtotal={`$${subtotalProductos.toLocaleString("es-AR", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`}
                                 total={`$${subtotalProductos.toLocaleString("es-AR", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`}
+                                porcentajeAumentoConsignacion={config.porcentajeAumentoConsignacion}
+                                porcentajeInteresTarjeta={config.porcentajeInteresTarjeta}
                                 className="mt-2"
                               />
+                              )}
                             </motion.div>
                           )}
                         </AnimatePresence>
@@ -371,18 +394,25 @@ export function CartDrawer({
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="text-sm font-semibold text-[var(--store-text,#0F172A)]">Email</Label>
+                    <Label className="text-sm font-semibold text-[var(--store-text,#0F172A)]">
+                      Email{isMpMode ? " *" : ""}
+                    </Label>
                     <Input
                       type="email"
                       name="email"
                       value={clienteData.email}
                       onChange={handleInputChange}
-                      placeholder="nombre@correo.com"
+                      placeholder={isMpMode ? "nombre@correo.com" : "Opcional"}
                       className="h-12 rounded-xl border-gray-200 bg-gray-50 text-[var(--store-text,#0F172A)] placeholder:text-gray-400 focus-visible:ring-[var(--store-primary,#007AFF)]"
                     />
                   </div>
-                  <div className="rounded-2xl bg-blue-50 border border-blue-100 p-4 text-sm text-blue-700">
-                    Vamos a generar un checkout online con el detalle de tu pedido y un ticket digital como referencia.
+                  <div className={cn(
+                    "rounded-2xl border p-4 text-sm",
+                    isWhatsappMode ? "bg-emerald-50 border-emerald-100 text-emerald-700" : "bg-blue-50 border-blue-100 text-blue-700",
+                  )}>
+                    {isWhatsappMode
+                      ? "Vamos a preparar un mensaje con tu pedido para enviarlo directamente por WhatsApp."
+                      : "Vamos a generar un checkout online con el detalle de tu pedido y un ticket digital como referencia."}
                   </div>
                 </motion.div>
               )}
@@ -491,7 +521,7 @@ export function CartDrawer({
               <div className="flex-shrink-0 border-t border-gray-100 bg-[var(--store-surface,#FFFFFF)] px-5 py-4 space-y-3">
                 {/* Resumen de precios en paso 1 */}
                 {step === 1 && ols && (
-                  <OrderSummary cartItems={cart} settings={ols} />
+                  <OrderSummary subtotal={subtotalProductos} settings={ols} cartItems={cart} />
                 )}
 
                 {/* Botón principal */}
@@ -502,15 +532,27 @@ export function CartDrawer({
                     "w-full h-14 rounded-2xl text-white font-bold text-base flex items-center justify-center gap-2.5",
                     "transition-all duration-200 hover:opacity-95 active:scale-[0.98]",
                     "disabled:opacity-50 disabled:cursor-not-allowed",
-                    "shadow-[0_4px_16px_rgba(0,0,0,0.15)]"
+                    step === 3 && isWhatsappMode
+                      ? "shadow-[0_4px_20px_rgba(37,211,102,0.35)]"
+                      : "shadow-[0_4px_16px_rgba(0,0,0,0.15)]"
                   )}
-                  style={{ backgroundColor: "var(--store-primary,#007AFF)" }}
+                  style={{
+                    backgroundColor: step === 3 && isWhatsappMode
+                      ? "var(--store-whatsapp,#25D366)"
+                      : "var(--store-primary,#007AFF)",
+                  }}
                 >
                   {loading ? (
                     <Loader2 className="h-5 w-5 animate-spin" />
                   ) : step === 3 ? (
                     <>
-                      <Receipt className="h-5 w-5" />
+                      {isWhatsappMode ? (
+                        <svg viewBox="0 0 24 24" className="h-5 w-5 fill-white" xmlns="http://www.w3.org/2000/svg">
+                          <path d={WHATSAPP_ICON_PATH} />
+                        </svg>
+                      ) : (
+                        <Receipt className="h-5 w-5" />
+                      )}
                       <span>{checkoutButtonText}</span>
                     </>
                   ) : (

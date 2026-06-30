@@ -5,6 +5,8 @@ import type { CatalogCartItem, OnlineStoreSettings } from "@/lib/types";
 
 type OrderSummaryProps = {
   cartItems: CatalogCartItem[];
+  /** Subtotal ya calculado (incluye recargo de consignación y, si aplica, interés por tarjeta). */
+  subtotal: number;
   settings: OnlineStoreSettings;
   className?: string;
 };
@@ -15,16 +17,12 @@ type OrderSummaryProps = {
  */
 export function OrderSummary({
   cartItems,
+  subtotal,
   settings,
   className = "",
 }: OrderSummaryProps) {
   const template = settings.cart.messageTemplate;
   const totalItems = cartItems.reduce((acc, i) => acc + i.quantity, 0);
-
-  const subtotal = cartItems.reduce(
-    (acc, item) => acc + Number(item.precioVenta) * item.quantity,
-    0
-  );
   const total = subtotal;
 
   const fmt = (val: number) =>

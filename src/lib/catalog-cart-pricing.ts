@@ -2,6 +2,10 @@ import type { CatalogCartItem } from "@/lib/types";
 
 type CatalogCartPricingContext = {
   porcentajeAumentoConsignacion?: number;
+  /** Recargo por uso de pasarela de pago (Mercado Pago). Solo se aplica si applyCardInterest es true. */
+  porcentajeInteresTarjeta?: number;
+  /** true cuando el checkout se realiza vía Mercado Pago (el recargo de tarjeta absorbe el costo de la pasarela). */
+  applyCardInterest?: boolean;
 };
 
 function roundMoney(value: number) {
@@ -12,17 +16,26 @@ export function getCatalogCartUnitPrice(
   item: Pick<CatalogCartItem, "precioVenta" | "descuentoEfectivo" | "pricingMode">,
   context: CatalogCartPricingContext = {},
 ) {
+  let price: number;
+
   if (item.descuentoEfectivo?.precioFinal != null) {
-    return roundMoney(Number(item.descuentoEfectivo.precioFinal));
+    price = Number(item.descuentoEfectivo.precioFinal);
+  } else {
+    const basePrice = Number(item.precioVenta);
+    if (item.pricingMode === "consigne") {
+      const surcharge = Number(context.porcentajeAumentoConsignacion) || 0;
+      price = basePrice * (1 + surcharge / 100);
+    } else {
+      price = basePrice;
+    }
   }
 
-  const basePrice = Number(item.precioVenta);
-  if (item.pricingMode === "consigne") {
-    const surcharge = Number(context.porcentajeAumentoConsignacion) || 0;
-    return roundMoney(basePrice * (1 + surcharge / 100));
+  if (context.applyCardInterest) {
+    const interes = Number(context.porcentajeInteresTarjeta) || 0;
+    price = price * (1 + interes / 100);
   }
 
-  return roundMoney(basePrice);
+  return roundMoney(price);
 }
 
 export function getCatalogCartLineSubtotal(

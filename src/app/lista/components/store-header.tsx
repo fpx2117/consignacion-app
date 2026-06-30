@@ -16,7 +16,7 @@ interface StoreHeaderProps {
 export function StoreHeader({ config, cartCount, onOpenCart, searchTerm, onSearchChange }: StoreHeaderProps) {
     const logoSrc = config.logoUrl || (config.logoData ? `data:${config.logoMime};base64,${config.logoData}` : null);
     const bannerSrc = config.bannerUrl || (config.bannerData ? `data:${config.bannerMime};base64,${config.bannerData}` : null);
-    const cartEnabled = Boolean(config.convertirTienda);
+    const cartEnabled = Boolean(config.tiendaPaymentMode);
     const content = normalizeStorefrontContent(config.storefrontContent, { storeName: config.businessName });
     const ols = config.onlineStoreConfig;
 

@@ -444,12 +444,12 @@ export default function PosSettingsPage() {
                             <div className="p-4 sm:p-6 md:px-8 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-muted/20 transition-colors">
                                 <div className="flex-1 min-w-0 pr-2">
                                     <div className="flex items-center gap-2 flex-wrap">
-                                        <h3 className="font-medium text-sm sm:text-base text-foreground">Modo Tienda (Ventas Online)</h3>
+                                        <h3 className="font-medium text-sm sm:text-base text-foreground">Habilitar Carrito de Compras</h3>
                                         <StatusBadge active={convertirTienda} />
-                                        <HelpTip text="Agrega carrito de compras y pagos con Mercado Pago. Requiere configurar las credenciales de MP." />
+                                        <HelpTip text="Agrega un carrito de compras al catálogo. El pedido se cobra con Mercado Pago si cargás credenciales de MP abajo; si no las cargás, el pedido se envía por WhatsApp al número configurado en Personalización → Social. Es una opción u otra, nunca las dos al mismo tiempo." />
                                     </div>
                                     <p className="text-xs sm:text-sm text-muted-foreground mt-1.5">
-                                        Habilita el carrito y pagos online con Mercado Pago.
+                                        Con credenciales de Mercado Pago cargadas: pago online. Sin credenciales: el pedido se envía por WhatsApp.
                                     </p>
                                 </div>
                                 <Switch
@@ -481,9 +481,13 @@ export default function PosSettingsPage() {
                                 <div className="p-4 sm:p-6 md:px-8 bg-muted/5 space-y-4 animate-in fade-in slide-in-from-top-2 duration-300">
                                     <div className="flex items-center gap-2 mb-2">
                                         <BookMarked className="h-4 w-4 text-[color:var(--primary)]" />
-                                        <span className="text-sm font-semibold text-foreground">Credenciales de Mercado Pago</span>
+                                        <span className="text-sm font-semibold text-foreground">Credenciales de Mercado Pago (opcional)</span>
                                         <HelpTip text="Obtenelas en developers.mercadopago.com → Tu aplicación → Credenciales de producción." />
                                     </div>
+                                    <p className="text-xs text-muted-foreground -mt-2">
+                                        Si las dejás vacías, el carrito funciona igual pero el pedido se envía por WhatsApp al número configurado en
+                                        Personalización → Social, en vez de cobrarse online.
+                                    </p>
                                     <div className="grid gap-4 sm:grid-cols-2">
                                         <div className="space-y-2">
                                             <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground ml-1">MP Public Key</label>

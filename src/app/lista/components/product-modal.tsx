@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from "motion/react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { buildCatalogProductInquiryUrl } from "@/lib/catalog-whatsapp";
+import { getCatalogCartUnitPrice } from "@/lib/catalog-cart-pricing";
 import { cn } from "@/lib/utils";
 import { getThemeStyles } from "../lib/theme-utils";
 import type {
@@ -29,12 +30,22 @@ export function ProductModal({ product, isOpen, onClose, config, isConsigne, onA
 
     const { radiusClass, buttonRadiusClass, buttonHoverClass, cardBgClass } = getThemeStyles(config?.themeIdentifier);
     const basePrice = Number(product.precioVenta);
-    const displayedPrice = isConsigne
-        ? basePrice * (1 + ((config.porcentajeAumentoConsignacion ?? 0) / 100))
-        : basePrice;
+    const isMercadoPagoMode = config.tiendaPaymentMode === "mercadopago";
+    const pricingContext = {
+        porcentajeAumentoConsignacion: config.porcentajeAumentoConsignacion,
+        porcentajeInteresTarjeta: config.porcentajeInteresTarjeta,
+        applyCardInterest: isMercadoPagoMode,
+    };
+    const displayedPrice = getCatalogCartUnitPrice(
+        { precioVenta: product.precioVenta, descuentoEfectivo: null, pricingMode: isConsigne ? "consigne" : "default" },
+        pricingContext,
+    );
     const isAvailable = product.stockDisponibleUnits > 0;
     const descuento = product.descuentoEfectivo;
-    const cartEnabled = Boolean(config.convertirTienda);
+    const descuentoPrecioFinal = descuento
+        ? getCatalogCartUnitPrice({ precioVenta: product.precioVenta, descuentoEfectivo: descuento, pricingMode: "default" }, pricingContext)
+        : null;
+    const cartEnabled = Boolean(config.tiendaPaymentMode);
 
     return (
         <AnimatePresence>
@@ -118,10 +129,10 @@ export function ProductModal({ product, isOpen, onClose, config, isConsigne, onA
                                                 </Badge>
                                             </div>
                                             <span className="text-3xl sm:text-4xl font-black text-red-500 tracking-tight">
-                                                ${descuento.precioFinal.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                                                ${(descuentoPrecioFinal ?? descuento.precioFinal).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
                                             </span>
                                             <span className="text-sm font-semibold text-emerald-600">
-                                                Ahorrás ${(descuento.precioOriginal - descuento.precioFinal).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                                                Ahorrás ${(descuento.precioOriginal - (descuentoPrecioFinal ?? descuento.precioFinal)).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
                                             </span>
                                         </>
                                     ) : (

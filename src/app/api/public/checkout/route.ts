@@ -1,10 +1,12 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import crypto from "crypto";
+import { getCatalogCartUnitPrice } from "@/lib/catalog-cart-pricing";
 
 type CheckoutItemInput = {
     id: number | string;
     quantity: number | string;
+    pricingMode?: "default" | "consigne";
 };
 
 type ClienteDataInput = {
@@ -75,7 +77,7 @@ export async function POST(req: Request) {
             where: { sucursalId: sucursalIdNum }
         });
 
-        if (!config || !config.convertirTienda || !config.mpAccessTokenTienda) {
+        if (!config || !config.convertirTienda || !config.mpAccessTokenTienda || !config.mpPublicKeyTienda) {
             return NextResponse.json({ error: "La tienda no está configurada o no acepta pagos" }, { status: 403 });
         }
 
@@ -87,7 +89,7 @@ export async function POST(req: Request) {
 
         const productoPorId = new Map(dbProductos.map((producto) => [producto.id, producto]));
         const porcentajeInteres = Number(config.porcentajeInteresTarjeta || 0);
-        const interestMultiplier = 1 + (porcentajeInteres / 100);
+        const porcentajeConsignacion = Number(config.porcentajeAumentoConsignacion || 0);
 
         const normalizedItems = items.map((item) => {
             const dbProd = productoPorId.get(Number(item.id));
@@ -101,7 +103,16 @@ export async function POST(req: Request) {
             }
 
             const basePrice = Number(dbProd.precioVenta);
-            const unitPrice = Number((basePrice * interestMultiplier).toFixed(2));
+            // Mismo cálculo que usa el cliente para mostrar el precio: recargo de consignación (si aplica)
+            // + recargo por uso de Mercado Pago, para que lo cobrado coincida con lo mostrado en /lista.
+            const unitPrice = getCatalogCartUnitPrice(
+                { precioVenta: basePrice, descuentoEfectivo: null, pricingMode: item.pricingMode === "consigne" ? "consigne" : "default" },
+                {
+                    porcentajeAumentoConsignacion: porcentajeConsignacion,
+                    porcentajeInteresTarjeta: porcentajeInteres,
+                    applyCardInterest: true,
+                },
+            );
             const subtotal = Number((unitPrice * quantity).toFixed(2));
 
             return {
