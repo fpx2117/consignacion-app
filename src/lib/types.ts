@@ -108,6 +108,8 @@ export type Configuracion = {
   porcentajeInteresTarjeta: number;
   mostrarListaPrecios: boolean;
   convertirTienda: boolean;
+  /** Método de pago elegido explícitamente por el usuario para el carrito: WhatsApp o Mercado Pago. */
+  tiendaMetodoPago?: "whatsapp" | "mercadopago";
   separarListaPorSucursal: boolean;
   mostrarPreciosConsignacion?: boolean;
   mostrarCategoriasEnHeader?: boolean;

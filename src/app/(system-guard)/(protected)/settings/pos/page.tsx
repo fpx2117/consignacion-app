@@ -30,6 +30,7 @@ type PosConfig = Pick<
     | "porcentajeInteresTarjeta"
     | "mostrarListaPrecios"
     | "convertirTienda"
+    | "tiendaMetodoPago"
     | "separarListaPorSucursal"
     | "mpAccessTokenTienda"
     | "mpPublicKeyTienda"
@@ -131,6 +132,7 @@ export default function PosSettingsPage() {
     const [porcentajeInteresTarjeta, setPorcentajeInteresTarjeta] = React.useState(0);
     const [mostrarListaPrecios, setMostrarListaPrecios] = React.useState(false);
     const [convertirTienda, setConvertirTienda] = React.useState(false);
+    const [tiendaMetodoPago, setTiendaMetodoPago] = React.useState<"whatsapp" | "mercadopago">("whatsapp");
     const [separarListaPorSucursal, setSepararListaPorSucursal] = React.useState(true);
     const [mpAccessTokenTienda, setMpAccessTokenTienda] = React.useState("");
     const [mpPublicKeyTienda, setMpPublicKeyTienda] = React.useState("");
@@ -138,6 +140,7 @@ export default function PosSettingsPage() {
     const [loading, setLoading] = React.useState(true);
     const [loadingConfigToggle, setLoadingConfigToggle] = React.useState(false);
     const [loadingSubmit, setLoadingSubmit] = React.useState(false);
+    const [loadingMetodoPago, setLoadingMetodoPago] = React.useState(false);
 
     const fetchInitialData = React.useCallback(async () => {
         try {
@@ -158,6 +161,7 @@ export default function PosSettingsPage() {
             setPorcentajeInteresTarjeta(config?.porcentajeInteresTarjeta ?? 0);
             setMostrarListaPrecios(config?.mostrarListaPrecios ?? false);
             setConvertirTienda(config?.convertirTienda ?? false);
+            setTiendaMetodoPago(config?.tiendaMetodoPago ?? "whatsapp");
             setSepararListaPorSucursal(config?.separarListaPorSucursal ?? true);
             setMpAccessTokenTienda(config?.mpAccessTokenTienda ?? "");
             setMpPublicKeyTienda(config?.mpPublicKeyTienda ?? "");
@@ -203,6 +207,20 @@ export default function PosSettingsPage() {
             toast.error("Error al actualizar la configuración.");
         } finally {
             setLoadingConfigToggle(false);
+        }
+    };
+
+    const handleSelectMetodoPago = async (metodo: "whatsapp" | "mercadopago") => {
+        if (metodo === tiendaMetodoPago) return;
+        setLoadingMetodoPago(true);
+        try {
+            await apiService.actualizarConfiguracionGeneral({ tiendaMetodoPago: metodo });
+            setTiendaMetodoPago(metodo);
+            toast.success("Método de pago actualizado");
+        } catch {
+            toast.error("Error al actualizar el método de pago.");
+        } finally {
+            setLoadingMetodoPago(false);
         }
     };
 
@@ -446,10 +464,10 @@ export default function PosSettingsPage() {
                                     <div className="flex items-center gap-2 flex-wrap">
                                         <h3 className="font-medium text-sm sm:text-base text-foreground">Habilitar Carrito de Compras</h3>
                                         <StatusBadge active={convertirTienda} />
-                                        <HelpTip text="Agrega un carrito de compras al catálogo. El pedido se cobra con Mercado Pago si cargás credenciales de MP abajo; si no las cargás, el pedido se envía por WhatsApp al número configurado en Personalización → Social. Es una opción u otra, nunca las dos al mismo tiempo." />
+                                        <HelpTip text="Agrega un carrito de compras al catálogo. Elegís abajo si el pedido se cobra con Mercado Pago o se envía por WhatsApp. Es una opción u otra, nunca las dos al mismo tiempo." />
                                     </div>
                                     <p className="text-xs sm:text-sm text-muted-foreground mt-1.5">
-                                        Con credenciales de Mercado Pago cargadas: pago online. Sin credenciales: el pedido se envía por WhatsApp.
+                                        Agrega carrito al catálogo público. El método de cobro se elige abajo.
                                     </p>
                                 </div>
                                 <Switch
@@ -457,6 +475,52 @@ export default function PosSettingsPage() {
                                     onCheckedChange={(checked) => handleToggleConfig("convertirTienda", checked)}
                                 />
                             </div>
+
+                            {/* Método de pago del carrito */}
+                            {convertirTienda && (
+                                <div className="p-4 sm:p-6 md:px-8 bg-muted/5 space-y-3 animate-in fade-in slide-in-from-top-2 duration-300">
+                                    <div className="flex items-center gap-2">
+                                        <CreditCard className="h-4 w-4 text-[color:var(--primary)]" />
+                                        <span className="text-sm font-semibold text-foreground">Método de pago del carrito</span>
+                                        <HelpTip text="Elegí si el pedido se cobra online con Mercado Pago o se envía como mensaje de WhatsApp al número configurado en Personalización → Social. Cambiar de método no borra las credenciales de Mercado Pago que ya cargaste." />
+                                    </div>
+                                    <div className="grid gap-3 sm:grid-cols-2">
+                                        <button
+                                            type="button"
+                                            disabled={loadingMetodoPago}
+                                            onClick={() => handleSelectMetodoPago("whatsapp")}
+                                            className={cn(
+                                                "text-left p-4 rounded-2xl border-2 transition-all disabled:opacity-60",
+                                                tiendaMetodoPago === "whatsapp"
+                                                    ? "border-[color:var(--status-success-strong)] bg-[color:var(--status-success-strong)]/5"
+                                                    : "border-border/40 hover:border-border"
+                                            )}
+                                        >
+                                            <p className="font-semibold text-sm text-foreground">WhatsApp</p>
+                                            <p className="text-xs text-muted-foreground mt-1">El pedido se envía como mensaje al número configurado en Personalización.</p>
+                                        </button>
+                                        <button
+                                            type="button"
+                                            disabled={loadingMetodoPago}
+                                            onClick={() => handleSelectMetodoPago("mercadopago")}
+                                            className={cn(
+                                                "text-left p-4 rounded-2xl border-2 transition-all disabled:opacity-60",
+                                                tiendaMetodoPago === "mercadopago"
+                                                    ? "border-[color:var(--primary)] bg-[color:var(--primary)]/5"
+                                                    : "border-border/40 hover:border-border"
+                                            )}
+                                        >
+                                            <p className="font-semibold text-sm text-foreground">Mercado Pago</p>
+                                            <p className="text-xs text-muted-foreground mt-1">Pago online. Requiere las credenciales cargadas abajo.</p>
+                                        </button>
+                                    </div>
+                                    {tiendaMetodoPago === "mercadopago" && (!mpAccessTokenTienda || !mpPublicKeyTienda) && (
+                                        <p className="text-xs text-[color:var(--status-warning)] font-medium">
+                                            Elegiste Mercado Pago pero todavía faltan credenciales. Cargalas abajo para que el carrito funcione.
+                                        </p>
+                                    )}
+                                </div>
+                            )}
 
                             {/* Separar por sucursal */}
                             <div className="p-4 sm:p-6 md:px-8 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-muted/20 transition-colors">
@@ -481,12 +545,12 @@ export default function PosSettingsPage() {
                                 <div className="p-4 sm:p-6 md:px-8 bg-muted/5 space-y-4 animate-in fade-in slide-in-from-top-2 duration-300">
                                     <div className="flex items-center gap-2 mb-2">
                                         <BookMarked className="h-4 w-4 text-[color:var(--primary)]" />
-                                        <span className="text-sm font-semibold text-foreground">Credenciales de Mercado Pago (opcional)</span>
+                                        <span className="text-sm font-semibold text-foreground">Credenciales de Mercado Pago</span>
                                         <HelpTip text="Obtenelas en developers.mercadopago.com → Tu aplicación → Credenciales de producción." />
                                     </div>
                                     <p className="text-xs text-muted-foreground -mt-2">
-                                        Si las dejás vacías, el carrito funciona igual pero el pedido se envía por WhatsApp al número configurado en
-                                        Personalización → Social, en vez de cobrarse online.
+                                        Quedan guardadas aunque elijas WhatsApp como método activo arriba, así no las perdés si después
+                                        querés volver a Mercado Pago.
                                     </p>
                                     <div className="grid gap-4 sm:grid-cols-2">
                                         <div className="space-y-2">

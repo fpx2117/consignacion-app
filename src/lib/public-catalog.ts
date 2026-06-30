@@ -101,17 +101,18 @@ export async function getPublicCatalogDataRaw(sucursalId: number | null): Promis
 
   const ahora = new Date();
 
-  // Modo de pago de la tienda: mutuamente excluyente. Si hay credenciales de MP cargadas,
-  // se usa Mercado Pago; si no, pero hay un número de WhatsApp, se usa el carrito por WhatsApp.
+  // Modo de pago de la tienda: el usuario elige explícitamente WhatsApp o Mercado Pago en
+  // settings (tiendaMetodoPago), mutuamente excluyente. Las credenciales de MP se conservan
+  // guardadas aunque el método activo sea WhatsApp, así no se pierden al cambiar de modo.
   const hasMpCredentials = Boolean(
     config.mpAccessTokenTienda?.trim() && config.mpPublicKeyTienda?.trim(),
   );
   const hasWhatsappNumber = Boolean(config.sucursal.branding?.whatsappNumber?.trim());
   const tiendaPaymentMode: "mercadopago" | "whatsapp" | null = !config.convertirTienda
     ? null
-    : hasMpCredentials
+    : config.tiendaMetodoPago === "mercadopago" && hasMpCredentials
       ? "mercadopago"
-      : hasWhatsappNumber
+      : config.tiendaMetodoPago === "whatsapp" && hasWhatsappNumber
         ? "whatsapp"
         : null;
 

@@ -38,6 +38,20 @@ export function getCatalogCartUnitPrice(
   return roundMoney(price);
 }
 
+/**
+ * Precio "de lista" a mostrar tachado junto al precio con descuento. Se le aplica el mismo
+ * recargo por tarjeta que al precio final, para que el ahorro mostrado (precioOriginal - precioFinal)
+ * nunca dé negativo cuando el recargo de Mercado Pago es mayor que el descuento del producto.
+ */
+export function getCatalogCartOriginalDisplayPrice(
+  item: Pick<CatalogCartItem, "precioVenta" | "descuentoEfectivo">,
+  context: CatalogCartPricingContext = {},
+) {
+  const basePrice = item.descuentoEfectivo?.precioOriginal ?? Number(item.precioVenta);
+  const interes = context.applyCardInterest ? Number(context.porcentajeInteresTarjeta) || 0 : 0;
+  return roundMoney(Number(basePrice) * (1 + interes / 100));
+}
+
 export function getCatalogCartLineSubtotal(
   item: Pick<CatalogCartItem, "precioVenta" | "descuentoEfectivo" | "pricingMode" | "quantity">,
   context: CatalogCartPricingContext = {},

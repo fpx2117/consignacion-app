@@ -24,6 +24,7 @@ model Configuracion {
   mostrarPreciosConsignacion     Boolean  @default(false)
   porcentajeInteresTarjeta       Float    @default(0)
   convertirTienda                Boolean  @default(false)
+  tiendaMetodoPago               String   @default("whatsapp")
   mostrarListaPrecios            Boolean  @default(false)
   mpAccessTokenTienda            String?
   mpPublicKeyTienda              String?

@@ -5,7 +5,7 @@ import { Plus, Minus, PackageOpen } from "lucide-react";
 import { motion } from "motion/react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import { getCatalogCartUnitPrice } from "@/lib/catalog-cart-pricing";
+import { getCatalogCartUnitPrice, getCatalogCartOriginalDisplayPrice } from "@/lib/catalog-cart-pricing";
 import type { PublicCatalogConfig, PublicCatalogProduct } from "@/lib/types";
 
 type QuantityStepperProps = {
@@ -88,16 +88,22 @@ export function ProductCard({
 }: ProductCardProps) {
     const isGrid = viewMode === "grid";
     const isMercadoPagoMode = config.tiendaPaymentMode === "mercadopago";
+    const pricingContext = {
+        porcentajeAumentoConsignacion: config.porcentajeAumentoConsignacion,
+        porcentajeInteresTarjeta: config.porcentajeInteresTarjeta,
+        applyCardInterest: isMercadoPagoMode,
+    };
     const displayedPrice = getCatalogCartUnitPrice(
         { precioVenta: product.precioVenta, descuentoEfectivo: product.descuentoEfectivo, pricingMode: isConsigne ? "consigne" : "default" },
-        {
-            porcentajeAumentoConsignacion: config.porcentajeAumentoConsignacion,
-            porcentajeInteresTarjeta: config.porcentajeInteresTarjeta,
-            applyCardInterest: isMercadoPagoMode,
-        },
+        pricingContext,
     );
     const isAvailable = product.stockDisponibleUnits > 0;
     const descuento = product.descuentoEfectivo;
+    // El precio "de lista" tachado también lleva el recargo de tarjeta para que nunca quede
+    // por debajo del precio final (ahorro negativo) cuando el recargo supera al descuento.
+    const descuentoPrecioOriginal = descuento
+        ? getCatalogCartOriginalDisplayPrice({ precioVenta: product.precioVenta, descuentoEfectivo: descuento }, pricingContext)
+        : null;
     const cartEnabled = Boolean(config.tiendaPaymentMode);
     const finalPrice = displayedPrice;
     const inCart = cartQuantity > 0;
@@ -238,7 +244,7 @@ export function ProductCard({
                                     </span>
                                     {descuento && (
                                         <span className="text-xs text-[var(--store-muted,#8A8F98)] line-through">
-                                            {formatPrice(descuento.precioOriginal)}
+                                            {formatPrice(descuentoPrecioOriginal ?? descuento.precioOriginal)}
                                         </span>
                                     )}
                                 </div>
@@ -323,7 +329,7 @@ export function ProductCard({
                                 {descuento ? (
                                     <div className="flex items-baseline gap-1.5">
                                         <span className="text-base font-bold text-[var(--store-text,#0F172A)]">{formatPrice(finalPrice)}</span>
-                                        <span className="text-xs text-[var(--store-muted,#8A8F98)] line-through">{formatPrice(descuento.precioOriginal)}</span>
+                                        <span className="text-xs text-[var(--store-muted,#8A8F98)] line-through">{formatPrice(descuentoPrecioOriginal ?? descuento.precioOriginal)}</span>
                                     </div>
                                 ) : (
                                     <span className="text-base font-bold text-[var(--store-text,#0F172A)]">{formatPrice(displayedPrice)}</span>

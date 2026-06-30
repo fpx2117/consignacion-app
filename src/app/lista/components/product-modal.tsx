@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from "motion/react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { buildCatalogProductInquiryUrl } from "@/lib/catalog-whatsapp";
-import { getCatalogCartUnitPrice } from "@/lib/catalog-cart-pricing";
+import { getCatalogCartUnitPrice, getCatalogCartOriginalDisplayPrice } from "@/lib/catalog-cart-pricing";
 import { cn } from "@/lib/utils";
 import { getThemeStyles } from "../lib/theme-utils";
 import type {
@@ -42,8 +42,13 @@ export function ProductModal({ product, isOpen, onClose, config, isConsigne, onA
     );
     const isAvailable = product.stockDisponibleUnits > 0;
     const descuento = product.descuentoEfectivo;
+    // El precio tachado también lleva el recargo de tarjeta (si aplica) para que el ahorro
+    // mostrado nunca dé negativo cuando el recargo es mayor que el descuento del producto.
     const descuentoPrecioFinal = descuento
         ? getCatalogCartUnitPrice({ precioVenta: product.precioVenta, descuentoEfectivo: descuento, pricingMode: "default" }, pricingContext)
+        : null;
+    const descuentoPrecioOriginal = descuento
+        ? getCatalogCartOriginalDisplayPrice({ precioVenta: product.precioVenta, descuentoEfectivo: descuento }, pricingContext)
         : null;
     const cartEnabled = Boolean(config.tiendaPaymentMode);
 
@@ -122,7 +127,7 @@ export function ProductModal({ product, isOpen, onClose, config, isConsigne, onA
                                         <>
                                             <div className="flex items-center gap-3">
                                                 <span className="text-sm font-semibold text-muted-foreground/80 line-through">
-                                                    ${descuento.precioOriginal.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                                                    ${(descuentoPrecioOriginal ?? descuento.precioOriginal).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
                                                 </span>
                                                 <Badge variant="destructive" className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5">
                                                     {Math.abs(descuento.porcentaje)}% OFF
@@ -131,9 +136,14 @@ export function ProductModal({ product, isOpen, onClose, config, isConsigne, onA
                                             <span className="text-3xl sm:text-4xl font-black text-red-500 tracking-tight">
                                                 ${(descuentoPrecioFinal ?? descuento.precioFinal).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
                                             </span>
-                                            <span className="text-sm font-semibold text-emerald-600">
-                                                Ahorrás ${(descuento.precioOriginal - (descuentoPrecioFinal ?? descuento.precioFinal)).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
-                                            </span>
+                                            {(() => {
+                                                const ahorras = (descuentoPrecioOriginal ?? descuento.precioOriginal) - (descuentoPrecioFinal ?? descuento.precioFinal);
+                                                return ahorras > 0 ? (
+                                                    <span className="text-sm font-semibold text-emerald-600">
+                                                        Ahorrás ${ahorras.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                                                    </span>
+                                                ) : null;
+                                            })()}
                                         </>
                                     ) : (
                                         <>
