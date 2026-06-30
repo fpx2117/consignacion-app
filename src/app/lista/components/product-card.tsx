@@ -7,6 +7,57 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import type { PublicCatalogConfig, PublicCatalogProduct } from "@/lib/types";
 
+type QuantityStepperProps = {
+    size?: "sm" | "lg";
+    quantity: number;
+    maxStock: number;
+    onDecrement: (event: React.MouseEvent) => void;
+    onIncrement: (event: React.MouseEvent) => void;
+};
+
+function QuantityStepper({
+    size = "sm",
+    quantity,
+    maxStock,
+    onDecrement,
+    onIncrement,
+}: QuantityStepperProps) {
+    return (
+        <div
+            className={cn(
+                "flex items-center rounded-full text-white font-semibold select-none",
+                size === "lg" ? "h-10 px-1 gap-1" : "h-9 px-0.5 gap-0.5"
+            )}
+            style={{ backgroundColor: "var(--store-primary,#007AFF)" }}
+        >
+            <button
+                onClick={onDecrement}
+                className={cn(
+                    "flex items-center justify-center rounded-full hover:bg-white/20 active:scale-90 transition-all",
+                    size === "lg" ? "h-8 w-8" : "h-7 w-7"
+                )}
+                aria-label="Reducir cantidad"
+            >
+                <Minus className={cn(size === "lg" ? "h-4 w-4" : "h-3.5 w-3.5")} strokeWidth={2.5} />
+            </button>
+            <span className={cn("text-center tabular-nums", size === "lg" ? "w-8 text-sm" : "w-7 text-sm")}>
+                {quantity}
+            </span>
+            <button
+                onClick={onIncrement}
+                disabled={quantity >= maxStock}
+                className={cn(
+                    "flex items-center justify-center rounded-full hover:bg-white/20 active:scale-90 transition-all disabled:opacity-40 disabled:cursor-not-allowed",
+                    size === "lg" ? "h-8 w-8" : "h-7 w-7"
+                )}
+                aria-label="Aumentar cantidad"
+            >
+                <Plus className={cn(size === "lg" ? "h-4 w-4" : "h-3.5 w-3.5")} strokeWidth={2.5} />
+            </button>
+        </div>
+    );
+}
+
 interface ProductCardProps {
     product: PublicCatalogProduct;
     config: PublicCatalogConfig;
@@ -83,44 +134,6 @@ export function ProductCard({
     };
 
     // ══════════════════════════════════════════
-    //  Stepper de cantidad (reutilizado en grid y list)
-    // ══════════════════════════════════════════
-    const QuantityStepper = ({ size = "sm" }: { size?: "sm" | "lg" }) => (
-        <div
-            className={cn(
-                "flex items-center rounded-full text-white font-semibold select-none",
-                size === "lg" ? "h-10 px-1 gap-1" : "h-9 px-0.5 gap-0.5"
-            )}
-            style={{ backgroundColor: "var(--store-primary,#007AFF)" }}
-        >
-            <button
-                onClick={handleDecrement}
-                className={cn(
-                    "flex items-center justify-center rounded-full hover:bg-white/20 active:scale-90 transition-all",
-                    size === "lg" ? "h-8 w-8" : "h-7 w-7"
-                )}
-                aria-label="Reducir cantidad"
-            >
-                <Minus className={cn(size === "lg" ? "h-4 w-4" : "h-3.5 w-3.5")} strokeWidth={2.5} />
-            </button>
-            <span className={cn("text-center tabular-nums", size === "lg" ? "w-8 text-sm" : "w-7 text-sm")}>
-                {cartQuantity}
-            </span>
-            <button
-                onClick={handleIncrement}
-                disabled={cartQuantity >= maxStock}
-                className={cn(
-                    "flex items-center justify-center rounded-full hover:bg-white/20 active:scale-90 transition-all disabled:opacity-40 disabled:cursor-not-allowed",
-                    size === "lg" ? "h-8 w-8" : "h-7 w-7"
-                )}
-                aria-label="Aumentar cantidad"
-            >
-                <Plus className={cn(size === "lg" ? "h-4 w-4" : "h-3.5 w-3.5")} strokeWidth={2.5} />
-            </button>
-        </div>
-    );
-
-    // ══════════════════════════════════════════
     //  GRID VIEW
     // ══════════════════════════════════════════
     if (isGrid) {
@@ -176,7 +189,13 @@ export function ProductCard({
                             {isAvailable && cartEnabled && addBtnPosition === "floating" && (
                                 <div className="absolute bottom-2 right-2 z-10">
                                     {inCart ? (
-                                        <QuantityStepper size="lg" />
+                                        <QuantityStepper
+                                            size="lg"
+                                            quantity={cartQuantity}
+                                            maxStock={maxStock}
+                                            onDecrement={handleDecrement}
+                                            onIncrement={handleIncrement}
+                                        />
                                     ) : (
                                         <button
                                             onClick={handleAdd}
@@ -222,7 +241,13 @@ export function ProductCard({
                             {isAvailable && cartEnabled && (addBtnPosition === "below" || !showImages) && (
                                 <div className="flex-shrink-0">
                                     {inCart ? (
-                                        <QuantityStepper size="sm" />
+                                        <QuantityStepper
+                                            size="sm"
+                                            quantity={cartQuantity}
+                                            maxStock={maxStock}
+                                            onDecrement={handleDecrement}
+                                            onIncrement={handleIncrement}
+                                        />
                                     ) : (
                                         <button
                                             onClick={handleAdd}
@@ -301,7 +326,13 @@ export function ProductCard({
                         {cartEnabled && isAvailable && (
                             <div className="flex-shrink-0">
                                 {inCart ? (
-                                    <QuantityStepper size="sm" />
+                                    <QuantityStepper
+                                        size="sm"
+                                        quantity={cartQuantity}
+                                        maxStock={maxStock}
+                                        onDecrement={handleDecrement}
+                                        onIncrement={handleIncrement}
+                                    />
                                 ) : (
                                     <button
                                         onClick={handleAdd}

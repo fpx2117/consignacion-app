@@ -1,4 +1,3 @@
-import { prisma } from "@/lib/prisma";
 import { CatalogClient } from "./catalog-client";
 import "./storefront.css";
 
@@ -27,47 +26,53 @@ function getContrastColor(hex: string) {
   return brightness > 155 ? "hsl(var(--foreground))" : "hsl(var(--background))";
 }
 
-export default async function ListaPage() {
-  const [branding, storeSettings] = await Promise.all([
-    prisma.branding.findUnique({
-      where: { sucursalId: 1 },
-      select: {
-        businessName: true,
-        primaryColor: true,
-        secondaryColor: true,
-        themeIdentifier: true,
-        logoData: true,
-        logoMime: true,
-      },
-    }),
-    prisma.storeSettings.findUnique({
-      where: { sucursalId: 1 },
-      select: { onlineStoreConfig: true },
-    }),
-  ]);
+type ListaPageProps = {
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
+};
 
-  const themeId = branding?.themeIdentifier || "modern";
-  const primaryColor = branding?.primaryColor || "#111827";
-  const secondaryColor = branding?.secondaryColor || "#3b82f6";
+function getSingleSearchParam(value: string | string[] | undefined) {
+  return Array.isArray(value) ? value[0] : value;
+}
+
+function getSucursalIdFromSearchParams(value: string | undefined) {
+  const parsed = Number(value);
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : 1;
+}
+
+function getCheckoutReturnStatus(value: string | undefined) {
+  if (value === "success" || value === "failure" || value === "pending") {
+    return value;
+  }
+
+  return null;
+}
+
+export default async function ListaPage({ searchParams }: ListaPageProps) {
+  const resolvedSearchParams = searchParams ? await searchParams : undefined;
+  const sucursalId = getSucursalIdFromSearchParams(
+    getSingleSearchParam(resolvedSearchParams?.sucursalId),
+  );
+  const checkoutReturnStatus = getCheckoutReturnStatus(
+    getSingleSearchParam(resolvedSearchParams?.status),
+  );
+
+  const themeId = "modern";
+  const primaryColor = "#111827";
+  const secondaryColor = "#3b82f6";
   const tc = THEME_COLORS[themeId] || THEME_COLORS.modern;
-  const hasCustomColors = primaryColor !== tc.primary || secondaryColor !== tc.secondary;
-
-  const resolvedPrimary = hasCustomColors ? primaryColor : tc.primary;
-  const resolvedSecondary = hasCustomColors ? secondaryColor : tc.secondary;
+  const resolvedPrimary = tc.primary;
+  const resolvedSecondary = tc.secondary;
 
   const brandingPrimaryRgb = hexToRgb(primaryColor);
   const brandingSecondaryRgb = hexToRgb(secondaryColor);
 
-  // Obtener colores de OnlineStoreSettings (si existen)
-  const ols = storeSettings?.onlineStoreConfig as Record<string, unknown> | null | undefined;
-  const olsTheme = (ols?.theme || {}) as Record<string, string | undefined>;
-  const storePrimary = olsTheme.primaryColor || "#007AFF";
-  const storeSecondary = olsTheme.secondaryColor || "#EAF3FF";
+  const storePrimary = "#007AFF";
+  const storeSecondary = "#EAF3FF";
   const storeBg = "#FFFFFF";
-  const storeSurface = olsTheme.surfaceColor || "#FFFFFF";
-  const storeText = olsTheme.textColor || "#0F172A";
-  const storeMuted = olsTheme.mutedTextColor || "#8A8F98";
-  const storeWhatsapp = olsTheme.whatsappColor || "#25D366";
+  const storeSurface = "#FFFFFF";
+  const storeText = "#0F172A";
+  const storeMuted = "#8A8F98";
+  const storeWhatsapp = "#25D366";
 
   const cssVars = `
 :root {
@@ -111,15 +116,15 @@ export default async function ListaPage() {
         rel="stylesheet"
       />
       {/* Preload de imágenes del comercio para carga instantánea */}
-      <link rel="preload" as="image" href="/api/public/branding-media?type=banner&sucursalId=1" />
-      <link rel="preload" as="image" href="/api/public/branding-media?type=logo&sucursalId=1" />
+      <link rel="preload" as="image" href={`/api/public/branding-media?type=banner&sucursalId=${sucursalId}`} />
+      <link rel="preload" as="image" href={`/api/public/branding-media?type=logo&sucursalId=${sucursalId}`} />
       <style dangerouslySetInnerHTML={{ __html: cssVars }} />
-      <div data-theme={themeId} data-theme-custom={hasCustomColors ? "true" : undefined} data-store-config="true">
+      <div data-theme={themeId} data-store-config="true">
         <CatalogClient
           initialData={null}
           initialError={null}
-          sucursalId={1}
-          checkoutReturnStatus={null}
+          sucursalId={sucursalId}
+          checkoutReturnStatus={checkoutReturnStatus}
         />
       </div>
     </>

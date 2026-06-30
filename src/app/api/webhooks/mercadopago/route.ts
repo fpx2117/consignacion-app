@@ -130,19 +130,49 @@ function isPaymentAction(action: string | undefined): boolean {
 }
 
 async function fetchMercadoPagoPayment(paymentId: string): Promise<MPPaymentData> {
-    const accessToken = paymentConfig.mp.accessToken;
-    if (!accessToken) {
+    const tokens = new Set<string>();
+
+    if (paymentConfig.mp.accessToken) {
+        tokens.add(paymentConfig.mp.accessToken);
+    }
+
+    const branchConfigs = await prisma.configuracion.findMany({
+        where: { mpAccessTokenTienda: { not: null } },
+        select: { mpAccessTokenTienda: true },
+    });
+
+    for (const branchConfig of branchConfigs) {
+        const token = toNonEmptyString(branchConfig.mpAccessTokenTienda);
+        if (token) {
+            tokens.add(token);
+        }
+    }
+
+    if (tokens.size === 0) {
         throw new Error("Mercado Pago accessToken no configurado para consultar pagos");
     }
 
-    const { MercadoPagoConfig, Payment } = await import("mercadopago");
-    const client = new MercadoPagoConfig({
-        accessToken,
-        options: { timeout: 5000 },
-    });
+    let lastError: unknown = null;
 
-    const payment = new Payment(client);
-    return (await payment.get({ id: paymentId })) as MPPaymentData;
+    const { MercadoPagoConfig, Payment } = await import("mercadopago");
+
+    for (const accessToken of tokens) {
+        try {
+            const client = new MercadoPagoConfig({
+                accessToken,
+                options: { timeout: 5000 },
+            });
+
+            const payment = new Payment(client);
+            return (await payment.get({ id: paymentId })) as MPPaymentData;
+        } catch (error) {
+            lastError = error;
+        }
+    }
+
+    throw lastError instanceof Error
+        ? lastError
+        : new Error(`No se pudo consultar el pago ${paymentId} con los tokens disponibles`);
 }
 
 async function findOrCreateClienteFromIntent(

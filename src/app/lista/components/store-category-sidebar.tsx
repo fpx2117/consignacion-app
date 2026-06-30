@@ -3,7 +3,6 @@
 import { cn } from "@/lib/utils";
 import type { PublicCatalogCategory, PublicCatalogConfig, PublicCatalogProduct } from "@/lib/types";
 import { ChevronDown } from "lucide-react";
-import { useState } from "react";
 
 interface StoreCategorySidebarProps {
     config: PublicCatalogConfig;

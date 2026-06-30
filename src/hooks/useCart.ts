@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useCallback, useMemo } from "react";
 import type { CatalogCartItem, PublicCatalogProduct } from "@/lib/types";
-import { getCatalogCartSubtotal } from "@/lib/catalog-cart-pricing";
 
 type UseCartOptions = {
   storageKey?: string;

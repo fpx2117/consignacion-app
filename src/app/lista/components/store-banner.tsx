@@ -4,21 +4,18 @@ import Image from "next/image";
 import { ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { normalizeStorefrontContent } from "@/lib/storefront-content";
-import type { PublicCatalogBanner, PublicCatalogConfig } from "@/lib/types";
-import { cn } from "@/lib/utils";
+import type { PublicCatalogConfig } from "@/lib/types";
 
 export function StoreBanner({
     config,
     productsCount,
     categoriesCount,
     onPrimaryAction,
-    onSecondaryAction,
 }: {
     config: PublicCatalogConfig;
     productsCount: number;
     categoriesCount: number;
     onPrimaryAction?: () => void;
-    onSecondaryAction?: () => void;
 }) {
     const banners = Array.isArray(config.banners) ? config.banners : [];
     const isSliderMode = Boolean(config.isBannerSlider) && banners.length > 0;
