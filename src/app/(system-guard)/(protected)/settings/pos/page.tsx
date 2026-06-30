@@ -136,6 +136,7 @@ export default function PosSettingsPage() {
     const [separarListaPorSucursal, setSepararListaPorSucursal] = React.useState(true);
     const [mpAccessTokenTienda, setMpAccessTokenTienda] = React.useState("");
     const [mpPublicKeyTienda, setMpPublicKeyTienda] = React.useState("");
+    const [whatsappNumber, setWhatsappNumber] = React.useState("");
 
     const [loading, setLoading] = React.useState(true);
     const [loadingConfigToggle, setLoadingConfigToggle] = React.useState(false);
@@ -147,13 +148,15 @@ export default function PosSettingsPage() {
             const cachedConfig = localStorage.getItem(`config-caja-${activeSucursalId}`);
             if (cachedConfig !== null) setUsarControlDeCaja(cachedConfig === "true");
 
-            const [cajasRes, configRes] = await Promise.all([
+            const [cajasRes, configRes, brandingRes] = await Promise.all([
                 apiService.getCajasDisponibles(),
                 apiService.getConfiguracionGeneral(),
+                apiService.getBranding().catch(() => null),
             ]);
 
             setCajas(Array.isArray(cajasRes) ? cajasRes : []);
             const config = configRes as Partial<PosConfig> | undefined;
+            setWhatsappNumber((brandingRes as { whatsappNumber?: string | null } | null)?.whatsappNumber ?? "");
 
             setUsarControlDeCaja(config?.usarControlDeCaja ?? true);
             localStorage.setItem(`config-caja-${activeSucursalId}`, String(config?.usarControlDeCaja ?? true));
@@ -517,6 +520,19 @@ export default function PosSettingsPage() {
                                     {tiendaMetodoPago === "mercadopago" && (!mpAccessTokenTienda || !mpPublicKeyTienda) && (
                                         <p className="text-xs text-[color:var(--status-warning)] font-medium">
                                             Elegiste Mercado Pago pero todavía faltan credenciales. Cargalas abajo para que el carrito funcione.
+                                        </p>
+                                    )}
+                                    {tiendaMetodoPago === "whatsapp" && !whatsappNumber.trim() && (
+                                        <p className="text-xs text-[color:var(--status-warning)] font-medium">
+                                            Elegiste WhatsApp pero todavía no cargaste un número. El carrito no aparecerá en el catálogo hasta que
+                                            lo configures en{" "}
+                                            <button
+                                                type="button"
+                                                onClick={() => router.push("/settings/tienda?tab=social")}
+                                                className="underline underline-offset-2 hover:opacity-80"
+                                            >
+                                                Personalización → Redes
+                                            </button>.
                                         </p>
                                     )}
                                 </div>
