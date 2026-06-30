@@ -12,11 +12,16 @@ interface ImageUploadProps {
     value?: string | null;
     onChange: (url: string | null) => void;
     disabled?: boolean;
+    onUploadingChange?: (loading: boolean) => void;
 }
 
-export function ImageUpload({ value, onChange, disabled }: ImageUploadProps) {
+export function ImageUpload({ value, onChange, disabled, onUploadingChange }: ImageUploadProps) {
     const [loading, setLoading] = React.useState(false);
     const fileInputRef = React.useRef<HTMLInputElement>(null);
+
+    React.useEffect(() => {
+        onUploadingChange?.(loading);
+    }, [loading, onUploadingChange]);
 
     const onUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];

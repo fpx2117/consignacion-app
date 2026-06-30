@@ -75,6 +75,7 @@ export function EditProductoDialog({
 }) {
   const [open, setOpen] = React.useState(false);
   const [saving, setSaving] = React.useState(false);
+  const [imageUploading, setImageUploading] = React.useState(false);
   const deleting = false;
 
   // Estados del formulario
@@ -122,6 +123,7 @@ export function EditProductoDialog({
       setFechaVencimiento(producto.fechaVencimiento ? new Date(producto.fechaVencimiento).toISOString().split('T')[0] : "");
       setCategoriaId(producto.categoriaId?.toString() || "");
       setImagenUrl(producto.imagenUrl || null);
+      setImageUploading(false);
       setDescuentoActivo(producto.descuentoActivo ?? false);
       setTipoDescuento((producto.tipoDescuento as "porcentaje" | "monto") ?? "porcentaje");
       setDescuentoPorcentaje(producto.descuentoPorcentaje ? String(producto.descuentoPorcentaje) : "");
@@ -238,7 +240,7 @@ export function EditProductoDialog({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 items-start">
             <div className="space-y-2">
               <Label className="text-xs font-bold uppercase text-muted-foreground">Imagen del Producto</Label>
-              <ImageUpload value={imagenUrl} onChange={setImagenUrl} />
+              <ImageUpload value={imagenUrl} onChange={setImagenUrl} onUploadingChange={setImageUploading} />
             </div>
 
             <div className="space-y-4">
@@ -510,8 +512,8 @@ export function EditProductoDialog({
             <Button type="button" variant="outline" className="flex-1 h-11" onClick={() => setOpen(false)} disabled={saving || deleting}>
               Cancelar
             </Button>
-            <Button onClick={save} className="flex-1 h-11 font-bold shadow-lg" disabled={!canSubmit || saving || deleting || esGananciaNegativa}>
-              {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+            <Button onClick={save} className="flex-1 h-11 font-bold shadow-lg" disabled={!canSubmit || saving || imageUploading || deleting || esGananciaNegativa}>
+              {saving || imageUploading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
               Guardar Cambios
             </Button>
           </div>
