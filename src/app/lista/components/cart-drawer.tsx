@@ -5,17 +5,15 @@ import {
   ArrowLeft,
   ArrowRight,
   Loader2,
-  MessageCircle,
+  Receipt,
   ShoppingBag,
   Store,
-  Trash2,
   Truck,
   X,
   Package,
 } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { getCatalogCartSubtotal } from "@/lib/catalog-cart-pricing";
@@ -26,10 +24,9 @@ import type {
   PublicCheckoutShippingData,
 } from "@/lib/types";
 import { cn } from "@/lib/utils";
-import { getThemeStyles } from "../lib/theme-utils";
 import { OrderItem } from "./order-item";
 import { OrderSummary } from "./order-summary";
-import { WhatsAppPreview } from "./whatsapp-preview";
+import { CheckoutTicketPreview } from "./checkout-ticket-preview";
 
 interface CartDrawerProps {
   isOpen: boolean;
@@ -58,9 +55,8 @@ export function CartDrawer({
   onCheckout,
   loading,
 }: CartDrawerProps) {
-  const { pageBgClass } = getThemeStyles(config.themeIdentifier);
   const [step, setStep] = React.useState(1);
-  const [showWhatsappPreviewToggle, setShowWhatsappPreviewToggle] = React.useState(true);
+  const [showTicketPreview, setShowTicketPreview] = React.useState(true);
   const [clienteData, setClienteData] = React.useState<PublicCheckoutCustomerData>({
     nombre: "",
     email: "",
@@ -79,8 +75,8 @@ export function CartDrawer({
 
   const ols = config.onlineStoreConfig;
   const displayMode: DisplayMode = ols?.cart?.displayMode ?? "bottom-sheet";
-  const showWhatsappPreviewSetting = ols?.cart?.showWhatsappPreview ?? true;
-  const whatsappButtonText = ols?.cart?.whatsappButtonText ?? "Enviar pedido por WhatsApp";
+  const showTicketPreviewSetting = ols?.cart?.showWhatsappPreview ?? true;
+  const checkoutButtonText = ols?.cart?.whatsappButtonText?.trim() || "Ir al pago";
   const [isMobile, setIsMobile] = React.useState(false);
 
   React.useEffect(() => {
@@ -127,6 +123,10 @@ export function CartDrawer({
         toast.error("Por favor completá tu nombre.");
         return;
       }
+      if (!clienteData.email.trim()) {
+        toast.error("Necesitamos tu email para generar el checkout.");
+        return;
+      }
       setStep(3);
       return;
     }
@@ -143,7 +143,6 @@ export function CartDrawer({
     onCheckout(clienteData, envioData);
   };
 
-  const canSendWhatsapp = Boolean(config.whatsappNumber?.trim());
   const requiresDeliveryAddress = envioData.metodoEnvio === "UBER_FLASH" || envioData.metodoEnvio === "ENCOMIENDA";
   const selectedDeliveryNeedsDisclaimer = envioData.metodoEnvio === "UBER_FLASH" || envioData.metodoEnvio === "ENCOMIENDA";
 
@@ -308,19 +307,19 @@ export function CartDrawer({
                     {/* Separador */}
                     <div className="h-px bg-gray-100 my-3" />
 
-                    {/* Toggle WhatsApp Preview */}
-                    {showWhatsappPreviewSetting && ols && (
+                    {/* Toggle ticket preview */}
+                    {showTicketPreviewSetting && ols && (
                       <div>
                         <button
-                          onClick={() => setShowWhatsappPreviewToggle(!showWhatsappPreviewToggle)}
+                          onClick={() => setShowTicketPreview(!showTicketPreview)}
                           className="text-xs text-[var(--store-muted,#8A8F98)] flex items-center gap-1.5 hover:text-[var(--store-text,#0F172A)] transition-colors w-full justify-center py-2"
                         >
-                          <MessageCircle className="h-3.5 w-3.5" />
-                          {showWhatsappPreviewToggle ? "Ocultar" : "Mostrar"} mensaje de WhatsApp
+                          <Receipt className="h-3.5 w-3.5" />
+                          {showTicketPreview ? "Ocultar" : "Mostrar"} vista previa del ticket
                         </button>
 
                         <AnimatePresence>
-                          {showWhatsappPreviewToggle && (
+                          {showTicketPreview && (
                             <motion.div
                               initial={{ opacity: 0, height: 0 }}
                               animate={{ opacity: 1, height: "auto" }}
@@ -328,7 +327,7 @@ export function CartDrawer({
                               transition={{ duration: 0.25 }}
                               className="overflow-hidden"
                             >
-                              <WhatsAppPreview
+                              <CheckoutTicketPreview
                                 settings={ols}
                                 cartItems={cart}
                                 subtotal={`$${subtotalProductos.toLocaleString("es-AR", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`}
@@ -378,12 +377,12 @@ export function CartDrawer({
                       name="email"
                       value={clienteData.email}
                       onChange={handleInputChange}
-                      placeholder="Opcional"
+                      placeholder="nombre@correo.com"
                       className="h-12 rounded-xl border-gray-200 bg-gray-50 text-[var(--store-text,#0F172A)] placeholder:text-gray-400 focus-visible:ring-[var(--store-primary,#007AFF)]"
                     />
                   </div>
                   <div className="rounded-2xl bg-blue-50 border border-blue-100 p-4 text-sm text-blue-700">
-                    Vamos a preparar un mensaje con tu pedido para enviarlo directamente por WhatsApp.
+                    Vamos a generar un checkout online con el detalle de tu pedido y un ticket digital como referencia.
                   </div>
                 </motion.div>
               )}
@@ -410,7 +409,7 @@ export function CartDrawer({
                       id: "UBER_FLASH",
                       icon: Truck,
                       title: "Envío por Uber Flash",
-                      desc: "Coordinamos por WhatsApp, el envío se cobra aparte",
+                      desc: "El envío se coordina después del pago y se cobra aparte",
                       color: "bg-blue-50",
                       textColor: "text-blue-600",
                     },
@@ -418,7 +417,7 @@ export function CartDrawer({
                       id: "ENCOMIENDA",
                       icon: Package,
                       title: "Envío por encomienda",
-                      desc: "Se coordina por WhatsApp, el envío se cobra aparte",
+                      desc: "La encomienda se coordina después del pago y se cobra aparte",
                       color: "bg-purple-50",
                       textColor: "text-purple-600",
                     },
@@ -483,11 +482,6 @@ export function CartDrawer({
                     </div>
                   )}
 
-                  {!canSendWhatsapp && (
-                    <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-                      No hay un número de WhatsApp configurado para esta tienda. Configuralo desde settings.
-                    </div>
-                  )}
                 </motion.div>
               )}
             </div>
@@ -503,30 +497,21 @@ export function CartDrawer({
                 {/* Botón principal */}
                 <button
                   onClick={handleContinue}
-                  disabled={loading || (step === 3 && !canSendWhatsapp)}
+                  disabled={loading}
                   className={cn(
                     "w-full h-14 rounded-2xl text-white font-bold text-base flex items-center justify-center gap-2.5",
                     "transition-all duration-200 hover:opacity-95 active:scale-[0.98]",
                     "disabled:opacity-50 disabled:cursor-not-allowed",
-                    step === 3
-                      ? "shadow-[0_4px_20px_rgba(37,211,102,0.35)]"
-                      : "shadow-[0_4px_16px_rgba(0,0,0,0.15)]"
+                    "shadow-[0_4px_16px_rgba(0,0,0,0.15)]"
                   )}
-                  style={{
-                    backgroundColor: step === 3
-                      ? "var(--store-whatsapp,#25D366)"
-                      : "var(--store-primary,#007AFF)",
-                  }}
+                  style={{ backgroundColor: "var(--store-primary,#007AFF)" }}
                 >
                   {loading ? (
                     <Loader2 className="h-5 w-5 animate-spin" />
                   ) : step === 3 ? (
                     <>
-                      {/* Ícono WhatsApp SVG */}
-                      <svg viewBox="0 0 24 24" className="h-5 w-5 fill-white" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
-                      </svg>
-                      <span>{whatsappButtonText}</span>
+                      <Receipt className="h-5 w-5" />
+                      <span>{checkoutButtonText}</span>
                     </>
                   ) : (
                     <>

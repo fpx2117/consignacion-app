@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { MercadoPagoConfig, Preference } from "mercadopago";
 import crypto from "crypto";
 
 type CheckoutItemInput = {
@@ -213,32 +212,57 @@ export async function POST(req: Request) {
         });
         checkoutIntentId = checkoutIntent.id;
 
-        const client = new MercadoPagoConfig({
-            accessToken: config.mpAccessTokenTienda,
-            options: { timeout: 5000 }
-        });
+        const baseUrl = process.env.APP_URL || process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+        const notificationUrl = `${baseUrl}/api/webhooks/mercadopago`;
 
-        const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+        // MP solo acepta auto_return con URLs públicas (no localhost)
+        const isPublicUrl = !baseUrl.includes("localhost") && !baseUrl.includes("127.0.0.1");
 
-        const preference = new Preference(client);
-        const response = await preference.create({
-            body: {
-                items: mpItems,
-                payer: {
-                    email: cliente.email || undefined,
-                    name: cliente.nombre,
-                },
-                back_urls: {
-                    success: `${baseUrl}/lista?sucursalId=${sucursalIdNum}&status=success`,
-                    failure: `${baseUrl}/lista?sucursalId=${sucursalIdNum}&status=failure`,
-                    pending: `${baseUrl}/lista?sucursalId=${sucursalIdNum}&status=pending`,
-                },
-                auto_return: "approved",
-                external_reference: checkoutIntent.externalReference,
+        const preferencePayload: Record<string, unknown> = {
+            items: mpItems,
+            payer: {
+                email: cliente.email || undefined,
+                name: cliente.nombre,
             },
-            requestOptions: {
-                idempotencyKey: crypto.randomUUID()
+            back_urls: {
+                success: `${baseUrl}/lista?sucursalId=${sucursalIdNum}&status=success`,
+                failure: `${baseUrl}/lista?sucursalId=${sucursalIdNum}&status=failure`,
+                pending: `${baseUrl}/lista?sucursalId=${sucursalIdNum}&status=pending`,
+            },
+            ...(isPublicUrl ? { notification_url: notificationUrl, auto_return: "approved" } : {}),
+            external_reference: checkoutIntent.externalReference,
+        };
+
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 12000);
+
+        const response = await fetch("https://api.mercadopago.com/checkout/preferences", {
+            method: "POST",
+            headers: {
+                Authorization: `Bearer ${config.mpAccessTokenTienda}`,
+                "Content-Type": "application/json",
+                "X-Idempotency-Key": crypto.randomUUID(),
+            },
+            body: JSON.stringify(preferencePayload),
+            signal: controller.signal,
+        }).then(async (mpResponse) => {
+            clearTimeout(timeout);
+
+            const payload = await mpResponse.json().catch(() => null);
+            if (!mpResponse.ok) {
+                const message = payload && typeof payload === "object" && "message" in payload
+                    ? String(payload.message)
+                    : "MercadoPago rechazó la creación de la preferencia";
+                throw new Error(message);
             }
+
+            return payload as { id?: string | number | null; init_point?: string | null };
+        }).catch((error: unknown) => {
+            clearTimeout(timeout);
+            if (error instanceof Error && error.name === "AbortError") {
+                throw new Error("MercadoPago demoró demasiado en responder");
+            }
+            throw error;
         });
 
         const preferenceId = response.id ? String(response.id) : null;
@@ -274,6 +298,12 @@ export async function POST(req: Request) {
         }
 
         console.error("Error creating store preference:", error);
-        return NextResponse.json({ error: "Error al procesar el pago" }, { status: 500 });
+        return NextResponse.json(
+            {
+                error: "Error al procesar el pago",
+                ...(process.env.NODE_ENV === "production" ? {} : { detail: errorMessage }),
+            },
+            { status: 500 }
+        );
     }
 }

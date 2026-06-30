@@ -6,14 +6,12 @@ import { CheckCircle2, ChevronLeft, ChevronRight, Loader2, XCircle } from "lucid
 import { motion } from "motion/react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { buildCatalogCartWhatsappUrl } from "@/lib/catalog-whatsapp";
 import { cn } from "@/lib/utils";
 import type {
     CatalogCartItem,
     PublicCatalogConfig,
     PublicCatalogData,
     PublicCatalogProduct,
-    PublicCatalogSortBy,
     PublicCheckoutCustomerData,
     PublicCheckoutShippingData,
 } from "@/lib/types";
@@ -73,8 +71,6 @@ export function CatalogClient({
     const [selectedSubcategory, setSelectedSubcategory] = React.useState<number | null>(null);
     const [isConsigne, setIsConsigne] = React.useState(false);
     const [selectedProduct, setSelectedProduct] = React.useState<PublicCatalogProduct | null>(null);
-    const [sortBy] = React.useState<PublicCatalogSortBy>("relevance");
-
     // ── Carrito ──
     const [cart, setCart] = React.useState<CatalogCartItem[]>([]);
     const [isCartOpen, setIsCartOpen] = React.useState(false);
@@ -92,6 +88,15 @@ export function CatalogClient({
     );
     const clearCheckoutToken = React.useCallback(() => {
         if (typeof window !== "undefined") window.localStorage.removeItem(CHECKOUT_TOKEN_STORAGE_KEY);
+    }, []);
+    const storeCheckoutToken = React.useCallback((token: string, storeSucursalId: number) => {
+        if (typeof window === "undefined") return;
+        const payload: StoredCheckoutToken = {
+            token,
+            sucursalId: storeSucursalId,
+            createdAt: Date.now(),
+        };
+        window.localStorage.setItem(CHECKOUT_TOKEN_STORAGE_KEY, JSON.stringify(payload));
     }, []);
     const readCheckoutToken = React.useCallback((storeSucursalId: number): string | null => {
         if (typeof window === "undefined") return null;
@@ -265,16 +270,23 @@ export function CatalogClient({
     const handleCheckout = async (clienteData: PublicCheckoutCustomerData, envioData: PublicCheckoutShippingData) => {
         setCheckoutLoading(true);
         try {
-            const whatsappUrl = buildCatalogCartWhatsappUrl({
-                config, cart, clienteData, envioData,
-                tiendaUrl: typeof window !== "undefined" ? window.location.href : null,
+            const checkoutResponse = await apiService.createPublicCheckout({
+                items: cart,
+                sucursalId: getSucursalIdForCheckout(),
+                clienteData,
+                envioData,
             });
-            if (!whatsappUrl) { toast.error("No hay un número de WhatsApp configurado."); return; }
-            window.open(whatsappUrl, "_blank", "noopener,noreferrer");
-            setCart([]);
-            setIsCartOpen(false);
-            setCheckoutFeedback({ kind: "success", message: "Abrimos WhatsApp con tu pedido listo para enviar." });
-            toast.success("Pedido preparado para WhatsApp");
+
+            if (!checkoutResponse?.init_point || !checkoutResponse.checkout_token) {
+                throw new Error("No pudimos iniciar el checkout online.");
+            }
+
+            storeCheckoutToken(checkoutResponse.checkout_token, getSucursalIdForCheckout());
+            setCheckoutFeedback({ kind: "polling", message: "Redirigiendo al pago seguro..." });
+
+            if (typeof window !== "undefined") {
+                window.location.assign(checkoutResponse.init_point);
+            }
         } catch (err: unknown) {
             toast.error(err instanceof Error ? err.message : "Error al preparar el pedido");
         } finally {
@@ -298,8 +310,18 @@ export function CatalogClient({
             while (!cancelled && Date.now() - start < CHECKOUT_POLL_TIMEOUT_MS) {
                 try {
                     const res = await apiService.getPublicCheckoutStatus(token);
-                    if (res?.status === "PAID") { clearCheckoutToken(); setCheckoutFeedback({ kind: "success", message: "¡Pago confirmado!" }); return; }
-                    if (res?.status === "FAILED") { clearCheckoutToken(); setCheckoutFeedback({ kind: "error", message: res?.reason || "No se pudo confirmar el pago." }); return; }
+                    if (res?.status === "PAID") {
+                        clearCheckoutToken();
+                        setCart([]);
+                        setIsCartOpen(false);
+                        setCheckoutFeedback({ kind: "success", message: "¡Pago confirmado! Tu ticket ya está siendo preparado." });
+                        return;
+                    }
+                    if (res?.status === "FAILED") {
+                        clearCheckoutToken();
+                        setCheckoutFeedback({ kind: "error", message: res?.reason || "No se pudo confirmar el pago." });
+                        return;
+                    }
                 } catch { /* retry */ }
                 await new Promise(r => setTimeout(r, CHECKOUT_POLL_INTERVAL_MS));
             }
@@ -392,7 +414,7 @@ export function CatalogClient({
             return categories.find((c) => c.id === selectedCategory)?.nombre ?? "Productos";
         }
         return "Todos los productos";
-    }, [deferredSearchTerm, selectedCategory, selectedSubcategory, categories]);
+    }, [deferredSearchTerm, selectedCategory, selectedSubcategory, categories, virtualCategories]);
 
     // ── Consigne (mantener compatibilidad) ──
     React.useEffect(() => {
