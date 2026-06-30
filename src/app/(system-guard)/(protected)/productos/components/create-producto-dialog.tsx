@@ -38,6 +38,7 @@ import {
   Percent,
 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
+import { ImageUpload } from "@/components/image-upload";
 import { CreateCategoriaDialog } from "./create-categoria-dialog";
 import { toast } from "sonner";
 
@@ -74,6 +75,7 @@ export function CreateProductoDialog({
 }) {
   const [open, setOpen] = React.useState(false);
   const [saving, setSaving] = React.useState(false);
+  const [imageUploading, setImageUploading] = React.useState(false);
 
   // Estados del formulario
   const [nombre, setNombre] = React.useState("");
@@ -83,6 +85,7 @@ export function CreateProductoDialog({
   const [stockDisponibleUnits, setStockDisponibleUnits] = React.useState("");
   const [stockMinUnits, setStockMinUnits] = React.useState("");
   const [fechaVencimiento, setFechaVencimiento] = React.useState("");
+  const [imagenUrl, setImagenUrl] = React.useState<string | null>(null);
 
   // Descuento
   const [descuentoActivo, setDescuentoActivo] = React.useState(false);
@@ -107,6 +110,8 @@ export function CreateProductoDialog({
       setStockDisponibleUnits("");
       setStockMinUnits("");
       setFechaVencimiento("");
+      setImagenUrl(null);
+      setImageUploading(false);
       setCategoriaId("");
       setDescuentoActivo(false);
       setTipoDescuento("porcentaje");
@@ -175,6 +180,7 @@ export function CreateProductoDialog({
         fechaVencimiento: fechaVencimiento || null,
         categoriaId: Number(categoriaId),
         subcategoriaId: subcategoriaId ? Number(subcategoriaId) : undefined,
+        imagenUrl,
         descuentoActivo,
         tipoDescuento,
         descuentoPorcentaje: tipoDescuento === "porcentaje" ? (dpct ?? null) : null,
@@ -223,8 +229,13 @@ export function CreateProductoDialog({
         </DialogHeader>
 
         <form onSubmit={save} className="p-6 space-y-4 max-h-[80vh] overflow-y-auto w-full">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="space-y-4 sm:col-span-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 items-start">
+            <div className="space-y-2">
+              <Label className="text-xs font-bold uppercase text-muted-foreground">Imagen del Producto</Label>
+              <ImageUpload value={imagenUrl} onChange={setImagenUrl} onUploadingChange={setImageUploading} />
+            </div>
+
+            <div className="space-y-4">
               <div className="space-y-2">
                 <Label className="text-xs font-bold uppercase text-muted-foreground">Nombre</Label>
                 <div className="relative">
@@ -241,7 +252,9 @@ export function CreateProductoDialog({
                 </div>
               </div>
             </div>
+          </div>
 
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-2 sm:col-span-2">
               <Label className="text-xs font-bold uppercase text-muted-foreground">Categoría</Label>
               <div className="flex gap-2">
@@ -492,8 +505,8 @@ export function CreateProductoDialog({
             <Button type="button" variant="outline" className="flex-1 h-11" onClick={() => setOpen(false)} disabled={saving}>
               Cancelar
             </Button>
-            <Button type="submit" className="flex-1 h-11 font-bold shadow-lg" disabled={!canSubmit || saving || esGananciaNegativa}>
-              {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : "Crear Producto"}
+            <Button type="submit" className="flex-1 h-11 font-bold shadow-lg" disabled={!canSubmit || saving || imageUploading || esGananciaNegativa}>
+              {saving || imageUploading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Crear Producto"}
             </Button>
           </div>
         </form>
