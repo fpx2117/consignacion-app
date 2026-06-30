@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { Receipt, Scissors } from "lucide-react";
+import { getCatalogCartLineSubtotal } from "@/lib/catalog-cart-pricing";
 import type { CatalogCartItem, OnlineStoreSettings } from "@/lib/types";
 
 type CheckoutTicketPreviewProps = {
@@ -10,6 +11,9 @@ type CheckoutTicketPreviewProps = {
   subtotal: string;
   total: string;
   className?: string;
+  /** porcentaje de interés por tarjeta a aplicar a cada línea (modo Mercado Pago) */
+  porcentajeInteresTarjeta?: number;
+  porcentajeAumentoConsignacion?: number;
 };
 
 export function CheckoutTicketPreview({
@@ -18,6 +22,8 @@ export function CheckoutTicketPreview({
   subtotal,
   total,
   className = "",
+  porcentajeInteresTarjeta = 0,
+  porcentajeAumentoConsignacion = 0,
 }: CheckoutTicketPreviewProps) {
   const storeName = settings.storeName || "Tienda";
   const ticketSeed = React.useMemo(
@@ -60,7 +66,11 @@ export function CheckoutTicketPreview({
                 <p className="text-xs text-stone-500">{item.quantity} u.</p>
               </div>
               <span className="shrink-0 font-semibold text-stone-700">
-                ${(Number(item.precioVenta) * item.quantity).toLocaleString("es-AR")}
+                ${getCatalogCartLineSubtotal(item, {
+                  porcentajeAumentoConsignacion,
+                  porcentajeInteresTarjeta,
+                  applyCardInterest: true,
+                }).toLocaleString("es-AR")}
               </span>
             </div>
           ))}

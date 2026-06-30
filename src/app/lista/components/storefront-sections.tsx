@@ -61,7 +61,12 @@ export function StorefrontSections({
   const stats = [
     { icon: Package2, label: "Productos", value: String(products.length), desc: "Stock actualizado" },
     { icon: Layers3, label: "Categorías", value: String(categories.length), desc: "Organización por rubro" },
-    { icon: Sparkles, label: "Canal", value: config.convertirTienda ? "Compra directa" : "Consulta guiada", desc: config.convertirTienda ? "Carrito activo" : "Vía WhatsApp" },
+    {
+      icon: Sparkles,
+      label: "Canal",
+      value: config.tiendaPaymentMode === "mercadopago" ? "Pago online" : config.tiendaPaymentMode === "whatsapp" ? "Compra directa" : "Consulta guiada",
+      desc: config.tiendaPaymentMode === "mercadopago" ? "Carrito + Mercado Pago" : config.tiendaPaymentMode === "whatsapp" ? "Carrito + WhatsApp" : "Vía WhatsApp",
+    },
   ];
 
   return (

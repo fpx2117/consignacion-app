@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { getCatalogCartLineSubtotal } from "@/lib/catalog-cart-pricing";
 import type { OnlineStoreSettings, CatalogCartItem } from "@/lib/types";
 
 type WhatsAppPreviewProps = {
@@ -9,6 +10,7 @@ type WhatsAppPreviewProps = {
   subtotal: string;
   total: string;
   className?: string;
+  porcentajeAumentoConsignacion?: number;
 };
 
 /**
@@ -23,6 +25,7 @@ export function WhatsAppPreview({
   subtotal,
   total,
   className = "",
+  porcentajeAumentoConsignacion = 0,
 }: WhatsAppPreviewProps) {
   const template = settings.cart.messageTemplate;
   const storeName = settings.storeName || "Tienda";
@@ -78,7 +81,7 @@ export function WhatsAppPreview({
                   • {item.nombre} <span className="font-bold">x{item.quantity}</span>
                 </span>
                 <span className="flex-shrink-0 font-medium">
-                  ${(Number(item.precioVenta) * item.quantity).toLocaleString("es-AR")}
+                  ${getCatalogCartLineSubtotal(item, { porcentajeAumentoConsignacion }).toLocaleString("es-AR")}
                 </span>
               </div>
             ))}

@@ -101,6 +101,20 @@ export async function getPublicCatalogDataRaw(sucursalId: number | null): Promis
 
   const ahora = new Date();
 
+  // Modo de pago de la tienda: mutuamente excluyente. Si hay credenciales de MP cargadas,
+  // se usa Mercado Pago; si no, pero hay un número de WhatsApp, se usa el carrito por WhatsApp.
+  const hasMpCredentials = Boolean(
+    config.mpAccessTokenTienda?.trim() && config.mpPublicKeyTienda?.trim(),
+  );
+  const hasWhatsappNumber = Boolean(config.sucursal.branding?.whatsappNumber?.trim());
+  const tiendaPaymentMode: "mercadopago" | "whatsapp" | null = !config.convertirTienda
+    ? null
+    : hasMpCredentials
+      ? "mercadopago"
+      : hasWhatsappNumber
+        ? "whatsapp"
+        : null;
+
   const productosConDescuento = productos.map((p) => ({
     ...p,
     descuentoEfectivo: calcularDescuentoEfectivo({
@@ -161,6 +175,7 @@ export async function getPublicCatalogDataRaw(sucursalId: number | null): Promis
       porcentajeAumentoConsignacion: config.porcentajeAumentoConsignacion,
       porcentajeInteresTarjeta: config.porcentajeInteresTarjeta,
       mpPublicKeyTienda: config.mpPublicKeyTienda,
+      tiendaPaymentMode,
       storefrontContent: normalizeStorefrontContent(brandingExtra?.storefrontContent, {
         storeName: config.sucursal.branding?.businessName || config.sucursal.nombre,
       }),

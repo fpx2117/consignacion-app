@@ -5,6 +5,7 @@ import { Plus, Minus, PackageOpen } from "lucide-react";
 import { motion } from "motion/react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { getCatalogCartUnitPrice } from "@/lib/catalog-cart-pricing";
 import type { PublicCatalogConfig, PublicCatalogProduct } from "@/lib/types";
 
 type QuantityStepperProps = {
@@ -86,13 +87,19 @@ export function ProductCard({
     compact = false,
 }: ProductCardProps) {
     const isGrid = viewMode === "grid";
-    const basePrice = Number(product.precioVenta);
-    const pct = Number(config.porcentajeAumentoConsignacion) || 0;
-    const displayedPrice = isConsigne ? basePrice * (1 + pct / 100) : basePrice;
+    const isMercadoPagoMode = config.tiendaPaymentMode === "mercadopago";
+    const displayedPrice = getCatalogCartUnitPrice(
+        { precioVenta: product.precioVenta, descuentoEfectivo: product.descuentoEfectivo, pricingMode: isConsigne ? "consigne" : "default" },
+        {
+            porcentajeAumentoConsignacion: config.porcentajeAumentoConsignacion,
+            porcentajeInteresTarjeta: config.porcentajeInteresTarjeta,
+            applyCardInterest: isMercadoPagoMode,
+        },
+    );
     const isAvailable = product.stockDisponibleUnits > 0;
     const descuento = product.descuentoEfectivo;
-    const cartEnabled = Boolean(config.convertirTienda);
-    const finalPrice = descuento ? descuento.precioFinal : displayedPrice;
+    const cartEnabled = Boolean(config.tiendaPaymentMode);
+    const finalPrice = displayedPrice;
     const inCart = cartQuantity > 0;
     const maxStock = Math.max(0, product.stockDisponibleUnits || 0);
 

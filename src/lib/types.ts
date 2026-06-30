@@ -561,6 +561,9 @@ export type PublicCatalogConfig = {
   porcentajeAumentoConsignacion?: number;
   porcentajeInteresTarjeta?: number;
   mpPublicKeyTienda?: string | null;
+  /** Modo de pago efectivo: "mercadopago" si hay credenciales de MP cargadas, "whatsapp" si solo
+   *  hay número de WhatsApp configurado, null si el carrito está deshabilitado. Mutuamente excluyente. */
+  tiendaPaymentMode?: "mercadopago" | "whatsapp" | null;
   storefrontContent?: StorefrontContent | null;
   onlineStoreConfig?: OnlineStoreSettings | null;
 };

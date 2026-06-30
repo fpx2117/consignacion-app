@@ -17,6 +17,7 @@ import type {
 } from "@/lib/types";
 
 import { apiService } from "@/lib/apiService";
+import { buildCatalogCartWhatsappUrl } from "@/lib/catalog-whatsapp";
 
 // Componentes
 import { StoreHeader } from "./components/store-header";
@@ -165,7 +166,7 @@ export function CatalogClient({
     const promoEnabled = ols?.promotions?.enabled ?? false;
     const promoItems = ols?.promotions?.items ?? [];
     const maxPerSection = ols?.catalog?.maxProductsPerSection ?? 8;
-    const cartEnabled = Boolean(config.convertirTienda);
+    const cartEnabled = Boolean(config.tiendaPaymentMode);
 
     // Sincronizar carrito con stock actualizado
     React.useEffect(() => {
@@ -268,6 +269,33 @@ export function CatalogClient({
     }, [products, isConsigne]);
 
     const handleCheckout = async (clienteData: PublicCheckoutCustomerData, envioData: PublicCheckoutShippingData) => {
+        // Modo Catálogo: el carrito se envía como pedido por WhatsApp, sin pasar por Mercado Pago.
+        if (config.tiendaPaymentMode === "whatsapp") {
+            setCheckoutLoading(true);
+            try {
+                const whatsappUrl = buildCatalogCartWhatsappUrl({
+                    config,
+                    cart,
+                    clienteData,
+                    envioData,
+                    tiendaUrl: typeof window !== "undefined" ? window.location.href : null,
+                });
+                if (!whatsappUrl) {
+                    toast.error("No hay un número de WhatsApp configurado para esta tienda.");
+                    return;
+                }
+                window.open(whatsappUrl, "_blank", "noopener,noreferrer");
+                setCart([]);
+                setIsCartOpen(false);
+                setCheckoutFeedback({ kind: "success", message: "Abrimos WhatsApp con tu pedido listo para enviar." });
+                toast.success("Pedido preparado para WhatsApp");
+            } finally {
+                setCheckoutLoading(false);
+            }
+            return;
+        }
+
+        // Modo Tienda Online: checkout vía Mercado Pago.
         setCheckoutLoading(true);
         try {
             const checkoutResponse = await apiService.createPublicCheckout({

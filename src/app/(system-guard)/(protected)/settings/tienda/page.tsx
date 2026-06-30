@@ -457,7 +457,11 @@ export default function TiendaSettingsPage() {
   const hasMercadoPagoCredentials =
     String(config.mpAccessTokenTienda ?? "").trim().length > 0 &&
     String(config.mpPublicKeyTienda ?? "").trim().length > 0;
-  const storeModeLabel = hasMercadoPagoCredentials ? "Modo Tienda" : "Modo Catalogo";
+  const storeModeLabel = !config.convertirTienda
+    ? "Carrito desactivado"
+    : hasMercadoPagoCredentials
+      ? "Modo Tienda (Mercado Pago)"
+      : "Modo Catalogo (WhatsApp)";
 
   if (loading) {
     return (
@@ -637,7 +641,11 @@ export default function TiendaSettingsPage() {
                   <span
                     className={cn(
                       "h-2 w-2 rounded-full",
-                      hasMercadoPagoCredentials ? "bg-[color:var(--status-success-strong)]" : "bg-[color:var(--status-warning)]",
+                      !config.convertirTienda
+                        ? "bg-muted-foreground/40"
+                        : hasMercadoPagoCredentials
+                          ? "bg-[color:var(--status-success-strong)]"
+                          : "bg-[color:var(--status-warning)]",
                     )}
                   />
                   <p className="text-sm font-medium">{storeModeLabel}</p>
