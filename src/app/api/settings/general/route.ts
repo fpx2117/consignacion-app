@@ -22,6 +22,7 @@ type GeneralSettingsBody = {
     porcentajeInteresTarjeta?: number;
     mostrarListaPrecios?: boolean;
     convertirTienda?: boolean;
+    tiendaMetodoPago?: "whatsapp" | "mercadopago";
     separarListaPorSucursal?: boolean;
     mpAccessTokenTienda?: string | null;
     mpPublicKeyTienda?: string | null;
@@ -89,6 +90,7 @@ export async function PUT(req: Request) {
             porcentajeInteresTarjeta,
             mostrarListaPrecios,
             convertirTienda,
+            tiendaMetodoPago,
             separarListaPorSucursal,
             mpAccessTokenTienda,
             mpPublicKeyTienda,
@@ -96,6 +98,10 @@ export async function PUT(req: Request) {
             mostrarCategoriasEnHeader,
             zonaHoraria,
         } = body;
+
+        if (tiendaMetodoPago !== undefined && tiendaMetodoPago !== "whatsapp" && tiendaMetodoPago !== "mercadopago") {
+            return NextResponse.json({ error: "tiendaMetodoPago debe ser 'whatsapp' o 'mercadopago'" }, { status: 400 });
+        }
 
         // Validar timezone IANA si se envía
         if (zonaHoraria !== undefined && !isValidTimezone(zonaHoraria)) {
@@ -183,6 +189,7 @@ export async function PUT(req: Request) {
                 ...(porcentajeInteresTarjeta !== undefined && { porcentajeInteresTarjeta }),
                 ...(mostrarListaPrecios !== undefined && { mostrarListaPrecios }),
                 ...(convertirTienda !== undefined && { convertirTienda }),
+                ...(tiendaMetodoPago !== undefined && { tiendaMetodoPago }),
                 ...(separarListaPorSucursal !== undefined && { separarListaPorSucursal }),
                 ...(mpAccessTokenTienda !== undefined && mpAccessTokenTienda !== "**************" && { mpAccessTokenTienda }),
                 ...(mpPublicKeyTienda !== undefined && { mpPublicKeyTienda }),
@@ -208,6 +215,7 @@ export async function PUT(req: Request) {
                 porcentajeInteresTarjeta: porcentajeInteresTarjeta ?? 0,
                 mostrarListaPrecios: mostrarListaPrecios ?? false,
                 convertirTienda: convertirTienda ?? false,
+                tiendaMetodoPago: tiendaMetodoPago ?? "whatsapp",
                 separarListaPorSucursal: separarListaPorSucursal ?? true,
                 mpAccessTokenTienda: mpAccessTokenTienda ?? null,
                 mpPublicKeyTienda: mpPublicKeyTienda ?? null,
@@ -220,6 +228,7 @@ export async function PUT(req: Request) {
         // Invalidar caché de settings para que el cambio tome efecto inmediato
         revalidatePath("/settings/general");
         revalidateTag("config", "max");
+        revalidateTag("public-catalog", "default");
 
         const message = migrationMessage 
             ? `Zona horaria de sucursal actualizada${migrationMessage}` 

@@ -77,7 +77,13 @@ export async function POST(req: Request) {
             where: { sucursalId: sucursalIdNum }
         });
 
-        if (!config || !config.convertirTienda || !config.mpAccessTokenTienda || !config.mpPublicKeyTienda) {
+        if (
+            !config ||
+            !config.convertirTienda ||
+            config.tiendaMetodoPago !== "mercadopago" ||
+            !config.mpAccessTokenTienda ||
+            !config.mpPublicKeyTienda
+        ) {
             return NextResponse.json({ error: "La tienda no está configurada o no acepta pagos" }, { status: 403 });
         }
 
