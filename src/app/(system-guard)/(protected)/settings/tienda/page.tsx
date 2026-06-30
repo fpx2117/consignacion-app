@@ -3,6 +3,7 @@
 import * as React from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import {
   Check,
@@ -192,10 +193,16 @@ function SkeletonBox({ className }: { className?: string }) {
   );
 }
 
+const VALID_TABS: SettingCategory[] = ["branding", "home", "layout", "themes", "social"];
+
 export default function TiendaSettingsPage() {
+  const searchParams = useSearchParams();
   const [loading, setLoading] = React.useState(true);
   const [saving, setSaving] = React.useState(false);
-  const [activeTab, setActiveTab] = React.useState<SettingCategory>("branding");
+  const [activeTab, setActiveTab] = React.useState<SettingCategory>(() => {
+    const tabParam = searchParams.get("tab");
+    return VALID_TABS.includes(tabParam as SettingCategory) ? (tabParam as SettingCategory) : "branding";
+  });
   const [previewMode, setPreviewMode] = React.useState<"mobile" | "desktop">("desktop");
   const [isPreviewOpen, setIsPreviewOpen] = React.useState(false);
   const [isDirty, setIsDirty] = React.useState(false);
