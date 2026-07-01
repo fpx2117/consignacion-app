@@ -31,7 +31,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ScanText, Loader2, AlertTriangle, CheckCircle2, XCircle, HelpCircle, Sparkles, Check, X, FileText } from "lucide-react";
+import { ScanText, Loader2, AlertTriangle, CheckCircle2, XCircle, HelpCircle, Sparkles, Check, X, FileText, User, Building2, Hash, Calendar, CircleDollarSign, ScanLine, Package } from "lucide-react";
 import { toast } from "sonner";
 import { CreateProductoDialog, type CreateProductoInitialValues, type ProductoCreado } from "./create-producto-dialog";
 
@@ -44,7 +44,7 @@ function badgeEstado(item: FacturaProveedorItem) {
     case "COINCIDENCIA_PROBABLE":
       return { label: `${item.producto?.nombre ?? "Producto sugerido"} (${Math.round((item.matchScore ?? 0) * 100)}%)`, cls: "text-[color:var(--status-success-strong)]", icon: CheckCircle2 };
     case "REQUIERE_REVISION":
-      return { label: item.producto ? `${item.producto.nombre} (${Math.round((item.matchScore ?? 0) * 100)}%) — revisar` : "Revisar manualmente", cls: "text-[color:var(--status-warning)]", icon: HelpCircle };
+      return { label: "Revisar manualmente", cls: "text-[color:var(--status-warning)]", icon: HelpCircle };
     case "SIN_COINCIDENCIA":
       return { label: "Sin coincidencia", cls: "text-muted-foreground", icon: XCircle };
     case "CONFIRMADO":
@@ -270,7 +270,6 @@ export function FacturaProveedorDialog({
     };
   }
 
-  const haySeguros = (items ?? []).some((i) => i.estado === "COINCIDENCIA_SEGURA");
   const facturaBloqueada = factura?.estado === "CONFIRMADA" || factura?.estado === "CANCELADA";
   const monedaFactura = (factura?.moneda ?? "ARS").trim().toUpperCase();
 
@@ -322,18 +321,22 @@ export function FacturaProveedorDialog({
           )}
         </DialogTrigger>
 
-        <DialogContent className="sm:max-w-[1100px] p-0 overflow-hidden border-none shadow-2xl bg-background">
-          <DialogHeader className="p-6 pb-2 border-b bg-muted/20">
-            <div className="flex items-center gap-2 text-primary">
-              <ScanText className="h-5 w-5" />
-              <DialogTitle className="text-xl font-bold tracking-tight">Escanear factura de compra</DialogTitle>
+        <DialogContent className="sm:max-w-[1100px] p-0 overflow-hidden border-none shadow-2xl bg-background gap-0 flex flex-col max-h-[90vh]">
+          <DialogHeader className="p-6 pb-5 border-b border-border/50">
+            <div className="flex items-center gap-4">
+              <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+                <ScanText className="h-7 w-7" />
+              </div>
+              <div className="space-y-1">
+                <DialogTitle className="text-2xl font-black tracking-tight">Escanear factura de compra</DialogTitle>
+                <DialogDescription className="text-sm text-muted-foreground">
+                  Subí o sacá una foto de la factura del proveedor para cargar stock automáticamente con IA.
+                </DialogDescription>
+              </div>
             </div>
-            <DialogDescription>
-              Subí o sacá una foto de la factura del proveedor para cargar stock automáticamente con IA.
-            </DialogDescription>
           </DialogHeader>
 
-          <div className="p-6 space-y-4 max-h-[75vh] overflow-y-auto w-full">
+          <div className="flex-1 min-h-0 overflow-y-auto p-6 space-y-5 w-full">
             {!items && (
               <div className="space-y-4">
                 <input
@@ -434,105 +437,134 @@ export function FacturaProveedorDialog({
 
             {items && factura && (
               <>
-                <div className="rounded-lg border bg-muted/30 p-4 space-y-3">
-                  <p className="text-[10px] font-bold uppercase text-muted-foreground">
-                    Datos de la factura {facturaBloqueada ? "(confirmada, ya no editable)" : "— corregí lo que la IA haya leído mal"}
-                  </p>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div className="space-y-1">
-                      <Label className="text-[10px] font-bold uppercase text-muted-foreground">Proveedor (existente)</Label>
-                      <Select
-                        value={factura.proveedorId ? String(factura.proveedorId) : "none"}
-                        onValueChange={(v) => guardarCampoFactura({ proveedorId: v === "none" ? null : Number(v) })}
-                        disabled={facturaBloqueada}
-                      >
-                        <SelectTrigger className="h-9 bg-background text-sm">
-                          <SelectValue placeholder="Sin asignar" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="none">Sin asignar</SelectItem>
-                          {proveedores.map((p) => (
-                            <SelectItem key={p.id} value={String(p.id)}>{p.nombre}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                    <div>
+                      <Label className="mb-1.5 block text-sm font-medium text-muted-foreground">Proveedor (existente)</Label>
+                      <div className="relative">
+                        <User className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                        <Select
+                          value={factura.proveedorId ? String(factura.proveedorId) : "none"}
+                          onValueChange={(v) => guardarCampoFactura({ proveedorId: v === "none" ? null : Number(v) })}
+                          disabled={facturaBloqueada}
+                        >
+                          <SelectTrigger className="h-12 rounded-xl border-border/50 bg-muted/40 pl-9 text-sm">
+                            <SelectValue placeholder="Sin asignar" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none">Sin asignar</SelectItem>
+                            {proveedores.map((p) => (
+                              <SelectItem key={p.id} value={String(p.id)}>{p.nombre}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
                     </div>
-                    <div className="space-y-1">
-                      <Label className="text-[10px] font-bold uppercase text-muted-foreground">Nombre detectado</Label>
-                      <Input
-                        value={factura.proveedorNombreDetectado ?? ""}
-                        onChange={(e) => updateFacturaLocal({ proveedorNombreDetectado: e.target.value })}
-                        onBlur={(e) => guardarCampoFactura({ proveedorNombreDetectado: e.target.value || null })}
-                        disabled={facturaBloqueada}
-                        placeholder="No detectado"
-                        className="h-9 bg-background text-sm"
-                      />
+                    <div>
+                      <Label className="mb-1.5 block text-sm font-medium text-muted-foreground">Nombre detectado</Label>
+                      <div className="relative">
+                        <Building2 className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                        <Input
+                          value={factura.proveedorNombreDetectado ?? ""}
+                          onChange={(e) => updateFacturaLocal({ proveedorNombreDetectado: e.target.value })}
+                          onBlur={(e) => guardarCampoFactura({ proveedorNombreDetectado: e.target.value || null })}
+                          disabled={facturaBloqueada}
+                          placeholder="No detectado"
+                          className="h-12 rounded-xl border-border/50 bg-muted/40 pl-9 text-sm"
+                        />
+                      </div>
                     </div>
-                    <div className="space-y-1">
-                      <Label className="text-[10px] font-bold uppercase text-muted-foreground">CUIT detectado</Label>
-                      <Input
-                        value={factura.proveedorCuitDetectado ?? ""}
-                        onChange={(e) => updateFacturaLocal({ proveedorCuitDetectado: e.target.value })}
-                        onBlur={(e) => guardarCampoFactura({ proveedorCuitDetectado: e.target.value || null })}
-                        disabled={facturaBloqueada}
-                        placeholder="No detectado"
-                        className="h-9 bg-background text-sm"
-                      />
+                    <div>
+                      <Label className="mb-1.5 block text-sm font-medium text-muted-foreground">CUIT detectado</Label>
+                      <div className="relative">
+                        <ScanLine className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                        <Input
+                          value={factura.proveedorCuitDetectado ?? ""}
+                          onChange={(e) => updateFacturaLocal({ proveedorCuitDetectado: e.target.value })}
+                          onBlur={(e) => guardarCampoFactura({ proveedorCuitDetectado: e.target.value || null })}
+                          disabled={facturaBloqueada}
+                          placeholder="No detectado"
+                          className="h-12 rounded-xl border-border/50 bg-muted/40 pl-9 text-sm"
+                        />
+                      </div>
                     </div>
-                    <div className="space-y-1">
-                      <Label className="text-[10px] font-bold uppercase text-muted-foreground">N° de factura</Label>
-                      <Input
-                        value={factura.numeroFactura ?? ""}
-                        onChange={(e) => updateFacturaLocal({ numeroFactura: e.target.value })}
-                        onBlur={(e) => guardarCampoFactura({ numeroFactura: e.target.value || null })}
-                        disabled={facturaBloqueada}
-                        placeholder="—"
-                        className="h-9 bg-background text-sm"
-                      />
+                    <div>
+                      <Label className="mb-1.5 block text-sm font-medium text-muted-foreground">N° de factura</Label>
+                      <div className="relative">
+                        <Hash className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                        <Input
+                          value={factura.numeroFactura ?? ""}
+                          onChange={(e) => updateFacturaLocal({ numeroFactura: e.target.value })}
+                          onBlur={(e) => guardarCampoFactura({ numeroFactura: e.target.value || null })}
+                          disabled={facturaBloqueada}
+                          placeholder="—"
+                          className="h-12 rounded-xl border-border/50 bg-muted/40 pl-9 text-sm"
+                        />
+                      </div>
                     </div>
-                    <div className="space-y-1">
-                      <Label className="text-[10px] font-bold uppercase text-muted-foreground">Fecha</Label>
-                      <Input
-                        type="date"
-                        value={factura.fecha ? factura.fecha.slice(0, 10) : ""}
-                        onChange={(e) => updateFacturaLocal({ fecha: e.target.value || null })}
-                        onBlur={(e) => guardarCampoFactura({ fecha: e.target.value || null })}
-                        disabled={facturaBloqueada}
-                        className="h-9 bg-background text-sm"
-                      />
+                  </div>
+
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                    <div>
+                      <Label className="mb-1.5 block text-sm font-medium text-muted-foreground">Fecha</Label>
+                      <div className="relative">
+                        <Calendar className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                        <Input
+                          type="date"
+                          value={factura.fecha ? factura.fecha.slice(0, 10) : ""}
+                          onChange={(e) => updateFacturaLocal({ fecha: e.target.value || null })}
+                          onBlur={(e) => guardarCampoFactura({ fecha: e.target.value || null })}
+                          disabled={facturaBloqueada}
+                          className="h-12 rounded-xl border-border/50 bg-muted/40 pl-9 text-sm"
+                        />
+                      </div>
                     </div>
-                    <div className="space-y-1">
-                      <Label className="text-[10px] font-bold uppercase text-muted-foreground">Moneda</Label>
-                      <Input
-                        value={factura.moneda}
-                        onChange={(e) => updateFacturaLocal({ moneda: e.target.value.toUpperCase() })}
-                        onBlur={(e) => guardarCampoFactura({ moneda: e.target.value.trim().toUpperCase() || "ARS" })}
-                        disabled={facturaBloqueada}
-                        placeholder="ARS"
-                        className="h-9 bg-background text-sm uppercase"
-                      />
+                    <div>
+                      <Label className="mb-1.5 block text-sm font-medium text-muted-foreground">Moneda</Label>
+                      <div className="relative">
+                        <CircleDollarSign className="pointer-events-none absolute left-3 top-1/2 z-10 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                        <Select
+                          value={monedaFactura}
+                          onValueChange={(v) => guardarCampoFactura({ moneda: v })}
+                          disabled={facturaBloqueada}
+                        >
+                          <SelectTrigger className="h-12 rounded-xl border-border/50 bg-muted/40 pl-9 text-sm">
+                            <SelectValue placeholder="ARS" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="ARS">ARS</SelectItem>
+                            <SelectItem value="USD">USD</SelectItem>
+                            {monedaFactura !== "ARS" && monedaFactura !== "USD" && (
+                              <SelectItem value={monedaFactura}>{monedaFactura}</SelectItem>
+                            )}
+                          </SelectContent>
+                        </Select>
+                      </div>
                       {facturaEnMonedaExtranjera && (
-                        <p className="text-[10px] text-muted-foreground">
+                        <p className="mt-1 text-[11px] text-muted-foreground">
                           {puedeConvertir
                             ? `Convirtiendo a ARS con dólar blue ($${cotizacionDolar?.toLocaleString("es-AR")}). El backend recalcula al confirmar.`
                             : "El costo se convierte a ARS al confirmar cada item."}
                         </p>
                       )}
                     </div>
-                    <div className="space-y-1">
-                      <Label className="text-[10px] font-bold uppercase text-muted-foreground">Total ({monedaFactura})</Label>
-                      <Input
-                        type="number"
-                        step="0.01"
-                        value={factura.totalDetectado ?? ""}
-                        onChange={(e) => updateFacturaLocal({ totalDetectado: parseNumeroOpcional(e.target.value) })}
-                        onBlur={(e) => guardarCampoFactura({ totalDetectado: parseNumeroOpcional(e.target.value) })}
-                        disabled={facturaBloqueada}
-                        placeholder="—"
-                        className="h-9 bg-background text-sm"
-                      />
+                    <div>
+                      <Label className="mb-1.5 block text-sm font-medium text-muted-foreground">Total ({monedaFactura})</Label>
+                      <div className="relative">
+                        <FileText className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                        <Input
+                          type="number"
+                          step="0.01"
+                          value={factura.totalDetectado ?? ""}
+                          onChange={(e) => updateFacturaLocal({ totalDetectado: parseNumeroOpcional(e.target.value) })}
+                          onBlur={(e) => guardarCampoFactura({ totalDetectado: parseNumeroOpcional(e.target.value) })}
+                          disabled={facturaBloqueada}
+                          placeholder="—"
+                          className="h-12 rounded-xl border-border/50 bg-muted/40 pl-9 text-sm"
+                        />
+                      </div>
                       {puedeConvertir && factura.totalDetectado != null && (
-                        <p className="text-[11px] font-semibold text-primary">
+                        <p className="mt-1 text-[11px] font-semibold text-primary">
                           = {formatearArs(convertirAArs(factura.totalDetectado)!)} ARS
                         </p>
                       )}
@@ -541,23 +573,9 @@ export function FacturaProveedorDialog({
                 </div>
 
                 {items.length > 0 && (
-                  <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground bg-muted/30 rounded-lg p-3">
-                    <div className="flex items-center gap-2">
-                      <AlertTriangle className="h-4 w-4 shrink-0 text-[color:var(--status-warning)]" />
-                      Revisá cada línea antes de confirmar. Nada actualiza tu stock hasta que lo apruebes.
-                    </div>
-                    {haySeguros && (
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="outline"
-                        className="h-8 shrink-0"
-                        onClick={confirmarTodosSeguros}
-                        disabled={confirmandoTodos}
-                      >
-                        {confirmandoTodos ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Confirmar todas las coincidencias seguras"}
-                      </Button>
-                    )}
+                  <div className="flex items-center gap-2 rounded-xl border border-[color:var(--status-warning)]/30 bg-[color:var(--status-warning)]/10 px-4 py-3 text-sm text-[color:var(--status-warning)]">
+                    <AlertTriangle className="h-4 w-4 shrink-0" />
+                    Revisá cada línea antes de confirmar. Nada actualiza tu stock hasta que lo apruebes.
                   </div>
                 )}
 
@@ -574,7 +592,6 @@ export function FacturaProveedorDialog({
                   <div className="divide-y">
                     {items.map((item) => {
                       const badge = badgeEstado(item);
-                      const Icon = badge.icon;
                       const terminal = ESTADOS_TERMINALES.has(item.estado);
                       const busy = busyItemId === item.id;
                       const mostrarCodigo = !codigoYaEnDescripcion(item);
@@ -586,28 +603,19 @@ export function FacturaProveedorDialog({
                           className={`grid grid-cols-1 lg:grid-cols-[minmax(220px,1fr)_74px_170px_220px_minmax(210px,auto)] gap-3 px-3 py-3 items-start ${terminal ? "opacity-60 bg-muted/20" : "bg-background"}`}
                         >
                           {/* Descripción (+ código si no está embebido) */}
-                          <div className="space-y-1 min-w-0">
-                            <Label className="lg:hidden text-[10px] font-bold uppercase text-muted-foreground">Descripción detectada</Label>
-                            <Input
-                              value={item.textoOriginal}
-                              onChange={(e) => updateItem(item.id, { textoOriginal: e.target.value })}
-                              onBlur={(e) => guardarCampoItem(item, { textoOriginal: e.target.value })}
-                              disabled={terminal || busy}
-                              className="h-9 bg-background text-sm"
-                            />
-                            {mostrarCodigo && (
-                              <div className="flex items-center gap-1.5">
-                                <span className="text-[10px] font-bold uppercase text-muted-foreground shrink-0">Cód.</span>
-                                <Input
-                                  value={item.codigoProveedor ?? ""}
-                                  onChange={(e) => updateItem(item.id, { codigoProveedor: e.target.value })}
-                                  onBlur={(e) => guardarCampoItem(item, { codigoProveedor: e.target.value || null })}
-                                  disabled={terminal || busy}
-                                  placeholder="—"
-                                  className="h-7 bg-background text-xs"
-                                />
-                              </div>
-                            )}
+                          <div className="flex items-start gap-2 min-w-0">
+                            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                              <Package className="h-4 w-4" />
+                            </div>
+                            <div className="min-w-0 space-y-0.5">
+                              <Label className="lg:hidden text-[10px] font-bold uppercase text-muted-foreground">Descripción detectada</Label>
+                              <p className="text-sm font-medium text-foreground truncate" title={item.textoOriginal}>
+                                {item.textoOriginal}
+                              </p>
+                              {mostrarCodigo && item.codigoProveedor && (
+                                <p className="text-[11px] font-mono text-muted-foreground">#{item.codigoProveedor}</p>
+                              )}
+                            </div>
                           </div>
 
                           {/* Cantidad */}
@@ -654,8 +662,8 @@ export function FacturaProveedorDialog({
                           {/* Coincidencia */}
                           <div className="space-y-1 min-w-0">
                             <Label className="lg:hidden text-[10px] font-bold uppercase text-muted-foreground">Coincidencia</Label>
-                            <span className={`text-xs font-medium flex items-center gap-1 ${badge.cls}`}>
-                              <Icon className="h-3.5 w-3.5 shrink-0" />
+                            <span className={`text-xs font-medium flex items-center gap-1.5 ${badge.cls}`}>
+                              <span className="h-2 w-2 rounded-full bg-current shrink-0" />
                               <span className="truncate">{badge.label}</span>
                             </span>
                             {!terminal && item.productoId && (
@@ -727,8 +735,19 @@ export function FacturaProveedorDialog({
                 No se detectaron líneas de producto. Probá con otra imagen.
               </div>
             )}
+          </div>
 
-            <div className="flex justify-end gap-3 pt-2">
+          <div className="flex items-center justify-between gap-3 border-t border-border/50 p-6">
+            <div className="flex min-w-0 items-center gap-2 text-sm text-muted-foreground">
+              {selectedFile && (
+                <>
+                  <FileText className="h-4 w-4 shrink-0" />
+                  <span className="truncate" title={selectedFile.name}>{selectedFile.name}</span>
+                  <CheckCircle2 className="h-4 w-4 shrink-0 text-[color:var(--status-success-strong)]" />
+                </>
+              )}
+            </div>
+            <div className="flex shrink-0 gap-3">
               <Button
                 type="button"
                 variant="outline"
@@ -736,9 +755,19 @@ export function FacturaProveedorDialog({
                 onClick={() => setOpen(false)}
                 disabled={trabajando}
               >
-                {items ? "Cerrar" : "Cancelar"}
+                Cancelar
               </Button>
-              {!items && (
+              {items && factura ? (
+                <Button
+                  type="button"
+                  className="h-11 px-6 font-semibold"
+                  onClick={confirmarTodosSeguros}
+                  disabled={confirmandoTodos || facturaBloqueada}
+                >
+                  {confirmandoTodos ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
+                  Confirmar todo
+                </Button>
+              ) : (
                 <Button
                   type="button"
                   className="h-11 px-6 font-semibold"
