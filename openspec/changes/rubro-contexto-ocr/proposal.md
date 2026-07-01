@@ -91,6 +91,18 @@ El objetivo combinado es que, durante el Setup inicial (y editable después desd
 
 **Justificación**: un reintento secuencial duplica la latencia (dos round-trips a OpenRouter, cada uno con su propio timeout de hasta 150s) para el caso que ya sabíamos de antemano que iba a fallar — si `confianzaOcr` ya es baja, no hace falta gastar el primer intento texto-only para descubrirlo. Visión por defecto para todo revierte la decisión de costo ya tomada en la migración a OpenRouter (`migracion-ocr-openrouter/design.md:11-19`), que fue justamente alejarse de eso. Un único llamado combinado, gateado por el mismo `confianzaOcr` que ya se calcula sin costo adicional, da lo mejor de ambos: la mayoría de las facturas (OCR con confianza alta) siguen constando centavos sin tocar código nuevo, y solo el subconjunto problemático paga el costo de imagen — una sola vez, no dos.
 
+**Adenda post-implementación (medido con datos reales tras la Fase 1)**: se evaluó pivotar a "imagen directa siempre para fotos/PDF escaneado, Tesseract solo como fallback de emergencia" — motivado por que `openai/gpt-4o-mini` resultó más barato por token que `qwen/qwen3.6-35b-a3b` (el modelo de texto que se usaba hasta acá) y lee imágenes muy bien. Se probó con una factura sintética de 15 items en tres caminos:
+
+| Camino | Tiempo | Costo real por factura |
+|---|---|---|
+| Texto (Tesseract) → qwen3.6-35b | 58.0s | ~$0.00156 |
+| Texto (Tesseract) → gpt-4o-mini | 8.9s | ~$0.00056 |
+| Imagen directa → gpt-4o-mini (sin Tesseract) | 9.8s | ~$0.00455 |
+
+Conclusión: **la lentitud reportada no era del pipeline de OCR local — era del modelo de texto (qwen)**. Con el mismo texto ya extraído por Tesseract, `gpt-4o-mini` es prácticamente tan rápido como mandar la imagen directa (8.9s vs 9.8s), pero ~8x más barato (la imagen consume ~23x más tokens de prompt que el texto equivalente por la codificación de imagen en sí — "más barato por token" no es lo mismo que "más barato por factura"). Se descarta el pivot a visión-por-defecto: **se cambia únicamente el default de `OPENROUTER_MODEL` a `openai/gpt-4o-mini`** (antes `qwen/qwen3.6-35b-a3b`), manteniendo intacta la arquitectura de la Decisión 5 (Tesseract primero, visión como fallback condicional). Esto da la mejora de velocidad esperada sin rediseñar el pipeline ni pagar el costo de imagen en el caso común.
+
+Dato adicional que valida el margen del umbral: al costo real medido, 400 facturas/mes (tope del plan Enterprise) escalando a visión el 100% de los casos costarían ~$1.82/mes — insignificante a esta escala. No hace falta ser conservador con `OCR_VISION_FALLBACK_THRESHOLD` por miedo al costo; el riesgo de ese umbral es UX (latencia si escala de más), no presupuesto.
+
 ### Decisión 6: `atributosExtra` en `Producto` es genérico y compartido por los 3 flujos de escritura, no exclusivo de OCR
 
 **Elección**: un único punto de extensión en `createProductoBaseSchema` (`src/lib/validators/producto.ts:20-35`), sin ramas por origen (manual vs. OCR) ni por rubro. La UI de los diálogos de producto reusa `RUBRO_ATRIBUTOS_TIPICOS` (la misma tabla que ya alimenta el prompt, Decisión 1) únicamente como sugerencia de qué clave escribir a continuación — nunca como un formulario distinto por rubro.
