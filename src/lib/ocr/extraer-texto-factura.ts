@@ -11,12 +11,16 @@ import {
   extraerTextoPdf,
   rasterizarPdf,
   preprocesarImagen,
+  prepararImagenParaVision,
 } from "./ocr-engine";
 import { recognizeImage } from "./tesseract-service";
 
 export type TextoFacturaExtraido = {
   texto: string;
   confianzaOcr: number;
+  /** Copia a color, comprimida, para el fallback de visión — null si fue un PDF
+   * con texto nativo (no se rasterizó nada, no hay imagen que ofrecer). */
+  imagenParaVision: Buffer | null;
 };
 
 export class FormatoFacturaNoSoportadoError extends Error {}
@@ -30,19 +34,25 @@ export async function extraerTextoFactura(input: {
   if (esPdf(mimeType)) {
     const textoNativo = await extraerTextoPdf(buffer);
     if (textoNativo) {
-      return { texto: textoNativo, confianzaOcr: 100 };
+      return { texto: textoNativo, confianzaOcr: 100, imagenParaVision: null };
     }
 
     const imagenParaOcr = await rasterizarPdf(buffer);
-    const preprocesada = await preprocesarImagen(imagenParaOcr);
+    const [preprocesada, imagenParaVision] = await Promise.all([
+      preprocesarImagen(imagenParaOcr),
+      prepararImagenParaVision(imagenParaOcr),
+    ]);
     const resultado = await recognizeImage(preprocesada);
-    return { texto: resultado.texto, confianzaOcr: resultado.confianza };
+    return { texto: resultado.texto, confianzaOcr: resultado.confianza, imagenParaVision };
   }
 
   if (esImagenSoportada(mimeType)) {
-    const preprocesada = await preprocesarImagen(buffer);
+    const [preprocesada, imagenParaVision] = await Promise.all([
+      preprocesarImagen(buffer),
+      prepararImagenParaVision(buffer),
+    ]);
     const resultado = await recognizeImage(preprocesada);
-    return { texto: resultado.texto, confianzaOcr: resultado.confianza };
+    return { texto: resultado.texto, confianzaOcr: resultado.confianza, imagenParaVision };
   }
 
   throw new FormatoFacturaNoSoportadoError(`Tipo de archivo no soportado para OCR: ${mimeType}`);
