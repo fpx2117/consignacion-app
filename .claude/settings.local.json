@@ -160,7 +160,12 @@
       "Bash(find . -iname \"Aptfile\" -not -path \"*/node_modules/*\")",
       "Bash(where railway *)",
       "Bash(railway --version)",
-      "Bash(railway whoami *)"
+      "Bash(railway whoami *)",
+      "Bash(npm ls *)",
+      "Bash(rm -rf node_modules package-lock.json)",
+      "Bash(npm install *)",
+      "Bash(rm -rf node_modules)",
+      "Bash(npm ci *)"
     ]
   }
 }
