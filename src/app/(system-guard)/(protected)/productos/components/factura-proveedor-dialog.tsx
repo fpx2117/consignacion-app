@@ -96,6 +96,12 @@ export function FacturaProveedorDialog({
   const [usage, setUsage] = React.useState<FacturaProveedorUsage | null>(null);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
+  // Consulta el cupo al montar para decidir si mostrar el disparador: los
+  // planes sin OCR (hasFeature === false) ocultan el botón por completo.
+  React.useEffect(() => {
+    apiService.getFacturaProveedorUsage().then(setUsage).catch(() => setUsage(null));
+  }, []);
+
   React.useEffect(() => {
     if (!open) {
       setFactura(null);
@@ -104,13 +110,13 @@ export function FacturaProveedorDialog({
       setProcesando(false);
       setSelectedFile(null);
       setDragActive(false);
-      setUsage(null);
       setItemParaCrear(null);
       if (fileInputRef.current) fileInputRef.current.value = "";
       return;
     }
     apiService.getProductos().then(setProductos).catch(() => setProductos([]));
     apiService.getProveedores().then(setProveedores).catch(() => setProveedores([]));
+    // Refresca el contador cada vez que se abre (puede haber cambiado el uso).
     apiService.getFacturaProveedorUsage().then(setUsage).catch(() => setUsage(null));
   }, [open]);
 
@@ -275,6 +281,36 @@ export function FacturaProveedorDialog({
     return Number.isFinite(n) ? n : null;
   }
 
+  // La factura puede venir en una moneda extranjera (ej. USD). Para que el
+  // usuario vea siempre los precios en pesos, se convierte en vivo con la
+  // cotización del dólar blue. El backend hace la conversión autoritativa al
+  // confirmar; acá es solo visual.
+  const facturaEnMonedaExtranjera = monedaFactura !== "ARS";
+  const puedeConvertir = facturaEnMonedaExtranjera && !!cotizacionDolar;
+
+  function convertirAArs(valor: number | null | undefined): number | null {
+    if (valor == null) return null;
+    if (!facturaEnMonedaExtranjera) return valor;
+    return cotizacionDolar ? valor * cotizacionDolar : null;
+  }
+
+  function formatearArs(valor: number): string {
+    return `$${valor.toLocaleString("es-AR", { maximumFractionDigits: 0 })}`;
+  }
+
+  // El código de proveedor no se muestra por separado si ya viene embebido en
+  // la descripción detectada (evita duplicar el dato en pantalla).
+  function codigoYaEnDescripcion(item: FacturaProveedorItem): boolean {
+    const cod = item.codigoProveedor?.trim();
+    if (!cod) return false;
+    return item.textoOriginal.toLowerCase().includes(cod.toLowerCase());
+  }
+
+  // Ocultar el disparador si el plan no incluye la carga de facturas con IA.
+  // Mientras se resuelve el cupo (usage === null) tampoco se muestra, para
+  // evitar que el botón aparezca y desaparezca en planes sin acceso.
+  if (!usage?.hasFeature) return null;
+
   return (
     <>
       <Dialog open={open} onOpenChange={setOpen}>
@@ -282,12 +318,12 @@ export function FacturaProveedorDialog({
           {trigger || (
             <Button variant="ghost" size="sm" className="h-9 px-3 rounded-lg font-bold text-sm">
               <ScanText className="h-3.5 w-3.5 mr-1.5" />
-              Cargar por factura (OCR)
+              Cargar por factura
             </Button>
           )}
         </DialogTrigger>
 
-        <DialogContent className="sm:max-w-[900px] p-0 overflow-hidden border-none shadow-2xl bg-background">
+        <DialogContent className="sm:max-w-[1100px] p-0 overflow-hidden border-none shadow-2xl bg-background">
           <DialogHeader className="p-6 pb-2 border-b bg-muted/20">
             <div className="flex items-center gap-2 text-primary">
               <ScanText className="h-5 w-5" />
@@ -310,19 +346,12 @@ export function FacturaProveedorDialog({
                   className="hidden"
                 />
 
-                {usage && usage.hasFeature && (
+                {usage && (
                   <div className="flex items-center justify-between rounded-lg border bg-muted/30 px-4 py-3 text-sm">
                     <span className="text-muted-foreground">Escaneos usados este mes</span>
                     <span className="font-semibold tabular-nums">
                       {usage.used} / {usage.limit === -1 ? "∞" : usage.limit}
                     </span>
-                  </div>
-                )}
-
-                {usage && !usage.hasFeature && (
-                  <div className="flex items-start gap-2 rounded-lg border border-[color:var(--status-warning)]/40 bg-[color:var(--status-warning)]/10 px-4 py-3 text-sm text-[color:var(--status-warning)]">
-                    <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
-                    La carga de facturas con IA está disponible sólo en el plan Enterprise. Actualizá tu plan para usarla.
                   </div>
                 )}
 
@@ -483,14 +512,16 @@ export function FacturaProveedorDialog({
                         placeholder="ARS"
                         className="h-9 bg-background text-sm uppercase"
                       />
-                      {monedaFactura !== "ARS" && (
+                      {facturaEnMonedaExtranjera && (
                         <p className="text-[10px] text-muted-foreground">
-                          El costo se convierte a ARS con la cotización del dólar blue al confirmar cada item.
+                          {puedeConvertir
+                            ? `Convirtiendo a ARS con dólar blue ($${cotizacionDolar?.toLocaleString("es-AR")}). El backend recalcula al confirmar.`
+                            : "El costo se convierte a ARS al confirmar cada item."}
                         </p>
                       )}
                     </div>
                     <div className="space-y-1">
-                      <Label className="text-[10px] font-bold uppercase text-muted-foreground">Total</Label>
+                      <Label className="text-[10px] font-bold uppercase text-muted-foreground">Total ({monedaFactura})</Label>
                       <Input
                         type="number"
                         step="0.01"
@@ -501,6 +532,11 @@ export function FacturaProveedorDialog({
                         placeholder="—"
                         className="h-9 bg-background text-sm"
                       />
+                      {puedeConvertir && factura.totalDetectado != null && (
+                        <p className="text-[11px] font-semibold text-primary">
+                          = {formatearArs(convertirAArs(factura.totalDetectado)!)} ARS
+                        </p>
+                      )}
                     </div>
                   </div>
                 </div>
