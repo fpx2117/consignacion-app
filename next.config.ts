@@ -98,6 +98,9 @@ const nextConfig: NextConfig = {
     imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
   },
 
+  // No bundlear tesseract.js (usa worker_threads con resolución dinámica de paths)
+  serverExternalPackages: ["tesseract.js"],
+
   // ✅ Optimizaciones experimentales de Next.js 15
   experimental: {
     // Optimización de imports de paquetes grandes
