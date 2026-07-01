@@ -81,8 +81,11 @@ export function InventoryPdfOptionsDialog({ open, onOpenChange }: Props) {
     }
     params.set("soloConStock", soloConStock ? "true" : "false");
 
+    // Va a la pantalla de carga (no directo a /pdf) para que el usuario vea
+    // el spinner mientras se genera el reporte en vez de una pestaña en
+    // blanco del navegador.
     window.open(
-      `/ver/inventario/${activeSucursalId}/pdf?${params.toString()}`,
+      `/ver/inventario/${activeSucursalId}?${params.toString()}`,
       "_blank"
     );
     setTimeout(() => {

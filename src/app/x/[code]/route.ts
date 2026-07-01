@@ -84,7 +84,10 @@ export async function GET(
       return redirectAbs(req, `${destPath}${query}`, { name: cookieName, value: "1" });
     }
     case "INVENTARIO":
-      destPath = `/ver/inventario/${link.targetId || "0"}/pdf`;
+      // A diferencia de TICKET/REMITO (que no tienen pantalla de carga propia),
+      // inventario sí la tiene: se apunta a esa página, no directo a /pdf, para
+      // que el usuario vea el spinner mientras se genera el reporte.
+      destPath = `/ver/inventario/${link.targetId || "0"}`;
       break;
     case "REPORTE_DASHBOARD": {
       const fullId = link.targetId || 11; // Default S1 Today
