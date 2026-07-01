@@ -28,6 +28,17 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogMedia,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   Eye,
   Ban,
   FileText,
@@ -60,6 +71,8 @@ export function FacturasList({ proveedores, proveedorId }: FacturasListProps) {
   const [proveedorFilter, setProveedorFilter] = React.useState<string>(
     proveedorId != null ? String(proveedorId) : "all",
   );
+  const [facturaACancelar, setFacturaACancelar] = React.useState<FacturaProveedor | null>(null);
+  const [cancelando, setCancelando] = React.useState(false);
 
   const load = React.useCallback(async () => {
     setLoading(true);
@@ -84,17 +97,18 @@ export function FacturasList({ proveedores, proveedorId }: FacturasListProps) {
     void load();
   }, [load]);
 
-  const cancelar = async (factura: FacturaProveedor) => {
-    const ok = window.confirm(
-      "¿Cancelar esta factura? Se marcará como CANCELADA y se eliminará su imagen para ahorrar espacio. Los ítems quedan como historial.",
-    );
-    if (!ok) return;
+  const confirmarCancelacion = async () => {
+    if (!facturaACancelar) return;
+    setCancelando(true);
     try {
-      await apiService.cancelFacturaProveedor(factura.id);
+      await apiService.cancelFacturaProveedor(facturaACancelar.id);
+      setFacturaACancelar(null);
       void load();
     } catch (e) {
       console.error(e);
       alert(e instanceof Error ? e.message : "No se pudo cancelar la factura");
+    } finally {
+      setCancelando(false);
     }
   };
 
@@ -253,7 +267,7 @@ export function FacturasList({ proveedores, proveedorId }: FacturasListProps) {
                                 size="icon"
                                 variant="ghost"
                                 className="h-8 w-8 rounded-lg text-muted-foreground hover:bg-background hover:text-[color:var(--status-danger)] hover:shadow-sm"
-                                onClick={() => cancelar(f)}
+                                onClick={() => setFacturaACancelar(f)}
                               >
                                 <Ban className="h-4 w-4" />
                               </Button>
@@ -273,6 +287,48 @@ export function FacturasList({ proveedores, proveedorId }: FacturasListProps) {
       <div className="flex justify-between items-center text-xs text-muted-foreground px-4">
         <span>Mostrando {items.length} facturas</span>
       </div>
+
+      <AlertDialog
+        open={facturaACancelar != null}
+        onOpenChange={(open) => {
+          if (!open && !cancelando) setFacturaACancelar(null);
+        }}
+      >
+        <AlertDialogContent className="rounded-[2rem] border-border/50 bg-background/95 backdrop-blur-xl shadow-2xl">
+          <AlertDialogHeader>
+            <AlertDialogMedia className="bg-[color:var(--status-danger)]/10 text-[color:var(--status-danger)] rounded-2xl">
+              <Ban />
+            </AlertDialogMedia>
+            <AlertDialogTitle className="text-xl font-black tracking-tight">
+              Cancelar factura
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-sm">
+              Se marcará como <span className="font-semibold text-foreground">CANCELADA</span> y se
+              eliminará su imagen para ahorrar espacio. Los ítems quedan como historial. Esta acción
+              no se puede deshacer.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="mt-2">
+            <AlertDialogCancel
+              disabled={cancelando}
+              className="rounded-xl h-11 border-border/50 font-medium"
+            >
+              Volver
+            </AlertDialogCancel>
+            <AlertDialogAction
+              variant="destructive"
+              disabled={cancelando}
+              onClick={(e) => {
+                e.preventDefault();
+                void confirmarCancelacion();
+              }}
+              className="rounded-xl h-11 font-bold"
+            >
+              {cancelando ? "Cancelando..." : "Sí, cancelar factura"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
