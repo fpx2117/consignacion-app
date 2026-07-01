@@ -8,16 +8,16 @@
 // Para imágenes (JPG/PNG/WEBP) → Tesseract.js directo (sin Chromium).
 // Esto evita el 502 en Railway para el 90% de los casos de uso.
 //
-// Chromium se resuelve desde:
-//   - PUPPETEER_EXECUTABLE_PATH (variable de Railway)
-//   - /usr/bin/chromium, /usr/bin/chromium-browser, /usr/bin/google-chrome
+// En Railway, Chromium se lanza vía @sparticuz/chromium (ver
+// src/lib/chromium/resolve-executable-path.ts) en vez de depender de un
+// binario instalado en el sistema.
 
 import path from "path";
 import { writeFile, rm } from "fs/promises";
 import os from "os";
 import crypto from "crypto";
 import sharp from "sharp";
-import { getChromiumExecutablePath } from "@/lib/chromium/resolve-executable-path";
+import { launchOcrBrowser } from "@/lib/chromium/resolve-executable-path";
 
 const IMAGE_MIME_TYPES = [
   "image/png",
@@ -64,39 +64,6 @@ export async function preprocesarImagen(buffer: Buffer): Promise<Buffer> {
     .toBuffer();
 }
 
-// ─── Puppeteer / Chromium launcher (Railway-safe) ────────────────────
-// Estos flags extra (--single-process, --disable-gpu, etc.) son específicos para
-// el caso de uso de este motor (rasterizar una página de PDF a imagen para OCR).
-// Los generadores de reportes PDF (src/app/ver/**) NO deben reusar esta función:
-// --single-process es inestable con Page.pdf() y puede colgar/cerrar el target.
-// Ellos resuelven el executablePath por su cuenta con getChromiumExecutablePath().
-
-export async function lanzarChromium() {
-  const executablePath = getChromiumExecutablePath();
-  const { default: puppeteer } = await import("puppeteer");
-
-  return puppeteer.launch({
-    headless: true,
-    executablePath,
-    args: [
-      "--no-sandbox",
-      "--disable-setuid-sandbox",
-      "--disable-dev-shm-usage",
-      "--disable-gpu",
-      "--disable-software-rasterizer",
-      "--disable-extensions",
-      "--disable-background-networking",
-      "--disable-default-apps",
-      "--disable-sync",
-      "--disable-translate",
-      "--hide-scrollbars",
-      "--mute-audio",
-      "--no-first-run",
-      "--single-process",
-    ],
-  });
-}
-
 // ─── Rasterizado de PDF (Puppeteer + Chromium) ───────────────────────
 // Solo se usa como fallback para PDFs escaneados sin texto nativo.
 
@@ -105,7 +72,7 @@ export async function rasterizarPdf(buffer: Buffer, maxPaginas = 5): Promise<Buf
   const tempPath = path.join(os.tmpdir(), `ocr-factura-${crypto.randomUUID()}.pdf`);
   await writeFile(tempPath, buffer);
 
-  const browser = await lanzarChromium();
+  const browser = await launchOcrBrowser();
   try {
     const page = await browser.newPage();
     const altoMaximo = 1600 * maxPaginas;

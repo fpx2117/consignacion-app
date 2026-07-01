@@ -1,7 +1,7 @@
 // src/app/ver/gasto/[id]/route.ts
 import { NextRequest, NextResponse } from "next/server";
-import puppeteer, { Browser } from "puppeteer";
-import { getChromiumExecutablePath } from "@/lib/chromium/resolve-executable-path";
+import type { Browser } from "puppeteer-core";
+import { launchReportBrowser } from "@/lib/chromium/resolve-executable-path";
 import { verifyPdfToken } from "@/lib/security/pdf-token";
 import type { GastoReportDTO } from "@/lib/reports/base/gasto-report-template";
 import { buildGastoHtml } from "@/lib/reports/base/gasto-report-template";
@@ -101,11 +101,7 @@ export async function GET(
         const branding = await getBranding();
         const html = await buildGastoHtml(reporteData, branding);
 
-        browser = await puppeteer.launch({
-            headless: true,
-            executablePath: getChromiumExecutablePath(),
-            args: ["--no-sandbox", "--disable-setuid-sandbox"],
-        });
+        browser = await launchReportBrowser();
 
         const page = await browser.newPage();
         await page.setContent(html, { waitUntil: "domcontentloaded", timeout: 30000 });

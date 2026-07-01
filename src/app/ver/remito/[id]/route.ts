@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import puppeteer, { Browser } from "puppeteer";
-import { getChromiumExecutablePath } from "@/lib/chromium/resolve-executable-path";
+import type { Browser } from "puppeteer-core";
+import { launchReportBrowser } from "@/lib/chromium/resolve-executable-path";
 import { verifyPdfToken } from "@/lib/security/pdf-token";
 import { prisma } from "@/lib/prisma";
 import { hashCode } from "@/lib/sharing/share-links";
@@ -92,11 +92,7 @@ export async function GET(
     // ✅ Branding desde la DB del environment del cliente
     const branding = await getBranding();
 
-    browser = await puppeteer.launch({
-      headless: true,
-      executablePath: getChromiumExecutablePath(),
-      args: ["--no-sandbox", "--disable-setuid-sandbox"],
-    });
+    browser = await launchReportBrowser();
 
     const page = await browser.newPage();
     await page.setContent(await buildConsignacionHtml({ ...consignacion, zonaHoraria: timezone.tz }, branding), {
