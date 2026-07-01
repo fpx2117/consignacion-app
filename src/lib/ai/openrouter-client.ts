@@ -1,12 +1,18 @@
 // src/lib/ai/openrouter-client.ts
 // Cliente de bajo nivel hacia OpenRouter (https://openrouter.ai) — API compatible
 // con OpenAI chat/completions, pero facturada por tokens (no por GPU/tiempo
-// encendida como Modal). Sólo se le manda texto, nunca imágenes/PDFs, para
-// mantener el costo por factura predecible y bajo.
+// encendida como Modal). Por defecto sólo se manda texto, para mantener el costo
+// por factura predecible y bajo. Excepción: fallback de visión (parámetro
+// `images`, ver invoice-ai-parser.ts) cuando el OCR local no alcanza — ahí sí se
+// manda la imagen, con un modelo y costo distintos (OPENROUTER_VISION_MODEL).
 
 const OPENROUTER_BASE_URL = (process.env.OPENROUTER_BASE_URL || "https://openrouter.ai/api/v1").replace(/\/$/, "");
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
 const OPENROUTER_MODEL = process.env.OPENROUTER_MODEL || "openai/gpt-4o-mini";
+// Modelo separado para el fallback de visión (ver invoice-ai-parser.ts): independiente
+// de OPENROUTER_MODEL a propósito, para que el camino texto-only pueda apuntar a un
+// modelo más barato sin depender de que ese modelo también soporte imágenes.
+const OPENROUTER_VISION_MODEL = process.env.OPENROUTER_VISION_MODEL || "openai/gpt-4o-mini";
 // 150s: medido contra facturas reales, la latencia de qwen3.6-35b-a3b sin
 // reasoning varía bastante según a qué proveedor upstream de OpenRouter te
 // toque (AtlasCloud, Parasail, etc.) y según qué tan "sucio" salga el texto
@@ -54,6 +60,11 @@ export type OpenRouterChatResult = {
   model: string;
 };
 
+export type OpenRouterImageInput = {
+  mimeType: string;
+  base64: string;
+};
+
 /**
  * Llama a chat/completions pidiendo JSON estructurado. No reintenta en caso de
  * rate limit (429) — a diferencia de Modal, acá no hay cold start que esperar;
@@ -63,6 +74,10 @@ export async function callOpenRouterJson(input: {
   systemPrompt: string;
   userPrompt: string;
   jsonSchema?: { name: string; schema: Record<string, unknown> };
+  /** Fallback de visión (facturas ilegibles para el OCR local): cuando se pasan
+   * imágenes, se manda el userPrompt + las imágenes juntos en un único mensaje
+   * multimodal, y se usa OPENROUTER_VISION_MODEL en vez de OPENROUTER_MODEL. */
+  images?: OpenRouterImageInput[];
 }): Promise<OpenRouterChatResult> {
   if (!OPENROUTER_API_KEY) {
     throw new OpenRouterConfigError("OPENROUTER_API_KEY no está configurada en este entorno.");
@@ -76,6 +91,18 @@ export async function callOpenRouterJson(input: {
     ? { type: "json_schema" as const, json_schema: { name: input.jsonSchema.name, schema: input.jsonSchema.schema, strict: true } }
     : { type: "json_object" as const };
 
+  const usedVision = Boolean(input.images?.length);
+  const model = usedVision ? OPENROUTER_VISION_MODEL : OPENROUTER_MODEL;
+  const userContent = usedVision
+    ? [
+        { type: "text" as const, text: input.userPrompt },
+        ...input.images!.map((img) => ({
+          type: "image_url" as const,
+          image_url: { url: `data:${img.mimeType};base64,${img.base64}` },
+        })),
+      ]
+    : input.userPrompt;
+
   try {
     const response = await fetch(`${OPENROUTER_BASE_URL}/chat/completions`, {
       method: "POST",
@@ -84,12 +111,12 @@ export async function callOpenRouterJson(input: {
         Authorization: `Bearer ${OPENROUTER_API_KEY}`,
       },
       body: JSON.stringify({
-        model: OPENROUTER_MODEL,
+        model,
         temperature: 0,
         max_tokens: OPENROUTER_MAX_TOKENS,
         messages: [
           { role: "system", content: input.systemPrompt },
-          { role: "user", content: input.userPrompt },
+          { role: "user", content: userContent },
         ],
         response_format: responseFormat,
         // OpenRouter valida "effort" contra un enum fijo (max/xhigh/high/medium/
@@ -132,10 +159,11 @@ export async function callOpenRouterJson(input: {
     }
 
     console.log("[OpenRouter]", {
-      model: json.model || OPENROUTER_MODEL,
+      model: json.model || model,
       elapsedMs: Date.now() - startedAt,
       reasoningTokens: json.usage?.completion_tokens_details?.reasoning_tokens ?? null,
       totalTokens: json.usage?.total_tokens ?? null,
+      usedVision,
     });
 
     return {
@@ -148,7 +176,7 @@ export async function callOpenRouterJson(input: {
             reasoningTokens: json.usage.completion_tokens_details?.reasoning_tokens ?? null,
           }
         : null,
-      model: json.model || OPENROUTER_MODEL,
+      model: json.model || model,
     };
   } catch (error) {
     if (error instanceof DOMException && error.name === "AbortError") {

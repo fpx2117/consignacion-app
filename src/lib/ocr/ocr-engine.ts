@@ -64,6 +64,22 @@ export async function preprocesarImagen(buffer: Buffer): Promise<Buffer> {
     .toBuffer();
 }
 
+// Ancho máximo para el fallback de visión (OCR + IA, ver invoice-ai-parser.ts):
+// a diferencia de preprocesarImagen() (arriba, pensado para Tesseract), acá se
+// mantiene el color y no se fuerza contraste/nitidez — un modelo de visión
+// rinde mejor con la imagen tal cual la sacó el usuario. Solo se achica para
+// no mandar un archivo de varios MB y disparar el costo en tokens de imagen.
+const ANCHO_MAXIMO_VISION = 1600;
+
+/** Copia liviana a color de la imagen, pensada para mandar a un modelo de visión (no a Tesseract). */
+export async function prepararImagenParaVision(buffer: Buffer): Promise<Buffer> {
+  return sharp(buffer)
+    .rotate()
+    .resize({ width: ANCHO_MAXIMO_VISION, withoutEnlargement: true, kernel: "lanczos3" })
+    .toFormat("jpeg", { quality: 80 })
+    .toBuffer();
+}
+
 // ─── Rasterizado de PDF (Puppeteer + Chromium) ───────────────────────
 // Solo se usa como fallback para PDFs escaneados sin texto nativo.
 

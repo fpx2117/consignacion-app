@@ -60,6 +60,13 @@ export type InvoiceAiErrorResult = {
 
 export type InvoiceAiResult = InvoiceAiSuccessResult | InvoiceAiErrorResult;
 
+// Debajo de este umbral de confianza de OCR (0-100), o con texto vacío, se
+// escala a un único llamado combinado (texto + imagen) a un modelo con
+// visión, en vez de mandar solo el texto ruidoso/vacío que devolvió el OCR
+// local. Ver openspec/changes/rubro-contexto-ocr/design.md — "Fallback
+// híbrido: OCR + Visión".
+const OCR_VISION_FALLBACK_THRESHOLD = Number(process.env.OCR_VISION_FALLBACK_THRESHOLD) || 55;
+
 /**
  * Procesa una factura ya subida (bytes en poder del backend): extrae texto
  * localmente y le pide a OpenRouter que lo estructure. Nunca escribe en la DB —
@@ -69,9 +76,13 @@ export async function procesarFacturaConIA(input: {
   buffer: Buffer;
   mimeType: string;
 }): Promise<InvoiceAiResult> {
-  const { texto, confianzaOcr } = await extraerTextoFactura(input);
+  const { texto, confianzaOcr, imagenParaVision } = await extraerTextoFactura(input);
 
-  if (!texto || !texto.trim()) {
+  const necesitaVision = Boolean(imagenParaVision) && (!texto.trim() || confianzaOcr < OCR_VISION_FALLBACK_THRESHOLD);
+
+  if (!texto.trim() && !necesitaVision) {
+    // Caso residual: PDF con texto nativo que igual vino vacío — no hubo
+    // rasterización (imagenParaVision es null acá), no hay imagen que ofrecer.
     return { status: "error", message: "No se pudo extraer texto legible del archivo." };
   }
 
@@ -79,10 +90,18 @@ export async function procesarFacturaConIA(input: {
   const systemPrompt = buildInvoiceExtractionPrompt();
   const schema = buildExpectedOutputSchema();
 
+  const userPrompt = necesitaVision
+    ? `Extraé los datos estructurados de esta factura de proveedor según las reglas indicadas. ` +
+      `El texto que devolvió el OCR local ${texto.trim() ? `tiene baja confianza (${confianzaOcr}%) y puede tener errores o partes faltantes` : "no pudo leer nada"}. ` +
+      `Se adjunta también la imagen original — usá el texto como referencia rápida y la imagen para completar o corregir lo que falte.\n\n` +
+      `Texto OCR:\n${textoTruncado || "(vacío)"}`
+    : `Extraé los datos estructurados de esta factura de proveedor según las reglas indicadas:\n\n${textoTruncado}`;
+
   const respuesta = await callOpenRouterJson({
     systemPrompt,
-    userPrompt: `Extraé los datos estructurados de esta factura de proveedor según las reglas indicadas:\n\n${textoTruncado}`,
+    userPrompt,
     jsonSchema: { name: "factura_extraida", schema },
+    images: necesitaVision ? [{ mimeType: "image/jpeg", base64: imagenParaVision!.toString("base64") }] : undefined,
   });
 
   const parsed = parseJsonContent(respuesta.content);
@@ -96,8 +115,13 @@ export async function procesarFacturaConIA(input: {
   // (Tesseract/pdf-parse, 0-100) y "qué tan segura está la IA de haber
   // estructurado bien ese texto" (0-1). Una foto borrosa con OCR de baja
   // confianza debe marcar la factura para revisión aunque la IA "suene seguro"
-  // interpretando el texto ruidoso que le llegó.
-  const globalConfidence = Math.min(calculateInvoiceConfidence(datos), confianzaOcr / 100);
+  // interpretando el texto ruidoso que le llegó — EXCEPTO cuando se usó
+  // visión: ahí la IA tuvo la imagen real, no solo el texto degradado, así
+  // que capar su confianza contra confianzaOcr (bajo por definición en este
+  // camino) penalizaría injustamente una extracción que sí rescató bien.
+  const globalConfidence = necesitaVision
+    ? calculateInvoiceConfidence(datos)
+    : Math.min(calculateInvoiceConfidence(datos), confianzaOcr / 100);
 
   return {
     status: "success",
