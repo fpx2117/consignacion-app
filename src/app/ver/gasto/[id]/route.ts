@@ -1,7 +1,7 @@
 // src/app/ver/gasto/[id]/route.ts
 import { NextRequest, NextResponse } from "next/server";
-import type { Browser } from "puppeteer-core";
-import { launchReportBrowser } from "@/lib/chromium/resolve-executable-path";
+import type { Page } from "puppeteer-core";
+import { getSharedReportBrowser } from "@/lib/chromium/resolve-executable-path";
 import { verifyPdfToken } from "@/lib/security/pdf-token";
 import type { GastoReportDTO } from "@/lib/reports/base/gasto-report-template";
 import { buildGastoHtml } from "@/lib/reports/base/gasto-report-template";
@@ -45,7 +45,7 @@ export async function GET(
     request: NextRequest,
     { params }: { params: Promise<{ id: string }> }
 ) {
-    let browser: Browser | null = null;
+    let page: Page | null = null;
 
     try {
         const { id: idParam } = await params;
@@ -101,9 +101,8 @@ export async function GET(
         const branding = await getBranding();
         const html = await buildGastoHtml(reporteData, branding);
 
-        browser = await launchReportBrowser();
-
-        const page = await browser.newPage();
+        const browser = await getSharedReportBrowser();
+        page = await browser.newPage();
         await page.setContent(html, { waitUntil: "domcontentloaded", timeout: 30000 });
 
         const pdfUint8Array = await page.pdf({
@@ -112,8 +111,8 @@ export async function GET(
             margin: { top: "10mm", bottom: "10mm", left: "10mm", right: "10mm" },
         });
 
-        await browser.close();
-        browser = null;
+        await page.close();
+        page = null;
 
         const cleanName = safeFilename(gasto.motivo);
         const fileName = `Gasto-${id}-${cleanName || "Comprobante"}.pdf`;
@@ -131,7 +130,7 @@ export async function GET(
         return NextResponse.json({ error: "Error generando Gasto PDF" }, { status: 500 });
     } finally {
         try {
-            if (browser) await browser.close();
+            if (page) await page.close();
         } catch { }
     }
 }

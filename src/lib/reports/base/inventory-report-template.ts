@@ -32,6 +32,22 @@ export interface InventoryGroup {
   productos: ProductoInventario[];
 }
 
+// Las fotos se muestran como miniatura de 36x36px en el reporte; el archivo
+// original puede pesar varios MB. Redimensionar a 72x72 (2x, para pantallas
+// retina) antes de incrustar como base64 corta drásticamente el tiempo de
+// generación y el peso del PDF resultante — no tiene sentido codificar una
+// foto de varios MB para mostrar un ícono.
+const THUMBNAIL_PX = 72;
+
+async function toThumbnailDataUrl(buf: Buffer): Promise<string> {
+  const { default: sharp } = await import("sharp");
+  const resized = await sharp(buf)
+    .resize(THUMBNAIL_PX, THUMBNAIL_PX, { fit: "cover" })
+    .webp({ quality: 75 })
+    .toBuffer();
+  return `data:image/webp;base64,${resized.toString("base64")}`;
+}
+
 async function fetchImageAsBase64(url: string): Promise<string> {
   try {
     // URLs locales (/api/files/<filename>) → leer directo del filesystem
@@ -41,16 +57,10 @@ async function fetchImageAsBase64(url: string): Promise<string> {
       const { readFile } = await import("fs/promises");
       const { resolveUploadFilesystemCandidates } = await import("@/lib/uploads/uploads");
       const filename = localMatch[1];
-      const ext = filename.split(".").pop()?.toLowerCase() ?? "";
-      const mimeMap: Record<string, string> = {
-        jpg: "image/jpeg", jpeg: "image/jpeg", png: "image/png",
-        webp: "image/webp", gif: "image/gif", avif: "image/avif",
-      };
-      const mime = mimeMap[ext] ?? "image/jpeg";
       for (const filePath of resolveUploadFilesystemCandidates(filename)) {
         try {
           const buf = await readFile(filePath);
-          return `data:${mime};base64,${buf.toString("base64")}`;
+          return await toThumbnailDataUrl(buf);
         } catch {
           continue;
         }
@@ -63,10 +73,8 @@ async function fetchImageAsBase64(url: string): Promise<string> {
     if (url.startsWith("http")) {
       const res = await fetch(url, { signal: AbortSignal.timeout(8000) });
       if (!res.ok) return "";
-      const contentType = res.headers.get("content-type") || "image/jpeg";
-      const mimeType = contentType.split(";")[0].trim();
-      const buf = await res.arrayBuffer();
-      return `data:${mimeType};base64,${Buffer.from(buf).toString("base64")}`;
+      const buf = Buffer.from(await res.arrayBuffer());
+      return await toThumbnailDataUrl(buf);
     }
 
     return "";

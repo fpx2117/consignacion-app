@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import type { Browser } from "puppeteer-core";
-import { launchReportBrowser } from "@/lib/chromium/resolve-executable-path";
+import type { Page } from "puppeteer-core";
+import { getSharedReportBrowser } from "@/lib/chromium/resolve-executable-path";
 import { prisma } from "@/lib/prisma";
 import { getBranding } from "@/lib/reports/get-branding";
 import {
@@ -59,7 +59,7 @@ export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  let browser: Browser | null = null;
+  let page: Page | null = null;
 
   try {
     const { id } = await params;
@@ -128,9 +128,8 @@ export async function GET(
       branding
     );
 
-    browser = await launchReportBrowser();
-
-    const page = await browser.newPage();
+    const browser = await getSharedReportBrowser();
+    page = await browser.newPage();
     await page.setContent(html, { waitUntil: "domcontentloaded" });
     await page.emulateMediaType("screen");
 
@@ -140,8 +139,8 @@ export async function GET(
       margin: { top: "10mm", bottom: "10mm", left: "10mm", right: "10mm" },
     });
 
-    await browser.close();
-    browser = null;
+    await page.close();
+    page = null;
 
     const response = new NextResponse(Buffer.from(pdfUint8Array), {
       headers: {
@@ -164,7 +163,7 @@ export async function GET(
     return NextResponse.json({ error: "Error en PDF" }, { status: 500 });
   } finally {
     try {
-      if (browser) await browser.close();
+      if (page) await page.close();
     } catch {}
   }
 }

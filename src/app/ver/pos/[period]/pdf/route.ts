@@ -1,8 +1,8 @@
 // src/app/ver/pos/[period]/pdf/route.ts
 import { Prisma } from "@prisma/client";
 import { NextRequest, NextResponse } from "next/server";
-import type { Browser } from "puppeteer-core";
-import { launchReportBrowser } from "@/lib/chromium/resolve-executable-path";
+import type { Page } from "puppeteer-core";
+import { getSharedReportBrowser } from "@/lib/chromium/resolve-executable-path";
 import { requireAuth } from "@/lib/auth/require-auth";
 import { resolveTimezone } from "@/lib/timezone/get-configured-tz";
 import { prisma } from "@/lib/prisma";
@@ -49,7 +49,7 @@ export async function GET(
     req: NextRequest,
     { params }: { params: Promise<{ period: string }> }
 ) {
-    let browser: Browser | null = null;
+    let page: Page | null = null;
     try {
         const { period: rawPeriod } = await params;
         const VALID: Period[] = ["today", "week", "month", "all"];
@@ -296,14 +296,14 @@ export async function GET(
         const branding = await getBranding(isGlobal ? (timezone.sucursalId ?? undefined) : scopedSucursalId);
         const htmlContent = buildPosReportHtml(reportData, branding);
 
-        browser = await launchReportBrowser();
-        const page = await browser.newPage();
+        const browser = await getSharedReportBrowser();
+        page = await browser.newPage();
         await page.setContent(htmlContent, { waitUntil: "domcontentloaded" });
         await page.emulateMediaType("print");
 
         const pdfBytes = await page.pdf({ format: "A4", printBackground: true, margin: { top: "0", bottom: "0", left: "0", right: "0" } });
-        await browser.close();
-        browser = null;
+        await page.close();
+        page = null;
 
         return new NextResponse(Buffer.from(pdfBytes), {
             headers: {
@@ -316,6 +316,6 @@ export async function GET(
         console.error("PDF POS ERROR:", err);
         return NextResponse.json({ error: "Error generando reporte POS" }, { status: 500 });
     } finally {
-        try { if (browser) await browser.close(); } catch { }
+        try { if (page) await page.close(); } catch { }
     }
 }

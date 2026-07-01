@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import type { Browser } from "puppeteer-core";
-import { launchReportBrowser } from "@/lib/chromium/resolve-executable-path";
+import type { Page } from "puppeteer-core";
+import { getSharedReportBrowser } from "@/lib/chromium/resolve-executable-path";
 import { verifyPdfToken } from "@/lib/security/pdf-token";
 import { prisma } from "@/lib/prisma";
 import { hashCode } from "@/lib/sharing/share-links";
@@ -51,7 +51,7 @@ export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  let browser: Browser | null = null;
+  let page: Page | null = null;
 
   try {
     const { id: idParam } = await params;
@@ -92,9 +92,8 @@ export async function GET(
     // ✅ Branding desde la DB del environment del cliente
     const branding = await getBranding();
 
-    browser = await launchReportBrowser();
-
-    const page = await browser.newPage();
+    const browser = await getSharedReportBrowser();
+    page = await browser.newPage();
     await page.setContent(await buildConsignacionHtml({ ...consignacion, zonaHoraria: timezone.tz }, branding), {
       waitUntil: "domcontentloaded",
       timeout: 30000,
@@ -106,8 +105,8 @@ export async function GET(
       margin: { top: "10mm", bottom: "10mm", left: "10mm", right: "10mm" },
     });
 
-    await browser.close();
-    browser = null;
+    await page.close();
+    page = null;
 
     const clienteNombre = safeFilename(consignacion.cliente?.nombre || "Cliente");
     const folioFormateado = String(consignacion.numeroFolio ?? consignacion.id).padStart(4, "0");
@@ -126,7 +125,7 @@ export async function GET(
     return NextResponse.json({ error: "Error generando PDF" }, { status: 500 });
   } finally {
     try {
-      if (browser) await browser.close();
+      if (page) await page.close();
     } catch { }
   }
 }
