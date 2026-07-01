@@ -69,7 +69,7 @@ import {
 
 // Sub-components
 import { CreateProductoDialog } from "./create-producto-dialog";
-import { OcrFacturaDialog } from "./ocr-factura-dialog";
+import { FacturaProveedorDialog } from "./factura-proveedor-dialog";
 import { EditProductoDialog } from "./edit-producto-dialog";
 import { AjustarStockDialog } from "./ajustar-stock-dialog";
 import { ProductosFilters } from "./productos-filters";
@@ -360,7 +360,7 @@ export function ProductosView() {
             <div className="flex items-center gap-1.5 p-1 bg-muted/50 rounded-xl border border-border/50">
               <HistoryReportDialog />
               <DownloadInventoryButton />
-              <OcrFacturaDialog onCreated={reload} />
+              <FacturaProveedorDialog onCreated={reload} />
               <Button asChild variant="ghost" size="sm" className="h-9 px-3 rounded-lg font-bold text-sm hover:bg-background hover:text-primary transition-all">
                 <Link href={catalogoHref} target="_blank" rel="noopener noreferrer">
                   <ExternalLink className="h-3.5 w-3.5 mr-1.5" />
@@ -409,7 +409,7 @@ export function ProductosView() {
                   <DownloadInventoryButton />
                 </div>
                 <div className="[&_button]:w-full [&_button]:justify-start [&_button]:rounded-lg [&_button]:h-10 [&_button]:text-sm [&_button]:font-semibold [&_button]:px-3 [&_button]:border-0 [&_button]:bg-transparent [&_button]:shadow-none">
-                  <OcrFacturaDialog onCreated={reload} />
+                  <FacturaProveedorDialog onCreated={reload} />
                 </div>
                 <DropdownMenuSeparator className="my-1" />
                 <DropdownMenuItem asChild className="rounded-lg font-semibold cursor-pointer h-10">

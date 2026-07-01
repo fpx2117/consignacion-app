@@ -64,16 +64,41 @@ export interface ProductoCreado {
   stockDisponibleUnits: number;
 }
 
+export interface CreateProductoInitialValues {
+  nombre?: string;
+  precioCosto?: number;
+  stockDisponibleUnits?: number;
+  codigoBarra?: string | null;
+}
+
 export function CreateProductoDialog({
   trigger,
   onCreated,
   onProductoCreado,
+  initialValues,
+  submitFn,
+  open: controlledOpen,
+  onOpenChange: controlledOnOpenChange,
 }: {
   trigger?: React.ReactNode;
   onCreated?: () => void;
   onProductoCreado?: (producto: ProductoCreado) => void;
+  /** Prellenado opcional (ej: desde un item de factura OCR). El usuario puede editar todo antes de crear. */
+  initialValues?: CreateProductoInitialValues;
+  /** Override del submit por defecto (apiService.createProducto). Lo usa el flujo de OCR para pegarle al
+   * endpoint que además suma stock/costo/alias asociados a un item de factura, en vez del alta genérica. */
+  submitFn?: (payload: CreateProductoInput) => Promise<ProductoCreado>;
+  /** Control externo del dialog (para abrirlo programáticamente, ej. desde la pantalla de revisión de OCR). */
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }) {
-  const [open, setOpen] = React.useState(false);
+  const [internalOpen, setInternalOpen] = React.useState(false);
+  const open = controlledOpen ?? internalOpen;
+  const setOpen = React.useCallback((value: boolean) => {
+    controlledOnOpenChange?.(value);
+    if (controlledOpen === undefined) setInternalOpen(value);
+  }, [controlledOnOpenChange, controlledOpen]);
+
   const [saving, setSaving] = React.useState(false);
   const [imageUploading, setImageUploading] = React.useState(false);
 
@@ -103,11 +128,13 @@ export function CreateProductoDialog({
 
   React.useEffect(() => {
     if (open) {
-      setNombre("");
-      setCodigoBarra("");
+      // Precio de venta NUNCA se prellena desde el costo de factura — el usuario
+      // siempre lo completa a mano (ver reglas de negocio de OCR de facturas).
+      setNombre(initialValues?.nombre ?? "");
+      setCodigoBarra(initialValues?.codigoBarra ?? "");
       setPrecioVenta("");
-      setPrecioCosto("");
-      setStockDisponibleUnits("");
+      setPrecioCosto(initialValues?.precioCosto !== undefined ? String(initialValues.precioCosto) : "");
+      setStockDisponibleUnits(initialValues?.stockDisponibleUnits !== undefined ? String(initialValues.stockDisponibleUnits) : "");
       setStockMinUnits("");
       setFechaVencimiento("");
       setImagenUrl(null);
@@ -129,6 +156,7 @@ export function CreateProductoDialog({
       setSubcategorias([]);
       setSubcategoriaId("");
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- initialValues se lee sólo al abrir, no en cada render
   }, [open]);
 
   // Cargar subcategorías al cambiar categoría
@@ -189,19 +217,20 @@ export function CreateProductoDialog({
         descuentoHasta: descuentoHasta ? new Date(descuentoHasta).toISOString() : null,
       };
 
-      const created = await apiService.createProducto(payload as unknown as CreateProductoInput);
+      const crear = submitFn ?? ((p: CreateProductoInput) =>
+        apiService.createProducto(p).then((created) => ({
+          id: Number(created.id),
+          nombre: created.nombre,
+          sku: (created as { sku?: string | null }).sku ?? null,
+          codigoBarra: created.codigoBarra ?? null,
+          stockDisponibleUnits: Number((created as { stockDisponibleUnits?: unknown }).stockDisponibleUnits ?? 0),
+        })));
+
+      const created = await crear(payload as unknown as CreateProductoInput);
       toast.success("Producto creado con éxito");
       setOpen(false);
       onCreated?.();
-      if (onProductoCreado && created) {
-        onProductoCreado({
-          id: Number(created.id),
-          nombre: created.nombre,
-          sku: created.sku ?? null,
-          codigoBarra: created.codigoBarra ?? null,
-          stockDisponibleUnits: Number((created as { stockDisponibleUnits?: unknown }).stockDisponibleUnits ?? 0),
-        });
-      }
+      onProductoCreado?.(created);
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : "Error al crear producto");
     } finally {
@@ -209,15 +238,22 @@ export function CreateProductoDialog({
     }
   }
 
+  // Cuando el dialog es controlado externamente (open/onOpenChange provistos, ej. desde
+  // la revisión de OCR) y no se pasó un trigger explícito, no renderizamos ningún botón
+  // propio — el padre decide cuándo abrirlo (ej. al tocar "Crear producto nuevo" en una fila).
+  const mostrarTriggerPropio = trigger !== undefined || controlledOpen === undefined;
+
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        {trigger || (
-          <Button className="h-11 rounded-full font-bold shadow-lg shadow-primary/20">
-            Nuevo Producto
-          </Button>
-        )}
-      </DialogTrigger>
+      {mostrarTriggerPropio && (
+        <DialogTrigger asChild>
+          {trigger || (
+            <Button className="h-11 rounded-full font-bold shadow-lg shadow-primary/20">
+              Nuevo Producto
+            </Button>
+          )}
+        </DialogTrigger>
+      )}
 
       <DialogContent className="sm:max-w-[550px] p-0 overflow-hidden border-none shadow-2xl bg-background">
         <DialogHeader className="p-6 pb-2 border-b bg-muted/20">

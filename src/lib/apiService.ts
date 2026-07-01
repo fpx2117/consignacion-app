@@ -81,6 +81,79 @@ export type OcrFacturaConfirmacion = {
   errores: { fila: string; error: string }[];
 };
 
+/* ---------- Facturas de proveedor (OCR + matching + aprendizaje) ---------- */
+
+export type Proveedor = {
+  id: number;
+  nombre: string;
+  cuit: string | null;
+  monedaPreferida: string;
+  activo: boolean;
+};
+
+export type EstadoFacturaProveedor =
+  | "PENDIENTE"
+  | "PROCESANDO"
+  | "REQUIERE_REVISION"
+  | "CONFIRMADA"
+  | "CANCELADA"
+  | "ERROR";
+
+export type EstadoItemFactura =
+  | "PENDIENTE"
+  | "COINCIDENCIA_SEGURA"
+  | "COINCIDENCIA_PROBABLE"
+  | "REQUIERE_REVISION"
+  | "SIN_COINCIDENCIA"
+  | "PRODUCTO_CREADO"
+  | "IGNORADO"
+  | "CONFIRMADO"
+  | "ERROR";
+
+export type FacturaProveedorItem = {
+  id: number;
+  facturaId: number;
+  productoId: number | null;
+  producto?: { id: number; nombre: string; precioCosto: number } | null;
+  textoOriginal: string;
+  descripcionNormalizada: string | null;
+  codigoProveedor: string | null;
+  cantidad: number;
+  precioUnitario: number | null;
+  totalLinea: number | null;
+  confianzaExtraccion: number | null;
+  matchScore: number | null;
+  matchMotivo: string | null;
+  estado: EstadoItemFactura;
+};
+
+export type FacturaProveedor = {
+  id: number;
+  proveedorId: number | null;
+  proveedor?: Proveedor | null;
+  proveedorNombreDetectado: string | null;
+  proveedorCuitDetectado: string | null;
+  sucursalId: number;
+  numeroFactura: string | null;
+  fecha: string | null;
+  moneda: string;
+  totalDetectado: number | null;
+  estado: EstadoFacturaProveedor;
+  confianzaOcr: number | null;
+  errorMensaje: string | null;
+  items?: FacturaProveedorItem[];
+};
+
+export type ConfirmarItemResultado = {
+  data: FacturaProveedorItem;
+  variacionCosto: { variacionPct: number | null; alerta: "normal" | "advertencia" | "alerta_fuerte" | null };
+};
+
+export type ConfirmAllResultado = {
+  confirmados: number;
+  errores: { itemId: number; error: string }[];
+};
+
 export class ApiRequestError extends Error {
   status: number;
   retryAfterSeconds: number | null;
@@ -262,6 +335,20 @@ export const API_ROUTES = {
   PRODUCTO_ID: (id: number) => `/api/productos/${id}`,
   OCR_FACTURA_ANALIZAR: "/api/productos/ocr-factura/analizar",
   OCR_FACTURA_CONFIRMAR: "/api/productos/ocr-factura/confirmar",
+
+  PROVEEDORES: "/api/proveedores",
+
+  FACTURAS_PROVEEDOR: {
+    LIST: "/api/facturas-proveedor",
+    UPLOAD: "/api/facturas-proveedor/upload",
+    BY_ID: (id: number) => `/api/facturas-proveedor/${id}`,
+    PROCESS: (id: number) => `/api/facturas-proveedor/${id}/process`,
+    CONFIRM_ALL: (id: number) => `/api/facturas-proveedor/${id}/confirm-all`,
+    ITEM_CONFIRM: (itemId: number) => `/api/facturas-proveedor/items/${itemId}/confirm`,
+    ITEM_CREATE_PRODUCT: (itemId: number) => `/api/facturas-proveedor/items/${itemId}/create-product`,
+    ITEM_IGNORE: (itemId: number) => `/api/facturas-proveedor/items/${itemId}/ignore`,
+  },
+
   CATEGORIAS: "/api/categorias",
   CATEGORIA_ID: (id: number) => `/api/categorias/${id}`,
   INVENTARIO_LINK: (id?: string | number) => `/api/productos/inventario-link${id ? `?sucursalId=${id}` : ""}`,
@@ -544,6 +631,73 @@ export const apiService = {
     return apiData<OcrFacturaConfirmacion>(API_ROUTES.OCR_FACTURA_CONFIRMAR, {
       method: "POST",
       body: JSON.stringify({ filas }),
+    });
+  },
+
+  /* ---------- Facturas de proveedor (pipeline OCR + matching) ---------- */
+
+  getProveedores() {
+    return apiData<Proveedor[]>(API_ROUTES.PROVEEDORES);
+  },
+
+  createProveedor(payload: { nombre: string; cuit?: string; monedaPreferida?: string }) {
+    return apiData<Proveedor>(API_ROUTES.PROVEEDORES, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+  },
+
+  uploadFacturaProveedor(file: File, proveedorId?: number | null) {
+    const formData = new FormData();
+    formData.append("file", file);
+    if (proveedorId) formData.append("proveedorId", String(proveedorId));
+    return apiData<FacturaProveedor>(API_ROUTES.FACTURAS_PROVEEDOR.UPLOAD, {
+      method: "POST",
+      body: formData,
+      headers: {},
+    });
+  },
+
+  processFacturaProveedor(facturaId: number) {
+    return apiData<FacturaProveedor>(API_ROUTES.FACTURAS_PROVEEDOR.PROCESS(facturaId), {
+      method: "POST",
+    });
+  },
+
+  getFacturaProveedor(facturaId: number) {
+    return apiData<FacturaProveedor>(API_ROUTES.FACTURAS_PROVEEDOR.BY_ID(facturaId));
+  },
+
+  listFacturasProveedor() {
+    return apiData<FacturaProveedor[]>(API_ROUTES.FACTURAS_PROVEEDOR.LIST);
+  },
+
+  async confirmFacturaProveedorItem(itemId: number, productoId: number): Promise<ConfirmarItemResultado> {
+    const res = await apiRequest<FacturaProveedorItem>(API_ROUTES.FACTURAS_PROVEEDOR.ITEM_CONFIRM(itemId), {
+      method: "POST",
+      body: JSON.stringify({ productoId }),
+    });
+    const variacionCosto = (res as unknown as { variacionCosto?: ConfirmarItemResultado["variacionCosto"] }).variacionCosto
+      ?? { variacionPct: null, alerta: null };
+    return { data: res.data, variacionCosto };
+  },
+
+  ignoreFacturaProveedorItem(itemId: number) {
+    return apiData<FacturaProveedorItem>(API_ROUTES.FACTURAS_PROVEEDOR.ITEM_IGNORE(itemId), {
+      method: "POST",
+    });
+  },
+
+  createProductoDesdeFacturaItem(itemId: number, payload: CreateProductoInput) {
+    return apiData<{ producto: ProductoWithImage; item: FacturaProveedorItem }>(
+      API_ROUTES.FACTURAS_PROVEEDOR.ITEM_CREATE_PRODUCT(itemId),
+      { method: "POST", body: JSON.stringify(payload) },
+    );
+  },
+
+  confirmAllFacturaProveedor(facturaId: number) {
+    return apiData<ConfirmAllResultado>(API_ROUTES.FACTURAS_PROVEEDOR.CONFIRM_ALL(facturaId), {
+      method: "POST",
     });
   },
 

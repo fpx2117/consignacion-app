@@ -45,18 +45,25 @@ function coeficienteDice(a: string, b: string): number {
   return (2 * interseccion) / (bigA.size + bigB.size);
 }
 
+/**
+ * Devuelve el score de todos los productos contra `nombre`, ordenado de mayor a
+ * menor. Lo usa el motor de matching por capas (matching-engine.ts) para poder
+ * detectar ambigüedad (dos productos con score muy parecido) y no sólo quedarse
+ * con el primero.
+ */
+export function scoresFuzzy(
+  nombre: string,
+  productos: { id: number; nombre: string }[],
+): ProductoMatch[] {
+  return productos
+    .map((producto) => ({ productoId: producto.id, score: coeficienteDice(nombre, producto.nombre) }))
+    .sort((a, b) => b.score - a.score);
+}
+
 export function matchProductoPorNombre(
   nombre: string,
   productos: { id: number; nombre: string }[],
 ): ProductoMatch | null {
-  let mejor: ProductoMatch | null = null;
-
-  for (const producto of productos) {
-    const score = coeficienteDice(nombre, producto.nombre);
-    if (score >= UMBRAL_MATCH && (!mejor || score > mejor.score)) {
-      mejor = { productoId: producto.id, score };
-    }
-  }
-
-  return mejor;
+  const mejor = scoresFuzzy(nombre, productos)[0];
+  return mejor && mejor.score >= UMBRAL_MATCH ? mejor : null;
 }

@@ -245,6 +245,9 @@ model Producto {
   descuentoActivo      Boolean               @default(false)
   descuentoDesde       DateTime?
   descuentoHasta       DateTime?
+  ultimoCostoCompra    Decimal?              @db.Decimal(12, 4)
+  monedaCosto          String                @default("ARS")
+  fechaUltimaCompra    DateTime?
   subcategoria         Subcategoria?         @relation(fields: [subcategoriaId], references: [id])
   consignacionDetalles ConsignacionDetalle[]
   movimientoStocks     MovimientoStock[]
@@ -254,6 +257,9 @@ model Producto {
   stockSucursals       StockSucursal[]
   ventaDetalles        VentaDetalle[]
   pedidoItems          PedidoEsperadoItem[]
+  facturaProveedorItems FacturaProveedorItem[]
+  proveedorAlias       ProductoProveedorAlias[]
+  historialCostos      HistorialCostoProducto[]
 
   @@unique([codigoBarra, sucursalId])
   @@unique([sku, sucursalId])
@@ -626,6 +632,7 @@ model Sucursal {
   pedidosEsperados  PedidoEsperado[]
   catalogVisits     CatalogVisit[]
   storeSettings     StoreSettings?
+  facturasProveedor FacturaProveedor[]
 }
 
 model StoreSettings {
@@ -712,6 +719,137 @@ model CategoriaGasto {
 enum EstadoGasto {
   PENDIENTE
   PAGADO
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// OCR de facturas de proveedores
+// ═══════════════════════════════════════════════════════════════════
+
+model Proveedor {
+  id              Int      @id @default(autoincrement())
+  nombre          String
+  cuit            String?
+  monedaPreferida String   @default("ARS")
+  activo          Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  facturas FacturaProveedor[]
+  alias    ProductoProveedorAlias[]
+
+  @@index([activo])
+  @@index([nombre])
+}
+
+model FacturaProveedor {
+  id                      Int                    @id @default(autoincrement())
+  proveedorId             Int?
+  sucursalId              Int
+  archivoPath             String
+  archivoMime             String
+  numeroFactura           String?
+  fecha                   DateTime?
+  moneda                  String                 @default("ARS")
+  totalDetectado          Decimal?               @db.Decimal(12, 2)
+  ocrTextoCompleto        String?
+  estado                  EstadoFacturaProveedor @default(PENDIENTE)
+  confianzaOcr            Float?
+  errorMensaje            String?
+  modalJobId              String?
+  proveedorNombreDetectado String?
+  proveedorCuitDetectado  String?
+  creadoPor               Int
+  createdAt               DateTime               @default(now())
+  updatedAt               DateTime               @updatedAt
+
+  proveedor Proveedor?             @relation(fields: [proveedorId], references: [id])
+  sucursal  Sucursal               @relation(fields: [sucursalId], references: [id])
+  items     FacturaProveedorItem[]
+
+  @@index([sucursalId])
+  @@index([proveedorId])
+  @@index([estado])
+}
+
+model FacturaProveedorItem {
+  id                     Int               @id @default(autoincrement())
+  facturaId              Int
+  productoId             Int?
+  textoOriginal          String
+  descripcionNormalizada String?
+  codigoProveedor        String?
+  cantidad               Int
+  precioUnitario         Decimal?          @db.Decimal(12, 4)
+  totalLinea             Decimal?          @db.Decimal(12, 2)
+  confianzaExtraccion    Float?
+  matchScore             Float?
+  matchMotivo            String?
+  estado                 EstadoItemFactura @default(PENDIENTE)
+  createdAt              DateTime          @default(now())
+  updatedAt              DateTime          @updatedAt
+
+  factura  FacturaProveedor @relation(fields: [facturaId], references: [id], onDelete: Cascade)
+  producto Producto?        @relation(fields: [productoId], references: [id])
+
+  @@index([facturaId])
+  @@index([productoId])
+  @@index([estado])
+}
+
+model ProductoProveedorAlias {
+  id               Int      @id @default(autoincrement())
+  proveedorId      Int
+  productoId       Int
+  codigoProveedor  String?
+  textoNormalizado String?
+  usoCount         Int      @default(1)
+  confianza        Float    @default(1.0)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  proveedor Proveedor @relation(fields: [proveedorId], references: [id])
+  producto  Producto  @relation(fields: [productoId], references: [id])
+
+  @@unique([proveedorId, codigoProveedor])
+  @@index([proveedorId, textoNormalizado])
+  @@index([productoId])
+}
+
+model HistorialCostoProducto {
+  id            Int      @id @default(autoincrement())
+  productoId    Int
+  proveedorId   Int?
+  facturaItemId Int?     @unique
+  costoAnterior Decimal? @db.Decimal(12, 4)
+  costoNuevo    Decimal  @db.Decimal(12, 4)
+  moneda        String   @default("ARS")
+  variacionPct  Float?
+  createdAt     DateTime @default(now())
+
+  producto Producto @relation(fields: [productoId], references: [id])
+
+  @@index([productoId, createdAt])
+}
+
+enum EstadoFacturaProveedor {
+  PENDIENTE
+  PROCESANDO
+  REQUIERE_REVISION
+  CONFIRMADA
+  CANCELADA
+  ERROR
+}
+
+enum EstadoItemFactura {
+  PENDIENTE
+  COINCIDENCIA_SEGURA
+  COINCIDENCIA_PROBABLE
+  REQUIERE_REVISION
+  SIN_COINCIDENCIA
+  PRODUCTO_CREADO
+  IGNORADO
+  CONFIRMADO
+  ERROR
 }
 
 enum CheckoutIntentStatus {

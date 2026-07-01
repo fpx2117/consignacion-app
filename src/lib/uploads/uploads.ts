@@ -2,10 +2,10 @@ import path from "path";
 import { randomUUID } from "crypto";
 import { existsSync } from "fs";
 
-export type UploadUseCase = "product-image";
+export type UploadUseCase = "product-image" | "factura-proveedor";
 
 type AllowedUploadType = {
-  canonicalExtension: "jpg" | "png" | "webp" | "gif";
+  canonicalExtension: "jpg" | "png" | "webp" | "gif" | "pdf";
   extensions: readonly string[];
   mimeTypes: readonly string[];
   sniff: (buffer: Buffer) => boolean;
@@ -56,16 +56,48 @@ const PRODUCT_IMAGE_ALLOWED_TYPES = [
   },
 ] satisfies readonly AllowedUploadType[];
 
+const PDF_SIGNATURE = Buffer.from("%PDF-", "ascii");
+
+const FACTURA_PROVEEDOR_ALLOWED_TYPES = [
+  PRODUCT_IMAGE_ALLOWED_TYPES[0], // jpg
+  PRODUCT_IMAGE_ALLOWED_TYPES[1], // png
+  PRODUCT_IMAGE_ALLOWED_TYPES[2], // webp
+  {
+    canonicalExtension: "pdf",
+    extensions: ["pdf"],
+    mimeTypes: ["application/pdf"],
+    sniff: (buffer: Buffer) => hasPrefix(buffer, Array.from(PDF_SIGNATURE)),
+  },
+] satisfies readonly AllowedUploadType[];
+
 const UPLOAD_POLICIES: Record<UploadUseCase, UploadPolicy> = {
   "product-image": {
     maxBytes: 5 * 1024 * 1024,
     allowedTypes: PRODUCT_IMAGE_ALLOWED_TYPES,
+  },
+  "factura-proveedor": {
+    maxBytes: 15 * 1024 * 1024,
+    allowedTypes: FACTURA_PROVEEDOR_ALLOWED_TYPES,
   },
 };
 
 const SERVABLE_EXTENSIONS = new Set(
   PRODUCT_IMAGE_ALLOWED_TYPES.flatMap((entry) => entry.extensions),
 );
+
+// Las facturas de proveedor NUNCA se sirven por /api/files (documentos de negocio
+// sensibles): se guardan en un subdirectorio propio y sólo se leen server-side
+// (confirmación OCR, futuro envío a Modal por URL firmada de corta duración).
+//
+// A diferencia de getUploadStorageDir(), NO cae en fallback a public/uploads:
+// ese directorio lo sirve Next.js estáticamente, y una factura ahí quedaría
+// accesible sin autenticación para quien adivine el nombre de archivo.
+export function getFacturaProveedorStorageDir(): string {
+  if (process.env.UPLOAD_DIR) {
+    return path.join(path.resolve(process.env.UPLOAD_DIR), "facturas-proveedor");
+  }
+  return path.join(process.cwd(), "storage", "facturas-proveedor");
+}
 
 const OPAQUE_UPLOAD_FILENAME_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\.(jpg|png|webp|gif)$/i;
 const LEGACY_API_UPLOAD_FILENAME_REGEX = /^\d{13}-[a-z0-9][a-z0-9._-]{0,180}\.(jpg|jpeg|png|webp|gif)$/i;
@@ -283,6 +315,8 @@ function getContentTypeForExtension(extension: string): string | null {
       return "image/webp";
     case "gif":
       return "image/gif";
+    case "pdf":
+      return "application/pdf";
     default:
       return null;
   }
