@@ -44,3 +44,19 @@ next-env.d.ts
 
 /src/generated/prisma
 /storage/uploads/
+
+# local dev/debug artifacts
+*.log
+*.log.txt
+cookies.txt
+*_output.txt
+check_out.txt
+smoke_catalog_response.json
+eslint.json
+
+# local AI tooling caches (not part of the app)
+.agent/
+.codegraph/
+
+# cache de modelos de OCR (Tesseract.js descarga spa.traineddata en el primer uso)
+/.cache/
