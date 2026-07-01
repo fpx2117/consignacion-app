@@ -19,3 +19,9 @@ The format is based on Keep a Changelog.
 ### Changed
 
 - Updated `README.md` with links to the new technical documentation index.
+- Reorganized `docs/`: consolidated root-level loose docs (`DOCUMENTACION.md`, `MANUAL_SISTEMA.md`, `MEMORIA_TECNICA_PROYECTO.md`, `KPI_CALCULATIONS.md`, `ROADMAP.md`) into `docs/`, removed duplicated content across large reference docs (each topic now has a single source of truth per `docs/INDEX.md`), split unimplemented proposals into `docs/plans/`, superseded/completed docs into `docs/archive/`, and speculative business docs into `docs/business/`.
+- Extracted the unique "where to touch per change type" + business-invariants content from `MEMORIA_TECNICA_PROYECTO.md` into a new focused doc, `docs/GUIA_CAMBIOS.md`.
+
+### Removed
+
+- Deleted root-level generated/obsolete docs with no remaining value: `README-DOCUMENTATION.md`, `DOCUMENTOS-README.md`, `TECNICO.md`, `DOCUMENTATION/ESTRUCTURA-COMPLETA.md`, `DOCUMENTATION/PROYECTO-MAESTRO.md` (contained inaccurate/invented data about the schema).

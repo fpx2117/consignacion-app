@@ -64,7 +64,7 @@ Puntos clave:
 
 ## 5) Modelo de datos y dominios
 
-El esquema principal esta en `prisma/schema.prisma`.
+El esquema principal esta en `prisma/schema.prisma`. Detalle entidad por entidad (campos, relaciones y enums) en [DOCUMENTACION.md](./DOCUMENTACION.md#modelo-de-datos).
 
 ### Dominios
 
@@ -167,7 +167,6 @@ Notas operativas:
 ## 11) Deuda tecnica visible
 
 - Existen `@ts-nocheck` en piezas centrales (`apiService.ts`, `requireAuth.ts`) que reducen garantias de tipado.
-- Hay archivos de schema historicos/copia en `prisma/` (`schema_v2`, `schema_v3`, `schema copy`) que pueden confundir el source of truth.
 - Conviene publicar contrato OpenAPI para la superficie `/api/*` y evitar divergencia entre frontend y backend.
 
 ## 12) Referencias directas

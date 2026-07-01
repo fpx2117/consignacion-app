@@ -1,5 +1,7 @@
 # Plan de implementación: Descuentos en productos y catálogo
 
+> **ARCHIVADO (2026-06-30): implementado.** `descuentoPorcentaje/Activo/Desde/Hasta` ya están en `prisma/schema.prisma` y la lógica vive en `src/lib/descuento-utils.ts`. Se conserva solo como referencia histórica del diseño original.
+
 ## Contexto de la base existente
 
 El sistema ya tiene:

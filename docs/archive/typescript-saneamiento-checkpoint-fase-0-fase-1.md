@@ -1,5 +1,7 @@
 # Checkpoint saneamiento TypeScript - Fase 0 / arranque Fase 1
 
+> **ARCHIVADO (2026-06-30): completado y superado.** El checkpoint reportaba archivos con `@ts-nocheck` pendientes de sanear; hoy no quedan restantes en `src/`. Se conserva solo como referencia histórica del proceso.
+
 Fecha: 2026-03-14
 
 ## Baseline congelado

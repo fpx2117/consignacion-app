@@ -1,5 +1,7 @@
 # Modelo de negocio para pasarela orquestada (Camino A)
 
+> **Nota (2026-06-30):** documento estratégico/comercial especulativo, no una feature en desarrollo. No hay código relacionado en `src/` (sin `orquestad`, `PSP` ni "smart routing"). No conecta con el modelo de negocio actual (SaaS de consignaciones).
+
 ## 1) Camino A: qué es y por qué es el recomendado
 
 **Camino A** implica construir una capa de orquestación de pagos sobre proveedores existentes (PSP/adquirentes/billeteras), sin convertirse en adquirente propio.

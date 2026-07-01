@@ -1,5 +1,7 @@
 # Plan de Implementación: Integración WhatsApp vía Kapso
 
+> **Estado (2026-06-30): NO implementado.** No existen campos `kapso*` en `prisma/schema.prisma` ni código relacionado en `src/`. Este es un plan pendiente, no una feature activa.
+
 **Fecha:** 2026-03-25
 **Prioridad:** Mediano Plazo
 **Área:** Comunicación con Clientes / Notificaciones / Automatización

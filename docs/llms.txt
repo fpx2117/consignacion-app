@@ -2,9 +2,15 @@
 > Sistema de gestión de ventas, consignaciones y liquidaciones para sucursales.
 
 ## Archivos Principales
-- `src/app/api/**: Rutas de la API (autenticación, ventas, consignaciones).
+- `src/app/api/**`: Rutas de la API (autenticación, ventas, consignaciones).
 - `docs/API_REFERENCIA_TECNICA.md`: Contratos técnicos de endpoints.
-- `docs/GUIA_TECNICA_PROYECTO.md`: Arquitectura y modelo de negocio.
+- `docs/GUIA_TECNICA_PROYECTO.md`: Arquitectura, stack y modelo de negocio.
+- `docs/DOCUMENTACION.md`: Funcionalidad, rutas frontend y modelo de datos completo.
+- `docs/MANUAL_SISTEMA.md`: Manual funcional (roles, módulos, flujos).
+- `docs/GUIA_CAMBIOS.md`: Qué archivos tocar según el tipo de cambio + reglas de negocio.
+- `docs/KPI_CALCULATIONS.md`: Fórmulas de KPIs del dashboard.
+- `docs/security/`: Políticas y runbooks de seguridad.
+- `docs/ADR/0001-servidor-custom-next-socketio.md`: Decisión de arquitectura del runtime.
 
 ## Conceptos Clave
 - **Autenticación**: JWT HttpOnly + sesiones activas en DB.
@@ -22,7 +28,15 @@
 │   │   └── requireAuth.ts (autenticación)
 │   └── ...
 └── docs/
+    ├── INDEX.md (mapa completo de documentación)
     ├── API_REFERENCIA_TECNICA.md
     ├── GUIA_TECNICA_PROYECTO.md
-    └── ADR/0001-servidor-custom-next-socketio.md
+    ├── DOCUMENTACION.md
+    ├── MANUAL_SISTEMA.md
+    ├── GUIA_CAMBIOS.md
+    ├── ADR/0001-servidor-custom-next-socketio.md
+    ├── features/     (docs por feature implementada)
+    ├── plans/         (propuestas/planes aún no implementados)
+    ├── security/      (políticas y runbooks)
+    └── archive/       (documentación histórica/superada)
 ```
