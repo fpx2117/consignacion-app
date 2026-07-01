@@ -51,36 +51,6 @@ import type {
 
 export type ProductoWithImage = Producto & { imagenUrl?: string | null };
 
-export type OcrFacturaLineaDetectada = {
-  id: number;
-  textoOriginal: string;
-  nombreDetectado: string;
-  cantidadDetectada: number | null;
-  precioDetectado: number | null;
-  productoSugeridoId: number | null;
-  productoSugeridoNombre: string | null;
-  matchScore: number | null;
-};
-
-export type OcrFacturaAnalisis = {
-  confianzaOcr: number;
-  filas: OcrFacturaLineaDetectada[];
-};
-
-export type OcrFacturaFilaConfirmacion = {
-  productoId?: number | null;
-  crearNuevo: boolean;
-  nombre: string;
-  cantidad: number;
-  precioCosto?: number | null;
-};
-
-export type OcrFacturaConfirmacion = {
-  creados: number;
-  actualizados: number;
-  errores: { fila: string; error: string }[];
-};
-
 /* ---------- Facturas de proveedor (OCR + matching + aprendizaje) ---------- */
 
 export type Proveedor = {
@@ -333,8 +303,6 @@ export const API_ROUTES = {
 
   PRODUCTOS: "/api/productos",
   PRODUCTO_ID: (id: number) => `/api/productos/${id}`,
-  OCR_FACTURA_ANALIZAR: "/api/productos/ocr-factura/analizar",
-  OCR_FACTURA_CONFIRMAR: "/api/productos/ocr-factura/confirmar",
 
   PROVEEDORES: "/api/proveedores",
 
@@ -614,23 +582,6 @@ export const apiService = {
       body: formData,
       // No seteamos Content-Type para que el browser ponga el boundary
       headers: {},
-    });
-  },
-
-  async analizarFacturaOcr(file: File) {
-    const formData = new FormData();
-    formData.append("file", file);
-    return apiData<OcrFacturaAnalisis>(API_ROUTES.OCR_FACTURA_ANALIZAR, {
-      method: "POST",
-      body: formData,
-      headers: {},
-    });
-  },
-
-  confirmarFacturaOcr(filas: OcrFacturaFilaConfirmacion[]) {
-    return apiData<OcrFacturaConfirmacion>(API_ROUTES.OCR_FACTURA_CONFIRMAR, {
-      method: "POST",
-      body: JSON.stringify({ filas }),
     });
   },
 

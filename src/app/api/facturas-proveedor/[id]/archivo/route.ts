@@ -1,8 +1,9 @@
 // src/app/api/facturas-proveedor/[id]/archivo/route.ts
 // Sirve el archivo original de una factura, gateado por token firmado de corta
-// duración (no por sesión de usuario) — es el mecanismo por el cual Modal.com
-// descarga el archivo sin tener credenciales de la app ni acceso directo al
-// volumen/filesystem del backend.
+// duración (no por sesión de usuario) — para casos donde hace falta acceso al
+// documento sin pasar por la sesión normal (ej. visor externo de corta vida).
+// El motor de extracción IA (OpenRouter) nunca usa esta ruta: recibe el texto
+// ya extraído localmente, no una URL para descargar el archivo.
 
 import { NextRequest, NextResponse } from "next/server";
 import { readFile } from "fs/promises";

@@ -1,6 +1,6 @@
 // src/lib/security/factura-proveedor-token.ts
-// Token firmado de corta duración para que Modal.com pueda descargar el archivo de
-// una factura sin credenciales de sesión. Mismo patrón que pdf-token.ts pero con
+// Token firmado de corta duración para acceder al archivo original de una
+// factura sin credenciales de sesión. Mismo patrón que pdf-token.ts pero con
 // secreto y TTL propios: este token da acceso a un documento de negocio (precios de
 // compra), no a un reporte ya generado, y sólo debe vivir minutos, no días.
 
