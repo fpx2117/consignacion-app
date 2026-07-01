@@ -5,7 +5,7 @@ import { LayoutTemplate, ShoppingBag } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { normalizeStorefrontContent, type StorefrontContent } from "@/lib/storefront-content";
+import { normalizeStorefrontContent, type StorefrontContent } from "@/lib/storefront/storefront-content";
 import type { Categoria } from "@/lib/types";
 import type { BrandingPreviewSettings } from "./types";
 

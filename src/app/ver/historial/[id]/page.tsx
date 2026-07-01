@@ -4,7 +4,7 @@
 import { useEffect, use } from "react";
 import { useSearchParams } from "next/navigation";
 import { FileText } from "lucide-react";
-import { ReportLoadingPage } from "@/components/report-loading-page";
+import { ReportLoadingPage } from "@/components/reports/report-loading-page";
 
 const MONTH_LABELS = [
   "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",

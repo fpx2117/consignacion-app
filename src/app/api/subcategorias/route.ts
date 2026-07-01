@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { revalidateTag } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/auth/require-auth";
-import { isGlobalSucursalView } from "@/lib/sucursalScope";
+import { isGlobalSucursalView } from "@/lib/security/sucursalScope";
 
 // GET: Obtener subcategorías por categoriaId
 export async function GET(req: NextRequest) {

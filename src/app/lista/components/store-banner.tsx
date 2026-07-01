@@ -3,7 +3,7 @@
 import Image from "next/image";
 import { ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { normalizeStorefrontContent } from "@/lib/storefront-content";
+import { normalizeStorefrontContent } from "@/lib/storefront/storefront-content";
 import type { PublicCatalogConfig } from "@/lib/types";
 
 export function StoreBanner({

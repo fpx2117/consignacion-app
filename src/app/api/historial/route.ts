@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/auth/require-auth";
-import { buildSucursalWhere } from "@/lib/sucursalScope";
-import { nowAR, monthRangeAR } from "@/lib/utils-date";
-import { resolveTimezoneForAuth } from "@/lib/get-configured-tz";
+import { buildSucursalWhere } from "@/lib/security/sucursalScope";
+import { nowAR, monthRangeAR } from "@/lib/date-format/utils-date";
+import { resolveTimezoneForAuth } from "@/lib/timezone/get-configured-tz";
 
 function getMonthAndYearInTimezone(date: Date, tz: string) {
   const parts = new Intl.DateTimeFormat("en-CA", {

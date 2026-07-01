@@ -13,10 +13,10 @@ import { z } from "zod";
 import { sendNotification } from "@/lib/notificaciones/socket-trigger";
 import { obtenerConfiguracionGlobal } from "@/lib/config";
 import { evaluateStockAlert, processNotificationQueue } from "@/lib/notificaciones/stock-alerts";
-import { nowAR } from "@/lib/utils-date";
-import { resolveTimezoneForAuth } from "@/lib/get-configured-tz";
-import { buildSucursalWhere, isGlobalSucursalView } from "@/lib/sucursalScope";
-import { calcularDescuentoEfectivo } from "@/lib/descuento-utils";
+import { nowAR } from "@/lib/date-format/utils-date";
+import { resolveTimezoneForAuth } from "@/lib/timezone/get-configured-tz";
+import { buildSucursalWhere, isGlobalSucursalView } from "@/lib/security/sucursalScope";
+import { calcularDescuentoEfectivo } from "@/lib/storefront/descuento-utils";
 
 const MAX_VENTA_RETRIES = 3;
 const createVentaSchema = z.object({

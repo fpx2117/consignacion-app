@@ -1,7 +1,7 @@
 import { cache } from "react";
 import { NextResponse } from "next/server";
 import { getAuthTokenFromCookies, verifyUserJwt } from "@/lib/auth/core";
-import { resolveEffectiveSucursalContext } from "@/lib/sucursalScope";
+import { resolveEffectiveSucursalContext } from "@/lib/security/sucursalScope";
 
 /* ============================
    AUTH GUARD

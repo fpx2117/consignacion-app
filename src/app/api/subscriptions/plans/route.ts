@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { SUBSCRIPTION_PLANS, PLAN_LIMITS_DEFAULTS } from "@/constants/subscriptions";
-import { fetchDolarBlue } from "@/lib/dolarBlue";
+import { fetchDolarBlue } from "@/lib/integrations/dolarBlue";
 
 export async function GET() {
     try {

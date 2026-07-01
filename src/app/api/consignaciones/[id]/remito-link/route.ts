@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { decryptCode, encryptCode, generateShortCode, hashCode } from "@/lib/share-links";
+import { decryptCode, encryptCode, generateShortCode, hashCode } from "@/lib/sharing/share-links";
 import { requireAuth } from "@/lib/auth/require-auth";
 
 export const dynamic = "force-dynamic";

@@ -9,7 +9,7 @@ import {
     getUploadStorageDir,
     getUploadUrl,
     validateUploadCandidate,
-} from "@/lib/uploads";
+} from "@/lib/uploads/uploads";
 
 type UploadDeps = {
     mkdir: typeof mkdir;

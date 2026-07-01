@@ -44,7 +44,7 @@ const KpiSortableGrid = dynamic(
   }
 );
 
-import { formatNumber, formatMoney } from "@/lib/utils-format";
+import { formatNumber, formatMoney } from "@/lib/date-format/utils-format";
 
 import { DashboardPeriod, DashboardFilter } from "@/lib/types";
 // import { useTimezone } from "@/hooks/useTimezone";

@@ -23,7 +23,7 @@ import {
 } from "lucide-react";
 
 import { apiService } from "@/lib/apiService";
-import { createDefaultStorefrontContent } from "@/lib/storefront-content";
+import { createDefaultStorefrontContent } from "@/lib/storefront/storefront-content";
 import { TIENDA_TUTORIAL } from "@/lib/tutorial-content";
 import type { Categoria } from "@/lib/types";
 import { cn } from "@/lib/utils";

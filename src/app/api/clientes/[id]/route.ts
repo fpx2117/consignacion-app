@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/auth/require-auth";
-import { canAccessSucursalResource, isGlobalSucursalView } from "@/lib/sucursalScope";
+import { canAccessSucursalResource, isGlobalSucursalView } from "@/lib/security/sucursalScope";
 
 type RouteContext = {
   params: Promise<{ id: string }>;

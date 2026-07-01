@@ -10,8 +10,8 @@ import { sendNotification } from "@/lib/notificaciones/socket-trigger";
 import { NOTIFICATION_TYPE } from "@/lib/notificaciones/types";
 import { obtenerConfiguracionGlobal } from "@/lib/config";
 import { checkProductLimit } from "@/lib/subscriptions/require-subscription";
-import { buildSucursalWhere, isGlobalSucursalView, resolveRequestedSucursalId } from "@/lib/sucursalScope";
-import { calcularDescuentoEfectivo } from "@/lib/descuento-utils";
+import { buildSucursalWhere, isGlobalSucursalView, resolveRequestedSucursalId } from "@/lib/security/sucursalScope";
+import { calcularDescuentoEfectivo } from "@/lib/storefront/descuento-utils";
 
 type ProductoCreateBody = CreateProductoInput & {
   subcategoriaId?: number | null;

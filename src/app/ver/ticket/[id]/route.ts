@@ -6,8 +6,8 @@ import type { VentaReportDTO } from "@/lib/reports/base/venta-report-template";
 import { buildVentaHtmlAsync } from "@/lib/reports/base/venta-report-template";
 import { getBranding } from "@/lib/reports/get-branding";
 import { prisma } from "@/lib/prisma";
-import { hashCode } from "@/lib/share-links";
-import { resolveTimezone } from "@/lib/get-configured-tz";
+import { hashCode } from "@/lib/sharing/share-links";
+import { resolveTimezone } from "@/lib/timezone/get-configured-tz";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";

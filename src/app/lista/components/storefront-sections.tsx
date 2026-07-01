@@ -9,7 +9,7 @@ import type {
   PublicCatalogConfig,
   PublicCatalogProduct,
 } from "@/lib/types";
-import { normalizeStorefrontContent } from "@/lib/storefront-content";
+import { normalizeStorefrontContent } from "@/lib/storefront/storefront-content";
 
 function SectionTitle({ title }: { title: string }) {
   return (

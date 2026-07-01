@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import crypto from "crypto";
-import { getCatalogCartUnitPrice } from "@/lib/catalog-cart-pricing";
+import { getCatalogCartUnitPrice } from "@/lib/storefront/catalog-cart-pricing";
 
 type CheckoutItemInput = {
     id: number | string;

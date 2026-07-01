@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/auth/require-auth";
 import { createPagoSchema } from "@/lib/validators/cliente";
-import { isGlobalSucursalView } from "@/lib/sucursalScope";
+import { isGlobalSucursalView } from "@/lib/security/sucursalScope";
 
 interface RouteContext {
   params: Promise<{ clienteId: string }>;

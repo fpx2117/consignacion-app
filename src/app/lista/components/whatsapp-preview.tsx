@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { getCatalogCartLineSubtotal } from "@/lib/catalog-cart-pricing";
+import { getCatalogCartLineSubtotal } from "@/lib/storefront/catalog-cart-pricing";
 import type { OnlineStoreSettings, CatalogCartItem } from "@/lib/types";
 
 type WhatsAppPreviewProps = {

@@ -3,7 +3,7 @@
 
 import { NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth/require-auth";
-import { checkAndUpdateVencidos } from "@/lib/pedidos-esperados";
+import { checkAndUpdateVencidos } from "@/lib/dashboard/pedidos-esperados";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";

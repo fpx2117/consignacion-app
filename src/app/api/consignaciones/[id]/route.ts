@@ -4,7 +4,7 @@ import { requireAuth } from "@/lib/auth/require-auth";
 import { createLiquidacionSchema } from "@/lib/validators/consignacion";
 import { z } from "zod";
 import { MotivoMovimientoStock, TipoMovimientoStock } from "@prisma/client";
-import { buildSucursalWhere, isGlobalSucursalView } from "@/lib/sucursalScope";
+import { buildSucursalWhere, isGlobalSucursalView } from "@/lib/security/sucursalScope";
 
 // âœ… Imports Centralizados de Config y Notificaciones
 import { obtenerConfiguracionGlobal } from "@/lib/config";

@@ -1,12 +1,12 @@
 import crypto from "crypto";
 import { NextResponse } from "next/server";
 import { Resend } from "resend";
-import { getAuthRateLimitDecision, getRequestIp, normalizeIdentity } from "@/lib/auth-rate-limit";
+import { getAuthRateLimitDecision, getRequestIp, normalizeIdentity } from "@/lib/security/auth-rate-limit";
 import {
   buildAuthThrottledResponse,
   FORGOT_PASSWORD_SAFE_MESSAGE,
   reportAuthRateLimitEvent,
-} from "@/lib/auth-security-monitor";
+} from "@/lib/security/auth-security-monitor";
 
 type ForgotPasswordUser = {
   nombre: string;
@@ -86,7 +86,7 @@ const defaultDeps: ForgotPasswordRouteDeps = {
     identity: email,
   }),
   recordAuditLog: async (input) => {
-    const { recordAuditLog } = await import("@/lib/audit");
+    const { recordAuditLog } = await import("@/lib/security/audit");
     await recordAuditLog(input);
   },
 };

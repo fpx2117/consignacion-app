@@ -38,9 +38,9 @@ import {
 } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
-import { SuccessDialog } from "@/components/success-dialog";
-import { ErrorDialog } from "@/components/error-dialog";
-import { HelpDialog } from "@/components/help-dialog";
+import { SuccessDialog } from "@/components/feedback/success-dialog";
+import { ErrorDialog } from "@/components/feedback/error-dialog";
+import { HelpDialog } from "@/components/feedback/help-dialog";
 
 type EditableItem = {
   productoId: number;

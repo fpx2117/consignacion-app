@@ -2,7 +2,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/auth/require-auth";
-import { buildSucursalWhere } from "@/lib/sucursalScope";
+import { buildSucursalWhere } from "@/lib/security/sucursalScope";
 
 export async function GET() {
   const auth = await requireAuth();

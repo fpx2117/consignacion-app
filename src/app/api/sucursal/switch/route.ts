@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth/require-auth";
 import { prisma } from "@/lib/prisma";
-import { canAccessSucursalId } from "@/lib/sucursalScope";
+import { canAccessSucursalId } from "@/lib/security/sucursalScope";
 
 export async function POST(req: Request) {
   const auth = await requireAuth();

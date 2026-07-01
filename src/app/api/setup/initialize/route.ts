@@ -255,7 +255,7 @@ export async function POST(req: Request) {
         // Exchange rate (NO rompe si falla)
         let exchangeRate = 1;
         try {
-            const { fetchDolarBlue } = await import("@/lib/dolarBlue");
+            const { fetchDolarBlue } = await import("@/lib/integrations/dolarBlue");
             const r = await fetchDolarBlue();
             exchangeRate = typeof r === "number" && !Number.isNaN(r) && r > 0 ? r : 1;
         } catch (e) {

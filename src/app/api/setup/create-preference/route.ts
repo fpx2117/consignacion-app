@@ -25,7 +25,7 @@ export async function POST(req: Request) {
 
         // Note: For SETUP, we don't have a userId yet. 
         // We'll use a placeholder or specific flag in external_reference.
-        const { fetchDolarBlue } = await import("@/lib/dolarBlue");
+        const { fetchDolarBlue } = await import("@/lib/integrations/dolarBlue");
         const exchangeRate = await fetchDolarBlue();
         const precioARS = plan.precioUSD * exchangeRate;
 

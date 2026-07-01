@@ -1,7 +1,7 @@
 import bcrypt from "bcryptjs";
 import { NextResponse } from "next/server";
-import { getAuthRateLimitDecision, getRequestIp, normalizeIdentity } from "@/lib/auth-rate-limit";
-import { buildAuthThrottledResponse, reportAuthRateLimitEvent } from "@/lib/auth-security-monitor";
+import { getAuthRateLimitDecision, getRequestIp, normalizeIdentity } from "@/lib/security/auth-rate-limit";
+import { buildAuthThrottledResponse, reportAuthRateLimitEvent } from "@/lib/security/auth-security-monitor";
 import { getRealClientData } from "@/lib/clientData";
 import { getSessionHash } from "@/lib/security/session-hash";
 
@@ -100,7 +100,7 @@ const defaultDeps: LoginRouteDeps = {
     });
   },
   recordAuditLog: async (input) => {
-    const { recordAuditLog } = await import("@/lib/audit");
+    const { recordAuditLog } = await import("@/lib/security/audit");
     await recordAuditLog(input);
   },
 };

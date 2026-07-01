@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/auth/require-auth";
-import { buildSucursalWhere, isGlobalSucursalView } from "@/lib/sucursalScope";
+import { buildSucursalWhere, isGlobalSucursalView } from "@/lib/security/sucursalScope";
 
 // GET: Obtener todas las categorías ordenadas por nombre (por sucursal)
 export async function GET(_req: NextRequest) {

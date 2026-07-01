@@ -4,7 +4,7 @@ import { NextResponse } from "next/server";
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/auth/require-auth"; // 🔒 Seguridad
-import { buildSucursalWhere, isGlobalSucursalView } from "@/lib/sucursalScope";
+import { buildSucursalWhere, isGlobalSucursalView } from "@/lib/security/sucursalScope";
 
 // --- GET: Obtener lista y contador ---
 export async function GET(req: Request) {

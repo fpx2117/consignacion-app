@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import type { OnlineStoreSettings } from "@/lib/types";
-import { getStoreCSSVariables } from "@/lib/store-theme-utils";
+import { getStoreCSSVariables } from "@/lib/storefront/store-theme-utils";
 
 type StoreThemeWrapperProps = {
   settings: OnlineStoreSettings;

@@ -9,7 +9,7 @@ import {
   TipoMovimientoStock,
 } from "@prisma/client";
 import { checkFeature } from "@/lib/subscriptions/require-subscription";
-import { buildSucursalWhere, isGlobalSucursalView } from "@/lib/sucursalScope";
+import { buildSucursalWhere, isGlobalSucursalView } from "@/lib/security/sucursalScope";
 
 // âœ… Imports Centralizados de Config y Notificaciones
 import { obtenerConfiguracionGlobal } from "@/lib/config";

@@ -6,14 +6,14 @@ import { prisma } from "@/lib/prisma";
 import { Prisma, TipoMovimientoStock, MotivoMovimientoStock } from "@prisma/client";
 import { requireAuth, requireRole } from "@/lib/auth/require-auth";
 import { updateProductoSchema, type UpdateProductoInput } from "@/lib/validators/producto";
-import { deleteFileSystemImage } from "@/lib/file-utils";
+import { deleteFileSystemImage } from "@/lib/uploads/file-utils";
 
 // Imports del Sistema de Notificaciones
 import { sendNotification } from "@/lib/notificaciones/socket-trigger";
 import { NOTIFICATION_TYPE } from "@/lib/notificaciones/types";
 import { obtenerConfiguracionGlobal } from "@/lib/config";
-import { canAccessSucursalResource, isGlobalSucursalView } from "@/lib/sucursalScope";
-import { calcularDescuentoEfectivo } from "@/lib/descuento-utils";
+import { canAccessSucursalResource, isGlobalSucursalView } from "@/lib/security/sucursalScope";
+import { calcularDescuentoEfectivo } from "@/lib/storefront/descuento-utils";
 
 type RouteParams = { params: Promise<{ id: string }> };
 

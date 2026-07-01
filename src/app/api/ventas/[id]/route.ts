@@ -3,9 +3,9 @@ import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/auth/require-auth";
 import { MotivoMovimientoStock, TipoMovimientoStock } from "@prisma/client";
 import { z } from "zod";
-import { buildSucursalWhere, isGlobalSucursalView } from "@/lib/sucursalScope";
-import { nowAR } from "@/lib/utils-date";
-import { resolveTimezoneForAuth } from "@/lib/get-configured-tz";
+import { buildSucursalWhere, isGlobalSucursalView } from "@/lib/security/sucursalScope";
+import { nowAR } from "@/lib/date-format/utils-date";
+import { resolveTimezoneForAuth } from "@/lib/timezone/get-configured-tz";
 
 const ventaAnulacionSchema = z.object({
   motivo: z.string().trim().min(1).optional(),

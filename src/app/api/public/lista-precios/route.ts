@@ -3,7 +3,7 @@ import {
   getPublicCatalogDataCached,
   PublicCatalogError,
   trackPublicCatalogVisit,
-} from "@/lib/public-catalog";
+} from "@/lib/storefront/public-catalog";
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);

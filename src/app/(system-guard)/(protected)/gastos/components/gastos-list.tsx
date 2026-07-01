@@ -26,9 +26,9 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useTimezone } from "@/hooks/useTimezone";
-import { nowAR } from "@/lib/utils-date";
+import { nowAR } from "@/lib/date-format/utils-date";
 import { cn } from "@/lib/utils";
-import { formatMoney } from "@/lib/utils-format";
+import { formatMoney } from "@/lib/date-format/utils-format";
 
 import { gastosTypography } from "./gastos-typography";
 

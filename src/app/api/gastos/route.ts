@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/auth/require-auth";
-import { isGlobalSucursalView } from "@/lib/sucursalScope";
+import { isGlobalSucursalView } from "@/lib/security/sucursalScope";
 import { EstadoGasto, FrecuenciaGasto } from "@prisma/client";
-import { nowAR, parseDateTimeInputAR } from "@/lib/utils-date";
-import { resolveTimezoneForAuth } from "@/lib/get-configured-tz";
+import { nowAR, parseDateTimeInputAR } from "@/lib/date-format/utils-date";
+import { resolveTimezoneForAuth } from "@/lib/timezone/get-configured-tz";
 
 type GastosRouteDeps = {
     prisma: typeof prisma;

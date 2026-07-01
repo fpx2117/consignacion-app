@@ -1,7 +1,7 @@
 import { ArrowRightLeft, Package } from "lucide-react";
 
 import type { Producto } from "@/lib/types";
-import { formatMoney } from "@/lib/utils-format";
+import { formatMoney } from "@/lib/date-format/utils-format";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";

@@ -1,10 +1,10 @@
 import { redirect } from "next/navigation";
 import { requireAuth } from "@/lib/auth/require-auth";
 import { prisma } from "@/lib/prisma";
-import { SidebarDock, type SidebarUserData } from "@/components/sidebar-dock";
-import { SubscriptionGuard } from "@/components/SubscriptionGuard";
-import { TopBar } from "@/components/top-bar";
-import { GlobalReadonlyGuard } from "@/components/global-readonly-guard";
+import { SidebarDock, type SidebarUserData } from "@/components/layout/sidebar-dock";
+import { SubscriptionGuard } from "@/components/auth/SubscriptionGuard";
+import { TopBar } from "@/components/layout/top-bar";
+import { GlobalReadonlyGuard } from "@/components/auth/global-readonly-guard";
 import { SocketProvider } from "@/providers/socket-provider";
 import { SocketToaster } from "@/providers/socket-toaster";
 import { getActivePlanLimits } from "@/lib/subscriptions/require-subscription";

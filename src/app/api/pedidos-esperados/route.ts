@@ -6,8 +6,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth, requireRole } from "@/lib/auth/require-auth";
 import { createPedidoSchema } from "@/lib/validators/pedidos-esperados";
-import { checkAndUpdateVencidos } from "@/lib/pedidos-esperados";
-import { buildSucursalWhere, isGlobalSucursalView } from "@/lib/sucursalScope";
+import { checkAndUpdateVencidos } from "@/lib/dashboard/pedidos-esperados";
+import { buildSucursalWhere, isGlobalSucursalView } from "@/lib/security/sucursalScope";
 import { EstadoPedidoEsperado, Prisma } from "@prisma/client";
 
 export const dynamic = "force-dynamic";

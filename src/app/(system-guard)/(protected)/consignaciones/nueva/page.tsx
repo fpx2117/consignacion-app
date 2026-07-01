@@ -26,8 +26,8 @@ import { toast } from "sonner";
 import { apiService } from "@/lib/apiService";
 import type { Cliente, Producto } from "@/lib/types";
 
-import { SuccessDialog } from "@/components/success-dialog";
-import { ErrorDialog } from "@/components/error-dialog";
+import { SuccessDialog } from "@/components/feedback/success-dialog";
+import { ErrorDialog } from "@/components/feedback/error-dialog";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";

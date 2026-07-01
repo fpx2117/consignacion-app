@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/auth/require-auth";
-import { recordAuditLog } from "@/lib/audit";
+import { recordAuditLog } from "@/lib/security/audit";
 
 function hasErrorCode(error: unknown, code: string) {
     return typeof error === "object" && error !== null && "code" in error && (error as { code?: unknown }).code === code;

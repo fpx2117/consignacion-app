@@ -39,7 +39,7 @@ async function fetchImageAsBase64(url: string): Promise<string> {
     const localMatch = url.match(/^\/api\/files\/([^/?#]+)$/);
     if (localMatch) {
       const { readFile } = await import("fs/promises");
-      const { resolveUploadFilesystemCandidates } = await import("@/lib/uploads");
+      const { resolveUploadFilesystemCandidates } = await import("@/lib/uploads/uploads");
       const filename = localMatch[1];
       const ext = filename.split(".").pop()?.toLowerCase() ?? "";
       const mimeMap: Record<string, string> = {

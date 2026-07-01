@@ -2,9 +2,9 @@
 
 import * as React from "react";
 import { apiService } from "@/lib/apiService";
-import { TECHNICAL_FALLBACK_TZ } from "@/lib/timezone-constants";
+import { TECHNICAL_FALLBACK_TZ } from "@/lib/timezone/timezone-constants";
 import type { TimezoneSource, Usuario } from "@/lib/types";
-import { formatDate, formatDateTime, formatDateWithOptions } from "@/lib/utils-format";
+import { formatDate, formatDateTime, formatDateWithOptions } from "@/lib/date-format/utils-format";
 
 type TimezoneSession = Pick<
   Usuario,

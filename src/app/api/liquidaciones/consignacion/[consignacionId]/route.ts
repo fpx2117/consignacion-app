@@ -9,7 +9,7 @@ import { TipoMovimientoStock, MotivoMovimientoStock, TipoVenta } from "@prisma/c
 import { obtenerConfiguracionGlobal } from "@/lib/config";
 import { evaluateStockAlert, processNotificationQueue } from "@/lib/notificaciones/stock-alerts";
 import { sendNotification } from "@/lib/notificaciones/socket-trigger";
-import { isGlobalSucursalView } from "@/lib/sucursalScope";
+import { isGlobalSucursalView } from "@/lib/security/sucursalScope";
 
 type RouteParams = {
   params: Promise<{ consignacionId: string }>;

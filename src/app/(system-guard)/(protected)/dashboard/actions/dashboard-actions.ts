@@ -1,9 +1,9 @@
 "use server";
 
 import { requireAuth } from "@/lib/auth/require-auth";
-import { getDashboardKpis, getDashboardTopProductos, getDashboardTopConsignados, getDashboardTendencia } from "@/lib/kpi-logic";
+import { getDashboardKpis, getDashboardTopProductos, getDashboardTopConsignados, getDashboardTendencia } from "@/lib/dashboard/kpi-logic";
 import { prisma } from "@/lib/prisma";
-import { resolveRequestedSucursalId } from "@/lib/sucursalScope";
+import { resolveRequestedSucursalId } from "@/lib/security/sucursalScope";
 import type {
   DashboardPeriod,
   DashboardKpis,

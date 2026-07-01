@@ -11,7 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { formatMoney } from "@/lib/utils-format";
+import { formatMoney } from "@/lib/date-format/utils-format";
 import { DashboardTendencia, DashboardFilter } from "@/lib/types";
 import { useTimezone } from "@/hooks/useTimezone";
 import { TrendingUp, DollarSign, Activity, Calendar, BarChart3 } from "lucide-react";

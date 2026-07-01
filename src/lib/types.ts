@@ -6,7 +6,7 @@ import { AppNotification } from "@/types/notification";
     DEFINICIONES BÁSICAS
 ========================= */
 export type ID = number;
-import type { StorefrontContent } from "@/lib/storefront-content";
+import type { StorefrontContent } from "@/lib/storefront/storefront-content";
 
 export type ISODateString = string;
 export type Money = number;

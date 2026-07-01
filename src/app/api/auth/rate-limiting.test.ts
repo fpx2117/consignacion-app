@@ -7,8 +7,8 @@ import {
   AUTH_THROTTLED_MESSAGE,
   FORGOT_PASSWORD_SAFE_MESSAGE,
   RESET_PASSWORD_INVALID_MESSAGE,
-} from "@/lib/auth-security-monitor";
-import type { AuthRateLimitDecision } from "@/lib/auth-rate-limit";
+} from "@/lib/security/auth-security-monitor";
+import type { AuthRateLimitDecision } from "@/lib/security/auth-rate-limit";
 
 function buildAllowedDecision(endpoint: AuthRateLimitDecision["endpoint"]): AuthRateLimitDecision {
   return {

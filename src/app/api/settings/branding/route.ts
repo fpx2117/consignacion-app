@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { revalidateTag } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireAuth, requireRole } from "@/lib/auth/require-auth";
-import type { StorefrontContent } from "@/lib/storefront-content";
+import type { StorefrontContent } from "@/lib/storefront/storefront-content";
 
 type BrandingBannerInput = {
   bannerData?: string;

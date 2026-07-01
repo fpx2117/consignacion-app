@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { clearAuthCookie, getAuthTokenFromCookies, verifyUserJwt } from "@/lib/auth/core";
 import { prisma } from "@/lib/prisma";
-import { recordAuditLog } from "@/lib/audit";
+import { recordAuditLog } from "@/lib/security/audit";
 
 export async function POST() {
   const token = await getAuthTokenFromCookies();

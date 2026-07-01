@@ -8,10 +8,10 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
-import { TimezoneMigrationDialog } from "@/components/timezone-migration-dialog";
-import { TimezoneSelector } from "@/components/timezone-selector";
+import { TimezoneMigrationDialog } from "@/components/timezone/timezone-migration-dialog";
+import { TimezoneSelector } from "@/components/timezone/timezone-selector";
 import { apiService } from "@/lib/apiService";
-import { TECHNICAL_FALLBACK_TZ } from "@/lib/timezone-constants";
+import { TECHNICAL_FALLBACK_TZ } from "@/lib/timezone/timezone-constants";
 import type { Configuracion, ProfileTimezone, TimezoneSource } from "@/lib/types";
 import { useTimezone } from "@/hooks/useTimezone";
 

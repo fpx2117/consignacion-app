@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/auth/require-auth";
-import { nowAR } from "@/lib/utils-date";
-import { resolveTimezoneForAuth } from "@/lib/get-configured-tz";
+import { nowAR } from "@/lib/date-format/utils-date";
+import { resolveTimezoneForAuth } from "@/lib/timezone/get-configured-tz";
 
 type CerrarCajaBody = {
   sesionId?: number;
