@@ -4,9 +4,49 @@
 // Cachea el worker para reutilizarlo en toda la vida del proceso.
 
 import { createWorker, type Worker } from "tesseract.js";
+import path from "path";
+import { existsSync } from "fs";
 
 let worker: Worker | null = null;
 let initializing: Promise<Worker> | null = null;
+
+/**
+ * Resuelve el path al worker-script de tesseract.js.
+ *
+ * En Railway, Next.js bundlea el código y __dirname no apunta a node_modules,
+ * así que primero intentamos resolver desde process.cwd() (que en Railway es /app).
+ */
+function resolveWorkerPath(): string {
+  // 1. Ruta desde process.cwd() — funciona en Railway runtime (/app/node_modules/...)
+  const cwdPath = path.join(
+    process.cwd(),
+    "node_modules",
+    "tesseract.js",
+    "src",
+    "worker-script",
+    "node",
+    "index.js"
+  );
+  if (existsSync(cwdPath)) {
+    return cwdPath;
+  }
+  // 2. Fallback: resolver relativo a este archivo (src/lib/ocr/tesseract-service.ts)
+  return path.join(
+    __dirname,
+    "..",
+    "..",
+    "..",
+    "..",
+    "node_modules",
+    "tesseract.js",
+    "src",
+    "worker-script",
+    "node",
+    "index.js"
+  );
+}
+
+const WORKER_PATH = resolveWorkerPath();
 
 export async function initTesseractWorker(): Promise<Worker> {
   if (worker) return worker;
@@ -14,7 +54,9 @@ export async function initTesseractWorker(): Promise<Worker> {
 
   initializing = (async () => {
     console.log("[Tesseract] Inicializando worker (idioma: spa)...");
+    console.log("[Tesseract] Worker path:", WORKER_PATH);
     const newWorker = await createWorker("spa", 1, {
+      workerPath: WORKER_PATH,
       logger: (message) => {
         if (message.status === "loading tesseract core") {
           console.log("[Tesseract] Cargando core WASM...");
