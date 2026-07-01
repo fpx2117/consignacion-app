@@ -367,6 +367,7 @@ export function CatalogClient({
                 id: -(i + 1),
                 nombre: (s.title || "Destacados"),
                 isVirtual: true as const,
+                subcategorias: [] as Array<{ id: number; nombre: string }>,
                 productIds: s.productIds,
                 displayMode: (s.displayMode || "slider-static") as "slider-auto" | "slider-static" | "grid",
             }))
@@ -506,7 +507,7 @@ export function CatalogClient({
                     {showCategories && (
                         <div className="hidden lg:block pt-6">
                             <DesktopCategorySidebar
-                                categories={allCategories as any}
+                                categories={allCategories}
                                 allProducts={products}
                                 selectedCategory={selectedCategory}
                                 selectedSubcategory={selectedSubcategory}
@@ -550,7 +551,7 @@ export function CatalogClient({
                         {showCategories && (
                             <div className="lg:hidden">
                                 <CategoryTabs
-                                    categories={allCategories as any}
+                                    categories={allCategories}
                                     selectedCategory={selectedCategory}
                                     onSelectCategory={handleSelectCategory}
                                     className="mt-2"
@@ -669,8 +670,8 @@ export function CatalogClient({
                                 /* Vista "todas las categorías" */
                                 <>
                                     {productsByCategory.map(({ category, products: catProducts, total }) => {
-                                        const isVirtual = (category as any).isVirtual;
-                                        const mode = (category as any).displayMode || "slider-static";
+                                        const isVirtual = "isVirtual" in category && category.isVirtual;
+                                        const mode = ("displayMode" in category && category.displayMode) || "slider-static";
                                         const isSlider = isVirtual && mode !== "grid";
                                         const isAuto = mode === "slider-auto";
                                         return (

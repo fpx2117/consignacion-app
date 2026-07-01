@@ -5,17 +5,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
     Image as ImageIcon, Palette, Trash2, FileText, Type, Check,
-    ChevronsUpDown, Upload, Camera, MapPin, Phone, Store, X, Layout
+    ChevronsUpDown, Upload, Camera, MapPin, Phone, Store, X
 } from "lucide-react";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import type { BrandingPreviewSettings } from "./types";
 
@@ -549,8 +542,8 @@ export function BrandingTab({ branding, setBranding, handleImageUpload }: Brandi
                     <div className="space-y-1.5">
                         <Label className="text-xs font-medium text-muted-foreground">Horarios de atención</Label>
                         <Input
-                            value={(branding as any).openingHours || ""}
-                            onChange={(e) => setBranding({ ...branding, openingHours: e.target.value } as any)}
+                            value={branding.openingHours || ""}
+                            onChange={(e) => setBranding({ ...branding, openingHours: e.target.value })}
                             placeholder="Lun a Vie 9-18hs / Sáb 9-13hs"
                             className="h-10 rounded-lg border-border/60 text-sm"
                         />
@@ -558,8 +551,8 @@ export function BrandingTab({ branding, setBranding, handleImageUpload }: Brandi
                     <div className="space-y-1.5">
                         <Label className="text-xs font-medium text-muted-foreground">Dirección / Zona de entrega</Label>
                         <Input
-                            value={(branding as any).addressText || ""}
-                            onChange={(e) => setBranding({ ...branding, addressText: e.target.value } as any)}
+                            value={branding.addressText || ""}
+                            onChange={(e) => setBranding({ ...branding, addressText: e.target.value })}
                             placeholder="Palermo, CABA"
                             className="h-10 rounded-lg border-border/60 text-sm"
                         />
@@ -567,8 +560,8 @@ export function BrandingTab({ branding, setBranding, handleImageUpload }: Brandi
                     <div className="space-y-1.5">
                         <Label className="text-xs font-medium text-muted-foreground">Descripción corta</Label>
                         <Input
-                            value={(branding as any).description || ""}
-                            onChange={(e) => setBranding({ ...branding, description: e.target.value } as any)}
+                            value={branding.description || ""}
+                            onChange={(e) => setBranding({ ...branding, description: e.target.value })}
                             placeholder="Breve descripción de tu comercio"
                             className="h-10 rounded-lg border-border/60 text-sm"
                         />

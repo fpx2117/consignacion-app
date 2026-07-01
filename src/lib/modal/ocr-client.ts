@@ -22,6 +22,15 @@ const MODAL_PROXY_SECRET = process.env.MODAL_PROXY_SECRET;
 const MODAL_MODEL_NAME = process.env.MODAL_MODEL_NAME || "Qwen/Qwen3.6-35B-A3B";
 const OCR_TIMEOUT_MS = Number(process.env.OCR_TIMEOUT_MS) || 45000;
 const OCR_MAX_TOKENS = Number(process.env.OCR_MAX_TOKENS) || 4096;
+// El contenedor de Modal escala a 0 tras estar inactivo (scaledown_window) y un
+// modelo de 35B en GPU puede tardar 1-3 minutos en levantar de nuevo. Mientras
+// arranca, Modal devuelve 503 — hay que reintentar, no fallar en el primer intento.
+const OCR_COLD_START_MAX_RETRIES = Number(process.env.OCR_COLD_START_MAX_RETRIES) || 8;
+const OCR_COLD_START_RETRY_DELAY_MS = Number(process.env.OCR_COLD_START_RETRY_DELAY_MS) || 15000;
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
 
 export type ModalOcrItem = {
   rawDescription: string;
@@ -135,59 +144,73 @@ export async function procesarFacturaConModal(input: {
   }
 
   const content = await construirContenidoParaModelo(input.buffer, input.mimeType);
+  const endpoint = `${MODAL_OCR_ENDPOINT_URL.replace(/\/$/, "")}/v1/chat/completions`;
 
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), OCR_TIMEOUT_MS);
+  for (let intento = 0; intento <= OCR_COLD_START_MAX_RETRIES; intento++) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), OCR_TIMEOUT_MS);
 
-  try {
-    const response = await fetch(`${MODAL_OCR_ENDPOINT_URL.replace(/\/$/, "")}/v1/chat/completions`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Modal-Key": MODAL_PROXY_KEY,
-        "Modal-Secret": MODAL_PROXY_SECRET,
-      },
-      body: JSON.stringify({
-        model: MODAL_MODEL_NAME,
-        temperature: 0,
-        max_tokens: OCR_MAX_TOKENS,
-        messages: [
-          { role: "system", content: SYSTEM_PROMPT },
-          { role: "user", content },
-        ],
-        response_format: {
-          type: "json_schema",
-          json_schema: {
-            name: "factura_extraida",
-            schema: RESPONSE_JSON_SCHEMA,
-            strict: true,
-          },
+    try {
+      const response = await fetch(endpoint, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Modal-Key": MODAL_PROXY_KEY,
+          "Modal-Secret": MODAL_PROXY_SECRET,
         },
-      }),
-      signal: controller.signal,
-    });
+        body: JSON.stringify({
+          model: MODAL_MODEL_NAME,
+          temperature: 0,
+          max_tokens: OCR_MAX_TOKENS,
+          messages: [
+            { role: "system", content: SYSTEM_PROMPT },
+            { role: "user", content },
+          ],
+          response_format: {
+            type: "json_schema",
+            json_schema: {
+              name: "factura_extraida",
+              schema: RESPONSE_JSON_SCHEMA,
+              strict: true,
+            },
+          },
+        }),
+        signal: controller.signal,
+      });
 
-    if (!response.ok) {
-      const bodyText = await response.text().catch(() => "");
-      throw new ModalOcrRequestError(
-        `Modal respondió ${response.status}: ${bodyText.slice(0, 500)}`,
-        response.status,
-      );
-    }
+      if (response.status === 503 && intento < OCR_COLD_START_MAX_RETRIES) {
+        console.log(`[Modal] 503 (cold start), reintentando en ${OCR_COLD_START_RETRY_DELAY_MS}ms (intento ${intento + 1}/${OCR_COLD_START_MAX_RETRIES})`);
+        await sleep(OCR_COLD_START_RETRY_DELAY_MS);
+        continue;
+      }
 
-    const json = (await response.json()) as unknown;
-    return parseChatCompletionResponse(json);
-  } catch (error) {
-    if (error instanceof DOMException && error.name === "AbortError") {
-      throw new ModalOcrTimeoutError(`Modal no respondió dentro de ${OCR_TIMEOUT_MS}ms`);
+      if (!response.ok) {
+        const bodyText = await response.text().catch(() => "");
+        throw new ModalOcrRequestError(
+          `Modal respondió ${response.status}: ${bodyText.slice(0, 500)}`,
+          response.status,
+        );
+      }
+
+      const json = (await response.json()) as unknown;
+      return parseChatCompletionResponse(json);
+    } catch (error) {
+      if (error instanceof DOMException && error.name === "AbortError") {
+        throw new ModalOcrTimeoutError(`Modal no respondió dentro de ${OCR_TIMEOUT_MS}ms`);
+      }
+      if (error instanceof ModalOcrRequestError || error instanceof ModalOcrConfigError) {
+        throw error;
+      }
+      throw new ModalOcrRequestError(error instanceof Error ? error.message : "Error desconocido llamando a Modal");
+    } finally {
+      clearTimeout(timeout);
     }
-    if (error instanceof ModalOcrRequestError || error instanceof ModalOcrConfigError) {
-      throw error;
-    }
-    throw new ModalOcrRequestError(error instanceof Error ? error.message : "Error desconocido llamando a Modal");
-  } finally {
-    clearTimeout(timeout);
   }
+
+  throw new ModalOcrRequestError(
+    `Modal siguió respondiendo 503 (cold start) tras ${OCR_COLD_START_MAX_RETRIES} reintentos`,
+    503,
+  );
 }
 
 async function construirContenidoParaModelo(buffer: Buffer, mimeType: string): Promise<ChatContent[]> {

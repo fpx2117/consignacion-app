@@ -2,6 +2,7 @@
 import { Prisma } from "@prisma/client";
 import { NextRequest, NextResponse } from "next/server";
 import puppeteer, { Browser } from "puppeteer";
+import { getChromiumExecutablePath } from "@/lib/chromium/resolve-executable-path";
 import { requireAuth } from "@/lib/auth/require-auth";
 import { resolveTimezone } from "@/lib/timezone/get-configured-tz";
 import { prisma } from "@/lib/prisma";
@@ -251,6 +252,7 @@ export async function GET(
         // 4. Puppeteer PDF
         browser = await puppeteer.launch({
             headless: true,
+            executablePath: getChromiumExecutablePath(),
             args: ["--no-sandbox", "--disable-setuid-sandbox"],
         });
 

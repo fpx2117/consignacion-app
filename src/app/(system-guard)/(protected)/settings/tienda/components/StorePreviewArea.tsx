@@ -11,25 +11,11 @@ import { ProductSection } from "@/app/lista/components/product-section";
 import { DesktopCategorySidebar } from "@/app/lista/components/desktop-category-sidebar";
 import { StoreFooter } from "@/app/lista/components/store-footer";
 import { getThemeStyles } from "@/app/lista/lib/theme-utils";
+import type { PublicCatalogConfig, PublicCatalogProduct, PublicCatalogCategory } from "@/lib/types";
 import type { BrandingPreviewSettings, StoreLayoutConfig } from "./types";
 
-type PreviewProduct = {
-    id: number;
-    nombre: string;
-    precioVenta: number;
-    costoConsignacion?: number;
-    imagenUrl: string;
-    stockDisponibleUnits: number;
-    categoriaId: number;
-    subcategoriaId: number | null;
-    categoria?: { id: number; nombre: string };
-};
-
-type PreviewCategory = {
-    id: number;
-    nombre: string;
-    subcategorias: Array<{ id: number; nombre: string }>;
-};
+type PreviewProduct = PublicCatalogProduct;
+type PreviewCategory = PublicCatalogCategory;
 
 type StorePreviewProps = {
     branding: BrandingPreviewSettings;
@@ -110,7 +96,7 @@ export function StorePreviewArea({ branding, config, mode }: StorePreviewProps) 
     const [selectedSubcategory, setSelectedSubcategory] = React.useState<number | null>(null);
 
     // Construir config falso compatible con PublicCatalogConfig
-    const mergedConfig: any = {
+    const mergedConfig: PublicCatalogConfig = {
         sucursalId: 1,
         businessName: branding.businessName || branding.storeName || "Mi Tienda",
         primaryColor: branding.primaryColor || "#007AFF",
@@ -131,22 +117,22 @@ export function StorePreviewArea({ branding, config, mode }: StorePreviewProps) 
         storefrontContent: branding.storefrontContent || null,
         onlineStoreConfig: {
             storeName: branding.businessName || branding.storeName || "Mi Tienda",
-            openingHours: (branding as any).openingHours || "",
-            addressText: (branding as any).addressText || "",
-            description: (branding as any).description || "",
+            openingHours: branding.openingHours || "",
+            addressText: branding.addressText || "",
+            description: branding.description || "",
             theme: {
                 primaryColor: branding.primaryColor || "#007AFF",
                 secondaryColor: branding.secondaryColor || "#EAF3FF",
-                backgroundColor: (branding as any).backgroundColor || "#F5F6F8",
-                surfaceColor: (branding as any).surfaceColor || "#FFFFFF",
-                textColor: (branding as any).textColor || "#0F172A",
-                mutedTextColor: (branding as any).mutedTextColor || "#8A8F98",
-                whatsappColor: (branding as any).whatsappColor || "#25D366",
-                mode: (branding as any).mode || "light",
-                borderRadius: (branding as any).borderRadius || "2xl",
-                shadow: (branding as any).shadow || "soft",
-                cardStyle: (branding as any).cardStyle || "minimal",
-                buttonStyle: (branding as any).buttonStyle || "pill",
+                backgroundColor: branding.backgroundColor || "#F5F6F8",
+                surfaceColor: branding.surfaceColor || "#FFFFFF",
+                textColor: branding.textColor || "#0F172A",
+                mutedTextColor: branding.mutedTextColor || "#8A8F98",
+                whatsappColor: branding.whatsappColor || "#25D366",
+                mode: branding.mode || "light",
+                borderRadius: branding.borderRadius || "2xl",
+                shadow: branding.shadow || "soft",
+                cardStyle: branding.cardStyle || "minimal",
+                buttonStyle: branding.buttonStyle || "pill",
             },
             catalog: {
                 showCategories: true,
@@ -157,6 +143,8 @@ export function StorePreviewArea({ branding, config, mode }: StorePreviewProps) 
                 productLayout: config.productLayout,
                 maxProductsPerSection: config.maxProductsPerSection,
                 addButtonPosition: config.addButtonPosition,
+                featuredProductIds: [],
+                featuredSections: [],
             },
             promotions: { enabled: false, items: [] },
             cart: {
@@ -240,7 +228,7 @@ export function StorePreviewArea({ branding, config, mode }: StorePreviewProps) 
                     <MobileStatusBar />
                 </div>
             )}
-            {!isMobile && <DesktopBrowserBar storeName={mergedConfig.businessName} />}
+            {!isMobile && <DesktopBrowserBar storeName={mergedConfig.businessName ?? undefined} />}
 
             {/* ─── Scrollable Store Content ─── */}
             <div className={cn("flex-1 overflow-y-auto overflow-x-hidden", pageBgClass)} style={{ scrollBehavior: "smooth" }}>
@@ -252,8 +240,8 @@ export function StorePreviewArea({ branding, config, mode }: StorePreviewProps) 
                         {!isMobile && (
                             <div className="hidden lg:block pt-6">
                                 <DesktopCategorySidebar
-                                    categories={categories as any}
-                                    allProducts={products as any}
+                                    categories={categories}
+                                    allProducts={products}
                                     selectedCategory={selectedCategory}
                                     selectedSubcategory={selectedSubcategory}
                                     onSelectCategory={(id) => { setSelectedCategory(id); setSelectedSubcategory(null); }}
@@ -276,10 +264,10 @@ export function StorePreviewArea({ branding, config, mode }: StorePreviewProps) 
                             {/* CategoryTabs (mobile only) */}
                             {isMobile && (
                                 <CategoryTabs
-                                    categories={categories as any}
+                                    categories={categories}
                                     selectedCategory={selectedCategory}
                                     onSelectCategory={(id) => { setSelectedCategory(id); setSelectedSubcategory(null); }}
-                                    allProducts={products as any}
+                                    allProducts={products}
                                     className="mt-2"
                                 />
                             )}
@@ -290,8 +278,8 @@ export function StorePreviewArea({ branding, config, mode }: StorePreviewProps) 
                                     <ProductSection
                                         title={searchTerm ? `"${searchTerm}"` : categories.find(c => c.id === selectedCategory)?.nombre || "Productos"}
                                         count={filteredProducts.length}
-                                        products={filteredProducts as any}
-                                        config={mergedConfig as any}
+                                        products={filteredProducts}
+                                        config={mergedConfig}
                                         viewMode="grid"
                                         isConsigne={false}
                                         onAddToCart={() => {}}
@@ -304,8 +292,8 @@ export function StorePreviewArea({ branding, config, mode }: StorePreviewProps) 
                                             key={category.id}
                                             title={category.nombre}
                                             count={catProducts.length}
-                                            products={catProducts as any}
-                                            config={mergedConfig as any}
+                                            products={catProducts}
+                                            config={mergedConfig}
                                             viewMode="grid"
                                             isConsigne={false}
                                             onAddToCart={() => {}}
@@ -319,7 +307,7 @@ export function StorePreviewArea({ branding, config, mode }: StorePreviewProps) 
 
                             {/* Footer */}
                             <div className="mt-12">
-                                <StoreFooter config={mergedConfig as any} />
+                                <StoreFooter config={mergedConfig} />
                             </div>
                         </div>
                     </div>

@@ -26,6 +26,7 @@ import { apiService } from "@/lib/apiService";
 import { createDefaultStorefrontContent } from "@/lib/storefront/storefront-content";
 import { TIENDA_TUTORIAL } from "@/lib/tutorial-content";
 import type { Categoria } from "@/lib/types";
+import type { BrandingSettings as ApiBrandingSettings } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 import { Button } from "@/components/ui/button";
@@ -63,6 +64,21 @@ type BrandingSettings = {
   isBannerSlider?: boolean;
   banners?: Array<{ bannerData: string; bannerMime: string }>;
   storefrontContent?: ReturnType<typeof createDefaultStorefrontContent> | null;
+  // Online Store — Identidad
+  description?: string;
+  openingHours?: string;
+  addressText?: string;
+  // Online Store — Tema
+  mode?: "light" | "dark" | "system";
+  borderRadius?: "sm" | "md" | "lg" | "xl" | "2xl";
+  shadow?: "none" | "soft" | "medium" | "strong";
+  cardStyle?: "minimal" | "elevated" | "bordered";
+  buttonStyle?: "rounded" | "pill" | "soft-square";
+  backgroundColor?: string;
+  surfaceColor?: string;
+  textColor?: string;
+  mutedTextColor?: string;
+  whatsappColor?: string;
   [key: string]: unknown;
 };
 
@@ -300,7 +316,7 @@ export default function TiendaSettingsPage() {
           whatsappButtonText: (olsCart.whatsappButtonText as string | undefined) ?? (configRes as Record<string, unknown>).whatsappButtonText as string ?? prev.whatsappButtonText,
           desktopLayout: ((olsResponsive.desktopLayout as StoreConfig["desktopLayout"]) ?? (configRes as Record<string, unknown>).desktopLayout as StoreConfig["desktopLayout"] ?? prev.desktopLayout),
           // Sincronizar showCategories con mostrarCategoriasEnHeader
-          mostrarCategoriasEnHeader: (olsCatalog.showCategories as boolean) ?? (configRes as any).mostrarCategoriasEnHeader ?? prev.mostrarCategoriasEnHeader,
+          mostrarCategoriasEnHeader: (olsCatalog.showCategories as boolean) ?? (configRes as Record<string, unknown>).mostrarCategoriasEnHeader as boolean ?? prev.mostrarCategoriasEnHeader,
         }));
       }
 
@@ -346,25 +362,25 @@ export default function TiendaSettingsPage() {
     try {
       // Construir onlineStoreConfig desde branding + config + estado local
       const builtOnlineStoreConfig = {
-        storeName: (branding as any).businessName || branding.storeName || "Mi tienda",
+        storeName: branding.businessName || branding.storeName || "Mi tienda",
         storeLogoUrl: branding.logoUrl || null,
         storeBannerUrl: branding.bannerUrl || null,
-        description: (branding as any).description || "",
-        openingHours: (branding as any).openingHours || "",
-        addressText: (branding as any).addressText || branding.address || "",
+        description: branding.description || "",
+        openingHours: branding.openingHours || "",
+        addressText: branding.addressText || branding.address || "",
         theme: {
           primaryColor: branding.primaryColor || "#007AFF",
           secondaryColor: branding.secondaryColor || "#EAF3FF",
-          backgroundColor: (branding as any).backgroundColor || "#F5F6F8",
-          surfaceColor: (branding as any).surfaceColor || "#FFFFFF",
-          textColor: (branding as any).textColor || "#0F172A",
-          mutedTextColor: (branding as any).mutedTextColor || "#8A8F98",
-          whatsappColor: (branding as any).whatsappColor || "#25D366",
-          mode: (branding as any).mode || "light",
-          borderRadius: (branding as any).borderRadius || "2xl",
-          shadow: (branding as any).shadow || "soft",
-          cardStyle: (branding as any).cardStyle || "minimal",
-          buttonStyle: (branding as any).buttonStyle || "pill",
+          backgroundColor: branding.backgroundColor || "#F5F6F8",
+          surfaceColor: branding.surfaceColor || "#FFFFFF",
+          textColor: branding.textColor || "#0F172A",
+          mutedTextColor: branding.mutedTextColor || "#8A8F98",
+          whatsappColor: branding.whatsappColor || "#25D366",
+          mode: branding.mode || "light",
+          borderRadius: branding.borderRadius || "2xl",
+          shadow: branding.shadow || "soft",
+          cardStyle: branding.cardStyle || "minimal",
+          buttonStyle: branding.buttonStyle || "pill",
         },
         catalog: {
           showCategories: config.mostrarCategoriasEnHeader,
@@ -403,7 +419,7 @@ export default function TiendaSettingsPage() {
       delete cleanBranding.banners;
 
       await Promise.all([
-        apiService.actualizarBranding(cleanBranding as any),
+        apiService.actualizarBranding(cleanBranding as unknown as ApiBrandingSettings),
         apiService.actualizarConfiguracionGeneral({
           tiendaLayout: config.tiendaLayout,
           mostrarCategoriasEnHeader: config.mostrarCategoriasEnHeader,
