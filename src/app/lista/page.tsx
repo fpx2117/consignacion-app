@@ -1,7 +1,14 @@
+import { Inter } from "next/font/google";
 import { CatalogClient } from "./catalog-client";
 import "./storefront.css";
 
 export const dynamic = "force-dynamic";
+
+const inter = Inter({
+  subsets: ["latin"],
+  weight: ["300", "400", "500", "600", "700", "800", "900"],
+  display: "swap",
+});
 
 const THEME_COLORS: Record<string, { primary: string; secondary: string; bg: string; text: string }> = {
   modern:   { primary: "#0891b2", secondary: "#22d3ee", bg: "#f0f9ff", text: "#164e63" },
@@ -109,17 +116,11 @@ export default async function ListaPage({ searchParams }: ListaPageProps) {
 
   return (
     <>
-      <link rel="preconnect" href="https://fonts.googleapis.com" />
-      <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-      <link
-        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap"
-        rel="stylesheet"
-      />
       {/* Preload de imágenes del comercio para carga instantánea */}
       <link rel="preload" as="image" href={`/api/public/branding-media?type=banner&sucursalId=${sucursalId}`} />
       <link rel="preload" as="image" href={`/api/public/branding-media?type=logo&sucursalId=${sucursalId}`} />
       <style dangerouslySetInnerHTML={{ __html: cssVars }} />
-      <div data-theme={themeId} data-store-config="true">
+      <div data-theme={themeId} data-store-config="true" className={inter.className}>
         <CatalogClient
           initialData={null}
           initialError={null}

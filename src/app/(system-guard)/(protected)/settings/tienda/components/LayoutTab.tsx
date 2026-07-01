@@ -2,7 +2,6 @@
 
 import * as React from "react";
 import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -10,9 +9,9 @@ import {
     Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import {
-    Store, Search, Tag, Percent, ShoppingCart, Monitor, Star, Loader2,
-    Image, Eye, DollarSign, Package, Grid, List, ChevronDown, CheckCircle2,
-    Smartphone, MonitorSmartphone, PanelRight, X,
+    Store, Search, Tag, Percent, ShoppingCart, Star,
+    Image, Eye, DollarSign, Package, Grid, ChevronDown, CheckCircle2,
+    Smartphone, X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useSucursalStore } from "@/store/useSucursalStore";
@@ -89,6 +88,15 @@ function SelectCard({ icon: Icon, label, desc, value, onChange, options }: {
 // ─── Editor de secciones destacadas ───
 type FeaturedSection = { title: string; productIds: number[]; displayMode: "slider-auto" | "slider-static" | "grid" };
 
+type ProductoApiRaw = {
+    id: number;
+    nombre: string;
+    stockDisponibleUnits?: number;
+    categoriaId?: number | null;
+    categoria?: { nombre?: string } | null;
+};
+type ProductosApiResponse = ProductoApiRaw[] | { data?: ProductoApiRaw[]; productos?: ProductoApiRaw[] };
+
 function FeaturedSectionsEditor({ sections, onChange }: { sections: FeaturedSection[]; onChange: (s: FeaturedSection[]) => void }) {
     const [products, setProducts] = React.useState<Array<{ id: number; nombre: string; stock: number; categoriaId: number | null; categoriaNombre: string }>>([]);
     const [loaded, setLoaded] = React.useState(false);
@@ -98,9 +106,9 @@ function FeaturedSectionsEditor({ sections, onChange }: { sections: FeaturedSect
         setLoaded(true); // marcar como cargado para evitar loops
         fetch("/api/productos?sucursalId=0")
             .then(r => r.ok ? r.json() : [])
-            .then((res: any) => {
+            .then((res: ProductosApiResponse) => {
                 const list = Array.isArray(res) ? res : (res?.data || res?.productos || []);
-                setProducts(list.map((p: any) => ({
+                setProducts(list.map((p) => ({
                     id: p.id, nombre: p.nombre,
                     stock: p.stockDisponibleUnits ?? 0,
                     categoriaId: p.categoriaId ?? null,
@@ -172,7 +180,7 @@ function SectionEditor({ section, products, onUpdate, onToggle, onRemove }: {
                     <Input value={section.title} onChange={e => onUpdate({ title: e.target.value })} placeholder="Nombre de la sección" className="h-7 text-sm border-0 bg-transparent px-1 focus-visible:ring-0 font-semibold flex-1" onClick={e => e.stopPropagation()} />
                 </button>
                 <Badge variant="secondary" className="text-[10px] h-4 px-1.5 rounded-full flex-shrink-0">{section.productIds.length}</Badge>
-                <Select value={section.displayMode || "slider-static"} onValueChange={(v) => onUpdate({ displayMode: v as any })}>
+                <Select value={section.displayMode || "slider-static"} onValueChange={(v) => onUpdate({ displayMode: v as FeaturedSection["displayMode"] })}>
                     <SelectTrigger className="h-7 w-24 text-[10px]"><SelectValue /></SelectTrigger>
                     <SelectContent>
                         <SelectItem value="slider-auto">Slider auto</SelectItem>
@@ -296,7 +304,7 @@ export function LayoutTab({ config, setConfig }: LayoutTabProps) {
 
                     <SelectCard icon={Grid} label="Layout de productos" desc="Cómo se ordenan las tarjetas"
                         value={config.productLayout}
-                        onChange={(v) => setConfig({ ...config, productLayout: v as any })}
+                        onChange={(v) => setConfig({ ...config, productLayout: v as StoreLayoutConfig["productLayout"] })}
                         options={[
                             { value: "grid", label: "Grilla 2 cols" },
                             { value: "horizontal", label: "Carrusel horizontal" },
@@ -318,7 +326,7 @@ export function LayoutTab({ config, setConfig }: LayoutTabProps) {
 
                     <SelectCard icon={ShoppingCart} label="Botón agregar" desc="Posición del botón + en la tarjeta"
                         value={config.addButtonPosition}
-                        onChange={(v) => setConfig({ ...config, addButtonPosition: v as any })}
+                        onChange={(v) => setConfig({ ...config, addButtonPosition: v as StoreLayoutConfig["addButtonPosition"] })}
                         options={[
                             { value: "floating", label: "Sobre la imagen" },
                             { value: "below", label: "Debajo del producto" },
@@ -334,7 +342,7 @@ export function LayoutTab({ config, setConfig }: LayoutTabProps) {
                 <div className="space-y-2">
                     <SelectCard icon={Smartphone} label="Tipo de carrito" desc="Cómo se muestra en el teléfono"
                         value={config.cartDisplayMode}
-                        onChange={(v) => setConfig({ ...config, cartDisplayMode: v as any })}
+                        onChange={(v) => setConfig({ ...config, cartDisplayMode: v as StoreLayoutConfig["cartDisplayMode"] })}
                         options={[
                             { value: "bottom-sheet", label: "Bottom sheet" },
                             { value: "modal", label: "Modal centrado" },

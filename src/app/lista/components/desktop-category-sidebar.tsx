@@ -45,8 +45,8 @@ export function DesktopCategorySidebar({
     }, [allProducts]);
 
     // Virtuales siempre visibles, reales solo con productos
-    const activeCategories = categories.filter((c: any) => {
-        if (c.isVirtual) return true;
+    const activeCategories = categories.filter((c) => {
+        if ("isVirtual" in c && c.isVirtual) return true;
         return (categoryCounts[c.id] || 0) > 0;
     });
 
@@ -76,7 +76,9 @@ export function DesktopCategorySidebar({
 
             {/* Categorías con subcategorías expandibles */}
             {activeCategories.map((cat) => {
-                const count = (cat as any).isVirtual ? ((cat as any).productIds?.length || 0) : (categoryCounts[cat.id] || 0);
+                const count = ("isVirtual" in cat && cat.isVirtual && "productIds" in cat)
+                    ? ((cat.productIds as number[] | undefined)?.length || 0)
+                    : (categoryCounts[cat.id] || 0);
                 const isActive = selectedCategory === cat.id;
                 const hasSubs = cat.subcategorias && cat.subcategorias.length > 0;
                 const activeSubs = hasSubs

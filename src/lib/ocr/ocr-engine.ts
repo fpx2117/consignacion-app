@@ -13,11 +13,11 @@
 //   - /usr/bin/chromium, /usr/bin/chromium-browser, /usr/bin/google-chrome
 
 import path from "path";
-import { existsSync } from "fs";
 import { writeFile, rm } from "fs/promises";
 import os from "os";
 import crypto from "crypto";
 import sharp from "sharp";
+import { getChromiumExecutablePath } from "@/lib/chromium/resolve-executable-path";
 
 const IMAGE_MIME_TYPES = [
   "image/png",
@@ -50,23 +50,11 @@ export async function preprocesarImagen(buffer: Buffer): Promise<Buffer> {
 }
 
 // ─── Puppeteer / Chromium launcher (Railway-safe) ────────────────────
-
-function getChromiumExecutablePath(): string | undefined {
-  const candidates = [
-    process.env.PUPPETEER_EXECUTABLE_PATH,
-    "/usr/bin/chromium",
-    "/usr/bin/chromium-browser",
-    "/usr/bin/google-chrome",
-  ].filter(Boolean) as string[];
-
-  const found = candidates.find((cand) => existsSync(cand));
-  if (found) {
-    console.log("[OCR] Chromium resuelto en:", found);
-  } else {
-    console.warn("[OCR] No se encontró Chromium en ninguna ruta conocida");
-  }
-  return found;
-}
+// Estos flags extra (--single-process, --disable-gpu, etc.) son específicos para
+// el caso de uso de este motor (rasterizar una página de PDF a imagen para OCR).
+// Los generadores de reportes PDF (src/app/ver/**) NO deben reusar esta función:
+// --single-process es inestable con Page.pdf() y puede colgar/cerrar el target.
+// Ellos resuelven el executablePath por su cuenta con getChromiumExecutablePath().
 
 export async function lanzarChromium() {
   const executablePath = getChromiumExecutablePath();

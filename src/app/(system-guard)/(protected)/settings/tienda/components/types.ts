@@ -47,6 +47,11 @@ export type BrandingPreviewSettings = {
   addressText?: string;
   description?: string;
   // Online Store — Tema
+  backgroundColor?: string;
+  surfaceColor?: string;
+  textColor?: string;
+  mutedTextColor?: string;
+  whatsappColor?: string;
   mode?: "light" | "dark" | "system";
   borderRadius?: "sm" | "md" | "lg" | "xl" | "2xl";
   shadow?: "none" | "soft" | "medium" | "strong";

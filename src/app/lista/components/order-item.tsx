@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Image from "next/image";
 import { Minus, Plus, Trash2 } from "lucide-react";
 import type { CatalogCartItem } from "@/lib/types";
 
@@ -31,12 +32,14 @@ export function OrderItem({
     <div className={`flex items-center gap-3 py-3.5 ${className}`}>
       {/* Miniatura */}
       {showImage && (
-        <div className="w-14 h-14 rounded-xl overflow-hidden flex-shrink-0 bg-gray-100">
+        <div className="relative w-14 h-14 rounded-xl overflow-hidden flex-shrink-0 bg-gray-100">
           {item.imagenUrl ? (
-            <img
+            <Image
               src={item.imagenUrl}
               alt={item.nombre}
-              className="w-full h-full object-cover"
+              fill
+              sizes="56px"
+              className="object-cover"
             />
           ) : (
             <div className="w-full h-full flex flex-col items-center justify-center text-gray-400 text-[9px] text-center leading-tight px-1">

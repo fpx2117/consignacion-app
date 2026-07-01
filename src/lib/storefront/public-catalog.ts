@@ -3,7 +3,7 @@ import { unstable_cache } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { registerCatalogVisit } from "@/lib/analytics/catalog-visit";
 import { normalizeStorefrontContent } from "@/lib/storefront/storefront-content";
-import type { PublicCatalogData } from "@/lib/types";
+import type { PublicCatalogData, OnlineStoreSettings } from "@/lib/types";
 import { calcularDescuentoEfectivo } from "@/lib/storefront/descuento-utils";
 
 function readOptionalString(record: Record<string, unknown> | null | undefined, key: string) {
@@ -180,7 +180,7 @@ export async function getPublicCatalogDataRaw(sucursalId: number | null): Promis
       storefrontContent: normalizeStorefrontContent(brandingExtra?.storefrontContent, {
         storeName: config.sucursal.branding?.businessName || config.sucursal.nombre,
       }),
-      onlineStoreConfig: (storeSettings?.onlineStoreConfig as any) ?? null,
+      onlineStoreConfig: (storeSettings?.onlineStoreConfig as unknown as OnlineStoreSettings | undefined) ?? null,
     },
   };
 
