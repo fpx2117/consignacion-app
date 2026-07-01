@@ -1,26 +1,26 @@
 // src/app/api/facturas-proveedor/[id]/process/route.ts
-// Fase 4: dispara el procesamiento OCR en Modal.com para una factura ya subida.
-// El backend lee el archivo del disco local (ya está en su poder, no hace falta que
-// Modal lo descargue) y le manda los bytes directo al endpoint de Qwen. Modal sólo
-// extrae texto/items; el backend corre el matching por capas (matching-engine.ts)
-// contra el catálogo de la sucursal y deja la factura en REQUIERE_REVISION. Ningún
-// match, por más "seguro" que sea, actualiza stock o costo acá — eso ocurre recién
-// al confirmar (endpoints /items/:id/confirm, /items/:id/create-product).
+// Fase 4: dispara la extracción IA (OpenRouter) para una factura ya subida. El
+// backend extrae texto localmente (CPU, ver extraer-texto-factura.ts) y le manda
+// sólo texto a OpenRouter — nunca el archivo. OpenRouter sólo extrae texto/items;
+// el backend corre el matching por capas (matching-engine.ts) contra el catálogo
+// de la sucursal y deja la factura en REQUIERE_REVISION. Ningún match, por más
+// "seguro" que sea, actualiza stock o costo acá — eso ocurre recién al confirmar
+// (endpoints /items/:id/confirm, /items/:id/create-product).
 
 import { NextRequest, NextResponse } from "next/server";
 import { readFile } from "fs/promises";
 import path from "path";
 import { prisma } from "@/lib/prisma";
-import { EstadoFacturaProveedor } from "@prisma/client";
+import { EstadoFacturaProveedor, Prisma } from "@prisma/client";
 import { requireAuth, requireRole } from "@/lib/auth/require-auth";
 import { canAccessSucursalResource } from "@/lib/security/sucursalScope";
 import { getFacturaProveedorStorageDir } from "@/lib/uploads/uploads";
 import {
-  procesarFacturaConModal,
-  ModalOcrConfigError,
-  ModalOcrRequestError,
-  ModalOcrTimeoutError,
-} from "@/lib/modal/ocr-client";
+  procesarFacturaConIA,
+  AiExtractionConfigError,
+  AiExtractionRequestError,
+  AiExtractionTimeoutError,
+} from "@/lib/ai/invoice-ai-parser";
 import { construirContextoMatching, matchearItem } from "@/lib/ocr/matching-engine";
 import { normalizarProducto } from "@/lib/ocr/normalizar-producto";
 
@@ -66,7 +66,7 @@ export async function POST(
     const filePath = path.join(getFacturaProveedorStorageDir(), factura.archivoPath);
     const buffer = await readFile(filePath);
 
-    const resultado = await procesarFacturaConModal({
+    const resultado = await procesarFacturaConIA({
       buffer,
       mimeType: factura.archivoMime,
     });
@@ -76,7 +76,7 @@ export async function POST(
         where: { id: facturaId },
         data: { estado: EstadoFacturaProveedor.ERROR, errorMensaje: resultado.message },
       });
-      return NextResponse.json({ error: `Modal reportó un error: ${resultado.message}` }, { status: 422 });
+      return NextResponse.json({ error: `La IA reportó un error: ${resultado.message}` }, { status: 422 });
     }
 
     // Proveedor: si ya venía asignado, no lo tocamos. Si no, intentamos un match
@@ -111,6 +111,10 @@ export async function POST(
           moneda: resultado.invoice.currency || factura.moneda,
           totalDetectado: resultado.invoice.total,
           ocrTextoCompleto: resultado.ocrText,
+          confianzaOcr: resultado.globalConfidence,
+          iaRespuestaCruda: resultado.aiRawResponse as Prisma.InputJsonValue,
+          iaModeloUsado: resultado.aiModel,
+          iaTokensUsados: resultado.aiUsage?.totalTokens ?? null,
         },
       });
 
@@ -154,12 +158,12 @@ export async function POST(
     });
   } catch (error) {
     const mensaje =
-      error instanceof ModalOcrConfigError
-        ? `Modal no está configurado en este entorno: ${error.message}`
-        : error instanceof ModalOcrTimeoutError
-          ? "Modal no respondió a tiempo. Podés reintentar el procesamiento."
-          : error instanceof ModalOcrRequestError
-            ? `Error al contactar a Modal: ${error.message}`
+      error instanceof AiExtractionConfigError
+        ? `La IA no está configurada en este entorno: ${error.message}`
+        : error instanceof AiExtractionTimeoutError
+          ? "La IA no respondió a tiempo. Podés reintentar el procesamiento."
+          : error instanceof AiExtractionRequestError
+            ? `Error al contactar a OpenRouter: ${error.message}`
             : error instanceof Error
               ? error.message
               : "Error desconocido al procesar la factura";

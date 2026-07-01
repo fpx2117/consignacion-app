@@ -755,9 +755,11 @@ model FacturaProveedor {
   estado                  EstadoFacturaProveedor @default(PENDIENTE)
   confianzaOcr            Float?
   errorMensaje            String?
-  modalJobId              String?
   proveedorNombreDetectado String?
   proveedorCuitDetectado  String?
+  iaRespuestaCruda        Json?
+  iaModeloUsado           String?
+  iaTokensUsados          Int?
   creadoPor               Int
   createdAt               DateTime               @default(now())
   updatedAt               DateTime               @updatedAt

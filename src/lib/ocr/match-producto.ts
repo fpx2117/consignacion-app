@@ -7,8 +7,6 @@ export type ProductoMatch = {
   score: number;
 };
 
-const UMBRAL_MATCH = 0.5;
-
 function normalizar(texto: string): string {
   return texto
     .toLowerCase()
@@ -58,12 +56,4 @@ export function scoresFuzzy(
   return productos
     .map((producto) => ({ productoId: producto.id, score: coeficienteDice(nombre, producto.nombre) }))
     .sort((a, b) => b.score - a.score);
-}
-
-export function matchProductoPorNombre(
-  nombre: string,
-  productos: { id: number; nombre: string }[],
-): ProductoMatch | null {
-  const mejor = scoresFuzzy(nombre, productos)[0];
-  return mejor && mejor.score >= UMBRAL_MATCH ? mejor : null;
 }
