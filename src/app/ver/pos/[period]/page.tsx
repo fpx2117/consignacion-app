@@ -4,7 +4,7 @@
 import { useEffect, use } from "react";
 import { useSearchParams } from "next/navigation";
 import { ShoppingCart } from "lucide-react";
-import { ReportLoadingPage } from "@/components/report-loading-page";
+import { ReportLoadingPage } from "@/components/reports/report-loading-page";
 
 const PERIOD_LABELS: Record<string, string> = {
   today: "Hoy",

@@ -1,7 +1,7 @@
 // src/app/api/dashboard/reporte-link/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { generateShortCode, hashCode, encryptCode, decryptCode } from "@/lib/share-links";
+import { generateShortCode, hashCode, encryptCode, decryptCode } from "@/lib/sharing/share-links";
 import { requireAuth } from "@/lib/auth/require-auth";
 
 export const dynamic = "force-dynamic";

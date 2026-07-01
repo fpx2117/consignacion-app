@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { andreaniService } from "@/lib/andreaniService";
+import { andreaniService } from "@/lib/integrations/andreaniService";
 
 export async function POST(req: Request) {
     try {

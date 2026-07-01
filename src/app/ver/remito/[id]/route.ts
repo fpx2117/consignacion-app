@@ -2,11 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import puppeteer, { Browser } from "puppeteer";
 import { verifyPdfToken } from "@/lib/security/pdf-token";
 import { prisma } from "@/lib/prisma";
-import { hashCode } from "@/lib/share-links";
+import { hashCode } from "@/lib/sharing/share-links";
 
 import { getBranding } from "@/lib/reports/get-branding";
 import { buildConsignacionHtml } from "@/lib/reports/base/remito-template";
-import { resolveTimezone } from "@/lib/get-configured-tz";
+import { resolveTimezone } from "@/lib/timezone/get-configured-tz";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";

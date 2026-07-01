@@ -2,9 +2,9 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/auth/require-auth";
-import { buildSucursalWhere } from "@/lib/sucursalScope";
-import { nowAR } from "@/lib/utils-date";
-import { resolveTimezoneForAuth } from "@/lib/get-configured-tz";
+import { buildSucursalWhere } from "@/lib/security/sucursalScope";
+import { nowAR } from "@/lib/date-format/utils-date";
+import { resolveTimezoneForAuth } from "@/lib/timezone/get-configured-tz";
 
 function getYearInTimezone(date: Date, tz: string) {
   return Number(

@@ -6,8 +6,8 @@ import type { GastoReportDTO } from "@/lib/reports/base/gasto-report-template";
 import { buildGastoHtml } from "@/lib/reports/base/gasto-report-template";
 import { getBranding } from "@/lib/reports/get-branding";
 import { prisma } from "@/lib/prisma";
-import { hashCode } from "@/lib/share-links";
-import { resolveTimezone } from "@/lib/get-configured-tz";
+import { hashCode } from "@/lib/sharing/share-links";
+import { resolveTimezone } from "@/lib/timezone/get-configured-tz";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";

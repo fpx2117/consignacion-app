@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { revalidatePath, revalidateTag } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireAuth, requireRole } from "@/lib/auth/require-auth";
-import { isValidTimezone, TECHNICAL_FALLBACK_TZ } from "@/lib/get-configured-tz";
+import { isValidTimezone, TECHNICAL_FALLBACK_TZ } from "@/lib/timezone/get-configured-tz";
 
 type GeneralSettingsBody = {
     minStockGlobal?: number;

@@ -5,9 +5,9 @@ import { useRouter } from "next/navigation";
 import { BadgePercent, Banknote, Barcode, Coins, CreditCard, Loader2, Lock, QrCode, UserCircle2 } from "lucide-react";
 import { toast } from "sonner";
 
-import { ErrorDialog } from "@/components/error-dialog";
-import { ShiftEndAlert } from "@/components/shift-end-alert";
-import { SuccessDialog } from "@/components/success-dialog";
+import { ErrorDialog } from "@/components/feedback/error-dialog";
+import { ShiftEndAlert } from "@/components/shift/shift-end-alert";
+import { SuccessDialog } from "@/components/feedback/success-dialog";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";

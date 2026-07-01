@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { ShoppingCart, Store, Clock, MapPin, BadgeCheck, Search } from "lucide-react";
-import { normalizeStorefrontContent } from "@/lib/storefront-content";
+import { normalizeStorefrontContent } from "@/lib/storefront/storefront-content";
 import type { PublicCatalogConfig } from "@/lib/types";
 
 interface StoreHeaderProps {

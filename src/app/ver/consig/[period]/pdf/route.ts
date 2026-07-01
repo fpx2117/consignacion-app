@@ -2,12 +2,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import puppeteer, { Browser } from "puppeteer";
 import { requireAuth } from "@/lib/auth/require-auth";
-import { resolveTimezone } from "@/lib/get-configured-tz";
+import { resolveTimezone } from "@/lib/timezone/get-configured-tz";
 import { prisma } from "@/lib/prisma";
 import { getBranding } from "@/lib/reports/get-branding";
 import { buildConsigReportHtml, type ConsigReportData, type ConsigClienteRow, type ConsigTopProducto } from "@/lib/reports/base/consignacion-report-template";
-import { nowAR, startOfDayAR, startOfWeekAR, startOfMonthAR, formatDateTimeAR } from "@/lib/utils-date";
-import { resolveRequestedSucursalId } from "@/lib/sucursalScope";
+import { nowAR, startOfDayAR, startOfWeekAR, startOfMonthAR, formatDateTimeAR } from "@/lib/date-format/utils-date";
+import { resolveRequestedSucursalId } from "@/lib/security/sucursalScope";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";

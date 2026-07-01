@@ -4,7 +4,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { lstat, readFile } from "fs/promises";
 import path from "path";
-import { getUploadStorageDir, resolveServableUploadResource, resolveUploadFilesystemCandidates } from "@/lib/uploads";
+import { getUploadStorageDir, resolveServableUploadResource, resolveUploadFilesystemCandidates } from "@/lib/uploads/uploads";
 
 export const dynamic = "force-dynamic";
 

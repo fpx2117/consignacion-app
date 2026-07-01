@@ -2,9 +2,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import puppeteer, { Browser } from "puppeteer";
 import { requireAuth } from "@/lib/auth/require-auth";
-import { resolveTimezoneForAuth } from "@/lib/get-configured-tz";
+import { resolveTimezoneForAuth } from "@/lib/timezone/get-configured-tz";
 import { prisma } from "@/lib/prisma";
-import { resolveRequestedSucursalId } from "@/lib/sucursalScope";
+import { resolveRequestedSucursalId } from "@/lib/security/sucursalScope";
 
 import { getBranding } from "@/lib/reports/get-branding";
 import { buildInventoryHtml, type InventoryGroup } from "@/lib/reports/base/inventory-report-template";

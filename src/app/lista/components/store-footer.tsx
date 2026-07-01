@@ -3,7 +3,7 @@
 import Image from "next/image";
 import { Store, Instagram, Facebook, MessageCircle, Phone, MapPin } from "lucide-react";
 import type { PublicCatalogConfig } from "@/lib/types";
-import { normalizeStorefrontContent } from "@/lib/storefront-content";
+import { normalizeStorefrontContent } from "@/lib/storefront/storefront-content";
 
 function normalizeUrl(url?: string | null) {
     if (!url) return "";

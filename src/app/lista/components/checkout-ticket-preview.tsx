@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { Receipt, Scissors } from "lucide-react";
-import { getCatalogCartLineSubtotal } from "@/lib/catalog-cart-pricing";
+import { getCatalogCartLineSubtotal } from "@/lib/storefront/catalog-cart-pricing";
 import type { CatalogCartItem, OnlineStoreSettings } from "@/lib/types";
 
 type CheckoutTicketPreviewProps = {

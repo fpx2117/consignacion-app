@@ -3,8 +3,8 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/auth/require-auth";
 import type { JwtPayloadUser } from "@/lib/auth/core";
-import { nowAR, getDayOfWeekAR, getTimeStringAR } from "@/lib/utils-date";
-import { resolveTimezoneForAuth } from "@/lib/get-configured-tz";
+import { nowAR, getDayOfWeekAR, getTimeStringAR } from "@/lib/date-format/utils-date";
+import { resolveTimezoneForAuth } from "@/lib/timezone/get-configured-tz";
 
 type TurnoRouteDeps = {
   prisma: typeof prisma;

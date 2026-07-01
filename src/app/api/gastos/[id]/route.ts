@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/auth/require-auth";
-import { canAccessSucursalResource, isGlobalSucursalView } from "@/lib/sucursalScope";
+import { canAccessSucursalResource, isGlobalSucursalView } from "@/lib/security/sucursalScope";
 import { EstadoGasto, FrecuenciaGasto } from "@prisma/client";
-import { formatTimeInputAR, parseDateTimeInputAR } from "@/lib/utils-date";
-import { resolveTimezoneForAuth } from "@/lib/get-configured-tz";
+import { formatTimeInputAR, parseDateTimeInputAR } from "@/lib/date-format/utils-date";
+import { resolveTimezoneForAuth } from "@/lib/timezone/get-configured-tz";
 
 export async function GET(
     req: Request,

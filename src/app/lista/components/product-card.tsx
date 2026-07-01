@@ -5,7 +5,7 @@ import { Plus, Minus, PackageOpen } from "lucide-react";
 import { motion } from "motion/react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import { getCatalogCartUnitPrice, getCatalogCartOriginalDisplayPrice } from "@/lib/catalog-cart-pricing";
+import { getCatalogCartUnitPrice, getCatalogCartOriginalDisplayPrice } from "@/lib/storefront/catalog-cart-pricing";
 import type { PublicCatalogConfig, PublicCatalogProduct } from "@/lib/types";
 
 type QuantityStepperProps = {

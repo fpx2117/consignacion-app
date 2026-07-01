@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/auth/require-auth";
-import { resolveTimezoneForAuth } from "@/lib/get-configured-tz";
+import { resolveTimezoneForAuth } from "@/lib/timezone/get-configured-tz";
 
 type SucursalPermitida = {
   id: number;

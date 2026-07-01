@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { fetchDolarBlue } from "@/lib/dolarBlue";
+import { fetchDolarBlue } from "@/lib/integrations/dolarBlue";
 import { updateMercadoPagoSubscriptionPrice } from "@/lib/payments/mercadopago";
 
 export const dynamic = "force-dynamic";

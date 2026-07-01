@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth/require-auth";
-import { getDashboardKpis } from "@/lib/kpi-logic";
+import { getDashboardKpis } from "@/lib/dashboard/kpi-logic";
 import { DashboardPeriod } from "@/lib/types";
 
 export async function GET(req: Request) {

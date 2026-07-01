@@ -6,11 +6,11 @@ import {
   buildHistoryInventoryHtml,
   type HistoryInventoryReportRow,
 } from "@/lib/reports/base/history-inventory-report.template";
-import { hashCode } from "@/lib/share-links";
+import { hashCode } from "@/lib/sharing/share-links";
 import {
   decodeHistorialShareTarget,
   getHistorialDefaultYear,
-} from "@/lib/historial-share-links";
+} from "@/lib/sharing/historial-share-links";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";

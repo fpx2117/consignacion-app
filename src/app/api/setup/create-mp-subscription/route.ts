@@ -52,7 +52,7 @@ export async function POST(req: Request) {
 
         const preApproval = new PreApproval(client);
 
-        const { fetchDolarBlue } = await import("@/lib/dolarBlue");
+        const { fetchDolarBlue } = await import("@/lib/integrations/dolarBlue");
         const exchangeRate = await fetchDolarBlue();
         const precioARS = Number(plan.precioUSD) * exchangeRate;
 

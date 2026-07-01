@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth/require-auth"; // 🔒 Importante
-import { isGlobalSucursalView } from "@/lib/sucursalScope";
+import { isGlobalSucursalView } from "@/lib/security/sucursalScope";
 
 export async function PATCH() {
   try {

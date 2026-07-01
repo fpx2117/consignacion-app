@@ -4,7 +4,7 @@
 import { useEffect, useState, use } from "react";
 import { Boxes } from "lucide-react";
 import { apiService } from "@/lib/apiService";
-import { ReportLoadingPage } from "@/components/report-loading-page";
+import { ReportLoadingPage } from "@/components/reports/report-loading-page";
 
 export default function InventarioLoadingPage({
   params,

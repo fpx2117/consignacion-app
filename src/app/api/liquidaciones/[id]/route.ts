@@ -7,7 +7,7 @@ import { TipoMovimientoStock, MotivoMovimientoStock } from "@prisma/client";
 // ✅ Imports Centralizados de Config y Notificaciones
 import { obtenerConfiguracionGlobal } from "@/lib/config";
 import { evaluateStockAlert, processNotificationQueue } from "@/lib/notificaciones/stock-alerts";
-import { buildSucursalWhere, isGlobalSucursalView } from "@/lib/sucursalScope";
+import { buildSucursalWhere, isGlobalSucursalView } from "@/lib/security/sucursalScope";
 
 type RouteParams = {
   params: Promise<{ id: string }>;

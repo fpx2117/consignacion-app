@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { hashCode } from "@/lib/share-links";
-import { decodeHistorialShareTarget } from "@/lib/historial-share-links";
+import { hashCode } from "@/lib/sharing/share-links";
+import { decodeHistorialShareTarget } from "@/lib/sharing/historial-share-links";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";

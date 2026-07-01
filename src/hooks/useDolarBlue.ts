@@ -1,6 +1,6 @@
 // src/hooks/useDolarBlue.ts
 import { useState, useEffect } from 'react';
-import { DolarCriptoResponse } from '@/lib/dolarBlue';
+import { DolarCriptoResponse } from '@/lib/integrations/dolarBlue';
 
 export function useDolarBlue() {
     const [rate, setRate] = useState<number | null>(null);

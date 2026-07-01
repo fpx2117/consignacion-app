@@ -6,11 +6,11 @@ import { toast } from "sonner";
 import type { Producto, Categoria } from "@/lib/types";
 import { apiService } from "@/lib/apiService";
 import { useSucursalStore } from "@/store/useSucursalStore";
-import { formatMoney } from "@/lib/utils-format";
+import { formatMoney } from "@/lib/date-format/utils-format";
 import { cn } from "@/lib/utils";
-import { formatDateSafe, isExpired as dateExpired, isExpiringSoon } from "@/lib/utils-date";
+import { formatDateSafe, isExpired as dateExpired, isExpiringSoon } from "@/lib/date-format/utils-date";
 import { getCategoryColorByKey, getCategoryColorByName } from "@/lib/category-colors";
-import { calcularDescuentoEfectivo } from "@/lib/descuento-utils";
+import { calcularDescuentoEfectivo } from "@/lib/storefront/descuento-utils";
 
 // UI Components
 import { Card } from "@/components/ui/card";
@@ -69,10 +69,11 @@ import {
 
 // Sub-components
 import { CreateProductoDialog } from "./create-producto-dialog";
+import { OcrFacturaDialog } from "./ocr-factura-dialog";
 import { EditProductoDialog } from "./edit-producto-dialog";
 import { AjustarStockDialog } from "./ajustar-stock-dialog";
 import { ProductosFilters } from "./productos-filters";
-import { DownloadInventoryButton } from "@/components/download-inventory-button";
+import { DownloadInventoryButton } from "@/components/reports/download-inventory-button";
 import HistoryReportDialog from "./historial-report-dialog";
 import { ProductosAgotadosSheetContent } from "./productos-agotados-sheet-content";
 import { ProductosBajoStockSheetContent } from "./productos-bajo-stock-sheet-content";
@@ -359,6 +360,7 @@ export function ProductosView() {
             <div className="flex items-center gap-1.5 p-1 bg-muted/50 rounded-xl border border-border/50">
               <HistoryReportDialog />
               <DownloadInventoryButton />
+              <OcrFacturaDialog onCreated={reload} />
               <Button asChild variant="ghost" size="sm" className="h-9 px-3 rounded-lg font-bold text-sm hover:bg-background hover:text-primary transition-all">
                 <Link href={catalogoHref} target="_blank" rel="noopener noreferrer">
                   <ExternalLink className="h-3.5 w-3.5 mr-1.5" />
@@ -405,6 +407,9 @@ export function ProductosView() {
                 {/* Ver PDF */}
                 <div className="[&_button]:w-full [&_button]:justify-start [&_button]:rounded-lg [&_button]:h-10 [&_button]:text-sm [&_button]:font-semibold [&_button]:px-3 [&_button]:border-0 [&_button]:bg-transparent [&_button]:shadow-none">
                   <DownloadInventoryButton />
+                </div>
+                <div className="[&_button]:w-full [&_button]:justify-start [&_button]:rounded-lg [&_button]:h-10 [&_button]:text-sm [&_button]:font-semibold [&_button]:px-3 [&_button]:border-0 [&_button]:bg-transparent [&_button]:shadow-none">
+                  <OcrFacturaDialog onCreated={reload} />
                 </div>
                 <DropdownMenuSeparator className="my-1" />
                 <DropdownMenuItem asChild className="rounded-lg font-semibold cursor-pointer h-10">

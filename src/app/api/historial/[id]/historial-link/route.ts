@@ -4,7 +4,7 @@ import {
   getOrCreateHistorialShareUrl,
   isValidHistorialPeriod,
   parseHistorialPeriod,
-} from "@/lib/historial-share-links";
+} from "@/lib/sharing/historial-share-links";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";

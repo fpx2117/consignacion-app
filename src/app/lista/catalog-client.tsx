@@ -17,7 +17,7 @@ import type {
 } from "@/lib/types";
 
 import { apiService } from "@/lib/apiService";
-import { buildCatalogCartWhatsappUrl } from "@/lib/catalog-whatsapp";
+import { buildCatalogCartWhatsappUrl } from "@/lib/storefront/catalog-whatsapp";
 
 // Componentes
 import { StoreHeader } from "./components/store-header";

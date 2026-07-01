@@ -5,8 +5,8 @@ import { XCircle, ShoppingCart, PackageOpen, CheckCircle2 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { buildCatalogProductInquiryUrl } from "@/lib/catalog-whatsapp";
-import { getCatalogCartUnitPrice, getCatalogCartOriginalDisplayPrice } from "@/lib/catalog-cart-pricing";
+import { buildCatalogProductInquiryUrl } from "@/lib/storefront/catalog-whatsapp";
+import { getCatalogCartUnitPrice, getCatalogCartOriginalDisplayPrice } from "@/lib/storefront/catalog-cart-pricing";
 import { cn } from "@/lib/utils";
 import { getThemeStyles } from "../lib/theme-utils";
 import type {

@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
-import { formatMoney } from "@/lib/utils-format";
+import { formatMoney } from "@/lib/date-format/utils-format";
 
 import { gastosTypography } from "./gastos-typography";
 

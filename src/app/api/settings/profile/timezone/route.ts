@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/auth/require-auth";
-import { isValidTimezone, resolveTimezoneForAuth } from "@/lib/get-configured-tz";
+import { isValidTimezone, resolveTimezoneForAuth } from "@/lib/timezone/get-configured-tz";
 
 const updateProfileTimezoneSchema = z.object({
   zonaHoraria: z.string().trim().min(1).nullable(),

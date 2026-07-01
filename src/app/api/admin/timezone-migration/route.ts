@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth, requireRole } from "@/lib/auth/require-auth";
-import { getConfiguredTz } from "@/lib/get-configured-tz";
+import { getConfiguredTz } from "@/lib/timezone/get-configured-tz";
 
 // ─── Tablas/columnas a corregir ──────────────────────────────────────────────
 

@@ -27,7 +27,7 @@ import { toast } from "sonner";
 import { apiService } from "@/lib/apiService";
 import { useTimezone } from "@/hooks/useTimezone";
 import type { Consignacion, EstadoConsignacion } from "@/lib/types";
-import { formatMoney } from "@/lib/utils-format";
+import { formatMoney } from "@/lib/date-format/utils-format";
 import { cn } from "@/lib/utils";
 
 import {

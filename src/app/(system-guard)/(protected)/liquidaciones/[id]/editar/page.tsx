@@ -24,8 +24,8 @@ import { Label } from "@/components/ui/label";
 import type { Consignacion, ConsignacionDetalle, Liquidacion, LiquidacionItem, Producto } from "@/lib/types";
 
 // Dialogs
-import { SuccessDialog } from "@/components/success-dialog";
-import { ErrorDialog } from "@/components/error-dialog";
+import { SuccessDialog } from "@/components/feedback/success-dialog";
+import { ErrorDialog } from "@/components/feedback/error-dialog";
 
 type EditableLiquidacionItem = {
   consignacionDetalleId: number;

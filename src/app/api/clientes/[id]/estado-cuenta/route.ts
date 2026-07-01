@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/auth/require-auth";
-import { buildSucursalWhere } from "@/lib/sucursalScope";
+import { buildSucursalWhere } from "@/lib/security/sucursalScope";
 
 // Definimos la interfaz para los params como una Promesa
 interface RouteContext {

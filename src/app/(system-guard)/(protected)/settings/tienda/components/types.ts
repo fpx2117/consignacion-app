@@ -1,4 +1,4 @@
-import type { StorefrontContent } from "@/lib/storefront-content";
+import type { StorefrontContent } from "@/lib/storefront/storefront-content";
 
 export type StoreThemeId =
   | "modern"

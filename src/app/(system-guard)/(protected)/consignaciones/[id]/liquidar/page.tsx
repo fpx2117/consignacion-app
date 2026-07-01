@@ -23,7 +23,7 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 
 // IMPORTAMOS EL DIÁLOGO DE ÉXITO (Asegúrate de tener este componente o quítalo si no lo usas)
-import { SuccessDialog } from "@/components/success-dialog";
+import { SuccessDialog } from "@/components/feedback/success-dialog";
 
 import type { Subcategoria } from "@/lib/types";
 

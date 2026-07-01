@@ -3,12 +3,12 @@ import { Prisma } from "@prisma/client";
 import { NextRequest, NextResponse } from "next/server";
 import puppeteer, { Browser } from "puppeteer";
 import { requireAuth } from "@/lib/auth/require-auth";
-import { resolveTimezone } from "@/lib/get-configured-tz";
+import { resolveTimezone } from "@/lib/timezone/get-configured-tz";
 import { prisma } from "@/lib/prisma";
 import { getBranding } from "@/lib/reports/get-branding";
 import { buildPosReportHtml, type PosReportData } from "@/lib/reports/base/pos-report-template";
-import { resolveRequestedSucursalId } from "@/lib/sucursalScope";
-import { nowAR, startOfDayAR, startOfWeekAR, startOfMonthAR, formatDateTimeAR } from "@/lib/utils-date";
+import { resolveRequestedSucursalId } from "@/lib/security/sucursalScope";
+import { nowAR, startOfDayAR, startOfWeekAR, startOfMonthAR, formatDateTimeAR } from "@/lib/date-format/utils-date";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";

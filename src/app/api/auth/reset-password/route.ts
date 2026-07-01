@@ -1,12 +1,12 @@
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
 import { NextResponse } from "next/server";
-import { getAuthRateLimitDecision, getRequestIp } from "@/lib/auth-rate-limit";
+import { getAuthRateLimitDecision, getRequestIp } from "@/lib/security/auth-rate-limit";
 import {
   buildAuthThrottledResponse,
   reportAuthRateLimitEvent,
   RESET_PASSWORD_INVALID_MESSAGE,
-} from "@/lib/auth-security-monitor";
+} from "@/lib/security/auth-security-monitor";
 import { validatePasswordStrength } from "@/lib/validators/password";
 
 type ResetPasswordTokenRecord = {
@@ -71,7 +71,7 @@ const defaultDeps: ResetPasswordRouteDeps = {
     token,
   }),
   recordAuditLog: async (input) => {
-    const { recordAuditLog } = await import("@/lib/audit");
+    const { recordAuditLog } = await import("@/lib/security/audit");
     await recordAuditLog(input);
   },
 };

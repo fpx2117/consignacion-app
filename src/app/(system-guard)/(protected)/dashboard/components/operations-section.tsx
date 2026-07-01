@@ -3,7 +3,7 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ChevronRight, CheckCircle2, History, Zap } from "lucide-react";
-import { formatNumber } from "@/lib/utils-format";
+import { formatNumber } from "@/lib/date-format/utils-format";
 import Link from "next/link";
 import { motion } from "motion/react";
 import type { DashboardConsignacionesResponse, DashboardLiquidacionItem } from "@/lib/types";

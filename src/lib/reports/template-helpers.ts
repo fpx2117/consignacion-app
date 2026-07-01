@@ -1,4 +1,4 @@
-import { TECHNICAL_FALLBACK_TZ } from "@/lib/timezone-constants";
+import { TECHNICAL_FALLBACK_TZ } from "@/lib/timezone/timezone-constants";
 
 export function escapeHtml(value: unknown): string {
   return String(value ?? "")
