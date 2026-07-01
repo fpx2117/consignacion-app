@@ -182,6 +182,58 @@ export async function registrarCostoYAlias(
   return variacion;
 }
 
+export type ConversionMonedaResultado = {
+  /** Costo ya convertido, listo para persistir. Null si `precioUnitario` era null. */
+  precioConvertido: number | null;
+  /** Moneda en la que efectivamente queda el costo ("ARS" salvo que no haya cotización disponible). */
+  monedaFinal: string;
+  /** Cotización usada, o null si no hubo conversión (ya era ARS, o no hay tasa para esa moneda). */
+  tipoCambioAplicado: number | null;
+  /** Mensaje para mostrarle al usuario si no se pudo convertir (no bloquea la confirmación). */
+  advertencia: string | null;
+};
+
+/**
+ * El negocio quiere el costo siempre en ARS. Si la factura ya está en ARS, no
+ * hay nada que hacer. Si está en USD, se convierte con la cotización del dólar
+ * blue (misma fuente que ya usa el resto del SaaS para pricing, ver
+ * `subscriptions/plans/route.ts`). Cualquier otra moneda no tiene cotización
+ * disponible acá — se guarda tal cual y se avisa, en vez de fallar la
+ * confirmación completa por un dato que la factura ni siquiera controla.
+ *
+ * Se llama ANTES de abrir el `$transaction` de confirm/create-product: hace un
+ * fetch externo, y un HTTP call dentro de una transacción de DB arriesga
+ * timeouts/locks innecesarios.
+ */
+export async function convertirCostoAArs(
+  precioUnitario: number | null,
+  monedaOrigen: string,
+): Promise<ConversionMonedaResultado> {
+  const moneda = monedaOrigen.trim().toUpperCase();
+
+  if (moneda === "ARS" || precioUnitario === null) {
+    return { precioConvertido: precioUnitario, monedaFinal: "ARS", tipoCambioAplicado: null, advertencia: null };
+  }
+
+  if (moneda === "USD") {
+    const { fetchDolarBlue } = await import("@/lib/integrations/dolarBlue");
+    const tipoCambio = await fetchDolarBlue();
+    return {
+      precioConvertido: precioUnitario * tipoCambio,
+      monedaFinal: "ARS",
+      tipoCambioAplicado: tipoCambio,
+      advertencia: null,
+    };
+  }
+
+  return {
+    precioConvertido: precioUnitario,
+    monedaFinal: moneda,
+    tipoCambioAplicado: null,
+    advertencia: `No hay cotización disponible para convertir ${moneda} a ARS: el costo se guardó en ${moneda}.`,
+  };
+}
+
 /** Si todos los items de la factura quedaron en un estado terminal, marca la factura como CONFIRMADA. */
 export async function actualizarEstadoFacturaSiCompleta(tx: TxClient, facturaId: number) {
   const pendientes = await tx.facturaProveedorItem.count({

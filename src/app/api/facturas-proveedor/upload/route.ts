@@ -10,6 +10,7 @@ import path from "path";
 import { prisma } from "@/lib/prisma";
 import { requireAuth, requireRole } from "@/lib/auth/require-auth";
 import { isGlobalSucursalView } from "@/lib/security/sucursalScope";
+import { checkFacturaOcrLimit } from "@/lib/subscriptions/require-subscription";
 import {
   buildOpaqueUploadFilename,
   getFacturaProveedorStorageDir,
@@ -29,10 +30,14 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "No tienes permisos (Admin requerido)" }, { status: 403 });
   }
 
+  const cupo = await checkFacturaOcrLimit();
+  if (!cupo.allowed) {
+    return NextResponse.json({ error: cupo.message }, { status: 403 });
+  }
+
   try {
     const formData = await req.formData();
     const file = formData.get("file") as File | null;
-    const proveedorIdRaw = formData.get("proveedorId");
 
     if (!file) {
       return NextResponse.json({ error: "No se encontró el archivo" }, { status: 400 });
@@ -51,19 +56,6 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: validation.error }, { status: validation.status });
     }
 
-    let proveedorId: number | null = null;
-    if (typeof proveedorIdRaw === "string" && proveedorIdRaw.trim()) {
-      const parsedProveedorId = Number(proveedorIdRaw);
-      if (!Number.isInteger(parsedProveedorId) || parsedProveedorId <= 0) {
-        return NextResponse.json({ error: "proveedorId inválido" }, { status: 400 });
-      }
-      const proveedorExiste = await prisma.proveedor.findUnique({ where: { id: parsedProveedorId } });
-      if (!proveedorExiste) {
-        return NextResponse.json({ error: "Proveedor no encontrado" }, { status: 404 });
-      }
-      proveedorId = parsedProveedorId;
-    }
-
     const storageDir = getFacturaProveedorStorageDir();
     await mkdir(storageDir, { recursive: true });
 
@@ -73,7 +65,6 @@ export async function POST(req: Request) {
 
     const factura = await prisma.facturaProveedor.create({
       data: {
-        proveedorId,
         sucursalId: auth.activeSucursalId,
         archivoPath: filename, // sólo el nombre: la carpeta base se resuelve server-side
         archivoMime: validation.contentType,

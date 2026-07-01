@@ -149,7 +149,18 @@
       "Bash(grep -rn \"^if \\(!.*\\) {$\\\\|throw new Error\" src/lib/security/factura-proveedor-token.ts src/lib/modal/ocr-client.ts)",
       "Bash(node --env-file=.env --import tsx scripts/_tmp_inspect_factura.ts)",
       "Bash(node --env-file=.env --import tsx scripts/_tmp_list_facturas.ts)",
-      "Bash(time curl -s -o scripts/_tmp_response_big.json -w 'HTTP_STATUS:%{http_code} TIME_TOTAL:%{time_total}\\\\n' https://openrouter.ai/api/v1/chat/completions -H 'Content-Type: application/json' -H 'Authorization: Bearer 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' -d @scripts/_tmp_payload_big.json)"
+      "Bash(time curl -s -o scripts/_tmp_response_big.json -w 'HTTP_STATUS:%{http_code} TIME_TOTAL:%{time_total}\\\\n' https://openrouter.ai/api/v1/chat/completions -H 'Content-Type: application/json' -H 'Authorization: Bearer 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' -d @scripts/_tmp_payload_big.json)",
+      "Bash(tasklist //FI \"PID eq 6596\")",
+      "Bash(wmic process *)",
+      "Bash(node test_puppeteer_tmp.mjs)",
+      "Bash(git show *)",
+      "Bash(find . -iname \"Dockerfile*\" -not -path \"*/node_modules/*\")",
+      "Bash(find . -iname \"nixpacks*\" -not -path \"*/node_modules/*\")",
+      "Bash(find . -iname \"railway*\" -not -path \"*/node_modules/*\")",
+      "Bash(find . -iname \"Aptfile\" -not -path \"*/node_modules/*\")",
+      "Bash(where railway *)",
+      "Bash(railway --version)",
+      "Bash(railway whoami *)"
     ]
   }
 }

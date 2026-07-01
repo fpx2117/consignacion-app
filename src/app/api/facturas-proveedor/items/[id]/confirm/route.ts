@@ -13,6 +13,7 @@ import {
   aplicarMovimientoStock,
   registrarCostoYAlias,
   actualizarEstadoFacturaSiCompleta,
+  convertirCostoAArs,
 } from "@/lib/ocr/aplicar-confirmacion";
 
 export async function POST(
@@ -52,6 +53,11 @@ export async function POST(
   }
 
   try {
+    const conversion = await convertirCostoAArs(
+      item.precioUnitario !== null ? Number(item.precioUnitario) : null,
+      item.factura.moneda,
+    );
+
     const resultado = await prisma.$transaction(async (tx) => {
       await aplicarMovimientoStock(tx, {
         productoId: parsed.data.productoId,
@@ -66,8 +72,8 @@ export async function POST(
         facturaItemId: item.id,
         codigoProveedor: item.codigoProveedor,
         descripcionNormalizada: item.descripcionNormalizada,
-        precioUnitario: item.precioUnitario !== null ? Number(item.precioUnitario) : null,
-        moneda: item.factura.moneda,
+        precioUnitario: conversion.precioConvertido,
+        moneda: conversion.monedaFinal,
       });
 
       const itemActualizado = await tx.facturaProveedorItem.update({
@@ -84,7 +90,12 @@ export async function POST(
       return { itemActualizado, variacion };
     });
 
-    return NextResponse.json({ data: resultado.itemActualizado, variacionCosto: resultado.variacion });
+    return NextResponse.json({
+      data: resultado.itemActualizado,
+      variacionCosto: resultado.variacion,
+      tipoCambioAplicado: conversion.tipoCambioAplicado,
+      advertenciaConversion: conversion.advertencia,
+    });
   } catch (error) {
     console.error("[FACTURA_PROVEEDOR_ITEM_CONFIRM_ERROR]", { itemId, error });
     return NextResponse.json({ error: "Error al confirmar el item" }, { status: 500 });

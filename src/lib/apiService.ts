@@ -114,14 +114,41 @@ export type FacturaProveedor = {
   items?: FacturaProveedorItem[];
 };
 
+export type FacturaProveedorUsage = {
+  used: number;
+  limit: number; // -1 = ilimitado, 0 = sin acceso
+  allowed: boolean;
+  hasFeature: boolean;
+};
+
 export type ConfirmarItemResultado = {
   data: FacturaProveedorItem;
   variacionCosto: { variacionPct: number | null; alerta: "normal" | "advertencia" | "alerta_fuerte" | null };
+  tipoCambioAplicado: number | null;
+  advertenciaConversion: string | null;
 };
 
 export type ConfirmAllResultado = {
   confirmados: number;
   errores: { itemId: number; error: string }[];
+};
+
+export type UpdateFacturaProveedorInput = {
+  proveedorId?: number | null;
+  proveedorNombreDetectado?: string | null;
+  proveedorCuitDetectado?: string | null;
+  numeroFactura?: string | null;
+  fecha?: string | null;
+  moneda?: string;
+  totalDetectado?: number | null;
+};
+
+export type UpdateFacturaProveedorItemInput = {
+  textoOriginal?: string;
+  codigoProveedor?: string | null;
+  cantidad?: number;
+  precioUnitario?: number | null;
+  totalLinea?: number | null;
 };
 
 export class ApiRequestError extends Error {
@@ -309,9 +336,11 @@ export const API_ROUTES = {
   FACTURAS_PROVEEDOR: {
     LIST: "/api/facturas-proveedor",
     UPLOAD: "/api/facturas-proveedor/upload",
+    USAGE: "/api/facturas-proveedor/usage",
     BY_ID: (id: number) => `/api/facturas-proveedor/${id}`,
     PROCESS: (id: number) => `/api/facturas-proveedor/${id}/process`,
     CONFIRM_ALL: (id: number) => `/api/facturas-proveedor/${id}/confirm-all`,
+    ITEM_UPDATE: (itemId: number) => `/api/facturas-proveedor/items/${itemId}`,
     ITEM_CONFIRM: (itemId: number) => `/api/facturas-proveedor/items/${itemId}/confirm`,
     ITEM_CREATE_PRODUCT: (itemId: number) => `/api/facturas-proveedor/items/${itemId}/create-product`,
     ITEM_IGNORE: (itemId: number) => `/api/facturas-proveedor/items/${itemId}/ignore`,
@@ -598,15 +627,18 @@ export const apiService = {
     });
   },
 
-  uploadFacturaProveedor(file: File, proveedorId?: number | null) {
+  uploadFacturaProveedor(file: File) {
     const formData = new FormData();
     formData.append("file", file);
-    if (proveedorId) formData.append("proveedorId", String(proveedorId));
     return apiData<FacturaProveedor>(API_ROUTES.FACTURAS_PROVEEDOR.UPLOAD, {
       method: "POST",
       body: formData,
       headers: {},
     });
+  },
+
+  getFacturaProveedorUsage() {
+    return apiData<FacturaProveedorUsage>(API_ROUTES.FACTURAS_PROVEEDOR.USAGE);
   },
 
   processFacturaProveedor(facturaId: number) {
@@ -623,14 +655,36 @@ export const apiService = {
     return apiData<FacturaProveedor[]>(API_ROUTES.FACTURAS_PROVEEDOR.LIST);
   },
 
+  updateFacturaProveedor(facturaId: number, payload: UpdateFacturaProveedorInput) {
+    return apiData<FacturaProveedor>(API_ROUTES.FACTURAS_PROVEEDOR.BY_ID(facturaId), {
+      method: "PATCH",
+      body: JSON.stringify(payload),
+    });
+  },
+
+  updateFacturaProveedorItem(itemId: number, payload: UpdateFacturaProveedorItemInput) {
+    return apiData<FacturaProveedorItem>(API_ROUTES.FACTURAS_PROVEEDOR.ITEM_UPDATE(itemId), {
+      method: "PATCH",
+      body: JSON.stringify(payload),
+    });
+  },
+
   async confirmFacturaProveedorItem(itemId: number, productoId: number): Promise<ConfirmarItemResultado> {
     const res = await apiRequest<FacturaProveedorItem>(API_ROUTES.FACTURAS_PROVEEDOR.ITEM_CONFIRM(itemId), {
       method: "POST",
       body: JSON.stringify({ productoId }),
     });
-    const variacionCosto = (res as unknown as { variacionCosto?: ConfirmarItemResultado["variacionCosto"] }).variacionCosto
-      ?? { variacionPct: null, alerta: null };
-    return { data: res.data, variacionCosto };
+    const extra = res as unknown as {
+      variacionCosto?: ConfirmarItemResultado["variacionCosto"];
+      tipoCambioAplicado?: number | null;
+      advertenciaConversion?: string | null;
+    };
+    return {
+      data: res.data,
+      variacionCosto: extra.variacionCosto ?? { variacionPct: null, alerta: null },
+      tipoCambioAplicado: extra.tipoCambioAplicado ?? null,
+      advertenciaConversion: extra.advertenciaConversion ?? null,
+    };
   },
 
   ignoreFacturaProveedorItem(itemId: number) {
@@ -639,11 +693,17 @@ export const apiService = {
     });
   },
 
-  createProductoDesdeFacturaItem(itemId: number, payload: CreateProductoInput) {
-    return apiData<{ producto: ProductoWithImage; item: FacturaProveedorItem }>(
+  async createProductoDesdeFacturaItem(itemId: number, payload: CreateProductoInput) {
+    const res = await apiRequest<{ producto: ProductoWithImage; item: FacturaProveedorItem }>(
       API_ROUTES.FACTURAS_PROVEEDOR.ITEM_CREATE_PRODUCT(itemId),
       { method: "POST", body: JSON.stringify(payload) },
     );
+    const extra = res as unknown as { tipoCambioAplicado?: number | null; advertenciaConversion?: string | null };
+    return {
+      ...res.data,
+      tipoCambioAplicado: extra.tipoCambioAplicado ?? null,
+      advertenciaConversion: extra.advertenciaConversion ?? null,
+    };
   },
 
   confirmAllFacturaProveedor(facturaId: number) {

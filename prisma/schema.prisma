@@ -577,6 +577,7 @@ model PlanLimit {
   planId              Int      @unique
   maxProductos        Int      @default(-1)
   maxUsuarios         Int      @default(5)
+  maxFacturasOcr      Int      @default(0)
   allowConsignaciones Boolean  @default(false)
   allowSucursales     Boolean  @default(false)
   updatedAt           DateTime @updatedAt
