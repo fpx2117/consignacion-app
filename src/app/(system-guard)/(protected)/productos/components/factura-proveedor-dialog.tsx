@@ -34,6 +34,7 @@ import {
 import { ScanText, Loader2, AlertTriangle, CheckCircle2, XCircle, HelpCircle, Sparkles, Check, X, FileText, User, Building2, Hash, Calendar, CircleDollarSign, ScanLine, Package } from "lucide-react";
 import { toast } from "sonner";
 import { CreateProductoDialog, type CreateProductoInitialValues, type ProductoCreado } from "./create-producto-dialog";
+import { cn } from "@/lib/utils";
 
 const ESTADOS_TERMINALES = new Set(["CONFIRMADO", "PRODUCTO_CREADO", "IGNORADO"]);
 
@@ -71,6 +72,10 @@ const TIPS_FOTO: { ok: boolean; texto: string }[] = [
 ];
 
 const ACCEPT_FACTURA = "image/png,image/jpeg,image/webp,application/pdf";
+const FACTURA_FIELD_CLASS = "h-12 rounded-xl border-[#2A2F3A] bg-[#11151C] text-sm shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]";
+const ITEM_FIELD_CLASS = "h-11 rounded-xl border-[#2A2F3A] bg-[#11151C] text-sm shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]";
+const ITEM_LABEL_CLASS = "text-[10px] font-bold uppercase tracking-[0.08em] text-muted-foreground xl:hidden";
+const ITEM_ACTION_BUTTON_CLASS = "h-11 min-w-[132px] rounded-xl px-4 text-sm font-semibold justify-center";
 
 export function FacturaProveedorDialog({
   trigger,
@@ -321,7 +326,7 @@ export function FacturaProveedorDialog({
           )}
         </DialogTrigger>
 
-        <DialogContent className="p-0 gap-0 flex flex-col overflow-hidden border border-[#2A2F3A] bg-[#0F1117] rounded-[28px] sm:rounded-[28px] shadow-2xl w-[90vw] max-w-[1280px] sm:max-w-[1280px] max-h-[85vh]">
+        <DialogContent className="p-0 gap-0 flex flex-col overflow-hidden border border-[#2A2F3A] bg-[#0F1117] rounded-[28px] sm:rounded-[28px] shadow-2xl w-[92vw] max-w-[1320px] sm:max-w-[1320px] max-h-[85vh]">
           <DialogHeader className="shrink-0 border-b border-[#2A2F3A] px-8 py-7">
             <div className="flex items-center gap-4">
               <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary">
@@ -438,7 +443,7 @@ export function FacturaProveedorDialog({
             <div className="flex-1 min-h-0 flex flex-col gap-5 px-8 py-6 overflow-hidden">
               {/* Card de datos de la factura (siempre visible, no scrollea) */}
               <div className="shrink-0 rounded-2xl border border-[#2A2F3A] bg-[#0B0D12] p-6">
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-4">
                   <div>
                     <Label className="mb-2 block text-xs font-medium text-muted-foreground">Proveedor (existente)</Label>
                     <div className="relative">
@@ -448,7 +453,7 @@ export function FacturaProveedorDialog({
                         onValueChange={(v) => guardarCampoFactura({ proveedorId: v === "none" ? null : Number(v) })}
                         disabled={facturaBloqueada}
                       >
-                        <SelectTrigger className="h-[52px] w-full rounded-xl border-[#2A2F3A] bg-[#11151C] pl-10 text-sm">
+                        <SelectTrigger className={cn(FACTURA_FIELD_CLASS, "w-full pl-10")}>
                           <SelectValue placeholder="Sin asignar" />
                         </SelectTrigger>
                         <SelectContent position="popper" align="start" sideOffset={4}>
@@ -470,7 +475,7 @@ export function FacturaProveedorDialog({
                         onBlur={(e) => guardarCampoFactura({ proveedorNombreDetectado: e.target.value || null })}
                         disabled={facturaBloqueada}
                         placeholder="No detectado"
-                        className="h-[52px] rounded-xl border-[#2A2F3A] bg-[#11151C] pl-10 text-sm"
+                        className={cn(FACTURA_FIELD_CLASS, "pl-10")}
                       />
                     </div>
                   </div>
@@ -484,7 +489,7 @@ export function FacturaProveedorDialog({
                         onBlur={(e) => guardarCampoFactura({ proveedorCuitDetectado: e.target.value || null })}
                         disabled={facturaBloqueada}
                         placeholder="No detectado"
-                        className="h-[52px] rounded-xl border-[#2A2F3A] bg-[#11151C] pl-10 text-sm"
+                        className={cn(FACTURA_FIELD_CLASS, "pl-10")}
                       />
                     </div>
                   </div>
@@ -498,13 +503,13 @@ export function FacturaProveedorDialog({
                         onBlur={(e) => guardarCampoFactura({ numeroFactura: e.target.value || null })}
                         disabled={facturaBloqueada}
                         placeholder="—"
-                        className="h-[52px] rounded-xl border-[#2A2F3A] bg-[#11151C] pl-10 text-sm"
+                        className={cn(FACTURA_FIELD_CLASS, "pl-10")}
                       />
                     </div>
                   </div>
                 </div>
 
-                <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-3">
+                <div className="mt-5 grid grid-cols-1 gap-5 xl:grid-cols-3">
                   <div>
                     <Label className="mb-2 block text-xs font-medium text-muted-foreground">Fecha</Label>
                     <div className="relative">
@@ -515,7 +520,7 @@ export function FacturaProveedorDialog({
                         onChange={(e) => updateFacturaLocal({ fecha: e.target.value || null })}
                         onBlur={(e) => guardarCampoFactura({ fecha: e.target.value || null })}
                         disabled={facturaBloqueada}
-                        className="h-[52px] rounded-xl border-[#2A2F3A] bg-[#11151C] pl-10 text-sm"
+                        className={cn(FACTURA_FIELD_CLASS, "pl-10")}
                       />
                     </div>
                   </div>
@@ -528,7 +533,7 @@ export function FacturaProveedorDialog({
                         onValueChange={(v) => guardarCampoFactura({ moneda: v })}
                         disabled={facturaBloqueada}
                       >
-                        <SelectTrigger className="h-[52px] w-full rounded-xl border-[#2A2F3A] bg-[#11151C] pl-10 text-sm">
+                        <SelectTrigger className={cn(FACTURA_FIELD_CLASS, "w-full pl-10")}>
                           <SelectValue placeholder="ARS" />
                         </SelectTrigger>
                         <SelectContent position="popper" align="start" sideOffset={4}>
@@ -560,7 +565,7 @@ export function FacturaProveedorDialog({
                         onBlur={(e) => guardarCampoFactura({ totalDetectado: parseNumeroOpcional(e.target.value) })}
                         disabled={facturaBloqueada}
                         placeholder="—"
-                        className="h-[52px] rounded-xl border-[#2A2F3A] bg-[#11151C] pl-10 text-sm"
+                        className={cn(FACTURA_FIELD_CLASS, "pl-10")}
                       />
                     </div>
                     {puedeConvertir && factura.totalDetectado != null && (
@@ -583,7 +588,7 @@ export function FacturaProveedorDialog({
                   {/* Tabla de productos detectados (scroll interno) */}
                   <div className="min-h-0 flex flex-col overflow-hidden rounded-2xl border border-[#2A2F3A]">
                     {/* Encabezado de columnas (solo desktop) */}
-                    <div className="hidden lg:grid shrink-0 grid-cols-[minmax(180px,1.4fr)_64px_110px_minmax(150px,1fr)_minmax(220px,1fr)] gap-3 border-b border-[#2A2F3A] bg-[#0B0D12] px-5 h-11 items-center text-xs font-medium text-muted-foreground">
+                    <div className="hidden xl:grid shrink-0 grid-cols-[minmax(260px,1.55fr)_88px_132px_minmax(240px,1fr)_minmax(320px,auto)] gap-4 border-b border-[#2A2F3A] bg-[#0B0D12] px-5 h-12 items-center text-xs font-medium uppercase tracking-[0.08em] text-muted-foreground">
                       <span>Descripción detectada</span>
                       <span>Cant.</span>
                       <span>Costo unit.{facturaEnMonedaExtranjera ? " → ARS" : ""}</span>
@@ -602,21 +607,22 @@ export function FacturaProveedorDialog({
                         return (
                           <div
                             key={item.id}
-                            className={`grid grid-cols-1 lg:grid-cols-[minmax(180px,1.4fr)_64px_110px_minmax(150px,1fr)_minmax(220px,1fr)] gap-3 px-5 py-3 min-h-[72px] items-center ${terminal ? "opacity-60 bg-white/[0.02]" : ""}`}
+                            className={`grid grid-cols-1 xl:grid-cols-[minmax(260px,1.55fr)_88px_132px_minmax(240px,1fr)_minmax(320px,auto)] gap-4 px-5 py-4 min-h-[96px] items-start xl:items-center ${terminal ? "opacity-60 bg-white/[0.02]" : "hover:bg-white/[0.015]"}`}
                           >
                             {/* Descripción — siempre editable: si no hay producto existente que coincida, no hay ninguna existencia previa que la fije */}
-                            <div className="flex items-start gap-2 min-w-0">
-                              <div className="mt-1.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                            <div className="flex items-start gap-3 min-w-0">
+                              <div className="mt-0.5 flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary ring-1 ring-primary/15">
                                 <Package className="h-4 w-4" />
                               </div>
                               <div className="min-w-0 flex-1 space-y-1">
-                                <Label className="lg:hidden text-[10px] font-bold uppercase text-muted-foreground">Descripción detectada</Label>
+                                <Label className={ITEM_LABEL_CLASS}>Descripción detectada</Label>
                                 <Input
+                                  aria-label={`Descripción detectada para línea ${item.id}`}
                                   value={item.textoOriginal}
                                   onChange={(e) => updateItem(item.id, { textoOriginal: e.target.value })}
                                   onBlur={(e) => guardarCampoItem(item, { textoOriginal: e.target.value })}
                                   disabled={terminal || busy}
-                                  className="h-9 rounded-lg border-[#2A2F3A] bg-[#11151C] text-sm font-medium"
+                                  className={cn(ITEM_FIELD_CLASS, "font-medium")}
                                 />
                                 {mostrarCodigo && item.codigoProveedor && (
                                   <p className="text-[11px] font-mono text-muted-foreground">#{item.codigoProveedor}</p>
@@ -626,8 +632,9 @@ export function FacturaProveedorDialog({
 
                             {/* Cantidad */}
                             <div className="space-y-1">
-                              <Label className="lg:hidden text-[10px] font-bold uppercase text-muted-foreground">Cantidad</Label>
+                              <Label className={ITEM_LABEL_CLASS}>Cantidad</Label>
                               <Input
+                                aria-label={`Cantidad para ${item.textoOriginal}`}
                                 type="number"
                                 min={1}
                                 step="1"
@@ -641,14 +648,15 @@ export function FacturaProveedorDialog({
                                   guardarCampoItem(item, { cantidad: n });
                                 }}
                                 disabled={terminal || busy}
-                                className="h-10 rounded-lg border-[#2A2F3A] bg-[#11151C] text-sm"
+                                className={cn(ITEM_FIELD_CLASS, "text-center tabular-nums")}
                               />
                             </div>
 
                             {/* Costo unitario (con conversión a ARS en vivo) */}
                             <div className="space-y-1">
-                              <Label className="lg:hidden text-[10px] font-bold uppercase text-muted-foreground">Costo unit. ({monedaFactura})</Label>
+                              <Label className={ITEM_LABEL_CLASS}>Costo unit. ({monedaFactura})</Label>
                               <Input
+                                aria-label={`Costo unitario para ${item.textoOriginal} en ${monedaFactura}`}
                                 type="number"
                                 step="0.01"
                                 value={item.precioUnitario ?? ""}
@@ -656,7 +664,7 @@ export function FacturaProveedorDialog({
                                 onBlur={(e) => guardarCampoItem(item, { precioUnitario: parseNumeroOpcional(e.target.value) })}
                                 disabled={terminal || busy}
                                 placeholder="—"
-                                className="h-10 rounded-lg border-[#2A2F3A] bg-[#11151C] text-sm"
+                                className={cn(ITEM_FIELD_CLASS, "tabular-nums")}
                               />
                               {costoArs != null && (
                                 <p className="text-[11px] font-semibold text-primary">
@@ -667,8 +675,8 @@ export function FacturaProveedorDialog({
 
                             {/* Coincidencia */}
                             <div className="space-y-1 min-w-0">
-                              <Label className="lg:hidden text-[10px] font-bold uppercase text-muted-foreground">Coincidencia</Label>
-                              <span className={`text-xs font-medium flex items-center gap-1.5 ${badge.cls}`}>
+                              <Label className={ITEM_LABEL_CLASS}>Coincidencia</Label>
+                              <span className={`flex items-center gap-1.5 text-xs font-medium ${badge.cls}`}>
                                 <span className="h-2 w-2 rounded-full bg-current shrink-0" />
                                 <span className="truncate">{badge.label}</span>
                               </span>
@@ -678,7 +686,7 @@ export function FacturaProveedorDialog({
                                   onValueChange={(v) => updateItem(item.id, { productoId: v === "none" ? null : Number(v) })}
                                   disabled={busy}
                                 >
-                                  <SelectTrigger className="h-9 w-full rounded-lg border-[#2A2F3A] bg-[#11151C] text-xs">
+                                  <SelectTrigger aria-label={`Producto existente para ${item.textoOriginal}`} className={cn(ITEM_FIELD_CLASS, "w-full text-sm")}>
                                     <SelectValue placeholder="Elegir producto existente" />
                                   </SelectTrigger>
                                   <SelectContent position="popper" align="start" sideOffset={4}>
@@ -692,14 +700,23 @@ export function FacturaProveedorDialog({
                             </div>
 
                             {/* Acciones (una sola línea en desktop) */}
-                            <div className="lg:justify-self-end">
+                            <div className="xl:justify-self-end">
                               {!terminal && (
-                                <div className="flex flex-wrap gap-2 lg:flex-nowrap lg:justify-end">
+                                <div
+                                  role="group"
+                                  aria-label={`Acciones para ${item.textoOriginal}`}
+                                  className={cn(
+                                    "grid gap-2 sm:grid-cols-2",
+                                    item.productoId ? "xl:grid-cols-3" : "xl:grid-cols-2",
+                                    "xl:w-full xl:max-w-[440px]"
+                                  )}
+                                >
                                   {item.productoId && (
                                     <Button
                                       type="button"
                                       size="sm"
-                                      className="h-8 shrink-0 whitespace-nowrap"
+                                      aria-label={`Confirmar coincidencia para ${item.textoOriginal}`}
+                                      className={ITEM_ACTION_BUTTON_CLASS}
                                       onClick={() => confirmarItem(item)}
                                       disabled={busy}
                                     >
@@ -710,7 +727,8 @@ export function FacturaProveedorDialog({
                                     type="button"
                                     size="sm"
                                     variant="outline"
-                                    className="h-8 shrink-0 whitespace-nowrap"
+                                    aria-label={`Crear producto nuevo desde ${item.textoOriginal}`}
+                                    className={ITEM_ACTION_BUTTON_CLASS}
                                     onClick={() => setItemParaCrear(item)}
                                     disabled={busy}
                                   >
@@ -720,7 +738,8 @@ export function FacturaProveedorDialog({
                                     type="button"
                                     size="sm"
                                     variant="ghost"
-                                    className="h-8 shrink-0 whitespace-nowrap"
+                                    aria-label={`Ignorar línea ${item.textoOriginal}`}
+                                    className={cn(ITEM_ACTION_BUTTON_CLASS, "border border-transparent hover:border-[#2A2F3A] hover:bg-white/[0.03]")}
                                     onClick={() => ignorarItem(item)}
                                     disabled={busy}
                                   >
