@@ -7,16 +7,31 @@
 const OPENROUTER_BASE_URL = (process.env.OPENROUTER_BASE_URL || "https://openrouter.ai/api/v1").replace(/\/$/, "");
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
 const OPENROUTER_MODEL = process.env.OPENROUTER_MODEL || "openai/gpt-4o-mini";
-const OPENROUTER_TIMEOUT_MS = Number(process.env.OCR_TIMEOUT_MS) || 90000;
+// 150s: medido contra facturas reales, la latencia de qwen3.6-35b-a3b sin
+// reasoning varía bastante según a qué proveedor upstream de OpenRouter te
+// toque (AtlasCloud, Parasail, etc.) y según qué tan "sucio" salga el texto
+// OCR de una foto vs. un PDF con texto nativo. Se deja margen generoso acá
+// porque el costo de esperar de más es mucho menor que el de un 502.
+const OPENROUTER_TIMEOUT_MS = Number(process.env.OCR_TIMEOUT_MS) || 150000;
 const OPENROUTER_MAX_TOKENS = Number(process.env.OCR_MAX_TOKENS) || 8000;
 // Reasoning apagado por defecto: medido contra una factura de 20 items, con
 // reasoning (incluso "low") tarda 100-145s y quema miles de tokens pensando
 // para una tarea de extracción estructurada que no lo necesita — con
-// `enabled: false` el mismo caso baja a ~49s y sale más barato, sin perder
+// effort "none" el mismo caso baja a ~49s y sale más barato, sin perder
 // precisión (json_schema strict ya fuerza la forma de la respuesta). Se puede
 // reactivar seteando OPENROUTER_REASONING_EFFORT a "low"/"medium"/"high" si
 // hiciera falta para facturas particularmente difíciles de leer.
-const OPENROUTER_REASONING_EFFORT = process.env.OPENROUTER_REASONING_EFFORT || "none";
+const VALID_REASONING_EFFORTS = ["max", "xhigh", "high", "medium", "low", "minimal", "none"] as const;
+const OPENROUTER_REASONING_EFFORT = resolveReasoningEffort(process.env.OPENROUTER_REASONING_EFFORT);
+
+function resolveReasoningEffort(raw: string | undefined): typeof VALID_REASONING_EFFORTS[number] {
+  const normalizado = (raw || "none").trim().toLowerCase();
+  if ((VALID_REASONING_EFFORTS as readonly string[]).includes(normalizado)) {
+    return normalizado as typeof VALID_REASONING_EFFORTS[number];
+  }
+  console.warn(`[OpenRouter] OPENROUTER_REASONING_EFFORT="${raw}" no es válido, usando "none"`);
+  return "none";
+}
 
 export class OpenRouterConfigError extends Error {}
 export class OpenRouterTimeoutError extends Error {}
@@ -55,6 +70,7 @@ export async function callOpenRouterJson(input: {
 
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), OPENROUTER_TIMEOUT_MS);
+  const startedAt = Date.now();
 
   const responseFormat = input.jsonSchema
     ? { type: "json_schema" as const, json_schema: { name: input.jsonSchema.name, schema: input.jsonSchema.schema, strict: true } }
@@ -76,10 +92,10 @@ export async function callOpenRouterJson(input: {
           { role: "user", content: input.userPrompt },
         ],
         response_format: responseFormat,
-        reasoning:
-          OPENROUTER_REASONING_EFFORT === "none"
-            ? { enabled: false }
-            : { effort: OPENROUTER_REASONING_EFFORT },
+        // OpenRouter valida "effort" contra un enum fijo (max/xhigh/high/medium/
+        // low/minimal/none) — "none" es un valor válido de esa lista, no hace
+        // falta (ni funciona) un campo "enabled" separado.
+        reasoning: { effort: OPENROUTER_REASONING_EFFORT },
       }),
       signal: controller.signal,
     });
@@ -115,6 +131,13 @@ export async function callOpenRouterJson(input: {
       throw new OpenRouterRequestError("OpenRouter no devolvió contenido en la respuesta del chat");
     }
 
+    console.log("[OpenRouter]", {
+      model: json.model || OPENROUTER_MODEL,
+      elapsedMs: Date.now() - startedAt,
+      reasoningTokens: json.usage?.completion_tokens_details?.reasoning_tokens ?? null,
+      totalTokens: json.usage?.total_tokens ?? null,
+    });
+
     return {
       content,
       usage: json.usage
@@ -129,6 +152,7 @@ export async function callOpenRouterJson(input: {
     };
   } catch (error) {
     if (error instanceof DOMException && error.name === "AbortError") {
+      console.error("[OpenRouter] timeout", { elapsedMs: Date.now() - startedAt, limitMs: OPENROUTER_TIMEOUT_MS });
       throw new OpenRouterTimeoutError(`OpenRouter no respondió dentro de ${OPENROUTER_TIMEOUT_MS}ms`);
     }
     if (error instanceof OpenRouterRequestError || error instanceof OpenRouterConfigError) {
