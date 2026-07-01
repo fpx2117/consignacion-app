@@ -579,9 +579,9 @@ export function FacturaProveedorDialog({
                   </div>
                 )}
 
-                <div className="rounded-lg border overflow-hidden">
+                <div className="rounded-xl border border-border/50 overflow-hidden">
                   {/* Encabezado de columnas (solo desktop): layout horizontal */}
-                  <div className="hidden lg:grid grid-cols-[minmax(220px,1fr)_74px_170px_220px_minmax(210px,auto)] gap-3 bg-muted/40 px-3 py-2 text-[10px] font-bold uppercase text-muted-foreground">
+                  <div className="hidden lg:grid grid-cols-[minmax(220px,1fr)_74px_170px_220px_minmax(210px,auto)] gap-3 border-b border-border/50 px-4 py-3 text-xs font-medium text-muted-foreground">
                     <span>Descripción detectada</span>
                     <span>Cant.</span>
                     <span>Costo unit.{facturaEnMonedaExtranjera ? " → ARS" : ""}</span>
@@ -600,7 +600,7 @@ export function FacturaProveedorDialog({
                       return (
                         <div
                           key={item.id}
-                          className={`grid grid-cols-1 lg:grid-cols-[minmax(220px,1fr)_74px_170px_220px_minmax(210px,auto)] gap-3 px-3 py-3 items-start ${terminal ? "opacity-60 bg-muted/20" : "bg-background"}`}
+                          className={`grid grid-cols-1 lg:grid-cols-[minmax(220px,1fr)_74px_170px_220px_minmax(210px,auto)] gap-3 px-4 py-3 items-center ${terminal ? "opacity-60 bg-muted/20" : "bg-background"}`}
                         >
                           {/* Descripción (+ código si no está embebido) */}
                           <div className="flex items-start gap-2 min-w-0">
@@ -635,7 +635,7 @@ export function FacturaProveedorDialog({
                                 guardarCampoItem(item, { cantidad: n });
                               }}
                               disabled={terminal || busy}
-                              className="h-9 bg-background text-sm"
+                              className="h-10 rounded-lg border-border/50 bg-muted/40 text-sm"
                             />
                           </div>
 
@@ -650,7 +650,7 @@ export function FacturaProveedorDialog({
                               onBlur={(e) => guardarCampoItem(item, { precioUnitario: parseNumeroOpcional(e.target.value) })}
                               disabled={terminal || busy}
                               placeholder="—"
-                              className="h-9 bg-background text-sm"
+                              className="h-10 rounded-lg border-border/50 bg-muted/40 text-sm"
                             />
                             {costoArs != null && (
                               <p className="text-[11px] font-semibold text-primary">
@@ -672,7 +672,7 @@ export function FacturaProveedorDialog({
                                 onValueChange={(v) => updateItem(item.id, { productoId: Number(v) })}
                                 disabled={busy}
                               >
-                                <SelectTrigger className="h-8 text-xs bg-muted/20">
+                                <SelectTrigger className="h-9 rounded-lg border-border/50 bg-muted/40 text-xs">
                                   <SelectValue placeholder="Elegir otro producto" />
                                 </SelectTrigger>
                                 <SelectContent>
