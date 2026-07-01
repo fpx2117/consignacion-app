@@ -321,7 +321,7 @@ export function FacturaProveedorDialog({
           )}
         </DialogTrigger>
 
-        <DialogContent className="p-0 gap-0 flex flex-col overflow-hidden border border-[#2A2F3A] bg-[#0F1117] rounded-[28px] sm:rounded-[28px] shadow-2xl w-[90vw] max-w-[1280px] max-h-[85vh]">
+        <DialogContent className="p-0 gap-0 flex flex-col overflow-hidden border border-[#2A2F3A] bg-[#0F1117] rounded-[28px] sm:rounded-[28px] shadow-2xl w-[90vw] max-w-[1280px] sm:max-w-[1280px] max-h-[85vh]">
           <DialogHeader className="shrink-0 border-b border-[#2A2F3A] px-8 py-7">
             <div className="flex items-center gap-4">
               <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary">
@@ -448,10 +448,10 @@ export function FacturaProveedorDialog({
                         onValueChange={(v) => guardarCampoFactura({ proveedorId: v === "none" ? null : Number(v) })}
                         disabled={facturaBloqueada}
                       >
-                        <SelectTrigger className="h-[52px] rounded-xl border-[#2A2F3A] bg-[#11151C] pl-10 text-sm">
+                        <SelectTrigger className="h-[52px] w-full rounded-xl border-[#2A2F3A] bg-[#11151C] pl-10 text-sm">
                           <SelectValue placeholder="Sin asignar" />
                         </SelectTrigger>
-                        <SelectContent>
+                        <SelectContent position="popper" align="start" sideOffset={4}>
                           <SelectItem value="none">Sin asignar</SelectItem>
                           {proveedores.map((p) => (
                             <SelectItem key={p.id} value={String(p.id)}>{p.nombre}</SelectItem>
@@ -528,10 +528,10 @@ export function FacturaProveedorDialog({
                         onValueChange={(v) => guardarCampoFactura({ moneda: v })}
                         disabled={facturaBloqueada}
                       >
-                        <SelectTrigger className="h-[52px] rounded-xl border-[#2A2F3A] bg-[#11151C] pl-10 text-sm">
+                        <SelectTrigger className="h-[52px] w-full rounded-xl border-[#2A2F3A] bg-[#11151C] pl-10 text-sm">
                           <SelectValue placeholder="ARS" />
                         </SelectTrigger>
-                        <SelectContent>
+                        <SelectContent position="popper" align="start" sideOffset={4}>
                           <SelectItem value="ARS">ARS</SelectItem>
                           <SelectItem value="USD">USD</SelectItem>
                           {monedaFactura !== "ARS" && monedaFactura !== "USD" && (
@@ -583,7 +583,7 @@ export function FacturaProveedorDialog({
                   {/* Tabla de productos detectados (scroll interno) */}
                   <div className="min-h-0 flex flex-col overflow-hidden rounded-2xl border border-[#2A2F3A]">
                     {/* Encabezado de columnas (solo desktop) */}
-                    <div className="hidden lg:grid shrink-0 grid-cols-[minmax(200px,1.3fr)_72px_120px_minmax(230px,1.4fr)_minmax(320px,1.2fr)] gap-3 border-b border-[#2A2F3A] bg-[#0B0D12] px-5 h-11 items-center text-xs font-medium text-muted-foreground">
+                    <div className="hidden lg:grid shrink-0 grid-cols-[minmax(180px,1.4fr)_64px_110px_minmax(150px,1fr)_minmax(220px,1fr)] gap-3 border-b border-[#2A2F3A] bg-[#0B0D12] px-5 h-11 items-center text-xs font-medium text-muted-foreground">
                       <span>Descripción detectada</span>
                       <span>Cant.</span>
                       <span>Costo unit.{facturaEnMonedaExtranjera ? " → ARS" : ""}</span>
@@ -602,18 +602,22 @@ export function FacturaProveedorDialog({
                         return (
                           <div
                             key={item.id}
-                            className={`grid grid-cols-1 lg:grid-cols-[minmax(200px,1.3fr)_72px_120px_minmax(230px,1.4fr)_minmax(320px,1.2fr)] gap-3 px-5 py-3 min-h-[72px] items-center ${terminal ? "opacity-60 bg-white/[0.02]" : ""}`}
+                            className={`grid grid-cols-1 lg:grid-cols-[minmax(180px,1.4fr)_64px_110px_minmax(150px,1fr)_minmax(220px,1fr)] gap-3 px-5 py-3 min-h-[72px] items-center ${terminal ? "opacity-60 bg-white/[0.02]" : ""}`}
                           >
-                            {/* Descripción (+ código si no está embebido) */}
-                            <div className="flex items-center gap-2 min-w-0">
-                              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                            {/* Descripción — siempre editable: si no hay producto existente que coincida, no hay ninguna existencia previa que la fije */}
+                            <div className="flex items-start gap-2 min-w-0">
+                              <div className="mt-1.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
                                 <Package className="h-4 w-4" />
                               </div>
-                              <div className="min-w-0 space-y-0.5">
+                              <div className="min-w-0 flex-1 space-y-1">
                                 <Label className="lg:hidden text-[10px] font-bold uppercase text-muted-foreground">Descripción detectada</Label>
-                                <p className="text-sm font-medium text-foreground truncate" title={item.textoOriginal}>
-                                  {item.textoOriginal}
-                                </p>
+                                <Input
+                                  value={item.textoOriginal}
+                                  onChange={(e) => updateItem(item.id, { textoOriginal: e.target.value })}
+                                  onBlur={(e) => guardarCampoItem(item, { textoOriginal: e.target.value })}
+                                  disabled={terminal || busy}
+                                  className="h-9 rounded-lg border-[#2A2F3A] bg-[#11151C] text-sm font-medium"
+                                />
                                 {mostrarCodigo && item.codigoProveedor && (
                                   <p className="text-[11px] font-mono text-muted-foreground">#{item.codigoProveedor}</p>
                                 )}
@@ -668,16 +672,17 @@ export function FacturaProveedorDialog({
                                 <span className="h-2 w-2 rounded-full bg-current shrink-0" />
                                 <span className="truncate">{badge.label}</span>
                               </span>
-                              {!terminal && item.productoId && (
+                              {!terminal && (
                                 <Select
-                                  value={String(item.productoId)}
-                                  onValueChange={(v) => updateItem(item.id, { productoId: Number(v) })}
+                                  value={item.productoId ? String(item.productoId) : "none"}
+                                  onValueChange={(v) => updateItem(item.id, { productoId: v === "none" ? null : Number(v) })}
                                   disabled={busy}
                                 >
-                                  <SelectTrigger className="h-9 rounded-lg border-[#2A2F3A] bg-[#11151C] text-xs">
-                                    <SelectValue placeholder="Elegir otro producto" />
+                                  <SelectTrigger className="h-9 w-full rounded-lg border-[#2A2F3A] bg-[#11151C] text-xs">
+                                    <SelectValue placeholder="Elegir producto existente" />
                                   </SelectTrigger>
-                                  <SelectContent>
+                                  <SelectContent position="popper" align="start" sideOffset={4}>
+                                    <SelectItem value="none">Sin producto (crear nuevo)</SelectItem>
                                     {productos.map((p) => (
                                       <SelectItem key={p.id} value={String(p.id)}>{p.nombre}</SelectItem>
                                     ))}
