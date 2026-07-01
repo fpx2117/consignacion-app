@@ -6,7 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { EstadoItemFactura } from "@prisma/client";
 import { requireAuth, requireRole } from "@/lib/auth/require-auth";
 import { cargarItemFacturaAccesible } from "@/lib/ocr/cargar-item-factura";
-import { actualizarEstadoFacturaSiCompleta } from "@/lib/ocr/aplicar-confirmacion";
+import { actualizarEstadoFacturaSiCompleta, purgarArchivoFacturaSiFinalizada } from "@/lib/ocr/aplicar-confirmacion";
 
 export async function POST(
   _req: NextRequest,
@@ -38,6 +38,9 @@ export async function POST(
     await actualizarEstadoFacturaSiCompleta(tx, item.facturaId);
     return updated;
   });
+
+  // Post-commit: purga el binario si la factura quedó completa.
+  await purgarArchivoFacturaSiFinalizada(item.facturaId);
 
   return NextResponse.json({ data: itemActualizado });
 }

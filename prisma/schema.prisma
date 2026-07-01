@@ -748,6 +748,9 @@ model FacturaProveedor {
   sucursalId              Int
   archivoPath             String
   archivoMime             String
+  /// El binario original se borra del disco al confirmar/cancelar la factura para
+  /// ahorrar espacio: los datos estructurados (items) ya quedan persistidos.
+  archivoEliminado        Boolean                @default(false)
   numeroFactura           String?
   fecha                   DateTime?
   moneda                  String                 @default("ARS")
