@@ -51,7 +51,7 @@ export function DesktopCategorySidebar({
     });
 
     return (
-        <aside className="hidden lg:flex w-60 xl:w-64 shrink-0 flex-col gap-0.5 sticky top-6 self-start max-h-[calc(100vh-3rem)] overflow-y-auto pb-6 pr-1">
+        <aside className="hidden lg:flex w-60 xl:w-64 shrink-0 flex-col gap-0.5 sticky top-6 self-start max-h-[calc(100vh-3rem)] overflow-y-auto pb-6 pr-1 scrollbar-themed">
             {/* Header del sidebar */}
             <div className="mb-3 px-2">
                 <h3 className="text-xs font-bold uppercase tracking-widest text-[var(--store-muted,#8A8F98)]">
