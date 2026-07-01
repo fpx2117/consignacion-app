@@ -1,38 +1,46 @@
 // src/lib/ocr/ocr-engine.ts
-// Motor de OCR reutilizable: mantiene un worker de Tesseract.js como singleton
-// (el servidor de este proyecto es un proceso Node persistente vía server.ts,
-// no serverless, así que evitamos reinicializar el modelo de idioma en cada request).
-// También resuelve la rasterización de PDFs a imagen reutilizando Puppeteer,
-// que ya es una dependencia del proyecto (evita sumar `canvas`/poppler).
+// Motor de OCR reutilizable con soporte para Railway.
+//
+// Estrategia de rasterizado de PDFs (de la más liviana a la más pesada):
+//   1. PDF nativo texto → pdf-parse (sin Chromium, casi cero overhead)
+//   2. PDF escaneado/imagen → Puppeteer + Chromium (solo como fallback)
+//
+// Para imágenes (JPG/PNG/WEBP) → Tesseract.js directo (sin Chromium).
+// Esto evita el 502 en Railway para el 90% de los casos de uso.
+//
+// Chromium se resuelve desde:
+//   - PUPPETEER_EXECUTABLE_PATH (variable de Railway)
+//   - /usr/bin/chromium, /usr/bin/chromium-browser, /usr/bin/google-chrome
 
 import path from "path";
-import { mkdir, writeFile, rm } from "fs/promises";
+import { existsSync } from "fs";
+import { writeFile, rm } from "fs/promises";
 import os from "os";
 import crypto from "crypto";
 import sharp from "sharp";
-import { createWorker, type Worker } from "tesseract.js";
 
-const CACHE_DIR = path.join(process.cwd(), ".cache", "tesseract");
+const IMAGE_MIME_TYPES = [
+  "image/png",
+  "image/jpeg",
+  "image/jpg",
+  "image/webp",
+  "image/bmp",
+] as const;
 
-let workerPromise: Promise<Worker> | null = null;
+// ─── Helpers de tipo MIME ────────────────────────────────────────────
 
-async function getWorker(): Promise<Worker> {
-  if (!workerPromise) {
-    workerPromise = (async () => {
-      await mkdir(CACHE_DIR, { recursive: true });
-      return createWorker("spa", undefined, { cachePath: CACHE_DIR });
-    })();
-  }
-  return workerPromise;
+export function esImagenSoportada(mimeType: string): boolean {
+  return IMAGE_MIME_TYPES.includes(mimeType as typeof IMAGE_MIME_TYPES[number]);
 }
 
-export type OcrResultado = {
-  texto: string;
-  confianza: number;
-};
+export function esPdf(mimeType: string): boolean {
+  return mimeType === "application/pdf";
+}
+
+// ─── Preprocesamiento de imagen (sharp) ──────────────────────────────
 
 /** Preprocesa la imagen (escala de grises + normalizado) para mejorar el reconocimiento. */
-async function preprocesarImagen(buffer: Buffer): Promise<Buffer> {
+export async function preprocesarImagen(buffer: Buffer): Promise<Buffer> {
   return sharp(buffer)
     .rotate() // respeta orientación EXIF (fotos de celular)
     .grayscale()
@@ -41,26 +49,60 @@ async function preprocesarImagen(buffer: Buffer): Promise<Buffer> {
     .toBuffer();
 }
 
-export async function reconocerTexto(buffer: Buffer): Promise<OcrResultado> {
-  const worker = await getWorker();
-  const preprocesada = await preprocesarImagen(buffer);
-  const { data } = await worker.recognize(preprocesada);
-  return { texto: data.text, confianza: data.confidence };
+// ─── Puppeteer / Chromium launcher (Railway-safe) ────────────────────
+
+function getChromiumExecutablePath(): string | undefined {
+  const candidates = [
+    process.env.PUPPETEER_EXECUTABLE_PATH,
+    "/usr/bin/chromium",
+    "/usr/bin/chromium-browser",
+    "/usr/bin/google-chrome",
+  ].filter(Boolean) as string[];
+
+  const found = candidates.find((cand) => existsSync(cand));
+  if (found) {
+    console.log("[OCR] Chromium resuelto en:", found);
+  } else {
+    console.warn("[OCR] No se encontró Chromium en ninguna ruta conocida");
+  }
+  return found;
 }
 
-/**
- * Rasteriza un PDF a una imagen PNG usando el visor de PDF nativo de Chromium
- * (vía Puppeteer). Simplificación pragmática de PoC: en vez de una imagen por
- * página, se captura el documento completo en una sola captura larga
- * (scroll completo), acotada por `maxPaginas` como límite de alto renderizado
- * para no procesar documentos desmedidos.
- */
+export async function lanzarChromium() {
+  const executablePath = getChromiumExecutablePath();
+  const { default: puppeteer } = await import("puppeteer");
+
+  return puppeteer.launch({
+    headless: true,
+    executablePath,
+    args: [
+      "--no-sandbox",
+      "--disable-setuid-sandbox",
+      "--disable-dev-shm-usage",
+      "--disable-gpu",
+      "--disable-software-rasterizer",
+      "--disable-extensions",
+      "--disable-background-networking",
+      "--disable-default-apps",
+      "--disable-sync",
+      "--disable-translate",
+      "--hide-scrollbars",
+      "--mute-audio",
+      "--no-first-run",
+      "--single-process",
+    ],
+  });
+}
+
+// ─── Rasterizado de PDF (Puppeteer + Chromium) ───────────────────────
+// Solo se usa como fallback para PDFs escaneados sin texto nativo.
+
 export async function rasterizarPdf(buffer: Buffer, maxPaginas = 5): Promise<Buffer> {
-  const puppeteer = await import("puppeteer");
+  console.log("[OCR] Rasterizando PDF con Chromium...");
   const tempPath = path.join(os.tmpdir(), `ocr-factura-${crypto.randomUUID()}.pdf`);
   await writeFile(tempPath, buffer);
 
-  const browser = await puppeteer.default.launch({ headless: true });
+  const browser = await lanzarChromium();
   try {
     const page = await browser.newPage();
     const altoMaximo = 1600 * maxPaginas;
@@ -77,15 +119,30 @@ export async function rasterizarPdf(buffer: Buffer, maxPaginas = 5): Promise<Buf
     const screenshot = await page.screenshot({ type: "png", fullPage: true });
     return Buffer.from(screenshot);
   } finally {
-    await browser.close();
+    await browser.close().catch(() => {});
     await rm(tempPath, { force: true });
   }
 }
 
-export function esPdf(mimeType: string): boolean {
-  return mimeType === "application/pdf";
-}
+// ─── Extracción de texto nativo de PDF (pdf-parse) ───────────────────
+// Alternativa liviana: sin Chromium, solo extrae texto ya presente en el PDF.
+// Útil para facturas electrónicas / PDFs generados por sistema.
 
-export function esImagenSoportada(mimeType: string): boolean {
-  return /^image\/(png|jpe?g|webp|bmp)$/i.test(mimeType);
+export async function extraerTextoPdf(buffer: Buffer): Promise<string | null> {
+  try {
+    // pdf-parse v2.x exporta la clase PDFParse (no default export)
+    const { PDFParse } = await import("pdf-parse");
+    const parser = new PDFParse({ data: buffer });
+    const result = await parser.getText();
+    await parser.destroy();
+    const text = result.text?.trim();
+    if (text && text.length > 20) {
+      console.log("[OCR] PDF nativo: texto extraído sin Chromium");
+      return text;
+    }
+    return null;
+  } catch (error) {
+    console.warn("[OCR] pdf-parse falló, se usará Chromium como fallback:", error);
+    return null;
+  }
 }
