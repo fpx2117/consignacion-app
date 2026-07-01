@@ -2,7 +2,7 @@
 
 Sistema de gestión comercial fullstack construido con **Next.js 16**, **React 19**, **Prisma 7** y **PostgreSQL**. Diseñado para manejar ventas directas (POS), gestión de stock multisucursal y un flujo completo de mercadería en consignación, bajo un modelo de suscripción SaaS con soporte para MercadoPago y PayPal.
 
-> Para documentación técnica detallada (rutas, modelos, enumeraciones) ver [DOCUMENTACION.md](./DOCUMENTACION.md).
+> Para documentación técnica detallada (rutas, modelos, enumeraciones) ver [docs/DOCUMENTACION.md](./docs/DOCUMENTACION.md). Índice completo de documentación en [docs/INDEX.md](./docs/INDEX.md).
 
 ## Documentacion Tecnica (Indice Nuevo)
 
@@ -215,7 +215,7 @@ consignacion-app/
 │   ├── store/                 # Estado global con Zustand
 │   └── types/                 # Tipos TypeScript compartidos
 ├── server.ts                  # Servidor HTTP custom (Next.js + Socket.io)
-└── DOCUMENTACION.md           # Documentación técnica detallada
+└── docs/                       # Documentación técnica (ver docs/INDEX.md)
 ```
 
 ---

@@ -1,5 +1,7 @@
 # Plan de desacople de Socket.IO
 
+> **Estado (2026-06-30): NO implementado.** `server.ts` sigue acoplando Socket.io al proceso de Next.js; no existe `RealtimePublisher` ni `REALTIME_EXTERNAL` en `src/`.
+
 ## Objetivo
 Separar el tiempo real (Socket.IO) del servidor principal de Next.js para mejorar escalabilidad, latencia y aislación de fallos, sin cambiar funcionalidades visibles para el usuario.
 
