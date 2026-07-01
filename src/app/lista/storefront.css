@@ -85,6 +85,26 @@
   display: none;
 }
 
+/* Scrollbar fina y con el color de la tienda, para listas largas (ej. sidebar de categorías) */
+.scrollbar-themed {
+  scrollbar-width: thin;
+  scrollbar-color: var(--store-primary, #007AFF) transparent;
+}
+.scrollbar-themed::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.scrollbar-themed::-webkit-scrollbar-track {
+  background: transparent;
+}
+.scrollbar-themed::-webkit-scrollbar-thumb {
+  background-color: color-mix(in srgb, var(--store-primary, #007AFF) 35%, transparent);
+  border-radius: 999px;
+}
+.scrollbar-themed::-webkit-scrollbar-thumb:hover {
+  background-color: color-mix(in srgb, var(--store-primary, #007AFF) 55%, transparent);
+}
+
 /* ── Sidebar de categorías: highlight activo ── */
 .sidebar-item-active-bg {
   background-color: var(--store-primary, #007AFF);
