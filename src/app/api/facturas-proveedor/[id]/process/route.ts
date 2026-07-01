@@ -99,7 +99,7 @@ export async function POST(
     });
 
     const facturaActualizada = await prisma.$transaction(async (tx) => {
-      const updated = await tx.facturaProveedor.update({
+      await tx.facturaProveedor.update({
         where: { id: facturaId },
         data: {
           estado: EstadoFacturaProveedor.REQUIERE_REVISION,
@@ -138,7 +138,13 @@ export async function POST(
         });
       }
 
-      return updated;
+      // El `update` de arriba no trae los items (se crean después, en este mismo
+      // loop) — hay que releerla con la relación incluida para que el frontend
+      // reciba las filas recién creadas en la misma respuesta.
+      return tx.facturaProveedor.findUniqueOrThrow({
+        where: { id: facturaId },
+        include: { items: true, proveedor: true },
+      });
     });
 
     return NextResponse.json({
