@@ -1,7 +1,7 @@
 // src/app/ver/inventario/[id]/pdf/route.ts
 import { NextRequest, NextResponse } from "next/server";
-import type { Browser } from "puppeteer-core";
-import { launchReportBrowser } from "@/lib/chromium/resolve-executable-path";
+import type { Page } from "puppeteer-core";
+import { getSharedReportBrowser } from "@/lib/chromium/resolve-executable-path";
 import { requireAuth } from "@/lib/auth/require-auth";
 import { resolveTimezoneForAuth } from "@/lib/timezone/get-configured-tz";
 import { prisma } from "@/lib/prisma";
@@ -14,7 +14,7 @@ export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  let browser: Browser | null = null;
+  let page: Page | null = null;
 
   try {
     const auth = await requireAuth();
@@ -114,9 +114,8 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     // 6. Generar HTML
     const htmlContent = await buildInventoryHtml(groups, branding, timezone.tz, conCostos, conValuacion);
 
-    browser = await launchReportBrowser();
-
-    const page = await browser.newPage();
+    const browser = await getSharedReportBrowser();
+    page = await browser.newPage();
     await page.setContent(htmlContent, { waitUntil: "domcontentloaded" });
     await page.emulateMediaType("screen");
 
@@ -126,8 +125,8 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
       margin: { top: "10mm", bottom: "10mm", left: "10mm", right: "10mm" },
     });
 
-    await browser.close();
-    browser = null;
+    await page.close();
+    page = null;
 
     const filename = sucursales.length === 1
       ? `Inventario_${sucursales[0].nombre.replace(/\s+/g, '_')}.pdf`
@@ -145,7 +144,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     return NextResponse.json({ error: "Error en PDF" }, { status: 500 });
   } finally {
     try {
-      if (browser) await browser.close();
+      if (page) await page.close();
     } catch { }
   }
 }

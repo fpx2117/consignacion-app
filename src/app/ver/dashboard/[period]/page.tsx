@@ -1,10 +1,11 @@
 "use client";
 
 // src/app/ver/dashboard/[period]/page.tsx
-import { useEffect, use } from "react";
+import { use } from "react";
 import { useSearchParams } from "next/navigation";
 import { BarChart3 } from "lucide-react";
 import { ReportLoadingPage } from "@/components/reports/report-loading-page";
+import { useReportPdfNavigation } from "@/hooks/useReportPdfNavigation";
 
 const PERIOD_LABELS: Record<string, string> = {
   today: "Hoy",
@@ -24,20 +25,15 @@ export default function DashboardReporteLoadingPage({
   const sucursalId = searchParams.get("sucursalId") || "1";
   const label = PERIOD_LABELS[period] ?? period;
 
-  useEffect(() => {
-    if (!code) return;
-    const timer = setTimeout(() => {
-      window.location.replace(`/ver/dashboard/${period}/pdf?code=${code}&sucursalId=${sucursalId}`);
-    }, 1200);
-    return () => clearTimeout(timer);
-  }, [period, code, sucursalId]);
+  const pdfUrl = code ? `/ver/dashboard/${period}/pdf?code=${code}&sucursalId=${sucursalId}` : null;
+  const fetchError = useReportPdfNavigation(pdfUrl);
 
   return (
     <ReportLoadingPage
       title="Generando Reporte"
       subtitle={`Dashboard · ${label}`}
       Icon={BarChart3}
-      errorMessage={code ? null : "Acceso no autorizado o enlace inválido."}
+      errorMessage={fetchError ?? (code ? null : "Acceso no autorizado o enlace inválido.")}
     />
   );
 }

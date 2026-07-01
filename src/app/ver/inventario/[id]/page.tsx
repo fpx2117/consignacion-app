@@ -5,6 +5,7 @@ import { useEffect, useState, use } from "react";
 import { Boxes } from "lucide-react";
 import { apiService } from "@/lib/apiService";
 import { ReportLoadingPage } from "@/components/reports/report-loading-page";
+import { useReportPdfNavigation } from "@/hooks/useReportPdfNavigation";
 
 export default function InventarioLoadingPage({
   params,
@@ -12,20 +13,23 @@ export default function InventarioLoadingPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = use(params);
-  const [error, setError] = useState<string | null>(null);
+  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
+  const [linkError, setLinkError] = useState<string | null>(null);
   const sucursalLabel = id === "0" ? "Vista General" : `Sucursal ${id}`;
 
   useEffect(() => {
     let mounted = true;
     apiService.getInventarioPdfUrl(id)
-      .then((pdfUrl) => {
-        if (mounted && pdfUrl) window.location.replace(pdfUrl);
+      .then((url) => {
+        if (mounted && url) setPdfUrl(url);
       })
       .catch(() => {
-        if (mounted) setError("No se pudo generar el reporte de inventario. Intentá nuevamente.");
+        if (mounted) setLinkError("No se pudo generar el reporte de inventario. Intentá nuevamente.");
       });
     return () => { mounted = false; };
   }, [id]);
+
+  const fetchError = useReportPdfNavigation(pdfUrl);
 
   return (
     <ReportLoadingPage
@@ -33,7 +37,7 @@ export default function InventarioLoadingPage({
       subtitle={sucursalLabel}
       Icon={Boxes}
       errorTitle="Error al generar inventario"
-      errorMessage={error}
+      errorMessage={linkError ?? fetchError}
     />
   );
 }

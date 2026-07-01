@@ -41,8 +41,38 @@ async function launchLocal(extraArgs: string[]): Promise<Browser> {
  * "--single-process": es inestable con Page.pdf() y puede colgar o cerrar
  * el target (verificado localmente).
  */
-export async function launchReportBrowser(): Promise<Browser> {
+async function launchReportBrowser(): Promise<Browser> {
   return isLinux ? launchLinux([]) : launchLocal([]);
+}
+
+// ─── Pool de un solo browser compartido entre requests ───────────────
+// Arrancar Chromium desde cero toma ~2s (verificado local); ese costo se
+// pagaba en CADA request de reporte. Un proceso de Next.js en Node vive
+// entre requests, así que mantenemos un único Browser vivo y solo abrimos
+// una Page nueva (barata) por request. Si el browser se cae/desconecta, se
+// relanza en el próximo pedido.
+
+let sharedBrowser: Browser | null = null;
+let launching: Promise<Browser> | null = null;
+
+export async function getSharedReportBrowser(): Promise<Browser> {
+  if (sharedBrowser?.connected) return sharedBrowser;
+
+  if (!launching) {
+    launching = launchReportBrowser()
+      .then((browser) => {
+        sharedBrowser = browser;
+        browser.once("disconnected", () => {
+          if (sharedBrowser === browser) sharedBrowser = null;
+        });
+        return browser;
+      })
+      .finally(() => {
+        launching = null;
+      });
+  }
+
+  return launching;
 }
 
 /**
