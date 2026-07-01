@@ -1,13 +1,25 @@
 // src/app/api/productos/ocr-factura/analizar/route.ts
-// PoC de OCR de facturas (Opción B del análisis en docs/features/import-productos-excel-ocr.md).
-// Recibe una imagen o PDF de una factura, corre OCR (Tesseract.js) y devuelve un borrador
-// de líneas de producto detectadas para revisión manual. No escribe nada en la base de datos.
+// OCR de facturas con soporte para Railway.
+//
+// Flujo de procesamiento (priorizando la ruta más liviana):
+//   Imagen (JPG/PNG/WEBP) → preprocesarImagen + recognizeImage (Tesseract, sin Chromium)
+//   PDF nativo           → extraerTextoPdf (pdf-parse, sin Chromium)
+//   PDF escaneado        → rasterizarPdf (Puppeteer/Chromium) + recognizeImage (Tesseract)
+//
+// Esto evita el error 502 en Railway al no forzar Chromium innecesariamente.
 
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth, requireRole } from "@/lib/auth/require-auth";
 import { isGlobalSucursalView } from "@/lib/security/sucursalScope";
-import { reconocerTexto, rasterizarPdf, esPdf, esImagenSoportada } from "@/lib/ocr/ocr-engine";
+import {
+  esPdf,
+  esImagenSoportada,
+  preprocesarImagen,
+  rasterizarPdf,
+  extraerTextoPdf,
+} from "@/lib/ocr/ocr-engine";
+import { recognizeImage } from "@/lib/ocr/tesseract-service";
 import { parseFacturaTexto } from "@/lib/ocr/parse-factura";
 import { matchProductoPorNombre } from "@/lib/ocr/match-producto";
 
@@ -49,9 +61,37 @@ export async function POST(req: Request) {
     }
 
     const buffer = Buffer.from(await file.arrayBuffer());
-    const imagenParaOcr = esPdf(mimeType) ? await rasterizarPdf(buffer) : buffer;
 
-    const { texto, confianza } = await reconocerTexto(imagenParaOcr);
+    // ── Extraer texto según el tipo de archivo ──────────────────
+    let texto: string;
+    let confianza: number;
+
+    if (esPdf(mimeType)) {
+      // 1) Intentar extraer texto nativo del PDF (sin Chromium)
+      const textoNativo = await extraerTextoPdf(buffer);
+      if (textoNativo) {
+        texto = textoNativo;
+        confianza = 100; // texto nativo = precisión perfecta
+        console.log("[OCR] Usando texto nativo de PDF (sin Chromium)");
+      } else {
+        // 2) Fallback: rasterizar con Chromium y aplicar OCR
+        console.log("[OCR] PDF sin texto nativo, rasterizando con Chromium...");
+        const imagenParaOcr = await rasterizarPdf(buffer);
+        const preprocesada = await preprocesarImagen(imagenParaOcr);
+        const resultado = await recognizeImage(preprocesada);
+        texto = resultado.texto;
+        confianza = resultado.confianza;
+      }
+    } else {
+      // Imagen: preprocesar + Tesseract directo (sin Chromium)
+      console.log("[OCR] Procesando imagen directamente (sin Chromium)");
+      const preprocesada = await preprocesarImagen(buffer);
+      const resultado = await recognizeImage(preprocesada);
+      texto = resultado.texto;
+      confianza = resultado.confianza;
+    }
+
+    // ── Parsear líneas detectadas ───────────────────────────────
     const lineasDetectadas = parseFacturaTexto(texto);
 
     const sucursalId = auth.activeSucursalId;
@@ -82,7 +122,10 @@ export async function POST(req: Request) {
       },
     });
   } catch (error) {
-    console.error("Error en análisis OCR de factura:", error);
+    console.error("[OCR_ERROR]", {
+      message: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+    });
     return NextResponse.json(
       { error: "Error interno al analizar la factura" },
       { status: 500 },

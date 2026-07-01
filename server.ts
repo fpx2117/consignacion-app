@@ -6,6 +6,7 @@ import { Server } from "socket.io";
 // @ts-expect-error cookie viene como dep transitiva de socket.io/engine.io
 import { parse as parseCookie } from "cookie";
 import { jwtVerify } from "jose";
+import { initTesseractWorker, shutdownTesseractWorker } from "./src/lib/ocr/tesseract-service";
 
 const dev = process.env.NODE_ENV !== "production";
 const port = Number(process.env.PORT) || 3000;
@@ -171,9 +172,26 @@ app.prepare().then(() => {
     });
   });
 
-  // 7. Escuchar en el puerto
+  // 7. Precargar Tesseract (OCR) para evitar timeout en el primer request
+  console.log("⏳ Precargando Tesseract worker (OCR)...");
+  initTesseractWorker().then(() => {
+    console.log("✅ Tesseract worker precargado");
+  });
+
+  // 8. Escuchar en el puerto
   httpServer.listen(port, listenHost, () => {
     console.log(`> 🚀 Servidor listo en http://${listenHost}:${port}`);
     console.log(`> 🌐 Hostname configurado para Next.js: ${hostname}`);
   });
+
+  // 9. Graceful shutdown
+  const shutdown = async () => {
+    console.log("\n🛑 Apagando servidor...");
+    await shutdownTesseractWorker();
+    io?.close();
+    httpServer.close();
+    process.exit(0);
+  };
+  process.on("SIGINT", shutdown);
+  process.on("SIGTERM", shutdown);
 });
