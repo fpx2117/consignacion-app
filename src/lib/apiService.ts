@@ -111,7 +111,10 @@ export type FacturaProveedor = {
   estado: EstadoFacturaProveedor;
   confianzaOcr: number | null;
   errorMensaje: string | null;
+  archivoEliminado?: boolean;
+  createdAt?: string;
   items?: FacturaProveedorItem[];
+  _count?: { items: number };
 };
 
 export type FacturaProveedorUsage = {
@@ -149,6 +152,24 @@ export type UpdateFacturaProveedorItemInput = {
   cantidad?: number;
   precioUnitario?: number | null;
   totalLinea?: number | null;
+};
+
+export type CreateProveedorInput = {
+  nombre: string;
+  cuit?: string;
+  monedaPreferida?: string;
+};
+
+export type UpdateProveedorInput = {
+  nombre?: string;
+  cuit?: string;
+  monedaPreferida?: string;
+  activo?: boolean;
+};
+
+export type ListFacturasProveedorFiltros = {
+  proveedorId?: number;
+  estado?: EstadoFacturaProveedor;
 };
 
 export class ApiRequestError extends Error {
@@ -332,6 +353,7 @@ export const API_ROUTES = {
   PRODUCTO_ID: (id: number) => `/api/productos/${id}`,
 
   PROVEEDORES: "/api/proveedores",
+  PROVEEDOR_ID: (id: number) => `/api/proveedores/${id}`,
 
   FACTURAS_PROVEEDOR: {
     LIST: "/api/facturas-proveedor",
@@ -339,6 +361,7 @@ export const API_ROUTES = {
     USAGE: "/api/facturas-proveedor/usage",
     BY_ID: (id: number) => `/api/facturas-proveedor/${id}`,
     PROCESS: (id: number) => `/api/facturas-proveedor/${id}/process`,
+    CANCEL: (id: number) => `/api/facturas-proveedor/${id}/cancel`,
     CONFIRM_ALL: (id: number) => `/api/facturas-proveedor/${id}/confirm-all`,
     ITEM_UPDATE: (itemId: number) => `/api/facturas-proveedor/items/${itemId}`,
     ITEM_CONFIRM: (itemId: number) => `/api/facturas-proveedor/items/${itemId}/confirm`,
@@ -620,10 +643,23 @@ export const apiService = {
     return apiData<Proveedor[]>(API_ROUTES.PROVEEDORES);
   },
 
-  createProveedor(payload: { nombre: string; cuit?: string; monedaPreferida?: string }) {
+  createProveedor(payload: CreateProveedorInput) {
     return apiData<Proveedor>(API_ROUTES.PROVEEDORES, {
       method: "POST",
       body: JSON.stringify(payload),
+    });
+  },
+
+  updateProveedor(id: number, payload: UpdateProveedorInput) {
+    return apiData<Proveedor>(API_ROUTES.PROVEEDOR_ID(id), {
+      method: "PATCH",
+      body: JSON.stringify(payload),
+    });
+  },
+
+  deleteProveedor(id: number) {
+    return apiData<{ success: boolean }>(API_ROUTES.PROVEEDOR_ID(id), {
+      method: "DELETE",
     });
   },
 
@@ -651,8 +687,19 @@ export const apiService = {
     return apiData<FacturaProveedor>(API_ROUTES.FACTURAS_PROVEEDOR.BY_ID(facturaId));
   },
 
-  listFacturasProveedor() {
-    return apiData<FacturaProveedor[]>(API_ROUTES.FACTURAS_PROVEEDOR.LIST);
+  listFacturasProveedor(filtros?: ListFacturasProveedorFiltros) {
+    const params = new URLSearchParams();
+    if (filtros?.proveedorId != null) params.set("proveedorId", String(filtros.proveedorId));
+    if (filtros?.estado) params.set("estado", filtros.estado);
+    const qs = params.toString();
+    const url = qs ? `${API_ROUTES.FACTURAS_PROVEEDOR.LIST}?${qs}` : API_ROUTES.FACTURAS_PROVEEDOR.LIST;
+    return apiData<FacturaProveedor[]>(url);
+  },
+
+  cancelFacturaProveedor(facturaId: number) {
+    return apiData<FacturaProveedor>(API_ROUTES.FACTURAS_PROVEEDOR.CANCEL(facturaId), {
+      method: "POST",
+    });
   },
 
   updateFacturaProveedor(facturaId: number, payload: UpdateFacturaProveedorInput) {

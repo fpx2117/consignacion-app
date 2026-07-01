@@ -9,8 +9,11 @@
 //   - precioVenta no se toca acá bajo ninguna circunstancia.
 //   - El alias sólo se guarda si la factura ya tiene proveedor asignado.
 
-import type { Prisma } from "@prisma/client";
-import { TipoMovimientoStock, MotivoMovimientoStock } from "@prisma/client";
+import { unlink } from "fs/promises";
+import path from "path";
+import { Prisma, TipoMovimientoStock, MotivoMovimientoStock } from "@prisma/client";
+import { prisma } from "@/lib/prisma";
+import { getFacturaProveedorStorageDir } from "@/lib/uploads/uploads";
 
 type TxClient = Prisma.TransactionClient;
 
@@ -249,4 +252,46 @@ export async function actualizarEstadoFacturaSiCompleta(tx: TxClient, facturaId:
       data: { estado: "CONFIRMADA" },
     });
   }
+}
+
+/**
+ * Purga el binario original de una factura ya finalizada (CONFIRMADA o CANCELADA)
+ * y limpia los blobs pesados que sólo servían durante el procesamiento (texto OCR
+ * y respuesta cruda de la IA). Los datos estructurados (items) se conservan.
+ *
+ * DEBE llamarse FUERA de la transacción de DB: el borrado en disco no participa
+ * del rollback. Es idempotente: si la factura no está finalizada o ya se purgó,
+ * no hace nada, así que las rutas pueden invocarla sin condicionar.
+ */
+export async function purgarArchivoFacturaSiFinalizada(facturaId: number): Promise<boolean> {
+  const factura = await prisma.facturaProveedor.findUnique({
+    where: { id: facturaId },
+    select: { estado: true, archivoPath: true, archivoEliminado: true },
+  });
+  if (!factura || factura.archivoEliminado) return false;
+  if (factura.estado !== "CONFIRMADA" && factura.estado !== "CANCELADA") return false;
+
+  // Borra el archivo del disco. El nombre siempre es opaco (uuid.ext); igual se
+  // valida antes de armar el path. Si ya no existe (ENOENT), se ignora.
+  if (/^[0-9a-f-]+\.(pdf|jpg|png|webp)$/i.test(factura.archivoPath)) {
+    try {
+      await unlink(path.join(getFacturaProveedorStorageDir(), factura.archivoPath));
+    } catch (error) {
+      const code = error instanceof Error ? (error as NodeJS.ErrnoException).code : undefined;
+      if (code !== "ENOENT") {
+        console.error("[FACTURA_PURGE_ARCHIVO_ERROR]", { facturaId, error });
+      }
+    }
+  }
+
+  await prisma.facturaProveedor.update({
+    where: { id: facturaId },
+    data: {
+      archivoEliminado: true,
+      ocrTextoCompleto: null,
+      iaRespuestaCruda: Prisma.DbNull,
+    },
+  });
+
+  return true;
 }

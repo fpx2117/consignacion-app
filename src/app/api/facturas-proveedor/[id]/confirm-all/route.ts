@@ -11,6 +11,7 @@ import {
   aplicarMovimientoStock,
   registrarCostoYAlias,
   actualizarEstadoFacturaSiCompleta,
+  purgarArchivoFacturaSiFinalizada,
 } from "@/lib/ocr/aplicar-confirmacion";
 
 export async function POST(
@@ -80,6 +81,9 @@ export async function POST(
   }
 
   await prisma.$transaction((tx) => actualizarEstadoFacturaSiCompleta(tx, facturaId));
+
+  // Post-commit: purga el binario si la factura quedó completa.
+  await purgarArchivoFacturaSiFinalizada(facturaId);
 
   return NextResponse.json({ data: { confirmados, errores } });
 }

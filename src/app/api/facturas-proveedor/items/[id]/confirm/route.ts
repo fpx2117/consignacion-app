@@ -13,6 +13,7 @@ import {
   aplicarMovimientoStock,
   registrarCostoYAlias,
   actualizarEstadoFacturaSiCompleta,
+  purgarArchivoFacturaSiFinalizada,
   convertirCostoAArs,
 } from "@/lib/ocr/aplicar-confirmacion";
 
@@ -89,6 +90,9 @@ export async function POST(
 
       return { itemActualizado, variacion };
     });
+
+    // Post-commit: si esta confirmación completó la factura, purga el binario.
+    await purgarArchivoFacturaSiFinalizada(item.facturaId);
 
     return NextResponse.json({
       data: resultado.itemActualizado,

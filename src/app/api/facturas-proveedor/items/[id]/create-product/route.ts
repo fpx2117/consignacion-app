@@ -11,7 +11,7 @@ import { requireAuth, requireRole } from "@/lib/auth/require-auth";
 import { createProductoSchema, type CreateProductoInput } from "@/lib/validators/producto";
 import { checkProductLimit } from "@/lib/subscriptions/require-subscription";
 import { cargarItemFacturaAccesible } from "@/lib/ocr/cargar-item-factura";
-import { registrarCostoYAlias, actualizarEstadoFacturaSiCompleta, convertirCostoAArs } from "@/lib/ocr/aplicar-confirmacion";
+import { registrarCostoYAlias, actualizarEstadoFacturaSiCompleta, convertirCostoAArs, purgarArchivoFacturaSiFinalizada } from "@/lib/ocr/aplicar-confirmacion";
 
 type ProductoCreateBody = CreateProductoInput & { subcategoriaId?: number | null };
 
@@ -139,6 +139,9 @@ export async function POST(
 
       return { producto: nuevoProducto, item: itemActualizado };
     });
+
+    // Post-commit: purga el binario si la factura quedó completa.
+    await purgarArchivoFacturaSiFinalizada(item.facturaId);
 
     return NextResponse.json(
       {

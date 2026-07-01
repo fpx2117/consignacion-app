@@ -47,6 +47,7 @@ import {
   ShoppingCart,
   Store,
   Sun,
+  Truck,
   Users,
   Wallet,
   Zap,
@@ -67,6 +68,7 @@ const NAV_CORE: SidebarNavItem[] = [
 
 const NAV_BUSINESS: SidebarNavItem[] = [
   { label: "Clientes", href: "/clientes", icon: Users },
+  { label: "Proveedores", href: "/proveedores", icon: Truck },
   { label: "Productos", href: "/productos", icon: Package },
   { label: "Pedidos Esperados", href: "/pedidos-esperados", icon: ClipboardList },
   { label: "Consignaciones", href: "/consignaciones", icon: Handshake },
