@@ -16,7 +16,6 @@ import { useDolarBlue } from "@/hooks/useDolarBlue";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog,
   DialogContent,
@@ -562,50 +561,58 @@ export function FacturaProveedorDialog({
                   </div>
                 )}
 
-                <div className="space-y-3">
-                  {items.map((item) => {
-                    const badge = badgeEstado(item);
-                    const Icon = badge.icon;
-                    const terminal = ESTADOS_TERMINALES.has(item.estado);
-                    const busy = busyItemId === item.id;
-                    const costoArsEstimado =
-                      item.precioUnitario != null && monedaFactura === "USD" && cotizacionDolar
-                        ? item.precioUnitario * cotizacionDolar
-                        : null;
+                <div className="rounded-lg border overflow-hidden">
+                  {/* Encabezado de columnas (solo desktop): layout horizontal */}
+                  <div className="hidden lg:grid grid-cols-[minmax(220px,1fr)_74px_170px_220px_minmax(210px,auto)] gap-3 bg-muted/40 px-3 py-2 text-[10px] font-bold uppercase text-muted-foreground">
+                    <span>Descripción detectada</span>
+                    <span>Cant.</span>
+                    <span>Costo unit.{facturaEnMonedaExtranjera ? " → ARS" : ""}</span>
+                    <span>Coincidencia</span>
+                    <span className="text-right">Acciones</span>
+                  </div>
 
-                    return (
-                      <div
-                        key={item.id}
-                        className={`rounded-lg border p-3 space-y-3 ${terminal ? "opacity-60 bg-muted/20" : "bg-background"}`}
-                      >
-                        <div className="grid grid-cols-1 sm:grid-cols-[1fr_160px] gap-3">
-                          <div className="space-y-1">
-                            <Label className="text-[10px] font-bold uppercase text-muted-foreground">Descripción detectada</Label>
-                            <Textarea
+                  <div className="divide-y">
+                    {items.map((item) => {
+                      const badge = badgeEstado(item);
+                      const Icon = badge.icon;
+                      const terminal = ESTADOS_TERMINALES.has(item.estado);
+                      const busy = busyItemId === item.id;
+                      const mostrarCodigo = !codigoYaEnDescripcion(item);
+                      const costoArs = puedeConvertir ? convertirAArs(item.precioUnitario) : null;
+
+                      return (
+                        <div
+                          key={item.id}
+                          className={`grid grid-cols-1 lg:grid-cols-[minmax(220px,1fr)_74px_170px_220px_minmax(210px,auto)] gap-3 px-3 py-3 items-start ${terminal ? "opacity-60 bg-muted/20" : "bg-background"}`}
+                        >
+                          {/* Descripción (+ código si no está embebido) */}
+                          <div className="space-y-1 min-w-0">
+                            <Label className="lg:hidden text-[10px] font-bold uppercase text-muted-foreground">Descripción detectada</Label>
+                            <Input
                               value={item.textoOriginal}
                               onChange={(e) => updateItem(item.id, { textoOriginal: e.target.value })}
                               onBlur={(e) => guardarCampoItem(item, { textoOriginal: e.target.value })}
                               disabled={terminal || busy}
-                              rows={2}
-                              className="resize-none text-sm bg-background break-words whitespace-normal"
-                            />
-                          </div>
-                          <div className="space-y-1">
-                            <Label className="text-[10px] font-bold uppercase text-muted-foreground">Cód. proveedor</Label>
-                            <Input
-                              value={item.codigoProveedor ?? ""}
-                              onChange={(e) => updateItem(item.id, { codigoProveedor: e.target.value })}
-                              onBlur={(e) => guardarCampoItem(item, { codigoProveedor: e.target.value || null })}
-                              disabled={terminal || busy}
-                              placeholder="—"
                               className="h-9 bg-background text-sm"
                             />
+                            {mostrarCodigo && (
+                              <div className="flex items-center gap-1.5">
+                                <span className="text-[10px] font-bold uppercase text-muted-foreground shrink-0">Cód.</span>
+                                <Input
+                                  value={item.codigoProveedor ?? ""}
+                                  onChange={(e) => updateItem(item.id, { codigoProveedor: e.target.value })}
+                                  onBlur={(e) => guardarCampoItem(item, { codigoProveedor: e.target.value || null })}
+                                  disabled={terminal || busy}
+                                  placeholder="—"
+                                  className="h-7 bg-background text-xs"
+                                />
+                              </div>
+                            )}
                           </div>
-                        </div>
 
-                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                          {/* Cantidad */}
                           <div className="space-y-1">
-                            <Label className="text-[10px] font-bold uppercase text-muted-foreground">Cantidad</Label>
+                            <Label className="lg:hidden text-[10px] font-bold uppercase text-muted-foreground">Cantidad</Label>
                             <Input
                               type="number"
                               min={1}
@@ -623,8 +630,10 @@ export function FacturaProveedorDialog({
                               className="h-9 bg-background text-sm"
                             />
                           </div>
+
+                          {/* Costo unitario (con conversión a ARS en vivo) */}
                           <div className="space-y-1">
-                            <Label className="text-[10px] font-bold uppercase text-muted-foreground">Costo unitario ({monedaFactura})</Label>
+                            <Label className="lg:hidden text-[10px] font-bold uppercase text-muted-foreground">Costo unit. ({monedaFactura})</Label>
                             <Input
                               type="number"
                               step="0.01"
@@ -635,17 +644,19 @@ export function FacturaProveedorDialog({
                               placeholder="—"
                               className="h-9 bg-background text-sm"
                             />
-                            {costoArsEstimado != null && (
-                              <p className="text-[10px] text-muted-foreground">
-                                ≈ ${costoArsEstimado.toLocaleString("es-AR", { maximumFractionDigits: 0 })} ARS (cotización blue)
+                            {costoArs != null && (
+                              <p className="text-[11px] font-semibold text-primary">
+                                = {formatearArs(costoArs)} ARS
                               </p>
                             )}
                           </div>
-                          <div className="col-span-2 space-y-1">
-                            <Label className="text-[10px] font-bold uppercase text-muted-foreground">Coincidencia</Label>
+
+                          {/* Coincidencia */}
+                          <div className="space-y-1 min-w-0">
+                            <Label className="lg:hidden text-[10px] font-bold uppercase text-muted-foreground">Coincidencia</Label>
                             <span className={`text-xs font-medium flex items-center gap-1 ${badge.cls}`}>
                               <Icon className="h-3.5 w-3.5 shrink-0" />
-                              {badge.label}
+                              <span className="truncate">{badge.label}</span>
                             </span>
                             {!terminal && item.productoId && (
                               <Select
@@ -664,46 +675,49 @@ export function FacturaProveedorDialog({
                               </Select>
                             )}
                           </div>
-                        </div>
 
-                        {!terminal && (
-                          <div className="flex justify-end gap-1.5">
-                            {item.productoId && (
-                              <Button
-                                type="button"
-                                size="sm"
-                                className="h-8"
-                                onClick={() => confirmarItem(item)}
-                                disabled={busy}
-                              >
-                                {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Confirmar"}
-                              </Button>
+                          {/* Acciones */}
+                          <div className="lg:justify-self-end">
+                            {!terminal && (
+                              <div className="flex flex-wrap gap-1.5 lg:justify-end">
+                                {item.productoId && (
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    className="h-8"
+                                    onClick={() => confirmarItem(item)}
+                                    disabled={busy}
+                                  >
+                                    {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Confirmar"}
+                                  </Button>
+                                )}
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant="outline"
+                                  className="h-8"
+                                  onClick={() => setItemParaCrear(item)}
+                                  disabled={busy}
+                                >
+                                  Nuevo producto
+                                </Button>
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant="ghost"
+                                  className="h-8"
+                                  onClick={() => ignorarItem(item)}
+                                  disabled={busy}
+                                >
+                                  Ignorar
+                                </Button>
+                              </div>
                             )}
-                            <Button
-                              type="button"
-                              size="sm"
-                              variant="outline"
-                              className="h-8"
-                              onClick={() => setItemParaCrear(item)}
-                              disabled={busy}
-                            >
-                              Nuevo producto
-                            </Button>
-                            <Button
-                              type="button"
-                              size="sm"
-                              variant="ghost"
-                              className="h-8"
-                              onClick={() => ignorarItem(item)}
-                              disabled={busy}
-                            >
-                              Ignorar
-                            </Button>
                           </div>
-                        )}
-                      </div>
-                    );
-                  })}
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
               </>
             )}
