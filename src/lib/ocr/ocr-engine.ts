@@ -39,12 +39,27 @@ export function esPdf(mimeType: string): boolean {
 
 // ─── Preprocesamiento de imagen (sharp) ──────────────────────────────
 
-/** Preprocesa la imagen (escala de grises + normalizado) para mejorar el reconocimiento. */
+// Tesseract rinde notablemente peor con texto chico/borroso — típico en fotos
+// de celular sacadas a distancia. Si la imagen viene angosta, se escala hacia
+// arriba antes de OCR (equivalente a acercarse más a la factura).
+const ANCHO_MINIMO_OCR = 1800;
+
+/** Preprocesa la imagen (escala de grises + normalizado + nitidez) para mejorar el reconocimiento. */
 export async function preprocesarImagen(buffer: Buffer): Promise<Buffer> {
-  return sharp(buffer)
+  const metadata = await sharp(buffer).metadata();
+  const anchoActual = metadata.width ?? 0;
+
+  let pipeline = sharp(buffer)
     .rotate() // respeta orientación EXIF (fotos de celular)
-    .grayscale()
+    .grayscale();
+
+  if (anchoActual > 0 && anchoActual < ANCHO_MINIMO_OCR) {
+    pipeline = pipeline.resize({ width: ANCHO_MINIMO_OCR, kernel: "lanczos3" });
+  }
+
+  return pipeline
     .normalize()
+    .sharpen()
     .toFormat("png")
     .toBuffer();
 }

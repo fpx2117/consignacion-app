@@ -69,7 +69,7 @@ export async function procesarFacturaConIA(input: {
   buffer: Buffer;
   mimeType: string;
 }): Promise<InvoiceAiResult> {
-  const { texto } = await extraerTextoFactura(input);
+  const { texto, confianzaOcr } = await extraerTextoFactura(input);
 
   if (!texto || !texto.trim()) {
     return { status: "error", message: "No se pudo extraer texto legible del archivo." };
@@ -92,7 +92,12 @@ export async function procesarFacturaConIA(input: {
   }
 
   const datos = normalizarExtraccion(parsed as Record<string, unknown>, texto);
-  const globalConfidence = calculateInvoiceConfidence(datos);
+  // La confianza final es el mínimo entre "qué tan bien se leyó el archivo"
+  // (Tesseract/pdf-parse, 0-100) y "qué tan segura está la IA de haber
+  // estructurado bien ese texto" (0-1). Una foto borrosa con OCR de baja
+  // confianza debe marcar la factura para revisión aunque la IA "suene seguro"
+  // interpretando el texto ruidoso que le llegó.
+  const globalConfidence = Math.min(calculateInvoiceConfidence(datos), confianzaOcr / 100);
 
   return {
     status: "success",

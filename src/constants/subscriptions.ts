@@ -65,6 +65,7 @@ export const SUBSCRIPTION_PLANS: SubscriptionPlan[] = [
         features: [
             "Todo lo de Pro",
             "Múltiples sucursales",
+            "Carga de facturas con IA (400/mes)",
             "API de acceso",
             "Soporte 24/7 dedicado",
         ],
@@ -78,24 +79,28 @@ export const getPlanByExternalId = (extId: string) =>
 export const PLAN_LIMITS_DEFAULTS: Record<number, {
     maxProductos: number;
     maxUsuarios: number;
+    maxFacturasOcr: number;
     allowConsignaciones: boolean;
     allowSucursales: boolean;
 }> = {
     1: {
         maxProductos: 60,
         maxUsuarios: 5,
+        maxFacturasOcr: 0, // Sin acceso a OCR
         allowConsignaciones: false,
         allowSucursales: false,
     },
     2: {
         maxProductos: -1, // Ilimitado
         maxUsuarios: 15,
+        maxFacturasOcr: 0, // Sin acceso a OCR
         allowConsignaciones: true,
         allowSucursales: false,
     },
     3: {
         maxProductos: -1, // Ilimitado
         maxUsuarios: 100,
+        maxFacturasOcr: 400, // 400 escaneos de factura por mes
         allowConsignaciones: true,
         allowSucursales: true,
     },

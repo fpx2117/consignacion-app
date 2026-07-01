@@ -11,7 +11,7 @@ import { requireAuth, requireRole } from "@/lib/auth/require-auth";
 import { createProductoSchema, type CreateProductoInput } from "@/lib/validators/producto";
 import { checkProductLimit } from "@/lib/subscriptions/require-subscription";
 import { cargarItemFacturaAccesible } from "@/lib/ocr/cargar-item-factura";
-import { registrarCostoYAlias, actualizarEstadoFacturaSiCompleta } from "@/lib/ocr/aplicar-confirmacion";
+import { registrarCostoYAlias, actualizarEstadoFacturaSiCompleta, convertirCostoAArs } from "@/lib/ocr/aplicar-confirmacion";
 
 type ProductoCreateBody = CreateProductoInput & { subcategoriaId?: number | null };
 
@@ -55,13 +55,20 @@ export async function POST(
   const stockInicial = data.stockDisponibleUnits ?? 0;
 
   try {
+    // data.precioCosto viene prellenado en el frontend desde item.precioUnitario,
+    // en la moneda original de la factura (item.factura.moneda) salvo que el
+    // usuario lo haya corregido a mano — de cualquier forma, el negocio quiere
+    // el costo siempre en ARS.
+    const conversion = await convertirCostoAArs(data.precioCosto, item.factura.moneda);
+
     const resultado = await prisma.$transaction(async (tx) => {
       const nuevoProducto = await tx.producto.create({
         data: {
           nombre: data.nombre,
           descripcion: data.descripcion,
           precioVenta: data.precioVenta,
-          precioCosto: data.precioCosto,
+          precioCosto: conversion.precioConvertido ?? data.precioCosto,
+          monedaCosto: conversion.monedaFinal,
           iva: data.iva,
           stockDisponibleUnits: stockInicial,
           stockConsignadoUnits: 0,
@@ -108,18 +115,18 @@ export async function POST(
         });
       }
 
-      // El costo ya quedó seteado en el create de arriba (precioCosto = data.precioCosto,
-      // normalmente prellenado desde item.precioUnitario en el frontend). Igual pasamos
-      // por registrarCostoYAlias para dejar HistorialCostoProducto + alias consistentes
-      // con el resto del flujo (costoAnterior será null: producto recién creado).
+      // El costo ya quedó seteado en el create de arriba (precioCosto ya convertido
+      // a ARS si hacía falta). Igual pasamos por registrarCostoYAlias para dejar
+      // HistorialCostoProducto + alias consistentes con el resto del flujo
+      // (costoAnterior será null: producto recién creado).
       await registrarCostoYAlias(tx, {
         productoId: nuevoProducto.id,
         proveedorId: item.factura.proveedorId,
         facturaItemId: item.id,
         codigoProveedor: item.codigoProveedor,
         descripcionNormalizada: item.descripcionNormalizada,
-        precioUnitario: data.precioCosto,
-        moneda: item.factura.moneda,
+        precioUnitario: conversion.precioConvertido ?? data.precioCosto,
+        moneda: conversion.monedaFinal,
         productoNuevo: true,
       });
 
@@ -133,7 +140,14 @@ export async function POST(
       return { producto: nuevoProducto, item: itemActualizado };
     });
 
-    return NextResponse.json({ data: resultado }, { status: 201 });
+    return NextResponse.json(
+      {
+        data: resultado,
+        tipoCambioAplicado: conversion.tipoCambioAplicado,
+        advertenciaConversion: conversion.advertencia,
+      },
+      { status: 201 },
+    );
   } catch (error) {
     console.error("[FACTURA_PROVEEDOR_ITEM_CREATE_PRODUCT_ERROR]", { itemId, error });
     return NextResponse.json({ error: "Error al crear el producto" }, { status: 500 });

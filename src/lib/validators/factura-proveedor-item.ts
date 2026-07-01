@@ -5,3 +5,16 @@ export const confirmarItemSchema = z.object({
 });
 
 export type ConfirmarItemInput = z.infer<typeof confirmarItemSchema>;
+
+// Edición manual de un item antes de confirmarlo — corrige lo que la IA/OCR
+// haya leído mal. Todos los campos son opcionales (PATCH parcial); si no se
+// manda nada no hay error, simplemente no cambia nada.
+export const updateFacturaProveedorItemSchema = z.object({
+  textoOriginal: z.string().trim().min(1).max(500).optional(),
+  codigoProveedor: z.string().trim().max(100).nullable().optional(),
+  cantidad: z.number().int().positive().optional(),
+  precioUnitario: z.number().nonnegative().nullable().optional(),
+  totalLinea: z.number().nonnegative().nullable().optional(),
+});
+
+export type UpdateFacturaProveedorItemInput = z.infer<typeof updateFacturaProveedorItemSchema>;

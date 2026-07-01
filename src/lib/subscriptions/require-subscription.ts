@@ -6,6 +6,7 @@ import { PLAN_LIMITS_DEFAULTS } from "@/constants/subscriptions";
 export interface PlanLimits {
     maxProductos: number;
     maxUsuarios: number;
+    maxFacturasOcr: number;
     allowConsignaciones: boolean;
     allowSucursales: boolean;
     planId: number;
@@ -15,6 +16,7 @@ export interface PlanLimits {
 type PlanLimitRecord = {
     maxProductos: number;
     maxUsuarios: number;
+    maxFacturasOcr: number;
     allowConsignaciones: boolean;
     allowSucursales: boolean;
 };
@@ -68,12 +70,56 @@ export const getActivePlanLimits = cache(async (): Promise<PlanLimits | null> =>
     return {
         maxProductos: limits?.maxProductos ?? defaults.maxProductos,
         maxUsuarios: limits?.maxUsuarios ?? defaults.maxUsuarios,
+        maxFacturasOcr: limits?.maxFacturasOcr ?? defaults.maxFacturasOcr,
         allowConsignaciones: limits?.allowConsignaciones ?? defaults.allowConsignaciones,
         allowSucursales: limits?.allowSucursales ?? defaults.allowSucursales,
         planId: subscription.planId,
         planNombre: subscription.plan?.nombre ?? "Desconocido",
     };
 });
+
+/**
+ * Cuenta las facturas de proveedor procesadas por OCR en el mes calendario
+ * en curso y las compara contra el cupo del plan.
+ * - maxFacturasOcr === 0  → el plan no incluye OCR (allowed: false).
+ * - maxFacturasOcr === -1 → cupo ilimitado.
+ * Devuelve siempre { used, limit } para poder pintar el contador en la UI.
+ */
+export async function checkFacturaOcrLimit() {
+    const limits = await getActivePlanLimits();
+    if (!limits) {
+        return { allowed: false as const, hasFeature: false, used: 0, limit: 0, message: "No hay suscripción activa." };
+    }
+
+    const max = limits.maxFacturasOcr;
+    if (max === 0) {
+        return {
+            allowed: false as const,
+            hasFeature: false,
+            used: 0,
+            limit: 0,
+            message: `La carga de facturas con IA no está disponible en el plan ${limits.planNombre}. Actualizá a Enterprise para usarla.`,
+        };
+    }
+
+    const now = new Date();
+    const inicioMes = new Date(now.getFullYear(), now.getMonth(), 1);
+    const used = await prisma.facturaProveedor.count({
+        where: { createdAt: { gte: inicioMes } },
+    });
+
+    if (max !== -1 && used >= max) {
+        return {
+            allowed: false as const,
+            hasFeature: true,
+            used,
+            limit: max,
+            message: `Alcanzaste el límite de ${max} escaneos de factura de este mes en el plan ${limits.planNombre}.`,
+        };
+    }
+
+    return { allowed: true as const, hasFeature: true, used, limit: max };
+}
 
 /**
  * Verifica si se puede crear un nuevo producto.
@@ -154,6 +200,7 @@ export async function seedPlanLimits(planId: number) {
             planId,
             maxProductos: defaults.maxProductos,
             maxUsuarios: defaults.maxUsuarios,
+            maxFacturasOcr: defaults.maxFacturasOcr,
             allowConsignaciones: defaults.allowConsignaciones,
             allowSucursales: defaults.allowSucursales,
         },
