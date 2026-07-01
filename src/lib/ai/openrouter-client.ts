@@ -7,12 +7,16 @@
 const OPENROUTER_BASE_URL = (process.env.OPENROUTER_BASE_URL || "https://openrouter.ai/api/v1").replace(/\/$/, "");
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
 const OPENROUTER_MODEL = process.env.OPENROUTER_MODEL || "openai/gpt-4o-mini";
-const OPENROUTER_TIMEOUT_MS = Number(process.env.OCR_TIMEOUT_MS) || 45000;
-const OPENROUTER_MAX_TOKENS = Number(process.env.OCR_MAX_TOKENS) || 4096;
-// "low" alcanza para estructurar texto ya extraído por OCR — los tokens de
-// reasoning se facturan igual que los de salida, así que no vale la pena un
-// esfuerzo mayor acá (no es una tarea de razonamiento complejo).
-const OPENROUTER_REASONING_EFFORT = process.env.OPENROUTER_REASONING_EFFORT || "low";
+const OPENROUTER_TIMEOUT_MS = Number(process.env.OCR_TIMEOUT_MS) || 90000;
+const OPENROUTER_MAX_TOKENS = Number(process.env.OCR_MAX_TOKENS) || 8000;
+// Reasoning apagado por defecto: medido contra una factura de 20 items, con
+// reasoning (incluso "low") tarda 100-145s y quema miles de tokens pensando
+// para una tarea de extracción estructurada que no lo necesita — con
+// `enabled: false` el mismo caso baja a ~49s y sale más barato, sin perder
+// precisión (json_schema strict ya fuerza la forma de la respuesta). Se puede
+// reactivar seteando OPENROUTER_REASONING_EFFORT a "low"/"medium"/"high" si
+// hiciera falta para facturas particularmente difíciles de leer.
+const OPENROUTER_REASONING_EFFORT = process.env.OPENROUTER_REASONING_EFFORT || "none";
 
 export class OpenRouterConfigError extends Error {}
 export class OpenRouterTimeoutError extends Error {}
@@ -72,7 +76,10 @@ export async function callOpenRouterJson(input: {
           { role: "user", content: input.userPrompt },
         ],
         response_format: responseFormat,
-        reasoning: { effort: OPENROUTER_REASONING_EFFORT },
+        reasoning:
+          OPENROUTER_REASONING_EFFORT === "none"
+            ? { enabled: false }
+            : { effort: OPENROUTER_REASONING_EFFORT },
       }),
       signal: controller.signal,
     });
