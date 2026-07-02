@@ -2,10 +2,20 @@
 // Reemplaza a src/lib/modal/ocr-client.ts. Orquesta: extracción de texto barata
 // (CPU, ver extraer-texto-factura.ts) → prompt dinámico desde
 // invoice-extraction.config.ts → OpenRouter → validación → shape normalizado
-// para el resto del pipeline (matching-engine, etc.), que no se modifica. Por
-// defecto solo se manda texto (costo por tokens, previsible); si la confianza
-// de OCR es baja o el texto vino vacío, se suma también la imagen original
-// como fallback (ver OCR_VISION_FALLBACK_THRESHOLD abajo).
+// para el resto del pipeline (matching-engine, etc.), que no se modifica.
+//
+// PDF con texto nativo (imagenParaVision null, confianzaOcr 100 fijo) →
+// solo texto, no hay nada que una imagen pudiera corregir.
+//
+// Foto o PDF escaneado (siempre hay imagenParaVision disponible) → SIEMPRE
+// se manda texto + imagen juntos, no solo cuando la confianza de OCR es
+// baja. Medido en producción: un documento con confianza "aceptable" en
+// promedio puede tener una línea puntual mal leída por Tesseract (ej. un
+// precio unitario confundido) sin que el promedio del documento lo refleje
+// — la confianza es una métrica del documento entero, no de cada celda. El
+// costo extra de mandar la imagen es de centavos por factura (medido:
+// ~$0.0045 vs ~$0.0006-0.0016 solo texto), así que no vale la pena arriesgar
+// un dato financiero mal leído para ahorrar eso.
 
 import {
   buildExpectedOutputSchema,
@@ -64,13 +74,6 @@ export type InvoiceAiErrorResult = {
 
 export type InvoiceAiResult = InvoiceAiSuccessResult | InvoiceAiErrorResult;
 
-// Debajo de este umbral de confianza de OCR (0-100), o con texto vacío, se
-// escala a un único llamado combinado (texto + imagen) a un modelo con
-// visión, en vez de mandar solo el texto ruidoso/vacío que devolvió el OCR
-// local. Ver openspec/changes/rubro-contexto-ocr/design.md — "Fallback
-// híbrido: OCR + Visión".
-const OCR_VISION_FALLBACK_THRESHOLD = Number(process.env.OCR_VISION_FALLBACK_THRESHOLD) || 55;
-
 /**
  * Procesa una factura ya subida (bytes en poder del backend): extrae texto
  * localmente y le pide a OpenRouter que lo estructure. Nunca escribe en la DB —
@@ -85,7 +88,9 @@ export async function procesarFacturaConIA(input: {
 }): Promise<InvoiceAiResult> {
   const { texto, confianzaOcr, imagenParaVision } = await extraerTextoFactura(input);
 
-  const necesitaVision = Boolean(imagenParaVision) && (!texto.trim() || confianzaOcr < OCR_VISION_FALLBACK_THRESHOLD);
+  // Siempre que haya imagen disponible (foto o PDF escaneado), se manda junto
+  // al texto — no solo cuando la confianza del documento completo es baja.
+  const necesitaVision = Boolean(imagenParaVision);
 
   if (!texto.trim() && !necesitaVision) {
     // Caso residual: PDF con texto nativo que igual vino vacío — no hubo
@@ -99,9 +104,10 @@ export async function procesarFacturaConIA(input: {
 
   const userPrompt = necesitaVision
     ? `Extraé los datos estructurados de esta factura de proveedor según las reglas indicadas. ` +
-      `El texto que devolvió el OCR local ${texto.trim() ? `tiene baja confianza (${confianzaOcr}%) y puede tener errores o partes faltantes` : "no pudo leer nada"}. ` +
-      `Se adjunta también la imagen original — usá el texto como referencia rápida y la imagen para completar o corregir lo que falte.\n\n` +
-      `Texto OCR:\n${textoTruncado || "(vacío)"}`
+      `Se adjunta también la imagen original del comprobante — el texto de abajo viene de un OCR local que puede tener errores ` +
+      `(caracteres confundidos, precios mal leídos, líneas cortadas). Usá la imagen como fuente de verdad para cotejar y corregir ` +
+      `cualquier dato del texto que no coincida con lo que ves en la imagen, especialmente precios y cantidades.\n\n` +
+      `Texto OCR (referencia, puede tener errores):\n${textoTruncado || "(vacío)"}`
     : `Extraé los datos estructurados de esta factura de proveedor según las reglas indicadas:\n\n${textoTruncado}`;
 
   const respuesta = await callOpenRouterJson({
