@@ -31,6 +31,7 @@ type GeneralSettingsBody = {
     mostrarCategoriasEnHeader?: boolean;
     zonaHoraria?: string;
     rubroNegocio?: string | null;
+    columnasAtributosProducto?: string[];
 };
 
 function buildIntervalOperator(offsetHours: number) {
@@ -100,6 +101,7 @@ export async function PUT(req: Request) {
             mostrarCategoriasEnHeader,
             zonaHoraria,
             rubroNegocio,
+            columnasAtributosProducto,
         } = body;
 
         if (tiendaMetodoPago !== undefined && tiendaMetodoPago !== "whatsapp" && tiendaMetodoPago !== "mercadopago") {
@@ -207,6 +209,7 @@ export async function PUT(req: Request) {
                 ...(mostrarCategoriasEnHeader !== undefined && { mostrarCategoriasEnHeader }),
                 ...(zonaHoraria !== undefined && { zonaHoraria }),
                 ...(rubroNegocio !== undefined && { rubroNegocio: rubroNegocio || null }),
+                ...(columnasAtributosProducto !== undefined && { columnasAtributosProducto }),
             },
             create: {
                 sucursalId: auth.activeSucursalId,
@@ -234,6 +237,7 @@ export async function PUT(req: Request) {
                 mostrarCategoriasEnHeader: mostrarCategoriasEnHeader ?? true,
                 zonaHoraria: zonaHoraria ?? TECHNICAL_FALLBACK_TZ,
                 rubroNegocio: rubroNegocio || null,
+                columnasAtributosProducto: columnasAtributosProducto ?? [],
             }
         });
 

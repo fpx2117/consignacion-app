@@ -39,9 +39,9 @@ Orden confirmado. Cada fase es un PR/deploy independiente — no hace falta comp
 
 ## Fase 4: Columnas dinámicas en la tabla de productos
 
-- [ ] 4.1 `productos-view.tsx`: extender `SortKey` para aceptar `attr:{clave}` + branch en el comparador de `sorted`
-- [ ] 4.2 `productos-view.tsx`: renderizar `TableHead`/`TableCell` dinámicos desde `columnasAtributosProducto`
-- [ ] 4.3 `columnas-producto-picker.tsx` (nuevo): popover con checkboxes — candidatas = claves en uso en el catálogo cargado + sugeridas por rubro
-- [ ] 4.4 Persistencia del picker vía `PUT /api/settings/general` (`columnasAtributosProducto`)
-- [ ] 4.5 `MobileProductCard`: renderizar las mismas columnas activas como badges
-- [ ] 4.6 Verificar manualmente: con rubro "Indumentaria", activar columnas "talle"/"color" desde el picker, confirmar que aparecen ordenables en desktop y como badges en mobile; confirmar que un negocio sin columnas activadas no ve ninguna diferencia visual
+- [x] 4.1 `productos-view.tsx`: extender `SortKey` para aceptar `attr:{clave}` + branch en el comparador de `sorted`
+- [x] 4.2 `productos-view.tsx`: renderizar `TableHead`/`TableCell` dinámicos desde `columnasAtributosProducto`
+- [x] 4.3 `columnas-producto-picker.tsx` (nuevo): popover con checkboxes — candidatas = claves en uso en `statsItems` (catálogo completo, no solo la página) + sugeridas por rubro
+- [x] 4.4 Persistencia del picker vía `PUT /api/settings/general` (`columnasAtributosProducto`), con update optimista en la UI
+- [x] 4.5 `MobileProductCard`: renderizar las mismas columnas activas como badges (solo si el producto tiene valor para esa clave)
+- [x] 4.6 Verificado contra la DB real: `Configuracion.columnasAtributosProducto` persiste correctamente (`[]` → `["talle","color"]` → revertido). tsc/eslint/next build sin errores. La verificación visual completa (picker + tabla + badges mobile) queda pendiente de probar en la UI real por el usuario.

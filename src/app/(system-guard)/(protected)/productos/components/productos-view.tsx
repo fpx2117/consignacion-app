@@ -77,6 +77,8 @@ import { DownloadInventoryButton } from "@/components/reports/download-inventory
 import HistoryReportDialog from "./historial-report-dialog";
 import { ProductosAgotadosSheetContent } from "./productos-agotados-sheet-content";
 import { ProductosBajoStockSheetContent } from "./productos-bajo-stock-sheet-content";
+import { ColumnasProductoPicker } from "./columnas-producto-picker";
+import { getAtributosTipicos } from "@/modules/invoices/config/rubros";
 
 // --- Interfaces ---
 interface StatCardProps {
@@ -90,7 +92,7 @@ interface StatCardProps {
   clickable?: boolean;
 }
 
-type SortKey = "nombre" | "precioVenta" | "stockDisponibleUnits" | "categoria";
+type SortKey = "nombre" | "precioVenta" | "stockDisponibleUnits" | "categoria" | `attr:${string}`;
 type SortDirection = "asc" | "desc";
 type ProductoViewItem = Producto & {
   subcategoria?: {
@@ -127,6 +129,47 @@ export function ProductosView() {
   const [sortConfig, setSortConfig] = React.useState<SortConfig>({ key: "nombre", direction: "asc" });
   const [showSensitiveData, setShowSensitiveData] = React.useState(false);
   const [stockDrawer, setStockDrawer] = React.useState<"low" | "out" | null>(null);
+
+  // Columnas dinámicas de atributosExtra (Fase 4)
+  const [columnasAtributos, setColumnasAtributos] = React.useState<string[]>([]);
+  const [sugerenciasRubro, setSugerenciasRubro] = React.useState<string[]>([]);
+
+  React.useEffect(() => {
+    apiService.getConfiguracionGeneral()
+      .then((config) => {
+        setColumnasAtributos(config?.columnasAtributosProducto ?? []);
+        const hint = getAtributosTipicos(config?.rubroNegocio);
+        setSugerenciasRubro(hint ? hint.split(", ").filter(Boolean) : []);
+      })
+      .catch(() => {
+        setColumnasAtributos([]);
+        setSugerenciasRubro([]);
+      });
+  }, [activeSucursalId]);
+
+  const clavesAtributosEnUso = React.useMemo(() => {
+    const set = new Set<string>();
+    for (const p of statsItems) {
+      if (p.atributosExtra && typeof p.atributosExtra === "object") {
+        Object.keys(p.atributosExtra).forEach((k) => set.add(k));
+      }
+    }
+    return Array.from(set);
+  }, [statsItems]);
+
+  const candidatasAtributos = React.useMemo(
+    () => Array.from(new Set([...clavesAtributosEnUso, ...sugerenciasRubro])),
+    [clavesAtributosEnUso, sugerenciasRubro],
+  );
+
+  const handleColumnasAtributosChange = async (nuevas: string[]) => {
+    setColumnasAtributos(nuevas); // optimista
+    try {
+      await apiService.actualizarConfiguracionGeneral({ columnasAtributosProducto: nuevas });
+    } catch {
+      toast.error("No se pudo guardar la preferencia de columnas");
+    }
+  };
 
   // Debounce de búsqueda (400ms)
   React.useEffect(() => {
@@ -279,12 +322,19 @@ export function ProductosView() {
     const sortableItems = [...filtered];
     if (sortConfig.key) {
       sortableItems.sort((a, b) => {
-        let aValue = a[sortConfig.key as keyof ProductoViewItem] as string | number | null | undefined;
-        let bValue = b[sortConfig.key as keyof ProductoViewItem] as string | number | null | undefined;
+        let aValue: string | number | null | undefined;
+        let bValue: string | number | null | undefined;
 
-        if (sortConfig.key === "categoria") {
+        if (sortConfig.key.startsWith("attr:")) {
+          const clave = sortConfig.key.slice(5);
+          aValue = (a.atributosExtra as Record<string, string> | null | undefined)?.[clave] ?? "";
+          bValue = (b.atributosExtra as Record<string, string> | null | undefined)?.[clave] ?? "";
+        } else if (sortConfig.key === "categoria") {
           aValue = a.categoria?.nombre || "";
           bValue = b.categoria?.nombre || "";
+        } else {
+          aValue = a[sortConfig.key as keyof ProductoViewItem] as string | number | null | undefined;
+          bValue = b[sortConfig.key as keyof ProductoViewItem] as string | number | null | undefined;
         }
 
         const comparableA = aValue ?? "";
@@ -496,6 +546,15 @@ export function ProductosView() {
           />
         </Card>
 
+        {/* Selector de columnas dinámicas (atributosExtra) — solo tabla desktop */}
+        <div className="hidden md:flex justify-end">
+          <ColumnasProductoPicker
+            candidatas={candidatasAtributos}
+            seleccionadas={columnasAtributos}
+            onChange={handleColumnasAtributosChange}
+          />
+        </div>
+
         {/* LOADING STATE */}
         {loading && (
           <div className="h-[400px] flex flex-col items-center justify-center gap-4 bg-card/30 rounded-2xl border border-border/50">
@@ -519,16 +578,19 @@ export function ProductosView() {
                       <SortableHead label="Stock" sortKey="stockDisponibleUnits" currentSort={sortConfig} onSort={handleSort} className="text-center" />
                       <TableHead className="text-center font-bold text-xs uppercase tracking-wider text-muted-foreground/70">Vencimiento</TableHead>
                       <SortableHead label="Precio" sortKey="precioVenta" currentSort={sortConfig} onSort={handleSort} className="text-right pr-6" />
+                      {columnasAtributos.map((clave) => (
+                        <SortableHead key={clave} label={clave} sortKey={`attr:${clave}`} currentSort={sortConfig} onSort={handleSort} className="text-center capitalize" />
+                      ))}
                       <TableHead className="w-[180px] text-right pr-6 font-bold text-xs uppercase tracking-wider text-muted-foreground/70">Acciones</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {sorted.map((p, idx) => (
-                      <ProductoRow key={p.id} p={p} idx={idx} load={reload} isLow={isLowStock(p)} isOut={isOutOfStock(p)} />
+                      <ProductoRow key={p.id} p={p} idx={idx} load={reload} isLow={isLowStock(p)} isOut={isOutOfStock(p)} columnasAtributos={columnasAtributos} />
                     ))}
                     {sorted.length === 0 && (
                       <TableRow>
-                        <TableCell colSpan={7} className="h-[300px] text-center">
+                        <TableCell colSpan={7 + columnasAtributos.length} className="h-[300px] text-center">
                           <div className="flex flex-col items-center justify-center gap-3 text-muted-foreground opacity-60">
                             <Search className="h-12 w-12 stroke-[1.5]" />
                             <p className="text-lg font-medium">No se encontraron productos</p>
@@ -561,7 +623,7 @@ export function ProductosView() {
             {/* --- VISTA MOBILE (CARDS) --- */}
             <div className="md:hidden space-y-4">
               {sorted.map((p, idx) => (
-                <MobileProductCard key={p.id} p={p} idx={idx} load={reload} isLow={isLowStock(p)} isOut={isOutOfStock(p)} />
+                <MobileProductCard key={p.id} p={p} idx={idx} load={reload} isLow={isLowStock(p)} isOut={isOutOfStock(p)} columnasAtributos={columnasAtributos} />
               ))}
 
               {sorted.length === 0 && (
@@ -696,7 +758,7 @@ function SortableHead({ label, sortKey, currentSort, onSort, className }: { labe
   );
 }
 
-function ProductoRow({ p, idx, load, isLow, isOut }: { p: ProductoViewItem; idx: number; load: () => void; isLow: boolean; isOut: boolean }) {
+function ProductoRow({ p, idx, load, isLow, isOut, columnasAtributos }: { p: ProductoViewItem; idx: number; load: () => void; isLow: boolean; isOut: boolean; columnasAtributos: string[] }) {
   const desc = React.useMemo(() => calcularDescuentoEfectivo({
     descuentoActivo: p.descuentoActivo ?? false,
     tipoDescuento: p.tipoDescuento,
@@ -830,6 +892,12 @@ function ProductoRow({ p, idx, load, isLow, isOut }: { p: ProductoViewItem; idx:
         </div>
       </TableCell>
 
+      {columnasAtributos.map((clave) => (
+        <TableCell key={clave} className="text-center text-sm text-muted-foreground">
+          {(p.atributosExtra as Record<string, string> | null | undefined)?.[clave] ?? "—"}
+        </TableCell>
+      ))}
+
       <TableCell className="text-right pr-6">
         {/* ACCIONES INLINE (SIN DROPDOWN) */}
         <div className="flex items-center justify-end gap-1 opacity-80 group-hover:opacity-100 transition-opacity">
@@ -867,7 +935,7 @@ function ProductoRow({ p, idx, load, isLow, isOut }: { p: ProductoViewItem; idx:
   );
 }
 
-function MobileProductCard({ p, idx, load, isLow, isOut }: { p: ProductoViewItem; idx: number; load: () => void; isLow: boolean; isOut: boolean }) {
+function MobileProductCard({ p, idx, load, isLow, isOut, columnasAtributos }: { p: ProductoViewItem; idx: number; load: () => void; isLow: boolean; isOut: boolean; columnasAtributos: string[] }) {
   return (
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: idx * 0.05 }}>
       <Card className="p-4 bg-card border-border/50 shadow-sm rounded-2xl relative overflow-hidden space-y-3">
@@ -923,6 +991,21 @@ function MobileProductCard({ p, idx, load, isLow, isOut }: { p: ProductoViewItem
               Vence: {formatDateSafe(p.fechaVencimiento)}
               {expired && <Badge variant="destructive" className="text-[9px] h-4 px-1 rounded-md ml-1">Vencido</Badge>}
               {soon && <Badge className="bg-[color:var(--status-warning)] text-[9px] h-4 px-1 rounded-md ml-1">Pronto</Badge>}
+            </div>
+          );
+        })()}
+
+        {columnasAtributos.length > 0 && (() => {
+          const atributos = (p.atributosExtra as Record<string, string> | null | undefined) ?? {};
+          const chips = columnasAtributos.filter((clave) => atributos[clave]);
+          if (chips.length === 0) return null;
+          return (
+            <div className="flex flex-wrap gap-1 pl-3">
+              {chips.map((clave) => (
+                <Badge key={clave} variant="outline" className="text-[10px] h-5 px-1.5 font-normal text-muted-foreground border-border/60 bg-background/50 rounded-md capitalize">
+                  {clave}: {atributos[clave]}
+                </Badge>
+              ))}
             </div>
           );
         })()}
