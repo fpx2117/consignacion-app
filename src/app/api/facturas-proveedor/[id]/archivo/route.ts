@@ -1,7 +1,9 @@
 // src/app/api/facturas-proveedor/[id]/archivo/route.ts
-// Sirve el archivo original de una factura, gateado por token firmado de corta
-// duración (no por sesión de usuario) — para casos donde hace falta acceso al
-// documento sin pasar por la sesión normal (ej. visor externo de corta vida).
+// Sirve el archivo original de una factura, con dos vías de autenticación:
+// 1) token firmado de corta duración (sin sesión) — para el worker externo de
+//    OCR (Modal), que necesita descargarlo sin credenciales de usuario.
+// 2) sesión de usuario normal, con acceso a la sucursal de la factura — para
+//    el visor de imagen dentro de la UI (factura-detalle-dialog.tsx).
 // El motor de extracción IA (OpenRouter) nunca usa esta ruta: recibe el texto
 // ya extraído localmente, no una URL para descargar el archivo.
 
@@ -11,6 +13,8 @@ import path from "path";
 import { prisma } from "@/lib/prisma";
 import { getFacturaProveedorStorageDir } from "@/lib/uploads/uploads";
 import { verifyFacturaArchivoToken } from "@/lib/security/factura-proveedor-token";
+import { requireAuth } from "@/lib/auth/require-auth";
+import { canAccessSucursalResource } from "@/lib/security/sucursalScope";
 
 export const dynamic = "force-dynamic";
 
@@ -25,16 +29,21 @@ export async function GET(
   }
 
   const token = req.nextUrl.searchParams.get("token");
-  if (!verifyFacturaArchivoToken(facturaId, token)) {
-    return NextResponse.json({ error: "Token inválido o vencido" }, { status: 403 });
-  }
-
   const factura = await prisma.facturaProveedor.findUnique({
     where: { id: facturaId },
-    select: { archivoPath: true, archivoMime: true },
+    select: { archivoPath: true, archivoMime: true, sucursalId: true },
   });
   if (!factura) {
     return NextResponse.json({ error: "Factura no encontrada" }, { status: 404 });
+  }
+
+  let autorizado = verifyFacturaArchivoToken(facturaId, token);
+  if (!autorizado) {
+    const auth = await requireAuth();
+    autorizado = auth.ok && canAccessSucursalResource(auth, factura.sucursalId);
+  }
+  if (!autorizado) {
+    return NextResponse.json({ error: "No autorizado" }, { status: 403 });
   }
 
   // Defensa en profundidad: archivoPath siempre se genera server-side como un nombre

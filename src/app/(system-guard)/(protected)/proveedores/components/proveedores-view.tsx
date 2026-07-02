@@ -196,7 +196,7 @@ export function ProveedoresView() {
             Proveedores
           </h1>
           <p className="text-muted-foreground font-medium text-sm md:text-base max-w-md">
-            Administra tus proveedores y las facturas cargadas por OCR.
+            Administra tus proveedores y las facturas cargadas.
           </p>
         </div>
         <CreateProveedorDialog
