@@ -70,12 +70,25 @@ export function EditProductoDialog({
   trigger,
   producto,
   onUpdated,
+  open: controlledOpen,
+  onOpenChange: controlledOnOpenChange,
 }: {
   trigger: React.ReactNode;
   producto: ProductoEditable;
   onUpdated?: () => void;
+  /** Control externo opcional (ej. para trackear si este dialog anidado está
+   * abierto desde un padre, y así evitar que un Escape/click-afuera dentro
+   * de este dialog cierre en cascada el dialog padre). Sin estos props, el
+   * componente sigue siendo no controlado como antes. */
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }) {
-  const [open, setOpen] = React.useState(false);
+  const [internalOpen, setInternalOpen] = React.useState(false);
+  const open = controlledOpen ?? internalOpen;
+  const setOpen = React.useCallback((value: boolean) => {
+    controlledOnOpenChange?.(value);
+    if (controlledOpen === undefined) setInternalOpen(value);
+  }, [controlledOnOpenChange, controlledOpen]);
   const [saving, setSaving] = React.useState(false);
   const [imageUploading, setImageUploading] = React.useState(false);
   const deleting = false;

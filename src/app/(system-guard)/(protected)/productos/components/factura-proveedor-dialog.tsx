@@ -41,6 +41,7 @@ import {
 import { ScanText, Loader2, AlertTriangle, CheckCircle2, XCircle, HelpCircle, Sparkles, Check, X, FileText, User, Building2, Hash, Calendar, CircleDollarSign, ScanLine, Package, Plus, PencilLine } from "lucide-react";
 import { toast } from "sonner";
 import { CreateProductoDialog, type CreateProductoInitialValues, type ProductoCreado } from "./create-producto-dialog";
+import { EditProductoDialog } from "./edit-producto-dialog";
 import { cn } from "@/lib/utils";
 
 const ESTADOS_TERMINALES = new Set(["CONFIRMADO", "PRODUCTO_CREADO", "IGNORADO"]);
@@ -109,6 +110,13 @@ export function FacturaProveedorDialog({
   const { rate: cotizacionDolar } = useDolarBlue();
   const [confirmandoTodos, setConfirmandoTodos] = React.useState(false);
   const [itemParaCrear, setItemParaCrear] = React.useState<FacturaProveedorItem | null>(null);
+  const [itemIdParaEditar, setItemIdParaEditar] = React.useState<number | null>(null);
+  // Trackea si hay un dialog anidado (crear/editar producto) abierto, para
+  // que el dialog padre no se cierre en cascada cuando el anidado detecta
+  // un click/Escape "afuera" (ambos son overlays de Radix portados a
+  // document.body — sin esto, el padre confunde esa interacción como si
+  // fuera afuera de sí mismo).
+  const nestedDialogOpen = itemParaCrear !== null || itemIdParaEditar !== null;
   const [selectedFile, setSelectedFile] = React.useState<File | null>(null);
   const [dragActive, setDragActive] = React.useState(false);
   const [usage, setUsage] = React.useState<FacturaProveedorUsage | null>(null);
@@ -341,7 +349,11 @@ export function FacturaProveedorDialog({
           )}
         </DialogTrigger>
 
-        <DialogContent className="p-0 gap-0 flex flex-col overflow-hidden border border-[#2A2F3A] bg-[#0F1117] rounded-[28px] sm:rounded-[28px] shadow-2xl w-[92vw] max-w-[1320px] sm:max-w-[1320px] max-h-[85vh]">
+        <DialogContent
+          className="p-0 gap-0 flex flex-col overflow-hidden border border-[#2A2F3A] bg-[#0F1117] rounded-[28px] sm:rounded-[28px] shadow-2xl w-[92vw] max-w-[1320px] sm:max-w-[1320px] max-h-[85vh]"
+          onInteractOutside={(e) => { if (nestedDialogOpen) e.preventDefault(); }}
+          onEscapeKeyDown={(e) => { if (nestedDialogOpen) e.preventDefault(); }}
+        >
           <DialogHeader className="shrink-0 border-b border-[#2A2F3A] px-8 py-7">
             <div className="flex items-center gap-4">
               <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary">
@@ -759,29 +771,54 @@ export function FacturaProveedorDialog({
                                     </Tooltip>
                                   )}
 
-                                  <Tooltip>
-                                    <TooltipTrigger asChild>
+                                  {requiereAlta ? (
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
                                         <Button
                                           type="button"
                                           size="icon-sm"
                                           variant="outline"
-                                          aria-label={`Abrir alta de producto para ${item.textoOriginal}`}
-                                          className={cn(
-                                            ITEM_ACTION_ICON_CLASS,
-                                            requiereAlta
-                                              ? "border-[color:var(--status-warning)]/35 bg-[color:var(--status-warning)]/12 text-[color:var(--status-warning)] hover:bg-[color:var(--status-warning)]/20"
-                                              : "border-primary/30 bg-primary/10 text-primary hover:bg-primary/18"
-                                          )}
+                                          aria-label={`Crear producto para ${item.textoOriginal}`}
+                                          className={cn(ITEM_ACTION_ICON_CLASS, "border-[color:var(--status-warning)]/35 bg-[color:var(--status-warning)]/12 text-[color:var(--status-warning)] hover:bg-[color:var(--status-warning)]/20")}
                                           onClick={() => setItemParaCrear(item)}
                                           disabled={busy}
                                         >
-                                        {requiereAlta ? <Plus className="h-4 w-4" /> : <PencilLine className="h-4 w-4" />}
-                                      </Button>
-                                    </TooltipTrigger>
-                                    <TooltipContent side="top" sideOffset={8}>
-                                      {requiereAlta ? "Crear producto nuevo con datos precargados" : "Abrir alta rápida para este item"}
-                                    </TooltipContent>
-                                  </Tooltip>
+                                          <Plus className="h-4 w-4" />
+                                        </Button>
+                                      </TooltipTrigger>
+                                      <TooltipContent side="top" sideOffset={8}>Crear producto nuevo con datos precargados</TooltipContent>
+                                    </Tooltip>
+                                  ) : (
+                                    (() => {
+                                      const productoMatch = productos.find((p) => p.id === item.productoId);
+                                      if (!productoMatch) return null;
+                                      return (
+                                        <Tooltip>
+                                          <TooltipTrigger asChild>
+                                            <EditProductoDialog
+                                              producto={productoMatch}
+                                              onUpdated={() => apiService.getProductos().then(setProductos).catch(() => {})}
+                                              open={itemIdParaEditar === item.id}
+                                              onOpenChange={(v) => setItemIdParaEditar(v ? item.id : null)}
+                                              trigger={
+                                                <Button
+                                                  type="button"
+                                                  size="icon-sm"
+                                                  variant="outline"
+                                                  aria-label={`Editar producto existente para ${item.textoOriginal}`}
+                                                  className={cn(ITEM_ACTION_ICON_CLASS, "border-primary/30 bg-primary/10 text-primary hover:bg-primary/18")}
+                                                  disabled={busy}
+                                                >
+                                                  <PencilLine className="h-4 w-4" />
+                                                </Button>
+                                              }
+                                            />
+                                          </TooltipTrigger>
+                                          <TooltipContent side="top" sideOffset={8}>Editar el producto ya existente que coincidió</TooltipContent>
+                                        </Tooltip>
+                                      );
+                                    })()
+                                  )}
 
                                   <Tooltip>
                                     <TooltipTrigger asChild>
