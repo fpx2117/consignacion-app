@@ -22,8 +22,41 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
-import { FileText, ImageOff, Hash, Calendar, Coins } from "lucide-react";
+import { FileText, ImageOff, Hash, Calendar, Coins, X, ZoomIn } from "lucide-react";
 import { estadoFacturaBadge, formatMoneda, formatFecha } from "./factura-helpers";
+
+// Lightbox para ver la imagen ampliada sin salir de la app (mismo patrón que
+// crear-pedido-dialog.tsx) — antes esto era un <a target="_blank"> que llevaba
+// directo a la URL de la API.
+function ImageVisor({ src, onClose }: { src: string; onClose: () => void }) {
+  React.useEffect(() => {
+    const handler = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [onClose]);
+
+  return (
+    <div
+      className="fixed inset-0 z-[200] flex items-center justify-center bg-black/80 backdrop-blur-sm"
+      onClick={onClose}
+    >
+      <button
+        type="button"
+        onClick={onClose}
+        className="absolute top-4 right-4 text-white/70 hover:text-white bg-white/10 hover:bg-white/20 rounded-full p-2 transition-colors"
+      >
+        <X className="h-5 w-5" />
+      </button>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={src}
+        alt="Factura ampliada"
+        className="max-h-[85vh] max-w-[85vw] object-contain rounded-xl shadow-2xl"
+        onClick={(e) => e.stopPropagation()}
+      />
+    </div>
+  );
+}
 
 export function FacturaDetalleDialog({
   facturaId,
@@ -35,6 +68,7 @@ export function FacturaDetalleDialog({
   const [open, setOpen] = React.useState(false);
   const [loading, setLoading] = React.useState(false);
   const [factura, setFactura] = React.useState<FacturaProveedor | null>(null);
+  const [visorAbierto, setVisorAbierto] = React.useState(false);
 
   React.useEffect(() => {
     if (!open) return;
@@ -113,17 +147,20 @@ export function FacturaDetalleDialog({
           ) : factura ? (
             <div className="mb-4 rounded-2xl border border-border/50 overflow-hidden bg-muted/20">
               {factura.archivoMime?.startsWith("image/") ? (
-                <a
-                  href={API_ROUTES.FACTURAS_PROVEEDOR.ARCHIVO(factura.id)}
-                  target="_blank"
-                  rel="noreferrer"
+                <button
+                  type="button"
+                  onClick={() => setVisorAbierto(true)}
+                  className="group relative block w-full"
                 >
                   <img
                     src={API_ROUTES.FACTURAS_PROVEEDOR.ARCHIVO(factura.id)}
                     alt="Factura original"
-                    className="w-full max-h-72 object-contain hover:opacity-90 transition-opacity cursor-zoom-in"
+                    className="w-full max-h-72 object-contain cursor-zoom-in"
                   />
-                </a>
+                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-center justify-center">
+                    <ZoomIn className="h-6 w-6 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                  </div>
+                </button>
               ) : factura.archivoMime === "application/pdf" ? (
                 <a
                   href={API_ROUTES.FACTURAS_PROVEEDOR.ARCHIVO(factura.id)}
@@ -210,6 +247,13 @@ export function FacturaDetalleDialog({
           )}
         </div>
       </DialogContent>
+
+      {visorAbierto && factura && (
+        <ImageVisor
+          src={API_ROUTES.FACTURAS_PROVEEDOR.ARCHIVO(factura.id)}
+          onClose={() => setVisorAbierto(false)}
+        />
+      )}
     </Dialog>
   );
 }

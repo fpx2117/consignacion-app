@@ -201,7 +201,8 @@
       "Bash(python \"C:\\\\Users\\\\Administrator\\\\.claude\\\\jobs\\\\04ce312e\\\\tmp\\\\test_upload_factura.py\")",
       "Bash(python \"C:\\\\Users\\\\Administrator\\\\.claude\\\\jobs\\\\04ce312e\\\\tmp\\\\reprocess_factura.py\")",
       "Bash(grep -rn \"ver/dashboard/\\\\${\" src --include=\"*.tsx\")",
-      "Bash(MAX_CHROMIUM_CONCURRENCY=1 npx tsx tmp_test_semaphore.ts)"
+      "Bash(MAX_CHROMIUM_CONCURRENCY=1 npx tsx tmp_test_semaphore.ts)",
+      "Bash(python \"C:\\\\Users\\\\Administrator\\\\.claude\\\\jobs\\\\04ce312e\\\\tmp\\\\test_visor.py\")"
     ]
   }
 }
