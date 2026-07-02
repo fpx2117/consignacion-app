@@ -16,6 +16,7 @@ import { useDolarBlue } from "@/hooks/useDolarBlue";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
   DialogContent,
@@ -31,7 +32,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ScanText, Loader2, AlertTriangle, CheckCircle2, XCircle, HelpCircle, Sparkles, Check, X, FileText, User, Building2, Hash, Calendar, CircleDollarSign, ScanLine, Package } from "lucide-react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { ScanText, Loader2, AlertTriangle, CheckCircle2, XCircle, HelpCircle, Sparkles, Check, X, FileText, User, Building2, Hash, Calendar, CircleDollarSign, ScanLine, Package, Plus, PencilLine } from "lucide-react";
 import { toast } from "sonner";
 import { CreateProductoDialog, type CreateProductoInitialValues, type ProductoCreado } from "./create-producto-dialog";
 import { cn } from "@/lib/utils";
@@ -63,6 +70,12 @@ function normalizarNombreSugerido(textoOriginal: string): string {
   return textoOriginal.trim();
 }
 
+function inferirCodigoBarra(item: FacturaProveedorItem): string | null {
+  const candidato = item.codigoProveedor?.trim() ?? "";
+  if (!/^\d{8,14}$/.test(candidato)) return null;
+  return candidato;
+}
+
 const TIPS_FOTO: { ok: boolean; texto: string }[] = [
   { ok: true, texto: "Buena iluminación" },
   { ok: true, texto: "Texto legible" },
@@ -75,7 +88,8 @@ const ACCEPT_FACTURA = "image/png,image/jpeg,image/webp,application/pdf";
 const FACTURA_FIELD_CLASS = "h-12 rounded-xl border-[#2A2F3A] bg-[#11151C] text-sm shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]";
 const ITEM_FIELD_CLASS = "h-11 rounded-xl border-[#2A2F3A] bg-[#11151C] text-sm shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]";
 const ITEM_LABEL_CLASS = "text-[10px] font-bold uppercase tracking-[0.08em] text-muted-foreground xl:hidden";
-const ITEM_ACTION_BUTTON_CLASS = "h-11 min-w-[132px] rounded-xl px-4 text-sm font-semibold justify-center";
+const ITEM_TABLE_COLUMNS = "xl:grid-cols-[minmax(0,2.1fr)_88px_150px_minmax(0,1.65fr)_136px]";
+const ITEM_ACTION_ICON_CLASS = "size-10 rounded-xl border transition-colors focus-visible:ring-2 focus-visible:ring-primary/60";
 
 export function FacturaProveedorDialog({
   trigger,
@@ -272,6 +286,7 @@ export function FacturaProveedorDialog({
       nombre: normalizarNombreSugerido(item.textoOriginal),
       precioCosto: precioEstimadoArs,
       stockDisponibleUnits: item.cantidad,
+      codigoBarra: inferirCodigoBarra(item),
     };
   }
 
@@ -586,9 +601,10 @@ export function FacturaProveedorDialog({
                   </div>
 
                   {/* Tabla de productos detectados (scroll interno) */}
+                  <TooltipProvider>
                   <div className="min-h-0 flex flex-col overflow-hidden rounded-2xl border border-[#2A2F3A]">
                     {/* Encabezado de columnas (solo desktop) */}
-                    <div className="hidden xl:grid shrink-0 grid-cols-[minmax(260px,1.55fr)_88px_132px_minmax(240px,1fr)_minmax(320px,auto)] gap-4 border-b border-[#2A2F3A] bg-[#0B0D12] px-5 h-12 items-center text-xs font-medium uppercase tracking-[0.08em] text-muted-foreground">
+                    <div className={cn("hidden xl:grid shrink-0 gap-4 border-b border-[#2A2F3A] bg-[#0B0D12] px-5 h-12 items-center text-xs font-medium uppercase tracking-[0.08em] text-muted-foreground", ITEM_TABLE_COLUMNS)}>
                       <span>Descripción detectada</span>
                       <span>Cant.</span>
                       <span>Costo unit.{facturaEnMonedaExtranjera ? " → ARS" : ""}</span>
@@ -599,15 +615,21 @@ export function FacturaProveedorDialog({
                     <div className="overflow-y-auto max-h-[320px] divide-y divide-[#2A2F3A] [scrollbar-width:thin] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-[#2A2F3A]">
                       {items.map((item) => {
                         const badge = badgeEstado(item);
+                        const BadgeIcon = badge.icon;
                         const terminal = ESTADOS_TERMINALES.has(item.estado);
                         const busy = busyItemId === item.id;
                         const mostrarCodigo = !codigoYaEnDescripcion(item);
                         const costoArs = puedeConvertir ? convertirAArs(item.precioUnitario) : null;
+                        const requiereAlta = !item.productoId;
 
                         return (
                           <div
                             key={item.id}
-                            className={`grid grid-cols-1 xl:grid-cols-[minmax(260px,1.55fr)_88px_132px_minmax(240px,1fr)_minmax(320px,auto)] gap-4 px-5 py-4 min-h-[96px] items-start xl:items-center ${terminal ? "opacity-60 bg-white/[0.02]" : "hover:bg-white/[0.015]"}`}
+                            className={cn(
+                              "grid grid-cols-1 gap-4 px-5 py-4 min-h-[96px] items-start xl:items-center",
+                              ITEM_TABLE_COLUMNS,
+                              terminal ? "opacity-60 bg-white/[0.02]" : "hover:bg-white/[0.015]"
+                            )}
                           >
                             {/* Descripción — siempre editable: si no hay producto existente que coincida, no hay ninguna existencia previa que la fije */}
                             <div className="flex items-start gap-3 min-w-0">
@@ -626,6 +648,15 @@ export function FacturaProveedorDialog({
                                 />
                                 {mostrarCodigo && item.codigoProveedor && (
                                   <p className="text-[11px] font-mono text-muted-foreground">#{item.codigoProveedor}</p>
+                                )}
+                                {item.atributosExtra && Object.keys(item.atributosExtra).length > 0 && (
+                                  <div className="flex flex-wrap gap-1 pt-0.5">
+                                    {Object.entries(item.atributosExtra).map(([clave, valor]) => (
+                                      <Badge key={clave} variant="outline" className="text-[10px] h-5 px-1.5 font-normal text-muted-foreground border-border/60 bg-background/50 rounded-md">
+                                        {clave}: {valor}
+                                      </Badge>
+                                    ))}
+                                  </div>
                                 )}
                               </div>
                             </div>
@@ -677,74 +708,97 @@ export function FacturaProveedorDialog({
                             <div className="space-y-1 min-w-0">
                               <Label className={ITEM_LABEL_CLASS}>Coincidencia</Label>
                               <span className={`flex items-center gap-1.5 text-xs font-medium ${badge.cls}`}>
-                                <span className="h-2 w-2 rounded-full bg-current shrink-0" />
+                                <BadgeIcon className="h-3.5 w-3.5 shrink-0" />
                                 <span className="truncate">{badge.label}</span>
                               </span>
                               {!terminal && (
-                                <Select
-                                  value={item.productoId ? String(item.productoId) : "none"}
-                                  onValueChange={(v) => updateItem(item.id, { productoId: v === "none" ? null : Number(v) })}
-                                  disabled={busy}
-                                >
-                                  <SelectTrigger aria-label={`Producto existente para ${item.textoOriginal}`} className={cn(ITEM_FIELD_CLASS, "w-full text-sm")}>
-                                    <SelectValue placeholder="Elegir producto existente" />
-                                  </SelectTrigger>
-                                  <SelectContent position="popper" align="start" sideOffset={4}>
-                                    <SelectItem value="none">Sin producto (crear nuevo)</SelectItem>
-                                    {productos.map((p) => (
-                                      <SelectItem key={p.id} value={String(p.id)}>{p.nombre}</SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
+                                <>
+                                  <Select
+                                    value={item.productoId ? String(item.productoId) : "none"}
+                                    onValueChange={(v) => updateItem(item.id, { productoId: v === "none" ? null : Number(v) })}
+                                    disabled={busy}
+                                  >
+                                    <SelectTrigger aria-label={`Producto existente para ${item.textoOriginal}`} className={cn(ITEM_FIELD_CLASS, "w-full text-sm")}>
+                                      <SelectValue placeholder="Elegir producto existente" />
+                                    </SelectTrigger>
+                                    <SelectContent position="popper" align="start" sideOffset={4}>
+                                      <SelectItem value="none">Sin producto (crear nuevo)</SelectItem>
+                                      {productos.map((p) => (
+                                        <SelectItem key={p.id} value={String(p.id)}>{p.nombre}</SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                  {requiereAlta && (
+                                    <p className="text-[11px] text-muted-foreground">
+                                      Si no existe, abrilo con <span className="font-semibold text-primary">crear producto</span> para completar precio de venta, categoría y stock inicial.
+                                    </p>
+                                  )}
+                                </>
                               )}
                             </div>
 
-                            {/* Acciones (una sola línea en desktop) */}
-                            <div className="xl:justify-self-end">
+                            {/* Acciones */}
+                            <div className="xl:justify-self-end xl:self-center">
                               {!terminal && (
-                                <div
-                                  role="group"
-                                  aria-label={`Acciones para ${item.textoOriginal}`}
-                                  className={cn(
-                                    "grid gap-2 sm:grid-cols-2",
-                                    item.productoId ? "xl:grid-cols-3" : "xl:grid-cols-2",
-                                    "xl:w-full xl:max-w-[440px]"
-                                  )}
-                                >
+                                <div role="group" aria-label={`Acciones para ${item.textoOriginal}`} className="flex items-center justify-start gap-2 xl:justify-end">
                                   {item.productoId && (
-                                    <Button
-                                      type="button"
-                                      size="sm"
-                                      aria-label={`Confirmar coincidencia para ${item.textoOriginal}`}
-                                      className={ITEM_ACTION_BUTTON_CLASS}
-                                      onClick={() => confirmarItem(item)}
-                                      disabled={busy}
-                                    >
-                                      {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Confirmar"}
-                                    </Button>
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <Button
+                                          type="button"
+                                          size="icon-sm"
+                                          aria-label={`Confirmar coincidencia para ${item.textoOriginal}`}
+                                          className={cn(ITEM_ACTION_ICON_CLASS, "border-[color:var(--status-success-strong)]/35 bg-[color:var(--status-success-strong)]/14 text-[color:var(--status-success-strong)] hover:bg-[color:var(--status-success-strong)]/22")}
+                                          onClick={() => confirmarItem(item)}
+                                          disabled={busy}
+                                        >
+                                          {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+                                        </Button>
+                                      </TooltipTrigger>
+                                      <TooltipContent side="top" sideOffset={8}>Confirmar coincidencia</TooltipContent>
+                                    </Tooltip>
                                   )}
-                                  <Button
-                                    type="button"
-                                    size="sm"
-                                    variant="outline"
-                                    aria-label={`Crear producto nuevo desde ${item.textoOriginal}`}
-                                    className={ITEM_ACTION_BUTTON_CLASS}
-                                    onClick={() => setItemParaCrear(item)}
-                                    disabled={busy}
-                                  >
-                                    Nuevo producto
-                                  </Button>
-                                  <Button
-                                    type="button"
-                                    size="sm"
-                                    variant="ghost"
-                                    aria-label={`Ignorar línea ${item.textoOriginal}`}
-                                    className={cn(ITEM_ACTION_BUTTON_CLASS, "border border-transparent hover:border-[#2A2F3A] hover:bg-white/[0.03]")}
-                                    onClick={() => ignorarItem(item)}
-                                    disabled={busy}
-                                  >
-                                    Ignorar
-                                  </Button>
+
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <Button
+                                          type="button"
+                                          size="icon-sm"
+                                          variant="outline"
+                                          aria-label={`Abrir alta de producto para ${item.textoOriginal}`}
+                                          className={cn(
+                                            ITEM_ACTION_ICON_CLASS,
+                                            requiereAlta
+                                              ? "border-[color:var(--status-warning)]/35 bg-[color:var(--status-warning)]/12 text-[color:var(--status-warning)] hover:bg-[color:var(--status-warning)]/20"
+                                              : "border-primary/30 bg-primary/10 text-primary hover:bg-primary/18"
+                                          )}
+                                          onClick={() => setItemParaCrear(item)}
+                                          disabled={busy}
+                                        >
+                                        {requiereAlta ? <Plus className="h-4 w-4" /> : <PencilLine className="h-4 w-4" />}
+                                      </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent side="top" sideOffset={8}>
+                                      {requiereAlta ? "Crear producto nuevo con datos precargados" : "Abrir alta rápida para este item"}
+                                    </TooltipContent>
+                                  </Tooltip>
+
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <Button
+                                        type="button"
+                                        size="icon-sm"
+                                        variant="ghost"
+                                        aria-label={`Ignorar línea ${item.textoOriginal}`}
+                                        className={cn(ITEM_ACTION_ICON_CLASS, "border-[#2A2F3A] bg-transparent text-muted-foreground hover:border-[color:var(--status-warning)]/40 hover:bg-[color:var(--status-warning)]/10 hover:text-[color:var(--status-warning)]")}
+                                        onClick={() => ignorarItem(item)}
+                                        disabled={busy}
+                                      >
+                                        <X className="h-4 w-4" />
+                                      </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent side="top" sideOffset={8}>Ignorar línea</TooltipContent>
+                                  </Tooltip>
                                 </div>
                               )}
                             </div>
@@ -753,6 +807,7 @@ export function FacturaProveedorDialog({
                       })}
                     </div>
                   </div>
+                  </TooltipProvider>
                 </>
               ) : (
                 <div className="flex-1 min-h-0 flex items-center justify-center text-sm text-muted-foreground">

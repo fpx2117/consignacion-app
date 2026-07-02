@@ -95,6 +95,8 @@ export type FacturaProveedorItem = {
   matchScore: number | null;
   matchMotivo: string | null;
   estado: EstadoItemFactura;
+  /** Columnas detectadas sin campo estándar (lote, vencimiento, talle, color, etc.), como objeto plano. */
+  atributosExtra: Record<string, string> | null;
 };
 
 export type FacturaProveedor = {

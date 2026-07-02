@@ -1,20 +1,24 @@
 "use client";
 
 import Image from "next/image";
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import { motion } from "motion/react";
-import { Building2, Phone, MapPin, Upload, Palette, X } from "lucide-react";
+import { Building2, Phone, MapPin, Upload, Palette, Store, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { StepWrapper } from "../StepWrapper";
 import type { BrandingData } from "../../types";
+import { RUBROS_NEGOCIO, RUBRO_OTRO_SLUG, RUBRO_MAX_LENGTH } from "@/modules/invoices/config/rubros";
 
 interface BusinessStepProps {
   businessName: string;
   branding: BrandingData;
+  rubroNegocio: string | null;
   onBusinessNameChange: (value: string) => void;
   onBrandingChange: (value: BrandingData) => void;
+  onRubroNegocioChange: (value: string | null) => void;
 }
 
 const COLOR_PRESET_TOKENS = [
@@ -39,11 +43,31 @@ function resolveColor(token: string): string {
 export function BusinessStep({
   businessName,
   branding,
+  rubroNegocio,
   onBusinessNameChange,
   onBrandingChange,
+  onRubroNegocioChange,
 }: BusinessStepProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const colorPresets = COLOR_PRESET_TOKENS.map((token) => resolveColor(token)).filter(Boolean);
+
+  const esRubroConocido = !!rubroNegocio && RUBROS_NEGOCIO.some((r) => r.slug === rubroNegocio);
+  const [rubroSeleccionado, setRubroSeleccionado] = useState<string>(
+    rubroNegocio ? (esRubroConocido ? rubroNegocio : RUBRO_OTRO_SLUG) : ""
+  );
+  const [rubroOtroTexto, setRubroOtroTexto] = useState<string>(
+    !esRubroConocido && rubroNegocio ? rubroNegocio : ""
+  );
+
+  const handleSelectRubro = (value: string) => {
+    setRubroSeleccionado(value);
+    onRubroNegocioChange(value === RUBRO_OTRO_SLUG ? (rubroOtroTexto || null) : value);
+  };
+
+  const handleRubroOtroTextoChange = (texto: string) => {
+    setRubroOtroTexto(texto);
+    onRubroNegocioChange(texto || null);
+  };
 
   const handleLogoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -92,6 +116,34 @@ export function BusinessStep({
             placeholder="Ej: Mega Store S.A."
             className="h-14 rounded-2xl bg-background/50 border-border/50 focus:border-[color:var(--primary)] focus:ring-4 focus:ring-[color:var(--primary)]/10 text-lg font-semibold"
           />
+        </div>
+
+        {/* Rubro */}
+        <div className="space-y-2">
+          <Label className="text-xs font-bold uppercase tracking-widest text-foreground/80 pl-2 flex items-center gap-1.5">
+            <Store className="h-3 w-3" /> Rubro de tu negocio
+          </Label>
+          <Select value={rubroSeleccionado} onValueChange={handleSelectRubro}>
+            <SelectTrigger className="h-12 rounded-2xl bg-background/50 border-border/50 w-full">
+              <SelectValue placeholder="Elegí un rubro (opcional)" />
+            </SelectTrigger>
+            <SelectContent>
+              {RUBROS_NEGOCIO.map((r) => (
+                <SelectItem key={r.slug} value={r.slug}>{r.label}</SelectItem>
+              ))}
+              <SelectItem value={RUBRO_OTRO_SLUG}>Otro (especificar)</SelectItem>
+            </SelectContent>
+          </Select>
+          {rubroSeleccionado === RUBRO_OTRO_SLUG && (
+            <Input
+              value={rubroOtroTexto}
+              onChange={(e) => handleRubroOtroTextoChange(e.target.value)}
+              placeholder="Especificá tu rubro"
+              maxLength={RUBRO_MAX_LENGTH}
+              className="h-12 rounded-2xl bg-background/50 border-border/50"
+            />
+          )}
+          <p className="text-xs text-muted-foreground/70 pl-2">Ayuda a que la IA interprete mejor tus facturas de proveedor. Podés cambiarlo después en Ajustes.</p>
         </div>
 
         {/* Phone + Address */}

@@ -66,9 +66,17 @@ export async function POST(
     const filePath = path.join(getFacturaProveedorStorageDir(), factura.archivoPath);
     const buffer = await readFile(filePath);
 
+    // Rubro de la sucursal que subió la factura — solo contexto para el
+    // prompt (ver invoice-extraction.config.ts), nunca cambia el pipeline.
+    const configuracion = await prisma.configuracion.findUnique({
+      where: { sucursalId: factura.sucursalId },
+      select: { rubroNegocio: true },
+    });
+
     const resultado = await procesarFacturaConIA({
       buffer,
       mimeType: factura.archivoMime,
+      rubroNegocio: configuracion?.rubroNegocio,
     });
 
     if (resultado.status === "error") {
@@ -138,6 +146,7 @@ export async function POST(
             matchScore: match.score,
             matchMotivo: match.motivo,
             estado: match.estado,
+            atributosExtra: item.atributosExtra ?? undefined,
           },
         });
       }

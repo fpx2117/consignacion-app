@@ -1,10 +1,11 @@
 // src/lib/ai/invoice-ai-parser.ts
 // Reemplaza a src/lib/modal/ocr-client.ts. Orquesta: extracción de texto barata
 // (CPU, ver extraer-texto-factura.ts) → prompt dinámico desde
-// invoice-extraction.config.ts → OpenRouter (texto, no imágenes) → validación →
-// shape normalizado para el resto del pipeline (matching-engine, etc.), que no
-// se modifica. Nunca se le manda el archivo original a OpenRouter, sólo el texto
-// ya extraído localmente — así el costo es por tokens y previsible.
+// invoice-extraction.config.ts → OpenRouter → validación → shape normalizado
+// para el resto del pipeline (matching-engine, etc.), que no se modifica. Por
+// defecto solo se manda texto (costo por tokens, previsible); si la confianza
+// de OCR es baja o el texto vino vacío, se suma también la imagen original
+// como fallback (ver OCR_VISION_FALLBACK_THRESHOLD abajo).
 
 import {
   buildExpectedOutputSchema,
@@ -38,6 +39,9 @@ export type InvoiceAiItem = {
   unitCost: number | null;
   lineTotal: number | null;
   confidence: number | null;
+  /** Columnas detectadas sin campo estándar (lote, vencimiento, talle, color,
+   * etc.), como objeto plano — null si no se detectó ninguna. */
+  atributosExtra: Record<string, string> | null;
 };
 
 export type InvoiceAiSuccessResult = {
@@ -75,6 +79,9 @@ const OCR_VISION_FALLBACK_THRESHOLD = Number(process.env.OCR_VISION_FALLBACK_THR
 export async function procesarFacturaConIA(input: {
   buffer: Buffer;
   mimeType: string;
+  /** Configuracion.rubroNegocio de la sucursal de la factura — solo contexto
+   * para el prompt, ver invoice-extraction.config.ts. */
+  rubroNegocio?: string | null;
 }): Promise<InvoiceAiResult> {
   const { texto, confianzaOcr, imagenParaVision } = await extraerTextoFactura(input);
 
@@ -87,7 +94,7 @@ export async function procesarFacturaConIA(input: {
   }
 
   const textoTruncado = truncateOcrText(texto);
-  const systemPrompt = buildInvoiceExtractionPrompt();
+  const systemPrompt = buildInvoiceExtractionPrompt(input.rubroNegocio);
   const schema = buildExpectedOutputSchema();
 
   const userPrompt = necesitaVision
@@ -135,6 +142,9 @@ export async function procesarFacturaConIA(input: {
       unitCost: item.unitCost,
       lineTotal: item.lineTotal,
       confidence: item.confidence,
+      atributosExtra: item.extraAttributes.length > 0
+        ? Object.fromEntries(item.extraAttributes.map((a) => [a.key, a.value]))
+        : null,
     })),
     warnings: datos.warnings,
     globalConfidence,
@@ -152,6 +162,7 @@ function normalizarExtraccion(data: Record<string, unknown>, ocrTextRaw: string)
   const items: ExtractedInvoiceItem[] = rawItems
     .map((raw): ExtractedInvoiceItem => {
       const item = raw as Record<string, unknown>;
+      const rawExtraAttributes = Array.isArray(item.extraAttributes) ? item.extraAttributes : [];
       return {
         rawDescription: typeof item.rawDescription === "string" ? item.rawDescription : "",
         supplierCode: typeof item.supplierCode === "string" ? item.supplierCode : null,
@@ -159,6 +170,13 @@ function normalizarExtraccion(data: Record<string, unknown>, ocrTextRaw: string)
         unitCost: typeof item.unitCost === "number" && Number.isFinite(item.unitCost) ? item.unitCost : null,
         lineTotal: typeof item.lineTotal === "number" && Number.isFinite(item.lineTotal) ? item.lineTotal : null,
         confidence: typeof item.confidence === "number" && Number.isFinite(item.confidence) ? item.confidence : null,
+        extraAttributes: rawExtraAttributes
+          .filter((a): a is Record<string, unknown> => !!a && typeof a === "object")
+          .map((a) => ({
+            key: typeof a.key === "string" ? a.key : "",
+            value: typeof a.value === "string" ? a.value : "",
+          }))
+          .filter((a) => a.key.trim().length > 0 && a.value.trim().length > 0),
       };
     })
     .filter((item) => item.rawDescription.trim().length > 0);

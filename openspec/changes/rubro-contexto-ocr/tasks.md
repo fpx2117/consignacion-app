@@ -13,20 +13,20 @@ Orden confirmado. Cada fase es un PR/deploy independiente — no hace falta comp
 
 ## Fase 2: Rubro como contexto (núcleo)
 
-- [ ] 2.1 Migración Prisma: `Configuracion.rubroNegocio`, `Configuracion.columnasAtributosProducto`, `FacturaProveedorItem.atributosExtra`, `Producto.atributosExtra` + `prisma generate`
-- [ ] 2.2 `src/modules/invoices/config/rubros.ts` (nuevo): `RUBROS_NEGOCIO` (17 slugs + labels) y `RUBRO_ATRIBUTOS_TIPICOS` (hints por rubro)
-- [ ] 2.3 `invoice-extraction.config.ts`: `extraAttributes` en `ExtractedInvoiceItem`, `buildExpectedOutputSchema()`, `buildInvoiceExtractionPrompt(rubro?)`
-- [ ] 2.4 `invoice-ai-parser.ts`: `procesarFacturaConIA()` acepta `rubroNegocio` opcional; `normalizarExtraccion()` mapea `extraAttributes[]` a objeto plano
-- [ ] 2.5 `process/route.ts`: lee `Configuracion.rubroNegocio` de la sucursal de la factura antes de llamar `procesarFacturaConIA()`; persiste `atributosExtra` al crear cada `FacturaProveedorItem`
-- [ ] 2.6 `settings/general/route.ts`: `GET`/`PUT` incluyen `rubroNegocio`, con validación de longitud (60 caracteres)
-- [ ] 2.7 Página de Ajustes (`/settings/general`): campo para editar rubro post-setup
-- [ ] 2.8 `setup/types.ts`: `SetupFormData.rubroNegocio`, `InitializePayload.rubroNegocio`
-- [ ] 2.9 `BusinessStep.tsx`: selector de rubro (17 opciones + "Otro" con texto libre, maxLength 60)
-- [ ] 2.10 `initialize/route.ts`: persiste `rubroNegocio` en el `configuracion.upsert()` existente
-- [ ] 2.11 `factura-proveedor-dialog.tsx`: mostrar `atributosExtra` del item como chips de solo lectura
-- [ ] 2.12 `apiService.ts`: tipos actualizados para `rubroNegocio` y `atributosExtra` en los payloads existentes
-- [ ] 2.13 Verificar manualmente: configurar rubro "Farmacia" en Setup (o Ajustes si ya se pasó el setup), procesar una factura con lote/vencimiento, confirmar que aparecen en `atributosExtra` del item
-- [ ] 2.14 Verificar manualmente: negocio sin rubro configurado (`null`) procesa una factura y el comportamiento es idéntico al actual
+- [x] 2.1 Migración Prisma: `Configuracion.rubroNegocio`, `Configuracion.columnasAtributosProducto`, `FacturaProveedorItem.atributosExtra`, `Producto.atributosExtra` + `prisma generate`
+- [x] 2.2 `src/modules/invoices/config/rubros.ts` (nuevo): `RUBROS_NEGOCIO` (17 slugs + labels) y `getAtributosTipicos()` (hints por rubro)
+- [x] 2.3 `invoice-extraction.config.ts`: `extraAttributes` en `ExtractedInvoiceItem`, `buildExpectedOutputSchema()`, `buildInvoiceExtractionPrompt(rubro?)`
+- [x] 2.4 `invoice-ai-parser.ts`: `procesarFacturaConIA()` acepta `rubroNegocio` opcional; `normalizarExtraccion()` mapea `extraAttributes[]` a objeto plano
+- [x] 2.5 `process/route.ts`: lee `Configuracion.rubroNegocio` de la sucursal de la factura antes de llamar `procesarFacturaConIA()`; persiste `atributosExtra` al crear cada `FacturaProveedorItem`
+- [x] 2.6 `settings/general/route.ts`: `GET`/`PUT` incluyen `rubroNegocio`, con validación de longitud (60 caracteres)
+- [x] 2.7 Página de Ajustes (`/settings/general`): campo para editar rubro post-setup
+- [x] 2.8 `setup/types.ts`: `SetupFormData.rubroNegocio`, `InitializePayload.rubroNegocio`
+- [x] 2.9 `BusinessStep.tsx`: selector de rubro (17 opciones + "Otro" con texto libre, maxLength 60)
+- [x] 2.10 `initialize/route.ts`: persiste `rubroNegocio` en el `configuracion.upsert()` existente
+- [x] 2.11 `factura-proveedor-dialog.tsx`: mostrar `atributosExtra` del item como chips de solo lectura
+- [x] 2.12 `apiService.ts`/`types.ts`: tipos actualizados para `rubroNegocio` y `atributosExtra` en los payloads existentes
+- [x] 2.13 Verificar manualmente: factura sintética con lote/vencimiento + rubro "farmacia" → capturados correctamente en `atributosExtra` (test real contra OpenRouter)
+- [x] 2.14 Verificar manualmente: misma factura sin rubro configurado (`null`) → extracción sigue funcionando igual, atributosExtra también capturado (vía regla genérica del prompt, sin el hint de rubro). tsc/eslint/next build sin errores.
 
 ## Fase 3: `atributosExtra` genérico en `Producto`
 

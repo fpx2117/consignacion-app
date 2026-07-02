@@ -13,6 +13,7 @@ type InitializeBody = {
     planId?: number;
     staff?: Array<{ nombre: string; email: string; password?: string }>;
     businessName?: string;
+    rubroNegocio?: string | null;
     promoCode?: string;
     paymentId?: string;
     // Nuevos campos del Setup Enhanced
@@ -99,7 +100,7 @@ export async function POST(req: Request) {
             return jsonError(400, { message: "Body inválido (JSON requerido)" });
         }
 
-        const { admin, planId, staff, businessName, promoCode, paymentId, branding, branch, posConfig, catalog, notifications } = body;
+        const { admin, planId, staff, businessName, rubroNegocio, promoCode, paymentId, branding, branch, posConfig, catalog, notifications } = body;
 
         if (!admin?.nombre || !admin?.email || !admin?.password) {
             return jsonError(400, { message: "Faltan datos del administrador" });
@@ -374,6 +375,7 @@ export async function POST(req: Request) {
                     ...(notifData.notificarLiquidaciones !== undefined && { notificarLiquidaciones: notifData.notificarLiquidaciones }),
                     ...(notifData.notificarConsignacionesActivas !== undefined && { notificarConsignacionesActivas: notifData.notificarConsignacionesActivas }),
                     ...(notifData.diasAvisoConsignacion !== undefined && { diasAvisoConsignacion: notifData.diasAvisoConsignacion }),
+                    ...(rubroNegocio !== undefined && { rubroNegocio: rubroNegocio || null }),
                 },
                 create: {
                     sucursal: { connect: { id: sucursalId } },
@@ -390,6 +392,7 @@ export async function POST(req: Request) {
                     porcentajeInteresTarjeta: posData.porcentajeInteresTarjeta ?? 0,
                     mostrarListaPrecios: catData.mostrarListaPrecios ?? false,
                     mensajeWhatsappConsignacion: catData.whatsappNumber || null,
+                    rubroNegocio: rubroNegocio || null,
                 },
             });
 
