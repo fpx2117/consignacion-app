@@ -55,7 +55,29 @@ async function launchReportBrowser(): Promise<Browser> {
 let sharedBrowser: Browser | null = null;
 let launching: Promise<Browser> | null = null;
 
+// Si no se pide ningún reporte nuevo en este lapso, el browser compartido se
+// cierra proactivamente en vez de quedar residente indefinidamente (podía
+// pasar horas sin liberarse — ver openspec/changes/optimizacion-consumo-ram).
+const IDLE_SHUTDOWN_MS = Number(process.env.CHROMIUM_IDLE_SHUTDOWN_MS) || 10 * 60 * 1000;
+
+let idleTimer: NodeJS.Timeout | null = null;
+
+function scheduleIdleShutdown() {
+  if (idleTimer) clearTimeout(idleTimer);
+  idleTimer = setTimeout(() => {
+    if (sharedBrowser) {
+      console.log("[Chromium] Cerrando browser compartido por inactividad");
+      const browserToClose = sharedBrowser;
+      sharedBrowser = null;
+      browserToClose.close().catch(() => {});
+    }
+  }, IDLE_SHUTDOWN_MS);
+  idleTimer.unref(); // no debe mantener el proceso vivo solo por este timer
+}
+
 export async function getSharedReportBrowser(): Promise<Browser> {
+  scheduleIdleShutdown();
+
   if (sharedBrowser?.connected) return sharedBrowser;
 
   if (!launching) {
@@ -64,6 +86,7 @@ export async function getSharedReportBrowser(): Promise<Browser> {
         sharedBrowser = browser;
         browser.once("disconnected", () => {
           if (sharedBrowser === browser) sharedBrowser = null;
+          if (idleTimer) clearTimeout(idleTimer);
         });
         return browser;
       })

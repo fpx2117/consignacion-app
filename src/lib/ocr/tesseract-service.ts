@@ -94,6 +94,10 @@ export async function recognizeImage(buffer: Buffer): Promise<{
   return { texto: data.text, confianza: data.confidence };
 }
 
+export function isTesseractWorkerLoaded(): boolean {
+  return worker !== null;
+}
+
 export async function shutdownTesseractWorker() {
   if (worker) {
     console.log("[Tesseract] Terminando worker...");

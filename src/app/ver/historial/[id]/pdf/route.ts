@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import type { Page } from "puppeteer-core";
 import { getSharedReportBrowser } from "@/lib/chromium/resolve-executable-path";
+import { withChromiumSlot, ChromiumBusyError } from "@/lib/chromium/chromium-semaphore";
 import { prisma } from "@/lib/prisma";
 import { getBranding } from "@/lib/reports/get-branding";
 import {
@@ -128,19 +129,21 @@ export async function GET(
       branding
     );
 
-    const browser = await getSharedReportBrowser();
-    page = await browser.newPage();
-    await page.setContent(html, { waitUntil: "domcontentloaded" });
-    await page.emulateMediaType("screen");
+    const pdfUint8Array = await withChromiumSlot(async () => {
+      const browser = await getSharedReportBrowser();
+      page = await browser.newPage();
+      await page.setContent(html, { waitUntil: "domcontentloaded" });
+      await page.emulateMediaType("screen");
 
-    const pdfUint8Array = await page.pdf({
-      format: "A4",
-      printBackground: true,
-      margin: { top: "10mm", bottom: "10mm", left: "10mm", right: "10mm" },
+      const bytes = await page.pdf({
+        format: "A4",
+        printBackground: true,
+        margin: { top: "10mm", bottom: "10mm", left: "10mm", right: "10mm" },
+      });
+
+      await page.close();
+      return bytes;
     });
-
-    await page.close();
-    page = null;
 
     const response = new NextResponse(Buffer.from(pdfUint8Array), {
       headers: {
@@ -159,11 +162,14 @@ export async function GET(
 
     return response;
   } catch (error) {
+    if (error instanceof ChromiumBusyError) {
+      return NextResponse.json({ error: "Servidor ocupado generando otros reportes, reintentá en unos segundos." }, { status: 503 });
+    }
     console.error("PDF HISTORY INVENTORY ERROR:", error);
     return NextResponse.json({ error: "Error en PDF" }, { status: 500 });
   } finally {
     try {
-      if (page) await page.close();
+      await (page as Page | null)?.close();
     } catch {}
   }
 }
