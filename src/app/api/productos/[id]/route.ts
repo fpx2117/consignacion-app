@@ -160,6 +160,11 @@ export async function PUT(req: Request, { params }: RouteParams) {
           descuentoMonto: parsed.data.descuentoMonto !== undefined ? parsed.data.descuentoMonto : undefined,
           descuentoDesde: parsed.data.descuentoDesde ? new Date(parsed.data.descuentoDesde) : parsed.data.descuentoDesde === null ? null : undefined,
           descuentoHasta: parsed.data.descuentoHasta ? new Date(parsed.data.descuentoHasta) : parsed.data.descuentoHasta === null ? null : undefined,
+          atributosExtra: parsed.data.atributosExtra === undefined
+            ? undefined
+            : parsed.data.atributosExtra === null
+              ? Prisma.JsonNull
+              : parsed.data.atributosExtra,
         },
       });
 

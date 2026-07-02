@@ -500,6 +500,8 @@ export type Producto = {
   descuentoHasta?: ISODateString | null;
   // Campo calculado por el backend — el frontend no evalúa vigencia
   descuentoEfectivo?: DescuentoEfectivo | null;
+  /** Atributos libres (lote, vencimiento, talle, color, etc.) */
+  atributosExtra?: Record<string, string> | null;
 };
 
 export type PublicCatalogSubcategory = {
@@ -844,6 +846,7 @@ export type CreateProductoInput = {
   descuentoActivo?: boolean;
   descuentoDesde?: ISODateString | null;
   descuentoHasta?: ISODateString | null;
+  atributosExtra?: Record<string, string> | null;
 };
 
 export type UpdateProductoInput = Partial<CreateProductoInput> & {

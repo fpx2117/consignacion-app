@@ -250,6 +250,7 @@ export async function POST(req: Request) {
           descuentoActivo: data.descuentoActivo ?? false,
           descuentoDesde: data.descuentoDesde ? new Date(data.descuentoDesde) : null,
           descuentoHasta: data.descuentoHasta ? new Date(data.descuentoHasta) : null,
+          atributosExtra: data.atributosExtra ?? undefined,
         },
         include: { categoria: true, subcategoria: true }
       });

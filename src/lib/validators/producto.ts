@@ -31,6 +31,10 @@ const createProductoBaseSchema = z.object({
   fechaVencimiento: z.string().nullish(),
   categoriaId: z.number().int().nullish(),
   imagenUrl: z.string().nullish(),
+  // Atributos libres (lote, vencimiento, talle, color, etc.) — mismo formato
+  // que FacturaProveedorItem.atributosExtra. Genérico entre rubros, sin
+  // validación de claves específicas.
+  atributosExtra: z.record(z.string(), z.string()).nullish(),
   ...descuentoFields,
 });
 

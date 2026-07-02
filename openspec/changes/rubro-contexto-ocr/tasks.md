@@ -30,12 +30,12 @@ Orden confirmado. Cada fase es un PR/deploy independiente — no hace falta comp
 
 ## Fase 3: `atributosExtra` genérico en `Producto`
 
-- [ ] 3.1 `validators/producto.ts`: `atributosExtra` opcional en `createProductoBaseSchema`
-- [ ] 3.2 `create-product/route.ts`: copia `atributosExtra` del item al `Producto` creado desde OCR
-- [ ] 3.3 Componente compartido `AtributosExtraEditor` (pares clave-valor, agregar/quitar fila, sugerencias desde `RUBRO_ATRIBUTOS_TIPICOS`)
-- [ ] 3.4 `create-producto-dialog.tsx`: sección "Atributos adicionales" (colapsada por default) con `AtributosExtraEditor`
-- [ ] 3.5 `edit-producto-dialog.tsx`: misma sección, prellenada con el `atributosExtra` existente del producto
-- [ ] 3.6 Verificar manualmente: crear un producto a mano y agregarle atributos; editar un producto existente (creado por OCR o a mano) y corregir sus atributos
+- [x] 3.1 `validators/producto.ts`: `atributosExtra` opcional en `createProductoBaseSchema`
+- [x] 3.2 `create-product/route.ts`: copia `atributosExtra` del item al `Producto` creado desde OCR
+- [x] 3.3 Componente compartido `AtributosExtraEditor` (pares clave-valor, agregar/quitar fila, sugerencias vía `getAtributosTipicos` + datalist)
+- [x] 3.4 `create-producto-dialog.tsx`: sección "Atributos adicionales" (colapsada por default) con `AtributosExtraEditor`
+- [x] 3.5 `edit-producto-dialog.tsx`: misma sección, prellenada con el `atributosExtra` existente del producto
+- [x] 3.6 Verificado contra la DB real: crear producto con atributos, actualizarlos, limpiarlos a null y borrar — los 3 pasos persisten correctamente (incluyó fix de `Prisma.JsonNull` para el caso update-a-null, que TS marcaba como error de tipos en `/api/productos/[id]`). tsc/eslint/next build sin errores.
 
 ## Fase 4: Columnas dinámicas en la tabla de productos
 
