@@ -40,6 +40,8 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { ImageUpload } from "@/components/image-upload";
 import { CreateCategoriaDialog } from "./create-categoria-dialog";
+import { AtributosExtraEditor } from "./atributos-extra-editor";
+import { getAtributosTipicos } from "@/modules/invoices/config/rubros";
 import { toast } from "sonner";
 
 type ProductoEditable = Producto & {
@@ -113,6 +115,11 @@ export function EditProductoDialog({
   const [subcategorias, setSubcategorias] = React.useState<{ id: number; nombre: string }[]>([]);
   const [subcategoriaId, setSubcategoriaId] = React.useState<string>(producto.subcategoriaId?.toString() || "");
 
+  // Atributos adicionales (lote, vencimiento, talle, color, etc.)
+  const [atributosExtra, setAtributosExtra] = React.useState<Record<string, string> | null>(producto.atributosExtra ?? null);
+  const [mostrarAtributos, setMostrarAtributos] = React.useState(!!producto.atributosExtra && Object.keys(producto.atributosExtra).length > 0);
+  const [sugerenciasAtributos, setSugerenciasAtributos] = React.useState<string[]>([]);
+
   React.useEffect(() => {
     if (open) {
       setNombre(producto.nombre);
@@ -130,12 +137,21 @@ export function EditProductoDialog({
       setDescuentoMonto(producto.descuentoMonto ? String(producto.descuentoMonto) : "");
       setDescuentoDesde(producto.descuentoDesde ? new Date(producto.descuentoDesde).toISOString().slice(0, 16) : "");
       setDescuentoHasta(producto.descuentoHasta ? new Date(producto.descuentoHasta).toISOString().slice(0, 16) : "");
+      setAtributosExtra(producto.atributosExtra ?? null);
+      setMostrarAtributos(!!producto.atributosExtra && Object.keys(producto.atributosExtra).length > 0);
 
       apiService.getCategorias()
         .then((data) => {
           setCategorias(Array.isArray(data) ? data : []);
         })
         .catch(() => setCategorias([]));
+
+      apiService.getConfiguracionGeneral()
+        .then((config) => {
+          const hint = getAtributosTipicos(config?.rubroNegocio);
+          setSugerenciasAtributos(hint ? hint.split(", ").filter(Boolean) : []);
+        })
+        .catch(() => setSugerenciasAtributos([]));
 
       if (producto.categoriaId) {
         apiService.getSubcategorias(producto.categoriaId)
@@ -206,6 +222,7 @@ export function EditProductoDialog({
         descuentoMonto: tipoDescuento === "monto" ? (dmonto ?? null) : null,
         descuentoDesde: descuentoDesde ? new Date(descuentoDesde).toISOString() : null,
         descuentoHasta: descuentoHasta ? new Date(descuentoHasta).toISOString() : null,
+        atributosExtra,
       };
 
       await apiService.updateProducto(producto.id, payload);
@@ -504,6 +521,28 @@ export function EditProductoDialog({
                     </div>
                   );
                 })()}
+              </div>
+            )}
+          </div>
+
+          {/* Sección Atributos adicionales — colapsada por default */}
+          <div className="rounded-xl border border-dashed border-muted-foreground/30 p-4 space-y-3 bg-muted/10">
+            <button
+              type="button"
+              onClick={() => setMostrarAtributos((v) => !v)}
+              className="flex items-center justify-between w-full text-left"
+            >
+              <span className="text-xs font-bold uppercase text-muted-foreground">Atributos adicionales (opcional)</span>
+              <span className="text-[10px] text-muted-foreground">{mostrarAtributos ? "Ocultar" : "Mostrar"}</span>
+            </button>
+            {mostrarAtributos && (
+              <div className="animate-in fade-in slide-in-from-top-2 duration-200">
+                <AtributosExtraEditor
+                  value={atributosExtra}
+                  onChange={setAtributosExtra}
+                  sugerencias={sugerenciasAtributos}
+                  disabled={saving}
+                />
               </div>
             )}
           </div>

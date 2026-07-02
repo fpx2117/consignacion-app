@@ -40,6 +40,8 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { ImageUpload } from "@/components/image-upload";
 import { CreateCategoriaDialog } from "./create-categoria-dialog";
+import { AtributosExtraEditor } from "./atributos-extra-editor";
+import { getAtributosTipicos } from "@/modules/invoices/config/rubros";
 import { toast } from "sonner";
 
 function toNumber(v: string): number | undefined {
@@ -69,6 +71,7 @@ export interface CreateProductoInitialValues {
   precioCosto?: number;
   stockDisponibleUnits?: number;
   codigoBarra?: string | null;
+  atributosExtra?: Record<string, string> | null;
 }
 
 export function CreateProductoDialog({
@@ -126,6 +129,11 @@ export function CreateProductoDialog({
   const [subcategorias, setSubcategorias] = React.useState<{ id: number; nombre: string }[]>([]);
   const [subcategoriaId, setSubcategoriaId] = React.useState<string>("");
 
+  // Atributos adicionales (lote, vencimiento, talle, color, etc.)
+  const [atributosExtra, setAtributosExtra] = React.useState<Record<string, string> | null>(null);
+  const [mostrarAtributos, setMostrarAtributos] = React.useState(false);
+  const [sugerenciasAtributos, setSugerenciasAtributos] = React.useState<string[]>([]);
+
   React.useEffect(() => {
     if (open) {
       // Precio de venta NUNCA se prellena desde el costo de factura — el usuario
@@ -146,12 +154,21 @@ export function CreateProductoDialog({
       setDescuentoMonto("");
       setDescuentoDesde("");
       setDescuentoHasta("");
+      setAtributosExtra(initialValues?.atributosExtra ?? null);
+      setMostrarAtributos(!!initialValues?.atributosExtra && Object.keys(initialValues.atributosExtra).length > 0);
 
       apiService.getCategorias()
         .then((data) => {
           setCategorias(Array.isArray(data) ? data : []);
         })
         .catch(() => setCategorias([]));
+
+      apiService.getConfiguracionGeneral()
+        .then((config) => {
+          const hint = getAtributosTipicos(config?.rubroNegocio);
+          setSugerenciasAtributos(hint ? hint.split(", ").filter(Boolean) : []);
+        })
+        .catch(() => setSugerenciasAtributos([]));
 
       setSubcategorias([]);
       setSubcategoriaId("");
@@ -215,6 +232,7 @@ export function CreateProductoDialog({
         descuentoMonto: tipoDescuento === "monto" ? (dmonto ?? null) : null,
         descuentoDesde: descuentoDesde ? new Date(descuentoDesde).toISOString() : null,
         descuentoHasta: descuentoHasta ? new Date(descuentoHasta).toISOString() : null,
+        atributosExtra,
       };
 
       const crear = submitFn ?? ((p: CreateProductoInput) =>
@@ -533,6 +551,28 @@ export function CreateProductoDialog({
                     </div>
                   );
                 })()}
+              </div>
+            )}
+          </div>
+
+          {/* Sección Atributos adicionales — colapsada por default */}
+          <div className="rounded-xl border border-dashed border-muted-foreground/30 p-4 space-y-3 bg-muted/10">
+            <button
+              type="button"
+              onClick={() => setMostrarAtributos((v) => !v)}
+              className="flex items-center justify-between w-full text-left"
+            >
+              <span className="text-xs font-bold uppercase text-muted-foreground">Atributos adicionales (opcional)</span>
+              <span className="text-[10px] text-muted-foreground">{mostrarAtributos ? "Ocultar" : "Mostrar"}</span>
+            </button>
+            {mostrarAtributos && (
+              <div className="animate-in fade-in slide-in-from-top-2 duration-200">
+                <AtributosExtraEditor
+                  value={atributosExtra}
+                  onChange={setAtributosExtra}
+                  sugerencias={sugerenciasAtributos}
+                  disabled={saving}
+                />
               </div>
             )}
           </div>

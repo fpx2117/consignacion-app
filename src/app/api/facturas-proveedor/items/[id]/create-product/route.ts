@@ -6,7 +6,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { EstadoItemFactura, TipoMovimientoStock, MotivoMovimientoStock } from "@prisma/client";
+import { EstadoItemFactura, TipoMovimientoStock, MotivoMovimientoStock, Prisma } from "@prisma/client";
 import { requireAuth, requireRole } from "@/lib/auth/require-auth";
 import { createProductoSchema, type CreateProductoInput } from "@/lib/validators/producto";
 import { checkProductLimit } from "@/lib/subscriptions/require-subscription";
@@ -87,6 +87,9 @@ export async function POST(
           descuentoActivo: data.descuentoActivo ?? false,
           descuentoDesde: data.descuentoDesde ? new Date(data.descuentoDesde) : null,
           descuentoHasta: data.descuentoHasta ? new Date(data.descuentoHasta) : null,
+          // Si el usuario editó los atributos en el formulario, se respeta eso;
+          // si no vino nada, se copia lo que la IA detectó en el item original.
+          atributosExtra: (data.atributosExtra ?? item.atributosExtra ?? undefined) as Prisma.InputJsonValue | undefined,
         },
       });
 
