@@ -38,6 +38,13 @@ model Configuracion {
   andreaniPassword               String?
   zonaHoraria                    String   @default("America/Argentina/Buenos_Aires")
   timezoneMigrationDone          Boolean  @default(false)
+  // Rubro del negocio (ver src/modules/invoices/config/rubros.ts): slug fijo o
+  // texto libre si el usuario eligió "otro". Se usa únicamente como contexto
+  // para el prompt de extracción de facturas por IA — no cambia el pipeline.
+  rubroNegocio                   String?
+  // Claves de Producto.atributosExtra que el usuario eligió mostrar como
+  // columna en la tabla de productos (selector manual, ver productos-view.tsx).
+  columnasAtributosProducto      String[] @default([])
   sucursal                       Sucursal @relation(fields: [sucursalId], references: [id])
 }
 
@@ -219,47 +226,51 @@ model Notification {
 }
 
 model Producto {
-  id                   Int                   @id @default(autoincrement())
-  nombre               String
-  precioVenta          Decimal               @db.Decimal(10, 2)
-  precioCosto          Decimal               @db.Decimal(10, 2)
-  stockDisponibleUnits Int                   @default(0)
-  stockConsignadoUnits Int                   @default(0)
-  packSizeUnits        Int?
-  createdAt            DateTime              @default(now())
-  updatedAt            DateTime              @updatedAt
-  stockMinUnits        Int                   @default(0)
-  fechaVencimiento     DateTime?
-  activo               Boolean               @default(true)
-  categoriaId          Int?
-  codigoBarra          String?
-  descripcion          String?
-  iva                  Decimal               @default(21.0) @db.Decimal(5, 2)
-  sku                  String?
-  sucursalId           Int?                  @default(1)
-  imagenUrl            String?
-  subcategoriaId       Int?
-  descuentoPorcentaje  Decimal?              @db.Decimal(5, 2)
-  descuentoMonto       Decimal?              @db.Decimal(10, 2)
-  tipoDescuento        String                @default("porcentaje")
-  descuentoActivo      Boolean               @default(false)
-  descuentoDesde       DateTime?
-  descuentoHasta       DateTime?
-  ultimoCostoCompra    Decimal?              @db.Decimal(12, 4)
-  monedaCosto          String                @default("ARS")
-  fechaUltimaCompra    DateTime?
-  subcategoria         Subcategoria?         @relation(fields: [subcategoriaId], references: [id])
-  consignacionDetalles ConsignacionDetalle[]
-  movimientoStocks     MovimientoStock[]
-  notifications        Notification[]
-  categoria            Categoria?            @relation(fields: [categoriaId], references: [id])
-  sucursal             Sucursal?             @relation(fields: [sucursalId], references: [id])
-  stockSucursals       StockSucursal[]
-  ventaDetalles        VentaDetalle[]
-  pedidoItems          PedidoEsperadoItem[]
+  id                    Int                      @id @default(autoincrement())
+  nombre                String
+  precioVenta           Decimal                  @db.Decimal(10, 2)
+  precioCosto           Decimal                  @db.Decimal(10, 2)
+  stockDisponibleUnits  Int                      @default(0)
+  stockConsignadoUnits  Int                      @default(0)
+  packSizeUnits         Int?
+  createdAt             DateTime                 @default(now())
+  updatedAt             DateTime                 @updatedAt
+  stockMinUnits         Int                      @default(0)
+  fechaVencimiento      DateTime?
+  activo                Boolean                  @default(true)
+  categoriaId           Int?
+  codigoBarra           String?
+  descripcion           String?
+  iva                   Decimal                  @default(21.0) @db.Decimal(5, 2)
+  sku                   String?
+  sucursalId            Int?                     @default(1)
+  imagenUrl             String?
+  subcategoriaId        Int?
+  descuentoPorcentaje   Decimal?                 @db.Decimal(5, 2)
+  descuentoMonto        Decimal?                 @db.Decimal(10, 2)
+  tipoDescuento         String                   @default("porcentaje")
+  descuentoActivo       Boolean                  @default(false)
+  descuentoDesde        DateTime?
+  descuentoHasta        DateTime?
+  ultimoCostoCompra     Decimal?                 @db.Decimal(12, 4)
+  monedaCosto           String                   @default("ARS")
+  fechaUltimaCompra     DateTime?
+  // Atributos libres (lote, vencimiento, talle, color, etc.) — mismo formato
+  // que FacturaProveedorItem.atributosExtra, editable desde el catálogo sin
+  // depender de que el producto haya sido creado por OCR.
+  atributosExtra        Json?
+  subcategoria          Subcategoria?            @relation(fields: [subcategoriaId], references: [id])
+  consignacionDetalles  ConsignacionDetalle[]
+  movimientoStocks      MovimientoStock[]
+  notifications         Notification[]
+  categoria             Categoria?               @relation(fields: [categoriaId], references: [id])
+  sucursal              Sucursal?                @relation(fields: [sucursalId], references: [id])
+  stockSucursals        StockSucursal[]
+  ventaDetalles         VentaDetalle[]
+  pedidoItems           PedidoEsperadoItem[]
   facturaProveedorItems FacturaProveedorItem[]
-  proveedorAlias       ProductoProveedorAlias[]
-  historialCostos      HistorialCostoProducto[]
+  proveedorAlias        ProductoProveedorAlias[]
+  historialCostos       HistorialCostoProducto[]
 
   @@unique([codigoBarra, sucursalId])
   @@unique([sku, sucursalId])
@@ -608,12 +619,12 @@ model ResetPasswordToken {
 }
 
 model Sucursal {
-  id                Int               @id @default(autoincrement())
+  id                Int                @id @default(autoincrement())
   nombre            String
-  esPrincipal       Boolean           @default(false)
-  activa            Boolean           @default(true)
-  createdAt         DateTime          @default(now())
-  updatedAt         DateTime          @updatedAt
+  esPrincipal       Boolean            @default(false)
+  activa            Boolean            @default(true)
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
   branding          Branding?
   cajas             Caja[]
   clientes          Cliente[]
@@ -743,30 +754,30 @@ model Proveedor {
 }
 
 model FacturaProveedor {
-  id                      Int                    @id @default(autoincrement())
-  proveedorId             Int?
-  sucursalId              Int
-  archivoPath             String
-  archivoMime             String
+  id                       Int                    @id @default(autoincrement())
+  proveedorId              Int?
+  sucursalId               Int
+  archivoPath              String
+  archivoMime              String
   /// El binario original se borra del disco al confirmar/cancelar la factura para
   /// ahorrar espacio: los datos estructurados (items) ya quedan persistidos.
-  archivoEliminado        Boolean                @default(false)
-  numeroFactura           String?
-  fecha                   DateTime?
-  moneda                  String                 @default("ARS")
-  totalDetectado          Decimal?               @db.Decimal(12, 2)
-  ocrTextoCompleto        String?
-  estado                  EstadoFacturaProveedor @default(PENDIENTE)
-  confianzaOcr            Float?
-  errorMensaje            String?
+  archivoEliminado         Boolean                @default(false)
+  numeroFactura            String?
+  fecha                    DateTime?
+  moneda                   String                 @default("ARS")
+  totalDetectado           Decimal?               @db.Decimal(12, 2)
+  ocrTextoCompleto         String?
+  estado                   EstadoFacturaProveedor @default(PENDIENTE)
+  confianzaOcr             Float?
+  errorMensaje             String?
   proveedorNombreDetectado String?
-  proveedorCuitDetectado  String?
-  iaRespuestaCruda        Json?
-  iaModeloUsado           String?
-  iaTokensUsados          Int?
-  creadoPor               Int
-  createdAt               DateTime               @default(now())
-  updatedAt               DateTime               @updatedAt
+  proveedorCuitDetectado   String?
+  iaRespuestaCruda         Json?
+  iaModeloUsado            String?
+  iaTokensUsados           Int?
+  creadoPor                Int
+  createdAt                DateTime               @default(now())
+  updatedAt                DateTime               @updatedAt
 
   proveedor Proveedor?             @relation(fields: [proveedorId], references: [id])
   sucursal  Sucursal               @relation(fields: [sucursalId], references: [id])
@@ -791,6 +802,9 @@ model FacturaProveedorItem {
   matchScore             Float?
   matchMotivo            String?
   estado                 EstadoItemFactura @default(PENDIENTE)
+  // Columnas detectadas por la IA que no matchean ningún campo estándar (lote,
+  // vencimiento, talle, color, etc. según el rubro) — pares clave-valor libres.
+  atributosExtra         Json?
   createdAt              DateTime          @default(now())
   updatedAt              DateTime          @updatedAt
 

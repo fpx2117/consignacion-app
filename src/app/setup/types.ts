@@ -52,6 +52,8 @@ export interface NotificationsData {
 
 export interface SetupFormData {
   businessName: string;
+  /** Slug fijo (ver src/modules/invoices/config/rubros.ts) o texto libre de "Otro". Solo contexto para OCR de facturas. */
+  rubroNegocio: string | null;
   branding: BrandingData;
   adminData: AdminData;
   branch: BranchData;
@@ -67,6 +69,7 @@ export interface InitializePayload {
   admin: { nombre: string; email: string; password: string };
   planId: number;
   businessName: string;
+  rubroNegocio?: string | null;
   staff: Array<{ nombre: string; email: string; password?: string }>;
   promoCode?: string;
   paymentId?: string;

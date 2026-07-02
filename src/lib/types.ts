@@ -121,6 +121,8 @@ export type Configuracion = {
   mpPublicKeyTienda?: string | null;
   zonaHoraria?: string | null;
   timezoneMigrationDone?: boolean;
+  /** Rubro de negocio (slug fijo o texto libre de "Otro") — contexto para el prompt de OCR de facturas. */
+  rubroNegocio?: string | null;
 };
 
 export type SucursalPermitida = {

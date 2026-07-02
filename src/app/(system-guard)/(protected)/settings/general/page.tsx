@@ -2,18 +2,21 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { AlertTriangle, ArrowLeft, Globe, Loader2, Settings2, Shield, UserRound } from "lucide-react";
+import { AlertTriangle, ArrowLeft, Globe, Loader2, Settings2, Shield, Store, UserRound } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { TimezoneMigrationDialog } from "@/components/timezone/timezone-migration-dialog";
 import { TimezoneSelector } from "@/components/timezone/timezone-selector";
 import { apiService } from "@/lib/apiService";
 import { TECHNICAL_FALLBACK_TZ } from "@/lib/timezone/timezone-constants";
 import type { Configuracion, ProfileTimezone, TimezoneSource } from "@/lib/types";
 import { useTimezone } from "@/hooks/useTimezone";
+import { RUBROS_NEGOCIO, RUBRO_OTRO_SLUG, RUBRO_MAX_LENGTH } from "@/modules/invoices/config/rubros";
 
 type TablaInfo = {
   tabla: string;
@@ -58,6 +61,9 @@ export default function GeneralSettingsPage() {
   const [loadingPage, setLoadingPage] = React.useState(true);
   const [savingProfile, setSavingProfile] = React.useState(false);
   const [savingBranch, setSavingBranch] = React.useState(false);
+  const [rubroSeleccionado, setRubroSeleccionado] = React.useState<string>("");
+  const [rubroOtroTexto, setRubroOtroTexto] = React.useState<string>("");
+  const [savingRubro, setSavingRubro] = React.useState(false);
 
   React.useEffect(() => {
     let cancelled = false;
@@ -85,6 +91,13 @@ export default function GeneralSettingsPage() {
         setBranchTimezone(
           generalConfig?.zonaHoraria ?? profileData?.zonaHorariaSucursal ?? TECHNICAL_FALLBACK_TZ,
         );
+
+        const rubroGuardado = generalConfig?.rubroNegocio ?? null;
+        if (rubroGuardado) {
+          const esRubroConocido = RUBROS_NEGOCIO.some((r) => r.slug === rubroGuardado);
+          setRubroSeleccionado(esRubroConocido ? rubroGuardado : RUBRO_OTRO_SLUG);
+          setRubroOtroTexto(esRubroConocido ? "" : rubroGuardado);
+        }
       } catch {
         if (!cancelled) {
           setProfile({
@@ -175,6 +188,19 @@ export default function GeneralSettingsPage() {
       toast.error(error instanceof Error ? error.message : "Error al guardar la zona horaria de sucursal.");
     } finally {
       setSavingBranch(false);
+    }
+  };
+
+  const handleSaveRubro = async () => {
+    setSavingRubro(true);
+    try {
+      const valorAGuardar = rubroSeleccionado === RUBRO_OTRO_SLUG ? rubroOtroTexto.trim() : rubroSeleccionado;
+      await apiService.actualizarConfiguracionGeneral({ rubroNegocio: valorAGuardar || null });
+      toast.success("Rubro de negocio actualizado.");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Error al guardar el rubro de negocio.");
+    } finally {
+      setSavingRubro(false);
     }
   };
 
@@ -269,6 +295,46 @@ export default function GeneralSettingsPage() {
               <div className="max-w-md"><TimezoneSelector value={branchTimezone} onChange={setBranchTimezone} disabled={!isAdmin || savingBranch || loadingPage} /></div>
             </div>
             <div className="flex justify-end border-t border-border/30 pt-5"><Button onClick={handleSaveBranchTimezone} disabled={!isAdmin || savingBranch || loadingPage} className="rounded-xl px-6 gap-2 h-10 sm:h-11">{savingBranch ? <Loader2 className="h-4 w-4 animate-spin" /> : null}Guardar zona de sucursal</Button></div>
+          </div>
+        </Card>
+
+        <Card className="rounded-[24px] border-border/40 shadow-sm bg-card overflow-hidden">
+          <div className="p-6 md:px-8 border-b border-border/40 flex items-center gap-3 bg-muted/5">
+            <div className="p-2 bg-primary/5 rounded-xl border border-primary/15"><Store className="w-5 h-5 text-primary" /></div>
+            <div className="flex-1 min-w-0">
+              <h2 className="font-semibold text-base sm:text-lg tracking-tight">Rubro de negocio</h2>
+              <p className="text-xs sm:text-sm text-muted-foreground">Se usa como contexto para que la IA interprete mejor las facturas de proveedor que subas — no cambia ninguna otra funcionalidad.</p>
+            </div>
+          </div>
+          <div className="p-6 md:p-8 space-y-6">
+            <div className="space-y-3">
+              <label className="text-sm font-semibold text-foreground">Rubro</label>
+              <div className="max-w-md">
+                <Select value={rubroSeleccionado} onValueChange={setRubroSeleccionado} disabled={!isAdmin || savingRubro || loadingPage}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Sin configurar" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {RUBROS_NEGOCIO.map((r) => (
+                      <SelectItem key={r.slug} value={r.slug}>{r.label}</SelectItem>
+                    ))}
+                    <SelectItem value={RUBRO_OTRO_SLUG}>Otro (especificar)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              {rubroSeleccionado === RUBRO_OTRO_SLUG && (
+                <div className="max-w-md">
+                  <Input
+                    value={rubroOtroTexto}
+                    onChange={(e) => setRubroOtroTexto(e.target.value)}
+                    placeholder="Especificá tu rubro"
+                    maxLength={RUBRO_MAX_LENGTH}
+                    disabled={!isAdmin || savingRubro || loadingPage}
+                  />
+                </div>
+              )}
+            </div>
+            <div className="flex justify-end border-t border-border/30 pt-5"><Button onClick={handleSaveRubro} disabled={!isAdmin || savingRubro || loadingPage} className="rounded-xl px-6 gap-2 h-10 sm:h-11">{savingRubro ? <Loader2 className="h-4 w-4 animate-spin" /> : null}Guardar rubro</Button></div>
           </div>
         </Card>
       </div>

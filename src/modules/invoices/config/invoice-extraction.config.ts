@@ -7,13 +7,15 @@
 //
 // Alcance deliberado: los campos definidos abajo son exactamente los que
 // persisten `FacturaProveedor`/`FacturaProveedorItem` (prisma/schema.prisma).
-// No se modelan campos como impuestos desglosados, descuentos, lote o
-// vencimiento porque el schema actual no tiene columnas para guardarlos — antes
-// de agregarlos acá hay que extender el modelo Prisma (ver TODO al final).
 // Es genérico entre rubros (perfumería, kiosco, farmacia, indumentaria...)
 // porque ninguno de estos campos es específico de un rubro: la extracción no
 // asume IVA, ni CUIT, ni tabla de items perfecta — todos son opcionales salvo
-// la descripción del item.
+// la descripción del item. Columnas específicas de rubro (lote, vencimiento,
+// talle, color...) no se modelan como campos fijos — se capturan vía
+// "extraAttributes" (ver ExtractedInvoiceItem) y se persisten en
+// FacturaProveedorItem.atributosExtra / Producto.atributosExtra.
+
+import { getAtributosTipicos } from "./rubros";
 
 export type InvoiceFieldKey =
   | "supplierName"
@@ -61,6 +63,11 @@ export interface ExtractedInvoiceItem {
   unitCost: number | null;
   lineTotal: number | null;
   confidence: number | null;
+  /** Columnas detectadas que no matchean ningún campo estándar de arriba (ej.
+   * lote, vencimiento, talle, color según el rubro) — pares clave-valor. Array
+   * en vez de objeto libre porque el JSON Schema strict de OpenRouter no
+   * soporta bien claves dinámicas. */
+  extraAttributes: Array<{ key: string; value: string }>;
 }
 
 export interface ExtractedInvoiceData {
@@ -180,8 +187,13 @@ export function truncateOcrText(rawText: string): string {
  * Arma el prompt de sistema dinámicamente desde la config — nada de JSON de
  * ejemplo hardcodeado en un string suelto: los campos y sus alias vienen de
  * INVOICE_EXTRACTION_FIELDS / INVOICE_ITEM_EXTRACTION_FIELDS.
+ *
+ * `rubro` es únicamente contexto adicional (Configuracion.rubroNegocio) — no
+ * cambia el schema ni el resto del prompt. Sin rubro configurado, o con un
+ * texto libre ("Otro") que no matchea ningún rubro fijo, el comportamiento es
+ * idéntico al de antes de esta función aceptar el parámetro.
  */
-export function buildInvoiceExtractionPrompt(): string {
+export function buildInvoiceExtractionPrompt(rubro?: string | null): string {
   const camposFactura = INVOICE_EXTRACTION_FIELDS
     .map((f) => `- ${f.key} (${f.expectedType}): ${f.description}. Alias posibles en el texto: ${f.aliases.join(", ")}.`)
     .join("\n");
@@ -189,10 +201,17 @@ export function buildInvoiceExtractionPrompt(): string {
     .map((f) => `- ${f.key} (${f.expectedType}): ${f.description}. Alias posibles: ${f.aliases.join(", ")}.`)
     .join("\n");
 
+  const atributosTipicos = getAtributosTipicos(rubro);
+  const contextoRubro = rubro
+    ? `\nContexto adicional: este negocio pertenece al rubro "${rubro}". Usá esto ÚNICAMENTE como contexto para anticipar qué columnas pueden aparecer además de las estándar` +
+      (atributosTipicos ? ` — en este rubro, prestá especial atención a: ${atributosTipicos}.` : ".") +
+      ` NO fuerces estos campos si no aparecen en el texto, y NO dejes de extraer los campos estándar de abajo.\n`
+    : "";
+
   return `Sos un extractor de datos de facturas/comprobantes de proveedores para un sistema de inventario multi-rubro (perfumería, farmacia, kiosco, almacén, supermercado, indumentaria, ferretería, distribuidora, librería, servicios, etc.).
 
 Recibís texto plano obtenido por OCR, posiblemente desordenado, con saltos de línea inconsistentes y errores de reconocimiento de caracteres.
-
+${contextoRubro}
 Reglas estrictas:
 - Devolvé ÚNICAMENTE JSON válido, sin texto adicional antes o después.
 - NO inventes datos que no estén en el texto. Si un campo no aparece o no se puede leer con confianza razonable, su value debe ser null.
@@ -203,6 +222,7 @@ Reglas estrictas:
 - Si el total no coincide con la suma de los items, agregalo como observación en "warnings", no lo corrijas vos.
 - Si no hay una tabla de items reconocible, devolvé items=[] — no inventes items.
 - No asumas que el comprobante tiene IVA, CUIT o packaging físico: muchos rubros (servicios, por ejemplo) no los tienen.
+- Si en un item aparece una columna que no es ninguno de los campos estándar mapeados abajo (ej. lote, vencimiento, talle, color), guardala en "extraAttributes" como {key, value} en vez de descartarla — pero seguí sin inventar: si no aparece, dejá extraAttributes=[].
 
 Campos del comprobante a extraer:
 ${camposFactura}
@@ -248,8 +268,20 @@ export function buildExpectedOutputSchema(): Record<string, unknown> {
             unitCost: { anyOf: [{ type: "number" }, { type: "null" }] },
             lineTotal: { anyOf: [{ type: "number" }, { type: "null" }] },
             confidence: { type: "number" },
+            extraAttributes: {
+              type: "array",
+              items: {
+                type: "object",
+                properties: {
+                  key: { type: "string" },
+                  value: { type: "string" },
+                },
+                required: ["key", "value"],
+                additionalProperties: false,
+              },
+            },
           },
-          required: ["rawDescription", "supplierCode", "quantity", "unitCost", "lineTotal", "confidence"],
+          required: ["rawDescription", "supplierCode", "quantity", "unitCost", "lineTotal", "confidence", "extraAttributes"],
           additionalProperties: false,
         },
       },
@@ -304,7 +336,3 @@ export function calculateInvoiceConfidence(data: ExtractedInvoiceData): number {
   return data.items.length > 0 ? (confianzaCabecera + confianzaItems) / 2 : confianzaCabecera;
 }
 
-// TODO: si en el futuro se necesita modelar impuestos desglosados, descuentos,
-// lote/vencimiento o itemType (PRODUCT/SERVICE), primero hay que agregar esas
-// columnas a FacturaProveedor/FacturaProveedorItem en prisma/schema.prisma —
-// después se extiende esta config y el prompt para pedirlas.

@@ -32,6 +32,7 @@ export const TOTAL_NAVIGABLE = NAVIGABLE_STEPS.length;
 
 export const DEFAULT_FORM_DATA: SetupFormData = {
   businessName: "",
+  rubroNegocio: null,
   branding: {
     phone: "",
     address: "",

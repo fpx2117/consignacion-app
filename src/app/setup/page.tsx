@@ -55,6 +55,7 @@ function toSafeData(form: SetupFormData): Record<string, unknown> {
 
   return {
     businessName: form.businessName,
+    rubroNegocio: form.rubroNegocio,
     adminData: safeAdmin,
     branding: safeBranding,
     branch: form.branch,
@@ -88,6 +89,7 @@ export default function SetupPage() {
       setForm(prev => ({
         ...prev,
         businessName: data.businessName ?? prev.businessName,
+        rubroNegocio: data.rubroNegocio !== undefined ? data.rubroNegocio : prev.rubroNegocio,
         branding: { ...prev.branding, ...data.branding },
         adminData: { ...prev.adminData, ...data.adminData },
         branch: { ...prev.branch, ...data.branch },
@@ -222,6 +224,7 @@ export default function SetupPage() {
         },
         planId: selectedPlan?.id ?? 2,
         businessName: form.businessName,
+        rubroNegocio: form.rubroNegocio,
         staff: form.staff.filter(s => s.nombre && s.email),
         promoCode,
         paymentId,
@@ -326,8 +329,10 @@ export default function SetupPage() {
           key="business"
           businessName={form.businessName}
           branding={form.branding}
+          rubroNegocio={form.rubroNegocio}
           onBusinessNameChange={(v) => updateForm("businessName", v)}
           onBrandingChange={(v) => updateForm("branding", v)}
+          onRubroNegocioChange={(v) => updateForm("rubroNegocio", v)}
         />
       )}
 

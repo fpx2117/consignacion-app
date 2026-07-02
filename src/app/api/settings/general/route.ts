@@ -4,6 +4,7 @@ import { revalidatePath, revalidateTag } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireAuth, requireRole } from "@/lib/auth/require-auth";
 import { isValidTimezone, TECHNICAL_FALLBACK_TZ } from "@/lib/timezone/get-configured-tz";
+import { RUBRO_MAX_LENGTH } from "@/modules/invoices/config/rubros";
 
 type GeneralSettingsBody = {
     minStockGlobal?: number;
@@ -29,6 +30,7 @@ type GeneralSettingsBody = {
     tiendaLayout?: string;
     mostrarCategoriasEnHeader?: boolean;
     zonaHoraria?: string;
+    rubroNegocio?: string | null;
 };
 
 function buildIntervalOperator(offsetHours: number) {
@@ -97,10 +99,18 @@ export async function PUT(req: Request) {
             tiendaLayout,
             mostrarCategoriasEnHeader,
             zonaHoraria,
+            rubroNegocio,
         } = body;
 
         if (tiendaMetodoPago !== undefined && tiendaMetodoPago !== "whatsapp" && tiendaMetodoPago !== "mercadopago") {
             return NextResponse.json({ error: "tiendaMetodoPago debe ser 'whatsapp' o 'mercadopago'" }, { status: 400 });
+        }
+
+        if (rubroNegocio !== undefined && rubroNegocio !== null && rubroNegocio.length > RUBRO_MAX_LENGTH) {
+            return NextResponse.json(
+                { error: `El rubro no puede superar los ${RUBRO_MAX_LENGTH} caracteres` },
+                { status: 400 }
+            );
         }
 
         // Validar timezone IANA si se envía
@@ -196,6 +206,7 @@ export async function PUT(req: Request) {
                 ...(tiendaLayout !== undefined && { tiendaLayout }),
                 ...(mostrarCategoriasEnHeader !== undefined && { mostrarCategoriasEnHeader }),
                 ...(zonaHoraria !== undefined && { zonaHoraria }),
+                ...(rubroNegocio !== undefined && { rubroNegocio: rubroNegocio || null }),
             },
             create: {
                 sucursalId: auth.activeSucursalId,
@@ -222,6 +233,7 @@ export async function PUT(req: Request) {
                 tiendaLayout: tiendaLayout ?? "grid",
                 mostrarCategoriasEnHeader: mostrarCategoriasEnHeader ?? true,
                 zonaHoraria: zonaHoraria ?? TECHNICAL_FALLBACK_TZ,
+                rubroNegocio: rubroNegocio || null,
             }
         });
 
