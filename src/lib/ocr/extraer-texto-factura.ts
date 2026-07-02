@@ -40,7 +40,9 @@ export async function extraerTextoFactura(input: {
     const imagenParaOcr = await rasterizarPdf(buffer);
     const [preprocesada, imagenParaVision] = await Promise.all([
       preprocesarImagen(imagenParaOcr),
-      prepararImagenParaVision(imagenParaOcr),
+      // Sin upscale: ya es una captura nítida de Chromium (render vectorial),
+      // no una foto de celular chica/borrosa — agrandarla solo sumaría tokens.
+      prepararImagenParaVision(imagenParaOcr, { permitirUpscale: false }),
     ]);
     const resultado = await recognizeImage(preprocesada);
     return { texto: resultado.texto, confianzaOcr: resultado.confianza, imagenParaVision };

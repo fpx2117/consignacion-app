@@ -114,7 +114,7 @@ export async function procesarFacturaConIA(input: {
     systemPrompt,
     userPrompt,
     jsonSchema: { name: "factura_extraida", schema },
-    images: necesitaVision ? [{ mimeType: "image/jpeg", base64: imagenParaVision!.toString("base64") }] : undefined,
+    images: necesitaVision ? [{ mimeType: "image/png", base64: imagenParaVision!.toString("base64") }] : undefined,
   });
 
   const parsed = parseJsonContent(respuesta.content);
