@@ -94,7 +94,11 @@ export async function POST(
     let proveedorId = factura.proveedorId;
     if (!proveedorId && resultado.supplier.name) {
       const match = await prisma.proveedor.findFirst({
-        where: { nombre: { equals: resultado.supplier.name, mode: "insensitive" }, activo: true },
+        where: {
+          nombre: { equals: resultado.supplier.name, mode: "insensitive" },
+          activo: true,
+          sucursalId: factura.sucursalId,
+        },
       });
       if (match) proveedorId = match.id;
     }
@@ -106,6 +110,36 @@ export async function POST(
       proveedorId,
     });
 
+    // matchearItem() es CPU pura (sin consultas a la base) — se resuelve acá, antes
+    // de abrir la transacción, para no alargarla con trabajo que no necesita estar
+    // dentro de ella.
+    const itemsData = resultado.items.map((item) => {
+      const match = matchearItem(
+        { textoOriginal: item.rawDescription, codigoProveedor: item.supplierCode },
+        contextoMatching,
+      );
+
+      return {
+        facturaId,
+        textoOriginal: item.rawDescription,
+        descripcionNormalizada: normalizarProducto(item.rawDescription).normalizado || null,
+        codigoProveedor: item.supplierCode,
+        cantidad: Math.max(1, Math.trunc(item.quantity)),
+        precioUnitario: item.unitCost,
+        totalLinea: item.lineTotal,
+        confianzaExtraccion: item.confidence,
+        productoId: match.productoId,
+        matchScore: match.score,
+        matchMotivo: match.motivo,
+        estado: match.estado,
+        atributosExtra: item.atributosExtra ?? undefined,
+      };
+    });
+
+    // { timeout: 15000 }: el default de Prisma (5000ms) alcanzaba a superarse en
+    // facturas con muchos ítems cuando el insert era secuencial (N round-trips). Con
+    // createMany() ya no debería hacer falta tanto margen, pero se deja como red de
+    // seguridad — ver openspec/changes/fix-timeout-transaccion-facturas-proveedor.
     const facturaActualizada = await prisma.$transaction(async (tx) => {
       await tx.facturaProveedor.update({
         where: { id: facturaId },
@@ -126,39 +160,21 @@ export async function POST(
         },
       });
 
-      for (const item of resultado.items) {
-        const match = matchearItem(
-          { textoOriginal: item.rawDescription, codigoProveedor: item.supplierCode },
-          contextoMatching,
-        );
-
-        await tx.facturaProveedorItem.create({
-          data: {
-            facturaId,
-            textoOriginal: item.rawDescription,
-            descripcionNormalizada: normalizarProducto(item.rawDescription).normalizado || null,
-            codigoProveedor: item.supplierCode,
-            cantidad: Math.max(1, Math.trunc(item.quantity)),
-            precioUnitario: item.unitCost,
-            totalLinea: item.lineTotal,
-            confianzaExtraccion: item.confidence,
-            productoId: match.productoId,
-            matchScore: match.score,
-            matchMotivo: match.motivo,
-            estado: match.estado,
-            atributosExtra: item.atributosExtra ?? undefined,
-          },
-        });
+      if (itemsData.length > 0) {
+        // Un único round-trip para todos los ítems, en vez de uno por ítem — con
+        // facturas de 20-30+ líneas, el loop secuencial anterior podía superar el
+        // timeout de la transacción.
+        await tx.facturaProveedorItem.createMany({ data: itemsData });
       }
 
-      // El `update` de arriba no trae los items (se crean después, en este mismo
-      // loop) — hay que releerla con la relación incluida para que el frontend
-      // reciba las filas recién creadas en la misma respuesta.
+      // El `update` de arriba no trae los items (se crean después) — hay que
+      // releerla con la relación incluida para que el frontend reciba las filas
+      // recién creadas en la misma respuesta.
       return tx.facturaProveedor.findUniqueOrThrow({
         where: { id: facturaId },
         include: { items: true, proveedor: true },
       });
-    });
+    }, { timeout: 15000 });
 
     return NextResponse.json({
       data: facturaActualizada,
