@@ -3,6 +3,7 @@ import { Prisma } from "@prisma/client";
 import { NextRequest, NextResponse } from "next/server";
 import type { Page } from "puppeteer-core";
 import { getSharedReportBrowser } from "@/lib/chromium/resolve-executable-path";
+import { withChromiumSlot, ChromiumBusyError } from "@/lib/chromium/chromium-semaphore";
 import { requireAuth } from "@/lib/auth/require-auth";
 import { resolveTimezone } from "@/lib/timezone/get-configured-tz";
 import { prisma } from "@/lib/prisma";
@@ -296,14 +297,16 @@ export async function GET(
         const branding = await getBranding(isGlobal ? (timezone.sucursalId ?? undefined) : scopedSucursalId);
         const htmlContent = buildPosReportHtml(reportData, branding);
 
-        const browser = await getSharedReportBrowser();
-        page = await browser.newPage();
-        await page.setContent(htmlContent, { waitUntil: "domcontentloaded" });
-        await page.emulateMediaType("print");
+        const pdfBytes = await withChromiumSlot(async () => {
+            const browser = await getSharedReportBrowser();
+            page = await browser.newPage();
+            await page.setContent(htmlContent, { waitUntil: "domcontentloaded" });
+            await page.emulateMediaType("print");
 
-        const pdfBytes = await page.pdf({ format: "A4", printBackground: true, margin: { top: "0", bottom: "0", left: "0", right: "0" } });
-        await page.close();
-        page = null;
+            const bytes = await page.pdf({ format: "A4", printBackground: true, margin: { top: "0", bottom: "0", left: "0", right: "0" } });
+            await page.close();
+            return bytes;
+        });
 
         return new NextResponse(Buffer.from(pdfBytes), {
             headers: {
@@ -313,6 +316,9 @@ export async function GET(
             },
         });
     } catch (err) {
+        if (err instanceof ChromiumBusyError) {
+            return NextResponse.json({ error: "Servidor ocupado generando otros reportes, reintentá en unos segundos." }, { status: 503 });
+        }
         console.error("PDF POS ERROR:", err);
         return NextResponse.json({ error: "Error generando reporte POS" }, { status: 500 });
     } finally {

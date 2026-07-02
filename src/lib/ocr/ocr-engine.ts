@@ -18,6 +18,7 @@ import os from "os";
 import crypto from "crypto";
 import sharp from "sharp";
 import { launchOcrBrowser } from "@/lib/chromium/resolve-executable-path";
+import { withChromiumSlot } from "@/lib/chromium/chromium-semaphore";
 
 const IMAGE_MIME_TYPES = [
   "image/png",
@@ -123,24 +124,32 @@ export async function rasterizarPdf(buffer: Buffer, maxPaginas = 3): Promise<Buf
   const tempPath = path.join(os.tmpdir(), `ocr-factura-${crypto.randomUUID()}.pdf`);
   await writeFile(tempPath, buffer);
 
-  const browser = await launchOcrBrowser();
   try {
-    const page = await browser.newPage();
-    const altoMaximo = 1600 * maxPaginas;
-    await page.setViewport({ width: 1240, height: Math.min(altoMaximo, 8000) });
-    // #toolbar=0 oculta la barra de herramientas del visor de PDF nativo de Chromium,
-    // que de otro modo queda "impresa" en la captura y ensucia el OCR.
-    await page.goto(`file://${tempPath.replace(/\\/g, "/")}#toolbar=0`, {
-      waitUntil: "networkidle0",
-      timeout: 30000,
-    });
-    // Da tiempo al visor de PDF embebido de Chromium a terminar de renderizar.
-    await new Promise((resolve) => setTimeout(resolve, 800));
+    // Comparte el mismo cupo de concurrencia que los reportes PDF (ver
+    // chromium-semaphore.ts) — ambos consumen del mismo presupuesto de RAM
+    // del contenedor, no tiene sentido acotarlos por separado.
+    return await withChromiumSlot(async () => {
+      const browser = await launchOcrBrowser();
+      try {
+        const page = await browser.newPage();
+        const altoMaximo = 1600 * maxPaginas;
+        await page.setViewport({ width: 1240, height: Math.min(altoMaximo, 8000) });
+        // #toolbar=0 oculta la barra de herramientas del visor de PDF nativo de Chromium,
+        // que de otro modo queda "impresa" en la captura y ensucia el OCR.
+        await page.goto(`file://${tempPath.replace(/\\/g, "/")}#toolbar=0`, {
+          waitUntil: "networkidle0",
+          timeout: 30000,
+        });
+        // Da tiempo al visor de PDF embebido de Chromium a terminar de renderizar.
+        await new Promise((resolve) => setTimeout(resolve, 800));
 
-    const screenshot = await page.screenshot({ type: "png", fullPage: true });
-    return Buffer.from(screenshot);
+        const screenshot = await page.screenshot({ type: "png", fullPage: true });
+        return Buffer.from(screenshot);
+      } finally {
+        await browser.close().catch(() => {});
+      }
+    });
   } finally {
-    await browser.close().catch(() => {});
     await rm(tempPath, { force: true });
   }
 }

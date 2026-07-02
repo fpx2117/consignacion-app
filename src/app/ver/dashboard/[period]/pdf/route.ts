@@ -3,6 +3,7 @@ import { Prisma } from "@prisma/client";
 import { NextRequest, NextResponse } from "next/server";
 import type { Page } from "puppeteer-core";
 import { getSharedReportBrowser } from "@/lib/chromium/resolve-executable-path";
+import { withChromiumSlot, ChromiumBusyError } from "@/lib/chromium/chromium-semaphore";
 import { requireAuth } from "@/lib/auth/require-auth";
 import { resolveTimezone } from "@/lib/timezone/get-configured-tz";
 import { prisma } from "@/lib/prisma";
@@ -250,19 +251,21 @@ export async function GET(
         const htmlContent = buildDashboardReportHtml(reportData, branding);
 
         // 4. Puppeteer PDF
-        const browser = await getSharedReportBrowser();
-        page = await browser.newPage();
-        await page.setContent(htmlContent, { waitUntil: "domcontentloaded" });
-        await page.emulateMediaType("screen");
+        const pdfBytes = await withChromiumSlot(async () => {
+            const browser = await getSharedReportBrowser();
+            page = await browser.newPage();
+            await page.setContent(htmlContent, { waitUntil: "domcontentloaded" });
+            await page.emulateMediaType("screen");
 
-        const pdfBytes = await page.pdf({
-            format: "A4",
-            printBackground: true,
-            margin: { top: "12mm", bottom: "12mm", left: "12mm", right: "12mm" },
+            const bytes = await page.pdf({
+                format: "A4",
+                printBackground: true,
+                margin: { top: "12mm", bottom: "12mm", left: "12mm", right: "12mm" },
+            });
+
+            await page.close();
+            return bytes;
         });
-
-        await page.close();
-        page = null;
 
         const filename = `Reporte-Dashboard-${reportData.periodLabel.replace(/\s+/g, "-")}.pdf`;
 
@@ -274,9 +277,12 @@ export async function GET(
             },
         });
     } catch (error) {
+        if (error instanceof ChromiumBusyError) {
+            return NextResponse.json({ error: "Servidor ocupado generando otros reportes, reintentá en unos segundos." }, { status: 503 });
+        }
         console.error("PDF DASHBOARD ERROR:", error);
         return NextResponse.json({ error: "Error generando reporte" }, { status: 500 });
     } finally {
-        try { if (page) await page.close(); } catch { }
+        try { await (page as Page | null)?.close(); } catch { }
     }
 }

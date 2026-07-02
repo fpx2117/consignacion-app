@@ -2,6 +2,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import type { Page } from "puppeteer-core";
 import { getSharedReportBrowser } from "@/lib/chromium/resolve-executable-path";
+import { withChromiumSlot, ChromiumBusyError } from "@/lib/chromium/chromium-semaphore";
 import { verifyPdfToken } from "@/lib/security/pdf-token";
 import type { GastoReportDTO } from "@/lib/reports/base/gasto-report-template";
 import { buildGastoHtml } from "@/lib/reports/base/gasto-report-template";
@@ -101,18 +102,20 @@ export async function GET(
         const branding = await getBranding();
         const html = await buildGastoHtml(reporteData, branding);
 
-        const browser = await getSharedReportBrowser();
-        page = await browser.newPage();
-        await page.setContent(html, { waitUntil: "domcontentloaded", timeout: 30000 });
+        const pdfUint8Array = await withChromiumSlot(async () => {
+            const browser = await getSharedReportBrowser();
+            page = await browser.newPage();
+            await page.setContent(html, { waitUntil: "domcontentloaded", timeout: 30000 });
 
-        const pdfUint8Array = await page.pdf({
-            format: "A4",
-            printBackground: true,
-            margin: { top: "10mm", bottom: "10mm", left: "10mm", right: "10mm" },
+            const bytes = await page.pdf({
+                format: "A4",
+                printBackground: true,
+                margin: { top: "10mm", bottom: "10mm", left: "10mm", right: "10mm" },
+            });
+
+            await page.close();
+            return bytes;
         });
-
-        await page.close();
-        page = null;
 
         const cleanName = safeFilename(gasto.motivo);
         const fileName = `Gasto-${id}-${cleanName || "Comprobante"}.pdf`;
@@ -126,11 +129,14 @@ export async function GET(
             },
         });
     } catch (error) {
+        if (error instanceof ChromiumBusyError) {
+            return NextResponse.json({ error: "Servidor ocupado generando otros reportes, reintentá en unos segundos." }, { status: 503 });
+        }
         console.error("PDF GASTO ERROR:", error);
         return NextResponse.json({ error: "Error generando Gasto PDF" }, { status: 500 });
     } finally {
         try {
-            if (page) await page.close();
+            await (page as Page | null)?.close();
         } catch { }
     }
 }

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import type { Page } from "puppeteer-core";
 import { getSharedReportBrowser } from "@/lib/chromium/resolve-executable-path";
+import { withChromiumSlot, ChromiumBusyError } from "@/lib/chromium/chromium-semaphore";
 import { verifyPdfToken } from "@/lib/security/pdf-token";
 import { prisma } from "@/lib/prisma";
 import { hashCode } from "@/lib/sharing/share-links";
@@ -92,21 +93,23 @@ export async function GET(
     // ✅ Branding desde la DB del environment del cliente
     const branding = await getBranding();
 
-    const browser = await getSharedReportBrowser();
-    page = await browser.newPage();
-    await page.setContent(await buildConsignacionHtml({ ...consignacion, zonaHoraria: timezone.tz }, branding), {
-      waitUntil: "domcontentloaded",
-      timeout: 30000,
-    });
+    const pdfUint8Array = await withChromiumSlot(async () => {
+      const browser = await getSharedReportBrowser();
+      page = await browser.newPage();
+      await page.setContent(await buildConsignacionHtml({ ...consignacion, zonaHoraria: timezone.tz }, branding), {
+        waitUntil: "domcontentloaded",
+        timeout: 30000,
+      });
 
-    const pdfUint8Array = await page.pdf({
-      format: "A4",
-      printBackground: true,
-      margin: { top: "10mm", bottom: "10mm", left: "10mm", right: "10mm" },
-    });
+      const bytes = await page.pdf({
+        format: "A4",
+        printBackground: true,
+        margin: { top: "10mm", bottom: "10mm", left: "10mm", right: "10mm" },
+      });
 
-    await page.close();
-    page = null;
+      await page.close();
+      return bytes;
+    });
 
     const clienteNombre = safeFilename(consignacion.cliente?.nombre || "Cliente");
     const folioFormateado = String(consignacion.numeroFolio ?? consignacion.id).padStart(4, "0");
@@ -121,11 +124,14 @@ export async function GET(
       },
     });
   } catch (error) {
+    if (error instanceof ChromiumBusyError) {
+      return NextResponse.json({ error: "Servidor ocupado generando otros reportes, reintentá en unos segundos." }, { status: 503 });
+    }
     console.error("PDF REMITO ERROR:", error);
     return NextResponse.json({ error: "Error generando PDF" }, { status: 500 });
   } finally {
     try {
-      if (page) await page.close();
+      await (page as Page | null)?.close();
     } catch { }
   }
 }

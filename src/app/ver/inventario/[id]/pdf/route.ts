@@ -2,6 +2,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import type { Page } from "puppeteer-core";
 import { getSharedReportBrowser } from "@/lib/chromium/resolve-executable-path";
+import { withChromiumSlot, ChromiumBusyError } from "@/lib/chromium/chromium-semaphore";
 import { requireAuth } from "@/lib/auth/require-auth";
 import { resolveTimezoneForAuth } from "@/lib/timezone/get-configured-tz";
 import { prisma } from "@/lib/prisma";
@@ -114,19 +115,21 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     // 6. Generar HTML
     const htmlContent = await buildInventoryHtml(groups, branding, timezone.tz, conCostos, conValuacion);
 
-    const browser = await getSharedReportBrowser();
-    page = await browser.newPage();
-    await page.setContent(htmlContent, { waitUntil: "domcontentloaded" });
-    await page.emulateMediaType("screen");
+    const pdfUint8Array = await withChromiumSlot(async () => {
+      const browser = await getSharedReportBrowser();
+      page = await browser.newPage();
+      await page.setContent(htmlContent, { waitUntil: "domcontentloaded" });
+      await page.emulateMediaType("screen");
 
-    const pdfUint8Array = await page.pdf({
-      format: "A4",
-      printBackground: true,
-      margin: { top: "10mm", bottom: "10mm", left: "10mm", right: "10mm" },
+      const bytes = await page.pdf({
+        format: "A4",
+        printBackground: true,
+        margin: { top: "10mm", bottom: "10mm", left: "10mm", right: "10mm" },
+      });
+
+      await page.close();
+      return bytes;
     });
-
-    await page.close();
-    page = null;
 
     const filename = sucursales.length === 1
       ? `Inventario_${sucursales[0].nombre.replace(/\s+/g, '_')}.pdf`
@@ -140,11 +143,14 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
       },
     });
   } catch (error) {
+    if (error instanceof ChromiumBusyError) {
+      return NextResponse.json({ error: "Servidor ocupado generando otros reportes, reintentá en unos segundos." }, { status: 503 });
+    }
     console.error("PDF INVENTARIO ERROR:", error);
     return NextResponse.json({ error: "Error en PDF" }, { status: 500 });
   } finally {
     try {
-      if (page) await page.close();
+      await (page as Page | null)?.close();
     } catch { }
   }
 }
