@@ -71,19 +71,54 @@ export async function preprocesarImagen(buffer: Buffer): Promise<Buffer> {
 // no mandar un archivo de varios MB y disparar el costo en tokens de imagen.
 const ANCHO_MAXIMO_VISION = 1600;
 
-/** Copia liviana a color de la imagen, pensada para mandar a un modelo de visión (no a Tesseract). */
-export async function prepararImagenParaVision(buffer: Buffer): Promise<Buffer> {
-  return sharp(buffer)
-    .rotate()
-    .resize({ width: ANCHO_MAXIMO_VISION, withoutEnlargement: true, kernel: "lanczos3" })
-    .toFormat("jpeg", { quality: 80 })
-    .toBuffer();
+// Fotos de celular de facturas con muchas líneas (15-20 items) suelen llegar
+// angostas (ej. 739px) porque la cámara encuadra la hoja completa. Enviarlas
+// tal cual a un modelo de visión, más un segundo JPEG con pérdida encima,
+// borronea los trazos finos que distinguen letras parecidas (N/W/M, S/T) —
+// confirmado con un caso real ("RASASI HAWAS" leído como "RASAST HAMAS"). Se
+// agranda igual que en preprocesarImagen() para darle al modelo más píxeles
+// por carácter antes de mandarla. Ojo: esto solo tiene sentido para fotos
+// (compresión con pérdida + cámara chica); una captura de Chromium ya sale
+// nítida (render vectorial), así que el caller de PDF rasterizado pasa
+// permitirUpscale=false — agrandarla no suma legibilidad, solo tokens.
+const ANCHO_MINIMO_VISION = 1600;
+
+/** Copia a color de la imagen, pensada para mandar a un modelo de visión (no a Tesseract). */
+export async function prepararImagenParaVision(
+  buffer: Buffer,
+  opciones: { permitirUpscale?: boolean } = {},
+): Promise<Buffer> {
+  const { permitirUpscale = true } = opciones;
+  const metadata = await sharp(buffer).metadata();
+  const anchoActual = metadata.width ?? 0;
+
+  let pipeline = sharp(buffer).rotate();
+
+  if (permitirUpscale && anchoActual > 0 && anchoActual < ANCHO_MINIMO_VISION) {
+    pipeline = pipeline.resize({ width: ANCHO_MINIMO_VISION, kernel: "lanczos3" });
+  } else if (anchoActual > ANCHO_MAXIMO_VISION) {
+    pipeline = pipeline.resize({ width: ANCHO_MAXIMO_VISION, kernel: "lanczos3" });
+  }
+
+  // PNG (sin pérdida) en vez de re-comprimir como JPEG: la imagen ya viene
+  // comprimida por la cámara/WhatsApp, sumarle una segunda compresión con
+  // pérdida es justo lo que borroneaba los trazos finos. El archivo pesa más,
+  // pero el costo de tokens de imagen en OpenRouter depende de resolución, no
+  // de bytes, así que no impacta el costo por factura.
+  return pipeline.toFormat("png").toBuffer();
 }
 
 // ─── Rasterizado de PDF (Puppeteer + Chromium) ───────────────────────
 // Solo se usa como fallback para PDFs escaneados sin texto nativo.
 
-export async function rasterizarPdf(buffer: Buffer, maxPaginas = 5): Promise<Buffer> {
+// maxPaginas=3 (antes 5): esta captura se concatena en una sola imagen alta
+// que se manda entera al modelo de visión (ver prepararImagenParaVision) — más
+// páginas = más tiles = más costo en tokens, sin relación con la calidad de
+// lectura. Un comprobante de proveedor de más de 2-3 páginas es poco común;
+// bajar el techo acota el costo máximo por documento sin tocar la resolución
+// por página (no sacrifica precisión, solo cuántas páginas entran en una
+// factura excepcionalmente larga). Ver optimizacion-tokens-y-limite-costo.md.
+export async function rasterizarPdf(buffer: Buffer, maxPaginas = 3): Promise<Buffer> {
   console.log("[OCR] Rasterizando PDF con Chromium...");
   const tempPath = path.join(os.tmpdir(), `ocr-factura-${crypto.randomUUID()}.pdf`);
   await writeFile(tempPath, buffer);
