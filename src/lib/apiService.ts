@@ -59,6 +59,7 @@ export type Proveedor = {
   cuit: string | null;
   monedaPreferida: string;
   activo: boolean;
+  sucursalId: number | null;
 };
 
 export type EstadoFacturaProveedor =
@@ -113,6 +114,7 @@ export type FacturaProveedor = {
   estado: EstadoFacturaProveedor;
   confianzaOcr: number | null;
   errorMensaje: string | null;
+  archivoMime?: string;
   archivoEliminado?: boolean;
   createdAt?: string;
   items?: FacturaProveedorItem[];
@@ -364,6 +366,7 @@ export const API_ROUTES = {
     BY_ID: (id: number) => `/api/facturas-proveedor/${id}`,
     PROCESS: (id: number) => `/api/facturas-proveedor/${id}/process`,
     CANCEL: (id: number) => `/api/facturas-proveedor/${id}/cancel`,
+    ARCHIVO: (id: number) => `/api/facturas-proveedor/${id}/archivo`,
     CONFIRM_ALL: (id: number) => `/api/facturas-proveedor/${id}/confirm-all`,
     ITEM_UPDATE: (itemId: number) => `/api/facturas-proveedor/items/${itemId}`,
     ITEM_CONFIRM: (itemId: number) => `/api/facturas-proveedor/items/${itemId}/confirm`,

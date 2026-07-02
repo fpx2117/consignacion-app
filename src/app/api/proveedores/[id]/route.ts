@@ -3,6 +3,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/auth/require-auth";
+import { canAccessSucursalResource, isGlobalSucursalView } from "@/lib/security/sucursalScope";
 import { updateProveedorSchema } from "@/lib/validators/proveedor";
 
 export async function GET(
@@ -19,7 +20,7 @@ export async function GET(
   }
 
   const proveedor = await prisma.proveedor.findUnique({ where: { id: proveedorId } });
-  if (!proveedor) {
+  if (!proveedor || !canAccessSucursalResource(auth, proveedor.sucursalId)) {
     return NextResponse.json({ error: "Proveedor no encontrado" }, { status: 404 });
   }
 
@@ -33,6 +34,12 @@ export async function PATCH(
 ) {
   const auth = await requireAuth();
   if (!auth.ok) return auth.res;
+  if (isGlobalSucursalView(auth)) {
+    return NextResponse.json(
+      { error: "Vista global en modo solo lectura. Selecciona una sucursal para editar un proveedor." },
+      { status: 409 },
+    );
+  }
 
   const { id } = await params;
   const proveedorId = Number(id);
@@ -50,7 +57,7 @@ export async function PATCH(
   }
 
   const existing = await prisma.proveedor.findUnique({ where: { id: proveedorId } });
-  if (!existing) {
+  if (!existing || !canAccessSucursalResource(auth, existing.sucursalId)) {
     return NextResponse.json({ error: "Proveedor no encontrado" }, { status: 404 });
   }
 
@@ -79,6 +86,12 @@ export async function DELETE(
 ) {
   const auth = await requireAuth();
   if (!auth.ok) return auth.res;
+  if (isGlobalSucursalView(auth)) {
+    return NextResponse.json(
+      { error: "Vista global en modo solo lectura. Selecciona una sucursal para eliminar un proveedor." },
+      { status: 409 },
+    );
+  }
 
   const { id } = await params;
   const proveedorId = Number(id);
@@ -87,7 +100,7 @@ export async function DELETE(
   }
 
   const existing = await prisma.proveedor.findUnique({ where: { id: proveedorId } });
-  if (!existing) {
+  if (!existing || !canAccessSucursalResource(auth, existing.sucursalId)) {
     return NextResponse.json({ error: "Proveedor no encontrado" }, { status: 404 });
   }
 

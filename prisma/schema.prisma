@@ -645,6 +645,7 @@ model Sucursal {
   catalogVisits     CatalogVisit[]
   storeSettings     StoreSettings?
   facturasProveedor FacturaProveedor[]
+  proveedores       Proveedor[]
 }
 
 model StoreSettings {
@@ -743,14 +744,17 @@ model Proveedor {
   cuit            String?
   monedaPreferida String   @default("ARS")
   activo          Boolean  @default(true)
+  sucursalId      Int?     @default(1)
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
+  sucursal Sucursal?                 @relation(fields: [sucursalId], references: [id], onDelete: SetNull)
   facturas FacturaProveedor[]
   alias    ProductoProveedorAlias[]
 
   @@index([activo])
   @@index([nombre])
+  @@index([sucursalId])
 }
 
 model FacturaProveedor {

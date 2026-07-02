@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import type { FacturaProveedor } from "@/lib/apiService";
-import { apiService } from "@/lib/apiService";
+import { apiService, API_ROUTES } from "@/lib/apiService";
 
 import {
   Dialog,
@@ -105,12 +105,37 @@ export function FacturaDetalleDialog({
 
         {/* Body */}
         <div className="p-6 overflow-y-auto">
-          {factura?.archivoEliminado && (
+          {factura?.archivoEliminado ? (
             <div className="mb-4 flex items-center gap-2 rounded-xl border border-border/50 bg-muted/40 px-4 py-3 text-xs font-medium text-muted-foreground">
               <ImageOff className="h-4 w-4 shrink-0" />
               Imagen original eliminada para ahorrar espacio. Se muestran solo los datos guardados.
             </div>
-          )}
+          ) : factura ? (
+            <div className="mb-4 rounded-2xl border border-border/50 overflow-hidden bg-muted/20">
+              {factura.archivoMime?.startsWith("image/") ? (
+                <a
+                  href={API_ROUTES.FACTURAS_PROVEEDOR.ARCHIVO(factura.id)}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  <img
+                    src={API_ROUTES.FACTURAS_PROVEEDOR.ARCHIVO(factura.id)}
+                    alt="Factura original"
+                    className="w-full max-h-72 object-contain hover:opacity-90 transition-opacity cursor-zoom-in"
+                  />
+                </a>
+              ) : factura.archivoMime === "application/pdf" ? (
+                <a
+                  href={API_ROUTES.FACTURAS_PROVEEDOR.ARCHIVO(factura.id)}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex items-center justify-center gap-2 p-6 text-sm font-medium text-primary hover:underline"
+                >
+                  <FileText className="h-4 w-4" /> Abrir PDF original
+                </a>
+              ) : null}
+            </div>
+          ) : null}
 
           {loading ? (
             <div className="space-y-2">
