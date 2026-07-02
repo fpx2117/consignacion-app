@@ -123,6 +123,8 @@ export type Configuracion = {
   timezoneMigrationDone?: boolean;
   /** Rubro de negocio (slug fijo o texto libre de "Otro") — contexto para el prompt de OCR de facturas. */
   rubroNegocio?: string | null;
+  /** Claves de Producto.atributosExtra promovidas a columna en la tabla de productos. */
+  columnasAtributosProducto?: string[];
 };
 
 export type SucursalPermitida = {
