@@ -121,6 +121,9 @@ export function FacturaProveedorDialog({
   const [dragActive, setDragActive] = React.useState(false);
   const [usage, setUsage] = React.useState<FacturaProveedorUsage | null>(null);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
+  // Evita que Radix cierre el Dialog al volver del selector nativo de
+  // archivos (cámara/galería) en mobile — ver openspec/changes/fix-carga-factura-mobile.
+  const selectorArchivoAbiertoRef = React.useRef(false);
 
   // Consulta el cupo al montar para decidir si mostrar el disparador: los
   // planes sin OCR (hasFeature === false) ocultan el botón por completo.
@@ -149,12 +152,46 @@ export function FacturaProveedorDialog({
   const trabajando = subiendo || procesando;
   const sinCupo = usage != null && (!usage.hasFeature || (usage.limit !== -1 && usage.used >= usage.limit));
 
+  // Red de seguridad: si el navegador no dispara "cancel" en el <input
+  // type="file"> (algunos no lo hacen), limpiar el guard cuando la ventana
+  // recupera el foco — pasa siempre al volver de la cámara/galería nativa,
+  // se haya elegido un archivo o no.
+  React.useEffect(() => {
+    function onWindowFocus() {
+      if (!selectorArchivoAbiertoRef.current) return;
+      window.setTimeout(() => {
+        selectorArchivoAbiertoRef.current = false;
+      }, 300);
+    }
+    window.addEventListener("focus", onWindowFocus);
+    return () => window.removeEventListener("focus", onWindowFocus);
+  }, []);
+
+  // El tipado de React no incluye el evento nativo "cancel" de <input
+  // type="file"> — se engancha imperativamente en vez de vía JSX onCancel.
+  React.useEffect(() => {
+    const input = fileInputRef.current;
+    if (!input) return;
+    function onCancel() {
+      selectorArchivoAbiertoRef.current = false;
+    }
+    input.addEventListener("cancel", onCancel);
+    return () => input.removeEventListener("cancel", onCancel);
+  }, []);
+
+  function abrirSelectorArchivo() {
+    if (trabajando || sinCupo) return;
+    selectorArchivoAbiertoRef.current = true;
+    fileInputRef.current?.click();
+  }
+
   function elegirArchivo(file: File | null | undefined) {
     if (!file || trabajando) return;
     setSelectedFile(file);
   }
 
   function handleFileInput(e: React.ChangeEvent<HTMLInputElement>) {
+    selectorArchivoAbiertoRef.current = false;
     elegirArchivo(e.target.files?.[0]);
   }
 
@@ -333,9 +370,11 @@ export function FacturaProveedorDialog({
   }
 
   // Ocultar el disparador si el plan no incluye la carga de facturas con IA.
-  // Mientras se resuelve el cupo (usage === null) tampoco se muestra, para
-  // evitar que el botón aparezca y desaparezca en planes sin acceso.
-  if (!usage?.hasFeature) return null;
+  // Mientras se resuelve el cupo (usage === null) se muestra de forma
+  // optimista: la mayoría de los planes tienen la feature habilitada, así
+  // que el botón aparece de inmediato en el caso común en vez de esperar la
+  // red — a costa de un posible flash breve para la minoría sin acceso.
+  if (usage != null && !usage.hasFeature) return null;
 
   return (
     <>
@@ -351,7 +390,7 @@ export function FacturaProveedorDialog({
 
         <DialogContent
           className="p-0 gap-0 flex flex-col overflow-hidden border border-[#2A2F3A] bg-[#0F1117] rounded-[28px] sm:rounded-[28px] shadow-2xl w-[92vw] max-w-[1320px] sm:max-w-[1320px] max-h-[85vh]"
-          onInteractOutside={(e) => { if (nestedDialogOpen) e.preventDefault(); }}
+          onInteractOutside={(e) => { if (nestedDialogOpen || selectorArchivoAbiertoRef.current) e.preventDefault(); }}
           onEscapeKeyDown={(e) => { if (nestedDialogOpen) e.preventDefault(); }}
         >
           <DialogHeader className="shrink-0 border-b border-[#2A2F3A] px-8 py-7">
@@ -391,11 +430,11 @@ export function FacturaProveedorDialog({
               <div
                 role="button"
                 tabIndex={0}
-                onClick={() => !trabajando && !sinCupo && fileInputRef.current?.click()}
+                onClick={() => abrirSelectorArchivo()}
                 onKeyDown={(e) => {
-                  if ((e.key === "Enter" || e.key === " ") && !trabajando && !sinCupo) {
+                  if (e.key === "Enter" || e.key === " ") {
                     e.preventDefault();
-                    fileInputRef.current?.click();
+                    abrirSelectorArchivo();
                   }
                 }}
                 onDragOver={(e) => { e.preventDefault(); if (!trabajando && !sinCupo) setDragActive(true); }}

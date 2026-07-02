@@ -203,7 +203,8 @@
       "Bash(grep -rn \"ver/dashboard/\\\\${\" src --include=\"*.tsx\")",
       "Bash(MAX_CHROMIUM_CONCURRENCY=1 npx tsx tmp_test_semaphore.ts)",
       "Bash(python \"C:\\\\Users\\\\Administrator\\\\.claude\\\\jobs\\\\04ce312e\\\\tmp\\\\test_visor.py\")",
-      "Bash(python \"C:\\\\Users\\\\Administrator\\\\.claude\\\\jobs\\\\04ce312e\\\\tmp\\\\test_layout.py\")"
+      "Bash(python \"C:\\\\Users\\\\Administrator\\\\.claude\\\\jobs\\\\04ce312e\\\\tmp\\\\test_layout.py\")",
+      "Bash(python \"C:\\\\Users\\\\Administrator\\\\.claude\\\\jobs\\\\04ce312e\\\\tmp\\\\test_factura_dialog.py\")"
     ]
   }
 }
