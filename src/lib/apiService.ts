@@ -98,6 +98,16 @@ export type FacturaProveedorItem = {
   estado: EstadoItemFactura;
   /** Columnas detectadas sin campo estándar (lote, vencimiento, talle, color, etc.), como objeto plano. */
   atributosExtra: Record<string, string> | null;
+  /** Advertencias de la validación aritmética post-extracción (ver validar-consistencia-factura.ts). */
+  advertencias: string[];
+  /**
+   * Sugerencia de catalogo-global-api cuando no hubo match local (productoId
+   * null) — solo informativa, ver openspec/changes/catalogo-global-api.
+   */
+  candidatoGlobalId: string | null;
+  candidatoGlobalNombre: string | null;
+  candidatoGlobalCodigoBarras: string | null;
+  candidatoGlobalScore: number | null;
 };
 
 export type FacturaProveedor = {
