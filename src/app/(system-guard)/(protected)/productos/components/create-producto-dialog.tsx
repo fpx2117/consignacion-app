@@ -317,36 +317,56 @@ export function CreateProductoDialog({
               </div>
 
               <div className="space-y-2">
-                <Label className="text-xs font-bold uppercase text-muted-foreground">Código de Barras</Label>
-                <div className="space-y-2">
-                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-                    <div className="relative flex-1">
-                      <Barcode className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        ref={codigoBarraInputRef}
-                        value={codigoBarra}
-                        onChange={(e) => setCodigoBarra(e.target.value)}
-                        className="pl-9 h-11 bg-muted/30"
-                        inputMode="numeric"
-                        autoComplete="off"
-                        placeholder="Escaneá o escribí el código"
-                        aria-describedby="codigo-barra-help"
-                      />
+                <div className="rounded-xl border border-border/70 bg-muted/20 p-3 sm:p-4">
+                  <div className="flex items-start gap-3">
+                    <div className="mt-0.5 rounded-lg bg-background p-2 text-primary shadow-sm">
+                      <Barcode className="h-4 w-4" />
                     </div>
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      className="h-11 rounded-lg px-4 sm:shrink-0"
-                      onClick={() => setBarcodeCameraOpen(true)}
-                      aria-label="Escanear código de barras con cámara"
-                    >
-                      <Barcode className="mr-2 h-4 w-4" />
-                      Escanear con cámara
-                    </Button>
+                    <div className="min-w-0 flex-1 space-y-3">
+                      <div className="space-y-1">
+                        <Label className="text-xs font-bold uppercase text-muted-foreground">Código de barras</Label>
+                        <p className="text-sm text-foreground">Podés cargarlo escribiéndolo, con pistola o usando la cámara.</p>
+                      </div>
+
+                      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                        <div className="relative flex-1">
+                          <Barcode className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                          <Input
+                            ref={codigoBarraInputRef}
+                            value={codigoBarra}
+                            onChange={(e) => setCodigoBarra(e.target.value)}
+                            className="h-11 bg-background pl-9"
+                            inputMode="numeric"
+                            autoComplete="off"
+                            placeholder="Ej.: 7791234567890"
+                            aria-describedby="codigo-barra-help"
+                          />
+                        </div>
+                        <Button
+                          type="button"
+                          variant="secondary"
+                          className="h-11 rounded-lg px-4 sm:shrink-0"
+                          onClick={() => setBarcodeCameraOpen(true)}
+                          aria-label="Escanear código de barras con cámara"
+                        >
+                          <Barcode className="mr-2 h-4 w-4" />
+                          Usar cámara
+                        </Button>
+                      </div>
+
+                      <div id="codigo-barra-help" className="grid gap-2 text-xs text-muted-foreground sm:grid-cols-3">
+                        <div className="rounded-lg border bg-background/80 px-3 py-2">
+                          <span className="font-medium text-foreground">Manual</span>: escribí o pegá el código si no tenés scanner.
+                        </div>
+                        <div className="rounded-lg border bg-background/80 px-3 py-2">
+                          <span className="font-medium text-foreground">Pistola</span>: dejá el cursor en este campo y escaneá directo.
+                        </div>
+                        <div className="rounded-lg border bg-background/80 px-3 py-2">
+                          <span className="font-medium text-foreground">Cámara</span>: usá el botón para leerlo desde el celular o la notebook.
+                        </div>
+                      </div>
+                    </div>
                   </div>
-                  <p id="codigo-barra-help" className="text-[11px] text-muted-foreground">
-                    Si usás pistola o scanner físico, apoyate en este campo y escaneá directo. El botón es solo para usar la cámara.
-                  </p>
                 </div>
               </div>
             </div>
