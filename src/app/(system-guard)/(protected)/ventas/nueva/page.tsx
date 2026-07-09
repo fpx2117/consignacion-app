@@ -24,6 +24,7 @@ import { DesktopSummary } from "./components/desktop-summary";
 import { MobileSummaryBar } from "./components/mobile-summary-bar";
 import { ProductSearchModal } from "./components/product-search-modal";
 import { VentaHeader } from "./components/venta-header";
+import { BarcodeCameraSheet } from "../../productos/components/barcode-camera-sheet";
 import type { CartItem, MetodoPagoOption, ProductoConStock } from "./types";
 import { formatCurrency, getBestDiscount, getNextDiscount } from "./utils";
 
@@ -53,8 +54,10 @@ export default function NuevaVentaPage() {
 
   const [openClienteModal, setOpenClienteModal] = React.useState(false);
   const [openSearchModal, setOpenSearchModal] = React.useState(false);
+  const [openBarcodeCamera, setOpenBarcodeCamera] = React.useState(false);
   const [cart, setCart] = React.useState<CartItem[]>([]);
   const [loading, setLoading] = React.useState(false);
+  const [buscandoBarcode, setBuscandoBarcode] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
 
   const [showSuccessDialog, setShowSuccessDialog] = React.useState(false);
@@ -182,17 +185,120 @@ export default function NuevaVentaPage() {
   );
 
   const processBarcode = React.useCallback(
-    (code: string) => {
-      const product = productos.find((producto) => producto.codigoBarra === code);
+    async (code: string) => {
+      const normalizedCode = code.trim();
+      if (!normalizedCode) return;
+
+      if (buscandoBarcode) return;
+
+      const product = productos.find((producto) => producto.codigoBarra?.trim() === normalizedCode);
       if (product) {
         addToCart(product, 1);
         toast.success(`Escaneado: ${product.nombre}`);
         return;
       }
-      toast.error(`Producto no encontrado: ${code}`);
+
+      setBuscandoBarcode(true);
+
+      try {
+        const productoBackend = await apiService.getProductoPorBarcode(normalizedCode);
+        const productoRemoto = productoBackend as ProductoConStock;
+
+        setProductos((previous) => {
+          const existingIndex = previous.findIndex((item) => item.id === productoRemoto.id);
+          if (existingIndex >= 0) {
+            const updated = [...previous];
+            updated[existingIndex] = { ...updated[existingIndex], ...productoRemoto };
+            return updated;
+          }
+          return [productoRemoto, ...previous];
+        });
+
+        addToCart(productoRemoto, 1);
+        toast.success(`Escaneado: ${productoRemoto.nombre}`);
+      } catch (caughtError: unknown) {
+        const message =
+          typeof caughtError === "object" &&
+          caughtError !== null &&
+          "message" in caughtError &&
+          typeof (caughtError as { message?: string }).message === "string"
+            ? (caughtError as { message: string }).message
+            : "No se pudo buscar el producto en este momento.";
+
+        const notFound = /no encontrado/i.test(message);
+        toast.error(notFound ? `Producto no encontrado: ${normalizedCode}` : message);
+      } finally {
+        setBuscandoBarcode(false);
+      }
     },
-    [addToCart, productos],
+    [addToCart, buscandoBarcode, productos],
   );
+
+  const removeItem = (productId: number) => {
+    setCart((previous) => previous.filter((item) => item.producto.id !== productId));
+  };
+
+  const handleCobrar = async () => {
+    setError(null);
+    if (cart.length === 0) {
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const finalClienteId = selectedClienteId === "" ? null : Number(selectedClienteId);
+      const payload: CreateVentaDirectaInput = {
+        clienteId: finalClienteId,
+        items: cart.map((item) => {
+          const precio = Number(item.producto.precioVenta);
+          let discountForItem = 0;
+
+          if (item.producto.descuentoEfectivo) {
+            discountForItem = item.producto.descuentoEfectivo.montoDescuento * item.quantity;
+          } else {
+            const subcategoryId = item.producto.subcategoriaId;
+            if (subcategoryId) {
+              const totalSubQty = subcategoryQtyMap.get(subcategoryId) ?? 0;
+              const subDescuentos = item.producto.subcategoria?.descuentos as DescuentoNivel[] | null | undefined;
+              const best = getBestDiscount(subDescuentos, totalSubQty);
+              if (best) {
+                discountForItem = precio * item.quantity * (best.porcentaje / 100);
+              }
+            }
+          }
+
+          return {
+            productoId: item.producto.id,
+            units: item.quantity,
+            precioUnitario: item.producto.precioVenta,
+            descuento: discountForItem,
+          };
+        }),
+        metodoPago,
+        descuentoGlobal: montoDescuentoGlobal,
+      };
+
+      const response = await apiService.createVentaDirecta(payload);
+      setCreatedVentaId(response.id);
+      setShowSuccessDialog(true);
+    } catch (caughtError: unknown) {
+      const message =
+        typeof caughtError === "object" &&
+        caughtError !== null &&
+        "message" in caughtError &&
+        typeof (caughtError as { message?: string }).message === "string"
+          ? (caughtError as { message: string }).message
+          : "Intenta nuevamente.";
+
+      setErrorDialog({
+        open: true,
+        title: "Error al procesar",
+        description: message,
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   React.useEffect(() => {
     fetchData();
@@ -302,10 +408,6 @@ export default function NuevaVentaPage() {
   }, [cajaAbierta, usaCajaEstricta, cart.length, loading, activeSucursalId]);
 
 
-
-  const removeItem = (productId: number) => {
-    setCart((previous) => previous.filter((item) => item.producto.id !== productId));
-  };
 
   const updateQuantity = React.useCallback((productId: number, delta: number) => {
     setCart((previous) =>
@@ -477,70 +579,6 @@ export default function NuevaVentaPage() {
     return Number.isFinite(parsed) && parsed > 0 ? subtotalNetoItems * (parsed / 100) : 0;
   }, [descuentoTipo, descuentoValor, parseMontoArs, parsePorcentaje, subtotalNetoItems]);
 
-  const handleCobrar = async () => {
-    setError(null);
-    if (cart.length === 0) {
-      return;
-    }
-
-    setLoading(true);
-    try {
-      const finalClienteId = selectedClienteId === "" ? null : Number(selectedClienteId);
-      const payload: CreateVentaDirectaInput = {
-        clienteId: finalClienteId,
-        items: cart.map((item) => {
-          const precio = Number(item.producto.precioVenta);
-          let discountForItem = 0;
-
-          // Prioridad 1: descuento de catálogo del producto
-          if (item.producto.descuentoEfectivo) {
-            discountForItem = item.producto.descuentoEfectivo.montoDescuento * item.quantity;
-          } else {
-            // Prioridad 2: tiers por subcategoría
-            const subcategoryId = item.producto.subcategoriaId;
-            if (subcategoryId) {
-              const totalSubQty = subcategoryQtyMap.get(subcategoryId) ?? 0;
-              const subDescuentos = item.producto.subcategoria?.descuentos as DescuentoNivel[] | null | undefined;
-              const best = getBestDiscount(subDescuentos, totalSubQty);
-              if (best) {
-                discountForItem = precio * item.quantity * (best.porcentaje / 100);
-              }
-            }
-          }
-
-          return {
-            productoId: item.producto.id,
-            units: item.quantity,
-            precioUnitario: item.producto.precioVenta,
-            descuento: discountForItem,
-          };
-        }),
-        metodoPago,
-        descuentoGlobal: montoDescuentoGlobal,
-      };
-
-      const response = await apiService.createVentaDirecta(payload);
-      setCreatedVentaId(response.id);
-      setShowSuccessDialog(true);
-    } catch (caughtError: unknown) {
-      const message =
-        typeof caughtError === "object" &&
-        caughtError !== null &&
-        "message" in caughtError &&
-        typeof (caughtError as { message?: string }).message === "string"
-          ? (caughtError as { message: string }).message
-          : "Intenta nuevamente.";
-
-      setErrorDialog({
-        open: true,
-        title: "Error al procesar",
-        description: message,
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const handleReset = () => {
     setCart([]);
     setMetodoPago("EFECTIVO");
@@ -673,16 +711,37 @@ export default function NuevaVentaPage() {
               <button
                 type="button"
                 onClick={() => setOpenSearchModal(true)}
-                className="flex-1 min-w-0 flex items-center gap-2 h-10 px-3 rounded-xl border border-dashed border-border/60 bg-muted/20 text-muted-foreground hover:bg-muted/40 hover:border-border/80 hover:text-foreground transition-all"
+                className="min-w-0 flex-1 flex items-center gap-2 h-10 px-3 rounded-xl border border-dashed border-border/60 bg-muted/20 text-muted-foreground hover:bg-muted/40 hover:border-border/80 hover:text-foreground transition-all"
                 aria-label="Buscar producto (F1)"
               >
-                <Barcode className="h-4 w-4 text-primary animate-pulse shrink-0" aria-hidden="true" />
-                <span className="flex-1 text-left truncate text-[11px] sm:text-sm">Escanear o buscar...</span>
+                {buscandoBarcode ? (
+                  <Loader2 className="h-4 w-4 text-primary animate-spin shrink-0" aria-hidden="true" />
+                ) : (
+                  <Barcode className="h-4 w-4 text-primary animate-pulse shrink-0" aria-hidden="true" />
+                )}
+                <span className="flex-1 text-left truncate text-[11px] sm:text-sm">
+                  {buscandoBarcode ? "Buscando producto..." : "Escanear o buscar..."}
+                </span>
                 <span className="hidden md:inline-flex items-center justify-center h-5 px-1.5 rounded border border-border bg-muted text-[9px] font-black font-mono text-muted-foreground shrink-0">
                   F1
                 </span>
               </button>
+
+              <Button
+                type="button"
+                variant="outline"
+                className="h-10 shrink-0 rounded-xl px-3"
+                onClick={() => setOpenBarcodeCamera(true)}
+                aria-label="Escanear producto con cámara"
+              >
+                <QrCode className="h-4 w-4 sm:mr-2" aria-hidden="true" />
+                <span className="hidden sm:inline">Cámara</span>
+              </Button>
             </div>
+
+            <p className="text-[11px] text-muted-foreground px-1">
+              Podés usar scanner físico tipo teclado o abrir la cámara para buscar y agregar un producto por código de barras.
+            </p>
           </section>
 
           <section className="flex-1 overflow-y-auto p-3 bg-muted/5" aria-label="Listado de carrito">
@@ -775,6 +834,12 @@ export default function NuevaVentaPage() {
         onPageChange={(page) => fetchProductosPaginados(page, searchQuery)}
         onSearchChange={setSearchQuery}
         loadingProductos={productosLoading}
+      />
+
+      <BarcodeCameraSheet
+        open={openBarcodeCamera}
+        onOpenChange={setOpenBarcodeCamera}
+        onDetected={processBarcode}
       />
 
       <Dialog open={openDescuento} onOpenChange={setOpenDescuento}>

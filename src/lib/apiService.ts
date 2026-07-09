@@ -365,6 +365,7 @@ export const API_ROUTES = {
 
   PRODUCTOS: "/api/productos",
   PRODUCTO_ID: (id: number) => `/api/productos/${id}`,
+  PRODUCTO_BARCODE: (code: string) => `/api/productos/barcode/${encodeURIComponent(code)}`,
 
   PROVEEDORES: "/api/proveedores",
   PROVEEDOR_ID: (id: number) => `/api/proveedores/${id}`,
@@ -639,6 +640,10 @@ export const apiService = {
 
   getProducto(id: number) {
     return apiData<Producto>(API_ROUTES.PRODUCTO_ID(id));
+  },
+
+  getProductoPorBarcode(code: string) {
+    return apiData<Producto>(API_ROUTES.PRODUCTO_BARCODE(code));
   },
 
   async uploadImage(file: File) {

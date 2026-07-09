@@ -43,6 +43,8 @@ import { CreateCategoriaDialog } from "./create-categoria-dialog";
 import { AtributosExtraEditor } from "./atributos-extra-editor";
 import { getAtributosTipicos } from "@/modules/invoices/config/rubros";
 import { toast } from "sonner";
+import { useBarcodeScanner } from "@/hooks/useBarcodeScanner";
+import { BarcodeCameraSheet } from "./barcode-camera-sheet";
 
 type ProductoEditable = Producto & {
   subcategoriaId?: number | null;
@@ -96,6 +98,7 @@ export function EditProductoDialog({
   // Estados del formulario
   const [nombre, setNombre] = React.useState(producto.nombre);
   const [codigoBarra, setCodigoBarra] = React.useState(producto.codigoBarra || "");
+  const [barcodeCameraOpen, setBarcodeCameraOpen] = React.useState(false);
   const [precioVenta, setPrecioVenta] = React.useState(String(producto.precioVenta));
   const [precioCosto, setPrecioCosto] = React.useState(String(producto.precioCosto));
   const [stockMinUnits, setStockMinUnits] = React.useState(String(producto.stockMinUnits || ""));
@@ -132,11 +135,26 @@ export function EditProductoDialog({
   const [atributosExtra, setAtributosExtra] = React.useState<Record<string, string> | null>(producto.atributosExtra ?? null);
   const [mostrarAtributos, setMostrarAtributos] = React.useState(!!producto.atributosExtra && Object.keys(producto.atributosExtra).length > 0);
   const [sugerenciasAtributos, setSugerenciasAtributos] = React.useState<string[]>([]);
+  const codigoBarraInputRef = React.useRef<HTMLInputElement | null>(null);
+
+  const applyBarcode = React.useCallback((code: string) => {
+    setCodigoBarra(code);
+    requestAnimationFrame(() => {
+      codigoBarraInputRef.current?.focus();
+      codigoBarraInputRef.current?.select();
+    });
+  }, []);
+
+  useBarcodeScanner({
+    enabled: open,
+    onScan: applyBarcode,
+  });
 
   React.useEffect(() => {
     if (open) {
       setNombre(producto.nombre);
       setCodigoBarra(producto.codigoBarra || "");
+      setBarcodeCameraOpen(false);
       setPrecioVenta(String(producto.precioVenta));
       setPrecioCosto(String(producto.precioCosto));
       setStockMinUnits(String(producto.stockMinUnits || ""));
@@ -284,9 +302,33 @@ export function EditProductoDialog({
 
               <div className="space-y-2">
                 <Label className="text-xs font-bold uppercase text-muted-foreground">Código de Barras</Label>
-                <div className="relative">
-                  <Barcode className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input value={codigoBarra} onChange={(e) => setCodigoBarra(e.target.value)} className="pl-9 h-11 bg-muted/30" />
+                <div className="space-y-2">
+                  <div className="relative">
+                    <Barcode className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      ref={codigoBarraInputRef}
+                      value={codigoBarra}
+                      onChange={(e) => setCodigoBarra(e.target.value)}
+                      className="pl-9 pr-28 h-11 bg-muted/30"
+                      inputMode="numeric"
+                      autoComplete="off"
+                      placeholder="Escaneá o escribí el código"
+                      aria-describedby="edit-codigo-barra-help"
+                    />
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="sm"
+                      className="absolute right-1.5 top-1/2 h-8 -translate-y-1/2 rounded-lg px-2.5"
+                      onClick={() => setBarcodeCameraOpen(true)}
+                    >
+                      <Barcode className="mr-1.5 h-3.5 w-3.5" />
+                      Escanear
+                    </Button>
+                  </div>
+                  <p id="edit-codigo-barra-help" className="text-[11px] text-muted-foreground">
+                    Compatible con scanner físico tipo teclado y con cámara desde celular o navegador compatible.
+                  </p>
                 </div>
               </div>
             </div>
@@ -571,6 +613,7 @@ export function EditProductoDialog({
           </div>
         </div>
       </DialogContent>
+      <BarcodeCameraSheet open={barcodeCameraOpen} onOpenChange={setBarcodeCameraOpen} onDetected={applyBarcode} />
     </Dialog>
   );
 }

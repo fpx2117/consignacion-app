@@ -43,6 +43,8 @@ import { CreateCategoriaDialog } from "./create-categoria-dialog";
 import { AtributosExtraEditor } from "./atributos-extra-editor";
 import { getAtributosTipicos } from "@/modules/invoices/config/rubros";
 import { toast } from "sonner";
+import { useBarcodeScanner } from "@/hooks/useBarcodeScanner";
+import { BarcodeCameraSheet } from "./barcode-camera-sheet";
 
 function toNumber(v: string): number | undefined {
   const t = v.replace(",", ".").trim();
@@ -108,6 +110,7 @@ export function CreateProductoDialog({
   // Estados del formulario
   const [nombre, setNombre] = React.useState("");
   const [codigoBarra, setCodigoBarra] = React.useState("");
+  const [barcodeCameraOpen, setBarcodeCameraOpen] = React.useState(false);
   const [precioVenta, setPrecioVenta] = React.useState("");
   const [precioCosto, setPrecioCosto] = React.useState("");
   const [stockDisponibleUnits, setStockDisponibleUnits] = React.useState("");
@@ -133,6 +136,20 @@ export function CreateProductoDialog({
   const [atributosExtra, setAtributosExtra] = React.useState<Record<string, string> | null>(null);
   const [mostrarAtributos, setMostrarAtributos] = React.useState(false);
   const [sugerenciasAtributos, setSugerenciasAtributos] = React.useState<string[]>([]);
+  const codigoBarraInputRef = React.useRef<HTMLInputElement | null>(null);
+
+  const applyBarcode = React.useCallback((code: string) => {
+    setCodigoBarra(code);
+    requestAnimationFrame(() => {
+      codigoBarraInputRef.current?.focus();
+      codigoBarraInputRef.current?.select();
+    });
+  }, []);
+
+  useBarcodeScanner({
+    enabled: open,
+    onScan: applyBarcode,
+  });
 
   React.useEffect(() => {
     if (open) {
@@ -140,6 +157,7 @@ export function CreateProductoDialog({
       // siempre lo completa a mano (ver reglas de negocio de OCR de facturas).
       setNombre(initialValues?.nombre ?? "");
       setCodigoBarra(initialValues?.codigoBarra ?? "");
+      setBarcodeCameraOpen(false);
       setPrecioVenta("");
       setPrecioCosto(initialValues?.precioCosto !== undefined ? String(initialValues.precioCosto) : "");
       setStockDisponibleUnits(initialValues?.stockDisponibleUnits !== undefined ? String(initialValues.stockDisponibleUnits) : "");
@@ -300,9 +318,33 @@ export function CreateProductoDialog({
 
               <div className="space-y-2">
                 <Label className="text-xs font-bold uppercase text-muted-foreground">Código de Barras</Label>
-                <div className="relative">
-                  <Barcode className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input value={codigoBarra} onChange={(e) => setCodigoBarra(e.target.value)} className="pl-9 h-11 bg-muted/30" />
+                <div className="space-y-2">
+                  <div className="relative">
+                    <Barcode className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      ref={codigoBarraInputRef}
+                      value={codigoBarra}
+                      onChange={(e) => setCodigoBarra(e.target.value)}
+                      className="pl-9 pr-28 h-11 bg-muted/30"
+                      inputMode="numeric"
+                      autoComplete="off"
+                      placeholder="Escaneá o escribí el código"
+                      aria-describedby="codigo-barra-help"
+                    />
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="sm"
+                      className="absolute right-1.5 top-1/2 h-8 -translate-y-1/2 rounded-lg px-2.5"
+                      onClick={() => setBarcodeCameraOpen(true)}
+                    >
+                      <Barcode className="mr-1.5 h-3.5 w-3.5" />
+                      Escanear
+                    </Button>
+                  </div>
+                  <p id="codigo-barra-help" className="text-[11px] text-muted-foreground">
+                    Compatible con scanner físico tipo teclado y con cámara desde celular o navegador compatible.
+                  </p>
                 </div>
               </div>
             </div>
@@ -587,6 +629,7 @@ export function CreateProductoDialog({
           </div>
         </form>
       </DialogContent>
+      <BarcodeCameraSheet open={barcodeCameraOpen} onOpenChange={setBarcodeCameraOpen} onDetected={applyBarcode} />
     </Dialog>
   );
 }
