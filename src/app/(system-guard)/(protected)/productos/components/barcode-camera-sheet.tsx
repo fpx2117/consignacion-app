@@ -26,6 +26,31 @@ declare global {
 
 const PREFERRED_FORMATS = ["ean_13", "ean_8", "upc_a", "upc_e", "code_128", "code_39", "itf", "codabar"];
 
+function waitForVideoReady(video: HTMLVideoElement) {
+  if (video.readyState >= HTMLMediaElement.HAVE_METADATA && video.videoWidth > 0 && video.videoHeight > 0) {
+    return Promise.resolve();
+  }
+
+  return new Promise<void>((resolve) => {
+    const handleReady = () => {
+      if (video.videoWidth > 0 && video.videoHeight > 0) {
+        cleanup();
+        resolve();
+      }
+    };
+
+    const cleanup = () => {
+      video.removeEventListener("loadedmetadata", handleReady);
+      video.removeEventListener("loadeddata", handleReady);
+      video.removeEventListener("canplay", handleReady);
+    };
+
+    video.addEventListener("loadedmetadata", handleReady);
+    video.addEventListener("loadeddata", handleReady);
+    video.addEventListener("canplay", handleReady);
+  });
+}
+
 async function createDetector() {
   if (typeof window === "undefined" || !window.BarcodeDetector) return null;
 
@@ -164,7 +189,14 @@ export function BarcodeCameraSheet({ open, onOpenChange, onDetected }: BarcodeCa
           return;
         }
 
+        video.muted = true;
+        video.playsInline = true;
+        video.autoplay = true;
+        video.setAttribute("muted", "");
+        video.setAttribute("playsinline", "true");
+        video.setAttribute("autoplay", "true");
         video.srcObject = stream;
+        await waitForVideoReady(video);
         await video.play();
         if (!cancelled) {
           setStarting(false);
@@ -215,7 +247,10 @@ export function BarcodeCameraSheet({ open, onOpenChange, onDetected }: BarcodeCa
             <video
               ref={videoRef}
               muted
+              autoPlay
               playsInline
+              controls={false}
+              disablePictureInPicture
               className={cn("aspect-[3/4] w-full object-cover sm:aspect-video", !supported && "opacity-40")}
               aria-label="Vista previa de cámara para escaneo"
             />
