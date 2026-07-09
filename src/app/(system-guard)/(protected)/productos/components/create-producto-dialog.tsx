@@ -319,31 +319,33 @@ export function CreateProductoDialog({
               <div className="space-y-2">
                 <Label className="text-xs font-bold uppercase text-muted-foreground">Código de Barras</Label>
                 <div className="space-y-2">
-                  <div className="relative">
-                    <Barcode className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      ref={codigoBarraInputRef}
-                      value={codigoBarra}
-                      onChange={(e) => setCodigoBarra(e.target.value)}
-                      className="pl-9 pr-28 h-11 bg-muted/30"
-                      inputMode="numeric"
-                      autoComplete="off"
-                      placeholder="Escaneá o escribí el código"
-                      aria-describedby="codigo-barra-help"
-                    />
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                    <div className="relative flex-1">
+                      <Barcode className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        ref={codigoBarraInputRef}
+                        value={codigoBarra}
+                        onChange={(e) => setCodigoBarra(e.target.value)}
+                        className="pl-9 h-11 bg-muted/30"
+                        inputMode="numeric"
+                        autoComplete="off"
+                        placeholder="Escaneá o escribí el código"
+                        aria-describedby="codigo-barra-help"
+                      />
+                    </div>
                     <Button
                       type="button"
                       variant="secondary"
-                      size="sm"
-                      className="absolute right-1.5 top-1/2 h-8 -translate-y-1/2 rounded-lg px-2.5"
+                      className="h-11 rounded-lg px-4 sm:shrink-0"
                       onClick={() => setBarcodeCameraOpen(true)}
+                      aria-label="Escanear código de barras con cámara"
                     >
-                      <Barcode className="mr-1.5 h-3.5 w-3.5" />
-                      Escanear
+                      <Barcode className="mr-2 h-4 w-4" />
+                      Escanear con cámara
                     </Button>
                   </div>
                   <p id="codigo-barra-help" className="text-[11px] text-muted-foreground">
-                    Compatible con scanner físico tipo teclado y con cámara desde celular o navegador compatible.
+                    Si usás pistola o scanner físico, apoyate en este campo y escaneá directo. El botón es solo para usar la cámara.
                   </p>
                 </div>
               </div>
