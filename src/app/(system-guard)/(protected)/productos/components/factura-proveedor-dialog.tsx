@@ -86,8 +86,8 @@ const TIPS_FOTO: { ok: boolean; texto: string }[] = [
 ];
 
 const ACCEPT_FACTURA = "image/png,image/jpeg,image/webp,application/pdf";
-const FACTURA_FIELD_CLASS = "h-12 rounded-xl border-[#2A2F3A] bg-[#11151C] text-sm shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]";
-const ITEM_FIELD_CLASS = "h-11 rounded-xl border-[#2A2F3A] bg-[#11151C] text-sm shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]";
+const FACTURA_FIELD_CLASS = "h-12 rounded-xl border-border bg-background text-sm shadow-xs";
+const ITEM_FIELD_CLASS = "h-11 rounded-xl border-border bg-background text-sm shadow-xs";
 const ITEM_LABEL_CLASS = "text-[10px] font-bold uppercase tracking-[0.08em] text-muted-foreground xl:hidden";
 const ITEM_TABLE_COLUMNS = "xl:grid-cols-[minmax(0,2.1fr)_88px_150px_minmax(0,1.65fr)_136px]";
 const ITEM_ACTION_ICON_CLASS = "size-10 rounded-xl border transition-colors focus-visible:ring-2 focus-visible:ring-primary/60";
@@ -328,10 +328,13 @@ export function FacturaProveedorDialog({
         : item.precioUnitario ?? undefined;
 
     return {
-      nombre: normalizarNombreSugerido(item.textoOriginal),
+      // Si hay una sugerencia del catálogo global, su nombre normalizado es
+      // más limpio que el texto OCR crudo — pero sigue siendo editable, no se
+      // fuerza nada (ver openspec/changes/catalogo-global-api).
+      nombre: normalizarNombreSugerido(item.candidatoGlobalNombre ?? item.textoOriginal),
       precioCosto: precioEstimadoArs,
       stockDisponibleUnits: item.cantidad,
-      codigoBarra: inferirCodigoBarra(item),
+      codigoBarra: inferirCodigoBarra(item) ?? item.candidatoGlobalCodigoBarras,
     };
   }
 
@@ -389,11 +392,11 @@ export function FacturaProveedorDialog({
         </DialogTrigger>
 
         <DialogContent
-          className="p-0 gap-0 flex flex-col overflow-hidden border border-[#2A2F3A] bg-[#0F1117] rounded-[28px] sm:rounded-[28px] shadow-2xl w-[92vw] max-w-[1320px] sm:max-w-[1320px] max-h-[85vh]"
+          className="p-0 gap-0 flex flex-col overflow-hidden border border-border bg-background rounded-[28px] sm:rounded-[28px] shadow-2xl w-[92vw] max-w-[1320px] sm:max-w-[1320px] max-h-[85vh]"
           onInteractOutside={(e) => { if (nestedDialogOpen || selectorArchivoAbiertoRef.current) e.preventDefault(); }}
           onEscapeKeyDown={(e) => { if (nestedDialogOpen) e.preventDefault(); }}
         >
-          <DialogHeader className="shrink-0 border-b border-[#2A2F3A] px-8 py-7">
+          <DialogHeader className="shrink-0 border-b border-border px-8 py-7">
             <div className="flex items-center gap-4">
               <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary">
                 <ScanText className="h-7 w-7" />
@@ -419,7 +422,7 @@ export function FacturaProveedorDialog({
               />
 
               {usage && (
-                <div className="flex items-center justify-between rounded-xl border border-[#2A2F3A] bg-[#11151C] px-4 py-3 text-sm">
+                <div className="flex items-center justify-between rounded-xl border border-border bg-card px-4 py-3 text-sm">
                   <span className="text-muted-foreground">Escaneos usados este mes</span>
                   <span className="font-semibold tabular-nums">
                     {usage.used} / {usage.limit === -1 ? "∞" : usage.limit}
@@ -443,12 +446,12 @@ export function FacturaProveedorDialog({
                 aria-disabled={sinCupo}
                 className={`rounded-2xl border-2 border-dashed p-8 text-center transition-colors outline-none ${
                   sinCupo
-                    ? "opacity-50 cursor-not-allowed border-[#2A2F3A]"
+                    ? "opacity-50 cursor-not-allowed border-border"
                     : "cursor-pointer focus-visible:ring-2 focus-visible:ring-primary"
                 } ${
                   dragActive
                     ? "border-primary bg-primary/5"
-                    : "border-[#2A2F3A] hover:border-primary/60 hover:bg-white/[0.02]"
+                    : "border-border hover:border-primary/60 hover:bg-muted/40"
                 }`}
               >
                   <div className="relative mx-auto mb-5 flex h-32 w-28 items-center justify-center">
@@ -508,7 +511,7 @@ export function FacturaProveedorDialog({
           {items && factura && (
             <div className="flex-1 min-h-0 flex flex-col gap-5 px-8 py-6 overflow-hidden">
               {/* Card de datos de la factura (siempre visible, no scrollea) */}
-              <div className="shrink-0 rounded-2xl border border-[#2A2F3A] bg-[#0B0D12] p-6">
+              <div className="shrink-0 rounded-2xl border border-border bg-card p-6">
                 <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-4">
                   <div>
                     <Label className="mb-2 block text-xs font-medium text-muted-foreground">Proveedor (existente)</Label>
@@ -653,9 +656,9 @@ export function FacturaProveedorDialog({
 
                   {/* Tabla de productos detectados (scroll interno) */}
                   <TooltipProvider>
-                  <div className="min-h-0 flex flex-col overflow-hidden rounded-2xl border border-[#2A2F3A]">
+                  <div className="min-h-0 flex flex-col overflow-hidden rounded-2xl border border-border bg-card/60">
                     {/* Encabezado de columnas (solo desktop) */}
-                    <div className={cn("hidden xl:grid shrink-0 gap-4 border-b border-[#2A2F3A] bg-[#0B0D12] px-5 h-12 items-center text-xs font-medium uppercase tracking-[0.08em] text-muted-foreground", ITEM_TABLE_COLUMNS)}>
+                    <div className={cn("hidden xl:grid shrink-0 gap-4 border-b border-border bg-muted/40 px-5 h-12 items-center text-xs font-medium uppercase tracking-[0.08em] text-muted-foreground", ITEM_TABLE_COLUMNS)}>
                       <span>Descripción detectada</span>
                       <span>Cant.</span>
                       <span>Costo unit.{facturaEnMonedaExtranjera ? " → ARS" : ""}</span>
@@ -663,7 +666,7 @@ export function FacturaProveedorDialog({
                       <span className="text-right">Acciones</span>
                     </div>
 
-                    <div className="overflow-y-auto max-h-[320px] divide-y divide-[#2A2F3A] [scrollbar-width:thin] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-[#2A2F3A]">
+                    <div className="overflow-y-auto max-h-[320px] divide-y divide-border [scrollbar-width:thin] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-border">
                       {items.map((item) => {
                         const badge = badgeEstado(item);
                         const BadgeIcon = badge.icon;
@@ -679,7 +682,7 @@ export function FacturaProveedorDialog({
                             className={cn(
                               "grid grid-cols-1 gap-4 px-5 py-4 min-h-[96px] items-start xl:items-center",
                               ITEM_TABLE_COLUMNS,
-                              terminal ? "opacity-60 bg-white/[0.02]" : "hover:bg-white/[0.015]"
+                              terminal ? "opacity-60 bg-muted/30" : "hover:bg-muted/30"
                             )}
                           >
                             {/* Descripción — siempre editable: si no hay producto existente que coincida, no hay ninguna existencia previa que la fije */}
@@ -699,6 +702,21 @@ export function FacturaProveedorDialog({
                                 />
                                 {mostrarCodigo && item.codigoProveedor && (
                                   <p className="text-[11px] font-mono text-muted-foreground">#{item.codigoProveedor}</p>
+                                )}
+                                {item.advertencias.length > 0 && (
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <div className="flex items-start gap-1 pt-0.5 text-[11px] text-[color:var(--status-warning)] cursor-help">
+                                        <AlertTriangle className="h-3 w-3 shrink-0 mt-0.5" />
+                                        <span className="line-clamp-1">Revisar: posible desalineación de cantidad/precio</span>
+                                      </div>
+                                    </TooltipTrigger>
+                                    <TooltipContent side="bottom" sideOffset={4} className="max-w-xs">
+                                      {item.advertencias.map((advertencia, i) => (
+                                        <p key={i}>{advertencia}</p>
+                                      ))}
+                                    </TooltipContent>
+                                  </Tooltip>
                                 )}
                                 {item.atributosExtra && Object.keys(item.atributosExtra).length > 0 && (
                                   <div className="flex flex-wrap gap-1 pt-0.5">
@@ -784,6 +802,15 @@ export function FacturaProveedorDialog({
                                       Si no existe, abrilo con <span className="font-semibold text-primary">crear producto</span> para completar precio de venta, categoría y stock inicial.
                                     </p>
                                   )}
+                                  {requiereAlta && item.candidatoGlobalNombre && (
+                                    <p className="flex items-start gap-1 text-[11px] text-primary">
+                                      <Sparkles className="h-3 w-3 shrink-0 mt-0.5" />
+                                      <span>
+                                        Catálogo global sugiere: <span className="font-semibold">{item.candidatoGlobalNombre}</span>
+                                        {item.candidatoGlobalScore != null && ` (${Math.round(item.candidatoGlobalScore)}%)`}
+                                      </span>
+                                    </p>
+                                  )}
                                 </>
                               )}
                             </div>
@@ -866,7 +893,7 @@ export function FacturaProveedorDialog({
                                         size="icon-sm"
                                         variant="ghost"
                                         aria-label={`Ignorar línea ${item.textoOriginal}`}
-                                        className={cn(ITEM_ACTION_ICON_CLASS, "border-[#2A2F3A] bg-transparent text-muted-foreground hover:border-[color:var(--status-warning)]/40 hover:bg-[color:var(--status-warning)]/10 hover:text-[color:var(--status-warning)]")}
+                                        className={cn(ITEM_ACTION_ICON_CLASS, "border-border bg-transparent text-muted-foreground hover:border-[color:var(--status-warning)]/40 hover:bg-[color:var(--status-warning)]/10 hover:text-[color:var(--status-warning)]")}
                                         onClick={() => ignorarItem(item)}
                                         disabled={busy}
                                       >
@@ -893,7 +920,7 @@ export function FacturaProveedorDialog({
             </div>
           )}
 
-          <div className="shrink-0 flex items-center justify-between gap-3 border-t border-[#2A2F3A] px-8 py-5">
+          <div className="shrink-0 flex items-center justify-between gap-3 border-t border-border px-8 py-5">
             <div className="flex min-w-0 items-center gap-2 text-sm text-muted-foreground">
               {selectedFile && (
                 <>
