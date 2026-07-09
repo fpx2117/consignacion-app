@@ -92,6 +92,12 @@ const ITEM_LABEL_CLASS = "text-[10px] font-bold uppercase tracking-[0.08em] text
 const ITEM_TABLE_COLUMNS = "xl:grid-cols-[minmax(0,2.1fr)_88px_150px_minmax(0,1.65fr)_136px]";
 const ITEM_ACTION_ICON_CLASS = "size-10 rounded-xl border transition-colors focus-visible:ring-2 focus-visible:ring-primary/60";
 
+type FacturaProveedorItemConCatalogoGlobal = FacturaProveedorItem & {
+  candidatoGlobalNombre?: string | null;
+  candidatoGlobalCodigoBarras?: string | null;
+  candidatoGlobalScore?: number | null;
+};
+
 export function FacturaProveedorDialog({
   trigger,
   onCreated,
@@ -316,7 +322,7 @@ export function FacturaProveedorDialog({
     }
   }
 
-  function initialValuesParaNuevoProducto(item: FacturaProveedorItem): CreateProductoInitialValues {
+  function initialValuesParaNuevoProducto(item: FacturaProveedorItemConCatalogoGlobal): CreateProductoInitialValues {
     // El costo final que persiste el backend siempre queda en ARS (ver
     // create-product/route.ts) — acá sólo se prellena una estimación con la
     // cotización del momento para que el campo no se vea con un número en
