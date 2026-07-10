@@ -26,88 +26,39 @@ declare global {
 
 const PREFERRED_FORMATS = ["ean_13", "ean_8", "upc_a", "upc_e", "code_128", "code_39", "itf", "codabar"];
 
-// CAUSA #1 FIX: eliminado videoWidth>0 como condición bloqueante, agregado evento
-// "playing" (el más confiable en iOS), timeout de emergencia de 5000ms y flag
-// resolved para evitar resoluciones múltiples.
-function waitForVideoReady(video: HTMLVideoElement) {
-  if (video.readyState >= HTMLMediaElement.HAVE_METADATA) {
-    return Promise.resolve();
-  }
-
-  return new Promise<void>((resolve) => {
-    let resolved = false;
-
-    const handleReady = () => {
-      if (resolved) return;
-      resolved = true;
-      cleanup();
-      resolve();
-    };
-
-    const cleanup = () => {
-      video.removeEventListener("loadedmetadata", handleReady);
-      video.removeEventListener("loadeddata", handleReady);
-      video.removeEventListener("canplay", handleReady);
-      video.removeEventListener("playing", handleReady);
-    };
-
-    video.addEventListener("loadedmetadata", handleReady);
-    video.addEventListener("loadeddata", handleReady);
-    video.addEventListener("canplay", handleReady);
-    video.addEventListener("playing", handleReady);
-
-    // Timeout de emergencia: resuelve aunque no lleguen eventos (5000ms)
-    setTimeout(() => {
-      if (!resolved) {
-        resolved = true;
-        cleanup();
-        resolve();
-      }
-    }, 5000);
-  });
-}
-
 async function createDetector() {
   if (typeof window === "undefined" || !window.BarcodeDetector) return null;
 
   const Detector = window.BarcodeDetector;
-  const supported = typeof Detector.getSupportedFormats === "function"
-    ? await Detector.getSupportedFormats().catch(() => [])
-    : [];
-  const formats = supported.length > 0
-    ? PREFERRED_FORMATS.filter((format) => supported.includes(format))
-    : PREFERRED_FORMATS;
+  const supported =
+    typeof Detector.getSupportedFormats === "function"
+      ? await Detector.getSupportedFormats().catch(() => [])
+      : [];
+  const formats =
+    supported.length > 0
+      ? PREFERRED_FORMATS.filter((f) => supported.includes(f))
+      : PREFERRED_FORMATS;
 
   return new Detector(formats.length > 0 ? { formats } : undefined);
 }
 
-// CAUSA #5 FIX: estrategia de dos intentos para getUserMedia.
-// 1º intento: exact "environment" con dimensiones ideales.
-// 2º intento si falla: facingMode "environment" sin exact.
-// 3º intento si falla: sin facingMode (cualquier cámara).
+// Intenta obtener stream de cámara trasera con fallbacks progresivos
 async function getCamera(): Promise<MediaStream> {
-  try {
-    return await navigator.mediaDevices.getUserMedia({
-      audio: false,
-      video: {
-        facingMode: { exact: "environment" },
-        width: { ideal: 1280 },
-        height: { ideal: 720 },
-      },
-    });
-  } catch {
+  const constraints: MediaStreamConstraints[] = [
+    { audio: false, video: { facingMode: { exact: "environment" }, width: { ideal: 1280 }, height: { ideal: 720 } } },
+    { audio: false, video: { facingMode: "environment" } },
+    { audio: false, video: true },
+  ];
+
+  let lastErr: unknown;
+  for (const c of constraints) {
     try {
-      return await navigator.mediaDevices.getUserMedia({
-        audio: false,
-        video: { facingMode: "environment" },
-      });
-    } catch {
-      return await navigator.mediaDevices.getUserMedia({
-        audio: false,
-        video: true,
-      });
+      return await navigator.mediaDevices.getUserMedia(c);
+    } catch (e) {
+      lastErr = e;
     }
   }
+  throw lastErr;
 }
 
 interface BarcodeCameraSheetProps {
@@ -122,188 +73,186 @@ export function BarcodeCameraSheet({ open, onOpenChange, onDetected }: BarcodeCa
   const detectorRef = React.useRef<Awaited<ReturnType<typeof createDetector>>>(null);
   const frameRef = React.useRef<number | null>(null);
   const lastValueRef = React.useRef<string | null>(null);
+  const startedRef = React.useRef(false);
 
-  const [starting, setStarting] = React.useState(false);
+  const [phase, setPhase] = React.useState<"idle" | "starting" | "ready" | "error">("idle");
   const [supported, setSupported] = React.useState(true);
-  const [error, setError] = React.useState<string | null>(null);
+  const [errorMsg, setErrorMsg] = React.useState<string | null>(null);
 
-  const stopScanner = React.useCallback(() => {
+  // ── Detener todo ──────────────────────────────────────────────────────────
+  const stopAll = React.useCallback(() => {
     if (frameRef.current !== null) {
-      window.cancelAnimationFrame(frameRef.current);
+      cancelAnimationFrame(frameRef.current);
       frameRef.current = null;
     }
-
-    const stream = streamRef.current;
-    if (stream) {
-      stream.getTracks().forEach((track) => track.stop());
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((t) => t.stop());
       streamRef.current = null;
     }
-
-    const video = videoRef.current;
-    if (video) {
-      video.srcObject = null;
+    const v = videoRef.current;
+    if (v) {
+      v.srcObject = null;
     }
+    startedRef.current = false;
   }, []);
 
-  const handleDetected = React.useCallback((rawValue: string) => {
-    const code = rawValue.trim();
-    if (!code || code === lastValueRef.current) return;
+  // ── Loop de detección (solo corre cuando el video está reproduciendo) ─────
+  const startDetectionLoop = React.useCallback(
+    (detector: NonNullable<Awaited<ReturnType<typeof createDetector>>>) => {
+      const tick = async () => {
+        const v = videoRef.current;
+        if (!v || v.readyState < HTMLMediaElement.HAVE_ENOUGH_DATA) {
+          frameRef.current = requestAnimationFrame(() => void tick());
+          return;
+        }
 
-    lastValueRef.current = code;
-    stopScanner();
-    onDetected(code);
-    onOpenChange(false);
-  }, [onDetected, onOpenChange, stopScanner]);
-
-  React.useEffect(() => {
-    if (!open) {
-      setError(null);
-      setStarting(false);
-      lastValueRef.current = null;
-      stopScanner();
-      return;
-    }
-
-    let cancelled = false;
-
-    const tick = async () => {
-      if (cancelled) return;
-
-      const video = videoRef.current;
-      const detector = detectorRef.current;
-
-      if (video && detector && video.readyState >= HTMLMediaElement.HAVE_ENOUGH_DATA) {
         try {
-          const results = await detector.detect(video);
-          const match = results.find((result) => typeof result.rawValue === "string" && result.rawValue.trim().length > 0);
+          const results = await detector.detect(v);
+          const match = results.find(
+            (r) => typeof r.rawValue === "string" && r.rawValue.trim().length > 0
+          );
           if (match?.rawValue) {
-            handleDetected(match.rawValue);
+            const code = match.rawValue.trim();
+            if (code !== lastValueRef.current) {
+              lastValueRef.current = code;
+              stopAll();
+              onDetected(code);
+              onOpenChange(false);
+            }
             return;
           }
         } catch {
-          setError("No se pudo procesar la imagen de la cámara.");
-          stopScanner();
-          return;
+          // frame con error: seguir intentando
         }
+
+        frameRef.current = requestAnimationFrame(() => void tick());
+      };
+
+      frameRef.current = requestAnimationFrame(() => void tick());
+    },
+    [onDetected, onOpenChange, stopAll]
+  );
+
+  // ── Iniciar cámara: llamado desde onCanPlay del <video> ───────────────────
+  // Esta es la clave: no usamos Promises encadenadas para play().
+  // El browser dispara onCanPlay cuando el video REALMENTE puede reproducir.
+  // En ese momento solo iniciamos el loop de detección, sin llamar play() manualmente.
+  const handleCanPlay = React.useCallback(async () => {
+    const v = videoRef.current;
+    if (!v || !streamRef.current) return;
+
+    // Asegurarse que el video esté reproduciendo (puede ya estarlo por autoPlay)
+    if (v.paused) {
+      try {
+        await v.play();
+      } catch {
+        // AbortError es normal si autoPlay ya lo arrancó; ignorar
       }
+    }
 
-      frameRef.current = window.requestAnimationFrame(() => {
-        void tick();
-      });
-    };
+    if (!detectorRef.current) return;
+    setPhase("ready");
+    startDetectionLoop(detectorRef.current);
+  }, [startDetectionLoop]);
 
-    const startScanner = async () => {
-      setStarting(true);
-      setError(null);
+  // ── Efecto principal: pedir cámara cuando open=true ───────────────────────
+  React.useEffect(() => {
+    if (!open) {
+      setPhase("idle");
+      setErrorMsg(null);
       lastValueRef.current = null;
+      stopAll();
+      return;
+    }
 
-      // CAUSA #3 FIX: esperar a que termine la animación CSS del Sheet (slide-in
-      // duration-500) antes de inicializar la cámara. Algunos browsers (iOS) no
-      // renderizan frames de video mientras el elemento está bajo un CSS transform.
-      await new Promise<void>((r) => setTimeout(r, 520));
+    // Evitar doble arranque
+    if (startedRef.current) return;
+    startedRef.current = true;
 
+    setPhase("starting");
+    setErrorMsg(null);
+    lastValueRef.current = null;
+
+    let cancelled = false;
+
+    const init = async () => {
+      // Esperar a que la animación CSS del Sheet termine (slide-in-from-bottom ~500ms)
+      // y a que el Portal de Radix haya pintado el <video> en el DOM
+      await new Promise<void>((r) => setTimeout(r, 550));
       if (cancelled) return;
 
-      // CAUSA #2 FIX: getUserMedia() va PRIMERO, antes de createDetector(), para
-      // que play() quede lo más cerca posible del gesto del usuario en iOS Safari.
-      // createDetector() corre en paralelo con el setup del video via Promise.all.
+      // Verificar que el nodo video ya está en el DOM
+      if (!videoRef.current) {
+        setErrorMsg("No se pudo inicializar la cámara. Intentá cerrar y abrir de nuevo.");
+        setPhase("error");
+        startedRef.current = false;
+        return;
+      }
+
+      // Pedir stream y detector en paralelo
       let stream: MediaStream;
       try {
-        stream = await getCamera();
+        const [s, detector] = await Promise.all([getCamera(), createDetector()]);
+        stream = s;
+        detectorRef.current = detector;
       } catch (err) {
         if (cancelled) return;
-
-        const message = err instanceof DOMException
-          ? err.name === "NotAllowedError"
-            ? "No hay permiso para usar la cámara en este navegador. Revisá permisos del sitio y HTTPS si corresponde."
-            : err.name === "NotFoundError"
+        const msg =
+          err instanceof DOMException
+            ? err.name === "NotAllowedError"
+              ? "Permiso de cámara denegado. Habilitalo desde la configuración del navegador."
+              : err.name === "NotFoundError"
               ? "No se encontró una cámara disponible en este dispositivo."
-              : "No se pudo iniciar la cámara para escanear el código."
-          : "No se pudo iniciar la cámara para escanear el código.";
-
-        setError(message);
-        setStarting(false);
+              : "No se pudo iniciar la cámara."
+            : "No se pudo iniciar la cámara.";
+        setErrorMsg(msg);
+        setPhase("error");
+        startedRef.current = false;
         return;
       }
 
       if (cancelled) {
-        stream.getTracks().forEach((track) => track.stop());
+        stream.getTracks().forEach((t) => t.stop());
+        return;
+      }
+
+      if (!detectorRef.current) {
+        stream.getTracks().forEach((t) => t.stop());
+        setSupported(false);
+        setErrorMsg(
+          "Este navegador no soporta escaneo con cámara. Usá Chrome o Edge reciente, o el scanner físico."
+        );
+        setPhase("error");
+        startedRef.current = false;
         return;
       }
 
       streamRef.current = stream;
-      const video = videoRef.current;
 
-      if (!video) {
-        stream.getTracks().forEach((track) => track.stop());
-        setStarting(false);
+      // Asignar el stream al <video>
+      // El browser disparará onCanPlay cuando esté listo para reproducir.
+      // NO llamamos play() aquí — lo maneja handleCanPlay o el atributo autoPlay.
+      const v = videoRef.current;
+      if (!v) {
+        stream.getTracks().forEach((t) => t.stop());
+        setPhase("error");
+        startedRef.current = false;
         return;
       }
 
-      // CAUSA #2 FIX: asignar srcObject inmediatamente después del stream, antes
-      // de cualquier otro await, para mantenerse en el call stack del gesto iOS.
-      video.muted = true;
-      video.playsInline = true;
-      video.autoplay = true;
-      video.setAttribute("muted", "");
-      video.setAttribute("playsinline", "true");
-      video.setAttribute("autoplay", "true");
-      video.srcObject = stream;
-
-      // createDetector() corre en paralelo con waitForVideoReady() ya que el
-      // stream ya fue asignado y srcObject ya está seteado.
-      try {
-        const [detector] = await Promise.all([
-          createDetector(),
-          waitForVideoReady(video),
-        ]);
-
-        detectorRef.current = detector;
-
-        if (!detector) {
-          if (!cancelled) {
-            setSupported(false);
-            setError("Este navegador no soporta escaneo de códigos con cámara. Probá con Chrome o Edge reciente, o usá el scanner físico.");
-            setStarting(false);
-            stopScanner();
-          }
-          return;
-        }
-
-        setSupported(true);
-
-        await video.play();
-
-        if (!cancelled) {
-          setStarting(false);
-          frameRef.current = window.requestAnimationFrame(() => {
-            void tick();
-          });
-        }
-      } catch (err) {
-        if (cancelled) return;
-
-        const message = err instanceof DOMException
-          ? err.name === "NotAllowedError"
-            ? "No hay permiso para usar la cámara en este navegador. Revisá permisos del sitio y HTTPS si corresponde."
-            : err.name === "NotFoundError"
-              ? "No se encontró una cámara disponible en este dispositivo."
-              : "No se pudo iniciar la cámara para escanear el código."
-          : "No se pudo iniciar la cámara para escanear el código.";
-
-        setError(message);
-        setStarting(false);
-        stopScanner();
-      }
+      v.srcObject = stream;
+      // En algunos Android, load() ayuda a que el elemento procese el nuevo srcObject
+      v.load();
     };
 
-    void startScanner();
+    void init();
 
     return () => {
       cancelled = true;
-      stopScanner();
+      stopAll();
     };
-  }, [handleDetected, open, stopScanner]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -319,23 +268,32 @@ export function BarcodeCameraSheet({ open, onOpenChange, onDetected }: BarcodeCa
         </SheetHeader>
 
         <div className="space-y-4 p-5 pb-6">
-          <div className="relative overflow-hidden rounded-2xl border bg-black/95 shadow-inner">
-            {/* CAUSA #4 FIX: width y height HTML explícitos para que el compositor
-                del browser (especialmente iOS) reserve correctamente la capa de
-                renderizado. El CSS sigue controlando el layout visual. */}
+          <div className="relative overflow-hidden rounded-2xl border bg-black shadow-inner">
+            {/*
+              El <video> tiene autoPlay + muted + playsInline como atributos HTML
+              (no solo props de React) para máxima compatibilidad mobile.
+              onCanPlay arranca el loop de detección cuando el browser confirma
+              que hay frames disponibles — sin Promise chains ni play() manual.
+              width/height explícitos para que el compositor de iOS reserve el layer.
+            */}
             <video
               ref={videoRef}
-              muted
               autoPlay
+              muted
               playsInline
               controls={false}
               disablePictureInPicture
               width={1280}
               height={720}
-              className={cn("aspect-[3/4] w-full object-cover sm:aspect-video", !supported && "opacity-40")}
+              onCanPlay={handleCanPlay}
+              className={cn(
+                "aspect-[3/4] w-full object-cover sm:aspect-video",
+                !supported && "opacity-40"
+              )}
               aria-label="Vista previa de cámara para escaneo"
             />
 
+            {/* Marco guía */}
             <div className="pointer-events-none absolute inset-0 flex items-center justify-center p-6">
               <div className="relative w-full max-w-xs rounded-2xl border-2 border-primary/90 shadow-[0_0_0_9999px_rgba(0,0,0,0.35)]">
                 <span className="absolute -left-0.5 -top-0.5 h-6 w-6 rounded-tl-xl border-l-4 border-t-4 border-white" />
@@ -348,7 +306,7 @@ export function BarcodeCameraSheet({ open, onOpenChange, onDetected }: BarcodeCa
               </div>
             </div>
 
-            {starting && (
+            {phase === "starting" && (
               <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-black/60 text-white">
                 <Loader2 className="h-6 w-6 animate-spin" />
                 <span className="text-sm font-medium">Iniciando cámara...</span>
@@ -356,11 +314,11 @@ export function BarcodeCameraSheet({ open, onOpenChange, onDetected }: BarcodeCa
             )}
           </div>
 
-          {error ? (
+          {errorMsg ? (
             <div className="rounded-2xl border border-destructive/20 bg-destructive/5 px-4 py-3 text-sm text-destructive">
               <div className="flex items-start gap-2">
                 <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
-                <p>{error}</p>
+                <p>{errorMsg}</p>
               </div>
             </div>
           ) : (
