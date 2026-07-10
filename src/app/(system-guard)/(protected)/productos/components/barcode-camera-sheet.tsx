@@ -26,28 +26,44 @@ declare global {
 
 const PREFERRED_FORMATS = ["ean_13", "ean_8", "upc_a", "upc_e", "code_128", "code_39", "itf", "codabar"];
 
+// CAUSA #1 FIX: eliminado videoWidth>0 como condición bloqueante, agregado evento
+// "playing" (el más confiable en iOS), timeout de emergencia de 5000ms y flag
+// resolved para evitar resoluciones múltiples.
 function waitForVideoReady(video: HTMLVideoElement) {
-  if (video.readyState >= HTMLMediaElement.HAVE_METADATA && video.videoWidth > 0 && video.videoHeight > 0) {
+  if (video.readyState >= HTMLMediaElement.HAVE_METADATA) {
     return Promise.resolve();
   }
 
   return new Promise<void>((resolve) => {
+    let resolved = false;
+
     const handleReady = () => {
-      if (video.videoWidth > 0 && video.videoHeight > 0) {
-        cleanup();
-        resolve();
-      }
+      if (resolved) return;
+      resolved = true;
+      cleanup();
+      resolve();
     };
 
     const cleanup = () => {
       video.removeEventListener("loadedmetadata", handleReady);
       video.removeEventListener("loadeddata", handleReady);
       video.removeEventListener("canplay", handleReady);
+      video.removeEventListener("playing", handleReady);
     };
 
     video.addEventListener("loadedmetadata", handleReady);
     video.addEventListener("loadeddata", handleReady);
     video.addEventListener("canplay", handleReady);
+    video.addEventListener("playing", handleReady);
+
+    // Timeout de emergencia: resuelve aunque no lleguen eventos (5000ms)
+    setTimeout(() => {
+      if (!resolved) {
+        resolved = true;
+        cleanup();
+        resolve();
+      }
+    }, 5000);
   });
 }
 
@@ -63,6 +79,35 @@ async function createDetector() {
     : PREFERRED_FORMATS;
 
   return new Detector(formats.length > 0 ? { formats } : undefined);
+}
+
+// CAUSA #5 FIX: estrategia de dos intentos para getUserMedia.
+// 1º intento: exact "environment" con dimensiones ideales.
+// 2º intento si falla: facingMode "environment" sin exact.
+// 3º intento si falla: sin facingMode (cualquier cámara).
+async function getCamera(): Promise<MediaStream> {
+  try {
+    return await navigator.mediaDevices.getUserMedia({
+      audio: false,
+      video: {
+        facingMode: { exact: "environment" },
+        width: { ideal: 1280 },
+        height: { ideal: 720 },
+      },
+    });
+  } catch {
+    try {
+      return await navigator.mediaDevices.getUserMedia({
+        audio: false,
+        video: { facingMode: "environment" },
+      });
+    } catch {
+      return await navigator.mediaDevices.getUserMedia({
+        audio: false,
+        video: true,
+      });
+    }
+  }
 }
 
 interface BarcodeCameraSheetProps {
@@ -152,52 +197,83 @@ export function BarcodeCameraSheet({ open, onOpenChange, onDetected }: BarcodeCa
       setError(null);
       lastValueRef.current = null;
 
-      const detector = await createDetector();
-      detectorRef.current = detector;
+      // CAUSA #3 FIX: esperar a que termine la animación CSS del Sheet (slide-in
+      // duration-500) antes de inicializar la cámara. Algunos browsers (iOS) no
+      // renderizan frames de video mientras el elemento está bajo un CSS transform.
+      await new Promise<void>((r) => setTimeout(r, 520));
 
-      if (!detector) {
-        if (!cancelled) {
-          setSupported(false);
-          setError("Este navegador no soporta escaneo de códigos con cámara. Probá con Chrome o Edge reciente, o usá el scanner físico.");
-          setStarting(false);
-        }
+      if (cancelled) return;
+
+      // CAUSA #2 FIX: getUserMedia() va PRIMERO, antes de createDetector(), para
+      // que play() quede lo más cerca posible del gesto del usuario en iOS Safari.
+      // createDetector() corre en paralelo con el setup del video via Promise.all.
+      let stream: MediaStream;
+      try {
+        stream = await getCamera();
+      } catch (err) {
+        if (cancelled) return;
+
+        const message = err instanceof DOMException
+          ? err.name === "NotAllowedError"
+            ? "No hay permiso para usar la cámara en este navegador. Revisá permisos del sitio y HTTPS si corresponde."
+            : err.name === "NotFoundError"
+              ? "No se encontró una cámara disponible en este dispositivo."
+              : "No se pudo iniciar la cámara para escanear el código."
+          : "No se pudo iniciar la cámara para escanear el código.";
+
+        setError(message);
+        setStarting(false);
         return;
       }
 
-      setSupported(true);
+      if (cancelled) {
+        stream.getTracks().forEach((track) => track.stop());
+        return;
+      }
 
+      streamRef.current = stream;
+      const video = videoRef.current;
+
+      if (!video) {
+        stream.getTracks().forEach((track) => track.stop());
+        setStarting(false);
+        return;
+      }
+
+      // CAUSA #2 FIX: asignar srcObject inmediatamente después del stream, antes
+      // de cualquier otro await, para mantenerse en el call stack del gesto iOS.
+      video.muted = true;
+      video.playsInline = true;
+      video.autoplay = true;
+      video.setAttribute("muted", "");
+      video.setAttribute("playsinline", "true");
+      video.setAttribute("autoplay", "true");
+      video.srcObject = stream;
+
+      // createDetector() corre en paralelo con waitForVideoReady() ya que el
+      // stream ya fue asignado y srcObject ya está seteado.
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({
-          audio: false,
-          video: {
-            facingMode: { ideal: "environment" },
-            width: { ideal: 1280 },
-            height: { ideal: 720 },
-          },
-        });
+        const [detector] = await Promise.all([
+          createDetector(),
+          waitForVideoReady(video),
+        ]);
 
-        if (cancelled) {
-          stream.getTracks().forEach((track) => track.stop());
+        detectorRef.current = detector;
+
+        if (!detector) {
+          if (!cancelled) {
+            setSupported(false);
+            setError("Este navegador no soporta escaneo de códigos con cámara. Probá con Chrome o Edge reciente, o usá el scanner físico.");
+            setStarting(false);
+            stopScanner();
+          }
           return;
         }
 
-        streamRef.current = stream;
-        const video = videoRef.current;
-        if (!video) {
-          stream.getTracks().forEach((track) => track.stop());
-          setStarting(false);
-          return;
-        }
+        setSupported(true);
 
-        video.muted = true;
-        video.playsInline = true;
-        video.autoplay = true;
-        video.setAttribute("muted", "");
-        video.setAttribute("playsinline", "true");
-        video.setAttribute("autoplay", "true");
-        video.srcObject = stream;
-        await waitForVideoReady(video);
         await video.play();
+
         if (!cancelled) {
           setStarting(false);
           frameRef.current = window.requestAnimationFrame(() => {
@@ -244,6 +320,9 @@ export function BarcodeCameraSheet({ open, onOpenChange, onDetected }: BarcodeCa
 
         <div className="space-y-4 p-5 pb-6">
           <div className="relative overflow-hidden rounded-2xl border bg-black/95 shadow-inner">
+            {/* CAUSA #4 FIX: width y height HTML explícitos para que el compositor
+                del browser (especialmente iOS) reserve correctamente la capa de
+                renderizado. El CSS sigue controlando el layout visual. */}
             <video
               ref={videoRef}
               muted
@@ -251,6 +330,8 @@ export function BarcodeCameraSheet({ open, onOpenChange, onDetected }: BarcodeCa
               playsInline
               controls={false}
               disablePictureInPicture
+              width={1280}
+              height={720}
               className={cn("aspect-[3/4] w-full object-cover sm:aspect-video", !supported && "opacity-40")}
               aria-label="Vista previa de cámara para escaneo"
             />
