@@ -88,21 +88,37 @@ async function createUnifiedDetector(): Promise<UnifiedDetector | null> {
   }
 
   // 2º intento: ZXing como fallback JS puro (funciona en cualquier browser)
+  // Usamos MultiFormatReader de @zxing/library directamente para decodificar
+  // desde un canvas — más confiable que decodeOnceFromVideoElement que
+  // intenta controlar el video internamente y choca con autoPlay.
   try {
-    const { BrowserMultiFormatReader } = await import("@zxing/browser");
-    const reader = new BrowserMultiFormatReader();
+    const { MultiFormatReader, BinaryBitmap, HybridBinarizer, HTMLCanvasElementLuminanceSource } =
+      await import("@zxing/library");
+
+    const zxingReader = new MultiFormatReader();
+    const canvas = document.createElement("canvas");
+    const ctx = canvas.getContext("2d", { willReadFrequently: true });
+
     return {
       detect: async (video) => {
+        if (!ctx || video.videoWidth === 0 || video.videoHeight === 0) return null;
         try {
-          // decodeOnceFromVideoElement decodifica el frame actual del video
-          const result = await reader.decodeOnceFromVideoElement(video);
+          // Capturar frame actual del video en canvas
+          canvas.width = video.videoWidth;
+          canvas.height = video.videoHeight;
+          ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+          // Decodificar desde el canvas con ZXing
+          const luminanceSource = new HTMLCanvasElementLuminanceSource(canvas);
+          const binaryBitmap = new BinaryBitmap(new HybridBinarizer(luminanceSource));
+          const result = zxingReader.decode(binaryBitmap);
           return result?.getText?.() ?? null;
         } catch {
           // NotFoundException es normal cuando no hay código en el frame
           return null;
         }
       },
-      stop: () => { /* BrowserMultiFormatReader no requiere cleanup explícito */ },
+      stop: () => { /* MultiFormatReader no requiere cleanup */ },
     };
   } catch {
     return null;
