@@ -291,95 +291,81 @@ export function CreateProductoDialog({
         </DialogTrigger>
       )}
 
-      <DialogContent className="sm:max-w-[550px] p-0 overflow-hidden border-none shadow-2xl bg-background">
-        <DialogHeader className="p-6 pb-2 border-b bg-muted/20">
+      <DialogContent className="max-w-xl sm:max-w-2xl p-0 overflow-hidden border-none shadow-2xl bg-background">
+        <DialogHeader className="px-5 pt-5 pb-3 border-b bg-muted/20">
           <div className="flex items-center gap-2 text-primary">
             <Package className="h-5 w-5" />
             <DialogTitle className="text-xl font-bold italic tracking-tight">Nuevo Producto</DialogTitle>
           </div>
-          <DialogDescription>Completa la información base del producto</DialogDescription>
+          <DialogDescription>Completá la información base del producto</DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={save} className="p-6 space-y-4 max-h-[80vh] overflow-y-auto w-full">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 items-start">
-            <div className="space-y-2">
-              <Label className="text-xs font-bold uppercase text-muted-foreground">Imagen del Producto</Label>
+        <form onSubmit={save} className="px-5 py-4 space-y-3 max-h-[80vh] overflow-y-auto w-full">
+
+          {/* Fila 1: imagen + nombre + código de barras */}
+          <div className="flex gap-4 items-start">
+            {/* Imagen — cuadrado compacto */}
+            <div className="shrink-0 w-[88px] space-y-1">
+              <Label className="text-[10px] font-bold uppercase text-muted-foreground">Imagen</Label>
               <ImageUpload value={imagenUrl} onChange={setImagenUrl} onUploadingChange={setImageUploading} />
             </div>
 
-            <div className="space-y-4">
-              <div className="space-y-2">
+            {/* Nombre + código de barras */}
+            <div className="min-w-0 flex-1 space-y-2.5">
+              <div className="space-y-1">
                 <Label className="text-xs font-bold uppercase text-muted-foreground">Nombre</Label>
                 <div className="relative">
                   <Tag className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input value={nombre} onChange={(e) => setNombre(e.target.value)} className="pl-9 h-11 bg-muted/30" />
+                  <Input value={nombre} onChange={(e) => setNombre(e.target.value)} className="pl-9 h-10 bg-muted/30" />
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <div className="rounded-xl border border-border/70 bg-muted/20 p-3 sm:p-4">
-                  <div className="flex items-start gap-3">
-                    <div className="mt-0.5 rounded-lg bg-background p-2 text-primary shadow-sm">
-                      <Barcode className="h-4 w-4" />
-                    </div>
-                    <div className="min-w-0 flex-1 space-y-3">
-                      <div className="space-y-1">
-                        <Label className="text-xs font-bold uppercase text-muted-foreground">Código de barras</Label>
-                        <p className="text-sm text-foreground">Podés cargarlo escribiéndolo, con pistola o usando la cámara.</p>
-                      </div>
-
-                      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-                        <div className="relative flex-1">
-                          <Barcode className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                          <Input
-                            ref={codigoBarraInputRef}
-                            value={codigoBarra}
-                            onChange={(e) => setCodigoBarra(e.target.value)}
-                            className="h-11 bg-background pl-9"
-                            inputMode="numeric"
-                            autoComplete="off"
-                            placeholder="Ej.: 7791234567890"
-                            aria-describedby="codigo-barra-help"
-                          />
-                        </div>
-                        <Button
-                          type="button"
-                          variant="secondary"
-                          className="h-11 rounded-lg px-4 sm:shrink-0"
-                          onClick={() => setBarcodeCameraOpen(true)}
-                          aria-label="Escanear código de barras con cámara"
-                        >
-                          <Barcode className="mr-2 h-4 w-4" />
-                          Usar cámara
-                        </Button>
-                      </div>
-
-                      <div id="codigo-barra-help" className="grid gap-2 text-xs text-muted-foreground sm:grid-cols-3">
-                        <div className="rounded-lg border bg-background/80 px-3 py-2">
-                          <span className="font-medium text-foreground">Manual</span>: escribí o pegá el código si no tenés scanner.
-                        </div>
-                        <div className="rounded-lg border bg-background/80 px-3 py-2">
-                          <span className="font-medium text-foreground">Pistola</span>: dejá el cursor en este campo y escaneá directo.
-                        </div>
-                        <div className="rounded-lg border bg-background/80 px-3 py-2">
-                          <span className="font-medium text-foreground">Cámara</span>: usá el botón para leerlo desde el celular o la notebook.
-                        </div>
-                      </div>
-                    </div>
+              <div className="space-y-1">
+                <Label htmlFor="create-codigo-barra" className="text-xs font-bold uppercase text-muted-foreground">
+                  Código de barras
+                </Label>
+                <div className="flex gap-2">
+                  <div className="relative flex-1">
+                    <Barcode className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      id="create-codigo-barra"
+                      ref={codigoBarraInputRef}
+                      value={codigoBarra}
+                      onChange={(e) => setCodigoBarra(e.target.value)}
+                      className="h-10 bg-muted/30 pl-9"
+                      inputMode="numeric"
+                      autoComplete="off"
+                      placeholder="Ej.: 7791234567890"
+                      aria-describedby="create-codigo-barra-hint"
+                    />
                   </div>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    className="h-10 rounded-lg px-3 shrink-0"
+                    onClick={() => setBarcodeCameraOpen(true)}
+                    aria-label="Escanear código de barras con cámara"
+                  >
+                    <Barcode className="h-4 w-4" />
+                    <span className="hidden sm:inline ml-2">Cámara</span>
+                  </Button>
                 </div>
+                <p id="create-codigo-barra-hint" className="text-[11px] text-muted-foreground leading-tight">
+                  <span className="font-medium text-foreground">Manual</span>, <span className="font-medium text-foreground">pistola</span> o <span className="font-medium text-foreground">cámara</span> — dejá el cursor aquí al escanear con pistola.
+                </p>
               </div>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="space-y-2 sm:col-span-2">
+          {/* Fila 2: categoría + subcategoría + vencimiento */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="space-y-1 sm:col-span-2">
               <Label className="text-xs font-bold uppercase text-muted-foreground">Categoría</Label>
               <div className="flex gap-2">
                 <div className="relative flex-1">
                   <Layers className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground z-10" />
                   <Select value={categoriaId} onValueChange={setCategoriaId}>
-                    <SelectTrigger className="pl-9 h-11 bg-muted/30">
+                    <SelectTrigger className="pl-9 h-10 bg-muted/30">
                       <SelectValue placeholder="Seleccionar categoría..." />
                     </SelectTrigger>
                     <SelectContent>
@@ -408,12 +394,12 @@ export function CreateProductoDialog({
             </div>
 
             {categoriaId && subcategorias.length > 0 && (
-              <div className="space-y-2 sm:col-span-2 animate-in fade-in slide-in-from-top-2 duration-300">
+              <div className="space-y-1 sm:col-span-2 animate-in fade-in slide-in-from-top-2 duration-300">
                 <Label className="text-xs font-bold uppercase text-muted-foreground">Subcategoría (Opcional)</Label>
                 <div className="relative">
                   <Tag className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground z-10" />
                   <Select value={subcategoriaId} onValueChange={setSubcategoriaId}>
-                    <SelectTrigger className="pl-9 h-11 bg-muted/30">
+                    <SelectTrigger className="pl-9 h-10 bg-muted/30">
                       <SelectValue placeholder="Seleccionar subcategoría..." />
                     </SelectTrigger>
                     <SelectContent>
@@ -429,76 +415,76 @@ export function CreateProductoDialog({
               </div>
             )}
 
-            <div className="space-y-2 sm:col-span-1">
-              <Label className="text-sm font-semibold opacity-80">Vencimiento (Opcional)</Label>
+            <div className="space-y-1">
+              <Label className="text-xs font-bold uppercase text-muted-foreground">Vencimiento (Opcional)</Label>
               <div className="relative">
                 <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input type="date" value={fechaVencimiento} onChange={(e) => setFechaVencimiento(e.target.value)} className="pl-9 h-11 bg-muted/30" />
+                <Input type="date" value={fechaVencimiento} onChange={(e) => setFechaVencimiento(e.target.value)} className="pl-9 h-10 bg-muted/30" />
               </div>
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label className="text-sm font-semibold opacity-80">Costo Unitario</Label>
+          {/* Fila 3: precios */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="space-y-1">
+              <Label className="text-xs font-bold uppercase text-muted-foreground">Costo unitario</Label>
               <div className="relative">
                 <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input value={precioCosto} onChange={(e) => setPrecioCosto(e.target.value)} className="pl-9 h-11 bg-muted/30" placeholder="0.00" inputMode="decimal" />
+                <Input value={precioCosto} onChange={(e) => setPrecioCosto(e.target.value)} className="pl-9 h-10 bg-muted/30" placeholder="0.00" inputMode="decimal" />
               </div>
             </div>
 
-            <div className="space-y-2">
-              <Label className="text-sm font-semibold opacity-80 text-primary">Precio Venta</Label>
+            <div className="space-y-1">
+              <Label className="text-xs font-bold uppercase text-primary">Precio de venta</Label>
               <div className="relative">
                 <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-primary" />
-                <Input value={precioVenta} onChange={(e) => setPrecioVenta(e.target.value)} className="pl-9 h-11 bg-primary/5 border-primary/20 font-bold text-primary" placeholder="0.00" inputMode="decimal" />
+                <Input value={precioVenta} onChange={(e) => setPrecioVenta(e.target.value)} className="pl-9 h-10 bg-primary/5 border-primary/20 font-bold text-primary" placeholder="0.00" inputMode="decimal" />
               </div>
             </div>
           </div>
 
+          {/* Rentabilidad */}
           {(pv > 0 || pc > 0) && (
-            <div className={`rounded-xl border p-4 space-y-2 transition-all ${esGananciaNegativa ? 'bg-destructive/10 border-destructive/20' : 'bg-[color:var(--status-success-strong)]/5 border-[color:var(--status-success-strong)]/20'}`}>
-              <div className="flex justify-between items-center">
-                <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
-                  <TrendingUp className={`h-3.5 w-3.5 ${esGananciaNegativa ? 'text-destructive' : 'text-[color:var(--status-success-strong)]'}`} />
-                  RENTABILIDAD ESTIMADA
-                  {muestraDescuento && (
-                    <span className="text-[10px] font-bold text-[color:var(--status-warning)] bg-[color:var(--status-warning)]/10 px-1.5 py-0.5 rounded-full">c/desc.</span>
-                  )}
-                </div>
+            <div className={`rounded-lg border px-4 py-2.5 flex items-center justify-between gap-2 transition-all ${esGananciaNegativa ? 'bg-destructive/10 border-destructive/20' : 'bg-[color:var(--status-success-strong)]/5 border-[color:var(--status-success-strong)]/20'}`}>
+              <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+                <TrendingUp className={`h-3.5 w-3.5 ${esGananciaNegativa ? 'text-destructive' : 'text-[color:var(--status-success-strong)]'}`} />
+                Rentabilidad estimada
+                {muestraDescuento && (
+                  <span className="text-[10px] font-bold text-[color:var(--status-warning)] bg-[color:var(--status-warning)]/10 px-1.5 py-0.5 rounded-full">c/desc.</span>
+                )}
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                {esGananciaNegativa && (
+                  <AlertCircle className="h-3.5 w-3.5 text-destructive" />
+                )}
                 <span className={`text-sm font-black ${esGananciaNegativa ? 'text-destructive' : 'text-[color:var(--status-success-strong)]'}`}>
-                  $${gananciaUnitaria.toLocaleString()} (${margenPorcentaje.toFixed(1)}%)
+                  ${gananciaUnitaria.toLocaleString()} ({margenPorcentaje.toFixed(1)}%)
                 </span>
               </div>
-              {esGananciaNegativa && (
-                <div className="flex items-center gap-1.5 text-destructive text-[10px] font-bold uppercase">
-                  <AlertCircle className="h-3 w-3" />
-                  {muestraDescuento ? "Atención: Precio con descuento bajo el costo" : "Atención: Precio de venta bajo el costo"}
-                </div>
-              )}
             </div>
           )}
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label className="text-sm font-semibold opacity-80">Stock Inicial</Label>
+          {/* Fila 4: stock */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="space-y-1">
+              <Label className="text-xs font-bold uppercase text-muted-foreground">Stock inicial</Label>
               <div className="relative">
                 <Package className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input value={stockDisponibleUnits} onChange={(e) => setStockDisponibleUnits(e.target.value)} className="pl-9 h-11 bg-muted/30" placeholder="0" inputMode="numeric" />
+                <Input value={stockDisponibleUnits} onChange={(e) => setStockDisponibleUnits(e.target.value)} className="pl-9 h-10 bg-muted/30" placeholder="0" inputMode="numeric" />
               </div>
             </div>
 
-            <div className="space-y-2">
-              <Label className="text-sm font-semibold opacity-80">Alerta Stock Bajo</Label>
+            <div className="space-y-1">
+              <Label className="text-xs font-bold uppercase text-muted-foreground">Alerta stock bajo</Label>
               <div className="relative">
                 <Plus className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[color:var(--status-warning)]" />
-                <Input value={stockMinUnits} onChange={(e) => setStockMinUnits(e.target.value)} className="pl-9 h-11 bg-[color:var(--status-warning)]/5 border-[color:var(--status-warning)]/20" placeholder="5" inputMode="numeric" />
+                <Input value={stockMinUnits} onChange={(e) => setStockMinUnits(e.target.value)} className="pl-9 h-10 bg-[color:var(--status-warning)]/5 border-[color:var(--status-warning)]/20" placeholder="5" inputMode="numeric" />
               </div>
             </div>
           </div>
 
           {/* Sección Descuento */}
-          <div className="rounded-xl border border-dashed border-muted-foreground/30 p-4 space-y-3 bg-muted/10">
+          <div className="rounded-xl border border-dashed border-muted-foreground/30 p-3 space-y-3 bg-muted/10">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Percent className="h-4 w-4 text-muted-foreground" />
@@ -509,7 +495,6 @@ export function CreateProductoDialog({
 
             {descuentoActivo && (
               <div className="space-y-3 animate-in fade-in slide-in-from-top-2 duration-200">
-                {/* Selector de tipo */}
                 <div className="grid grid-cols-2 gap-2">
                   <button
                     type="button"
@@ -537,7 +522,7 @@ export function CreateProductoDialog({
                   </button>
                 </div>
 
-                <div className="space-y-2">
+                <div className="space-y-1">
                   {tipoDescuento === "porcentaje" ? (
                     <>
                       <Label className="text-xs font-bold uppercase text-muted-foreground">Porcentaje (%)</Label>
@@ -549,7 +534,7 @@ export function CreateProductoDialog({
                           max={99}
                           value={descuentoPorcentaje}
                           onChange={(e) => setDescuentoPorcentaje(e.target.value)}
-                          className="pl-9 h-11 bg-muted/30"
+                          className="pl-9 h-10 bg-muted/30"
                           placeholder="ej: 20"
                           inputMode="numeric"
                         />
@@ -565,7 +550,7 @@ export function CreateProductoDialog({
                           min={0.01}
                           value={descuentoMonto}
                           onChange={(e) => setDescuentoMonto(e.target.value)}
-                          className="pl-9 h-11 bg-muted/30"
+                          className="pl-9 h-10 bg-muted/30"
                           placeholder="ej: 500"
                           inputMode="decimal"
                         />
@@ -575,22 +560,22 @@ export function CreateProductoDialog({
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-2">
+                  <div className="space-y-1">
                     <Label className="text-xs font-bold uppercase text-muted-foreground">Desde (opcional)</Label>
                     <Input
                       type="datetime-local"
                       value={descuentoDesde}
                       onChange={(e) => setDescuentoDesde(e.target.value)}
-                      className="h-11 bg-muted/30"
+                      className="h-10 bg-muted/30"
                     />
                   </div>
-                  <div className="space-y-2">
+                  <div className="space-y-1">
                     <Label className="text-xs font-bold uppercase text-muted-foreground">Hasta (opcional)</Label>
                     <Input
                       type="datetime-local"
                       value={descuentoHasta}
                       onChange={(e) => setDescuentoHasta(e.target.value)}
-                      className="h-11 bg-muted/30"
+                      className="h-10 bg-muted/30"
                     />
                   </div>
                 </div>
@@ -620,7 +605,7 @@ export function CreateProductoDialog({
           </div>
 
           {/* Sección Atributos adicionales — colapsada por default */}
-          <div className="rounded-xl border border-dashed border-muted-foreground/30 p-4 space-y-3 bg-muted/10">
+          <div className="rounded-xl border border-dashed border-muted-foreground/30 p-3 space-y-3 bg-muted/10">
             <button
               type="button"
               onClick={() => setMostrarAtributos((v) => !v)}
@@ -641,11 +626,11 @@ export function CreateProductoDialog({
             )}
           </div>
 
-          <div className="flex gap-3 pt-4">
-            <Button type="button" variant="outline" className="flex-1 h-11" onClick={() => setOpen(false)} disabled={saving}>
+          <div className="flex gap-3 pt-2">
+            <Button type="button" variant="outline" className="flex-1 h-10" onClick={() => setOpen(false)} disabled={saving}>
               Cancelar
             </Button>
-            <Button type="submit" className="flex-1 h-11 font-bold shadow-lg" disabled={!canSubmit || saving || imageUploading || esGananciaNegativa}>
+            <Button type="submit" className="flex-1 h-10 font-bold shadow-lg" disabled={!canSubmit || saving || imageUploading || esGananciaNegativa}>
               {saving || imageUploading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Crear Producto"}
             </Button>
           </div>
