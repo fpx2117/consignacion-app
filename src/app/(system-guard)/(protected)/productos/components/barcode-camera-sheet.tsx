@@ -147,6 +147,11 @@ export function BarcodeCameraSheet({
 
   const [phase, setPhase] = React.useState<"idle" | "starting" | "ready" | "error">("idle");
   const [errorMsg, setErrorMsg] = React.useState<string | null>(null);
+  const [debugLog, setDebugLog] = React.useState<string[]>([]);
+
+  const log = React.useCallback((msg: string) => {
+    setDebugLog((prev) => [...prev.slice(-6), `${new Date().toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}: ${msg}`]);
+  }, []);
 
   // ── Detener todo ────────────────────────────────────────────────────────────
   const stopAll = React.useCallback(() => {
@@ -170,6 +175,7 @@ export function BarcodeCameraSheet({
   const startNativeLoop = React.useCallback(
     (detector: UnifiedDetector) => {
       scanningRef.current = true;
+      log("loop iniciado");
 
       const tick = async () => {
         if (!scanningRef.current) return;
@@ -179,6 +185,7 @@ export function BarcodeCameraSheet({
           try {
             const code = await detector.detect(v);
             if (code && code !== lastValueRef.current) {
+              log(`detectado: ${code}`);
               lastValueRef.current = code;
               stopAll();
               onDetected(code);
@@ -195,13 +202,14 @@ export function BarcodeCameraSheet({
 
       frameRef.current = requestAnimationFrame(() => void tick());
     },
-    [onDetected, onOpenChange, stopAll]
+    [onDetected, onOpenChange, stopAll, log]
   );
 
   // ── Cuando el video puede reproducir: iniciar detección ────────────────────
   const handleCanPlay = React.useCallback(() => {
     const v = videoRef.current;
     const detector = detectorRef.current;
+    log(`onCanPlay — detector:${detector ? "OK" : "null"} scanning:${scanningRef.current}`);
     if (!v || !detector || scanningRef.current) return;
 
     // Asegurar reproducción (autoPlay puede no haber arrancado aún)
@@ -210,11 +218,8 @@ export function BarcodeCameraSheet({
     }
 
     setPhase("ready");
-
-    // ZXing maneja su propio loop internamente con decodeOnceFromVideoElement;
-    // para el detector nativo usamos rAF.
     startNativeLoop(detector);
-  }, [startNativeLoop]);
+  }, [startNativeLoop, log]);
 
   // ── Efecto principal ────────────────────────────────────────────────────────
   React.useEffect(() => {
@@ -236,16 +241,19 @@ export function BarcodeCameraSheet({
     let cancelled = false;
 
     const init = async () => {
+      log("init: esperando animación...");
       // Esperar animación del Sheet (slide-in ~500ms) + paint del Portal de Radix
       await new Promise<void>((r) => setTimeout(r, 600));
       if (cancelled) return;
 
+      log("init: pidiendo cámara + detector...");
       // Obtener stream + detector en paralelo
       let stream: MediaStream;
       let detector: UnifiedDetector | null;
 
       try {
         [stream, detector] = await Promise.all([getCamera(), createUnifiedDetector()]);
+        log(`init: stream OK, detector:${detector ? "OK" : "null"}`);
       } catch (err) {
         if (cancelled) return;
         const msg =
@@ -256,6 +264,7 @@ export function BarcodeCameraSheet({
               ? "No se encontró ninguna cámara en este dispositivo."
               : "No se pudo acceder a la cámara."
             : "No se pudo acceder a la cámara.";
+        log(`ERROR cámara: ${msg}`);
         setErrorMsg(msg);
         setPhase("error");
         startedRef.current = false;
@@ -270,9 +279,9 @@ export function BarcodeCameraSheet({
 
       if (!detector) {
         stream.getTracks().forEach((t) => t.stop());
-        setErrorMsg(
-          "Este navegador no soporta escaneo de códigos. Usá el scanner físico o ingresá el código manualmente."
-        );
+        const msg = "Este navegador no soporta escaneo de códigos. Usá el scanner físico o ingresá el código manualmente.";
+        log(`ERROR: ${msg}`);
+        setErrorMsg(msg);
         setPhase("error");
         startedRef.current = false;
         return;
@@ -285,12 +294,15 @@ export function BarcodeCameraSheet({
       if (!v) {
         stream.getTracks().forEach((t) => t.stop());
         detector.stop();
-        setErrorMsg("Error interno al inicializar la cámara. Cerrá y volvé a intentar.");
+        const msg = "Error interno al inicializar la cámara. Cerrá y volvé a intentar.";
+        log(`ERROR: videoRef null`);
+        setErrorMsg(msg);
         setPhase("error");
         startedRef.current = false;
         return;
       }
 
+      log(`init: asignando srcObject, videoRef OK`);
       // Asignar stream al video. El browser dispara onCanPlay cuando hay frames.
       // load() fuerza el procesamiento del nuevo srcObject en algunos Android.
       v.srcObject = stream;
@@ -372,6 +384,13 @@ export function BarcodeCameraSheet({
                 <Barcode className="mt-0.5 h-4 w-4 shrink-0" />
                 <p>El escaneo se completa apenas el navegador detecta un código válido.</p>
               </div>
+            </div>
+          )}
+
+          {/* DEBUG TEMPORAL — borrar después */}
+          {debugLog.length > 0 && (
+            <div className="rounded-xl border border-yellow-400/40 bg-yellow-50/80 px-3 py-2 font-mono text-[10px] text-yellow-900 dark:bg-yellow-900/20 dark:text-yellow-200">
+              {debugLog.map((line, i) => <div key={i}>{line}</div>)}
             </div>
           )}
 
