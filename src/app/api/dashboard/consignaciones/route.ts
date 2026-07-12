@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/auth/require-auth";
+import { getIncludedGlobalSucursalIds } from "@/lib/dashboard/kpi-logic";
 
 export async function GET(req: Request) {
   const auth = await requireAuth();
@@ -10,7 +11,8 @@ export async function GET(req: Request) {
   const limit = Math.min(Number(searchParams.get("limit") ?? 10) || 10, 50);
   const sucursalId = auth.activeSucursalId;
   const isGlobal = auth.user.rol === "ADMIN" && sucursalId === 0;
-  const sucursalWhere = isGlobal ? {} : { sucursalId };
+  const includedGlobalIds = isGlobal ? await getIncludedGlobalSucursalIds() : [];
+  const sucursalWhere = isGlobal ? { sucursalId: { in: includedGlobalIds } } : { sucursalId };
 
   // Traemos consignaciones ABIERTAS con detalles + cliente
   const abiertas = await prisma.consignacion.findMany({

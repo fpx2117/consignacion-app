@@ -1093,7 +1093,7 @@ export const apiService = {
       body: JSON.stringify(payload),
     });
   },
-  updateSucursal(id: number, payload: { nombre?: string; activa?: boolean }) {
+  updateSucursal(id: number, payload: { nombre?: string; activa?: boolean; incluidaEnDashboardGlobal?: boolean }) {
     return apiData<SucursalResumen>(`/api/settings/sucursales/${id}`, {
       method: "PUT",
       body: JSON.stringify(payload),

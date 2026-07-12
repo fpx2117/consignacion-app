@@ -375,6 +375,7 @@ export type SucursalResumen = {
   nombre: string;
   esPrincipal: boolean;
   activa: boolean;
+  incluidaEnDashboardGlobal: boolean;
 };
 
 export type Branding = {

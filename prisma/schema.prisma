@@ -635,6 +635,9 @@ model Sucursal {
   nombre            String
   esPrincipal       Boolean            @default(false)
   activa            Boolean            @default(true)
+  // Si es false, esta sucursal se excluye de la vista "Todas las Sucursales" del dashboard
+  // (KPIs, tendencia, top productos/consignados, stock y gastos). No afecta su vista individual.
+  incluidaEnDashboardGlobal Boolean    @default(true)
   createdAt         DateTime           @default(now())
   updatedAt         DateTime           @updatedAt
   branding          Branding?
