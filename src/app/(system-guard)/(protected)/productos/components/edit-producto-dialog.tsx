@@ -239,7 +239,7 @@ export function EditProductoDialog({
       const dmonto = toNumber(descuentoMonto);
       const payload: UpdateProductoPayload = {
         nombre: nombre.trim(),
-        codigoBarra: codigoBarra.trim() || undefined,
+        codigoBarra: codigoBarra.trim() || null,
         precioVenta: pv,
         precioCosto: pc,
         stockMinUnits: toInt(stockMinUnits) || 0,

@@ -830,7 +830,7 @@ export type UpdateClienteInput = Partial<CreateClienteInput> & {
 export type CreateProductoInput = {
   nombre: string;
   descripcion?: string;
-  codigoBarra?: string;
+  codigoBarra?: string | null;
   sku?: string;
   precioVenta: Money;
   precioCosto: Money;
