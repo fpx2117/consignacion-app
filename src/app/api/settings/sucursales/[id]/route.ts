@@ -7,6 +7,7 @@ type RouteContext = { params: Promise<{ id: string }> };
 type UpdateSucursalBody = {
   nombre?: string;
   activa?: boolean;
+  incluidaEnDashboardGlobal?: boolean;
 };
 
 function parseSucursalId(id: string) {
@@ -30,7 +31,7 @@ export async function PUT(req: Request, { params }: RouteContext) {
       return NextResponse.json({ error: "ID invalido" }, { status: 400 });
     }
 
-    const { nombre, activa } = (await req.json()) as UpdateSucursalBody;
+    const { nombre, activa, incluidaEnDashboardGlobal } = (await req.json()) as UpdateSucursalBody;
     const existing = await prisma.sucursal.findUnique({ where: { id: sucursalId } });
 
     if (!existing) {
@@ -46,6 +47,7 @@ export async function PUT(req: Request, { params }: RouteContext) {
       data: {
         ...(nombre !== undefined ? { nombre: nombre.trim() } : {}),
         ...(activa !== undefined ? { activa } : {}),
+        ...(incluidaEnDashboardGlobal !== undefined ? { incluidaEnDashboardGlobal } : {}),
       },
     });
 

@@ -36,6 +36,7 @@ export default function BranchesClient() {
     // Form State
     const [nombre, setNombre] = useState("");
     const [activa, setActiva] = useState(true);
+    const [incluidaEnDashboardGlobal, setIncluidaEnDashboardGlobal] = useState(true);
     const [submitting, setSubmitting] = useState(false);
 
     // Delete State
@@ -63,6 +64,7 @@ export default function BranchesClient() {
         setEditingBranch(null);
         setNombre("");
         setActiva(true);
+        setIncluidaEnDashboardGlobal(true);
         setIsModalOpen(true);
     };
 
@@ -70,6 +72,7 @@ export default function BranchesClient() {
         setEditingBranch(branch);
         setNombre(branch.nombre);
         setActiva(branch.activa);
+        setIncluidaEnDashboardGlobal(branch.incluidaEnDashboardGlobal ?? true);
         setIsModalOpen(true);
     };
 
@@ -78,7 +81,7 @@ export default function BranchesClient() {
         try {
             setSubmitting(true);
             if (editingBranch) {
-                await apiService.updateSucursal(editingBranch.id, { nombre, activa });
+                await apiService.updateSucursal(editingBranch.id, { nombre, activa, incluidaEnDashboardGlobal });
                 toast.success("Sucursal actualizada correctamente.");
             } else {
                 await apiService.createSucursal({ nombre, activa });
@@ -166,6 +169,11 @@ export default function BranchesClient() {
                                         <Badge variant="outline" className={`text-[10px] uppercase font-bold tracking-wider ${branch.activa ? 'text-[color:var(--status-success)] border-[color:var(--status-success)]/30' : 'text-muted-foreground'}`}>
                                             {branch.activa ? 'Activa' : 'Inactiva'}
                                         </Badge>
+                                        {!branch.incluidaEnDashboardGlobal && (
+                                            <Badge variant="outline" className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground border-border/50">
+                                                Fuera del Dashboard Global
+                                            </Badge>
+                                        )}
                                     </div>
                                 </div>
                             </div>
@@ -238,6 +246,23 @@ export default function BranchesClient() {
                                 </div>
                             </div>
                         )}
+
+                        <div className="flex flex-col gap-3 p-4 bg-muted/30 border border-border/50 rounded-2xl">
+                            <div className="flex items-center justify-between">
+                                <div className="space-y-0.5">
+                                    <label className="text-sm font-semibold text-foreground/80">
+                                        Incluir en Dashboard Global
+                                    </label>
+                                    <p className="text-[12px] text-muted-foreground">
+                                        Si está apagado, esta sucursal no suma en la vista &quot;Todas las Sucursales&quot; del dashboard (KPIs, tendencia, top productos, gastos). Su vista individual no cambia.
+                                    </p>
+                                </div>
+                                <Switch
+                                    checked={incluidaEnDashboardGlobal}
+                                    onCheckedChange={setIncluidaEnDashboardGlobal}
+                                />
+                            </div>
+                        </div>
 
                         {editingBranch?.esPrincipal && (
                             <p className="text-xs text-muted-foreground italic bg-muted/50 p-3 rounded-lg border border-border/30">

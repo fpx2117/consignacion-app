@@ -45,6 +45,19 @@ const buildIncludedSharedExpenseWhere = (
   gasto: buildIncludedExpenseWhere(baseWhere),
 });
 
+/**
+ * IDs de sucursales que optaron por participar en la vista "Todas las Sucursales"
+ * del dashboard (Sucursal.incluidaEnDashboardGlobal). Se consulta solo cuando
+ * isGlobal es true.
+ */
+export async function getIncludedGlobalSucursalIds(): Promise<number[]> {
+  const rows = await prisma.sucursal.findMany({
+    where: { incluidaEnDashboardGlobal: true },
+    select: { id: true },
+  });
+  return rows.map((r) => r.id);
+}
+
 function getCatalogVisitDelegate(): CatalogVisitDelegate | null {
   return "catalogVisit" in prisma
     ? ((prisma as unknown as { catalogVisit?: CatalogVisitDelegate }).catalogVisit ?? null)
@@ -89,9 +102,11 @@ export async function getDashboardKpis(sucursalId: number, period: DashboardPeri
     const now = nowAR(tz);
     const dateWhere = resolvePeriodDateWhere(period, now, tz);
 
-    // Si sucursalId es 0 y es admin, no filtramos por sucursal (Vista Global)
+    // Si sucursalId es 0 y es admin, no filtramos por sucursal (Vista Global),
+    // pero solo se incluyen las sucursales que optaron por participar (opt-out via Sucursal.incluidaEnDashboardGlobal)
     const isGlobal = sucursalId === 0 && isAdmin;
-    const sucursalWhere = isGlobal ? {} : { sucursalId };
+    const includedGlobalIds = isGlobal ? await getIncludedGlobalSucursalIds() : [];
+    const sucursalWhere = isGlobal ? { sucursalId: { in: includedGlobalIds } } : { sucursalId };
     const configSucursalId = timezone.sucursalId;
     const [dashboardConfig, sharedCatalogConfig] = await Promise.all([
         configSucursalId
@@ -145,7 +160,7 @@ export async function getDashboardKpis(sucursalId: number, period: DashboardPeri
         prisma.consignacion.count({ where: { ...sucursalWhere, fecha: dateWhere } }),
         // 2. Stock
         isGlobal
-            ? prisma.producto.aggregate({ _sum: { stockDisponibleUnits: true, stockConsignadoUnits: true } })
+            ? prisma.producto.aggregate({ where: { sucursalId: { in: includedGlobalIds } }, _sum: { stockDisponibleUnits: true, stockConsignadoUnits: true } })
             : prisma.stockSucursal.aggregate({ where: sucursalWhere, _sum: { stockDisponibleUnits: true, stockConsignadoUnits: true } }),
         // 3. Ventas Totales por Tipo (excluir anuladas)
         prisma.venta.groupBy({
@@ -181,10 +196,10 @@ export async function getDashboardKpis(sucursalId: number, period: DashboardPeri
                 }
             }
         }),
-        // 7. Gastos propios incluidos en rentabilidad (pagados + recurrentes pendientes; o todos si global)
+        // 7. Gastos propios incluidos en rentabilidad (pagados + recurrentes pendientes; o de las sucursales incluidas si global)
         isGlobal
             ? prisma.gasto.aggregate({
-                where: buildIncludedExpenseWhere({ fecha: dateWhere }),
+                where: buildIncludedExpenseWhere({ fecha: dateWhere, sucursalId: { in: includedGlobalIds } }),
                 _sum: { monto: true },
                 _count: { _all: true }
             })
@@ -400,13 +415,14 @@ export async function getDashboardKpis(sucursalId: number, period: DashboardPeri
  */
 export async function getDashboardTendencia(sucursalId: number, period: DashboardPeriod, isAdmin: boolean = false, userId?: number | null) {
     const isGlobal = sucursalId === 0 && isAdmin;
+    const includedGlobalIds = isGlobal ? await getIncludedGlobalSucursalIds() : [];
     const timezone = await resolveKpiTimezone(sucursalId, userId);
     const tz = timezone.tz;
     const now = nowAR(tz);
     const dateWhere = resolvePeriodDateWhere(period, now, tz) ?? { gte: startOfMonthAR(now, tz) };
     const start = dateWhere.gte;
 
-    const sucursalWhere = isGlobal ? {} : { sucursalId };
+    const sucursalWhere = isGlobal ? { sucursalId: { in: includedGlobalIds } } : { sucursalId };
     const days = differenceInDays(now, start) + 1;
 
     const [ventas, pagos] = await Promise.all([
@@ -475,11 +491,12 @@ export async function getDashboardTendencia(sucursalId: number, period: Dashboar
  */
 export async function getDashboardTopProductos(sucursalId: number, period: DashboardPeriod, isAdmin: boolean = false, limit: number = 10, userId?: number | null) {
     const isGlobal = sucursalId === 0 && isAdmin;
+    const includedGlobalIds = isGlobal ? await getIncludedGlobalSucursalIds() : [];
     const timezone = await resolveKpiTimezone(sucursalId, userId);
     const tz = timezone.tz;
     const now = nowAR(tz);
 
-    const sucursalWhere = isGlobal ? {} : { sucursalId };
+    const sucursalWhere = isGlobal ? { sucursalId: { in: includedGlobalIds } } : { sucursalId };
     const dateWhere = resolvePeriodDateWhere(period, now, tz);
 
     const [liqItems, posItems] = await Promise.all([
@@ -551,11 +568,12 @@ export async function getDashboardTopConsignados(
     userId?: number | null,
 ) {
     const isGlobal = sucursalId === 0 && isAdmin;
+    const includedGlobalIds = isGlobal ? await getIncludedGlobalSucursalIds() : [];
     const timezone = await resolveKpiTimezone(sucursalId, userId);
     const tz = timezone.tz;
     const now = nowAR(tz);
 
-    const sucursalWhere = isGlobal ? {} : { sucursalId };
+    const sucursalWhere = isGlobal ? { sucursalId: { in: includedGlobalIds } } : { sucursalId };
     const dateWhere = resolvePeriodDateWhere(period, now, tz);
 
     const detalles = await prisma.consignacionDetalle.findMany({

@@ -7,6 +7,9 @@ export interface Sucursal {
   nombre: string;
   esPrincipal: boolean;
   activa: boolean;
+  // Opcional: solo se usa en la gestión de sucursales (/settings/branches), no en
+  // la lista de navegación (sucursalesPermitidas) que hidrata este store.
+  incluidaEnDashboardGlobal?: boolean;
 }
 
 export interface HydratePayload {
