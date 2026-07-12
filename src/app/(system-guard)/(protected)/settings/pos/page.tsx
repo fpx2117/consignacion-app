@@ -16,12 +16,13 @@ import { apiService } from "@/lib/apiService";
 import { cn } from "@/lib/utils";
 import { useSucursalStore } from "@/store/useSucursalStore";
 import type { Caja, Configuracion } from "@/lib/types";
+import { slugify, validateSlug } from "@/lib/storefront/slug";
 
 // ─── Tutorial compartido ───────────────────────────────────────────────────────
 import { TutorialButton } from "@/components/ui/tutorial-button";
 import { POS_TUTORIAL } from "@/lib/tutorial-content";
 
-type PosToggleKey = "usarControlDeCaja" | "mostrarListaPrecios" | "convertirTienda" | "separarListaPorSucursal";
+type PosToggleKey = "usarControlDeCaja" | "mostrarListaPrecios" | "convertirTienda" | "mostrarEnTiendaOnline";
 
 type PosConfig = Pick<
     Configuracion,
@@ -31,10 +32,17 @@ type PosConfig = Pick<
     | "mostrarListaPrecios"
     | "convertirTienda"
     | "tiendaMetodoPago"
-    | "separarListaPorSucursal"
+    | "mostrarEnTiendaOnline"
+    | "tiendaSlug"
     | "mpAccessTokenTienda"
     | "mpPublicKeyTienda"
 >;
+
+const SLUG_ERROR_MESSAGES: Record<string, string> = {
+    empty: "El nombre de la tienda no puede estar vacío",
+    "invalid-format": "Solo letras minúsculas, números y guiones",
+    reserved: "Ese nombre no está disponible, elegí otro",
+};
 
 function getErrorMessage(error: unknown, fallback: string) {
     return error instanceof Error ? error.message : fallback;
@@ -133,7 +141,11 @@ export default function PosSettingsPage() {
     const [mostrarListaPrecios, setMostrarListaPrecios] = React.useState(false);
     const [convertirTienda, setConvertirTienda] = React.useState(false);
     const [tiendaMetodoPago, setTiendaMetodoPago] = React.useState<"whatsapp" | "mercadopago">("whatsapp");
-    const [separarListaPorSucursal, setSepararListaPorSucursal] = React.useState(true);
+    const [mostrarEnTiendaOnline, setMostrarEnTiendaOnline] = React.useState(false);
+    const [tiendaSlug, setTiendaSlug] = React.useState<string>("");
+    const [tiendaSlugInput, setTiendaSlugInput] = React.useState<string>("");
+    const [slugError, setSlugError] = React.useState<string | null>(null);
+    const [modoUnificado, setModoUnificado] = React.useState(true);
     const [mpAccessTokenTienda, setMpAccessTokenTienda] = React.useState("");
     const [mpPublicKeyTienda, setMpPublicKeyTienda] = React.useState("");
     const [whatsappNumber, setWhatsappNumber] = React.useState("");
@@ -142,16 +154,19 @@ export default function PosSettingsPage() {
     const [loadingConfigToggle, setLoadingConfigToggle] = React.useState(false);
     const [loadingSubmit, setLoadingSubmit] = React.useState(false);
     const [loadingMetodoPago, setLoadingMetodoPago] = React.useState(false);
+    const [loadingModoTienda, setLoadingModoTienda] = React.useState(false);
+    const [loadingSlug, setLoadingSlug] = React.useState(false);
 
     const fetchInitialData = React.useCallback(async () => {
         try {
             const cachedConfig = localStorage.getItem(`config-caja-${activeSucursalId}`);
             if (cachedConfig !== null) setUsarControlDeCaja(cachedConfig === "true");
 
-            const [cajasRes, configRes, brandingRes] = await Promise.all([
+            const [cajasRes, configRes, brandingRes, tiendaGlobalRes] = await Promise.all([
                 apiService.getCajasDisponibles(),
                 apiService.getConfiguracionGeneral(),
                 apiService.getBranding().catch(() => null),
+                apiService.getTiendaGlobalConfig().catch(() => null),
             ]);
 
             setCajas(Array.isArray(cajasRes) ? cajasRes : []);
@@ -165,7 +180,10 @@ export default function PosSettingsPage() {
             setMostrarListaPrecios(config?.mostrarListaPrecios ?? false);
             setConvertirTienda(config?.convertirTienda ?? false);
             setTiendaMetodoPago(config?.tiendaMetodoPago ?? "whatsapp");
-            setSepararListaPorSucursal(config?.separarListaPorSucursal ?? true);
+            setMostrarEnTiendaOnline(config?.mostrarEnTiendaOnline ?? false);
+            setTiendaSlug(config?.tiendaSlug ?? "");
+            setTiendaSlugInput(config?.tiendaSlug ?? "");
+            setModoUnificado(tiendaGlobalRes?.modoUnificado ?? true);
             setMpAccessTokenTienda(config?.mpAccessTokenTienda ?? "");
             setMpPublicKeyTienda(config?.mpPublicKeyTienda ?? "");
         } catch (error) {
@@ -204,12 +222,46 @@ export default function PosSettingsPage() {
                 window.dispatchEvent(new CustomEvent("config-updated", { detail: { usarControlDeCaja: checked } }));
             } else if (key === "mostrarListaPrecios") setMostrarListaPrecios(checked);
             else if (key === "convertirTienda") setConvertirTienda(checked);
-            else if (key === "separarListaPorSucursal") setSepararListaPorSucursal(checked);
+            else if (key === "mostrarEnTiendaOnline") setMostrarEnTiendaOnline(checked);
             toast.success("Configuración actualizada");
         } catch {
             toast.error("Error al actualizar la configuración.");
         } finally {
             setLoadingConfigToggle(false);
+        }
+    };
+
+    const handleCambiarModoTienda = async (nuevoModo: boolean) => {
+        if (nuevoModo === modoUnificado) return;
+        setLoadingModoTienda(true);
+        try {
+            await apiService.actualizarTiendaGlobalConfig({ modoUnificado: nuevoModo });
+            setModoUnificado(nuevoModo);
+            toast.success("Modo de tienda actualizado");
+        } catch (error) {
+            toast.error(getErrorMessage(error, "Error al actualizar el modo de tienda."));
+        } finally {
+            setLoadingModoTienda(false);
+        }
+    };
+
+    const handleGuardarSlug = async () => {
+        const result = validateSlug(tiendaSlugInput);
+        if (!result.ok) {
+            setSlugError(SLUG_ERROR_MESSAGES[result.error]);
+            return;
+        }
+        setSlugError(null);
+        setLoadingSlug(true);
+        try {
+            await apiService.actualizarConfiguracionGeneral({ tiendaSlug: result.slug });
+            setTiendaSlug(result.slug);
+            setTiendaSlugInput(result.slug);
+            toast.success("Nombre de la tienda guardado");
+        } catch (error) {
+            toast.error(getErrorMessage(error, "No se pudo guardar el nombre de la tienda."));
+        } finally {
+            setLoadingSlug(false);
         }
     };
 
@@ -538,22 +590,103 @@ export default function PosSettingsPage() {
                                 </div>
                             )}
 
-                            {/* Separar por sucursal */}
+                            {/* Modo de Tienda (decisión global, afecta a todas las sucursales) */}
+                            <div className="p-4 sm:p-6 md:px-8 bg-muted/5 space-y-3">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                    <h3 className="font-medium text-sm sm:text-base text-foreground">Modo de Tienda</h3>
+                                    <HelpTip text="Esta decisión aplica a TODO el negocio, no solo a esta sucursal. 'Tienda unificada' combina en un solo link los productos de las sucursales que activaron 'Mostrar en Tienda Online'. 'Por sucursal' le da a cada una su propio link con el nombre que elija." />
+                                </div>
+                                <p className="text-xs sm:text-sm text-muted-foreground -mt-1">
+                                    Elegí si todas las sucursales comparten un solo catálogo, o si cada una tiene su propio link.
+                                </p>
+                                <div className="grid gap-3 sm:grid-cols-2">
+                                    <button
+                                        type="button"
+                                        disabled={loadingModoTienda}
+                                        onClick={() => handleCambiarModoTienda(true)}
+                                        className={cn(
+                                            "text-left p-4 rounded-2xl border-2 transition-all disabled:opacity-60",
+                                            modoUnificado
+                                                ? "border-[color:var(--primary)] bg-[color:var(--primary)]/5"
+                                                : "border-border/40 hover:border-border"
+                                        )}
+                                    >
+                                        <p className="font-semibold text-sm text-foreground">Tienda unificada</p>
+                                        <p className="text-xs text-muted-foreground mt-1">Un solo link (/lista) combina las sucursales que optaron in.</p>
+                                    </button>
+                                    <button
+                                        type="button"
+                                        disabled={loadingModoTienda}
+                                        onClick={() => handleCambiarModoTienda(false)}
+                                        className={cn(
+                                            "text-left p-4 rounded-2xl border-2 transition-all disabled:opacity-60",
+                                            !modoUnificado
+                                                ? "border-[color:var(--primary)] bg-[color:var(--primary)]/5"
+                                                : "border-border/40 hover:border-border"
+                                        )}
+                                    >
+                                        <p className="font-semibold text-sm text-foreground">Cada sucursal, su tienda</p>
+                                        <p className="text-xs text-muted-foreground mt-1">Cada sucursal tiene su propio link con el nombre que elija.</p>
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* Mostrar esta sucursal en la tienda online (opt-in) */}
                             <div className="p-4 sm:p-6 md:px-8 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-muted/20 transition-colors">
                                 <div className="flex-1 min-w-0 pr-2">
                                     <div className="flex items-center gap-2 flex-wrap">
-                                        <h3 className="font-medium text-sm sm:text-base text-foreground">Filtrar por esta Sucursal</h3>
-                                        <StatusBadge active={separarListaPorSucursal} />
-                                        <HelpTip text="El link público solo mostrará productos de ESTA sucursal. Desactivado, muestra todo el inventario." />
+                                        <h3 className="font-medium text-sm sm:text-base text-foreground">Mostrar esta Sucursal en la Tienda Online</h3>
+                                        <StatusBadge active={mostrarEnTiendaOnline} />
+                                        <HelpTip text="Si está apagado, los productos de esta sucursal NO aparecen en la tienda online (ni en la unificada ni en su propio link). Los productos nuevos no se agregan automáticamente hasta que actives esto." />
                                     </div>
                                     <p className="text-xs sm:text-sm text-muted-foreground mt-1.5">
-                                        El catálogo público mostrará solo productos de esta sucursal.
+                                        Controla si los productos de esta sucursal participan de la tienda online.
                                     </p>
                                 </div>
                                 <Switch
-                                    checked={separarListaPorSucursal}
-                                    onCheckedChange={(checked) => handleToggleConfig("separarListaPorSucursal", checked)}
+                                    checked={mostrarEnTiendaOnline}
+                                    onCheckedChange={(checked) => handleToggleConfig("mostrarEnTiendaOnline", checked)}
                                 />
+                            </div>
+
+                            {/* Nombre de la tienda / slug (solo relevante en modo "por sucursal") */}
+                            <div className={cn(
+                                "p-4 sm:p-6 md:px-8 space-y-2 transition-colors",
+                                !modoUnificado ? "hover:bg-muted/20" : "bg-muted/5 opacity-70"
+                            )}>
+                                <div className="flex items-center gap-2 flex-wrap">
+                                    <h3 className="font-medium text-sm sm:text-base text-foreground">Nombre de tu Tienda (URL)</h3>
+                                    <HelpTip text="Se usa cuando el Modo de Tienda está en 'Cada sucursal, su tienda'. Define la URL pública de esta sucursal: tudominio.com/{nombre}." />
+                                    {modoUnificado && (
+                                        <span className="text-[10px] font-bold uppercase tracking-wider bg-background border border-border/50 text-muted-foreground px-2 py-0.5 rounded-full">
+                                            Solo aplica en modo &quot;Por sucursal&quot;
+                                        </span>
+                                    )}
+                                </div>
+                                <div className="flex flex-col sm:flex-row gap-2 sm:items-center">
+                                    <div className="flex-1 min-w-0">
+                                        <Input
+                                            value={tiendaSlugInput}
+                                            onChange={(e) => { setTiendaSlugInput(e.target.value); setSlugError(null); }}
+                                            placeholder="mi-sucursal-norte"
+                                            className="h-11 rounded-xl bg-background border-border/50"
+                                        />
+                                        <p className="text-[11px] text-muted-foreground mt-1.5 ml-1 truncate">
+                                            {typeof window !== "undefined" ? window.location.origin : ""}/{slugify(tiendaSlugInput) || "..."}
+                                        </p>
+                                        {slugError && (
+                                            <p className="text-[11px] text-[color:var(--status-warning)] mt-1 ml-1 font-medium">{slugError}</p>
+                                        )}
+                                    </div>
+                                    <Button
+                                        onClick={handleGuardarSlug}
+                                        disabled={loadingSlug || tiendaSlugInput === tiendaSlug}
+                                        variant="outline"
+                                        className="h-11 rounded-xl shrink-0"
+                                    >
+                                        {loadingSlug ? <Loader2 className="h-4 w-4 animate-spin" /> : "Guardar"}
+                                    </Button>
+                                </div>
                             </div>
 
                             {/* Credenciales MP */}
@@ -606,15 +739,20 @@ export default function PosSettingsPage() {
                                     <div className="flex items-center gap-2 sm:gap-3 min-w-0">
                                         <div className="h-2 w-2 rounded-full bg-[color:var(--status-success-strong)] animate-pulse shrink-0" />
                                         <p className="text-xs sm:text-sm font-medium text-primary/80 truncate">
-                                            Activo en: <code className="bg-primary/10 px-1.5 py-0.5 rounded text-primary text-xs">/lista</code>
+                                            Activo en: <code className="bg-primary/10 px-1.5 py-0.5 rounded text-primary text-xs">
+                                                {modoUnificado ? "/lista" : tiendaSlug ? `/${tiendaSlug}` : "(falta definir el nombre de tu tienda)"}
+                                            </code>
                                         </p>
                                     </div>
                                     <Button
                                         variant="ghost"
                                         size="sm"
+                                        disabled={!modoUnificado && !tiendaSlug}
                                         className="text-primary hover:text-primary hover:bg-primary/10 font-bold rounded-xl shrink-0"
                                         onClick={() => {
-                                            const url = `${window.location.origin}/lista${separarListaPorSucursal && activeSucursalId ? `?sucursalId=${activeSucursalId}` : ""}`;
+                                            const url = modoUnificado
+                                                ? `${window.location.origin}/lista`
+                                                : `${window.location.origin}/${tiendaSlug}`;
                                             navigator.clipboard.writeText(url);
                                             toast.success("Link copiado al portapapeles");
                                         }}

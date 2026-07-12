@@ -5,6 +5,7 @@ import { registerCatalogVisit } from "@/lib/analytics/catalog-visit";
 import { normalizeStorefrontContent } from "@/lib/storefront/storefront-content";
 import type { PublicCatalogData, OnlineStoreSettings } from "@/lib/types";
 import { calcularDescuentoEfectivo } from "@/lib/storefront/descuento-utils";
+import { getTiendaGlobalConfig } from "@/lib/storefront/tienda-global";
 
 function readOptionalString(record: Record<string, unknown> | null | undefined, key: string) {
   const value = record?.[key];
@@ -22,7 +23,22 @@ export class PublicCatalogError extends Error {
 }
 
 export async function getPublicCatalogDataRaw(sucursalId: number | null): Promise<PublicCatalogData> {
-  const resolvedId = sucursalId || 1;
+  const { modoUnificado } = await getTiendaGlobalConfig();
+
+  let resolvedId: number;
+  if (modoUnificado) {
+    // En modo unificado el branding/pagos de la tienda combinada salen de la
+    // sucursal principal; los productos de todas las sucursales que optaron
+    // in se agregan más abajo vía el `where` de la consulta de productos.
+    const principal = await prisma.sucursal.findFirst({
+      where: { esPrincipal: true },
+      select: { id: true },
+    });
+    resolvedId = principal?.id || sucursalId || 1;
+  } else {
+    resolvedId = sucursalId || 1;
+  }
+
   const config = await prisma.configuracion.findUnique({
     where: { sucursalId: resolvedId },
     include: {
@@ -50,8 +66,14 @@ export async function getPublicCatalogDataRaw(sucursalId: number | null): Promis
     throw new PublicCatalogError("La lista de precios no está habilitada", 403);
   }
 
+  if (!modoUnificado && !config.mostrarEnTiendaOnline) {
+    throw new PublicCatalogError("Esta sucursal no tiene la tienda online habilitada", 403);
+  }
+
   const where: Prisma.ProductoWhereInput = { activo: true };
-  if (config.separarListaPorSucursal) {
+  if (modoUnificado) {
+    where.sucursal = { activa: true, configuracion: { mostrarEnTiendaOnline: true } };
+  } else {
     where.sucursalId = config.sucursalId;
   }
 

@@ -15,6 +15,7 @@ import type {
   DashboardTopProductos,
   DashboardTendencia,
   Configuracion,
+  TiendaGlobalConfig,
   ProfileTimezone,
   SucursalResumen,
   Venta,
@@ -433,6 +434,7 @@ export const API_ROUTES = {
   SETTINGS: {
     HORARIOS: "/api/settings/pos/horarios",
     GENERAL: "/api/settings/general",
+    TIENDA_GLOBAL: "/api/settings/tienda-global",
     PROFILE_TIMEZONE: "/api/settings/profile/timezone",
     BRANDING: "/api/settings/branding",
     SECURITY: {
@@ -509,6 +511,17 @@ export const apiService = {
 
    actualizarConfiguracionGeneral(data: Partial<Configuracion> & Record<string, unknown>) {
     return apiRequest<{ message: string; data: Configuracion }>(API_ROUTES.SETTINGS.GENERAL, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    });
+  },
+
+  getTiendaGlobalConfig() {
+    return apiData<TiendaGlobalConfig>(API_ROUTES.SETTINGS.TIENDA_GLOBAL);
+  },
+
+  actualizarTiendaGlobalConfig(data: TiendaGlobalConfig) {
+    return apiRequest<{ message: string; data: TiendaGlobalConfig }>(API_ROUTES.SETTINGS.TIENDA_GLOBAL, {
       method: "PUT",
       body: JSON.stringify(data),
     });
