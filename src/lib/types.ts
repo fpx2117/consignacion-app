@@ -111,6 +111,10 @@ export type Configuracion = {
   /** Método de pago elegido explícitamente por el usuario para el carrito: WhatsApp o Mercado Pago. */
   tiendaMetodoPago?: "whatsapp" | "mercadopago";
   separarListaPorSucursal: boolean;
+  /** Opt-in por sucursal: si no está activo, sus productos no aparecen en la tienda online (unificada ni por slug). */
+  mostrarEnTiendaOnline?: boolean;
+  /** Nombre elegido por el usuario para la URL de esta sucursal cuando el modo global es "por sucursal" (tudominio.com/{tiendaSlug}). */
+  tiendaSlug?: string | null;
   mostrarPreciosConsignacion?: boolean;
   mostrarCategoriasEnHeader?: boolean;
   tiendaLayout?: string;
@@ -125,6 +129,11 @@ export type Configuracion = {
   rubroNegocio?: string | null;
   /** Claves de Producto.atributosExtra promovidas a columna en la tabla de productos. */
   columnasAtributosProducto?: string[];
+};
+
+/** Modo de tienda para todo el negocio: unificada (un solo /lista combinado) o por sucursal (cada una con su /{tiendaSlug}). */
+export type TiendaGlobalConfig = {
+  modoUnificado: boolean;
 };
 
 export type SucursalPermitida = {

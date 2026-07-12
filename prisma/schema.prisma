@@ -29,6 +29,8 @@ model Configuracion {
   mpAccessTokenTienda            String?
   mpPublicKeyTienda              String?
   separarListaPorSucursal        Boolean  @default(true)
+  mostrarEnTiendaOnline          Boolean  @default(false)
+  tiendaSlug                     String?  @unique
   mostrarCategoriasEnHeader      Boolean  @default(true)
   tiendaLayout                   String   @default("grid")
   andreaniContratoDomicilio      String?
@@ -46,6 +48,16 @@ model Configuracion {
   // columna en la tabla de productos (selector manual, ver productos-view.tsx).
   columnasAtributosProducto      String[] @default([])
   sucursal                       Sucursal @relation(fields: [sucursalId], references: [id])
+}
+
+// Configuración global de la tienda online, única fila (id=1) para todo el negocio.
+// Decide si las sucursales que optaron in (Configuracion.mostrarEnTiendaOnline)
+// comparten un solo catálogo combinado (/lista) o cada una tiene su propia URL
+// por slug (/[slug]).
+model TiendaGlobalConfig {
+  id            Int      @id @default(autoincrement())
+  modoUnificado Boolean  @default(true)
+  updatedAt     DateTime @updatedAt
 }
 
 model Usuario {
@@ -748,7 +760,7 @@ model Proveedor {
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
-  sucursal Sucursal?                 @relation(fields: [sucursalId], references: [id], onDelete: SetNull)
+  sucursal Sucursal?                @relation(fields: [sucursalId], references: [id], onDelete: SetNull)
   facturas FacturaProveedor[]
   alias    ProductoProveedorAlias[]
 
@@ -793,24 +805,38 @@ model FacturaProveedor {
 }
 
 model FacturaProveedorItem {
-  id                     Int               @id @default(autoincrement())
-  facturaId              Int
-  productoId             Int?
-  textoOriginal          String
-  descripcionNormalizada String?
-  codigoProveedor        String?
-  cantidad               Int
-  precioUnitario         Decimal?          @db.Decimal(12, 4)
-  totalLinea             Decimal?          @db.Decimal(12, 2)
-  confianzaExtraccion    Float?
-  matchScore             Float?
-  matchMotivo            String?
-  estado                 EstadoItemFactura @default(PENDIENTE)
+  id                          Int               @id @default(autoincrement())
+  facturaId                   Int
+  productoId                  Int?
+  textoOriginal               String
+  descripcionNormalizada      String?
+  codigoProveedor             String?
+  cantidad                    Int
+  precioUnitario              Decimal?          @db.Decimal(12, 4)
+  totalLinea                  Decimal?          @db.Decimal(12, 2)
+  confianzaExtraccion         Float?
+  matchScore                  Float?
+  matchMotivo                 String?
+  estado                      EstadoItemFactura @default(PENDIENTE)
+  // Sugerencia de catalogo-global-api cuando no hubo match local (productoId
+  // null tras matchearItem()) — puramente informativa hasta que el usuario
+  // confirma o crea el producto; ver openspec/changes/catalogo-global-api.
+  // Se persiste acá (y no solo en memoria) porque la revisión del usuario
+  // puede ocurrir mucho después de procesar la factura.
+  candidatoGlobalId           String?
+  candidatoGlobalNombre       String?
+  candidatoGlobalCodigoBarras String?
+  candidatoGlobalScore        Float?
   // Columnas detectadas por la IA que no matchean ningún campo estándar (lote,
   // vencimiento, talle, color, etc. según el rubro) — pares clave-valor libres.
-  atributosExtra         Json?
-  createdAt              DateTime          @default(now())
-  updatedAt              DateTime          @updatedAt
+  atributosExtra              Json?
+  // Advertencias de la validación aritmética post-extracción (unitCost*cantidad
+  // vs totalLinea, o suma de líneas vs total de factura) — ver
+  // src/lib/ai/validar-consistencia-factura.ts. Informativas: nunca bloquean la
+  // confirmación manual del item.
+  advertencias                String[]          @default([])
+  createdAt                   DateTime          @default(now())
+  updatedAt                   DateTime          @updatedAt
 
   factura  FacturaProveedor @relation(fields: [facturaId], references: [id], onDelete: Cascade)
   producto Producto?        @relation(fields: [productoId], references: [id])
@@ -830,6 +856,10 @@ model ProductoProveedorAlias {
   confianza        Float    @default(1.0)
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
+  // Id del ProductoGlobal (catalogo-global-api) del que se originó este alias,
+  // cuando el item confirmado venía de una sugerencia de catálogo global —
+  // solo trazabilidad, nunca se resuelve consultando la API central de nuevo.
+  productoGlobalId String?
 
   proveedor Proveedor @relation(fields: [proveedorId], references: [id])
   producto  Producto  @relation(fields: [productoId], references: [id])

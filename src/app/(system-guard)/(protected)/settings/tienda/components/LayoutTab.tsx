@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useSucursalStore } from "@/store/useSucursalStore";
+import { apiService } from "@/lib/apiService";
 import type { StoreLayoutConfig } from "./types";
 
 type LayoutTabProps = { config: StoreLayoutConfig; setConfig: React.Dispatch<React.SetStateAction<StoreLayoutConfig>> };
@@ -243,7 +244,28 @@ function SectionEditor({ section, products, onUpdate, onToggle, onRemove }: {
 export function LayoutTab({ config, setConfig }: LayoutTabProps) {
     const activeSucursalId = useSucursalStore((s) => s.activeSucursalId);
     const isLive = config.convertirTienda;
-    const catalogoHref = activeSucursalId ? `/lista?sucursalId=${activeSucursalId}` : "/lista";
+    const [tiendaHrefInfo, setTiendaHrefInfo] = React.useState<{ modoUnificado: boolean; tiendaSlug: string | null }>({
+        modoUnificado: true,
+        tiendaSlug: null,
+    });
+
+    React.useEffect(() => {
+        Promise.all([
+            apiService.getTiendaGlobalConfig().catch(() => null),
+            apiService.getConfiguracionGeneral().catch(() => null),
+        ]).then(([tiendaGlobal, configuracion]) => {
+            setTiendaHrefInfo({
+                modoUnificado: tiendaGlobal?.modoUnificado ?? true,
+                tiendaSlug: configuracion?.tiendaSlug ?? null,
+            });
+        });
+    }, [activeSucursalId]);
+
+    const catalogoHref = tiendaHrefInfo.modoUnificado
+        ? "/lista"
+        : tiendaHrefInfo.tiendaSlug
+            ? `/${tiendaHrefInfo.tiendaSlug}`
+            : "/lista";
 
     return (
         <div className="space-y-6">

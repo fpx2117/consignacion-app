@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { requireAuth, requireRole } from "@/lib/auth/require-auth";
 import { isValidTimezone, TECHNICAL_FALLBACK_TZ } from "@/lib/timezone/get-configured-tz";
 import { RUBRO_MAX_LENGTH } from "@/modules/invoices/config/rubros";
+import { validateSlug } from "@/lib/storefront/slug";
 
 type GeneralSettingsBody = {
     minStockGlobal?: number;
@@ -25,6 +26,8 @@ type GeneralSettingsBody = {
     convertirTienda?: boolean;
     tiendaMetodoPago?: "whatsapp" | "mercadopago";
     separarListaPorSucursal?: boolean;
+    mostrarEnTiendaOnline?: boolean;
+    tiendaSlug?: string | null;
     mpAccessTokenTienda?: string | null;
     mpPublicKeyTienda?: string | null;
     tiendaLayout?: string;
@@ -95,6 +98,8 @@ export async function PUT(req: Request) {
             convertirTienda,
             tiendaMetodoPago,
             separarListaPorSucursal,
+            mostrarEnTiendaOnline,
+            tiendaSlug,
             mpAccessTokenTienda,
             mpPublicKeyTienda,
             tiendaLayout,
@@ -106,6 +111,24 @@ export async function PUT(req: Request) {
 
         if (tiendaMetodoPago !== undefined && tiendaMetodoPago !== "whatsapp" && tiendaMetodoPago !== "mercadopago") {
             return NextResponse.json({ error: "tiendaMetodoPago debe ser 'whatsapp' o 'mercadopago'" }, { status: 400 });
+        }
+
+        let normalizedTiendaSlug: string | null | undefined;
+        if (tiendaSlug !== undefined) {
+            if (tiendaSlug === null || tiendaSlug.trim() === "") {
+                normalizedTiendaSlug = null;
+            } else {
+                const result = validateSlug(tiendaSlug);
+                if (!result.ok) {
+                    const messages: Record<typeof result.error, string> = {
+                        empty: "El nombre de la tienda no puede estar vacío",
+                        "invalid-format": "El nombre de la tienda solo puede tener letras minúsculas, números y guiones",
+                        reserved: "Ese nombre no está disponible, elegí otro",
+                    };
+                    return NextResponse.json({ error: messages[result.error] }, { status: 400 });
+                }
+                normalizedTiendaSlug = result.slug;
+            }
         }
 
         if (rubroNegocio !== undefined && rubroNegocio !== null && rubroNegocio.length > RUBRO_MAX_LENGTH) {
@@ -203,6 +226,8 @@ export async function PUT(req: Request) {
                 ...(convertirTienda !== undefined && { convertirTienda }),
                 ...(tiendaMetodoPago !== undefined && { tiendaMetodoPago }),
                 ...(separarListaPorSucursal !== undefined && { separarListaPorSucursal }),
+                ...(mostrarEnTiendaOnline !== undefined && { mostrarEnTiendaOnline }),
+                ...(normalizedTiendaSlug !== undefined && { tiendaSlug: normalizedTiendaSlug }),
                 ...(mpAccessTokenTienda !== undefined && mpAccessTokenTienda !== "**************" && { mpAccessTokenTienda }),
                 ...(mpPublicKeyTienda !== undefined && { mpPublicKeyTienda }),
                 ...(tiendaLayout !== undefined && { tiendaLayout }),
@@ -231,6 +256,8 @@ export async function PUT(req: Request) {
                 convertirTienda: convertirTienda ?? false,
                 tiendaMetodoPago: tiendaMetodoPago ?? "whatsapp",
                 separarListaPorSucursal: separarListaPorSucursal ?? true,
+                mostrarEnTiendaOnline: mostrarEnTiendaOnline ?? false,
+                tiendaSlug: normalizedTiendaSlug ?? null,
                 mpAccessTokenTienda: mpAccessTokenTienda ?? null,
                 mpPublicKeyTienda: mpPublicKeyTienda ?? null,
                 tiendaLayout: tiendaLayout ?? "grid",
@@ -252,6 +279,9 @@ export async function PUT(req: Request) {
             
         return NextResponse.json({ data: configActualizada, message });
     } catch (error) {
+        if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+            return NextResponse.json({ error: "Ese nombre de tienda ya está en uso por otra sucursal" }, { status: 400 });
+        }
         console.error("Error actualizando configuración:", error);
         return NextResponse.json({ error: "Error al actualizar la configuración" }, { status: 500 });
     }

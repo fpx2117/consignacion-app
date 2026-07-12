@@ -2,23 +2,30 @@ import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
 import { verifyUserJwt } from "@/lib/auth/core";
 import { prisma } from "@/lib/prisma";
+import { getTiendaGlobalConfig } from "@/lib/storefront/tienda-global";
 
 export const dynamic = "force-dynamic";
 
 async function getPublicCatalogRedirect() {
-  const publicCatalogConfig = await prisma.configuracion.findFirst({
-    where: { mostrarListaPrecios: true },
-    select: { sucursalId: true, separarListaPorSucursal: true },
+  const { modoUnificado } = await getTiendaGlobalConfig();
+
+  if (modoUnificado) {
+    const principal = await prisma.sucursal.findFirst({ where: { esPrincipal: true }, select: { id: true } });
+    const config = await prisma.configuracion.findUnique({
+      where: { sucursalId: principal?.id ?? 1 },
+      select: { mostrarListaPrecios: true },
+    });
+    return config?.mostrarListaPrecios ? "/lista" : null;
+  }
+
+  // Modo "por sucursal": redirige a la primera sucursal que optó in y ya definió su slug.
+  const config = await prisma.configuracion.findFirst({
+    where: { mostrarListaPrecios: true, mostrarEnTiendaOnline: true, tiendaSlug: { not: null } },
+    select: { tiendaSlug: true },
     orderBy: { sucursalId: "asc" },
   });
 
-  if (!publicCatalogConfig) return null;
-
-  const query = publicCatalogConfig.separarListaPorSucursal
-    ? `?sucursalId=${publicCatalogConfig.sucursalId}`
-    : "";
-
-  return `/lista${query}`;
+  return config?.tiendaSlug ? `/${config.tiendaSlug}` : null;
 }
 
 export default async function Home() {
