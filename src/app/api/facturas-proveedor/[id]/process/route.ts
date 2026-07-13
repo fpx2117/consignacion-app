@@ -23,6 +23,7 @@ import {
 } from "@/lib/ai/invoice-ai-parser";
 import { construirContextoMatching, matchearItem } from "@/lib/ocr/matching-engine";
 import { normalizarProducto } from "@/lib/ocr/normalizar-producto";
+import { buscarCandidatosGlobales } from "@/lib/ai/catalogo-global-client";
 
 const PROCESABLES: EstadoFacturaProveedor[] = [
   EstadoFacturaProveedor.PENDIENTE,
@@ -113,11 +114,32 @@ export async function POST(
     // matchearItem() es CPU pura (sin consultas a la base) — se resuelve acá, antes
     // de abrir la transacción, para no alargarla con trabajo que no necesita estar
     // dentro de ella.
-    const itemsData = resultado.items.map((item) => {
-      const match = matchearItem(
+    const matches = resultado.items.map((item) =>
+      matchearItem(
         { textoOriginal: item.rawDescription, codigoProveedor: item.supplierCode },
         contextoMatching,
-      );
+      ),
+    );
+
+    // Catálogo global (catalogo-global-api, servicio separado — ver
+    // openspec/changes/catalogo-global-api): tercera fuente, consultada solo
+    // para líneas sin match local (mismo criterio que "requiereAlta" en el
+    // diálogo de revisión) — nunca reemplaza ni bloquea el matching existente,
+    // degrada a [] si la API central no está configurada o falla. Se consulta
+    // en paralelo por línea, después del matching local y fuera de la
+    // transacción, igual que este.
+    const rubroNegocio = configuracion?.rubroNegocio;
+    const candidatosGlobalesPorItem = await Promise.all(
+      resultado.items.map((item, index) =>
+        rubroNegocio && matches[index].productoId === null
+          ? buscarCandidatosGlobales({ rubro: rubroNegocio, descripcion: item.rawDescription, limit: 3 })
+          : Promise.resolve([]),
+      ),
+    );
+
+    const itemsData = resultado.items.map((item, index) => {
+      const match = matches[index];
+      const candidatoGlobal = candidatosGlobalesPorItem[index][0];
 
       return {
         facturaId,
@@ -133,6 +155,11 @@ export async function POST(
         matchMotivo: match.motivo,
         estado: match.estado,
         atributosExtra: item.atributosExtra ?? undefined,
+        advertencias: item.advertencias,
+        candidatoGlobalId: candidatoGlobal?.id ?? null,
+        candidatoGlobalNombre: candidatoGlobal?.nombreNormalizado ?? null,
+        candidatoGlobalCodigoBarras: candidatoGlobal?.codigoBarras ?? null,
+        candidatoGlobalScore: candidatoGlobal?.score ?? null,
       };
     });
 
