@@ -204,7 +204,30 @@
       "Bash(MAX_CHROMIUM_CONCURRENCY=1 npx tsx tmp_test_semaphore.ts)",
       "Bash(python \"C:\\\\Users\\\\Administrator\\\\.claude\\\\jobs\\\\04ce312e\\\\tmp\\\\test_visor.py\")",
       "Bash(python \"C:\\\\Users\\\\Administrator\\\\.claude\\\\jobs\\\\04ce312e\\\\tmp\\\\test_layout.py\")",
-      "Bash(python \"C:\\\\Users\\\\Administrator\\\\.claude\\\\jobs\\\\04ce312e\\\\tmp\\\\test_factura_dialog.py\")"
+      "Bash(python \"C:\\\\Users\\\\Administrator\\\\.claude\\\\jobs\\\\04ce312e\\\\tmp\\\\test_factura_dialog.py\")",
+      "Bash(python \"C:\\\\Users\\\\Administrator\\\\.claude\\\\jobs\\\\04ce312e\\\\tmp\\\\test_factura.py\")",
+      "Bash(python \"C:\\\\Users\\\\Administrator\\\\.claude\\\\jobs\\\\04ce312e\\\\tmp\\\\test_factura2.py\")",
+      "Bash(xargs -I{} basename {})",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:gist.github.com)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "Bash(npx --version)",
+      "Bash(rm -rf .next node_modules/.cache)",
+      "Bash(rm -f package-lock.json)",
+      "Bash(docker --version)",
+      "Bash(where postgres *)",
+      "Bash(git status *)",
+      "Bash(node \"C:/Users/conta/AppData/Local/Temp/claude/B--Programaci-n-consignacion-app/6c6b58a5-e749-463c-8da0-b327275134ad/scratchpad/check_slider.js\")",
+      "Bash(chromium-cli --help)",
+      "Bash(cp \"C:/Users/conta/AppData/Local/Temp/claude/B--Programaci-n-consignacion-app/6c6b58a5-e749-463c-8da0-b327275134ad/scratchpad/check_slider.js\" ./tmp_check_slider.js)",
+      "Bash(node tmp_check_slider.js)",
+      "Bash(python -c \"import playwright; print\\('ok'\\)\")",
+      "Bash(pip3 show *)",
+      "Bash(where.exe python *)",
+      "Bash(py -c \"import playwright\")",
+      "Bash(timeout 90 npx --yes playwright@latest install chromium --with-deps)",
+      "PowerShell(Get-NetTCPConnection *)",
+      "Bash(timeout 60 npx --yes playwright --version)"
     ]
   }
 }
