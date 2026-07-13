@@ -821,6 +821,7 @@ function SliderRow({ products: items, config, isConsigne, addToCart, setSelected
     autoScroll: boolean;
 }) {
     const scrollRef = React.useRef<HTMLDivElement>(null);
+    const groupRef = React.useRef<HTMLDivElement>(null);
 
     const scrollBy = (amount: number) => {
         scrollRef.current?.scrollBy({ left: amount, behavior: "smooth" });
@@ -828,8 +829,9 @@ function SliderRow({ products: items, config, isConsigne, addToCart, setSelected
 
     // Auto-scroll
     React.useEffect(() => {
-        if (!autoScroll || !scrollRef.current) return;
+        if (!autoScroll || !scrollRef.current || !groupRef.current) return;
         const el = scrollRef.current;
+        const group = groupRef.current;
         let raf: number;
         const speed = 1.2; // px por frame (~72px/s)
         const animate = () => {
@@ -843,19 +845,25 @@ function SliderRow({ products: items, config, isConsigne, addToCart, setSelected
         raf = requestAnimationFrame(animate);
         const pause = () => cancelAnimationFrame(raf);
         const resume = () => { raf = requestAnimationFrame(animate); };
-        el.addEventListener("mouseenter", pause);
-        el.addEventListener("mouseleave", resume);
+        // Escuchar sobre todo el grupo (incluye las flechas), no solo el
+        // contenedor de scroll: las flechas están posicionadas encima de él
+        // con z-10 y capturan el puntero, así que mouseenter/mouseleave en
+        // "el" nunca dispara al pasar sobre ellas y el auto-scroll no pausa.
+        group.addEventListener("mouseenter", pause);
+        group.addEventListener("mouseleave", resume);
         el.addEventListener("touchstart", pause, { passive: true });
         el.addEventListener("touchend", resume);
         return () => {
             cancelAnimationFrame(raf);
-            el.removeEventListener("mouseenter", pause);
-            el.removeEventListener("mouseleave", resume);
+            group.removeEventListener("mouseenter", pause);
+            group.removeEventListener("mouseleave", resume);
+            el.removeEventListener("touchstart", pause);
+            el.removeEventListener("touchend", resume);
         };
     }, [autoScroll]);
 
     return (
-        <div className="relative group">
+        <div ref={groupRef} className="relative group">
             {/* Flecha izquierda (desktop) */}
             <button onClick={() => scrollBy(-300)}
                 className="hidden md:flex absolute left-0 top-1/2 -translate-y-1/2 z-10 h-10 w-10 rounded-full bg-white/90 shadow-lg items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-white"
