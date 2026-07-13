@@ -3,6 +3,7 @@
 import * as React from "react";
 import { useDashboard } from "./hooks/use-dashboard";
 import { DashboardHeader } from "./components/dashboard-header";
+import { SucursalesGlobalToggle } from "./components/sucursales-global-toggle";
 import { OperationsSection } from "./components/operations-section";
 import { TopProductsSection } from "./components/top-products-section";
 import dynamic from "next/dynamic";
@@ -498,6 +499,9 @@ export default function DashboardPage() {
         />
 
         <div className="flex flex-wrap items-center justify-end gap-2">
+          {activeSucursalId === 0 && (
+            <SucursalesGlobalToggle onChanged={refresh} />
+          )}
           <Sheet>
             <SheetTrigger asChild>
               <button
