@@ -27,7 +27,7 @@ export function SucursalesGlobalToggle({ onChanged }: SucursalesGlobalToggleProp
     setLoading(true);
     try {
       const data = await apiService.getSucursales();
-      setSucursales(data);
+      setSucursales(data.filter((s) => s.activa));
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Error al cargar sucursales");
     } finally {
