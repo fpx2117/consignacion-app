@@ -15,6 +15,7 @@
 // - La descripción del item se conserva cruda para trazabilidad.
 // - No se inventan productos, precios, totales ni datos fiscales.
 
+import { z } from "zod";
 import { getAtributosTipicos, getRubroLabel } from "./rubros";
 
 export type InvoiceFieldKey =
@@ -506,6 +507,7 @@ Reglas para items:
 - lineTotal debe ser el subtotal de la línea escrito en la factura.
 - No calcules unitCost desde lineTotal/quantity.
 - No calcules lineTotal desde unitCost*quantity.
+- Antes de responder, verificá mentalmente que unitCost × quantity sea aproximadamente igual a lineTotal en cada línea. Si no coincide, es una señal de que puede haber tomado un valor de la fila incorrecta (columnas desalineadas) — en ese caso, preferí bajar tu propia confidence para esa línea en vez de forzar un valor que "cierre la cuenta" artificialmente.
 - Si aparece un precio tachado, promocional, bonificado o con descuento ambiguo, elegí el precio final solo si está claro; si no, usá null y agregá warning.
 - Si hay bonificaciones o descuentos por línea y no hay un precio final claro, preservá lo visible en extraAttributes o warnings.
 
@@ -681,188 +683,60 @@ export function buildExpectedOutputSchema(): Record<string, unknown> {
   };
 }
 
+// Schema de validación de runtime del JSON que devuelve el modelo — independiente
+// del JSON Schema que ve OpenRouter (buildExpectedOutputSchema(), arriba, que es
+// el contrato de generación con `strict: true`). Este es el chequeo de defensa
+// que corre en nuestro backend antes de confiar en la respuesta.
+//
+// Importante: esto valida FORMA y TIPOS, no CONTENIDO. Un `unitCost: 28500` que
+// en el papel dice 13900 pasa este schema sin error — sigue siendo un `number`
+// válido. La detección de ese tipo de error es responsabilidad exclusiva de
+// validarConsistenciaFactura() (src/lib/ai/validar-consistencia-factura.ts), no
+// de este schema. Ver openspec/changes/mejora-precision-lineas-factura-ocr/.
+const extraAttributeSchema = z.object({
+  key: z.string(),
+  value: z.string(),
+});
+
+const extractedInvoiceItemSchema = z.object({
+  rawDescription: z.string(),
+  supplierCode: z.string().nullable(),
+  quantity: z.number(),
+  unitCost: z.number().nullable(),
+  lineTotal: z.number().nullable(),
+  confidence: z.number().min(0).max(1).nullable(),
+  extraAttributes: z.array(extraAttributeSchema),
+});
+
+export const extractedInvoiceSchema = z.object({
+  supplier: z.object({
+    name: z.string().nullable(),
+    taxId: z.string().nullable(),
+  }),
+  invoice: z.object({
+    number: z.string().nullable(),
+    date: z.string().nullable(),
+    currency: z.string().nullable(),
+    total: z.number().nullable(),
+  }),
+  items: z.array(extractedInvoiceItemSchema),
+  warnings: z.array(z.string()),
+});
+
 /**
- * Valida la forma mínima del JSON devuelto por el modelo antes de confiar en él.
- *
- * Esta validación no reemplaza una validación completa con Zod/Ajv, pero sirve
- * como defensa rápida antes de persistir o mandar a matching-engine.ts.
+ * Valida la forma mínima del JSON devuelto por el modelo antes de confiar en él
+ * — defensa rápida antes de persistir o mandar a matching-engine.ts.
  */
 export function validateExtractedInvoice(data: unknown): InvoiceValidationResult {
-  const errors: string[] = [];
-
-  if (!data || typeof data !== "object") {
-    return {
-      valid: false,
-      errors: ["La respuesta no es un objeto JSON"],
-    };
-  }
-
-  const obj = data as Record<string, unknown>;
-
-  if (!obj.supplier || typeof obj.supplier !== "object" || Array.isArray(obj.supplier)) {
-    errors.push("Falta 'supplier' o no es un objeto");
-  } else {
-    const supplier = obj.supplier as Record<string, unknown>;
-
-    if (!("name" in supplier)) errors.push("Falta 'supplier.name'");
-    if (!("taxId" in supplier)) errors.push("Falta 'supplier.taxId'");
-
-    if (
-      supplier.name !== null &&
-      supplier.name !== undefined &&
-      typeof supplier.name !== "string"
-    ) {
-      errors.push("'supplier.name' debe ser string o null");
-    }
-
-    if (
-      supplier.taxId !== null &&
-      supplier.taxId !== undefined &&
-      typeof supplier.taxId !== "string"
-    ) {
-      errors.push("'supplier.taxId' debe ser string o null");
-    }
-  }
-
-  if (!obj.invoice || typeof obj.invoice !== "object" || Array.isArray(obj.invoice)) {
-    errors.push("Falta 'invoice' o no es un objeto");
-  } else {
-    const invoice = obj.invoice as Record<string, unknown>;
-
-    if (!("number" in invoice)) errors.push("Falta 'invoice.number'");
-    if (!("date" in invoice)) errors.push("Falta 'invoice.date'");
-    if (!("currency" in invoice)) errors.push("Falta 'invoice.currency'");
-    if (!("total" in invoice)) errors.push("Falta 'invoice.total'");
-
-    if (
-      invoice.number !== null &&
-      invoice.number !== undefined &&
-      typeof invoice.number !== "string"
-    ) {
-      errors.push("'invoice.number' debe ser string o null");
-    }
-
-    if (
-      invoice.date !== null &&
-      invoice.date !== undefined &&
-      typeof invoice.date !== "string"
-    ) {
-      errors.push("'invoice.date' debe ser string o null");
-    }
-
-    if (
-      invoice.currency !== null &&
-      invoice.currency !== undefined &&
-      typeof invoice.currency !== "string"
-    ) {
-      errors.push("'invoice.currency' debe ser string o null");
-    }
-
-    if (
-      invoice.total !== null &&
-      invoice.total !== undefined &&
-      typeof invoice.total !== "number"
-    ) {
-      errors.push("'invoice.total' debe ser number o null");
-    }
-  }
-
-  if (!Array.isArray(obj.items)) {
-    errors.push("'items' debe ser un array");
-  } else {
-    obj.items.forEach((item, index) => {
-      if (!item || typeof item !== "object" || Array.isArray(item)) {
-        errors.push(`'items[${index}]' debe ser un objeto`);
-        return;
-      }
-
-      const itemObj = item as Record<string, unknown>;
-
-      if (typeof itemObj.rawDescription !== "string") {
-        errors.push(`'items[${index}].rawDescription' debe ser string`);
-      }
-
-      if (
-        itemObj.supplierCode !== null &&
-        itemObj.supplierCode !== undefined &&
-        typeof itemObj.supplierCode !== "string"
-      ) {
-        errors.push(`'items[${index}].supplierCode' debe ser string o null`);
-      }
-
-      if (typeof itemObj.quantity !== "number" || Number.isNaN(itemObj.quantity)) {
-        errors.push(`'items[${index}].quantity' debe ser number`);
-      }
-
-      if (
-        itemObj.unitCost !== null &&
-        itemObj.unitCost !== undefined &&
-        (typeof itemObj.unitCost !== "number" || Number.isNaN(itemObj.unitCost))
-      ) {
-        errors.push(`'items[${index}].unitCost' debe ser number o null`);
-      }
-
-      if (
-        itemObj.lineTotal !== null &&
-        itemObj.lineTotal !== undefined &&
-        (typeof itemObj.lineTotal !== "number" || Number.isNaN(itemObj.lineTotal))
-      ) {
-        errors.push(`'items[${index}].lineTotal' debe ser number o null`);
-      }
-
-      if (
-        itemObj.confidence !== null &&
-        itemObj.confidence !== undefined &&
-        (typeof itemObj.confidence !== "number" ||
-          Number.isNaN(itemObj.confidence) ||
-          itemObj.confidence < 0 ||
-          itemObj.confidence > 1)
-      ) {
-        errors.push(`'items[${index}].confidence' debe ser number entre 0 y 1 o null`);
-      }
-
-      if (!Array.isArray(itemObj.extraAttributes)) {
-        errors.push(`'items[${index}].extraAttributes' debe ser array`);
-      } else {
-        itemObj.extraAttributes.forEach((attr, attrIndex) => {
-          if (!attr || typeof attr !== "object" || Array.isArray(attr)) {
-            errors.push(
-              `'items[${index}].extraAttributes[${attrIndex}]' debe ser objeto`,
-            );
-            return;
-          }
-
-          const attrObj = attr as Record<string, unknown>;
-
-          if (typeof attrObj.key !== "string") {
-            errors.push(
-              `'items[${index}].extraAttributes[${attrIndex}].key' debe ser string`,
-            );
-          }
-
-          if (typeof attrObj.value !== "string") {
-            errors.push(
-              `'items[${index}].extraAttributes[${attrIndex}].value' debe ser string`,
-            );
-          }
-        });
-      }
-    });
-  }
-
-  if (!Array.isArray(obj.warnings)) {
-    errors.push("'warnings' debe ser un array");
-  } else {
-    obj.warnings.forEach((warning, index) => {
-      if (typeof warning !== "string") {
-        errors.push(`'warnings[${index}]' debe ser string`);
-      }
-    });
-  }
+  const resultado = extractedInvoiceSchema.safeParse(data);
+  if (resultado.success) return { valid: true, errors: [] };
 
   return {
-    valid: errors.length === 0,
-    errors,
+    valid: false,
+    errors: resultado.error.issues.map((issue) => {
+      const ruta = issue.path.join(".");
+      return ruta ? `'${ruta}': ${issue.message}` : issue.message;
+    }),
   };
 }
 

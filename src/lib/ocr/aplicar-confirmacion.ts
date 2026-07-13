@@ -98,6 +98,13 @@ export async function registrarCostoYAlias(
     precioUnitario: number | null;
     moneda: string;
     /**
+     * Id de ProductoGlobal (catalogo-global-api) si el item confirmado venía de
+     * una sugerencia de catálogo global — se guarda en el alias como trazabilidad
+     * (ver openspec/changes/catalogo-global-api, Decisión 5); nunca se usa para
+     * volver a resolver nada, solo informativo.
+     */
+    productoGlobalId?: string | null;
+    /**
      * Producto recién creado en esta misma transacción: no hay costo "anterior"
      * real que comparar (precioCosto ya quedó seteado al crearlo), así que se
      * fuerza costoAnterior=null en vez de leerlo de vuelta de la DB — si no, la
@@ -151,10 +158,12 @@ export async function registrarCostoYAlias(
           productoId: params.productoId,
           codigoProveedor: params.codigoProveedor,
           textoNormalizado: params.descripcionNormalizada,
+          productoGlobalId: params.productoGlobalId ?? null,
         },
         update: {
           productoId: params.productoId,
           usoCount: { increment: 1 },
+          ...(params.productoGlobalId ? { productoGlobalId: params.productoGlobalId } : {}),
         },
       });
     } else if (params.descripcionNormalizada) {
@@ -168,7 +177,11 @@ export async function registrarCostoYAlias(
       if (existente) {
         await tx.productoProveedorAlias.update({
           where: { id: existente.id },
-          data: { productoId: params.productoId, usoCount: { increment: 1 } },
+          data: {
+            productoId: params.productoId,
+            usoCount: { increment: 1 },
+            ...(params.productoGlobalId ? { productoGlobalId: params.productoGlobalId } : {}),
+          },
         });
       } else {
         await tx.productoProveedorAlias.create({
@@ -176,6 +189,7 @@ export async function registrarCostoYAlias(
             proveedorId: params.proveedorId,
             productoId: params.productoId,
             textoNormalizado: params.descripcionNormalizada,
+            productoGlobalId: params.productoGlobalId ?? null,
           },
         });
       }

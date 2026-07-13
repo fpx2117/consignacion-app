@@ -27,6 +27,7 @@ import {
   type ExtractedInvoiceItem,
 } from "@/modules/invoices/config/invoice-extraction.config";
 import { extraerTextoFactura } from "@/lib/ocr/extraer-texto-factura";
+import { validarConsistenciaFactura } from "./validar-consistencia-factura";
 import {
   callOpenRouterJson,
   parseJsonContent,
@@ -52,6 +53,9 @@ export type InvoiceAiItem = {
   /** Columnas detectadas sin campo estándar (lote, vencimiento, talle, color,
    * etc.), como objeto plano — null si no se detectó ninguna. */
   atributosExtra: Record<string, string> | null;
+  /** Advertencias de la validación aritmética determinística post-extracción
+   * (ver validar-consistencia-factura.ts) — nunca generadas por el modelo. */
+  advertencias: string[];
 };
 
 export type InvoiceAiSuccessResult = {
@@ -124,24 +128,41 @@ export async function procesarFacturaConIA(input: {
   }
 
   const datos = normalizarExtraccion(parsed as Record<string, unknown>, texto);
+
+  // Validación determinística, en código, de lo que devolvió el modelo — nunca
+  // reescribe unitCost/quantity/lineTotal, solo topea (nunca sube) la confidence
+  // reportada y agrega advertencias. Ver validar-consistencia-factura.ts: el
+  // prompt ya le pide al modelo que se autoevalúe, pero en la práctica eso no
+  // es confiable por sí solo (caso real: confidence=1 en líneas con precios
+  // desalineados varios miles de pesos).
+  const consistencia = validarConsistenciaFactura(datos);
+  const itemsConConfidenceAjustada = datos.items.map((item, index) => {
+    const tope = consistencia.confidenceMaximaPorItem.get(index);
+    return tope != null && item.confidence != null
+      ? { ...item, confidence: Math.min(item.confidence, tope) }
+      : item;
+  });
+  const datosConConfidenceAjustada = { ...datos, items: itemsConConfidenceAjustada };
+
   // La confianza final es el mínimo entre "qué tan bien se leyó el archivo"
   // (Tesseract/pdf-parse, 0-100) y "qué tan segura está la IA de haber
-  // estructurado bien ese texto" (0-1). Una foto borrosa con OCR de baja
-  // confianza debe marcar la factura para revisión aunque la IA "suene seguro"
-  // interpretando el texto ruidoso que le llegó — EXCEPTO cuando se usó
-  // visión: ahí la IA tuvo la imagen real, no solo el texto degradado, así
-  // que capar su confianza contra confianzaOcr (bajo por definición en este
-  // camino) penalizaría injustamente una extracción que sí rescató bien.
+  // estructurado bien ese texto" (0-1, ya ajustada por la validación de
+  // consistencia de arriba). Una foto borrosa con OCR de baja confianza debe
+  // marcar la factura para revisión aunque la IA "suene seguro" interpretando
+  // el texto ruidoso que le llegó — EXCEPTO cuando se usó visión: ahí la IA
+  // tuvo la imagen real, no solo el texto degradado, así que capar su
+  // confianza contra confianzaOcr (bajo por definición en este camino)
+  // penalizaría injustamente una extracción que sí rescató bien.
   const globalConfidence = necesitaVision
-    ? calculateInvoiceConfidence(datos)
-    : Math.min(calculateInvoiceConfidence(datos), confianzaOcr / 100);
+    ? calculateInvoiceConfidence(datosConConfidenceAjustada)
+    : Math.min(calculateInvoiceConfidence(datosConConfidenceAjustada), confianzaOcr / 100);
 
   return {
     status: "success",
     ocrText: texto,
     supplier: datos.supplier,
     invoice: datos.invoice,
-    items: datos.items.map((item) => ({
+    items: itemsConConfidenceAjustada.map((item, index) => ({
       rawDescription: item.rawDescription,
       supplierCode: item.supplierCode,
       quantity: item.quantity,
@@ -151,8 +172,9 @@ export async function procesarFacturaConIA(input: {
       atributosExtra: item.extraAttributes.length > 0
         ? Object.fromEntries(item.extraAttributes.map((a) => [a.key, a.value]))
         : null,
+      advertencias: consistencia.itemsConAdvertencia.get(index) ?? [],
     })),
-    warnings: datos.warnings,
+    warnings: [...datos.warnings, ...consistencia.advertenciasFactura],
     globalConfidence,
     aiModel: respuesta.model,
     aiUsage: respuesta.usage,

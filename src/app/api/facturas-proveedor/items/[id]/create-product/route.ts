@@ -131,6 +131,7 @@ export async function POST(
         precioUnitario: conversion.precioConvertido ?? data.precioCosto,
         moneda: conversion.monedaFinal,
         productoNuevo: true,
+        productoGlobalId: item.candidatoGlobalId,
       });
 
       const itemActualizado = await tx.facturaProveedorItem.update({

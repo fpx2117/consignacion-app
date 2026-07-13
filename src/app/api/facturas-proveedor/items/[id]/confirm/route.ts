@@ -75,6 +75,7 @@ export async function POST(
         descripcionNormalizada: item.descripcionNormalizada,
         precioUnitario: conversion.precioConvertido,
         moneda: conversion.monedaFinal,
+        productoGlobalId: item.candidatoGlobalId,
       });
 
       const itemActualizado = await tx.facturaProveedorItem.update({
