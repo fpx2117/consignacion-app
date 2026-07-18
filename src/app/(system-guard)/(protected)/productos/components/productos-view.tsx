@@ -8,8 +8,15 @@ import { apiService } from "@/lib/apiService";
 import { useSucursalStore } from "@/store/useSucursalStore";
 import { formatMoney } from "@/lib/date-format/utils-format";
 import { cn } from "@/lib/utils";
-import { formatDateSafe, isExpired as dateExpired, isExpiringSoon } from "@/lib/date-format/utils-date";
-import { getCategoryColorByKey, getCategoryColorByName } from "@/lib/category-colors";
+import {
+  formatDateSafe,
+  isExpired as dateExpired,
+  isExpiringSoon,
+} from "@/lib/date-format/utils-date";
+import {
+  getCategoryColorByKey,
+  getCategoryColorByName,
+} from "@/lib/category-colors";
 import { calcularDescuentoEfectivo } from "@/lib/storefront/descuento-utils";
 
 // UI Components
@@ -92,7 +99,12 @@ interface StatCardProps {
   clickable?: boolean;
 }
 
-type SortKey = "nombre" | "precioVenta" | "stockDisponibleUnits" | "categoria" | `attr:${string}`;
+type SortKey =
+  | "nombre"
+  | "precioVenta"
+  | "stockDisponibleUnits"
+  | "categoria"
+  | `attr:${string}`;
 type SortDirection = "asc" | "desc";
 type ProductoViewItem = Producto & {
   subcategoria?: {
@@ -107,7 +119,9 @@ interface SortConfig {
 
 export function ProductosView() {
   const activeSucursalId = useSucursalStore((s) => s.activeSucursalId);
-  const catalogoHref = activeSucursalId ? `/lista?sucursalId=${activeSucursalId}` : "/lista";
+  const catalogoHref = activeSucursalId
+    ? `/lista?sucursalId=${activeSucursalId}`
+    : "/lista";
   const [items, setItems] = React.useState<ProductoViewItem[]>([]);
   const [statsItems, setStatsItems] = React.useState<ProductoViewItem[]>([]);
   const [allCategories, setAllCategories] = React.useState<Categoria[]>([]);
@@ -126,16 +140,24 @@ export function ProductosView() {
   const [serverTotal, setServerTotal] = React.useState(0);
   const [serverTotalPages, setServerTotalPages] = React.useState(1);
   const [itemsPerPage, setItemsPerPage] = React.useState(10);
-  const [sortConfig, setSortConfig] = React.useState<SortConfig>({ key: "nombre", direction: "asc" });
+  const [sortConfig, setSortConfig] = React.useState<SortConfig>({
+    key: "nombre",
+    direction: "asc",
+  });
   const [showSensitiveData, setShowSensitiveData] = React.useState(false);
-  const [stockDrawer, setStockDrawer] = React.useState<"low" | "out" | null>(null);
+  const [stockDrawer, setStockDrawer] = React.useState<"low" | "out" | null>(
+    null,
+  );
 
   // Columnas dinámicas de atributosExtra (Fase 4)
-  const [columnasAtributos, setColumnasAtributos] = React.useState<string[]>([]);
+  const [columnasAtributos, setColumnasAtributos] = React.useState<string[]>(
+    [],
+  );
   const [sugerenciasRubro, setSugerenciasRubro] = React.useState<string[]>([]);
 
   React.useEffect(() => {
-    apiService.getConfiguracionGeneral()
+    apiService
+      .getConfiguracionGeneral()
       .then((config) => {
         setColumnasAtributos(config?.columnasAtributosProducto ?? []);
         const hint = getAtributosTipicos(config?.rubroNegocio);
@@ -165,7 +187,9 @@ export function ProductosView() {
   const handleColumnasAtributosChange = async (nuevas: string[]) => {
     setColumnasAtributos(nuevas); // optimista
     try {
-      await apiService.actualizarConfiguracionGeneral({ columnasAtributosProducto: nuevas });
+      await apiService.actualizarConfiguracionGeneral({
+        columnasAtributosProducto: nuevas,
+      });
     } catch {
       toast.error("No se pudo guardar la preferencia de columnas");
     }
@@ -180,63 +204,81 @@ export function ProductosView() {
   // Obtener categoriaId para enviar al servidor
   const serverCategoriaId = React.useMemo(() => {
     if (categoryFilter === "all") return null;
-    const cat = allCategories.find(c => c.nombre === categoryFilter);
+    const cat = allCategories.find((c) => c.nombre === categoryFilter);
     return cat?.id ?? null;
   }, [categoryFilter, allCategories]);
 
-  const load = React.useCallback(async (page: number = 1, search: string = "", categoriaId: number | null = null, limit: number = 10) => {
-    setLoading(true);
-    try {
-      // Cache buster para evitar respuestas stale al cambiar de sucursal
-      const bust = `_t=${Date.now()}`;
-      const sp = new URLSearchParams();
-      sp.set("page", String(page));
-      sp.set("limit", String(limit));
-      if (search) sp.set("search", search);
-      if (categoriaId) sp.set("categoriaId", String(categoriaId));
-      sp.set("_t", String(Date.now()));
+  const load = React.useCallback(
+    async (
+      page: number = 1,
+      search: string = "",
+      categoriaId: number | null = null,
+      limit: number = 10,
+    ) => {
+      setLoading(true);
+      try {
+        // Cache buster para evitar respuestas stale al cambiar de sucursal
+        const bust = `_t=${Date.now()}`;
+        const sp = new URLSearchParams();
+        sp.set("page", String(page));
+        sp.set("limit", String(limit));
+        if (search) sp.set("search", search);
+        if (categoriaId) sp.set("categoriaId", String(categoriaId));
+        sp.set("_t", String(Date.now()));
 
-      const sid = activeSucursalId;
-      const sucursalHeaders: HeadersInit = sid ? { "x-sucursal-id": String(sid) } : {};
+        const sid = activeSucursalId;
+        const sucursalHeaders: HeadersInit = sid
+          ? { "x-sucursal-id": String(sid) }
+          : {};
 
-      const [resPaginados, resCategorias, resStats] = await Promise.all([
-        fetch(`/api/productos?${sp.toString()}`, {
-          headers: { "Content-Type": "application/json", ...sucursalHeaders },
-          cache: "no-store",
-        }).then(r => r.json()),
-        fetch(`/api/categorias?${bust}`, {
-          headers: sucursalHeaders,
-          cache: "no-store",
-        }).then(r => r.json()),
-        fetch(`/api/productos?${bust}`, {
-          headers: sucursalHeaders,
-          cache: "no-store",
-        }).then(r => r.json()),
-      ]);
+        const [resPaginados, resCategorias, resStats] = await Promise.all([
+          fetch(`/api/productos?${sp.toString()}`, {
+            headers: { "Content-Type": "application/json", ...sucursalHeaders },
+            cache: "no-store",
+          }).then((r) => r.json()),
+          fetch(`/api/categorias?${bust}`, {
+            headers: sucursalHeaders,
+            cache: "no-store",
+          }).then((r) => r.json()),
+          fetch(`/api/productos?${bust}`, {
+            headers: sucursalHeaders,
+            cache: "no-store",
+          }).then((r) => r.json()),
+        ]);
 
-      const paginadosPayload = resPaginados;
-      const activos = Array.isArray(paginadosPayload?.data)
-        ? paginadosPayload.data.filter((p: Producto) => p.activo !== false)
-        : [];
-      setItems(activos);
-      setServerTotal(paginadosPayload.total ?? 0);
-      setServerTotalPages(paginadosPayload.totalPages ?? 1);
-      setServerPage(paginadosPayload.page ?? page);
+        const paginadosPayload = resPaginados;
+        const activos = Array.isArray(paginadosPayload?.data)
+          ? paginadosPayload.data.filter((p: Producto) => p.activo !== false)
+          : [];
+        setItems(activos);
+        setServerTotal(paginadosPayload.total ?? 0);
+        setServerTotalPages(paginadosPayload.totalPages ?? 1);
+        setServerPage(paginadosPayload.page ?? page);
 
-      const cats = Array.isArray(resCategorias) ? resCategorias : (Array.isArray(resCategorias?.data) ? resCategorias.data : []);
-      setAllCategories(cats);
+        const cats = Array.isArray(resCategorias)
+          ? resCategorias
+          : Array.isArray(resCategorias?.data)
+            ? resCategorias.data
+            : [];
+        setAllCategories(cats);
 
-      const statsRaw = Array.isArray(resStats) ? resStats : (Array.isArray(resStats?.data) ? resStats.data : []);
-      setStatsItems(statsRaw);
-    } catch (e) {
-      console.error("Error loading data:", e);
-      toast.error("Error al sincronizar datos");
-      setItems([]);
-      setStatsItems([]);
-    } finally {
-      setLoading(false);
-    }
-  }, [activeSucursalId]);
+        const statsRaw = Array.isArray(resStats)
+          ? resStats
+          : Array.isArray(resStats?.data)
+            ? resStats.data
+            : [];
+        setStatsItems(statsRaw);
+      } catch (e) {
+        console.error("Error loading data:", e);
+        toast.error("Error al sincronizar datos");
+        setItems([]);
+        setStatsItems([]);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [activeSucursalId],
+  );
 
   // Al cambiar de sucursal: resetear filtros Y recargar en un solo efecto
   const prevSucursalRef = React.useRef(activeSucursalId);
@@ -290,17 +332,26 @@ export function ProductosView() {
         (p.codigoBarra && p.codigoBarra.toLowerCase().includes(term));
 
       const matchesStock =
-        stockFilter === "all" ? true :
-          stockFilter === "low" ? isLowStock(p) :
-            stockFilter === "out" ? isOutOfStock(p) :
-              stockFilter === "available" ? p.stockDisponibleUnits > 0 : true;
+        stockFilter === "all"
+          ? true
+          : stockFilter === "low"
+            ? isLowStock(p)
+            : stockFilter === "out"
+              ? isOutOfStock(p)
+              : stockFilter === "available"
+                ? p.stockDisponibleUnits > 0
+                : true;
 
-      const matchesCategory = categoryFilter === "all" || p.categoria?.nombre === categoryFilter;
-      const matchesSubCategory = subCategoryFilter === "all" || p.subcategoria?.nombre === subCategoryFilter;
+      const matchesCategory =
+        categoryFilter === "all" || p.categoria?.nombre === categoryFilter;
+      const matchesSubCategory =
+        subCategoryFilter === "all" ||
+        p.subcategoria?.nombre === subCategoryFilter;
 
       let matchesExpiry = true;
       if (expiryFilter !== "all") {
-        if (!p.fechaVencimiento && expiryFilter === "none") matchesExpiry = true;
+        if (!p.fechaVencimiento && expiryFilter === "none")
+          matchesExpiry = true;
         else if (!p.fechaVencimiento) matchesExpiry = false;
         else {
           const venc = new Date(p.fechaVencimiento);
@@ -313,9 +364,24 @@ export function ProductosView() {
           } else if (expiryFilter === "none") matchesExpiry = false;
         }
       }
-      return matchesQuery && matchesStock && matchesCategory && matchesSubCategory && matchesExpiry;
+      return (
+        matchesQuery &&
+        matchesStock &&
+        matchesCategory &&
+        matchesSubCategory &&
+        matchesExpiry
+      );
     });
-  }, [items, q, stockFilter, categoryFilter, subCategoryFilter, expiryFilter, isLowStock, isOutOfStock]);
+  }, [
+    items,
+    q,
+    stockFilter,
+    categoryFilter,
+    subCategoryFilter,
+    expiryFilter,
+    isLowStock,
+    isOutOfStock,
+  ]);
 
   // Ordenamiento
   const sorted = React.useMemo(() => {
@@ -327,21 +393,31 @@ export function ProductosView() {
 
         if (sortConfig.key.startsWith("attr:")) {
           const clave = sortConfig.key.slice(5);
-          aValue = (a.atributosExtra as Record<string, string> | null | undefined)?.[clave] ?? "";
-          bValue = (b.atributosExtra as Record<string, string> | null | undefined)?.[clave] ?? "";
+          aValue =
+            (a.atributosExtra as Record<string, string> | null | undefined)?.[
+              clave
+            ] ?? "";
+          bValue =
+            (b.atributosExtra as Record<string, string> | null | undefined)?.[
+              clave
+            ] ?? "";
         } else if (sortConfig.key === "categoria") {
           aValue = a.categoria?.nombre || "";
           bValue = b.categoria?.nombre || "";
         } else {
-          aValue = a[sortConfig.key as keyof ProductoViewItem] as string | number | null | undefined;
-          bValue = b[sortConfig.key as keyof ProductoViewItem] as string | number | null | undefined;
+          aValue = a[sortConfig.key as keyof ProductoViewItem] as
+            string | number | null | undefined;
+          bValue = b[sortConfig.key as keyof ProductoViewItem] as
+            string | number | null | undefined;
         }
 
         const comparableA = aValue ?? "";
         const comparableB = bValue ?? "";
 
-        if (comparableA < comparableB) return sortConfig.direction === "asc" ? -1 : 1;
-        if (comparableA > comparableB) return sortConfig.direction === "asc" ? 1 : -1;
+        if (comparableA < comparableB)
+          return sortConfig.direction === "asc" ? -1 : 1;
+        if (comparableA > comparableB)
+          return sortConfig.direction === "asc" ? 1 : -1;
         return 0;
       });
     }
@@ -351,18 +427,33 @@ export function ProductosView() {
   const handleSort = (key: SortKey) => {
     setSortConfig((current) => ({
       key,
-      direction: current.key === key && current.direction === "asc" ? "desc" : "asc",
+      direction:
+        current.key === key && current.direction === "asc" ? "desc" : "asc",
     }));
   };
 
-  const stats = React.useMemo(() => ({
-    // total usa el count del servidor (más preciso que items.length que es la página actual)
-    total: serverTotal || items?.length || 0,
-    lowStock: statsItems?.filter(i => isLowStock(i)).length || 0,
-    outOfStock: statsItems?.filter(i => isOutOfStock(i)).length || 0,
-    valorVenta: statsItems?.reduce((acc, i) => acc + (Number(i.precioVenta) * i.stockDisponibleUnits), 0) || 0,
-    utilidad: statsItems?.reduce((acc, i) => acc + ((Number(i.precioVenta) - Number(i.precioCosto)) * i.stockDisponibleUnits), 0) || 0
-  }), [items, serverTotal, statsItems, isLowStock, isOutOfStock]);
+  const stats = React.useMemo(
+    () => ({
+      // total usa el count del servidor (más preciso que items.length que es la página actual)
+      total: serverTotal || items?.length || 0,
+      lowStock: statsItems?.filter((i) => isLowStock(i)).length || 0,
+      outOfStock: statsItems?.filter((i) => isOutOfStock(i)).length || 0,
+      valorVenta:
+        statsItems?.reduce(
+          (acc, i) => acc + Number(i.precioVenta) * i.stockDisponibleUnits,
+          0,
+        ) || 0,
+      utilidad:
+        statsItems?.reduce(
+          (acc, i) =>
+            acc +
+            (Number(i.precioVenta) - Number(i.precioCosto)) *
+              i.stockDisponibleUnits,
+          0,
+        ) || 0,
+    }),
+    [items, serverTotal, statsItems, isLowStock, isOutOfStock],
+  );
 
   const lowStockItems = React.useMemo(
     () => statsItems?.filter((item) => isLowStock(item)) ?? [],
@@ -376,11 +467,21 @@ export function ProductosView() {
 
   const renderStockDrawerContent = () => {
     if (stockDrawer === "out") {
-      return <ProductosAgotadosSheetContent productos={outOfStockItems} onStockUpdated={reload} />;
+      return (
+        <ProductosAgotadosSheetContent
+          productos={outOfStockItems}
+          onStockUpdated={reload}
+        />
+      );
     }
 
     if (stockDrawer === "low") {
-      return <ProductosBajoStockSheetContent productos={lowStockItems} onStockUpdated={reload} />;
+      return (
+        <ProductosBajoStockSheetContent
+          productos={lowStockItems}
+          onStockUpdated={reload}
+        />
+      );
     }
 
     return null;
@@ -388,7 +489,6 @@ export function ProductosView() {
 
   return (
     <div className="max-w-[1600px] mx-auto space-y-8 p-6 md:p-10 pb-20 text-foreground selection:bg-primary/20 font-sans">
-
       {/* HEADER */}
       <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-border/40">
         <div className="space-y-1.5">
@@ -397,13 +497,13 @@ export function ProductosView() {
             Inventario
           </h1>
           <p className="text-muted-foreground text-sm md:text-base max-w-2xl">
-            Gestiona tu catálogo, controla existencias y supervisá la rentabilidad en tiempo real.
+            Gestiona tu catálogo, controla existencias y supervisá la
+            rentabilidad en tiempo real.
           </p>
         </div>
 
         {/* â”€â”€ BOTONES HEADER â”€â”€ */}
         <div className="flex items-center gap-3 w-full sm:w-auto">
-
           {/* DESKTOP: todos los botones visibles */}
           <div className="hidden sm:flex items-center gap-2">
             {/* Grupo secundario */}
@@ -411,8 +511,17 @@ export function ProductosView() {
               <HistoryReportDialog />
               <DownloadInventoryButton />
               <FacturaProveedorDialog onCreated={reload} />
-              <Button asChild variant="ghost" size="sm" className="h-9 px-3 rounded-lg font-bold text-sm hover:bg-background hover:text-primary transition-all">
-                <Link href={catalogoHref} target="_blank" rel="noopener noreferrer">
+              <Button
+                asChild
+                variant="ghost"
+                size="sm"
+                className="h-9 px-3 rounded-lg font-bold text-sm hover:bg-background hover:text-primary transition-all"
+              >
+                <Link
+                  href={catalogoHref}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
                   <ExternalLink className="h-3.5 w-3.5 mr-1.5" />
                   Catálogo
                 </Link>
@@ -421,8 +530,12 @@ export function ProductosView() {
             {/* CTA principal */}
             <CreateProductoDialog
               onCreated={reload}
+              onCategoriasChanged={reload}
               trigger={
-                <Button size="lg" className="h-10 px-5 rounded-xl font-bold shadow-lg shadow-primary/20 hover:shadow-primary/40 transition-all hover:scale-[1.02]">
+                <Button
+                  size="lg"
+                  className="h-10 px-5 rounded-xl font-bold shadow-lg shadow-primary/20 hover:shadow-primary/40 transition-all hover:scale-[1.02]"
+                >
                   <Plus className="h-4 w-4 mr-2 stroke-[3px]" />
                   Nuevo Producto
                 </Button>
@@ -435,8 +548,12 @@ export function ProductosView() {
             {/* CTA principal siempre visible */}
             <CreateProductoDialog
               onCreated={reload}
+              onCategoriasChanged={reload}
               trigger={
-                <Button size="default" className="h-10 px-4 rounded-xl font-bold shadow-lg shadow-primary/20">
+                <Button
+                  size="default"
+                  className="h-10 px-4 rounded-xl font-bold shadow-lg shadow-primary/20"
+                >
                   <Plus className="h-4 w-4 mr-1.5 stroke-[3px]" />
                   Nuevo
                 </Button>
@@ -445,11 +562,19 @@ export function ProductosView() {
             {/* Dropdown ⋯ — siempre al extremo derecho */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="icon" className="h-10 w-10 rounded-xl border-border/60">
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-10 w-10 rounded-xl border-border/60"
+                >
                   <MoreVertical className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" side="bottom" className="w-56 rounded-xl border-border/60 shadow-xl p-1.5 space-y-0.5">
+              <DropdownMenuContent
+                align="end"
+                side="bottom"
+                className="w-56 rounded-xl border-border/60 shadow-xl p-1.5 space-y-0.5"
+              >
                 {/* Auditoría — [&_span]:!inline fuerza el texto aunque tenga hidden sm:inline */}
                 <div className="[&_button]:w-full [&_button]:justify-start [&_button]:rounded-lg [&_button]:h-10 [&_button]:text-sm [&_button]:font-semibold [&_button]:px-3 [&_button]:border-0 [&_button]:bg-transparent [&_button]:shadow-none [&_span]:!inline">
                   <HistoryReportDialog />
@@ -462,8 +587,16 @@ export function ProductosView() {
                   <FacturaProveedorDialog onCreated={reload} />
                 </div>
                 <DropdownMenuSeparator className="my-1" />
-                <DropdownMenuItem asChild className="rounded-lg font-semibold cursor-pointer h-10">
-                  <Link href={catalogoHref} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2.5">
+                <DropdownMenuItem
+                  asChild
+                  className="rounded-lg font-semibold cursor-pointer h-10"
+                >
+                  <Link
+                    href={catalogoHref}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-2.5"
+                  >
                     <ExternalLink className="h-4 w-4 text-primary" />
                     Ver Catálogo público
                   </Link>
@@ -472,7 +605,6 @@ export function ProductosView() {
             </DropdownMenu>
           </div>
         </div>
-
       </header>
 
       {/* STATS */}
@@ -498,7 +630,12 @@ export function ProductosView() {
         </Button>
       </div>
       <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
-        <StatCard label="Total Items" value={stats.total} icon={LayoutGrid} color="default" />
+        <StatCard
+          label="Total Items"
+          value={stats.total}
+          icon={LayoutGrid}
+          color="default"
+        />
         <StatCard
           label="Stock Bajo"
           value={stats.lowStock}
@@ -537,11 +674,16 @@ export function ProductosView() {
         {/* FILTROS & CONTROLES */}
         <Card className="p-1 bg-card/50 backdrop-blur-sm border-border/60 shadow-sm rounded-2xl">
           <ProductosFilters
-            query={q} setQuery={setQ}
-            stockFilter={stockFilter} setStockFilter={setStockFilter}
-            categoryFilter={categoryFilter} setCategoryFilter={setCategoryFilter}
-            subCategoryFilter={subCategoryFilter} setSubCategoryFilter={setSubCategoryFilter}
-            expiryFilter={expiryFilter} setExpiryFilter={setExpiryFilter}
+            query={q}
+            setQuery={setQ}
+            stockFilter={stockFilter}
+            setStockFilter={setStockFilter}
+            categoryFilter={categoryFilter}
+            setCategoryFilter={setCategoryFilter}
+            subCategoryFilter={subCategoryFilter}
+            setSubCategoryFilter={setSubCategoryFilter}
+            expiryFilter={expiryFilter}
+            setExpiryFilter={setExpiryFilter}
             categories={allCategories}
           />
         </Card>
@@ -559,7 +701,9 @@ export function ProductosView() {
         {loading && (
           <div className="h-[400px] flex flex-col items-center justify-center gap-4 bg-card/30 rounded-2xl border border-border/50">
             <Loader2 className="h-12 w-12 animate-spin text-primary opacity-50" />
-            <span className="text-sm font-medium text-muted-foreground animate-pulse">Cargando inventario...</span>
+            <span className="text-sm font-medium text-muted-foreground animate-pulse">
+              Cargando inventario...
+            </span>
           </div>
         )}
 
@@ -572,29 +716,86 @@ export function ProductosView() {
                 <Table>
                   <TableHeader className="bg-muted/30">
                     <TableRow className="hover:bg-transparent border-b border-border/60">
-                      <SortableHead label="Producto" sortKey="nombre" currentSort={sortConfig} onSort={handleSort} className="pl-6 w-[30%]" />
-                      <SortableHead label="Categoría / Subcat." sortKey="categoria" currentSort={sortConfig} onSort={handleSort} />
-                      <TableHead className="text-center font-bold text-xs uppercase tracking-wider text-muted-foreground/70">Estado</TableHead>
-                      <SortableHead label="Stock" sortKey="stockDisponibleUnits" currentSort={sortConfig} onSort={handleSort} className="text-center" />
-                      <TableHead className="text-center font-bold text-xs uppercase tracking-wider text-muted-foreground/70">Vencimiento</TableHead>
-                      <SortableHead label="Precio" sortKey="precioVenta" currentSort={sortConfig} onSort={handleSort} className="text-right pr-6" />
+                      <SortableHead
+                        label="Producto"
+                        sortKey="nombre"
+                        currentSort={sortConfig}
+                        onSort={handleSort}
+                        className="pl-6 w-[30%]"
+                      />
+                      <SortableHead
+                        label="Categoría / Subcat."
+                        sortKey="categoria"
+                        currentSort={sortConfig}
+                        onSort={handleSort}
+                      />
+                      <TableHead className="text-center font-bold text-xs uppercase tracking-wider text-muted-foreground/70">
+                        Estado
+                      </TableHead>
+                      <SortableHead
+                        label="Stock"
+                        sortKey="stockDisponibleUnits"
+                        currentSort={sortConfig}
+                        onSort={handleSort}
+                        className="text-center"
+                      />
+                      <TableHead className="text-center font-bold text-xs uppercase tracking-wider text-muted-foreground/70">
+                        Vencimiento
+                      </TableHead>
+                      <SortableHead
+                        label="Precio"
+                        sortKey="precioVenta"
+                        currentSort={sortConfig}
+                        onSort={handleSort}
+                        className="text-right pr-6"
+                      />
                       {columnasAtributos.map((clave) => (
-                        <SortableHead key={clave} label={clave} sortKey={`attr:${clave}`} currentSort={sortConfig} onSort={handleSort} className="text-center capitalize" />
+                        <SortableHead
+                          key={clave}
+                          label={clave}
+                          sortKey={`attr:${clave}`}
+                          currentSort={sortConfig}
+                          onSort={handleSort}
+                          className="text-center capitalize"
+                        />
                       ))}
-                      <TableHead className="w-[180px] text-right pr-6 font-bold text-xs uppercase tracking-wider text-muted-foreground/70">Acciones</TableHead>
+                      <TableHead className="w-[180px] text-right pr-6 font-bold text-xs uppercase tracking-wider text-muted-foreground/70">
+                        Acciones
+                      </TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {sorted.map((p, idx) => (
-                      <ProductoRow key={p.id} p={p} idx={idx} load={reload} isLow={isLowStock(p)} isOut={isOutOfStock(p)} columnasAtributos={columnasAtributos} />
+                      <ProductoRow
+                        key={p.id}
+                        p={p}
+                        idx={idx}
+                        load={reload}
+                        isLow={isLowStock(p)}
+                        isOut={isOutOfStock(p)}
+                        columnasAtributos={columnasAtributos}
+                      />
                     ))}
                     {sorted.length === 0 && (
                       <TableRow>
-                        <TableCell colSpan={7 + columnasAtributos.length} className="h-[300px] text-center">
+                        <TableCell
+                          colSpan={7 + columnasAtributos.length}
+                          className="h-[300px] text-center"
+                        >
                           <div className="flex flex-col items-center justify-center gap-3 text-muted-foreground opacity-60">
                             <Search className="h-12 w-12 stroke-[1.5]" />
-                            <p className="text-lg font-medium">No se encontraron productos</p>
-                            <Button variant="link" onClick={() => { setQ(""); setStockFilter("all"); setCategoryFilter("all"); setExpiryFilter("all"); }}>
+                            <p className="text-lg font-medium">
+                              No se encontraron productos
+                            </p>
+                            <Button
+                              variant="link"
+                              onClick={() => {
+                                setQ("");
+                                setStockFilter("all");
+                                setCategoryFilter("all");
+                                setExpiryFilter("all");
+                              }}
+                            >
                               Limpiar filtros
                             </Button>
                           </div>
@@ -608,13 +809,33 @@ export function ProductosView() {
                 {filtered.length > 0 && (
                   <PaginationControls
                     itemsPerPage={itemsPerPage}
-                    setItemsPerPage={(v) => { setItemsPerPage(v); load(1, debouncedQ, serverCategoriaId, v); setServerPage(1); }}
+                    setItemsPerPage={(v) => {
+                      setItemsPerPage(v);
+                      load(1, debouncedQ, serverCategoriaId, v);
+                      setServerPage(1);
+                    }}
                     totalItems={serverTotal || filtered.length}
                     currentItems={sorted.length}
                     serverPage={serverPage}
                     serverTotalPages={serverTotalPages}
-                    onServerPrev={() => { load(Math.max(1, serverPage - 1), debouncedQ, serverCategoriaId, itemsPerPage); setServerPage(p => Math.max(1, p - 1)); }}
-                    onServerNext={() => { load(Math.min(serverTotalPages, serverPage + 1), debouncedQ, serverCategoriaId, itemsPerPage); setServerPage(p => Math.min(serverTotalPages, p + 1)); }}
+                    onServerPrev={() => {
+                      load(
+                        Math.max(1, serverPage - 1),
+                        debouncedQ,
+                        serverCategoriaId,
+                        itemsPerPage,
+                      );
+                      setServerPage((p) => Math.max(1, p - 1));
+                    }}
+                    onServerNext={() => {
+                      load(
+                        Math.min(serverTotalPages, serverPage + 1),
+                        debouncedQ,
+                        serverCategoriaId,
+                        itemsPerPage,
+                      );
+                      setServerPage((p) => Math.min(serverTotalPages, p + 1));
+                    }}
                   />
                 )}
               </Card>
@@ -623,14 +844,32 @@ export function ProductosView() {
             {/* --- VISTA MOBILE (CARDS) --- */}
             <div className="md:hidden space-y-4">
               {sorted.map((p, idx) => (
-                <MobileProductCard key={p.id} p={p} idx={idx} load={reload} isLow={isLowStock(p)} isOut={isOutOfStock(p)} columnasAtributos={columnasAtributos} />
+                <MobileProductCard
+                  key={p.id}
+                  p={p}
+                  idx={idx}
+                  load={reload}
+                  isLow={isLowStock(p)}
+                  isOut={isOutOfStock(p)}
+                  columnasAtributos={columnasAtributos}
+                />
               ))}
 
               {sorted.length === 0 && (
                 <div className="flex flex-col items-center justify-center gap-3 text-muted-foreground opacity-60 py-20 text-center">
                   <Search className="h-12 w-12 stroke-[1.5]" />
-                  <p className="text-lg font-medium">No se encontraron productos</p>
-                  <Button variant="link" onClick={() => { setQ(""); setStockFilter("all"); setCategoryFilter("all"); setExpiryFilter("all"); }}>
+                  <p className="text-lg font-medium">
+                    No se encontraron productos
+                  </p>
+                  <Button
+                    variant="link"
+                    onClick={() => {
+                      setQ("");
+                      setStockFilter("all");
+                      setCategoryFilter("all");
+                      setExpiryFilter("all");
+                    }}
+                  >
                     Limpiar filtros
                   </Button>
                 </div>
@@ -640,14 +879,34 @@ export function ProductosView() {
               {filtered.length > 0 && (
                 <PaginationControls
                   itemsPerPage={itemsPerPage}
-                  setItemsPerPage={(v) => { setItemsPerPage(v); load(1, debouncedQ, serverCategoriaId, v); setServerPage(1); }}
+                  setItemsPerPage={(v) => {
+                    setItemsPerPage(v);
+                    load(1, debouncedQ, serverCategoriaId, v);
+                    setServerPage(1);
+                  }}
                   totalItems={serverTotal || filtered.length}
                   currentItems={sorted.length}
                   isMobile
                   serverPage={serverPage}
                   serverTotalPages={serverTotalPages}
-                  onServerPrev={() => { load(Math.max(1, serverPage - 1), debouncedQ, serverCategoriaId, itemsPerPage); setServerPage(p => Math.max(1, p - 1)); }}
-                  onServerNext={() => { load(Math.min(serverTotalPages, serverPage + 1), debouncedQ, serverCategoriaId, itemsPerPage); setServerPage(p => Math.min(serverTotalPages, p + 1)); }}
+                  onServerPrev={() => {
+                    load(
+                      Math.max(1, serverPage - 1),
+                      debouncedQ,
+                      serverCategoriaId,
+                      itemsPerPage,
+                    );
+                    setServerPage((p) => Math.max(1, p - 1));
+                  }}
+                  onServerNext={() => {
+                    load(
+                      Math.min(serverTotalPages, serverPage + 1),
+                      debouncedQ,
+                      serverCategoriaId,
+                      itemsPerPage,
+                    );
+                    setServerPage((p) => Math.min(serverTotalPages, p + 1));
+                  }}
                 />
               )}
             </div>
@@ -657,13 +916,16 @@ export function ProductosView() {
 
       {/* Sheet de detalle de KPI de stock */}
       {/* ── Sheet KPI de stock — responsive: bottom en mobile, right en desktop ── */}
-      <Sheet open={stockDrawer !== null} onOpenChange={(open) => !open && setStockDrawer(null)}>
+      <Sheet
+        open={stockDrawer !== null}
+        onOpenChange={(open) => !open && setStockDrawer(null)}
+      >
         <SheetContent
           side="bottom"
           overlayClassName="backdrop-blur-none sm:hidden"
           className={cn(
             "sm:hidden rounded-t-3xl p-0 flex flex-col",
-            "max-h-[90dvh] h-auto"
+            "max-h-[90dvh] h-auto",
           )}
         >
           {renderStockDrawerContent()}
@@ -673,7 +935,7 @@ export function ProductosView() {
           overlayClassName="hidden sm:block sm:backdrop-blur-[2px]"
           className={cn(
             "hidden sm:flex flex-col",
-            "w-[380px] max-w-[90vw] p-0 h-full overflow-x-hidden"
+            "w-[380px] max-w-[90vw] p-0 h-full overflow-x-hidden",
           )}
         >
           {renderStockDrawerContent()}
@@ -686,9 +948,15 @@ export function ProductosView() {
 // --- SUB COMPONENTS ---
 
 function PaginationControls({
-  itemsPerPage, setItemsPerPage,
-  totalItems, currentItems, isMobile = false,
-  serverPage, serverTotalPages, onServerPrev, onServerNext,
+  itemsPerPage,
+  setItemsPerPage,
+  totalItems,
+  currentItems,
+  isMobile = false,
+  serverPage,
+  serverTotalPages,
+  onServerPrev,
+  onServerNext,
 }: {
   itemsPerPage: number;
   setItemsPerPage: (v: number) => void;
@@ -704,16 +972,32 @@ function PaginationControls({
   const totalPages = serverTotalPages ?? 1;
 
   return (
-    <div className={cn("flex items-center justify-between gap-4 p-4 border-t border-border/60 bg-muted/20", isMobile && "flex-col border rounded-xl bg-card")}>
+    <div
+      className={cn(
+        "flex items-center justify-between gap-4 p-4 border-t border-border/60 bg-muted/20",
+        isMobile && "flex-col border rounded-xl bg-card",
+      )}
+    >
       <div className="flex items-center gap-2 text-sm text-muted-foreground">
-        <span>Mostrando {currentItems} de <span className="font-bold text-foreground">{totalItems}</span></span>
+        <span>
+          Mostrando {currentItems} de{" "}
+          <span className="font-bold text-foreground">{totalItems}</span>
+        </span>
       </div>
 
-      <div className={cn("flex items-center gap-4", isMobile && "w-full justify-between")}>
+      <div
+        className={cn(
+          "flex items-center gap-4",
+          isMobile && "w-full justify-between",
+        )}
+      >
         {!isMobile && (
           <div className="flex items-center gap-2">
             <span className="text-xs text-muted-foreground">Filas:</span>
-            <Select value={itemsPerPage.toString()} onValueChange={(v) => setItemsPerPage(Number(v))}>
+            <Select
+              value={itemsPerPage.toString()}
+              onValueChange={(v) => setItemsPerPage(Number(v))}
+            >
               <SelectTrigger className="h-8 w-[80px] text-xs font-bold">
                 <SelectValue placeholder="10" />
               </SelectTrigger>
@@ -729,7 +1013,13 @@ function PaginationControls({
         )}
 
         <div className="flex items-center gap-1">
-          <Button variant="outline" size="icon" className="h-8 w-8 rounded-lg" onClick={onServerPrev} disabled={!onServerPrev || page <= 1}>
+          <Button
+            variant="outline"
+            size="icon"
+            className="h-8 w-8 rounded-lg"
+            onClick={onServerPrev}
+            disabled={!onServerPrev || page <= 1}
+          >
             <ChevronLeft className="h-4 w-4" />
           </Button>
           <div className="flex items-center gap-1 px-2">
@@ -737,37 +1027,105 @@ function PaginationControls({
             <span className="text-sm text-muted-foreground">/</span>
             <span className="text-sm text-muted-foreground">{totalPages}</span>
           </div>
-          <Button variant="outline" size="icon" className="h-8 w-8 rounded-lg" onClick={onServerNext} disabled={!onServerNext || page >= totalPages}>
+          <Button
+            variant="outline"
+            size="icon"
+            className="h-8 w-8 rounded-lg"
+            onClick={onServerNext}
+            disabled={!onServerNext || page >= totalPages}
+          >
             <ChevronRight className="h-4 w-4" />
           </Button>
         </div>
       </div>
     </div>
-  )
+  );
 }
 
-function SortableHead({ label, sortKey, currentSort, onSort, className }: { label: string, sortKey: SortKey, currentSort: SortConfig, onSort: (k: SortKey) => void, className?: string }) {
+function SortableHead({
+  label,
+  sortKey,
+  currentSort,
+  onSort,
+  className,
+}: {
+  label: string;
+  sortKey: SortKey;
+  currentSort: SortConfig;
+  onSort: (k: SortKey) => void;
+  className?: string;
+}) {
   const isActive = currentSort.key === sortKey;
   return (
-    <TableHead className={cn("py-4 transition-colors cursor-pointer select-none hover:bg-muted/50 hover:text-foreground", className)} onClick={() => onSort(sortKey)}>
-      <div className={cn("flex items-center gap-2", className?.includes("text-right") && "justify-end", className?.includes("text-center") && "justify-center")}>
-        <span className={cn("font-bold text-xs uppercase tracking-wider", isActive ? "text-primary" : "text-muted-foreground/70")}>{label}</span>
-        <ArrowUpDown className={cn("h-3 w-3 transition-opacity", isActive ? "text-primary opacity-100" : "opacity-0")} />
+    <TableHead
+      className={cn(
+        "py-4 transition-colors cursor-pointer select-none hover:bg-muted/50 hover:text-foreground",
+        className,
+      )}
+      onClick={() => onSort(sortKey)}
+    >
+      <div
+        className={cn(
+          "flex items-center gap-2",
+          className?.includes("text-right") && "justify-end",
+          className?.includes("text-center") && "justify-center",
+        )}
+      >
+        <span
+          className={cn(
+            "font-bold text-xs uppercase tracking-wider",
+            isActive ? "text-primary" : "text-muted-foreground/70",
+          )}
+        >
+          {label}
+        </span>
+        <ArrowUpDown
+          className={cn(
+            "h-3 w-3 transition-opacity",
+            isActive ? "text-primary opacity-100" : "opacity-0",
+          )}
+        />
       </div>
     </TableHead>
   );
 }
 
-function ProductoRow({ p, idx, load, isLow, isOut, columnasAtributos }: { p: ProductoViewItem; idx: number; load: () => void; isLow: boolean; isOut: boolean; columnasAtributos: string[] }) {
-  const desc = React.useMemo(() => calcularDescuentoEfectivo({
-    descuentoActivo: p.descuentoActivo ?? false,
-    tipoDescuento: p.tipoDescuento,
-    descuentoPorcentaje: p.descuentoPorcentaje ?? 0,
-    descuentoMonto: p.descuentoMonto ?? 0,
-    descuentoDesde: p.descuentoDesde ?? null,
-    descuentoHasta: p.descuentoHasta ?? null,
-    precioVenta: Number(p.precioVenta),
-  }), [p.descuentoActivo, p.tipoDescuento, p.descuentoPorcentaje, p.descuentoMonto, p.descuentoDesde, p.descuentoHasta, p.precioVenta]);
+function ProductoRow({
+  p,
+  idx,
+  load,
+  isLow,
+  isOut,
+  columnasAtributos,
+}: {
+  p: ProductoViewItem;
+  idx: number;
+  load: () => void;
+  isLow: boolean;
+  isOut: boolean;
+  columnasAtributos: string[];
+}) {
+  const desc = React.useMemo(
+    () =>
+      calcularDescuentoEfectivo({
+        descuentoActivo: p.descuentoActivo ?? false,
+        tipoDescuento: p.tipoDescuento,
+        descuentoPorcentaje: p.descuentoPorcentaje ?? 0,
+        descuentoMonto: p.descuentoMonto ?? 0,
+        descuentoDesde: p.descuentoDesde ?? null,
+        descuentoHasta: p.descuentoHasta ?? null,
+        precioVenta: Number(p.precioVenta),
+      }),
+    [
+      p.descuentoActivo,
+      p.tipoDescuento,
+      p.descuentoPorcentaje,
+      p.descuentoMonto,
+      p.descuentoDesde,
+      p.descuentoHasta,
+      p.precioVenta,
+    ],
+  );
 
   const precioEfectivo = desc?.precioFinal ?? Number(p.precioVenta);
   const tieneDescuento = desc !== null;
@@ -783,20 +1141,36 @@ function ProductoRow({ p, idx, load, isLow, isOut, columnasAtributos }: { p: Pro
         <div className="flex items-center gap-4 min-w-0">
           <div className="h-12 w-12 rounded-lg bg-muted/50 border border-border/60 overflow-hidden flex items-center justify-center shrink-0 relative">
             {p.imagenUrl ? (
-              <Image src={p.imagenUrl} alt={p.nombre} fill sizes="48px" className="object-cover" />
+              <Image
+                src={p.imagenUrl}
+                alt={p.nombre}
+                fill
+                sizes="48px"
+                className="object-cover"
+              />
             ) : (
               <ImageIcon className="h-6 w-6 text-muted-foreground/40" />
             )}
           </div>
           <div className="flex flex-col gap-1 min-w-0">
-            <span className="font-bold text-foreground text-sm leading-none group-hover:text-primary transition-colors truncate" title={p.nombre}>{p.nombre}</span>
+            <span
+              className="font-bold text-foreground text-sm leading-none group-hover:text-primary transition-colors truncate"
+              title={p.nombre}
+            >
+              {p.nombre}
+            </span>
             <div className="flex items-center gap-2 pt-1">
               {p.codigoBarra ? (
-                <Badge variant="outline" className="text-[10px] h-5 px-1.5 font-mono text-muted-foreground border-border/60 bg-background/50 gap-1 rounded-md">
+                <Badge
+                  variant="outline"
+                  className="text-[10px] h-5 px-1.5 font-mono text-muted-foreground border-border/60 bg-background/50 gap-1 rounded-md"
+                >
                   <Barcode className="h-3 w-3 opacity-50" /> {p.codigoBarra}
                 </Badge>
               ) : (
-                <span className="text-[10px] text-muted-foreground/40 italic">Sin código</span>
+                <span className="text-[10px] text-muted-foreground/40 italic">
+                  Sin código
+                </span>
               )}
             </div>
           </div>
@@ -807,9 +1181,19 @@ function ProductoRow({ p, idx, load, isLow, isOut, columnasAtributos }: { p: Pro
         <div className="flex flex-col gap-1">
           {(() => {
             const catName = p.categoria?.nombre || "General";
-            const color = p.categoria?.color ? getCategoryColorByKey(p.categoria.color) : getCategoryColorByName(catName);
+            const color = p.categoria?.color
+              ? getCategoryColorByKey(p.categoria.color)
+              : getCategoryColorByName(catName);
             return (
-              <Badge variant="secondary" className={cn("px-2.5 py-0.5 rounded-lg font-bold text-[10px] border uppercase tracking-tight gap-1.5 w-fit", color.bg, color.text, color.border)}>
+              <Badge
+                variant="secondary"
+                className={cn(
+                  "px-2.5 py-0.5 rounded-lg font-bold text-[10px] border uppercase tracking-tight gap-1.5 w-fit",
+                  color.bg,
+                  color.text,
+                  color.border,
+                )}
+              >
                 <div className={cn("h-1.5 w-1.5 rounded-full", color.dot)} />
                 {catName}
               </Badge>
@@ -825,42 +1209,76 @@ function ProductoRow({ p, idx, load, isLow, isOut, columnasAtributos }: { p: Pro
 
       <TableCell className="text-center">
         {isOut ? (
-          <Badge variant="destructive" className="rounded-full px-2 py-0 text-[10px] font-black uppercase">Agotado</Badge>
+          <Badge
+            variant="destructive"
+            className="rounded-full px-2 py-0 text-[10px] font-black uppercase"
+          >
+            Agotado
+          </Badge>
         ) : isLow ? (
-          <Badge className="bg-[color:var(--status-warning)] hover:bg-[color:var(--status-warning)] rounded-full px-2 py-0 text-[10px] font-black uppercase">Bajo Stock</Badge>
+          <Badge className="bg-[color:var(--status-warning)] hover:bg-[color:var(--status-warning)] rounded-full px-2 py-0 text-[10px] font-black uppercase">
+            Bajo Stock
+          </Badge>
         ) : (
           <div className="flex items-center justify-center gap-1.5 text-[color:var(--status-success-strong)] dark:text-[color:var(--status-success-strong)]">
             <div className="h-1.5 w-1.5 rounded-full bg-[color:var(--status-success-strong)] animate-pulse" />
-            <span className="text-[10px] font-bold uppercase tracking-tight">Disponible</span>
+            <span className="text-[10px] font-bold uppercase tracking-tight">
+              Disponible
+            </span>
           </div>
         )}
       </TableCell>
 
       <TableCell className="text-center">
-        <span className={cn(
-          "text-sm font-bold tabular-nums",
-          isOut ? "text-destructive" : isLow ? "text-[color:var(--status-warning)]" : "text-foreground"
-        )}>
+        <span
+          className={cn(
+            "text-sm font-bold tabular-nums",
+            isOut
+              ? "text-destructive"
+              : isLow
+                ? "text-[color:var(--status-warning)]"
+                : "text-foreground",
+          )}
+        >
           {p.stockDisponibleUnits}
         </span>
       </TableCell>
 
       <TableCell className="text-center">
         {(() => {
-          if (!p.fechaVencimiento) return <span className="text-[10px] text-muted-foreground/40 italic">Sin venc.</span>;
+          if (!p.fechaVencimiento)
+            return (
+              <span className="text-[10px] text-muted-foreground/40 italic">
+                Sin venc.
+              </span>
+            );
           const expired = dateExpired(p.fechaVencimiento);
           const soon = isExpiringSoon(p.fechaVencimiento);
           return (
             <div className="flex flex-col items-center gap-0.5">
-              <span className={cn(
-                "text-xs font-bold tabular-nums flex items-center gap-1",
-                expired ? "text-[color:var(--status-danger)]" : soon ? "text-[color:var(--status-warning)]" : "text-muted-foreground"
-              )}>
+              <span
+                className={cn(
+                  "text-xs font-bold tabular-nums flex items-center gap-1",
+                  expired
+                    ? "text-[color:var(--status-danger)]"
+                    : soon
+                      ? "text-[color:var(--status-warning)]"
+                      : "text-muted-foreground",
+                )}
+              >
                 <Calendar className="h-3 w-3" />
                 {formatDateSafe(p.fechaVencimiento)}
               </span>
-              {expired && <span className="text-[9px] font-black text-[color:var(--status-danger)] uppercase">Vencido</span>}
-              {soon && <span className="text-[9px] font-black text-[color:var(--status-warning)] uppercase">Pronto</span>}
+              {expired && (
+                <span className="text-[9px] font-black text-[color:var(--status-danger)] uppercase">
+                  Vencido
+                </span>
+              )}
+              {soon && (
+                <span className="text-[9px] font-black text-[color:var(--status-warning)] uppercase">
+                  Pronto
+                </span>
+              )}
             </div>
           );
         })()}
@@ -874,27 +1292,43 @@ function ProductoRow({ p, idx, load, isLow, isOut, columnasAtributos }: { p: Pro
                 -{desc.porcentaje}%
               </span>
             )}
-            <span className={cn("font-black text-foreground text-sm tabular-nums", tieneDescuento && "line-through text-muted-foreground/60")}>{formatMoney(p.precioVenta)}</span>
+            <span
+              className={cn(
+                "font-black text-foreground text-sm tabular-nums",
+                tieneDescuento && "line-through text-muted-foreground/60",
+              )}
+            >
+              {formatMoney(p.precioVenta)}
+            </span>
             {tieneDescuento && (
-              <span className="font-black text-destructive text-sm tabular-nums">{formatMoney(precioEfectivo)}</span>
+              <span className="font-black text-destructive text-sm tabular-nums">
+                {formatMoney(precioEfectivo)}
+              </span>
             )}
           </div>
-          <span className={cn(
-            "text-[10px] font-medium px-1.5 rounded-md tabular-nums",
-            margenEfectivo < 0
-              ? "text-destructive bg-destructive/10"
-              : tieneDescuento
-                ? "text-[color:var(--status-warning)] bg-[color:var(--status-warning)]/10"
-                : "text-[color:var(--status-success-strong)] bg-[color:var(--status-success-strong)]/10"
-          )}>
+          <span
+            className={cn(
+              "text-[10px] font-medium px-1.5 rounded-md tabular-nums",
+              margenEfectivo < 0
+                ? "text-destructive bg-destructive/10"
+                : tieneDescuento
+                  ? "text-[color:var(--status-warning)] bg-[color:var(--status-warning)]/10"
+                  : "text-[color:var(--status-success-strong)] bg-[color:var(--status-success-strong)]/10",
+            )}
+          >
             Margen: {formatMoney(margenEfectivo)}
           </span>
         </div>
       </TableCell>
 
       {columnasAtributos.map((clave) => (
-        <TableCell key={clave} className="text-center text-sm text-muted-foreground">
-          {(p.atributosExtra as Record<string, string> | null | undefined)?.[clave] ?? "—"}
+        <TableCell
+          key={clave}
+          className="text-center text-sm text-muted-foreground"
+        >
+          {(p.atributosExtra as Record<string, string> | null | undefined)?.[
+            clave
+          ] ?? "—"}
         </TableCell>
       ))}
 
@@ -905,7 +1339,12 @@ function ProductoRow({ p, idx, load, isLow, isOut, columnasAtributos }: { p: Pro
             producto={p}
             onUpdated={load}
             trigger={
-              <Button variant="ghost" size="icon" className="h-8 w-8 text-[color:var(--status-warning)] hover:bg-[color:var(--status-warning)] dark:hover:bg-[color:var(--status-warning)]/30 rounded-lg" title="Ajustar Stock">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 text-[color:var(--status-warning)] hover:bg-[color:var(--status-warning)] dark:hover:bg-[color:var(--status-warning)]/30 rounded-lg"
+                title="Ajustar Stock"
+              >
                 <ArrowRightLeft className="h-4 w-4" />
               </Button>
             }
@@ -913,8 +1352,14 @@ function ProductoRow({ p, idx, load, isLow, isOut, columnasAtributos }: { p: Pro
           <EditProductoDialog
             producto={p}
             onUpdated={load}
+            onCategoriasChanged={load}
             trigger={
-              <Button variant="ghost" size="icon" className="h-8 w-8 text-[color:var(--theme-ocean-primary)] hover:bg-[color:var(--theme-ocean-primary)] dark:hover:bg-[color:var(--theme-ocean-primary)]/30 rounded-lg" title="Editar">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 text-[color:var(--theme-ocean-primary)] hover:bg-[color:var(--theme-ocean-primary)] dark:hover:bg-[color:var(--theme-ocean-primary)]/30 rounded-lg"
+                title="Editar"
+              >
                 <Pencil className="h-4 w-4" />
               </Button>
             }
@@ -924,7 +1369,12 @@ function ProductoRow({ p, idx, load, isLow, isOut, columnasAtributos }: { p: Pro
             nombre={p.nombre}
             onDeleted={load}
             trigger={
-              <Button variant="ghost" size="icon" className="h-8 w-8 text-[color:var(--status-danger)] hover:bg-[color:var(--status-danger)] dark:hover:bg-[color:var(--status-danger)]/30 rounded-lg" title="Eliminar">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 text-[color:var(--status-danger)] hover:bg-[color:var(--status-danger)] dark:hover:bg-[color:var(--status-danger)]/30 rounded-lg"
+                title="Eliminar"
+              >
                 <Trash2 className="h-4 w-4" />
               </Button>
             }
@@ -935,30 +1385,77 @@ function ProductoRow({ p, idx, load, isLow, isOut, columnasAtributos }: { p: Pro
   );
 }
 
-function MobileProductCard({ p, idx, load, isLow, isOut, columnasAtributos }: { p: ProductoViewItem; idx: number; load: () => void; isLow: boolean; isOut: boolean; columnasAtributos: string[] }) {
+function MobileProductCard({
+  p,
+  idx,
+  load,
+  isLow,
+  isOut,
+  columnasAtributos,
+}: {
+  p: ProductoViewItem;
+  idx: number;
+  load: () => void;
+  isLow: boolean;
+  isOut: boolean;
+  columnasAtributos: string[];
+}) {
   return (
-    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: idx * 0.05 }}>
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: idx * 0.05 }}
+    >
       <Card className="p-4 bg-card border-border/50 shadow-sm rounded-2xl relative overflow-hidden space-y-3">
-        <div className={cn("absolute left-0 top-0 bottom-0 w-1.5", isOut ? "bg-[color:var(--status-danger)]" : isLow ? "bg-[color:var(--status-warning)]" : "bg-[color:var(--status-success-strong)]")} />
+        <div
+          className={cn(
+            "absolute left-0 top-0 bottom-0 w-1.5",
+            isOut
+              ? "bg-[color:var(--status-danger)]"
+              : isLow
+                ? "bg-[color:var(--status-warning)]"
+                : "bg-[color:var(--status-success-strong)]",
+          )}
+        />
 
         <div className="flex justify-between items-start pl-3 gap-3">
           <div className="h-14 w-14 rounded-xl bg-muted/50 border border-border/60 overflow-hidden flex items-center justify-center shrink-0 relative">
             {p.imagenUrl ? (
-              <Image src={p.imagenUrl} alt={p.nombre} fill sizes="56px" className="object-cover" />
+              <Image
+                src={p.imagenUrl}
+                alt={p.nombre}
+                fill
+                sizes="56px"
+                className="object-cover"
+              />
             ) : (
               <ImageIcon className="h-7 w-7 text-muted-foreground/40" />
             )}
           </div>
           <div className="flex-1 space-y-1">
-            <h3 className="font-bold text-foreground text-sm leading-tight">{p.nombre}</h3>
+            <h3 className="font-bold text-foreground text-sm leading-tight">
+              {p.nombre}
+            </h3>
             <div className="flex items-center gap-2">
               {(() => {
                 const catName = p.categoria?.nombre || "General";
-                const color = p.categoria?.color ? getCategoryColorByKey(p.categoria.color) : getCategoryColorByName(catName);
+                const color = p.categoria?.color
+                  ? getCategoryColorByKey(p.categoria.color)
+                  : getCategoryColorByName(catName);
                 return (
                   <div className="flex flex-col gap-0.5">
-                    <Badge variant="outline" className={cn("text-[10px] h-5 px-1.5 font-bold border rounded-md gap-1 w-fit", color.bg, color.text, color.border)}>
-                      <div className={cn("h-1.5 w-1.5 rounded-full", color.dot)} />
+                    <Badge
+                      variant="outline"
+                      className={cn(
+                        "text-[10px] h-5 px-1.5 font-bold border rounded-md gap-1 w-fit",
+                        color.bg,
+                        color.text,
+                        color.border,
+                      )}
+                    >
+                      <div
+                        className={cn("h-1.5 w-1.5 rounded-full", color.dot)}
+                      />
                       {catName}
                     </Badge>
                     {p.subcategoria && (
@@ -972,50 +1469,85 @@ function MobileProductCard({ p, idx, load, isLow, isOut, columnasAtributos }: { 
             </div>
           </div>
           <div className="text-right">
-            <span className="block font-black text-lg text-primary tabular-nums">{formatMoney(p.precioVenta)}</span>
+            <span className="block font-black text-lg text-primary tabular-nums">
+              {formatMoney(p.precioVenta)}
+            </span>
             {p.codigoBarra && (
-              <span className="text-[10px] font-mono text-muted-foreground/60">{p.codigoBarra}</span>
+              <span className="text-[10px] font-mono text-muted-foreground/60">
+                {p.codigoBarra}
+              </span>
             )}
           </div>
         </div>
 
-        {p.fechaVencimiento && (() => {
-          const expired = dateExpired(p.fechaVencimiento);
-          const soon = isExpiringSoon(p.fechaVencimiento);
-          return (
-            <div className={cn(
-              "flex items-center gap-1.5 pl-3 text-[11px] font-bold",
-              expired ? "text-[color:var(--status-danger)]" : soon ? "text-[color:var(--status-warning)]" : "text-muted-foreground"
-            )}>
-              <Calendar className="h-3 w-3" />
-              Vence: {formatDateSafe(p.fechaVencimiento)}
-              {expired && <Badge variant="destructive" className="text-[9px] h-4 px-1 rounded-md ml-1">Vencido</Badge>}
-              {soon && <Badge className="bg-[color:var(--status-warning)] text-[9px] h-4 px-1 rounded-md ml-1">Pronto</Badge>}
-            </div>
-          );
-        })()}
+        {p.fechaVencimiento &&
+          (() => {
+            const expired = dateExpired(p.fechaVencimiento);
+            const soon = isExpiringSoon(p.fechaVencimiento);
+            return (
+              <div
+                className={cn(
+                  "flex items-center gap-1.5 pl-3 text-[11px] font-bold",
+                  expired
+                    ? "text-[color:var(--status-danger)]"
+                    : soon
+                      ? "text-[color:var(--status-warning)]"
+                      : "text-muted-foreground",
+                )}
+              >
+                <Calendar className="h-3 w-3" />
+                Vence: {formatDateSafe(p.fechaVencimiento)}
+                {expired && (
+                  <Badge
+                    variant="destructive"
+                    className="text-[9px] h-4 px-1 rounded-md ml-1"
+                  >
+                    Vencido
+                  </Badge>
+                )}
+                {soon && (
+                  <Badge className="bg-[color:var(--status-warning)] text-[9px] h-4 px-1 rounded-md ml-1">
+                    Pronto
+                  </Badge>
+                )}
+              </div>
+            );
+          })()}
 
-        {columnasAtributos.length > 0 && (() => {
-          const atributos = (p.atributosExtra as Record<string, string> | null | undefined) ?? {};
-          const chips = columnasAtributos.filter((clave) => atributos[clave]);
-          if (chips.length === 0) return null;
-          return (
-            <div className="flex flex-wrap gap-1 pl-3">
-              {chips.map((clave) => (
-                <Badge key={clave} variant="outline" className="text-[10px] h-5 px-1.5 font-normal text-muted-foreground border-border/60 bg-background/50 rounded-md capitalize">
-                  {clave}: {atributos[clave]}
-                </Badge>
-              ))}
-            </div>
-          );
-        })()}
+        {columnasAtributos.length > 0 &&
+          (() => {
+            const atributos =
+              (p.atributosExtra as Record<string, string> | null | undefined) ??
+              {};
+            const chips = columnasAtributos.filter((clave) => atributos[clave]);
+            if (chips.length === 0) return null;
+            return (
+              <div className="flex flex-wrap gap-1 pl-3">
+                {chips.map((clave) => (
+                  <Badge
+                    key={clave}
+                    variant="outline"
+                    className="text-[10px] h-5 px-1.5 font-normal text-muted-foreground border-border/60 bg-background/50 rounded-md capitalize"
+                  >
+                    {clave}: {atributos[clave]}
+                  </Badge>
+                ))}
+              </div>
+            );
+          })()}
 
         <div className="flex items-center justify-between pl-3 pr-1 pt-2 border-t border-dashed border-border/50 mt-2">
           <div className="flex items-center gap-2">
-            <span className={cn(
-              "text-xs font-bold px-2 py-1 rounded-md flex items-center gap-1",
-              isOut ? "bg-[color:var(--status-danger)]/10 text-[color:var(--status-danger)]" : isLow ? "bg-[color:var(--status-warning)]/10 text-[color:var(--status-warning)]" : "bg-[color:var(--status-success-strong)]/10 text-[color:var(--status-success-strong)]"
-            )}>
+            <span
+              className={cn(
+                "text-xs font-bold px-2 py-1 rounded-md flex items-center gap-1",
+                isOut
+                  ? "bg-[color:var(--status-danger)]/10 text-[color:var(--status-danger)]"
+                  : isLow
+                    ? "bg-[color:var(--status-warning)]/10 text-[color:var(--status-warning)]"
+                    : "bg-[color:var(--status-success-strong)]/10 text-[color:var(--status-success-strong)]",
+              )}
+            >
               <Package className="h-3.5 w-3.5" />
               {p.stockDisponibleUnits} uds.
             </span>
@@ -1024,11 +1556,18 @@ function MobileProductCard({ p, idx, load, isLow, isOut, columnasAtributos }: { 
           {/* â”€â”€ DROPDOWN DE ACCIONES (Mobile) â”€â”€ */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="icon" className="h-9 w-9 rounded-xl border-border/60">
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-9 w-9 rounded-xl border-border/60"
+              >
                 <MoreVertical className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-52 rounded-xl border-border/60 shadow-xl">
+            <DropdownMenuContent
+              align="end"
+              className="w-52 rounded-xl border-border/60 shadow-xl"
+            >
               {/* Ajustar Stock */}
               <AjustarStockDialog
                 producto={p}
@@ -1047,6 +1586,7 @@ function MobileProductCard({ p, idx, load, isLow, isOut, columnasAtributos }: { 
               <EditProductoDialog
                 producto={p}
                 onUpdated={load}
+                onCategoriasChanged={load}
                 trigger={
                   <DropdownMenuItem
                     className="flex items-center gap-2.5 font-semibold text-[color:var(--theme-ocean-primary)] dark:text-[color:var(--theme-ocean-primary)] cursor-pointer rounded-lg focus:text-[color:var(--theme-ocean-primary)] focus:bg-[color:var(--theme-ocean-primary)] dark:focus:bg-[color:var(--theme-ocean-primary)]/40"
@@ -1081,12 +1621,23 @@ function MobileProductCard({ p, idx, load, isLow, isOut, columnasAtributos }: { 
   );
 }
 
-function StatCard({ label, value, icon: Icon, color = "default", trend, trendUp, onClick, clickable }: StatCardProps) {
+function StatCard({
+  label,
+  value,
+  icon: Icon,
+  color = "default",
+  trend,
+  trendUp,
+  onClick,
+  clickable,
+}: StatCardProps) {
   const colors = {
     default: "bg-primary/5 text-primary",
     blue: "bg-[color:var(--theme-ocean-primary)]/10 text-[color:var(--theme-ocean-primary)]",
-    emerald: "bg-[color:var(--status-success-strong)]/10 text-[color:var(--status-success-strong)]",
-    orange: "bg-[color:var(--status-warning)]/10 text-[color:var(--status-warning)]",
+    emerald:
+      "bg-[color:var(--status-success-strong)]/10 text-[color:var(--status-success-strong)]",
+    orange:
+      "bg-[color:var(--status-warning)]/10 text-[color:var(--status-warning)]",
     red: "bg-[color:var(--status-danger)]/10 text-[color:var(--status-danger)]",
   };
 
@@ -1094,7 +1645,7 @@ function StatCard({ label, value, icon: Icon, color = "default", trend, trendUp,
     <Card
       className={cn(
         "p-5 border-border/50 shadow-sm bg-card/50 backdrop-blur-sm relative overflow-hidden group hover:bg-card/80 transition-all",
-        clickable && "cursor-pointer hover:shadow-md hover:border-primary/40"
+        clickable && "cursor-pointer hover:shadow-md hover:border-primary/40",
       )}
       onClick={clickable ? onClick : undefined}
     >
@@ -1113,13 +1664,28 @@ function StatCard({ label, value, icon: Icon, color = "default", trend, trendUp,
           </div>
         </div>
         <div className="space-y-1">
-          <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground/80">{label}</p>
+          <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground/80">
+            {label}
+          </p>
           <div className="flex items-end gap-2">
-            <h3 className="text-2xl font-black tracking-tight text-foreground">{value}</h3>
+            <h3 className="text-2xl font-black tracking-tight text-foreground">
+              {value}
+            </h3>
           </div>
           {trend && (
-            <p className={cn("text-[10px] font-bold flex items-center gap-1", trendUp ? "text-[color:var(--status-success-strong)]" : "text-[color:var(--status-danger)]")}>
-              {trendUp ? <TrendingUp className="h-3 w-3" /> : <AlertCircle className="h-3 w-3" />}
+            <p
+              className={cn(
+                "text-[10px] font-bold flex items-center gap-1",
+                trendUp
+                  ? "text-[color:var(--status-success-strong)]"
+                  : "text-[color:var(--status-danger)]",
+              )}
+            >
+              {trendUp ? (
+                <TrendingUp className="h-3 w-3" />
+              ) : (
+                <AlertCircle className="h-3 w-3" />
+              )}
               {trend}
             </p>
           )}
@@ -1140,7 +1706,17 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
-function DeleteButton({ id, nombre, onDeleted, trigger }: { id: number; nombre: string; onDeleted: () => void, trigger: React.ReactNode }) {
+function DeleteButton({
+  id,
+  nombre,
+  onDeleted,
+  trigger,
+}: {
+  id: number;
+  nombre: string;
+  onDeleted: () => void;
+  trigger: React.ReactNode;
+}) {
   const [deleting, setDeleting] = React.useState(false);
   const [open, setOpen] = React.useState(false);
 
@@ -1150,13 +1726,23 @@ function DeleteButton({ id, nombre, onDeleted, trigger }: { id: number; nombre: 
       await apiService.deleteProducto(id);
       toast.success("Eliminado correctamente");
       onDeleted();
-    } catch { toast.error("Error al eliminar"); }
-    finally { setDeleting(false); setOpen(false); }
+    } catch {
+      toast.error("Error al eliminar");
+    } finally {
+      setDeleting(false);
+      setOpen(false);
+    }
   }
 
   return (
     <>
-      <div onClick={(e) => { e.preventDefault(); e.stopPropagation(); setOpen(true); }}>
+      <div
+        onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          setOpen(true);
+        }}
+      >
         {trigger}
       </div>
 
@@ -1166,13 +1752,25 @@ function DeleteButton({ id, nombre, onDeleted, trigger }: { id: number; nombre: 
             <div className="mx-auto bg-[color:var(--status-danger)] dark:bg-[color:var(--status-danger)]/30 p-3 rounded-full w-fit mb-2">
               <AlertCircle className="h-8 w-8 text-[color:var(--status-danger)]" />
             </div>
-            <AlertDialogTitle className="text-xl font-bold text-center">Â¿Eliminar producto?</AlertDialogTitle>
+            <AlertDialogTitle className="text-xl font-bold text-center">
+              Â¿Eliminar producto?
+            </AlertDialogTitle>
             <AlertDialogDescription className="text-center text-muted-foreground">
-              Estás a punto de eliminar <span className="font-bold text-foreground">&quot;{nombre}&quot;</span>. Esta acción es irreversible y afectará los reportes de inventario.
+              Estás a punto de eliminar{" "}
+              <span className="font-bold text-foreground">
+                &quot;{nombre}&quot;
+              </span>
+              . Esta acción es irreversible y afectará los reportes de
+              inventario.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="grid grid-cols-2 gap-3 sm:flex-row sm:justify-center pt-2">
-            <AlertDialogCancel className="h-11 rounded-xl mt-0" onClick={() => setOpen(false)}>Cancelar</AlertDialogCancel>
+            <AlertDialogCancel
+              className="h-11 rounded-xl mt-0"
+              onClick={() => setOpen(false)}
+            >
+              Cancelar
+            </AlertDialogCancel>
             <AlertDialogAction
               className="h-11 rounded-xl bg-[color:var(--status-danger)] hover:bg-[color:var(--status-danger)] text-[color:var(--ui-fx-white)] font-bold"
               onClick={(e) => {
@@ -1181,7 +1779,11 @@ function DeleteButton({ id, nombre, onDeleted, trigger }: { id: number; nombre: 
               }}
               disabled={deleting}
             >
-              {deleting ? <Loader2 className="h-4 w-4 animate-spin" /> : "Sí, eliminar"}
+              {deleting ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                "Sí, eliminar"
+              )}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
