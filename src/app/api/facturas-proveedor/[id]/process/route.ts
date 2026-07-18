@@ -21,7 +21,10 @@ import {
   AiExtractionRequestError,
   AiExtractionTimeoutError,
 } from "@/lib/ai/invoice-ai-parser";
-import { construirContextoMatching, matchearItem } from "@/lib/ocr/matching-engine";
+import {
+  construirContextoMatching,
+  matchearItem,
+} from "@/lib/ocr/matching-engine";
 import { normalizarProducto } from "@/lib/ocr/normalizar-producto";
 import { buscarCandidatosGlobales } from "@/lib/ai/catalogo-global-client";
 
@@ -37,23 +40,36 @@ export async function POST(
   const auth = await requireAuth();
   if (!auth.ok) return auth.res;
   if (!requireRole(auth.user, ["ADMIN"])) {
-    return NextResponse.json({ error: "No tienes permisos (Admin requerido)" }, { status: 403 });
+    return NextResponse.json(
+      { error: "No tienes permisos (Admin requerido)" },
+      { status: 403 },
+    );
   }
 
   const { id } = await params;
   const facturaId = Number(id);
   if (!Number.isInteger(facturaId)) {
-    return NextResponse.json({ error: "Factura no encontrada" }, { status: 404 });
+    return NextResponse.json(
+      { error: "Factura no encontrada" },
+      { status: 404 },
+    );
   }
 
-  const factura = await prisma.facturaProveedor.findUnique({ where: { id: facturaId } });
+  const factura = await prisma.facturaProveedor.findUnique({
+    where: { id: facturaId },
+  });
   if (!factura || !canAccessSucursalResource(auth, factura.sucursalId)) {
-    return NextResponse.json({ error: "Factura no encontrada" }, { status: 404 });
+    return NextResponse.json(
+      { error: "Factura no encontrada" },
+      { status: 404 },
+    );
   }
 
   if (!PROCESABLES.includes(factura.estado)) {
     return NextResponse.json(
-      { error: `La factura está en estado ${factura.estado} y no se puede reprocesar.` },
+      {
+        error: `La factura está en estado ${factura.estado} y no se puede reprocesar.`,
+      },
       { status: 409 },
     );
   }
@@ -64,7 +80,10 @@ export async function POST(
   });
 
   try {
-    const filePath = path.join(getFacturaProveedorStorageDir(), factura.archivoPath);
+    const filePath = path.join(
+      getFacturaProveedorStorageDir(),
+      factura.archivoPath,
+    );
     const buffer = await readFile(filePath);
 
     // Rubro de la sucursal que subió la factura — solo contexto para el
@@ -83,25 +102,58 @@ export async function POST(
     if (resultado.status === "error") {
       await prisma.facturaProveedor.update({
         where: { id: facturaId },
-        data: { estado: EstadoFacturaProveedor.ERROR, errorMensaje: resultado.message },
-      });
-      return NextResponse.json({ error: `La IA reportó un error: ${resultado.message}` }, { status: 422 });
-    }
-
-    // Proveedor: si ya venía asignado, no lo tocamos. Si no, intentamos un match
-    // exacto por nombre (case-insensitive) contra proveedores existentes; si no
-    // hay match, se guarda el nombre detectado para que el usuario lo confirme o
-    // cree el proveedor en la pantalla de revisión — nunca se crea automáticamente.
-    let proveedorId = factura.proveedorId;
-    if (!proveedorId && resultado.supplier.name) {
-      const match = await prisma.proveedor.findFirst({
-        where: {
-          nombre: { equals: resultado.supplier.name, mode: "insensitive" },
-          activo: true,
-          sucursalId: factura.sucursalId,
+        data: {
+          estado: EstadoFacturaProveedor.ERROR,
+          errorMensaje: resultado.message,
         },
       });
-      if (match) proveedorId = match.id;
+      return NextResponse.json(
+        { error: `La IA reportó un error: ${resultado.message}` },
+        { status: 422 },
+      );
+    }
+
+    // Proveedor: si ya venía asignado, no lo tocamos. Si no, intentamos matchear
+    // primero por CUIT (más confiable que el nombre, que puede variar de formato
+    // entre facturas del mismo proveedor) y después por nombre exacto
+    // (case-insensitive). Si no hay match con ningún proveedor existente, se crea
+    // uno nuevo automáticamente: dejarlo "Sin asignar" hacía que
+    // registrarCostoYAlias (aplicar-confirmacion.ts) saltee por completo el
+    // guardado de alias proveedor→producto, perdiendo todo el aprendizaje de
+    // esa factura y las siguientes hasta que alguien lo vinculara a mano.
+    let proveedorId = factura.proveedorId;
+    if (!proveedorId && resultado.supplier.name) {
+      const matchPorCuit = resultado.supplier.taxId
+        ? await prisma.proveedor.findFirst({
+            where: {
+              cuit: resultado.supplier.taxId,
+              activo: true,
+              sucursalId: factura.sucursalId,
+            },
+          })
+        : null;
+      const matchPorNombre =
+        matchPorCuit ??
+        (await prisma.proveedor.findFirst({
+          where: {
+            nombre: { equals: resultado.supplier.name, mode: "insensitive" },
+            activo: true,
+            sucursalId: factura.sucursalId,
+          },
+        }));
+
+      if (matchPorNombre) {
+        proveedorId = matchPorNombre.id;
+      } else {
+        const proveedorCreado = await prisma.proveedor.create({
+          data: {
+            nombre: resultado.supplier.name,
+            cuit: resultado.supplier.taxId,
+            sucursalId: factura.sucursalId,
+          },
+        });
+        proveedorId = proveedorCreado.id;
+      }
     }
 
     // Contexto de matching: catálogo de la sucursal + alias aprendidos del proveedor
@@ -116,7 +168,10 @@ export async function POST(
     // dentro de ella.
     const matches = resultado.items.map((item) =>
       matchearItem(
-        { textoOriginal: item.rawDescription, codigoProveedor: item.supplierCode },
+        {
+          textoOriginal: item.rawDescription,
+          codigoProveedor: item.supplierCode,
+        },
         contextoMatching,
       ),
     );
@@ -132,7 +187,11 @@ export async function POST(
     const candidatosGlobalesPorItem = await Promise.all(
       resultado.items.map((item, index) =>
         rubroNegocio && matches[index].productoId === null
-          ? buscarCandidatosGlobales({ rubro: rubroNegocio, descripcion: item.rawDescription, limit: 3 })
+          ? buscarCandidatosGlobales({
+              rubro: rubroNegocio,
+              descripcion: item.rawDescription,
+              limit: 3,
+            })
           : Promise.resolve([]),
       ),
     );
@@ -144,7 +203,8 @@ export async function POST(
       return {
         facturaId,
         textoOriginal: item.rawDescription,
-        descripcionNormalizada: normalizarProducto(item.rawDescription).normalizado || null,
+        descripcionNormalizada:
+          normalizarProducto(item.rawDescription).normalizado || null,
         codigoProveedor: item.supplierCode,
         cantidad: Math.max(1, Math.trunc(item.quantity)),
         precioUnitario: item.unitCost,
@@ -167,41 +227,46 @@ export async function POST(
     // facturas con muchos ítems cuando el insert era secuencial (N round-trips). Con
     // createMany() ya no debería hacer falta tanto margen, pero se deja como red de
     // seguridad — ver openspec/changes/fix-timeout-transaccion-facturas-proveedor.
-    const facturaActualizada = await prisma.$transaction(async (tx) => {
-      await tx.facturaProveedor.update({
-        where: { id: facturaId },
-        data: {
-          estado: EstadoFacturaProveedor.REQUIERE_REVISION,
-          proveedorId,
-          proveedorNombreDetectado: resultado.supplier.name,
-          proveedorCuitDetectado: resultado.supplier.taxId,
-          numeroFactura: resultado.invoice.number,
-          fecha: resultado.invoice.date ? new Date(resultado.invoice.date) : null,
-          moneda: resultado.invoice.currency || factura.moneda,
-          totalDetectado: resultado.invoice.total,
-          ocrTextoCompleto: resultado.ocrText,
-          confianzaOcr: resultado.globalConfidence,
-          iaRespuestaCruda: resultado.aiRawResponse as Prisma.InputJsonValue,
-          iaModeloUsado: resultado.aiModel,
-          iaTokensUsados: resultado.aiUsage?.totalTokens ?? null,
-        },
-      });
+    const facturaActualizada = await prisma.$transaction(
+      async (tx) => {
+        await tx.facturaProveedor.update({
+          where: { id: facturaId },
+          data: {
+            estado: EstadoFacturaProveedor.REQUIERE_REVISION,
+            proveedorId,
+            proveedorNombreDetectado: resultado.supplier.name,
+            proveedorCuitDetectado: resultado.supplier.taxId,
+            numeroFactura: resultado.invoice.number,
+            fecha: resultado.invoice.date
+              ? new Date(resultado.invoice.date)
+              : null,
+            moneda: resultado.invoice.currency || factura.moneda,
+            totalDetectado: resultado.invoice.total,
+            ocrTextoCompleto: resultado.ocrText,
+            confianzaOcr: resultado.globalConfidence,
+            iaRespuestaCruda: resultado.aiRawResponse as Prisma.InputJsonValue,
+            iaModeloUsado: resultado.aiModel,
+            iaTokensUsados: resultado.aiUsage?.totalTokens ?? null,
+          },
+        });
 
-      if (itemsData.length > 0) {
-        // Un único round-trip para todos los ítems, en vez de uno por ítem — con
-        // facturas de 20-30+ líneas, el loop secuencial anterior podía superar el
-        // timeout de la transacción.
-        await tx.facturaProveedorItem.createMany({ data: itemsData });
-      }
+        if (itemsData.length > 0) {
+          // Un único round-trip para todos los ítems, en vez de uno por ítem — con
+          // facturas de 20-30+ líneas, el loop secuencial anterior podía superar el
+          // timeout de la transacción.
+          await tx.facturaProveedorItem.createMany({ data: itemsData });
+        }
 
-      // El `update` de arriba no trae los items (se crean después) — hay que
-      // releerla con la relación incluida para que el frontend reciba las filas
-      // recién creadas en la misma respuesta.
-      return tx.facturaProveedor.findUniqueOrThrow({
-        where: { id: facturaId },
-        include: { items: true, proveedor: true },
-      });
-    }, { timeout: 15000 });
+        // El `update` de arriba no trae los items (se crean después) — hay que
+        // releerla con la relación incluida para que el frontend reciba las filas
+        // recién creadas en la misma respuesta.
+        return tx.facturaProveedor.findUniqueOrThrow({
+          where: { id: facturaId },
+          include: { items: true, proveedor: true },
+        });
+      },
+      { timeout: 15000 },
+    );
 
     return NextResponse.json({
       data: facturaActualizada,
