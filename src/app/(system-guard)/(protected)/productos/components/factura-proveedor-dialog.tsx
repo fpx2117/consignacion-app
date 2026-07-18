@@ -19,7 +19,6 @@ import { digitosAMonto, formatearInputMonto } from "@/lib/money-input";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
   DialogContent,
@@ -196,8 +195,6 @@ const ACCEPT_FACTURA = "image/png,image/jpeg,image/webp,application/pdf";
 // compactos para que la tabla respire.
 const DATO_FIELD_CLASS =
   "h-10 rounded-xl border-border bg-background text-sm shadow-xs";
-const CELL_INPUT_CLASS =
-  "h-9 rounded-lg border-border bg-background text-sm shadow-xs";
 const TABLE_ACTION_ICON_CLASS =
   "size-8 rounded-lg border transition-colors focus-visible:ring-2 focus-visible:ring-primary/60";
 
@@ -1193,28 +1190,25 @@ export function FacturaProveedorDialog({
                       <TooltipProvider>
                         <div className="overflow-hidden rounded-2xl border border-border bg-card">
                           <div className="overflow-x-auto">
-                            <table className="w-full min-w-[880px] border-collapse text-sm">
+                            <table className="w-full min-w-[720px] border-collapse text-sm">
                               <thead>
                                 <tr className="border-b border-border bg-muted/50 text-left text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-                                  <th className="px-4 py-2.5 font-semibold">
+                                  <th className="px-3 py-2 pl-4 font-semibold">
                                     Producto
                                   </th>
-                                  <th className="px-3 py-2.5 font-semibold">
+                                  <th className="w-14 px-2 py-2 font-semibold">
                                     Cant.
                                   </th>
-                                  <th className="px-3 py-2.5 font-semibold">
+                                  <th className="w-[92px] px-2 py-2 font-semibold">
                                     Costo ({monedaFactura})
                                   </th>
-                                  <th className="px-3 py-2.5 font-semibold">
-                                    Precio venta
+                                  <th className="w-[92px] px-2 py-2 font-semibold">
+                                    P. venta
                                   </th>
-                                  <th className="px-3 py-2.5 font-semibold">
-                                    Confianza
-                                  </th>
-                                  <th className="px-3 py-2.5 font-semibold">
+                                  <th className="w-[116px] px-2 py-2 font-semibold">
                                     Estado
                                   </th>
-                                  <th className="px-3 py-2.5 text-right font-semibold">
+                                  <th className="w-[108px] px-2 py-2 pr-3 text-right font-semibold">
                                     Acciones
                                   </th>
                                 </tr>
@@ -1223,7 +1217,7 @@ export function FacturaProveedorDialog({
                                 {itemsFiltrados.length === 0 ? (
                                   <tr>
                                     <td
-                                      colSpan={7}
+                                      colSpan={6}
                                       className="px-4 py-10 text-center text-sm text-muted-foreground"
                                     >
                                       No hay productos en este filtro.
@@ -1277,11 +1271,11 @@ export function FacturaProveedorDialog({
                                             : "hover:bg-muted/30",
                                         )}
                                       >
-                                        {/* Producto */}
-                                        <td className="px-4 py-3 pl-5 align-top">
-                                          <div className="flex items-start gap-2.5">
-                                            <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary ring-1 ring-primary/15">
-                                              <Package className="h-4 w-4" />
+                                        {/* Producto: descripción editable + código + botón de match */}
+                                        <td className="px-3 py-2.5 pl-4 align-top">
+                                          <div className="flex items-start gap-2">
+                                            <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary ring-1 ring-primary/15">
+                                              <Package className="h-3.5 w-3.5" />
                                             </div>
                                             <div className="min-w-0 flex-1 space-y-1">
                                               <Input
@@ -1301,78 +1295,53 @@ export function FacturaProveedorDialog({
                                                 }
                                                 disabled={terminal || busy}
                                                 className={cn(
-                                                  CELL_INPUT_CLASS,
-                                                  "font-medium",
+                                                  "h-8 rounded-lg border-border bg-background text-sm font-medium shadow-xs",
                                                 )}
                                               />
-                                              {mostrarCodigo &&
-                                                item.codigoProveedor && (
-                                                  <p className="font-mono text-[11px] text-muted-foreground">
-                                                    #{item.codigoProveedor}
-                                                  </p>
-                                                )}
-                                              {!terminal && (
-                                                <Button
-                                                  type="button"
-                                                  variant="outline"
-                                                  aria-label={`Producto existente para ${item.textoOriginal}`}
-                                                  onClick={() =>
-                                                    setItemIdParaMatch(item.id)
-                                                  }
-                                                  disabled={busy}
-                                                  className={cn(
-                                                    CELL_INPUT_CLASS,
-                                                    "w-full justify-between gap-2 font-normal",
-                                                    !productoMatch &&
-                                                      "text-muted-foreground",
-                                                  )}
-                                                >
-                                                  <span className="truncate">
-                                                    {productoMatch
-                                                      ? productoMatch.nombre
-                                                      : "Elegir producto existente"}
-                                                  </span>
-                                                  <Search className="h-3.5 w-3.5 shrink-0 opacity-60" />
-                                                </Button>
-                                              )}
-                                              {requiereAlta &&
-                                                !terminal &&
-                                                item.candidatoGlobalNombre && (
-                                                  <p className="flex items-start gap-1 text-[11px] text-primary">
-                                                    <Sparkles className="mt-0.5 h-3 w-3 shrink-0" />
-                                                    <span>
-                                                      Sugerido:{" "}
-                                                      <span className="font-semibold">
-                                                        {
-                                                          item.candidatoGlobalNombre
-                                                        }
-                                                      </span>
+                                              <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                                                {mostrarCodigo &&
+                                                  item.codigoProveedor && (
+                                                    <span className="font-mono text-[11px] text-muted-foreground">
+                                                      #{item.codigoProveedor}
                                                     </span>
-                                                  </p>
+                                                  )}
+                                                {!terminal && (
+                                                  <button
+                                                    type="button"
+                                                    aria-label={`Producto existente para ${item.textoOriginal}`}
+                                                    onClick={() =>
+                                                      setItemIdParaMatch(
+                                                        item.id,
+                                                      )
+                                                    }
+                                                    disabled={busy}
+                                                    className={cn(
+                                                      "inline-flex min-w-0 max-w-full items-center gap-1 rounded-md border border-border/70 bg-background px-2 py-1 text-xs font-medium transition-colors hover:border-primary/50 hover:text-primary disabled:opacity-50",
+                                                      productoMatch
+                                                        ? "text-foreground"
+                                                        : "text-muted-foreground",
+                                                    )}
+                                                  >
+                                                    <Search className="h-3 w-3 shrink-0 opacity-70" />
+                                                    <span className="truncate">
+                                                      {productoMatch
+                                                        ? productoMatch.nombre
+                                                        : "Elegir producto"}
+                                                    </span>
+                                                  </button>
                                                 )}
-                                              {item.atributosExtra &&
-                                                Object.keys(item.atributosExtra)
-                                                  .length > 0 && (
-                                                  <div className="flex flex-wrap gap-1 pt-0.5">
-                                                    {Object.entries(
-                                                      item.atributosExtra,
-                                                    ).map(([clave, valor]) => (
-                                                      <Badge
-                                                        key={clave}
-                                                        variant="outline"
-                                                        className="h-5 rounded-md border-border/60 bg-background/50 px-1.5 text-[10px] font-normal text-muted-foreground"
-                                                      >
-                                                        {clave}: {valor}
-                                                      </Badge>
-                                                    ))}
-                                                  </div>
+                                                {terminal && productoMatch && (
+                                                  <span className="truncate text-xs text-muted-foreground">
+                                                    {productoMatch.nombre}
+                                                  </span>
                                                 )}
+                                              </div>
                                             </div>
                                           </div>
                                         </td>
 
                                         {/* Cantidad */}
-                                        <td className="px-3 py-3 align-top">
+                                        <td className="px-2 py-2.5 align-top">
                                           <Input
                                             aria-label={`Cantidad para ${item.textoOriginal}`}
                                             type="number"
@@ -1399,17 +1368,19 @@ export function FacturaProveedorDialog({
                                               });
                                             }}
                                             disabled={terminal || busy}
-                                            className={cn(
-                                              CELL_INPUT_CLASS,
-                                              "w-16 text-center tabular-nums",
-                                            )}
+                                            className="h-8 w-12 rounded-lg border-border bg-background px-1.5 text-center text-sm shadow-xs tabular-nums"
                                           />
                                         </td>
 
-                                        {/* Costo unitario */}
-                                        <td className="px-3 py-3 align-top">
+                                        {/* Costo unitario (ARS en tooltip) */}
+                                        <td className="px-2 py-2.5 align-top">
                                           <Input
                                             aria-label={`Costo unitario para ${item.textoOriginal} en ${monedaFactura}`}
+                                            title={
+                                              costoArs != null
+                                                ? `${formatearArs(costoArs)} ARS`
+                                                : undefined
+                                            }
                                             type="text"
                                             inputMode="decimal"
                                             value={formatearInputMonto(
@@ -1430,33 +1401,24 @@ export function FacturaProveedorDialog({
                                             }
                                             disabled={terminal || busy}
                                             placeholder="—"
-                                            className={cn(
-                                              CELL_INPUT_CLASS,
-                                              "w-24 tabular-nums",
-                                            )}
+                                            className="h-8 w-full rounded-lg border-border bg-background px-2 text-sm shadow-xs tabular-nums"
                                           />
-                                          {costoArs != null && (
-                                            <p className="mt-1 text-[11px] font-semibold text-primary tabular-nums">
-                                              {formatearArs(costoArs)} ARS
-                                            </p>
-                                          )}
                                         </td>
 
                                         {/* Precio venta */}
-                                        <td className="px-3 py-3 align-top">
+                                        <td className="px-2 py-2.5 align-top">
                                           {productoMatch ? (
                                             <div
-                                              className={cn(
-                                                CELL_INPUT_CLASS,
-                                                "flex w-24 items-center px-2.5 font-semibold tabular-nums text-foreground",
-                                              )}
+                                              className="flex h-8 items-center rounded-lg border border-border bg-muted/40 px-2 text-sm font-semibold tabular-nums text-foreground"
                                               title="Precio de venta del producto existente — editalo con 'Editar producto'"
                                             >
-                                              {formatMoney(
-                                                Number(
-                                                  productoMatch.precioVenta,
-                                                ),
-                                              )}
+                                              <span className="truncate">
+                                                {formatMoney(
+                                                  Number(
+                                                    productoMatch.precioVenta,
+                                                  ),
+                                                )}
+                                              </span>
                                             </div>
                                           ) : (
                                             <Input
@@ -1478,66 +1440,77 @@ export function FacturaProveedorDialog({
                                               }
                                               disabled={terminal || busy}
                                               placeholder="—"
-                                              className={cn(
-                                                CELL_INPUT_CLASS,
-                                                "w-24 tabular-nums",
-                                              )}
+                                              className="h-8 w-full rounded-lg border-border bg-background px-2 text-sm shadow-xs tabular-nums"
                                             />
                                           )}
                                         </td>
 
-                                        {/* Confianza */}
-                                        <td className="px-3 py-3 align-top">
-                                          <span
-                                            className={cn(
-                                              "inline-flex items-center gap-1 rounded-full px-2 py-1 font-mono text-xs font-bold",
-                                              confCls,
-                                            )}
-                                          >
-                                            {conf.pct != null
-                                              ? `${conf.pct}%`
-                                              : "—"}
-                                          </span>
-                                        </td>
-
-                                        {/* Estado */}
-                                        <td className="px-3 py-3 align-top">
-                                          <span
-                                            className={cn(
-                                              "inline-flex items-center gap-1.5 text-xs font-semibold",
-                                              badge.cls,
-                                            )}
-                                          >
-                                            <BadgeIcon className="h-3.5 w-3.5 shrink-0" />
-                                            <span className="max-w-[140px] truncate">
-                                              {badge.label}
+                                        {/* Estado: chip de confianza + badge compacto */}
+                                        <td className="px-2 py-2.5 align-top">
+                                          <div className="flex flex-col gap-1">
+                                            <span
+                                              className={cn(
+                                                "inline-flex w-fit items-center rounded-full px-2 py-0.5 font-mono text-xs font-bold",
+                                                confCls,
+                                              )}
+                                            >
+                                              {conf.pct != null
+                                                ? `${conf.pct}%`
+                                                : "—"}
                                             </span>
-                                          </span>
-                                          {item.advertencias.length > 0 && (
-                                            <Tooltip>
-                                              <TooltipTrigger asChild>
-                                                <div className="mt-1 flex cursor-help items-center gap-1 text-[11px] text-[color:var(--status-warning)]">
-                                                  <AlertTriangle className="h-3 w-3 shrink-0" />
-                                                  <span>Revisar</span>
-                                                </div>
-                                              </TooltipTrigger>
-                                              <TooltipContent
-                                                side="bottom"
-                                                sideOffset={4}
-                                                className="max-w-xs"
-                                              >
-                                                {item.advertencias.map(
-                                                  (advertencia, i) => (
-                                                    <p key={i}>{advertencia}</p>
-                                                  ),
-                                                )}
-                                              </TooltipContent>
-                                            </Tooltip>
-                                          )}
+                                            <span
+                                              className={cn(
+                                                "inline-flex items-center gap-1 text-[11px] font-semibold",
+                                                badge.cls,
+                                              )}
+                                            >
+                                              <BadgeIcon className="h-3 w-3 shrink-0" />
+                                              <span className="truncate">
+                                                {item.estado === "CONFIRMADO"
+                                                  ? "Confirmado"
+                                                  : item.estado ===
+                                                      "PRODUCTO_CREADO"
+                                                    ? "Creado"
+                                                    : item.estado ===
+                                                        "SIN_COINCIDENCIA"
+                                                      ? "Sin match"
+                                                      : item.estado ===
+                                                          "IGNORADO"
+                                                        ? "Ignorado"
+                                                        : item.estado ===
+                                                            "REQUIERE_REVISION"
+                                                          ? "Revisar"
+                                                          : "Sugerido"}
+                                              </span>
+                                            </span>
+                                            {item.advertencias.length > 0 && (
+                                              <Tooltip>
+                                                <TooltipTrigger asChild>
+                                                  <span className="inline-flex w-fit cursor-help items-center gap-1 text-[11px] text-[color:var(--status-warning)]">
+                                                    <AlertTriangle className="h-3 w-3 shrink-0" />
+                                                    Revisar
+                                                  </span>
+                                                </TooltipTrigger>
+                                                <TooltipContent
+                                                  side="bottom"
+                                                  sideOffset={4}
+                                                  className="max-w-xs"
+                                                >
+                                                  {item.advertencias.map(
+                                                    (advertencia, i) => (
+                                                      <p key={i}>
+                                                        {advertencia}
+                                                      </p>
+                                                    ),
+                                                  )}
+                                                </TooltipContent>
+                                              </Tooltip>
+                                            )}
+                                          </div>
                                         </td>
 
                                         {/* Acciones */}
-                                        <td className="px-3 py-3 align-top">
+                                        <td className="px-2 py-2.5 pr-3 align-top">
                                           {terminal ? (
                                             <span className="block text-right text-[11px] font-medium text-muted-foreground">
                                               —
@@ -1546,7 +1519,7 @@ export function FacturaProveedorDialog({
                                             <div
                                               role="group"
                                               aria-label={`Acciones para ${item.textoOriginal}`}
-                                              className="flex items-center justify-end gap-1.5"
+                                              className="flex items-center justify-end gap-1"
                                             >
                                               {item.productoId && (
                                                 <Tooltip>
