@@ -26,6 +26,16 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -115,6 +125,11 @@ export function FacturaProveedorDialog({
   const [busyItemId, setBusyItemId] = React.useState<number | null>(null);
   const { rate: cotizacionDolar } = useDolarBlue();
   const [confirmandoTodos, setConfirmandoTodos] = React.useState(false);
+  // El proveedor puede haberse asignado/creado automáticamente al procesar la
+  // factura (ver process/route.ts) — antes de confirmar todo se le muestra al
+  // usuario para que lo valide o lo corrija, en vez de darlo por sentado.
+  const [confirmarProveedorOpen, setConfirmarProveedorOpen] =
+    React.useState(false);
   const [itemParaCrear, setItemParaCrear] = React.useState<FacturaProveedorItem | null>(null);
   const [itemIdParaEditar, setItemIdParaEditar] = React.useState<number | null>(null);
   // Trackea si hay un dialog anidado (crear/editar producto) abierto, para
@@ -950,7 +965,7 @@ export function FacturaProveedorDialog({
                 <Button
                   type="button"
                   className="h-11 shrink-0 whitespace-nowrap px-6 font-semibold"
-                  onClick={confirmarTodosSeguros}
+                  onClick={() => setConfirmarProveedorOpen(true)}
                   disabled={confirmandoTodos || facturaBloqueada}
                 >
                   {confirmandoTodos ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
@@ -1002,6 +1017,47 @@ export function FacturaProveedorDialog({
           }}
         />
       )}
+
+      <AlertDialog open={confirmarProveedorOpen} onOpenChange={setConfirmarProveedorOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <Building2 className="h-5 w-5 text-primary" />
+              Confirmá los datos del proveedor
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {factura?.proveedorId
+                ? "Este proveedor se asignó automáticamente a partir de lo que detectó la IA. Revisá que sea correcto antes de confirmar los productos — el aprendizaje de futuras facturas (códigos y alias) se guarda contra este proveedor."
+                : "No se pudo asignar ningún proveedor para esta factura. Podés confirmar los productos igual, pero no se va a guardar ningún alias para reconocerlos más rápido la próxima vez."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="space-y-2 rounded-xl border bg-muted/30 px-4 py-3 text-sm">
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-muted-foreground">Nombre</span>
+              <span className="font-medium text-right truncate">
+                {factura?.proveedor?.nombre ?? factura?.proveedorNombreDetectado ?? "Sin detectar"}
+              </span>
+            </div>
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-muted-foreground">CUIT</span>
+              <span className="font-mono text-right">
+                {factura?.proveedor?.cuit ?? factura?.proveedorCuitDetectado ?? "Sin detectar"}
+              </span>
+            </div>
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Revisar antes</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                setConfirmarProveedorOpen(false);
+                confirmarTodosSeguros();
+              }}
+            >
+              Es correcto, confirmar todo
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }
