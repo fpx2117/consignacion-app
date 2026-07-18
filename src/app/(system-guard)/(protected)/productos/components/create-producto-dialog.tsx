@@ -14,6 +14,7 @@ export function CreateProductoDialog({
   trigger,
   onCreated,
   onProductoCreado,
+  onCategoriasChanged,
   initialValues,
   submitFn,
   open,
@@ -22,6 +23,8 @@ export function CreateProductoDialog({
   trigger?: React.ReactNode;
   onCreated?: () => void;
   onProductoCreado?: (producto: ProductoCreado) => void;
+  /** Notifica al padre cuando se crea/edita/elimina una categoría desde este dialog. */
+  onCategoriasChanged?: () => void;
   /** Prellenado opcional (ej: desde un item de factura OCR). El usuario puede editar todo antes de crear. */
   initialValues?: CreateProductoInitialValues;
   /** Override del submit por defecto (apiService.createProducto). Lo usa el flujo de OCR para pegarle al
@@ -37,6 +40,7 @@ export function CreateProductoDialog({
       trigger={trigger}
       onCreated={onCreated}
       onProductoCreado={onProductoCreado}
+      onCategoriasChanged={onCategoriasChanged}
       initialValues={initialValues}
       submitFn={submitFn}
       open={open}

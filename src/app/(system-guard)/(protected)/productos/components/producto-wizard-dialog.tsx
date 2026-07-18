@@ -1,10 +1,15 @@
 "use client";
 
 import * as React from "react";
-import type { CreateProductoInput, Producto, UpdateProductoInput } from "@/lib/types";
+import type {
+  CreateProductoInput,
+  Producto,
+  UpdateProductoInput,
+} from "@/lib/types";
 import { apiService } from "@/lib/apiService";
 import { getCategoryColorByKey } from "@/lib/category-colors";
 import { cn } from "@/lib/utils";
+import { digitosAMonto, formatearInputMonto } from "@/lib/money-input";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -95,6 +100,7 @@ export interface ProductoCreado {
 export interface CreateProductoInitialValues {
   nombre?: string;
   precioCosto?: number;
+  precioVenta?: number;
   stockDisponibleUnits?: number;
   codigoBarra?: string | null;
   atributosExtra?: Record<string, string> | null;
@@ -116,6 +122,7 @@ export function ProductoWizardDialog({
   onCreated,
   onProductoCreado,
   onUpdated,
+  onCategoriasChanged,
   initialValues,
   submitFn,
   open: controlledOpen,
@@ -128,6 +135,9 @@ export function ProductoWizardDialog({
   onCreated?: () => void;
   onProductoCreado?: (producto: ProductoCreado) => void;
   onUpdated?: () => void;
+  /** Notifica al padre cuando se crea/edita/elimina una categoría desde este wizard,
+   * para que pueda refrescar listados de categorías fuera del dialog (ej. filtros). */
+  onCategoriasChanged?: () => void;
   /** Prellenado opcional (ej: desde un item de factura OCR). Solo mode="create". */
   initialValues?: CreateProductoInitialValues;
   /** Override del submit por defecto (apiService.createProducto). Solo mode="create". */
@@ -139,66 +149,111 @@ export function ProductoWizardDialog({
 
   const [internalOpen, setInternalOpen] = React.useState(false);
   const open = controlledOpen ?? internalOpen;
-  const setOpen = React.useCallback((value: boolean) => {
-    controlledOnOpenChange?.(value);
-    if (controlledOpen === undefined) setInternalOpen(value);
-  }, [controlledOnOpenChange, controlledOpen]);
+  const setOpen = React.useCallback(
+    (value: boolean) => {
+      controlledOnOpenChange?.(value);
+      if (controlledOpen === undefined) setInternalOpen(value);
+    },
+    [controlledOnOpenChange, controlledOpen],
+  );
 
   const [step, setStep] = React.useState(0);
   const [saving, setSaving] = React.useState(false);
   const [imageUploading, setImageUploading] = React.useState(false);
 
   // Estados del formulario
-  const [nombre, setNombre] = React.useState(producto?.nombre ?? initialValues?.nombre ?? "");
-  const [codigoBarra, setCodigoBarra] = React.useState(producto?.codigoBarra ?? initialValues?.codigoBarra ?? "");
+  const [nombre, setNombre] = React.useState(
+    producto?.nombre ?? initialValues?.nombre ?? "",
+  );
+  const [codigoBarra, setCodigoBarra] = React.useState(
+    producto?.codigoBarra ?? initialValues?.codigoBarra ?? "",
+  );
   const [barcodeCameraOpen, setBarcodeCameraOpen] = React.useState(false);
-  const [pendingBarcode, setPendingBarcode] = React.useState<{ code: string; source: BarcodeSource } | null>(null);
-  const [precioVenta, setPrecioVenta] = React.useState(producto ? String(producto.precioVenta) : "");
+  const [pendingBarcode, setPendingBarcode] = React.useState<{
+    code: string;
+    source: BarcodeSource;
+  } | null>(null);
+  const [precioVenta, setPrecioVenta] = React.useState(
+    producto
+      ? formatearInputMonto(Number(producto.precioVenta))
+      : initialValues?.precioVenta !== undefined
+        ? formatearInputMonto(initialValues.precioVenta)
+        : "",
+  );
   const [precioCosto, setPrecioCosto] = React.useState(
-    producto ? String(producto.precioCosto) : initialValues?.precioCosto !== undefined ? String(initialValues.precioCosto) : ""
+    producto
+      ? formatearInputMonto(Number(producto.precioCosto))
+      : initialValues?.precioCosto !== undefined
+        ? formatearInputMonto(initialValues.precioCosto)
+        : "",
   );
   const [stockDisponibleUnits, setStockDisponibleUnits] = React.useState(
-    !producto && initialValues?.stockDisponibleUnits !== undefined ? String(initialValues.stockDisponibleUnits) : ""
+    !producto && initialValues?.stockDisponibleUnits !== undefined
+      ? String(initialValues.stockDisponibleUnits)
+      : "",
   );
-  const [stockMinUnits, setStockMinUnits] = React.useState(producto ? String(producto.stockMinUnits || "") : "");
+  const [stockMinUnits, setStockMinUnits] = React.useState(
+    producto ? String(producto.stockMinUnits || "") : "",
+  );
   const [fechaVencimiento, setFechaVencimiento] = React.useState(
-    producto?.fechaVencimiento ? new Date(producto.fechaVencimiento).toISOString().split("T")[0] : ""
+    producto?.fechaVencimiento
+      ? new Date(producto.fechaVencimiento).toISOString().split("T")[0]
+      : "",
   );
-  const [imagenUrl, setImagenUrl] = React.useState<string | null>(producto?.imagenUrl ?? null);
+  const [imagenUrl, setImagenUrl] = React.useState<string | null>(
+    producto?.imagenUrl ?? null,
+  );
 
   // Descuento
-  const [descuentoActivo, setDescuentoActivo] = React.useState(producto?.descuentoActivo ?? false);
-  const [tipoDescuento, setTipoDescuento] = React.useState<"porcentaje" | "monto">(
-    (producto?.tipoDescuento as "porcentaje" | "monto") ?? "porcentaje"
+  const [descuentoActivo, setDescuentoActivo] = React.useState(
+    producto?.descuentoActivo ?? false,
   );
+  const [tipoDescuento, setTipoDescuento] = React.useState<
+    "porcentaje" | "monto"
+  >((producto?.tipoDescuento as "porcentaje" | "monto") ?? "porcentaje");
   const [descuentoPorcentaje, setDescuentoPorcentaje] = React.useState(
-    producto?.descuentoPorcentaje ? String(producto.descuentoPorcentaje) : ""
+    producto?.descuentoPorcentaje ? String(producto.descuentoPorcentaje) : "",
   );
   const [descuentoMonto, setDescuentoMonto] = React.useState(
-    producto?.descuentoMonto ? String(producto.descuentoMonto) : ""
+    producto?.descuentoMonto ? String(producto.descuentoMonto) : "",
   );
   const [descuentoDesde, setDescuentoDesde] = React.useState(
-    producto?.descuentoDesde ? new Date(producto.descuentoDesde).toISOString().slice(0, 16) : ""
+    producto?.descuentoDesde
+      ? new Date(producto.descuentoDesde).toISOString().slice(0, 16)
+      : "",
   );
   const [descuentoHasta, setDescuentoHasta] = React.useState(
-    producto?.descuentoHasta ? new Date(producto.descuentoHasta).toISOString().slice(0, 16) : ""
+    producto?.descuentoHasta
+      ? new Date(producto.descuentoHasta).toISOString().slice(0, 16)
+      : "",
   );
 
   // Categorías
-  const [categorias, setCategorias] = React.useState<{ id: number | string; nombre: string; color?: string }[]>([]);
-  const [categoriaId, setCategoriaId] = React.useState<string>(producto?.categoriaId?.toString() ?? "");
-  const [subcategorias, setSubcategorias] = React.useState<{ id: number; nombre: string }[]>([]);
-  const [subcategoriaId, setSubcategoriaId] = React.useState<string>(producto?.subcategoriaId?.toString() ?? "");
+  const [categorias, setCategorias] = React.useState<
+    { id: number | string; nombre: string; color?: string }[]
+  >([]);
+  const [categoriaId, setCategoriaId] = React.useState<string>(
+    producto?.categoriaId?.toString() ?? "",
+  );
+  const [subcategorias, setSubcategorias] = React.useState<
+    { id: number; nombre: string }[]
+  >([]);
+  const [subcategoriaId, setSubcategoriaId] = React.useState<string>(
+    producto?.subcategoriaId?.toString() ?? "",
+  );
 
   // Atributos adicionales (lote, vencimiento, talle, color, etc.)
-  const [atributosExtra, setAtributosExtra] = React.useState<Record<string, string> | null>(
-    producto?.atributosExtra ?? initialValues?.atributosExtra ?? null
-  );
+  const [atributosExtra, setAtributosExtra] = React.useState<Record<
+    string,
+    string
+  > | null>(producto?.atributosExtra ?? initialValues?.atributosExtra ?? null);
   const [mostrarAtributos, setMostrarAtributos] = React.useState(() => {
     const extra = producto?.atributosExtra ?? initialValues?.atributosExtra;
     return !!extra && Object.keys(extra).length > 0;
   });
-  const [sugerenciasAtributos, setSugerenciasAtributos] = React.useState<string[]>([]);
+  const [sugerenciasAtributos, setSugerenciasAtributos] = React.useState<
+    string[]
+  >([]);
   const codigoBarraInputRef = React.useRef<HTMLInputElement | null>(null);
 
   const confirmBarcode = React.useCallback(() => {
@@ -234,29 +289,66 @@ export function ProductoWizardDialog({
     setCodigoBarra(producto?.codigoBarra ?? initialValues?.codigoBarra ?? "");
     setBarcodeCameraOpen(false);
     setPendingBarcode(null);
-    setPrecioVenta(producto ? String(producto.precioVenta) : "");
-    setPrecioCosto(producto ? String(producto.precioCosto) : initialValues?.precioCosto !== undefined ? String(initialValues.precioCosto) : "");
-    setStockDisponibleUnits(!producto && initialValues?.stockDisponibleUnits !== undefined ? String(initialValues.stockDisponibleUnits) : "");
+    setPrecioVenta(
+      producto
+        ? formatearInputMonto(Number(producto.precioVenta))
+        : initialValues?.precioVenta !== undefined
+          ? formatearInputMonto(initialValues.precioVenta)
+          : "",
+    );
+    setPrecioCosto(
+      producto
+        ? formatearInputMonto(Number(producto.precioCosto))
+        : initialValues?.precioCosto !== undefined
+          ? formatearInputMonto(initialValues.precioCosto)
+          : "",
+    );
+    setStockDisponibleUnits(
+      !producto && initialValues?.stockDisponibleUnits !== undefined
+        ? String(initialValues.stockDisponibleUnits)
+        : "",
+    );
     setStockMinUnits(producto ? String(producto.stockMinUnits || "") : "");
-    setFechaVencimiento(producto?.fechaVencimiento ? new Date(producto.fechaVencimiento).toISOString().split("T")[0] : "");
+    setFechaVencimiento(
+      producto?.fechaVencimiento
+        ? new Date(producto.fechaVencimiento).toISOString().split("T")[0]
+        : "",
+    );
     setImagenUrl(producto?.imagenUrl ?? null);
     setImageUploading(false);
     setCategoriaId(producto?.categoriaId?.toString() ?? "");
     setDescuentoActivo(producto?.descuentoActivo ?? false);
-    setTipoDescuento((producto?.tipoDescuento as "porcentaje" | "monto") ?? "porcentaje");
-    setDescuentoPorcentaje(producto?.descuentoPorcentaje ? String(producto.descuentoPorcentaje) : "");
-    setDescuentoMonto(producto?.descuentoMonto ? String(producto.descuentoMonto) : "");
-    setDescuentoDesde(producto?.descuentoDesde ? new Date(producto.descuentoDesde).toISOString().slice(0, 16) : "");
-    setDescuentoHasta(producto?.descuentoHasta ? new Date(producto.descuentoHasta).toISOString().slice(0, 16) : "");
-    const extra = producto?.atributosExtra ?? initialValues?.atributosExtra ?? null;
+    setTipoDescuento(
+      (producto?.tipoDescuento as "porcentaje" | "monto") ?? "porcentaje",
+    );
+    setDescuentoPorcentaje(
+      producto?.descuentoPorcentaje ? String(producto.descuentoPorcentaje) : "",
+    );
+    setDescuentoMonto(
+      producto?.descuentoMonto ? String(producto.descuentoMonto) : "",
+    );
+    setDescuentoDesde(
+      producto?.descuentoDesde
+        ? new Date(producto.descuentoDesde).toISOString().slice(0, 16)
+        : "",
+    );
+    setDescuentoHasta(
+      producto?.descuentoHasta
+        ? new Date(producto.descuentoHasta).toISOString().slice(0, 16)
+        : "",
+    );
+    const extra =
+      producto?.atributosExtra ?? initialValues?.atributosExtra ?? null;
     setAtributosExtra(extra);
     setMostrarAtributos(!!extra && Object.keys(extra).length > 0);
 
-    apiService.getCategorias()
+    apiService
+      .getCategorias()
       .then((data) => setCategorias(Array.isArray(data) ? data : []))
       .catch(() => setCategorias([]));
 
-    apiService.getConfiguracionGeneral()
+    apiService
+      .getConfiguracionGeneral()
       .then((config) => {
         const hint = getAtributosTipicos(config?.rubroNegocio);
         setSugerenciasAtributos(hint ? hint.split(", ").filter(Boolean) : []);
@@ -264,7 +356,10 @@ export function ProductoWizardDialog({
       .catch(() => setSugerenciasAtributos([]));
 
     if (producto?.categoriaId) {
-      apiService.getSubcategorias(producto.categoriaId).then(setSubcategorias).catch(() => setSubcategorias([]));
+      apiService
+        .getSubcategorias(producto.categoriaId)
+        .then(setSubcategorias)
+        .catch(() => setSubcategorias([]));
     } else {
       setSubcategorias([]);
     }
@@ -280,7 +375,8 @@ export function ProductoWizardDialog({
       return;
     }
     if (categoriaId) {
-      apiService.getSubcategorias(Number(categoriaId))
+      apiService
+        .getSubcategorias(Number(categoriaId))
         .then(setSubcategorias)
         .catch(() => setSubcategorias([]));
       setSubcategoriaId("");
@@ -292,8 +388,14 @@ export function ProductoWizardDialog({
 
   const pv = toNumber(precioVenta) || 0;
   const pc = toNumber(precioCosto) || 0;
-  const dpct = descuentoActivo && tipoDescuento === "porcentaje" ? (toNumber(descuentoPorcentaje) ?? 0) : 0;
-  const dmonto = descuentoActivo && tipoDescuento === "monto" ? (toNumber(descuentoMonto) ?? 0) : 0;
+  const dpct =
+    descuentoActivo && tipoDescuento === "porcentaje"
+      ? (toNumber(descuentoPorcentaje) ?? 0)
+      : 0;
+  const dmonto =
+    descuentoActivo && tipoDescuento === "monto"
+      ? (toNumber(descuentoMonto) ?? 0)
+      : 0;
   const precioEfectivo = descuentoActivo
     ? tipoDescuento === "porcentaje" && dpct > 0
       ? pv * (1 - dpct / 100)
@@ -302,11 +404,17 @@ export function ProductoWizardDialog({
         : pv
     : pv;
   const gananciaUnitaria = precioEfectivo - pc;
-  const margenPorcentaje = precioEfectivo > 0 ? (gananciaUnitaria / precioEfectivo) * 100 : 0;
-  const esGananciaNegativa = precioEfectivo > 0 && pc > 0 && gananciaUnitaria < 0;
-  const muestraDescuento = descuentoActivo && ((tipoDescuento === "porcentaje" && dpct > 0) || (tipoDescuento === "monto" && dmonto > 0));
+  const margenPorcentaje =
+    precioEfectivo > 0 ? (gananciaUnitaria / precioEfectivo) * 100 : 0;
+  const esGananciaNegativa =
+    precioEfectivo > 0 && pc > 0 && gananciaUnitaria < 0;
+  const muestraDescuento =
+    descuentoActivo &&
+    ((tipoDescuento === "porcentaje" && dpct > 0) ||
+      (tipoDescuento === "monto" && dmonto > 0));
 
-  const step0Valid = nombre.trim().length >= 2 && (isEdit || categoriaId !== "");
+  const step0Valid =
+    nombre.trim().length >= 2 && (isEdit || categoriaId !== "");
   const step2Valid = pv > 0 && pc > 0 && !esGananciaNegativa;
   const canSubmit = step0Valid && step2Valid;
 
@@ -347,21 +455,32 @@ export function ProductoWizardDialog({
           imagenUrl,
           descuentoActivo,
           tipoDescuento,
-          descuentoPorcentaje: tipoDescuento === "porcentaje" ? (dpctVal ?? null) : null,
-          descuentoMonto: tipoDescuento === "monto" ? (dmontoVal ?? null) : null,
-          descuentoDesde: descuentoDesde ? new Date(descuentoDesde).toISOString() : null,
-          descuentoHasta: descuentoHasta ? new Date(descuentoHasta).toISOString() : null,
+          descuentoPorcentaje:
+            tipoDescuento === "porcentaje" ? (dpctVal ?? null) : null,
+          descuentoMonto:
+            tipoDescuento === "monto" ? (dmontoVal ?? null) : null,
+          descuentoDesde: descuentoDesde
+            ? new Date(descuentoDesde).toISOString()
+            : null,
+          descuentoHasta: descuentoHasta
+            ? new Date(descuentoHasta).toISOString()
+            : null,
           atributosExtra,
         };
 
-        const crear = submitFn ?? ((p: CreateProductoInput) =>
-          apiService.createProducto(p).then((created) => ({
-            id: Number(created.id),
-            nombre: created.nombre,
-            sku: (created as { sku?: string | null }).sku ?? null,
-            codigoBarra: created.codigoBarra ?? null,
-            stockDisponibleUnits: Number((created as { stockDisponibleUnits?: unknown }).stockDisponibleUnits ?? 0),
-          })));
+        const crear =
+          submitFn ??
+          ((p: CreateProductoInput) =>
+            apiService.createProducto(p).then((created) => ({
+              id: Number(created.id),
+              nombre: created.nombre,
+              sku: (created as { sku?: string | null }).sku ?? null,
+              codigoBarra: created.codigoBarra ?? null,
+              stockDisponibleUnits: Number(
+                (created as { stockDisponibleUnits?: unknown })
+                  .stockDisponibleUnits ?? 0,
+              ),
+            })));
 
         const created = await crear(payload as unknown as CreateProductoInput);
         toast.success("Producto creado con éxito");
@@ -381,10 +500,16 @@ export function ProductoWizardDialog({
           imagenUrl: imagenUrl || null,
           descuentoActivo,
           tipoDescuento,
-          descuentoPorcentaje: tipoDescuento === "porcentaje" ? (dpctVal ?? null) : null,
-          descuentoMonto: tipoDescuento === "monto" ? (dmontoVal ?? null) : null,
-          descuentoDesde: descuentoDesde ? new Date(descuentoDesde).toISOString() : null,
-          descuentoHasta: descuentoHasta ? new Date(descuentoHasta).toISOString() : null,
+          descuentoPorcentaje:
+            tipoDescuento === "porcentaje" ? (dpctVal ?? null) : null,
+          descuentoMonto:
+            tipoDescuento === "monto" ? (dmontoVal ?? null) : null,
+          descuentoDesde: descuentoDesde
+            ? new Date(descuentoDesde).toISOString()
+            : null,
+          descuentoHasta: descuentoHasta
+            ? new Date(descuentoHasta).toISOString()
+            : null,
           atributosExtra,
         };
 
@@ -394,7 +519,13 @@ export function ProductoWizardDialog({
         onUpdated?.();
       }
     } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : mode === "create" ? "Error al crear producto" : "Error al actualizar");
+      toast.error(
+        err instanceof Error
+          ? err.message
+          : mode === "create"
+            ? "Error al crear producto"
+            : "Error al actualizar",
+      );
     } finally {
       setSaving(false);
     }
@@ -402,7 +533,8 @@ export function ProductoWizardDialog({
 
   // Cuando el dialog es controlado externamente (open/onOpenChange provistos) y no se pasó
   // un trigger explícito, no renderizamos ningún botón propio — el padre decide cuándo abrirlo.
-  const mostrarTriggerPropio = isEdit || trigger !== undefined || controlledOpen === undefined;
+  const mostrarTriggerPropio =
+    isEdit || trigger !== undefined || controlledOpen === undefined;
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -419,18 +551,24 @@ export function ProductoWizardDialog({
       <DialogContent
         className={cn(
           "top-0 left-0 flex h-[100dvh] w-screen max-w-none translate-x-0 translate-y-0 flex-col gap-0 overflow-hidden rounded-none border-none bg-background p-0 shadow-2xl",
-          "sm:top-[50%] sm:left-[50%] sm:h-auto sm:max-h-[90vh] sm:w-full sm:max-w-2xl sm:translate-x-[-50%] sm:translate-y-[-50%] sm:rounded-2xl sm:border"
+          "sm:top-[50%] sm:left-[50%] sm:h-auto sm:max-h-[90vh] sm:w-full sm:max-w-2xl sm:translate-x-[-50%] sm:translate-y-[-50%] sm:rounded-2xl sm:border",
         )}
       >
         <DialogHeader className="shrink-0 border-b bg-muted/20 px-5 pt-5 pb-3">
           <div className="flex items-center gap-2 text-primary">
-            {isEdit ? <Pencil className="h-5 w-5" /> : <Package className="h-5 w-5" />}
+            {isEdit ? (
+              <Pencil className="h-5 w-5" />
+            ) : (
+              <Package className="h-5 w-5" />
+            )}
             <DialogTitle className="text-xl font-bold italic tracking-tight">
               {isEdit ? "Editar Producto" : "Nuevo Producto"}
             </DialogTitle>
           </div>
           <DialogDescription>
-            {isEdit ? "Ajustá la ficha técnica y comercial del producto." : "Completá la información base del producto"}
+            {isEdit
+              ? "Ajustá la ficha técnica y comercial del producto."
+              : "Completá la información base del producto"}
           </DialogDescription>
 
           <div className="pt-1">
@@ -438,7 +576,10 @@ export function ProductoWizardDialog({
               {STEPS.map((s, i) => (
                 <div
                   key={s.label}
-                  className={cn("h-1.5 flex-1 rounded-full transition-colors", i <= step ? "bg-primary" : "bg-muted")}
+                  className={cn(
+                    "h-1.5 flex-1 rounded-full transition-colors",
+                    i <= step ? "bg-primary" : "bg-muted",
+                  )}
                 />
               ))}
             </div>
@@ -454,24 +595,43 @@ export function ProductoWizardDialog({
               {/* Imagen + nombre + categoría/subcategoría + vencimiento */}
               <div className="flex gap-4 items-start">
                 <div className="shrink-0 w-[88px] space-y-1">
-                  <Label className="text-[10px] font-bold uppercase text-muted-foreground">Imagen</Label>
-                  <ImageUpload value={imagenUrl} onChange={setImagenUrl} onUploadingChange={setImageUploading} />
+                  <Label className="text-[10px] font-bold uppercase text-muted-foreground">
+                    Imagen
+                  </Label>
+                  <ImageUpload
+                    value={imagenUrl}
+                    onChange={setImagenUrl}
+                    onUploadingChange={setImageUploading}
+                  />
                 </div>
 
                 <div className="min-w-0 flex-1 space-y-2.5">
                   <div className="space-y-1">
-                    <Label className="text-xs font-bold uppercase text-muted-foreground">Nombre</Label>
+                    <Label className="text-xs font-bold uppercase text-muted-foreground">
+                      Nombre
+                    </Label>
                     <div className="relative">
                       <Tag className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                      <Input value={nombre} onChange={(e) => setNombre(e.target.value)} className="pl-9 h-10 bg-muted/30" />
+                      <Input
+                        value={nombre}
+                        onChange={(e) => setNombre(e.target.value)}
+                        className="pl-9 h-10 bg-muted/30"
+                      />
                     </div>
                   </div>
 
                   <div className="space-y-1">
-                    <Label className="text-xs font-bold uppercase text-muted-foreground">Vencimiento (Opcional)</Label>
+                    <Label className="text-xs font-bold uppercase text-muted-foreground">
+                      Vencimiento (Opcional)
+                    </Label>
                     <div className="relative">
                       <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                      <Input type="date" value={fechaVencimiento} onChange={(e) => setFechaVencimiento(e.target.value)} className="pl-9 h-10 bg-muted/30" />
+                      <Input
+                        type="date"
+                        value={fechaVencimiento}
+                        onChange={(e) => setFechaVencimiento(e.target.value)}
+                        className="pl-9 h-10 bg-muted/30"
+                      />
                     </div>
                   </div>
                 </div>
@@ -479,21 +639,40 @@ export function ProductoWizardDialog({
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="space-y-1 sm:col-span-2">
-                  <Label className="text-xs font-bold uppercase text-muted-foreground">Categoría</Label>
+                  <Label className="text-xs font-bold uppercase text-muted-foreground">
+                    Categoría
+                  </Label>
                   <div className="flex gap-2">
                     <div className="relative flex-1">
                       <Layers className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground z-10" />
-                      <Select value={categoriaId} onValueChange={setCategoriaId}>
+                      <Select
+                        value={categoriaId}
+                        onValueChange={setCategoriaId}
+                      >
                         <SelectTrigger className="pl-9 h-10 bg-muted/30">
-                          <SelectValue placeholder={isEdit ? "Sin categoría" : "Seleccionar categoría..."} />
+                          <SelectValue
+                            placeholder={
+                              isEdit
+                                ? "Sin categoría"
+                                : "Seleccionar categoría..."
+                            }
+                          />
                         </SelectTrigger>
                         <SelectContent>
                           {categorias.map((cat) => {
                             const catColor = getCategoryColorByKey(cat.color);
                             return (
-                              <SelectItem key={cat.id} value={cat.id.toString()}>
+                              <SelectItem
+                                key={cat.id}
+                                value={cat.id.toString()}
+                              >
                                 <span className="flex items-center gap-2">
-                                  <span className={cn("h-2 w-2 rounded-full shrink-0", catColor.dot)} />
+                                  <span
+                                    className={cn(
+                                      "h-2 w-2 rounded-full shrink-0",
+                                      catColor.dot,
+                                    )}
+                                  />
                                   {cat.nombre}
                                 </span>
                               </SelectItem>
@@ -504,7 +683,12 @@ export function ProductoWizardDialog({
                     </div>
                     <CreateCategoriaDialog
                       onCreated={() => {
-                        apiService.getCategorias().then((data) => setCategorias(Array.isArray(data) ? data : []));
+                        apiService
+                          .getCategorias()
+                          .then((data) =>
+                            setCategorias(Array.isArray(data) ? data : []),
+                          );
+                        onCategoriasChanged?.();
                       }}
                     />
                   </div>
@@ -512,10 +696,15 @@ export function ProductoWizardDialog({
 
                 {categoriaId && subcategorias.length > 0 && (
                   <div className="space-y-1 sm:col-span-2 animate-in fade-in slide-in-from-top-2 duration-300">
-                    <Label className="text-xs font-bold uppercase text-muted-foreground">Subcategoría (Opcional)</Label>
+                    <Label className="text-xs font-bold uppercase text-muted-foreground">
+                      Subcategoría (Opcional)
+                    </Label>
                     <div className="relative">
                       <Tag className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground z-10" />
-                      <Select value={subcategoriaId} onValueChange={setSubcategoriaId}>
+                      <Select
+                        value={subcategoriaId}
+                        onValueChange={setSubcategoriaId}
+                      >
                         <SelectTrigger className="pl-9 h-10 bg-muted/30">
                           <SelectValue placeholder="Seleccionar subcategoría..." />
                         </SelectTrigger>
@@ -538,7 +727,10 @@ export function ProductoWizardDialog({
           {step === 1 && (
             <>
               <div className="space-y-1">
-                <Label htmlFor="wizard-codigo-barra" className="text-xs font-bold uppercase text-muted-foreground">
+                <Label
+                  htmlFor="wizard-codigo-barra"
+                  className="text-xs font-bold uppercase text-muted-foreground"
+                >
                   Código de barras
                 </Label>
                 <div className="flex gap-2">
@@ -567,8 +759,23 @@ export function ProductoWizardDialog({
                     <span className="hidden sm:inline ml-2">Cámara</span>
                   </Button>
                 </div>
-                <p id="wizard-codigo-barra-hint" className="text-[11px] text-muted-foreground leading-tight">
-                  Escribilo <span className="font-medium text-foreground">manualmente</span>, apuntá la <span className="font-medium text-foreground">cámara</span> al código, o usá la <span className="font-medium text-foreground">pistola lectora</span> en cualquier parte de esta pantalla — no hace falta hacer click en el campo. Un código leído por cámara o pistola pide confirmación antes de aplicarse.
+                <p
+                  id="wizard-codigo-barra-hint"
+                  className="text-[11px] text-muted-foreground leading-tight"
+                >
+                  Escribilo{" "}
+                  <span className="font-medium text-foreground">
+                    manualmente
+                  </span>
+                  , apuntá la{" "}
+                  <span className="font-medium text-foreground">cámara</span> al
+                  código, o usá la{" "}
+                  <span className="font-medium text-foreground">
+                    pistola lectora
+                  </span>{" "}
+                  en cualquier parte de esta pantalla — no hace falta hacer
+                  click en el campo. Un código leído por cámara o pistola pide
+                  confirmación antes de aplicarse.
                 </p>
               </div>
 
@@ -576,7 +783,10 @@ export function ProductoWizardDialog({
                 <div className="flex items-center gap-2 rounded-lg border border-[color:var(--status-success-strong)]/30 bg-[color:var(--status-success-strong)]/5 px-3 py-2.5 text-sm animate-in fade-in">
                   <CheckCircle2 className="h-4 w-4 text-[color:var(--status-success-strong)] shrink-0" />
                   <span className="text-muted-foreground">
-                    Código asignado: <span className="font-mono font-bold text-foreground">{codigoBarra}</span>
+                    Código asignado:{" "}
+                    <span className="font-mono font-bold text-foreground">
+                      {codigoBarra}
+                    </span>
                   </span>
                 </div>
               ) : (
@@ -591,35 +801,70 @@ export function ProductoWizardDialog({
             <>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="space-y-1">
-                  <Label className="text-xs font-bold uppercase text-muted-foreground">Costo unitario</Label>
+                  <Label className="text-xs font-bold uppercase text-muted-foreground">
+                    Costo unitario
+                  </Label>
                   <div className="relative">
                     <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input value={precioCosto} onChange={(e) => setPrecioCosto(e.target.value)} className="pl-9 h-10 bg-muted/30" placeholder="0.00" inputMode="decimal" />
+                    <Input
+                      value={precioCosto}
+                      onChange={(e) =>
+                        setPrecioCosto(
+                          formatearInputMonto(digitosAMonto(e.target.value)),
+                        )
+                      }
+                      className="pl-9 h-10 bg-muted/30"
+                      placeholder="0.00"
+                      inputMode="decimal"
+                    />
                   </div>
                 </div>
 
                 <div className="space-y-1">
-                  <Label className="text-xs font-bold uppercase text-primary">Precio de venta</Label>
+                  <Label className="text-xs font-bold uppercase text-primary">
+                    Precio de venta
+                  </Label>
                   <div className="relative">
                     <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-primary" />
-                    <Input value={precioVenta} onChange={(e) => setPrecioVenta(e.target.value)} className="pl-9 h-10 bg-primary/5 border-primary/20 font-bold text-primary" placeholder="0.00" inputMode="decimal" />
+                    <Input
+                      value={precioVenta}
+                      onChange={(e) =>
+                        setPrecioVenta(
+                          formatearInputMonto(digitosAMonto(e.target.value)),
+                        )
+                      }
+                      className="pl-9 h-10 bg-primary/5 border-primary/20 font-bold text-primary"
+                      placeholder="0.00"
+                      inputMode="decimal"
+                    />
                   </div>
                 </div>
               </div>
 
               {(pv > 0 || pc > 0) && (
-                <div className={`rounded-lg border px-4 py-2.5 flex items-center justify-between gap-2 transition-all ${esGananciaNegativa ? 'bg-destructive/10 border-destructive/20' : 'bg-[color:var(--status-success-strong)]/5 border-[color:var(--status-success-strong)]/20'}`}>
+                <div
+                  className={`rounded-lg border px-4 py-2.5 flex items-center justify-between gap-2 transition-all ${esGananciaNegativa ? "bg-destructive/10 border-destructive/20" : "bg-[color:var(--status-success-strong)]/5 border-[color:var(--status-success-strong)]/20"}`}
+                >
                   <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
-                    <TrendingUp className={`h-3.5 w-3.5 ${esGananciaNegativa ? 'text-destructive' : 'text-[color:var(--status-success-strong)]'}`} />
+                    <TrendingUp
+                      className={`h-3.5 w-3.5 ${esGananciaNegativa ? "text-destructive" : "text-[color:var(--status-success-strong)]"}`}
+                    />
                     Rentabilidad estimada
                     {muestraDescuento && (
-                      <span className="text-[10px] font-bold text-[color:var(--status-warning)] bg-[color:var(--status-warning)]/10 px-1.5 py-0.5 rounded-full">c/desc.</span>
+                      <span className="text-[10px] font-bold text-[color:var(--status-warning)] bg-[color:var(--status-warning)]/10 px-1.5 py-0.5 rounded-full">
+                        c/desc.
+                      </span>
                     )}
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
-                    {esGananciaNegativa && <AlertCircle className="h-3.5 w-3.5 text-destructive" />}
-                    <span className={`text-sm font-black ${esGananciaNegativa ? 'text-destructive' : 'text-[color:var(--status-success-strong)]'}`}>
-                      ${gananciaUnitaria.toLocaleString()} ({margenPorcentaje.toFixed(1)}%)
+                    {esGananciaNegativa && (
+                      <AlertCircle className="h-3.5 w-3.5 text-destructive" />
+                    )}
+                    <span
+                      className={`text-sm font-black ${esGananciaNegativa ? "text-destructive" : "text-[color:var(--status-success-strong)]"}`}
+                    >
+                      ${gananciaUnitaria.toLocaleString()} (
+                      {margenPorcentaje.toFixed(1)}%)
                     </span>
                   </div>
                 </div>
@@ -630,25 +875,47 @@ export function ProductoWizardDialog({
                   <div className="flex items-center gap-2 p-3 bg-muted/20 rounded-lg border border-dashed">
                     <Package className="h-4 w-4 text-muted-foreground shrink-0" />
                     <div className="flex flex-col min-w-0">
-                      <span className="text-[10px] uppercase font-bold text-muted-foreground">Stock actual</span>
-                      <span className="text-sm font-bold truncate">{producto!.stockDisponibleUnits} u.</span>
+                      <span className="text-[10px] uppercase font-bold text-muted-foreground">
+                        Stock actual
+                      </span>
+                      <span className="text-sm font-bold truncate">
+                        {producto!.stockDisponibleUnits} u.
+                      </span>
                     </div>
                   </div>
                 ) : (
                   <div className="space-y-1">
-                    <Label className="text-xs font-bold uppercase text-muted-foreground">Stock inicial</Label>
+                    <Label className="text-xs font-bold uppercase text-muted-foreground">
+                      Stock inicial
+                    </Label>
                     <div className="relative">
                       <Package className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                      <Input value={stockDisponibleUnits} onChange={(e) => setStockDisponibleUnits(e.target.value)} className="pl-9 h-10 bg-muted/30" placeholder="0" inputMode="numeric" />
+                      <Input
+                        value={stockDisponibleUnits}
+                        onChange={(e) =>
+                          setStockDisponibleUnits(e.target.value)
+                        }
+                        className="pl-9 h-10 bg-muted/30"
+                        placeholder="0"
+                        inputMode="numeric"
+                      />
                     </div>
                   </div>
                 )}
 
                 <div className="space-y-1">
-                  <Label className="text-xs font-bold uppercase text-[color:var(--status-warning)]">Alerta stock bajo</Label>
+                  <Label className="text-xs font-bold uppercase text-[color:var(--status-warning)]">
+                    Alerta stock bajo
+                  </Label>
                   <div className="relative">
                     <BellRing className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[color:var(--status-warning)]" />
-                    <Input value={stockMinUnits} onChange={(e) => setStockMinUnits(e.target.value)} className="pl-9 h-10 bg-[color:var(--status-warning)]/5 border-[color:var(--status-warning)]/20" placeholder="5" inputMode="numeric" />
+                    <Input
+                      value={stockMinUnits}
+                      onChange={(e) => setStockMinUnits(e.target.value)}
+                      className="pl-9 h-10 bg-[color:var(--status-warning)]/5 border-[color:var(--status-warning)]/20"
+                      placeholder="5"
+                      inputMode="numeric"
+                    />
                   </div>
                 </div>
               </div>
@@ -662,9 +929,14 @@ export function ProductoWizardDialog({
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <Percent className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-xs font-bold uppercase text-muted-foreground">Descuento en catálogo</span>
+                    <span className="text-xs font-bold uppercase text-muted-foreground">
+                      Descuento en catálogo
+                    </span>
                   </div>
-                  <Switch checked={descuentoActivo} onCheckedChange={setDescuentoActivo} />
+                  <Switch
+                    checked={descuentoActivo}
+                    onCheckedChange={setDescuentoActivo}
+                  />
                 </div>
 
                 {descuentoActivo && (
@@ -677,7 +949,7 @@ export function ProductoWizardDialog({
                           "h-9 rounded-lg text-xs font-bold border transition-colors",
                           tipoDescuento === "porcentaje"
                             ? "bg-destructive text-white border-destructive"
-                            : "bg-muted/30 text-muted-foreground border-muted-foreground/20 hover:border-muted-foreground/40"
+                            : "bg-muted/30 text-muted-foreground border-muted-foreground/20 hover:border-muted-foreground/40",
                         )}
                       >
                         % Porcentaje
@@ -689,7 +961,7 @@ export function ProductoWizardDialog({
                           "h-9 rounded-lg text-xs font-bold border transition-colors",
                           tipoDescuento === "monto"
                             ? "bg-destructive text-white border-destructive"
-                            : "bg-muted/30 text-muted-foreground border-muted-foreground/20 hover:border-muted-foreground/40"
+                            : "bg-muted/30 text-muted-foreground border-muted-foreground/20 hover:border-muted-foreground/40",
                         )}
                       >
                         $ Monto fijo
@@ -699,7 +971,9 @@ export function ProductoWizardDialog({
                     <div className="space-y-1">
                       {tipoDescuento === "porcentaje" ? (
                         <>
-                          <Label className="text-xs font-bold uppercase text-muted-foreground">Porcentaje (%)</Label>
+                          <Label className="text-xs font-bold uppercase text-muted-foreground">
+                            Porcentaje (%)
+                          </Label>
                           <div className="relative">
                             <Percent className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                             <Input
@@ -707,7 +981,9 @@ export function ProductoWizardDialog({
                               min={1}
                               max={99}
                               value={descuentoPorcentaje}
-                              onChange={(e) => setDescuentoPorcentaje(e.target.value)}
+                              onChange={(e) =>
+                                setDescuentoPorcentaje(e.target.value)
+                              }
                               className="pl-9 h-10 bg-muted/30"
                               placeholder="ej: 20"
                               inputMode="numeric"
@@ -716,14 +992,18 @@ export function ProductoWizardDialog({
                         </>
                       ) : (
                         <>
-                          <Label className="text-xs font-bold uppercase text-muted-foreground">Monto de descuento ($)</Label>
+                          <Label className="text-xs font-bold uppercase text-muted-foreground">
+                            Monto de descuento ($)
+                          </Label>
                           <div className="relative">
                             <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                             <Input
                               type="number"
                               min={0.01}
                               value={descuentoMonto}
-                              onChange={(e) => setDescuentoMonto(e.target.value)}
+                              onChange={(e) =>
+                                setDescuentoMonto(e.target.value)
+                              }
                               className="pl-9 h-10 bg-muted/30"
                               placeholder="ej: 500"
                               inputMode="decimal"
@@ -735,29 +1015,54 @@ export function ProductoWizardDialog({
 
                     <div className="grid grid-cols-2 gap-3">
                       <div className="space-y-1">
-                        <Label className="text-xs font-bold uppercase text-muted-foreground">Desde (opcional)</Label>
-                        <Input type="datetime-local" value={descuentoDesde} onChange={(e) => setDescuentoDesde(e.target.value)} className="h-10 bg-muted/30" />
+                        <Label className="text-xs font-bold uppercase text-muted-foreground">
+                          Desde (opcional)
+                        </Label>
+                        <Input
+                          type="datetime-local"
+                          value={descuentoDesde}
+                          onChange={(e) => setDescuentoDesde(e.target.value)}
+                          className="h-10 bg-muted/30"
+                        />
                       </div>
                       <div className="space-y-1">
-                        <Label className="text-xs font-bold uppercase text-muted-foreground">Hasta (opcional)</Label>
-                        <Input type="datetime-local" value={descuentoHasta} onChange={(e) => setDescuentoHasta(e.target.value)} className="h-10 bg-muted/30" />
+                        <Label className="text-xs font-bold uppercase text-muted-foreground">
+                          Hasta (opcional)
+                        </Label>
+                        <Input
+                          type="datetime-local"
+                          value={descuentoHasta}
+                          onChange={(e) => setDescuentoHasta(e.target.value)}
+                          className="h-10 bg-muted/30"
+                        />
                       </div>
                     </div>
 
                     {(() => {
                       const dpctPreview = toNumber(descuentoPorcentaje);
                       const dmontoPreview = toNumber(descuentoMonto);
-                      const precioFinal = tipoDescuento === "porcentaje"
-                        ? (dpctPreview && pv > 0 ? pv * (1 - dpctPreview / 100) : null)
-                        : (dmontoPreview && pv > 0 ? pv - Math.min(dmontoPreview, pv) : null);
+                      const precioFinal =
+                        tipoDescuento === "porcentaje"
+                          ? dpctPreview && pv > 0
+                            ? pv * (1 - dpctPreview / 100)
+                            : null
+                          : dmontoPreview && pv > 0
+                            ? pv - Math.min(dmontoPreview, pv)
+                            : null;
                       if (!precioFinal || pv <= 0) return null;
                       const ahorro = pv - precioFinal;
                       const pctCalc = Math.round((ahorro / pv) * 100);
                       return (
                         <div className="rounded-lg bg-destructive/5 border border-destructive/20 px-3 py-2 flex items-center justify-between">
-                          <span className="text-xs text-muted-foreground line-through">${pv.toLocaleString("es-AR")}</span>
-                          <span className="text-sm font-black text-destructive">${precioFinal.toLocaleString("es-AR")}</span>
-                          <span className="text-xs font-bold text-destructive bg-destructive/10 px-2 py-0.5 rounded-full">-{pctCalc}%</span>
+                          <span className="text-xs text-muted-foreground line-through">
+                            ${pv.toLocaleString("es-AR")}
+                          </span>
+                          <span className="text-sm font-black text-destructive">
+                            ${precioFinal.toLocaleString("es-AR")}
+                          </span>
+                          <span className="text-xs font-bold text-destructive bg-destructive/10 px-2 py-0.5 rounded-full">
+                            -{pctCalc}%
+                          </span>
                         </div>
                       );
                     })()}
@@ -772,8 +1077,12 @@ export function ProductoWizardDialog({
                   onClick={() => setMostrarAtributos((v) => !v)}
                   className="flex items-center justify-between w-full text-left"
                 >
-                  <span className="text-xs font-bold uppercase text-muted-foreground">Atributos adicionales (opcional)</span>
-                  <span className="text-[10px] text-muted-foreground">{mostrarAtributos ? "Ocultar" : "Mostrar"}</span>
+                  <span className="text-xs font-bold uppercase text-muted-foreground">
+                    Atributos adicionales (opcional)
+                  </span>
+                  <span className="text-[10px] text-muted-foreground">
+                    {mostrarAtributos ? "Ocultar" : "Mostrar"}
+                  </span>
                 </button>
                 {mostrarAtributos && (
                   <div className="animate-in fade-in slide-in-from-top-2 duration-200">
@@ -789,25 +1098,46 @@ export function ProductoWizardDialog({
 
               {/* Resumen final */}
               <div className="rounded-xl border bg-muted/10 p-3 space-y-2">
-                <p className="text-xs font-bold uppercase text-muted-foreground">Resumen</p>
+                <p className="text-xs font-bold uppercase text-muted-foreground">
+                  Resumen
+                </p>
                 <div className="grid grid-cols-2 gap-x-3 gap-y-1.5 text-sm">
                   <span className="text-muted-foreground">Nombre</span>
-                  <span className="font-medium text-right truncate">{nombre || "—"}</span>
+                  <span className="font-medium text-right truncate">
+                    {nombre || "—"}
+                  </span>
                   <span className="text-muted-foreground">Categoría</span>
                   <span className="font-medium text-right truncate">
-                    {categorias.find((c) => String(c.id) === categoriaId)?.nombre || "—"}
+                    {categorias.find((c) => String(c.id) === categoriaId)
+                      ?.nombre || "—"}
                   </span>
-                  <span className="text-muted-foreground">Código de barras</span>
-                  <span className="font-mono text-right truncate">{codigoBarra || "—"}</span>
+                  <span className="text-muted-foreground">
+                    Código de barras
+                  </span>
+                  <span className="font-mono text-right truncate">
+                    {codigoBarra || "—"}
+                  </span>
                   <span className="text-muted-foreground">Precio de venta</span>
-                  <span className="font-bold text-right">${pv.toLocaleString("es-AR")}</span>
+                  <span className="font-bold text-right">
+                    ${pv.toLocaleString("es-AR")}
+                  </span>
                   <span className="text-muted-foreground">Margen</span>
-                  <span className={cn("font-bold text-right", esGananciaNegativa ? "text-destructive" : "text-[color:var(--status-success-strong)]")}>
+                  <span
+                    className={cn(
+                      "font-bold text-right",
+                      esGananciaNegativa
+                        ? "text-destructive"
+                        : "text-[color:var(--status-success-strong)]",
+                    )}
+                  >
                     {margenPorcentaje.toFixed(1)}%
                   </span>
                   <span className="text-muted-foreground">Stock</span>
                   <span className="font-medium text-right">
-                    {isEdit ? producto!.stockDisponibleUnits : toInt(stockDisponibleUnits) || 0} u.
+                    {isEdit
+                      ? producto!.stockDisponibleUnits
+                      : toInt(stockDisponibleUnits) || 0}{" "}
+                    u.
                   </span>
                 </div>
               </div>
@@ -817,24 +1147,52 @@ export function ProductoWizardDialog({
 
         <div className="shrink-0 flex gap-3 border-t bg-background px-5 py-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))]">
           {step === 0 ? (
-            <Button type="button" variant="outline" className="flex-1 h-10" onClick={() => setOpen(false)} disabled={saving}>
+            <Button
+              type="button"
+              variant="outline"
+              className="flex-1 h-10"
+              onClick={() => setOpen(false)}
+              disabled={saving}
+            >
               Cancelar
             </Button>
           ) : (
-            <Button type="button" variant="outline" className="flex-1 h-10" onClick={goBack} disabled={saving}>
+            <Button
+              type="button"
+              variant="outline"
+              className="flex-1 h-10"
+              onClick={goBack}
+              disabled={saving}
+            >
               <ChevronLeft className="h-4 w-4 mr-1" />
               Atrás
             </Button>
           )}
 
           {step < STEPS.length - 1 ? (
-            <Button type="button" className="flex-1 h-10 font-bold" onClick={goNext} disabled={!canAdvanceFrom(step)}>
+            <Button
+              type="button"
+              className="flex-1 h-10 font-bold"
+              onClick={goNext}
+              disabled={!canAdvanceFrom(step)}
+            >
               Siguiente
               <ChevronRight className="h-4 w-4 ml-1" />
             </Button>
           ) : (
-            <Button type="button" className="flex-1 h-10 font-bold shadow-lg" onClick={save} disabled={!canSubmit || saving || imageUploading}>
-              {saving || imageUploading ? <Loader2 className="h-4 w-4 animate-spin" /> : isEdit ? "Guardar Cambios" : "Crear Producto"}
+            <Button
+              type="button"
+              className="flex-1 h-10 font-bold shadow-lg"
+              onClick={save}
+              disabled={!canSubmit || saving || imageUploading}
+            >
+              {saving || imageUploading ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : isEdit ? (
+                "Guardar Cambios"
+              ) : (
+                "Crear Producto"
+              )}
             </Button>
           )}
         </div>
@@ -846,23 +1204,41 @@ export function ProductoWizardDialog({
         onDetected={(code) => setPendingBarcode({ code, source: "camera" })}
       />
 
-      <AlertDialog open={pendingBarcode !== null} onOpenChange={(o) => { if (!o) setPendingBarcode(null); }}>
+      <AlertDialog
+        open={pendingBarcode !== null}
+        onOpenChange={(o) => {
+          if (!o) setPendingBarcode(null);
+        }}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center justify-center gap-2">
-              {pendingBarcode?.source === "camera" ? <Camera className="h-5 w-5 text-primary" /> : <ScanLine className="h-5 w-5 text-primary" />}
+              {pendingBarcode?.source === "camera" ? (
+                <Camera className="h-5 w-5 text-primary" />
+              ) : (
+                <ScanLine className="h-5 w-5 text-primary" />
+              )}
               Código detectado
             </AlertDialogTitle>
             <AlertDialogDescription>
-              {pendingBarcode?.source === "camera" ? "Detectado con la cámara." : "Detectado con la pistola lectora."} Confirmá que es correcto antes de aplicarlo.
+              {pendingBarcode?.source === "camera"
+                ? "Detectado con la cámara."
+                : "Detectado con la pistola lectora."}{" "}
+              Confirmá que es correcto antes de aplicarlo.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <div className="rounded-xl border bg-muted/30 px-4 py-3 text-center">
-            <span className="font-mono text-xl font-black tracking-wider break-all">{pendingBarcode?.code}</span>
+            <span className="font-mono text-xl font-black tracking-wider break-all">
+              {pendingBarcode?.code}
+            </span>
           </div>
           <AlertDialogFooter>
-            <AlertDialogCancel onClick={rejectBarcode}>Volver a escanear</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmBarcode}>Confirmar</AlertDialogAction>
+            <AlertDialogCancel onClick={rejectBarcode}>
+              Volver a escanear
+            </AlertDialogCancel>
+            <AlertDialogAction onClick={confirmBarcode}>
+              Confirmar
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
