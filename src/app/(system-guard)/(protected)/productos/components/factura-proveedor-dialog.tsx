@@ -3,6 +3,7 @@
 import * as React from "react";
 import {
   apiService,
+  API_ROUTES,
   type FacturaProveedor,
   type FacturaProveedorItem,
   type FacturaProveedorUsage,
@@ -147,6 +148,39 @@ function inferirCodigoBarra(item: FacturaProveedorItem): string | null {
   return candidato;
 }
 
+type FiltroFactura =
+  "todos" | "pendiente" | "confirmado" | "sin-match" | "advertencia";
+
+// Nivel de confianza del match para el chip de la tabla. Deriva del matchScore
+// que ya calcula el motor de matching (0..1); un item sin producto asociado no
+// tiene confianza real, se muestra como "baja".
+type NivelConfianza = "excelente" | "buena" | "baja";
+function nivelConfianza(item: FacturaProveedorItem): {
+  nivel: NivelConfianza;
+  pct: number | null;
+} {
+  if (!item.productoId) return { nivel: "baja", pct: null };
+  const pct = Math.round((item.matchScore ?? 0) * 100);
+  if (pct >= 95) return { nivel: "excelente", pct };
+  if (pct >= 70) return { nivel: "buena", pct };
+  return { nivel: "baja", pct };
+}
+
+// Agrupa el estado del item en los buckets que usan los filtros de la pantalla.
+function bucketsDeItem(item: FacturaProveedorItem): FiltroFactura[] {
+  const buckets: FiltroFactura[] = [];
+  const terminal = ESTADOS_TERMINALES.has(item.estado);
+  if (item.estado === "CONFIRMADO" || item.estado === "PRODUCTO_CREADO") {
+    buckets.push("confirmado");
+  } else if (item.estado !== "IGNORADO") {
+    buckets.push("pendiente");
+  }
+  if (!terminal && item.estado === "SIN_COINCIDENCIA")
+    buckets.push("sin-match");
+  if (item.advertencias.length > 0) buckets.push("advertencia");
+  return buckets;
+}
+
 const TIPS_FOTO: { ok: boolean; texto: string }[] = [
   { ok: true, texto: "Buena iluminación" },
   { ok: true, texto: "Texto legible" },
@@ -156,16 +190,16 @@ const TIPS_FOTO: { ok: boolean; texto: string }[] = [
 ];
 
 const ACCEPT_FACTURA = "image/png,image/jpeg,image/webp,application/pdf";
-const FACTURA_FIELD_CLASS =
-  "h-12 rounded-xl border-border bg-background text-sm shadow-xs";
-const ITEM_FIELD_CLASS =
-  "h-11 rounded-xl border-border bg-background text-sm shadow-xs";
-const ITEM_LABEL_CLASS =
-  "text-[10px] font-bold uppercase tracking-[0.08em] text-muted-foreground xl:hidden";
-const ITEM_TABLE_COLUMNS =
-  "xl:grid-cols-[minmax(0,1.9fr)_80px_140px_140px_minmax(0,1.45fr)_136px]";
-const ITEM_ACTION_ICON_CLASS =
-  "size-10 rounded-xl border transition-colors focus-visible:ring-2 focus-visible:ring-primary/60";
+
+// Campos del rediseño de la pantalla de revisión (grilla de datos y celdas de
+// la tabla). Mismo lenguaje visual de la app (rounded-xl, shadow-xs) pero
+// compactos para que la tabla respire.
+const DATO_FIELD_CLASS =
+  "h-10 rounded-xl border-border bg-background text-sm shadow-xs";
+const CELL_INPUT_CLASS =
+  "h-9 rounded-lg border-border bg-background text-sm shadow-xs";
+const TABLE_ACTION_ICON_CLASS =
+  "size-8 rounded-lg border transition-colors focus-visible:ring-2 focus-visible:ring-primary/60";
 
 type FacturaProveedorItemConCatalogoGlobal = FacturaProveedorItem & {
   candidatoGlobalNombre?: string | null;
@@ -195,6 +229,9 @@ export function FacturaProveedorDialog({
   // usuario para que lo valide o lo corrija, en vez de darlo por sentado.
   const [confirmarProveedorOpen, setConfirmarProveedorOpen] =
     React.useState(false);
+  // Filtro activo de la tabla de productos (todos / pendientes / etc.).
+  const [filtroActivo, setFiltroActivo] =
+    React.useState<FiltroFactura>("todos");
   const [itemParaCrear, setItemParaCrear] =
     React.useState<FacturaProveedorItem | null>(null);
   const [itemIdParaEditar, setItemIdParaEditar] = React.useState<number | null>(
@@ -220,6 +257,9 @@ export function FacturaProveedorDialog({
     itemIdParaMatch !== null;
   const [selectedFile, setSelectedFile] = React.useState<File | null>(null);
   const [dragActive, setDragActive] = React.useState(false);
+  // La vista previa de la factura carga el archivo original vía /archivo; si
+  // falla (permisos, archivo purgado tras confirmar) se muestra un fallback.
+  const [imagenPreviewError, setImagenPreviewError] = React.useState(false);
   const [usage, setUsage] = React.useState<FacturaProveedorUsage | null>(null);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   // Evita que Radix cierre el Dialog al volver del selector nativo de
@@ -243,6 +283,7 @@ export function FacturaProveedorDialog({
       setProcesando(false);
       setSelectedFile(null);
       setDragActive(false);
+      setFiltroActivo("todos");
       setItemParaCrear(null);
       setItemIdParaMatch(null);
       setPrecioVentaBorrador({});
@@ -586,6 +627,37 @@ export function FacturaProveedorDialog({
     0,
   );
 
+  // Conteos por bucket para los chips de filtro y el resumen lateral.
+  const conteos = React.useMemo(() => {
+    const base: Record<FiltroFactura, number> = {
+      todos: 0,
+      pendiente: 0,
+      confirmado: 0,
+      "sin-match": 0,
+      advertencia: 0,
+    };
+    for (const item of items ?? []) {
+      base.todos += 1;
+      for (const b of bucketsDeItem(item)) base[b] += 1;
+    }
+    return base;
+  }, [items]);
+
+  const itemsFiltrados = React.useMemo(() => {
+    const lista = items ?? [];
+    if (filtroActivo === "todos") return lista;
+    return lista.filter((i) => bucketsDeItem(i).includes(filtroActivo));
+  }, [items, filtroActivo]);
+
+  // Progreso: cuántas líneas ya quedaron resueltas (confirmadas, con producto
+  // creado o ignoradas) sobre el total detectado.
+  const totalLineas = (items ?? []).length;
+  const lineasResueltas = (items ?? []).filter((i) =>
+    ESTADOS_TERMINALES.has(i.estado),
+  ).length;
+  const progresoPct =
+    totalLineas > 0 ? Math.round((lineasResueltas / totalLineas) * 100) : 0;
+
   // Mantiene factura.totalDetectado sincronizado con la suma de líneas.
   React.useEffect(() => {
     if (!factura || !items || facturaBloqueada) return;
@@ -628,7 +700,7 @@ export function FacturaProveedorDialog({
         </DialogTrigger>
 
         <DialogContent
-          className="p-0 gap-0 flex flex-col overflow-hidden border border-border bg-background rounded-[28px] sm:rounded-[28px] shadow-2xl w-[92vw] max-w-[1320px] sm:max-w-[1320px] max-h-[85vh]"
+          className="p-0 gap-0 flex flex-col overflow-hidden border border-border bg-background rounded-2xl sm:rounded-[28px] shadow-2xl w-screen sm:w-[94vw] max-w-none sm:max-w-[1440px] h-[100dvh] sm:h-auto max-h-[100dvh] sm:max-h-[92vh]"
           onInteractOutside={(e) => {
             if (nestedDialogOpen || selectorArchivoAbiertoRef.current)
               e.preventDefault();
@@ -637,18 +709,19 @@ export function FacturaProveedorDialog({
             if (nestedDialogOpen) e.preventDefault();
           }}
         >
-          <DialogHeader className="shrink-0 border-b border-border px-8 py-7">
-            <div className="flex items-center gap-4">
-              <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-                <ScanText className="h-7 w-7" />
+          <DialogHeader className="shrink-0 border-b border-border px-4 py-4 sm:px-8 sm:py-6 text-left">
+            <div className="flex items-center gap-3 sm:gap-4">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary sm:h-14 sm:w-14">
+                <ScanText className="h-6 w-6 sm:h-7 sm:w-7" />
               </div>
-              <div className="space-y-1">
-                <DialogTitle className="text-2xl font-black tracking-tight">
+              <div className="min-w-0 space-y-0.5 sm:space-y-1">
+                <DialogTitle className="text-lg font-black italic tracking-tight sm:text-2xl">
                   Escanear factura de compra
                 </DialogTitle>
-                <DialogDescription className="text-sm text-muted-foreground">
-                  Subí o sacá una foto de la factura del proveedor para cargar
-                  stock automáticamente con IA.
+                <DialogDescription className="text-xs text-muted-foreground sm:text-sm">
+                  {items
+                    ? "Revisá los datos antes de actualizar el stock."
+                    : "Subí o sacá una foto de la factura del proveedor para cargar stock automáticamente con IA."}
                 </DialogDescription>
               </div>
             </div>
@@ -792,706 +865,1036 @@ export function FacturaProveedorDialog({
           )}
 
           {items && factura && (
-            <div className="flex-1 min-h-0 flex flex-col gap-5 px-8 py-6 overflow-hidden">
-              {/* Card de datos de la factura (siempre visible, no scrollea) */}
-              <div className="shrink-0 rounded-2xl border border-border bg-card p-6">
-                <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-4">
+            <div className="flex-1 min-h-0 overflow-y-auto px-4 py-5 sm:px-6 lg:px-8">
+              <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_360px]">
+                {/* ===== COLUMNA PRINCIPAL: contexto + tabla ===== */}
+                <div className="flex min-w-0 flex-col gap-4">
+                  {/* Progreso */}
                   <div>
-                    <Label className="mb-2 block text-xs font-medium text-muted-foreground">
-                      Proveedor (existente)
-                    </Label>
-                    <div className="relative">
-                      <User className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                      <Select
-                        value={
-                          factura.proveedorId
-                            ? String(factura.proveedorId)
-                            : "none"
-                        }
-                        onValueChange={(v) =>
-                          guardarCampoFactura({
-                            proveedorId: v === "none" ? null : Number(v),
-                          })
-                        }
-                        disabled={facturaBloqueada}
-                      >
-                        <SelectTrigger
-                          className={cn(FACTURA_FIELD_CLASS, "w-full pl-10")}
-                        >
-                          <SelectValue placeholder="Sin asignar" />
-                        </SelectTrigger>
-                        <SelectContent
-                          position="popper"
-                          align="start"
-                          sideOffset={4}
-                        >
-                          <SelectItem value="none">Sin asignar</SelectItem>
-                          {proveedores.map((p) => (
-                            <SelectItem key={p.id} value={String(p.id)}>
-                              {p.nombre}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                    <div className="mb-1.5 flex items-center justify-between gap-3 text-sm">
+                      <span className="font-semibold">
+                        {lineasResueltas} de {totalLineas} productos revisados
+                      </span>
+                      <span className="text-muted-foreground">
+                        {totalLineas - lineasResueltas === 0
+                          ? "Todo listo"
+                          : `Quedan ${totalLineas - lineasResueltas}`}
+                      </span>
                     </div>
-                  </div>
-                  <div>
-                    <Label className="mb-2 block text-xs font-medium text-muted-foreground">
-                      Nombre detectado
-                    </Label>
-                    <div className="relative">
-                      <Building2 className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                      <Input
-                        value={factura.proveedorNombreDetectado ?? ""}
-                        onChange={(e) =>
-                          updateFacturaLocal({
-                            proveedorNombreDetectado: e.target.value,
-                          })
-                        }
-                        onBlur={(e) =>
-                          guardarCampoFactura({
-                            proveedorNombreDetectado: e.target.value || null,
-                          })
-                        }
-                        disabled={facturaBloqueada}
-                        placeholder="No detectado"
-                        className={cn(FACTURA_FIELD_CLASS, "pl-10")}
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <Label className="mb-2 block text-xs font-medium text-muted-foreground">
-                      CUIT detectado
-                    </Label>
-                    <div className="relative">
-                      <ScanLine className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                      <Input
-                        value={factura.proveedorCuitDetectado ?? ""}
-                        onChange={(e) =>
-                          updateFacturaLocal({
-                            proveedorCuitDetectado: e.target.value,
-                          })
-                        }
-                        onBlur={(e) =>
-                          guardarCampoFactura({
-                            proveedorCuitDetectado: e.target.value || null,
-                          })
-                        }
-                        disabled={facturaBloqueada}
-                        placeholder="No detectado"
-                        className={cn(FACTURA_FIELD_CLASS, "pl-10")}
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <Label className="mb-2 block text-xs font-medium text-muted-foreground">
-                      N° de factura
-                    </Label>
-                    <div className="relative">
-                      <Hash className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                      <Input
-                        value={factura.numeroFactura ?? ""}
-                        onChange={(e) =>
-                          updateFacturaLocal({ numeroFactura: e.target.value })
-                        }
-                        onBlur={(e) =>
-                          guardarCampoFactura({
-                            numeroFactura: e.target.value || null,
-                          })
-                        }
-                        disabled={facturaBloqueada}
-                        placeholder="—"
-                        className={cn(FACTURA_FIELD_CLASS, "pl-10")}
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                <div className="mt-5 grid grid-cols-1 gap-5 xl:grid-cols-4">
-                  <div>
-                    <Label className="mb-2 block text-xs font-medium text-muted-foreground">
-                      Fecha
-                    </Label>
-                    <div className="relative">
-                      <Calendar className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                      <Input
-                        type="date"
-                        value={factura.fecha ? factura.fecha.slice(0, 10) : ""}
-                        onChange={(e) =>
-                          updateFacturaLocal({ fecha: e.target.value || null })
-                        }
-                        onBlur={(e) =>
-                          guardarCampoFactura({ fecha: e.target.value || null })
-                        }
-                        disabled={facturaBloqueada}
-                        className={cn(FACTURA_FIELD_CLASS, "pl-10")}
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <Label className="mb-2 block text-xs font-medium text-muted-foreground">
-                      Moneda
-                    </Label>
-                    <div className="relative">
-                      <CircleDollarSign className="pointer-events-none absolute left-3 top-1/2 z-10 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                      <Select
-                        value={monedaFactura}
-                        onValueChange={cambiarMonedaFactura}
-                        disabled={facturaBloqueada}
-                      >
-                        <SelectTrigger
-                          className={cn(FACTURA_FIELD_CLASS, "w-full pl-10")}
-                        >
-                          <SelectValue placeholder="ARS" />
-                        </SelectTrigger>
-                        <SelectContent
-                          position="popper"
-                          align="start"
-                          sideOffset={4}
-                        >
-                          <SelectItem value="ARS">ARS</SelectItem>
-                          <SelectItem value="USD">USD</SelectItem>
-                          {monedaFactura !== "ARS" &&
-                            monedaFactura !== "USD" && (
-                              <SelectItem value={monedaFactura}>
-                                {monedaFactura}
-                              </SelectItem>
-                            )}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    {facturaEnMonedaExtranjera && (
-                      <p className="mt-1 text-[11px] text-muted-foreground">
-                        {puedeConvertir
-                          ? `Convirtiendo a ARS con dólar blue ($${cotizacionDolar?.toLocaleString("es-AR")}). El backend recalcula al confirmar.`
-                          : "El costo se convierte a ARS al confirmar cada item."}
-                      </p>
-                    )}
-                  </div>
-                  <div>
-                    <Label className="mb-2 block text-xs font-medium text-muted-foreground">
-                      Cantidad
-                    </Label>
-                    <div className="relative">
-                      <Package className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                    <div
+                      className="h-2 overflow-hidden rounded-full bg-muted"
+                      role="progressbar"
+                      aria-valuenow={progresoPct}
+                      aria-valuemin={0}
+                      aria-valuemax={100}
+                      aria-label="Progreso de revisión de productos"
+                    >
                       <div
-                        className={cn(
-                          FACTURA_FIELD_CLASS,
-                          "flex items-center gap-1.5 pl-10 font-semibold text-foreground",
-                        )}
-                      >
-                        <span className="tabular-nums">
-                          {cantidadTotalUnidades}
-                        </span>
-                        <span className="text-xs font-normal text-muted-foreground">
-                          unid. · {itemsValidos.length}{" "}
-                          {itemsValidos.length === 1 ? "producto" : "productos"}
-                        </span>
-                      </div>
+                        className="h-full rounded-full bg-primary transition-[width] duration-300"
+                        style={{ width: `${progresoPct}%` }}
+                      />
                     </div>
                   </div>
-                  <div>
-                    <Label className="mb-2 block text-xs font-medium text-muted-foreground">
-                      Total ({monedaFactura})
-                    </Label>
-                    <div className="relative">
-                      <FileText className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                      <div
-                        className={cn(
-                          FACTURA_FIELD_CLASS,
-                          "flex items-center pl-10 font-semibold text-foreground",
-                        )}
-                        title="Se calcula automáticamente: cantidad × costo unitario de cada línea"
-                      >
-                        {totalCalculado.toLocaleString("es-AR", {
-                          minimumFractionDigits: 2,
-                          maximumFractionDigits: 2,
-                        })}
-                      </div>
+
+                  {/* Datos generales */}
+                  <div className="rounded-2xl border border-border bg-card p-4 sm:p-5">
+                    <div className="mb-3 flex items-center justify-between gap-3">
+                      <h3 className="text-base font-black italic tracking-tight">
+                        Datos generales
+                      </h3>
+                      <span className="text-xs text-muted-foreground">
+                        Editá lo que necesites
+                      </span>
                     </div>
-                    {puedeConvertir && totalCalculado > 0 && (
-                      <p className="mt-1 text-[11px] font-semibold text-primary">
-                        = {formatearArs(convertirAArs(totalCalculado)!)} ARS
-                      </p>
-                    )}
-                    <p className="mt-1 text-[10px] text-muted-foreground">
-                      Se calcula solo con cantidad × costo de cada línea.
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              {items.length > 0 ? (
-                <>
-                  {/* Banner de advertencia */}
-                  <div className="shrink-0 flex items-center gap-2 rounded-xl border border-[color:var(--status-warning)]/30 bg-[color:var(--status-warning)]/10 px-4 py-3 text-sm text-[color:var(--status-warning)]">
-                    <AlertTriangle className="h-4 w-4 shrink-0" />
-                    Revisá cada línea antes de confirmar. Nada actualiza tu
-                    stock hasta que lo apruebes.
-                  </div>
-
-                  {/* Tabla de productos detectados (scroll interno) */}
-                  <TooltipProvider>
-                    <div className="min-h-0 flex flex-col overflow-hidden rounded-2xl border border-border bg-card/60">
-                      {/* Encabezado de columnas (solo desktop) */}
-                      <div
-                        className={cn(
-                          "hidden xl:grid shrink-0 gap-4 border-b border-border bg-muted/40 px-5 h-12 items-center text-xs font-medium uppercase tracking-[0.08em] text-muted-foreground",
-                          ITEM_TABLE_COLUMNS,
-                        )}
-                      >
-                        <span>Descripción detectada</span>
-                        <span>Cant.</span>
-                        <span>
-                          Costo unit.{facturaEnMonedaExtranjera ? " → ARS" : ""}
-                        </span>
-                        <span>Precio venta</span>
-                        <span>Coincidencia</span>
-                        <span className="text-right">Acciones</span>
-                      </div>
-
-                      <div className="overflow-y-auto max-h-[320px] divide-y divide-border [scrollbar-width:thin] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-border">
-                        {items.map((item) => {
-                          const badge = badgeEstado(item);
-                          const BadgeIcon = badge.icon;
-                          const terminal = ESTADOS_TERMINALES.has(item.estado);
-                          const busy = busyItemId === item.id;
-                          const mostrarCodigo = !codigoYaEnDescripcion(item);
-                          const costoArs = puedeConvertir
-                            ? convertirAArs(item.precioUnitario)
-                            : null;
-                          const requiereAlta = !item.productoId;
-                          const productoMatch = item.productoId
-                            ? productos.find((p) => p.id === item.productoId)
-                            : undefined;
-
-                          return (
-                            <div
-                              key={item.id}
-                              className={cn(
-                                "grid grid-cols-1 gap-4 px-5 py-4 min-h-[96px] items-start xl:items-center",
-                                ITEM_TABLE_COLUMNS,
-                                terminal
-                                  ? "opacity-60 bg-muted/30"
-                                  : "hover:bg-muted/30",
-                              )}
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                      <div>
+                        <Label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                          Proveedor
+                        </Label>
+                        <div className="relative">
+                          <User className="pointer-events-none absolute left-3 top-1/2 z-10 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                          <Select
+                            value={
+                              factura.proveedorId
+                                ? String(factura.proveedorId)
+                                : "none"
+                            }
+                            onValueChange={(v) =>
+                              guardarCampoFactura({
+                                proveedorId: v === "none" ? null : Number(v),
+                              })
+                            }
+                            disabled={facturaBloqueada}
+                          >
+                            <SelectTrigger
+                              className={cn(DATO_FIELD_CLASS, "w-full pl-9")}
                             >
-                              {/* Descripción — siempre editable: si no hay producto existente que coincida, no hay ninguna existencia previa que la fije */}
-                              <div className="flex items-start gap-3 min-w-0">
-                                <div className="mt-0.5 flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary ring-1 ring-primary/15">
-                                  <Package className="h-4 w-4" />
-                                </div>
-                                <div className="min-w-0 flex-1 space-y-1">
-                                  <Label className={ITEM_LABEL_CLASS}>
-                                    Descripción detectada
-                                  </Label>
-                                  <Input
-                                    aria-label={`Descripción detectada para línea ${item.id}`}
-                                    value={item.textoOriginal}
-                                    onChange={(e) =>
-                                      updateItem(item.id, {
-                                        textoOriginal: e.target.value,
-                                      })
-                                    }
-                                    onBlur={(e) =>
-                                      guardarCampoItem(item, {
-                                        textoOriginal: e.target.value,
-                                      })
-                                    }
-                                    disabled={terminal || busy}
-                                    className={cn(
-                                      ITEM_FIELD_CLASS,
-                                      "font-medium",
-                                    )}
-                                  />
-                                  {mostrarCodigo && item.codigoProveedor && (
-                                    <p className="text-[11px] font-mono text-muted-foreground">
-                                      #{item.codigoProveedor}
-                                    </p>
-                                  )}
-                                  {item.advertencias.length > 0 && (
-                                    <Tooltip>
-                                      <TooltipTrigger asChild>
-                                        <div className="flex items-start gap-1 pt-0.5 text-[11px] text-[color:var(--status-warning)] cursor-help">
-                                          <AlertTriangle className="h-3 w-3 shrink-0 mt-0.5" />
-                                          <span className="line-clamp-1">
-                                            Revisar: posible desalineación de
-                                            cantidad/precio
-                                          </span>
-                                        </div>
-                                      </TooltipTrigger>
-                                      <TooltipContent
-                                        side="bottom"
-                                        sideOffset={4}
-                                        className="max-w-xs"
-                                      >
-                                        {item.advertencias.map(
-                                          (advertencia, i) => (
-                                            <p key={i}>{advertencia}</p>
-                                          ),
-                                        )}
-                                      </TooltipContent>
-                                    </Tooltip>
-                                  )}
-                                  {item.atributosExtra &&
-                                    Object.keys(item.atributosExtra).length >
-                                      0 && (
-                                      <div className="flex flex-wrap gap-1 pt-0.5">
-                                        {Object.entries(
-                                          item.atributosExtra,
-                                        ).map(([clave, valor]) => (
-                                          <Badge
-                                            key={clave}
-                                            variant="outline"
-                                            className="text-[10px] h-5 px-1.5 font-normal text-muted-foreground border-border/60 bg-background/50 rounded-md"
-                                          >
-                                            {clave}: {valor}
-                                          </Badge>
-                                        ))}
-                                      </div>
-                                    )}
-                                </div>
-                              </div>
-
-                              {/* Cantidad */}
-                              <div className="space-y-1">
-                                <Label className={ITEM_LABEL_CLASS}>
-                                  Cantidad
-                                </Label>
-                                <Input
-                                  aria-label={`Cantidad para ${item.textoOriginal}`}
-                                  type="number"
-                                  min={1}
-                                  step="1"
-                                  value={item.cantidad}
-                                  onChange={(e) => {
-                                    const n = Number(e.target.value);
-                                    if (Number.isFinite(n))
-                                      updateItem(item.id, { cantidad: n });
-                                  }}
-                                  onBlur={(e) => {
-                                    const n = Math.max(
-                                      1,
-                                      Math.trunc(
-                                        Number(e.target.value) || item.cantidad,
-                                      ),
-                                    );
-                                    guardarCampoItem(item, { cantidad: n });
-                                  }}
-                                  disabled={terminal || busy}
-                                  className={cn(
-                                    ITEM_FIELD_CLASS,
-                                    "text-center tabular-nums",
-                                  )}
-                                />
-                              </div>
-
-                              {/* Costo unitario (con conversión a ARS en vivo) */}
-                              <div className="space-y-1">
-                                <Label className={ITEM_LABEL_CLASS}>
-                                  Costo unit. ({monedaFactura})
-                                </Label>
-                                <Input
-                                  aria-label={`Costo unitario para ${item.textoOriginal} en ${monedaFactura}`}
-                                  type="text"
-                                  inputMode="decimal"
-                                  value={formatearInputMonto(
-                                    item.precioUnitario,
-                                  )}
-                                  onChange={(e) =>
-                                    updateItem(item.id, {
-                                      precioUnitario: digitosAMonto(
-                                        e.target.value,
-                                      ),
-                                    })
-                                  }
-                                  onBlur={() =>
-                                    guardarCampoItem(item, {
-                                      precioUnitario: item.precioUnitario,
-                                    })
-                                  }
-                                  disabled={terminal || busy}
-                                  placeholder="—"
-                                  className={cn(
-                                    ITEM_FIELD_CLASS,
-                                    "tabular-nums",
-                                  )}
-                                />
-                                {costoArs != null && (
-                                  <p className="text-[11px] font-semibold text-primary">
-                                    = {formatearArs(costoArs)} ARS
-                                  </p>
+                              <SelectValue placeholder="Sin asignar" />
+                            </SelectTrigger>
+                            <SelectContent
+                              position="popper"
+                              align="start"
+                              sideOffset={4}
+                            >
+                              <SelectItem value="none">Sin asignar</SelectItem>
+                              {proveedores.map((p) => (
+                                <SelectItem key={p.id} value={String(p.id)}>
+                                  {p.nombre}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                      <div>
+                        <Label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                          Nombre detectado
+                        </Label>
+                        <div className="relative">
+                          <Building2 className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                          <Input
+                            value={factura.proveedorNombreDetectado ?? ""}
+                            onChange={(e) =>
+                              updateFacturaLocal({
+                                proveedorNombreDetectado: e.target.value,
+                              })
+                            }
+                            onBlur={(e) =>
+                              guardarCampoFactura({
+                                proveedorNombreDetectado:
+                                  e.target.value || null,
+                              })
+                            }
+                            disabled={facturaBloqueada}
+                            placeholder="No detectado"
+                            className={cn(DATO_FIELD_CLASS, "pl-9")}
+                          />
+                        </div>
+                      </div>
+                      <div>
+                        <Label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                          CUIT
+                        </Label>
+                        <div className="relative">
+                          <ScanLine className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                          <Input
+                            value={factura.proveedorCuitDetectado ?? ""}
+                            onChange={(e) =>
+                              updateFacturaLocal({
+                                proveedorCuitDetectado: e.target.value,
+                              })
+                            }
+                            onBlur={(e) =>
+                              guardarCampoFactura({
+                                proveedorCuitDetectado: e.target.value || null,
+                              })
+                            }
+                            disabled={facturaBloqueada}
+                            placeholder="No detectado"
+                            className={cn(DATO_FIELD_CLASS, "pl-9 font-mono")}
+                          />
+                        </div>
+                      </div>
+                      <div>
+                        <Label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                          N° de factura
+                        </Label>
+                        <div className="relative">
+                          <Hash className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                          <Input
+                            value={factura.numeroFactura ?? ""}
+                            onChange={(e) =>
+                              updateFacturaLocal({
+                                numeroFactura: e.target.value,
+                              })
+                            }
+                            onBlur={(e) =>
+                              guardarCampoFactura({
+                                numeroFactura: e.target.value || null,
+                              })
+                            }
+                            disabled={facturaBloqueada}
+                            placeholder="—"
+                            className={cn(DATO_FIELD_CLASS, "pl-9 font-mono")}
+                          />
+                        </div>
+                      </div>
+                      <div>
+                        <Label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                          Fecha
+                        </Label>
+                        <div className="relative">
+                          <Calendar className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                          <Input
+                            type="date"
+                            value={
+                              factura.fecha ? factura.fecha.slice(0, 10) : ""
+                            }
+                            onChange={(e) =>
+                              updateFacturaLocal({
+                                fecha: e.target.value || null,
+                              })
+                            }
+                            onBlur={(e) =>
+                              guardarCampoFactura({
+                                fecha: e.target.value || null,
+                              })
+                            }
+                            disabled={facturaBloqueada}
+                            className={cn(DATO_FIELD_CLASS, "pl-9")}
+                          />
+                        </div>
+                      </div>
+                      <div>
+                        <Label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                          Moneda
+                        </Label>
+                        <div className="relative">
+                          <CircleDollarSign className="pointer-events-none absolute left-3 top-1/2 z-10 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                          <Select
+                            value={monedaFactura}
+                            onValueChange={cambiarMonedaFactura}
+                            disabled={facturaBloqueada}
+                          >
+                            <SelectTrigger
+                              className={cn(DATO_FIELD_CLASS, "w-full pl-9")}
+                            >
+                              <SelectValue placeholder="ARS" />
+                            </SelectTrigger>
+                            <SelectContent
+                              position="popper"
+                              align="start"
+                              sideOffset={4}
+                            >
+                              <SelectItem value="ARS">ARS</SelectItem>
+                              <SelectItem value="USD">USD</SelectItem>
+                              {monedaFactura !== "ARS" &&
+                                monedaFactura !== "USD" && (
+                                  <SelectItem value={monedaFactura}>
+                                    {monedaFactura}
+                                  </SelectItem>
                                 )}
-                              </div>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                      <div>
+                        <Label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                          Productos
+                          <span className="ml-1 font-normal normal-case tracking-normal text-muted-foreground/70">
+                            calc.
+                          </span>
+                        </Label>
+                        <div
+                          className={cn(
+                            DATO_FIELD_CLASS,
+                            "flex items-center px-3 font-semibold tabular-nums text-foreground",
+                          )}
+                        >
+                          {itemsValidos.length}{" "}
+                          <span className="ml-1 text-xs font-normal text-muted-foreground">
+                            líneas
+                          </span>
+                        </div>
+                      </div>
+                      <div>
+                        <Label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                          Total ({monedaFactura})
+                          <span className="ml-1 font-normal normal-case tracking-normal text-muted-foreground/70">
+                            calc.
+                          </span>
+                        </Label>
+                        <div
+                          className={cn(
+                            DATO_FIELD_CLASS,
+                            "flex items-center px-3 font-semibold tabular-nums text-foreground",
+                          )}
+                          title="Se calcula automáticamente: cantidad × costo unitario de cada línea"
+                        >
+                          {totalCalculado.toLocaleString("es-AR", {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2,
+                          })}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="mt-3 flex flex-wrap gap-x-6 gap-y-1 text-xs text-muted-foreground">
+                      <span>
+                        Unidades totales:{" "}
+                        <b className="text-foreground tabular-nums">
+                          {cantidadTotalUnidades}
+                        </b>
+                      </span>
+                      {facturaEnMonedaExtranjera && (
+                        <span>
+                          {puedeConvertir && totalCalculado > 0 ? (
+                            <>
+                              Total convertido:{" "}
+                              <b className="text-primary tabular-nums">
+                                {formatearArs(convertirAArs(totalCalculado)!)}{" "}
+                                ARS
+                              </b>
+                              {cotizacionDolar
+                                ? ` (dólar $${cotizacionDolar.toLocaleString("es-AR")})`
+                                : ""}
+                            </>
+                          ) : (
+                            "El costo se convierte a ARS al confirmar."
+                          )}
+                        </span>
+                      )}
+                    </div>
+                  </div>
 
-                              {/* Precio de venta — si hay coincidencia viene del producto existente
-                                  (mismo dato que edita "Editar producto"); si no, es un borrador libre
-                                  que se usa para precargar el alta del producto nuevo. */}
-                              <div className="space-y-1">
-                                <Label className={ITEM_LABEL_CLASS}>
-                                  Precio de venta
-                                </Label>
-                                {productoMatch ? (
-                                  <div
-                                    className={cn(
-                                      ITEM_FIELD_CLASS,
-                                      "flex items-center font-semibold tabular-nums text-foreground",
-                                    )}
-                                    title="Precio de venta del producto existente — editalo con 'Editar producto'"
-                                  >
-                                    {formatMoney(
-                                      Number(productoMatch.precioVenta),
-                                    )}
-                                  </div>
-                                ) : (
-                                  <Input
-                                    aria-label={`Precio de venta para ${item.textoOriginal}`}
-                                    type="text"
-                                    inputMode="decimal"
-                                    value={formatearInputMonto(
-                                      precioVentaBorrador[item.id],
-                                    )}
-                                    onChange={(e) =>
-                                      setPrecioVentaBorrador((prev) => ({
-                                        ...prev,
-                                        [item.id]: digitosAMonto(
-                                          e.target.value,
-                                        ),
-                                      }))
-                                    }
-                                    disabled={terminal || busy}
-                                    placeholder="—"
-                                    className={cn(
-                                      ITEM_FIELD_CLASS,
-                                      "tabular-nums",
-                                    )}
-                                  />
-                                )}
-                              </div>
+                  {items.length > 0 ? (
+                    <>
+                      {/* Confianza + filtros */}
+                      <p className="flex items-center gap-2.5 rounded-xl border border-primary/25 bg-primary/5 px-4 py-2.5 text-sm text-foreground">
+                        <Sparkles className="h-4 w-4 shrink-0 text-primary" />
+                        <span>
+                          <b>{conteos.confirmado}</b> de <b>{totalLineas}</b> ya
+                          se relacionaron solos. Revisá los{" "}
+                          <b>{conteos.pendiente}</b> marcados — nada cambia
+                          hasta confirmar.
+                        </span>
+                      </p>
 
-                              {/* Coincidencia */}
-                              <div className="space-y-1 min-w-0">
-                                <Label className={ITEM_LABEL_CLASS}>
-                                  Coincidencia
-                                </Label>
-                                <span
-                                  className={`flex items-center gap-1.5 text-xs font-medium ${badge.cls}`}
-                                >
-                                  <BadgeIcon className="h-3.5 w-3.5 shrink-0" />
-                                  <span className="truncate">
-                                    {badge.label}
-                                  </span>
-                                </span>
-                                {!terminal && (
-                                  <>
-                                    <Button
-                                      type="button"
-                                      variant="outline"
-                                      aria-label={`Producto existente para ${item.textoOriginal}`}
-                                      onClick={() =>
-                                        setItemIdParaMatch(item.id)
-                                      }
-                                      disabled={busy}
-                                      className={cn(
-                                        ITEM_FIELD_CLASS,
-                                        "w-full justify-between gap-2 text-sm font-normal",
-                                        !productoMatch &&
-                                          "text-muted-foreground",
-                                      )}
+                      <div className="flex flex-wrap gap-2">
+                        {(
+                          [
+                            ["todos", "Todos"],
+                            ["pendiente", "Pendientes"],
+                            ["confirmado", "Confirmados"],
+                            ["sin-match", "Sin match"],
+                            ["advertencia", "Advertencias"],
+                          ] as [FiltroFactura, string][]
+                        ).map(([key, label]) => (
+                          <button
+                            key={key}
+                            type="button"
+                            aria-pressed={filtroActivo === key}
+                            onClick={() => setFiltroActivo(key)}
+                            className={cn(
+                              "inline-flex min-h-9 items-center gap-1.5 rounded-full border px-3.5 text-sm font-semibold transition-colors",
+                              filtroActivo === key
+                                ? "border-foreground bg-foreground text-background"
+                                : "border-border bg-background text-muted-foreground hover:border-foreground/40",
+                            )}
+                          >
+                            {label}
+                            <span className="font-mono text-xs opacity-70">
+                              {conteos[key]}
+                            </span>
+                          </button>
+                        ))}
+                      </div>
+
+                      {/* Tabla de productos (scroll horizontal en pantallas chicas) */}
+                      <TooltipProvider>
+                        <div className="overflow-hidden rounded-2xl border border-border bg-card">
+                          <div className="overflow-x-auto">
+                            <table className="w-full min-w-[880px] border-collapse text-sm">
+                              <thead>
+                                <tr className="border-b border-border bg-muted/50 text-left text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                                  <th className="px-4 py-2.5 font-semibold">
+                                    Producto
+                                  </th>
+                                  <th className="px-3 py-2.5 font-semibold">
+                                    Cant.
+                                  </th>
+                                  <th className="px-3 py-2.5 font-semibold">
+                                    Costo ({monedaFactura})
+                                  </th>
+                                  <th className="px-3 py-2.5 font-semibold">
+                                    Precio venta
+                                  </th>
+                                  <th className="px-3 py-2.5 font-semibold">
+                                    Confianza
+                                  </th>
+                                  <th className="px-3 py-2.5 font-semibold">
+                                    Estado
+                                  </th>
+                                  <th className="px-3 py-2.5 text-right font-semibold">
+                                    Acciones
+                                  </th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {itemsFiltrados.length === 0 ? (
+                                  <tr>
+                                    <td
+                                      colSpan={7}
+                                      className="px-4 py-10 text-center text-sm text-muted-foreground"
                                     >
-                                      <span className="truncate">
-                                        {productoMatch
-                                          ? productoMatch.nombre
-                                          : "Elegir producto existente"}
-                                      </span>
-                                      <Search className="h-3.5 w-3.5 shrink-0 opacity-60" />
-                                    </Button>
-                                    {requiereAlta && (
-                                      <p className="text-[11px] text-muted-foreground">
-                                        Si no existe, abrilo con{" "}
-                                        <span className="font-semibold text-primary">
-                                          crear producto
-                                        </span>{" "}
-                                        para completar precio de venta,
-                                        categoría y stock inicial.
-                                      </p>
-                                    )}
-                                    {requiereAlta &&
-                                      item.candidatoGlobalNombre && (
-                                        <p className="flex items-start gap-1 text-[11px] text-primary">
-                                          <Sparkles className="h-3 w-3 shrink-0 mt-0.5" />
-                                          <span>
-                                            Catálogo global sugiere:{" "}
-                                            <span className="font-semibold">
-                                              {item.candidatoGlobalNombre}
-                                            </span>
-                                            {item.candidatoGlobalScore !=
-                                              null &&
-                                              ` (${Math.round(item.candidatoGlobalScore)}%)`}
-                                          </span>
-                                        </p>
-                                      )}
-                                  </>
-                                )}
-                              </div>
+                                      No hay productos en este filtro.
+                                    </td>
+                                  </tr>
+                                ) : (
+                                  itemsFiltrados.map((item) => {
+                                    const badge = badgeEstado(item);
+                                    const BadgeIcon = badge.icon;
+                                    const terminal = ESTADOS_TERMINALES.has(
+                                      item.estado,
+                                    );
+                                    const busy = busyItemId === item.id;
+                                    const mostrarCodigo =
+                                      !codigoYaEnDescripcion(item);
+                                    const costoArs = puedeConvertir
+                                      ? convertirAArs(item.precioUnitario)
+                                      : null;
+                                    const requiereAlta = !item.productoId;
+                                    const productoMatch = item.productoId
+                                      ? productos.find(
+                                          (p) => p.id === item.productoId,
+                                        )
+                                      : undefined;
+                                    const conf = nivelConfianza(item);
+                                    const confCls =
+                                      conf.nivel === "excelente"
+                                        ? "text-[color:var(--status-success-strong)] bg-[color:var(--status-success-strong)]/12"
+                                        : conf.nivel === "buena"
+                                          ? "text-[color:var(--status-warning)] bg-[color:var(--status-warning)]/12"
+                                          : "text-[color:var(--status-danger)] bg-[color:var(--status-danger)]/12";
+                                    const bordeEstado =
+                                      item.estado === "CONFIRMADO" ||
+                                      item.estado === "PRODUCTO_CREADO"
+                                        ? "before:bg-[color:var(--status-success-strong)]"
+                                        : item.estado === "SIN_COINCIDENCIA"
+                                          ? "before:bg-[color:var(--status-danger)]"
+                                          : item.estado === "IGNORADO"
+                                            ? "before:bg-border"
+                                            : "before:bg-[color:var(--status-warning)]";
 
-                              {/* Acciones */}
-                              <div className="xl:justify-self-end xl:self-center">
-                                {!terminal && (
-                                  <div
-                                    role="group"
-                                    aria-label={`Acciones para ${item.textoOriginal}`}
-                                    className="flex items-center justify-start gap-2 xl:justify-end"
-                                  >
-                                    {item.productoId && (
-                                      <Tooltip>
-                                        <TooltipTrigger asChild>
-                                          <Button
-                                            type="button"
-                                            size="icon-sm"
-                                            aria-label={`Confirmar coincidencia para ${item.textoOriginal}`}
-                                            className={cn(
-                                              ITEM_ACTION_ICON_CLASS,
-                                              "border-[color:var(--status-success-strong)]/35 bg-[color:var(--status-success-strong)]/14 text-[color:var(--status-success-strong)] hover:bg-[color:var(--status-success-strong)]/22",
-                                            )}
-                                            onClick={() => confirmarItem(item)}
-                                            disabled={busy}
-                                          >
-                                            {busy ? (
-                                              <Loader2 className="h-4 w-4 animate-spin" />
-                                            ) : (
-                                              <Check className="h-4 w-4" />
-                                            )}
-                                          </Button>
-                                        </TooltipTrigger>
-                                        <TooltipContent
-                                          side="top"
-                                          sideOffset={8}
-                                        >
-                                          Confirmar coincidencia
-                                        </TooltipContent>
-                                      </Tooltip>
-                                    )}
+                                    return (
+                                      <tr
+                                        key={item.id}
+                                        className={cn(
+                                          "relative border-b border-border align-top transition-colors last:border-b-0",
+                                          "before:absolute before:left-0 before:top-0 before:h-full before:w-1 before:content-['']",
+                                          bordeEstado,
+                                          terminal
+                                            ? "bg-muted/25 opacity-70"
+                                            : "hover:bg-muted/30",
+                                        )}
+                                      >
+                                        {/* Producto */}
+                                        <td className="px-4 py-3 pl-5 align-top">
+                                          <div className="flex items-start gap-2.5">
+                                            <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary ring-1 ring-primary/15">
+                                              <Package className="h-4 w-4" />
+                                            </div>
+                                            <div className="min-w-0 flex-1 space-y-1">
+                                              <Input
+                                                aria-label={`Descripción detectada para línea ${item.id}`}
+                                                value={item.textoOriginal}
+                                                onChange={(e) =>
+                                                  updateItem(item.id, {
+                                                    textoOriginal:
+                                                      e.target.value,
+                                                  })
+                                                }
+                                                onBlur={(e) =>
+                                                  guardarCampoItem(item, {
+                                                    textoOriginal:
+                                                      e.target.value,
+                                                  })
+                                                }
+                                                disabled={terminal || busy}
+                                                className={cn(
+                                                  CELL_INPUT_CLASS,
+                                                  "font-medium",
+                                                )}
+                                              />
+                                              {mostrarCodigo &&
+                                                item.codigoProveedor && (
+                                                  <p className="font-mono text-[11px] text-muted-foreground">
+                                                    #{item.codigoProveedor}
+                                                  </p>
+                                                )}
+                                              {!terminal && (
+                                                <Button
+                                                  type="button"
+                                                  variant="outline"
+                                                  aria-label={`Producto existente para ${item.textoOriginal}`}
+                                                  onClick={() =>
+                                                    setItemIdParaMatch(item.id)
+                                                  }
+                                                  disabled={busy}
+                                                  className={cn(
+                                                    CELL_INPUT_CLASS,
+                                                    "w-full justify-between gap-2 font-normal",
+                                                    !productoMatch &&
+                                                      "text-muted-foreground",
+                                                  )}
+                                                >
+                                                  <span className="truncate">
+                                                    {productoMatch
+                                                      ? productoMatch.nombre
+                                                      : "Elegir producto existente"}
+                                                  </span>
+                                                  <Search className="h-3.5 w-3.5 shrink-0 opacity-60" />
+                                                </Button>
+                                              )}
+                                              {requiereAlta &&
+                                                !terminal &&
+                                                item.candidatoGlobalNombre && (
+                                                  <p className="flex items-start gap-1 text-[11px] text-primary">
+                                                    <Sparkles className="mt-0.5 h-3 w-3 shrink-0" />
+                                                    <span>
+                                                      Sugerido:{" "}
+                                                      <span className="font-semibold">
+                                                        {
+                                                          item.candidatoGlobalNombre
+                                                        }
+                                                      </span>
+                                                    </span>
+                                                  </p>
+                                                )}
+                                              {item.atributosExtra &&
+                                                Object.keys(item.atributosExtra)
+                                                  .length > 0 && (
+                                                  <div className="flex flex-wrap gap-1 pt-0.5">
+                                                    {Object.entries(
+                                                      item.atributosExtra,
+                                                    ).map(([clave, valor]) => (
+                                                      <Badge
+                                                        key={clave}
+                                                        variant="outline"
+                                                        className="h-5 rounded-md border-border/60 bg-background/50 px-1.5 text-[10px] font-normal text-muted-foreground"
+                                                      >
+                                                        {clave}: {valor}
+                                                      </Badge>
+                                                    ))}
+                                                  </div>
+                                                )}
+                                            </div>
+                                          </div>
+                                        </td>
 
-                                    {requiereAlta ? (
-                                      <Tooltip>
-                                        <TooltipTrigger asChild>
-                                          <Button
-                                            type="button"
-                                            size="icon-sm"
-                                            variant="outline"
-                                            aria-label={`Crear producto para ${item.textoOriginal}`}
+                                        {/* Cantidad */}
+                                        <td className="px-3 py-3 align-top">
+                                          <Input
+                                            aria-label={`Cantidad para ${item.textoOriginal}`}
+                                            type="number"
+                                            min={1}
+                                            step="1"
+                                            value={item.cantidad}
+                                            onChange={(e) => {
+                                              const n = Number(e.target.value);
+                                              if (Number.isFinite(n))
+                                                updateItem(item.id, {
+                                                  cantidad: n,
+                                                });
+                                            }}
+                                            onBlur={(e) => {
+                                              const n = Math.max(
+                                                1,
+                                                Math.trunc(
+                                                  Number(e.target.value) ||
+                                                    item.cantidad,
+                                                ),
+                                              );
+                                              guardarCampoItem(item, {
+                                                cantidad: n,
+                                              });
+                                            }}
+                                            disabled={terminal || busy}
                                             className={cn(
-                                              ITEM_ACTION_ICON_CLASS,
-                                              "border-[color:var(--status-warning)]/35 bg-[color:var(--status-warning)]/12 text-[color:var(--status-warning)] hover:bg-[color:var(--status-warning)]/20",
+                                              CELL_INPUT_CLASS,
+                                              "w-16 text-center tabular-nums",
                                             )}
-                                            onClick={() =>
-                                              setItemParaCrear(item)
+                                          />
+                                        </td>
+
+                                        {/* Costo unitario */}
+                                        <td className="px-3 py-3 align-top">
+                                          <Input
+                                            aria-label={`Costo unitario para ${item.textoOriginal} en ${monedaFactura}`}
+                                            type="text"
+                                            inputMode="decimal"
+                                            value={formatearInputMonto(
+                                              item.precioUnitario,
+                                            )}
+                                            onChange={(e) =>
+                                              updateItem(item.id, {
+                                                precioUnitario: digitosAMonto(
+                                                  e.target.value,
+                                                ),
+                                              })
                                             }
-                                            disabled={busy}
+                                            onBlur={() =>
+                                              guardarCampoItem(item, {
+                                                precioUnitario:
+                                                  item.precioUnitario,
+                                              })
+                                            }
+                                            disabled={terminal || busy}
+                                            placeholder="—"
+                                            className={cn(
+                                              CELL_INPUT_CLASS,
+                                              "w-24 tabular-nums",
+                                            )}
+                                          />
+                                          {costoArs != null && (
+                                            <p className="mt-1 text-[11px] font-semibold text-primary tabular-nums">
+                                              {formatearArs(costoArs)} ARS
+                                            </p>
+                                          )}
+                                        </td>
+
+                                        {/* Precio venta */}
+                                        <td className="px-3 py-3 align-top">
+                                          {productoMatch ? (
+                                            <div
+                                              className={cn(
+                                                CELL_INPUT_CLASS,
+                                                "flex w-24 items-center px-2.5 font-semibold tabular-nums text-foreground",
+                                              )}
+                                              title="Precio de venta del producto existente — editalo con 'Editar producto'"
+                                            >
+                                              {formatMoney(
+                                                Number(
+                                                  productoMatch.precioVenta,
+                                                ),
+                                              )}
+                                            </div>
+                                          ) : (
+                                            <Input
+                                              aria-label={`Precio de venta para ${item.textoOriginal}`}
+                                              type="text"
+                                              inputMode="decimal"
+                                              value={formatearInputMonto(
+                                                precioVentaBorrador[item.id],
+                                              )}
+                                              onChange={(e) =>
+                                                setPrecioVentaBorrador(
+                                                  (prev) => ({
+                                                    ...prev,
+                                                    [item.id]: digitosAMonto(
+                                                      e.target.value,
+                                                    ),
+                                                  }),
+                                                )
+                                              }
+                                              disabled={terminal || busy}
+                                              placeholder="—"
+                                              className={cn(
+                                                CELL_INPUT_CLASS,
+                                                "w-24 tabular-nums",
+                                              )}
+                                            />
+                                          )}
+                                        </td>
+
+                                        {/* Confianza */}
+                                        <td className="px-3 py-3 align-top">
+                                          <span
+                                            className={cn(
+                                              "inline-flex items-center gap-1 rounded-full px-2 py-1 font-mono text-xs font-bold",
+                                              confCls,
+                                            )}
                                           >
-                                            <Plus className="h-4 w-4" />
-                                          </Button>
-                                        </TooltipTrigger>
-                                        <TooltipContent
-                                          side="top"
-                                          sideOffset={8}
-                                        >
-                                          Crear producto nuevo con datos
-                                          precargados
-                                        </TooltipContent>
-                                      </Tooltip>
-                                    ) : (
-                                      (() => {
-                                        if (!productoMatch) return null;
-                                        return (
-                                          <Tooltip>
-                                            <TooltipTrigger asChild>
-                                              <EditProductoDialog
-                                                producto={productoMatch}
-                                                onUpdated={() =>
-                                                  apiService
-                                                    .getProductos()
-                                                    .then(setProductos)
-                                                    .catch(() => {})
-                                                }
-                                                open={
-                                                  itemIdParaEditar === item.id
-                                                }
-                                                onOpenChange={(v) =>
-                                                  setItemIdParaEditar(
-                                                    v ? item.id : null,
-                                                  )
-                                                }
-                                                trigger={
+                                            {conf.pct != null
+                                              ? `${conf.pct}%`
+                                              : "—"}
+                                          </span>
+                                        </td>
+
+                                        {/* Estado */}
+                                        <td className="px-3 py-3 align-top">
+                                          <span
+                                            className={cn(
+                                              "inline-flex items-center gap-1.5 text-xs font-semibold",
+                                              badge.cls,
+                                            )}
+                                          >
+                                            <BadgeIcon className="h-3.5 w-3.5 shrink-0" />
+                                            <span className="max-w-[140px] truncate">
+                                              {badge.label}
+                                            </span>
+                                          </span>
+                                          {item.advertencias.length > 0 && (
+                                            <Tooltip>
+                                              <TooltipTrigger asChild>
+                                                <div className="mt-1 flex cursor-help items-center gap-1 text-[11px] text-[color:var(--status-warning)]">
+                                                  <AlertTriangle className="h-3 w-3 shrink-0" />
+                                                  <span>Revisar</span>
+                                                </div>
+                                              </TooltipTrigger>
+                                              <TooltipContent
+                                                side="bottom"
+                                                sideOffset={4}
+                                                className="max-w-xs"
+                                              >
+                                                {item.advertencias.map(
+                                                  (advertencia, i) => (
+                                                    <p key={i}>{advertencia}</p>
+                                                  ),
+                                                )}
+                                              </TooltipContent>
+                                            </Tooltip>
+                                          )}
+                                        </td>
+
+                                        {/* Acciones */}
+                                        <td className="px-3 py-3 align-top">
+                                          {terminal ? (
+                                            <span className="block text-right text-[11px] font-medium text-muted-foreground">
+                                              —
+                                            </span>
+                                          ) : (
+                                            <div
+                                              role="group"
+                                              aria-label={`Acciones para ${item.textoOriginal}`}
+                                              className="flex items-center justify-end gap-1.5"
+                                            >
+                                              {item.productoId && (
+                                                <Tooltip>
+                                                  <TooltipTrigger asChild>
+                                                    <Button
+                                                      type="button"
+                                                      size="icon-sm"
+                                                      aria-label={`Confirmar coincidencia para ${item.textoOriginal}`}
+                                                      className={cn(
+                                                        TABLE_ACTION_ICON_CLASS,
+                                                        "border-[color:var(--status-success-strong)]/35 bg-[color:var(--status-success-strong)]/14 text-[color:var(--status-success-strong)] hover:bg-[color:var(--status-success-strong)]/22",
+                                                      )}
+                                                      onClick={() =>
+                                                        confirmarItem(item)
+                                                      }
+                                                      disabled={busy}
+                                                    >
+                                                      {busy ? (
+                                                        <Loader2 className="h-4 w-4 animate-spin" />
+                                                      ) : (
+                                                        <Check className="h-4 w-4" />
+                                                      )}
+                                                    </Button>
+                                                  </TooltipTrigger>
+                                                  <TooltipContent
+                                                    side="top"
+                                                    sideOffset={8}
+                                                  >
+                                                    Confirmar coincidencia
+                                                  </TooltipContent>
+                                                </Tooltip>
+                                              )}
+
+                                              {requiereAlta ? (
+                                                <Tooltip>
+                                                  <TooltipTrigger asChild>
+                                                    <Button
+                                                      type="button"
+                                                      size="icon-sm"
+                                                      variant="outline"
+                                                      aria-label={`Crear producto para ${item.textoOriginal}`}
+                                                      className={cn(
+                                                        TABLE_ACTION_ICON_CLASS,
+                                                        "border-primary/30 bg-primary/10 text-primary hover:bg-primary/18",
+                                                      )}
+                                                      onClick={() =>
+                                                        setItemParaCrear(item)
+                                                      }
+                                                      disabled={busy}
+                                                    >
+                                                      <Plus className="h-4 w-4" />
+                                                    </Button>
+                                                  </TooltipTrigger>
+                                                  <TooltipContent
+                                                    side="top"
+                                                    sideOffset={8}
+                                                  >
+                                                    Crear producto nuevo con
+                                                    datos precargados
+                                                  </TooltipContent>
+                                                </Tooltip>
+                                              ) : (
+                                                productoMatch && (
+                                                  <Tooltip>
+                                                    <TooltipTrigger asChild>
+                                                      <EditProductoDialog
+                                                        producto={productoMatch}
+                                                        onUpdated={() =>
+                                                          apiService
+                                                            .getProductos()
+                                                            .then(setProductos)
+                                                            .catch(() => {})
+                                                        }
+                                                        open={
+                                                          itemIdParaEditar ===
+                                                          item.id
+                                                        }
+                                                        onOpenChange={(v) =>
+                                                          setItemIdParaEditar(
+                                                            v ? item.id : null,
+                                                          )
+                                                        }
+                                                        trigger={
+                                                          <Button
+                                                            type="button"
+                                                            size="icon-sm"
+                                                            variant="outline"
+                                                            aria-label={`Editar producto existente para ${item.textoOriginal}`}
+                                                            className={cn(
+                                                              TABLE_ACTION_ICON_CLASS,
+                                                              "border-primary/30 bg-primary/10 text-primary hover:bg-primary/18",
+                                                            )}
+                                                            disabled={busy}
+                                                          >
+                                                            <PencilLine className="h-4 w-4" />
+                                                          </Button>
+                                                        }
+                                                      />
+                                                    </TooltipTrigger>
+                                                    <TooltipContent
+                                                      side="top"
+                                                      sideOffset={8}
+                                                    >
+                                                      Editar el producto ya
+                                                      existente que coincidió
+                                                    </TooltipContent>
+                                                  </Tooltip>
+                                                )
+                                              )}
+
+                                              <Tooltip>
+                                                <TooltipTrigger asChild>
                                                   <Button
                                                     type="button"
                                                     size="icon-sm"
-                                                    variant="outline"
-                                                    aria-label={`Editar producto existente para ${item.textoOriginal}`}
+                                                    variant="ghost"
+                                                    aria-label={`Ignorar línea ${item.textoOriginal}`}
                                                     className={cn(
-                                                      ITEM_ACTION_ICON_CLASS,
-                                                      "border-primary/30 bg-primary/10 text-primary hover:bg-primary/18",
+                                                      TABLE_ACTION_ICON_CLASS,
+                                                      "border-border bg-transparent text-muted-foreground hover:border-[color:var(--status-warning)]/40 hover:bg-[color:var(--status-warning)]/10 hover:text-[color:var(--status-warning)]",
                                                     )}
+                                                    onClick={() =>
+                                                      ignorarItem(item)
+                                                    }
                                                     disabled={busy}
                                                   >
-                                                    <PencilLine className="h-4 w-4" />
+                                                    <X className="h-4 w-4" />
                                                   </Button>
-                                                }
-                                              />
-                                            </TooltipTrigger>
-                                            <TooltipContent
-                                              side="top"
-                                              sideOffset={8}
-                                            >
-                                              Editar el producto ya existente
-                                              que coincidió
-                                            </TooltipContent>
-                                          </Tooltip>
-                                        );
-                                      })()
-                                    )}
-
-                                    <Tooltip>
-                                      <TooltipTrigger asChild>
-                                        <Button
-                                          type="button"
-                                          size="icon-sm"
-                                          variant="ghost"
-                                          aria-label={`Ignorar línea ${item.textoOriginal}`}
-                                          className={cn(
-                                            ITEM_ACTION_ICON_CLASS,
-                                            "border-border bg-transparent text-muted-foreground hover:border-[color:var(--status-warning)]/40 hover:bg-[color:var(--status-warning)]/10 hover:text-[color:var(--status-warning)]",
+                                                </TooltipTrigger>
+                                                <TooltipContent
+                                                  side="top"
+                                                  sideOffset={8}
+                                                >
+                                                  Ignorar línea
+                                                </TooltipContent>
+                                              </Tooltip>
+                                            </div>
                                           )}
-                                          onClick={() => ignorarItem(item)}
-                                          disabled={busy}
-                                        >
-                                          <X className="h-4 w-4" />
-                                        </Button>
-                                      </TooltipTrigger>
-                                      <TooltipContent side="top" sideOffset={8}>
-                                        Ignorar línea
-                                      </TooltipContent>
-                                    </Tooltip>
-                                  </div>
+                                        </td>
+                                      </tr>
+                                    );
+                                  })
                                 )}
-                              </div>
-                            </div>
-                          );
-                        })}
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
+                      </TooltipProvider>
+                    </>
+                  ) : (
+                    <div className="flex min-h-[160px] items-center justify-center rounded-2xl border border-border bg-card text-sm text-muted-foreground">
+                      No se detectaron líneas de producto. Probá con otra
+                      imagen.
+                    </div>
+                  )}
+                </div>
+
+                {/* ===== COLUMNA LATERAL: preview + resumen ===== */}
+                <div className="flex flex-col gap-4 xl:sticky xl:top-0">
+                  {/* Vista previa de la factura */}
+                  <div className="overflow-hidden rounded-2xl border border-border bg-card">
+                    <div className="flex items-center gap-2 border-b border-border bg-muted/40 px-4 py-2.5 text-sm font-semibold">
+                      <FileText className="h-4 w-4 text-muted-foreground" />
+                      Factura escaneada
+                    </div>
+                    <div className="flex items-center justify-center bg-muted/30 p-3">
+                      {factura.archivoEliminado ? (
+                        <div className="flex h-40 flex-col items-center justify-center gap-2 text-center text-xs text-muted-foreground">
+                          <FileText className="h-8 w-8 opacity-40" />
+                          El archivo original ya no está disponible.
+                        </div>
+                      ) : imagenPreviewError ? (
+                        <div className="flex h-40 flex-col items-center justify-center gap-2 text-center text-xs text-muted-foreground">
+                          <FileText className="h-8 w-8 opacity-40" />
+                          No se pudo cargar la imagen original.
+                        </div>
+                      ) : factura.archivoMime?.startsWith("image/") ? (
+                        <a
+                          href={API_ROUTES.FACTURAS_PROVEEDOR.ARCHIVO(
+                            factura.id,
+                          )}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="block w-full"
+                          title="Abrir la factura original en tamaño completo"
+                        >
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={API_ROUTES.FACTURAS_PROVEEDOR.ARCHIVO(
+                              factura.id,
+                            )}
+                            alt="Factura escaneada"
+                            className="mx-auto max-h-[320px] w-full cursor-zoom-in rounded-lg object-contain"
+                            onError={() => setImagenPreviewError(true)}
+                          />
+                        </a>
+                      ) : factura.archivoMime === "application/pdf" ? (
+                        <a
+                          href={API_ROUTES.FACTURAS_PROVEEDOR.ARCHIVO(
+                            factura.id,
+                          )}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="flex h-40 w-full flex-col items-center justify-center gap-2 rounded-lg text-sm font-medium text-primary hover:underline"
+                        >
+                          <FileText className="h-8 w-8" />
+                          Abrir PDF original
+                        </a>
+                      ) : (
+                        <div className="flex h-40 flex-col items-center justify-center gap-2 text-center text-xs text-muted-foreground">
+                          <FileText className="h-8 w-8 opacity-40" />
+                          Sin vista previa disponible.
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Resumen de la revisión */}
+                  <div className="rounded-2xl border border-border bg-card p-4 sm:p-5">
+                    <h3 className="mb-3 text-base font-black italic tracking-tight">
+                      Resumen de la revisión
+                    </h3>
+                    <div className="mb-3 border-b border-border pb-3">
+                      <p className="truncate font-semibold">
+                        {factura.proveedor?.nombre ??
+                          factura.proveedorNombreDetectado ??
+                          "Proveedor sin asignar"}
+                      </p>
+                      {(factura.proveedor?.cuit ??
+                        factura.proveedorCuitDetectado) && (
+                        <p className="font-mono text-xs text-muted-foreground">
+                          CUIT{" "}
+                          {factura.proveedor?.cuit ??
+                            factura.proveedorCuitDetectado}
+                        </p>
+                      )}
+                    </div>
+                    <dl className="space-y-1.5 text-sm">
+                      <div className="flex items-center justify-between">
+                        <dt className="text-muted-foreground">Detectados</dt>
+                        <dd className="font-mono font-bold tabular-nums">
+                          {conteos.todos}
+                        </dd>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <dt className="text-muted-foreground">Confirmados</dt>
+                        <dd className="font-mono font-bold tabular-nums text-[color:var(--status-success-strong)]">
+                          {conteos.confirmado}
+                        </dd>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <dt className="text-muted-foreground">Pendientes</dt>
+                        <dd className="font-mono font-bold tabular-nums text-[color:var(--status-warning)]">
+                          {conteos.pendiente}
+                        </dd>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <dt className="text-muted-foreground">
+                          Sin coincidencia
+                        </dt>
+                        <dd className="font-mono font-bold tabular-nums text-[color:var(--status-danger)]">
+                          {conteos["sin-match"]}
+                        </dd>
+                      </div>
+                    </dl>
+                    <div className="my-3 space-y-1.5 border-y border-border py-3 text-sm">
+                      <div className="flex items-center justify-between">
+                        <span className="text-muted-foreground">
+                          Total ({monedaFactura})
+                        </span>
+                        <span className="font-mono font-semibold tabular-nums">
+                          {totalCalculado.toLocaleString("es-AR", {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2,
+                          })}
+                        </span>
+                      </div>
+                      {puedeConvertir && totalCalculado > 0 && (
+                        <div className="flex items-center justify-between">
+                          <span className="text-muted-foreground">
+                            Convertido
+                          </span>
+                          <span className="font-mono text-base font-extrabold tabular-nums">
+                            {formatearArs(convertirAArs(totalCalculado)!)}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                    <Button
+                      type="button"
+                      className="h-11 w-full rounded-full font-bold shadow-lg shadow-primary/20"
+                      onClick={() => setConfirmarProveedorOpen(true)}
+                      disabled={confirmandoTodos || facturaBloqueada}
+                    >
+                      {confirmandoTodos ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <CheckCircle2 className="h-4 w-4" />
+                      )}
+                      Confirmar ingreso
+                    </Button>
+                    <p className="mt-2 text-center text-xs text-muted-foreground">
+                      Nada se actualiza hasta confirmar.
+                    </p>
+                  </div>
+
+                  {/* Barra de confianza */}
+                  <div className="grid grid-cols-1 gap-3 rounded-2xl border border-border bg-card p-4 sm:grid-cols-3">
+                    <div className="flex items-center gap-2.5">
+                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                        <ScanLine className="h-4 w-4" />
+                      </span>
+                      <div className="min-w-0">
+                        <p className="text-xs font-bold">Seguridad</p>
+                        <p className="text-[11px] text-muted-foreground">
+                          Tu info está protegida
+                        </p>
                       </div>
                     </div>
-                  </TooltipProvider>
-                </>
-              ) : (
-                <div className="flex-1 min-h-0 flex items-center justify-center text-sm text-muted-foreground">
-                  No se detectaron líneas de producto. Probá con otra imagen.
+                    <div className="flex items-center gap-2.5">
+                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                        <FileText className="h-4 w-4" />
+                      </span>
+                      <div className="min-w-0">
+                        <p className="text-xs font-bold">Sin riesgos</p>
+                        <p className="text-[11px] text-muted-foreground">
+                          Editá u omití antes
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2.5">
+                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                        <CheckCircle2 className="h-4 w-4" />
+                      </span>
+                      <div className="min-w-0">
+                        <p className="text-xs font-bold">Control total</p>
+                        <p className="text-[11px] text-muted-foreground">
+                          Vos tenés la última palabra
+                        </p>
+                      </div>
+                    </div>
+                  </div>
                 </div>
-              )}
+              </div>
             </div>
           )}
 
-          <div className="shrink-0 flex items-center justify-between gap-3 border-t border-border px-8 py-5">
+          <div className="shrink-0 flex items-center justify-between gap-3 border-t border-border px-4 py-3 sm:px-8 sm:py-5">
             <div className="flex min-w-0 items-center gap-2 text-sm text-muted-foreground">
               {selectedFile && (
                 <>
@@ -1511,23 +1914,11 @@ export function FacturaProveedorDialog({
                 onClick={() => setOpen(false)}
                 disabled={trabajando}
               >
-                Cancelar
+                {items && factura ? "Cerrar" : "Cancelar"}
               </Button>
-              {items && factura ? (
-                <Button
-                  type="button"
-                  className="h-11 shrink-0 whitespace-nowrap px-6 font-semibold"
-                  onClick={() => setConfirmarProveedorOpen(true)}
-                  disabled={confirmandoTodos || facturaBloqueada}
-                >
-                  {confirmandoTodos ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <CheckCircle2 className="h-4 w-4" />
-                  )}
-                  Confirmar todo
-                </Button>
-              ) : (
+              {/* En la vista de revisión el CTA principal ("Confirmar ingreso")
+                  vive en el panel de resumen; el pie sólo ofrece cerrar. */}
+              {!items && (
                 <Button
                   type="button"
                   className="h-11 shrink-0 whitespace-nowrap px-6 font-semibold"
