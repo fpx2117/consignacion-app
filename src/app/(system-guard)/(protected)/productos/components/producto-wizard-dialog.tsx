@@ -342,7 +342,7 @@ export function ProductoWizardDialog({
           stockTotalUnits: toInt(stockDisponibleUnits) || 0,
           stockMinUnits: toInt(stockMinUnits) || 0,
           fechaVencimiento: fechaVencimiento || null,
-          categoriaId: Number(categoriaId),
+          categoriaId: categoriaId ? Number(categoriaId) : null,
           subcategoriaId: subcategoriaId ? Number(subcategoriaId) : undefined,
           imagenUrl,
           descuentoActivo,

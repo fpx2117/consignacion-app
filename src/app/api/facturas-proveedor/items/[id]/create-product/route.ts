@@ -6,14 +6,29 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { EstadoItemFactura, TipoMovimientoStock, MotivoMovimientoStock, Prisma } from "@prisma/client";
+import {
+  EstadoItemFactura,
+  TipoMovimientoStock,
+  MotivoMovimientoStock,
+  Prisma,
+} from "@prisma/client";
 import { requireAuth, requireRole } from "@/lib/auth/require-auth";
-import { createProductoSchema, type CreateProductoInput } from "@/lib/validators/producto";
+import {
+  createProductoSchema,
+  type CreateProductoInput,
+} from "@/lib/validators/producto";
 import { checkProductLimit } from "@/lib/subscriptions/require-subscription";
 import { cargarItemFacturaAccesible } from "@/lib/ocr/cargar-item-factura";
-import { registrarCostoYAlias, actualizarEstadoFacturaSiCompleta, convertirCostoAArs, purgarArchivoFacturaSiFinalizada } from "@/lib/ocr/aplicar-confirmacion";
+import {
+  registrarCostoYAlias,
+  actualizarEstadoFacturaSiCompleta,
+  convertirCostoAArs,
+  purgarArchivoFacturaSiFinalizada,
+} from "@/lib/ocr/aplicar-confirmacion";
 
-type ProductoCreateBody = CreateProductoInput & { subcategoriaId?: number | null };
+type ProductoCreateBody = CreateProductoInput & {
+  subcategoriaId?: number | null;
+};
 
 export async function POST(
   req: NextRequest,
@@ -22,32 +37,49 @@ export async function POST(
   const auth = await requireAuth();
   if (!auth.ok) return auth.res;
   if (!requireRole(auth.user, ["ADMIN"])) {
-    return NextResponse.json({ error: "No tienes permisos (Admin requerido)" }, { status: 403 });
+    return NextResponse.json(
+      { error: "No tienes permisos (Admin requerido)" },
+      { status: 403 },
+    );
   }
 
   const { id } = await params;
   const itemId = Number(id);
   if (!Number.isInteger(itemId)) {
-    return NextResponse.json({ error: "Item de factura no encontrado" }, { status: 404 });
+    return NextResponse.json(
+      { error: "Item de factura no encontrado" },
+      { status: 404 },
+    );
   }
 
   const productCheck = await checkProductLimit();
   if (!productCheck.allowed) {
-    return NextResponse.json({ error: productCheck.message, limitReached: true }, { status: 403 });
+    return NextResponse.json(
+      { error: productCheck.message, limitReached: true },
+      { status: 403 },
+    );
   }
 
-  const body = (await req.json().catch(() => null)) as ProductoCreateBody | null;
+  const body = (await req
+    .json()
+    .catch(() => null)) as ProductoCreateBody | null;
   const parsed = createProductoSchema.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json(
-      { error: "Validación fallida", details: parsed.error.flatten().fieldErrors },
+      {
+        error: "Validación fallida",
+        details: parsed.error.flatten().fieldErrors,
+      },
       { status: 400 },
     );
   }
 
   const cargado = await cargarItemFacturaAccesible(auth, itemId);
   if (!cargado.ok) {
-    return NextResponse.json({ error: cargado.error }, { status: cargado.status });
+    return NextResponse.json(
+      { error: cargado.error },
+      { status: cargado.status },
+    );
   }
   const { item } = cargado;
   const sucursalId = item.factura.sucursalId;
@@ -59,7 +91,10 @@ export async function POST(
     // en la moneda original de la factura (item.factura.moneda) salvo que el
     // usuario lo haya corregido a mano — de cualquier forma, el negocio quiere
     // el costo siempre en ARS.
-    const conversion = await convertirCostoAArs(data.precioCosto, item.factura.moneda);
+    const conversion = await convertirCostoAArs(
+      data.precioCosto,
+      item.factura.moneda,
+    );
 
     const resultado = await prisma.$transaction(async (tx) => {
       const nuevoProducto = await tx.producto.create({
@@ -78,18 +113,26 @@ export async function POST(
           sku: data.sku?.trim() || null,
           categoriaId: data.categoriaId ?? null,
           subcategoriaId: body?.subcategoriaId ?? null,
-          fechaVencimiento: data.fechaVencimiento ? new Date(data.fechaVencimiento) : null,
+          fechaVencimiento: data.fechaVencimiento
+            ? new Date(data.fechaVencimiento)
+            : null,
           imagenUrl: data.imagenUrl || null,
           sucursalId,
           tipoDescuento: data.tipoDescuento ?? "porcentaje",
           descuentoPorcentaje: data.descuentoPorcentaje ?? null,
           descuentoMonto: data.descuentoMonto ?? null,
           descuentoActivo: data.descuentoActivo ?? false,
-          descuentoDesde: data.descuentoDesde ? new Date(data.descuentoDesde) : null,
-          descuentoHasta: data.descuentoHasta ? new Date(data.descuentoHasta) : null,
+          descuentoDesde: data.descuentoDesde
+            ? new Date(data.descuentoDesde)
+            : null,
+          descuentoHasta: data.descuentoHasta
+            ? new Date(data.descuentoHasta)
+            : null,
           // Si el usuario editó los atributos en el formulario, se respeta eso;
           // si no vino nada, se copia lo que la IA detectó en el item original.
-          atributosExtra: (data.atributosExtra ?? item.atributosExtra ?? undefined) as Prisma.InputJsonValue | undefined,
+          atributosExtra: (data.atributosExtra ??
+            item.atributosExtra ??
+            undefined) as Prisma.InputJsonValue | undefined,
         },
       });
 
@@ -136,7 +179,11 @@ export async function POST(
 
       const itemActualizado = await tx.facturaProveedorItem.update({
         where: { id: item.id },
-        data: { productoId: nuevoProducto.id, estado: EstadoItemFactura.PRODUCTO_CREADO, matchMotivo: "manual" },
+        data: {
+          productoId: nuevoProducto.id,
+          estado: EstadoItemFactura.PRODUCTO_CREADO,
+          matchMotivo: "manual",
+        },
       });
 
       await actualizarEstadoFacturaSiCompleta(tx, item.facturaId);
@@ -156,7 +203,48 @@ export async function POST(
       { status: 201 },
     );
   } catch (error) {
-    console.error("[FACTURA_PROVEEDOR_ITEM_CREATE_PRODUCT_ERROR]", { itemId, error });
-    return NextResponse.json({ error: "Error al crear el producto" }, { status: 500 });
+    // Mismo manejo de duplicados que POST /api/productos: el item de factura sin
+    // match confiable puede traer un código de barras que ya pertenece a otro
+    // producto de la sucursal (ej. el usuario lo escaneó a mano en el paso de
+    // código de barras del wizard), lo que antes tiraba un 500 genérico.
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === "P2002"
+    ) {
+      // Con el driver adapter de pg, Prisma no llena `meta.target`: el nombre de
+      // columna hay que sacarlo de `meta.driverAdapterError.cause.constraint.fields`.
+      const constraintFields = (
+        error.meta as {
+          target?: unknown;
+          driverAdapterError?: {
+            cause?: { constraint?: { fields?: unknown } };
+          };
+        }
+      )?.driverAdapterError?.cause?.constraint?.fields;
+      const rawField = Array.isArray(error.meta?.target)
+        ? error.meta.target[0]
+        : Array.isArray(constraintFields)
+          ? constraintFields[0]
+          : null;
+      const field =
+        typeof rawField === "string"
+          ? rawField.replace(/"/g, "")
+          : "desconocido";
+      return NextResponse.json(
+        {
+          error: `El valor en el campo '${field}' ya está registrado en otro producto.`,
+        },
+        { status: 400 },
+      );
+    }
+
+    console.error("[FACTURA_PROVEEDOR_ITEM_CREATE_PRODUCT_ERROR]", {
+      itemId,
+      error,
+    });
+    return NextResponse.json(
+      { error: "Error al crear el producto" },
+      { status: 500 },
+    );
   }
 }
