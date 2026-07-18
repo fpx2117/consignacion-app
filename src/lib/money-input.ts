@@ -15,5 +15,10 @@ export function digitosAMonto(valorCrudo: string): number | null {
 
 export function formatearInputMonto(valor: number | null | undefined): string {
   if (valor == null) return "";
-  return valor.toFixed(2);
+  // Los campos Decimal de Prisma (precioCosto/precioUnitario, etc.) serializan
+  // como string sobre JSON (Decimal.prototype.toJSON hace toString()), aunque
+  // los tipos de apiService.ts digan `number` — sin este Number(), un valor
+  // así rompía acá con "toFixed is not a function" (ver factura-proveedor-dialog
+  // -> initialValuesParaNuevoProducto, que no siempre convierte antes de pasarlo).
+  return Number(valor).toFixed(2);
 }
