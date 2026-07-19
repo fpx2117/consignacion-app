@@ -67,7 +67,6 @@ import {
   Calendar,
   CircleDollarSign,
   ScanLine,
-  Package,
   Plus,
   PencilLine,
   Search,
@@ -1190,7 +1189,7 @@ export function FacturaProveedorDialog({
                       <TooltipProvider>
                         <div className="overflow-hidden rounded-2xl border border-border bg-card">
                           <div className="overflow-x-auto">
-                            <table className="w-full min-w-[720px] border-collapse text-sm">
+                            <table className="w-full min-w-[680px] table-fixed border-collapse text-sm">
                               <thead>
                                 <tr className="border-b border-border bg-muted/50 text-left text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
                                   <th className="px-3 py-2 pl-4 font-semibold">
@@ -1273,69 +1272,60 @@ export function FacturaProveedorDialog({
                                       >
                                         {/* Producto: descripción editable + código + botón de match */}
                                         <td className="px-3 py-2.5 pl-4 align-top">
-                                          <div className="flex items-start gap-2">
-                                            <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary ring-1 ring-primary/15">
-                                              <Package className="h-3.5 w-3.5" />
-                                            </div>
-                                            <div className="min-w-0 flex-1 space-y-1">
-                                              <Input
-                                                aria-label={`Descripción detectada para línea ${item.id}`}
-                                                value={item.textoOriginal}
-                                                onChange={(e) =>
-                                                  updateItem(item.id, {
-                                                    textoOriginal:
-                                                      e.target.value,
-                                                  })
-                                                }
-                                                onBlur={(e) =>
-                                                  guardarCampoItem(item, {
-                                                    textoOriginal:
-                                                      e.target.value,
-                                                  })
-                                                }
-                                                disabled={terminal || busy}
-                                                className={cn(
-                                                  "h-8 rounded-lg border-border bg-background text-sm font-medium shadow-xs",
-                                                )}
-                                              />
-                                              <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                                                {mostrarCodigo &&
-                                                  item.codigoProveedor && (
-                                                    <span className="font-mono text-[11px] text-muted-foreground">
-                                                      #{item.codigoProveedor}
-                                                    </span>
-                                                  )}
-                                                {!terminal && (
-                                                  <button
-                                                    type="button"
-                                                    aria-label={`Producto existente para ${item.textoOriginal}`}
-                                                    onClick={() =>
-                                                      setItemIdParaMatch(
-                                                        item.id,
-                                                      )
-                                                    }
-                                                    disabled={busy}
-                                                    className={cn(
-                                                      "inline-flex min-w-0 max-w-full items-center gap-1 rounded-md border border-border/70 bg-background px-2 py-1 text-xs font-medium transition-colors hover:border-primary/50 hover:text-primary disabled:opacity-50",
-                                                      productoMatch
-                                                        ? "text-foreground"
-                                                        : "text-muted-foreground",
-                                                    )}
-                                                  >
-                                                    <Search className="h-3 w-3 shrink-0 opacity-70" />
-                                                    <span className="truncate">
-                                                      {productoMatch
-                                                        ? productoMatch.nombre
-                                                        : "Elegir producto"}
-                                                    </span>
-                                                  </button>
-                                                )}
-                                                {terminal && productoMatch && (
-                                                  <span className="truncate text-xs text-muted-foreground">
-                                                    {productoMatch.nombre}
+                                          <div className="min-w-0 space-y-1">
+                                            <Input
+                                              aria-label={`Descripción detectada para línea ${item.id}`}
+                                              value={item.textoOriginal}
+                                              onChange={(e) =>
+                                                updateItem(item.id, {
+                                                  textoOriginal: e.target.value,
+                                                })
+                                              }
+                                              onBlur={(e) =>
+                                                guardarCampoItem(item, {
+                                                  textoOriginal: e.target.value,
+                                                })
+                                              }
+                                              disabled={terminal || busy}
+                                              className={cn(
+                                                "h-8 rounded-lg border-border bg-background text-sm font-medium shadow-xs",
+                                              )}
+                                            />
+                                            <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                                              {mostrarCodigo &&
+                                                item.codigoProveedor && (
+                                                  <span className="font-mono text-[11px] text-muted-foreground">
+                                                    #{item.codigoProveedor}
                                                   </span>
                                                 )}
-                                              </div>
+                                              {!terminal && (
+                                                <button
+                                                  type="button"
+                                                  aria-label={`Producto existente para ${item.textoOriginal}`}
+                                                  onClick={() =>
+                                                    setItemIdParaMatch(item.id)
+                                                  }
+                                                  disabled={busy}
+                                                  className={cn(
+                                                    "inline-flex min-w-0 max-w-full items-center gap-1 rounded-md border border-border/70 bg-background px-2 py-1 text-xs font-medium transition-colors hover:border-primary/50 hover:text-primary disabled:opacity-50",
+                                                    productoMatch
+                                                      ? "text-foreground"
+                                                      : "text-muted-foreground",
+                                                  )}
+                                                >
+                                                  <Search className="h-3 w-3 shrink-0 opacity-70" />
+                                                  <span className="truncate">
+                                                    {productoMatch
+                                                      ? productoMatch.nombre
+                                                      : "Elegir producto"}
+                                                  </span>
+                                                </button>
+                                              )}
+                                              {terminal && productoMatch && (
+                                                <span className="truncate text-xs text-muted-foreground">
+                                                  {productoMatch.nombre}
+                                                </span>
+                                              )}
                                             </div>
                                           </div>
                                         </td>
