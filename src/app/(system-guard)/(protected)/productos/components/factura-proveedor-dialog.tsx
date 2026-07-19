@@ -206,11 +206,32 @@ type FacturaProveedorItemConCatalogoGlobal = FacturaProveedorItem & {
 export function FacturaProveedorDialog({
   trigger,
   onCreated,
+  facturaIdInicial,
+  open: controlledOpen,
+  onOpenChange: controlledOnOpenChange,
 }: {
   trigger?: React.ReactNode;
   onCreated?: () => void;
+  /** Si viene, al abrir el diálogo se retoma esa factura (ya analizada, en
+   * revisión) cargándola directamente en la pantalla de revisión, en vez de
+   * arrancar en la carga de un archivo nuevo. Se usa desde el listado de
+   * facturas para no re-escanear (y no volver a gastar tokens). */
+  facturaIdInicial?: number | null;
+  /** Control externo de apertura (para abrirlo programáticamente al retomar). */
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }) {
-  const [open, setOpen] = React.useState(false);
+  const [internalOpen, setInternalOpen] = React.useState(false);
+  const open = controlledOpen ?? internalOpen;
+  const setOpen = React.useCallback(
+    (value: boolean) => {
+      controlledOnOpenChange?.(value);
+      if (controlledOpen === undefined) setInternalOpen(value);
+    },
+    [controlledOnOpenChange, controlledOpen],
+  );
+  // Carga de la factura a retomar (spinner mientras se trae del backend).
+  const [cargandoInicial, setCargandoInicial] = React.useState(false);
   const [subiendo, setSubiendo] = React.useState(false);
   const [procesando, setProcesando] = React.useState(false);
   const [factura, setFactura] = React.useState<FacturaProveedor | null>(null);
@@ -277,6 +298,7 @@ export function FacturaProveedorDialog({
       setItems(null);
       setSubiendo(false);
       setProcesando(false);
+      setCargandoInicial(false);
       setSelectedFile(null);
       setDragActive(false);
       setFiltroActivo("todos");
@@ -299,7 +321,37 @@ export function FacturaProveedorDialog({
       .getFacturaProveedorUsage()
       .then(setUsage)
       .catch(() => setUsage(null));
-  }, [open]);
+
+    // Modo "retomar": si se abre con una factura ya analizada, se carga
+    // directamente en la pantalla de revisión (sin subir un archivo nuevo).
+    if (facturaIdInicial != null) {
+      let cancelado = false;
+      setCargandoInicial(true);
+      apiService
+        .getFacturaProveedor(facturaIdInicial)
+        .then((f) => {
+          if (cancelado) return;
+          setFactura(f);
+          setItems(f.items ?? []);
+        })
+        .catch((err: unknown) => {
+          if (cancelado) return;
+          toast.error(
+            err instanceof Error
+              ? err.message
+              : "No se pudo cargar la factura para retomar",
+          );
+          setOpen(false);
+        })
+        .finally(() => {
+          if (!cancelado) setCargandoInicial(false);
+        });
+      return () => {
+        cancelado = true;
+      };
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- setOpen es estable; sólo debe re-cargar cuando cambia open o la factura a retomar.
+  }, [open, facturaIdInicial]);
 
   const trabajando = subiendo || procesando;
   const sinCupo =
@@ -682,18 +734,22 @@ export function FacturaProveedorDialog({
   return (
     <>
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogTrigger asChild>
-          {trigger || (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-9 px-3 rounded-lg font-bold text-sm"
-            >
-              <ScanText className="h-3.5 w-3.5 mr-1.5" />
-              Cargar por factura
-            </Button>
-          )}
-        </DialogTrigger>
+        {/* En modo controlado (retomar) sin trigger explícito, no renderizamos
+            botón propio: la apertura la maneja quien lo usa. */}
+        {(trigger !== undefined || controlledOpen === undefined) && (
+          <DialogTrigger asChild>
+            {trigger || (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-9 px-3 rounded-lg font-bold text-sm"
+              >
+                <ScanText className="h-3.5 w-3.5 mr-1.5" />
+                Cargar por factura
+              </Button>
+            )}
+          </DialogTrigger>
+        )}
 
         <DialogContent
           className="p-0 gap-0 flex flex-col overflow-hidden border border-border bg-background rounded-2xl sm:rounded-[28px] shadow-2xl w-screen sm:w-[94vw] max-w-none sm:max-w-[1440px] h-[100dvh] sm:h-auto max-h-[100dvh] sm:max-h-[92vh]"
@@ -712,10 +768,12 @@ export function FacturaProveedorDialog({
               </div>
               <div className="min-w-0 space-y-0.5 sm:space-y-1">
                 <DialogTitle className="text-lg font-black italic tracking-tight sm:text-2xl">
-                  Escanear factura de compra
+                  {facturaIdInicial != null
+                    ? "Retomar revisión de factura"
+                    : "Escanear factura de compra"}
                 </DialogTitle>
                 <DialogDescription className="text-xs text-muted-foreground sm:text-sm">
-                  {items
+                  {items || facturaIdInicial != null
                     ? "Revisá los datos antes de actualizar el stock."
                     : "Subí o sacá una foto de la factura del proveedor para cargar stock automáticamente con IA."}
                 </DialogDescription>
@@ -723,7 +781,14 @@ export function FacturaProveedorDialog({
             </div>
           </DialogHeader>
 
-          {!items && (
+          {cargandoInicial && (
+            <div className="flex flex-1 min-h-[240px] items-center justify-center gap-2 text-sm text-muted-foreground">
+              <Loader2 className="h-5 w-5 animate-spin" />
+              Cargando la revisión…
+            </div>
+          )}
+
+          {!items && !cargandoInicial && facturaIdInicial == null && (
             <div className="flex-1 min-h-0 overflow-y-auto px-8 py-6 space-y-4">
               <input
                 ref={fileInputRef}
@@ -1853,8 +1918,9 @@ export function FacturaProveedorDialog({
                 {items && factura ? "Cerrar" : "Cancelar"}
               </Button>
               {/* En la vista de revisión el CTA principal ("Confirmar ingreso")
-                  vive en el panel de resumen; el pie sólo ofrece cerrar. */}
-              {!items && (
+                  vive en el panel de resumen; el pie sólo ofrece cerrar.
+                  En modo retomar tampoco hay que analizar nada nuevo. */}
+              {!items && !cargandoInicial && facturaIdInicial == null && (
                 <Button
                   type="button"
                   className="h-11 shrink-0 whitespace-nowrap px-6 font-semibold"

@@ -119,15 +119,17 @@ export async function checkFacturaOcrLimit() {
 
   const now = new Date();
   const inicioMes = new Date(now.getFullYear(), now.getMonth(), 1);
-  // El cupo mensual sólo debe consumirse por facturas que efectivamente usaron
-  // un escaneo (subidas activas / en revisión / confirmadas). Las CANCELADA y
-  // ERROR no cuentan: fueron descartadas por el usuario o falló el OCR, así que
-  // no representan un escaneo válido del mes. Antes se contaba `createdAt` a
-  // secas y las canceladas inflaban el uso (ej. 51 canceladas contra 2 reales).
+  // El costo real (tokens de OpenRouter) se gasta cuando se ejecuta el análisis
+  // OCR+IA, no al subir el archivo. Ese análisis ocurre justo cuando la factura
+  // deja de estar en PENDIENTE (process/route.ts la pasa a PROCESANDO y llama a
+  // la IA). Por eso el cupo cuenta toda factura ANALIZADA del mes —en revisión,
+  // confirmada, cancelada o con error— porque en todas se gastaron tokens; y NO
+  // cuenta las que se subieron pero nunca se analizaron (PENDIENTE), que no
+  // consumieron nada.
   const used = await prisma.facturaProveedor.count({
     where: {
       createdAt: { gte: inicioMes },
-      estado: { notIn: ["CANCELADA", "ERROR"] },
+      estado: { not: "PENDIENTE" },
     },
   });
 
