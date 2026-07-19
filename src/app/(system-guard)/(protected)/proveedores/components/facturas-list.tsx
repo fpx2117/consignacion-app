@@ -45,9 +45,15 @@ import {
   ImageOff,
   Package,
   Filter,
+  PlayCircle,
 } from "lucide-react";
 import { FacturaDetalleDialog } from "./factura-detalle-dialog";
-import { estadoFacturaBadge, formatMoneda, formatFecha } from "./factura-helpers";
+import { FacturaProveedorDialog } from "@/app/(system-guard)/(protected)/productos/components/factura-proveedor-dialog";
+import {
+  estadoFacturaBadge,
+  formatMoneda,
+  formatFecha,
+} from "./factura-helpers";
 
 const ESTADOS: { value: string; label: string }[] = [
   { value: "all", label: "Todos los estados" },
@@ -71,8 +77,14 @@ export function FacturasList({ proveedores, proveedorId }: FacturasListProps) {
   const [proveedorFilter, setProveedorFilter] = React.useState<string>(
     proveedorId != null ? String(proveedorId) : "all",
   );
-  const [facturaACancelar, setFacturaACancelar] = React.useState<FacturaProveedor | null>(null);
+  const [facturaACancelar, setFacturaACancelar] =
+    React.useState<FacturaProveedor | null>(null);
   const [cancelando, setCancelando] = React.useState(false);
+  // Factura a retomar: reabre la pantalla de revisión completa para una factura
+  // ya analizada (en revisión) sin volver a escanear ni gastar tokens.
+  const [facturaARetomar, setFacturaARetomar] = React.useState<number | null>(
+    null,
+  );
 
   const load = React.useCallback(async () => {
     setLoading(true);
@@ -83,7 +95,8 @@ export function FacturasList({ proveedores, proveedorId }: FacturasListProps) {
       } else if (proveedorFilter !== "all") {
         filtros.proveedorId = Number(proveedorFilter);
       }
-      if (estadoFilter !== "all") filtros.estado = estadoFilter as EstadoFacturaProveedor;
+      if (estadoFilter !== "all")
+        filtros.estado = estadoFilter as EstadoFacturaProveedor;
       const res = await apiService.listFacturasProveedor(filtros);
       setItems(res ?? []);
     } catch (e) {
@@ -173,7 +186,9 @@ export function FacturasList({ proveedores, proveedorId }: FacturasListProps) {
                 <FileText className="h-12 w-12 text-muted-foreground" />
               </div>
               <h3 className="text-xl font-bold">No se encontraron facturas</h3>
-              <p className="text-sm">Ajustá los filtros o subí una factura desde Productos.</p>
+              <p className="text-sm">
+                Ajustá los filtros o subí una factura desde Productos.
+              </p>
             </motion.div>
           ) : (
             <motion.div
@@ -206,7 +221,9 @@ export function FacturasList({ proveedores, proveedorId }: FacturasListProps) {
                 <TableBody>
                   {items.map((f) => {
                     const proveedorNombre =
-                      f.proveedor?.nombre ?? f.proveedorNombreDetectado ?? "Sin asignar";
+                      f.proveedor?.nombre ??
+                      f.proveedorNombreDetectado ??
+                      "Sin asignar";
                     return (
                       <TableRow
                         key={f.id}
@@ -233,9 +250,12 @@ export function FacturasList({ proveedores, proveedorId }: FacturasListProps) {
                           </div>
                         </TableCell>
                         <TableCell>
-                          <div className="text-sm font-mono">{f.numeroFactura || "—"}</div>
+                          <div className="text-sm font-mono">
+                            {f.numeroFactura || "—"}
+                          </div>
                           <div className="text-[10px] text-muted-foreground mt-0.5">
-                            {f._count?.items ?? f.items?.length ?? 0} ítems · {f.moneda}
+                            {f._count?.items ?? f.items?.length ?? 0} ítems ·{" "}
+                            {f.moneda}
                           </div>
                         </TableCell>
                         <TableCell>
@@ -244,12 +264,25 @@ export function FacturasList({ proveedores, proveedorId }: FacturasListProps) {
                               {formatMoneda(f.totalDetectado, f.moneda)}
                             </span>
                           ) : (
-                            <span className="text-muted-foreground/30 text-xs italic">—</span>
+                            <span className="text-muted-foreground/30 text-xs italic">
+                              —
+                            </span>
                           )}
                         </TableCell>
                         <TableCell>{estadoFacturaBadge(f.estado)}</TableCell>
                         <TableCell className="text-right pr-8">
                           <div className="flex justify-end gap-1 opacity-60 group-hover:opacity-100 transition-opacity">
+                            {f.estado === "REQUIERE_REVISION" && (
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-8 gap-1.5 rounded-lg px-2.5 font-semibold text-primary hover:bg-primary/10 hover:text-primary hover:shadow-sm"
+                                onClick={() => setFacturaARetomar(f.id)}
+                              >
+                                <PlayCircle className="h-4 w-4" />
+                                Retomar
+                              </Button>
+                            )}
                             <FacturaDetalleDialog
                               facturaId={f.id}
                               trigger={
@@ -288,6 +321,17 @@ export function FacturasList({ proveedores, proveedorId }: FacturasListProps) {
         <span>Mostrando {items.length} facturas</span>
       </div>
 
+      {/* Retomar revisión: reabre la pantalla de revisión completa para la
+          factura ya analizada, sin re-escanear. Al confirmar, refresca la lista. */}
+      <FacturaProveedorDialog
+        facturaIdInicial={facturaARetomar}
+        open={facturaARetomar != null}
+        onOpenChange={(open) => {
+          if (!open) setFacturaARetomar(null);
+        }}
+        onCreated={() => void load()}
+      />
+
       <AlertDialog
         open={facturaACancelar != null}
         onOpenChange={(open) => {
@@ -303,9 +347,10 @@ export function FacturasList({ proveedores, proveedorId }: FacturasListProps) {
               Cancelar factura
             </AlertDialogTitle>
             <AlertDialogDescription className="text-sm">
-              Se marcará como <span className="font-semibold text-foreground">CANCELADA</span> y se
-              eliminará su imagen para ahorrar espacio. Los ítems quedan como historial. Esta acción
-              no se puede deshacer.
+              Se marcará como{" "}
+              <span className="font-semibold text-foreground">CANCELADA</span> y
+              se eliminará su imagen para ahorrar espacio. Los ítems quedan como
+              historial. Esta acción no se puede deshacer.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="mt-2">
