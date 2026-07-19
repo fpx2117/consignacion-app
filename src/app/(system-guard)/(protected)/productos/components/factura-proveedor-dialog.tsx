@@ -1185,476 +1185,449 @@ export function FacturaProveedorDialog({
                         ))}
                       </div>
 
-                      {/* Tabla de productos (scroll horizontal en pantallas chicas) */}
+                      {/* Lista de productos: grilla en pantallas anchas, tarjetas
+                          apiladas en angostas. minmax(0,1fr) en Producto permite
+                          que la descripción encoja sin romper el resto. */}
                       <TooltipProvider>
                         <div className="overflow-hidden rounded-2xl border border-border bg-card">
-                          <div className="overflow-x-auto">
-                            <table className="w-full min-w-[680px] table-fixed border-collapse text-sm">
-                              <thead>
-                                <tr className="border-b border-border bg-muted/50 text-left text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-                                  <th className="px-3 py-2 pl-4 font-semibold">
-                                    Producto
-                                  </th>
-                                  <th className="w-14 px-2 py-2 font-semibold">
-                                    Cant.
-                                  </th>
-                                  <th className="w-[92px] px-2 py-2 font-semibold">
-                                    Costo ({monedaFactura})
-                                  </th>
-                                  <th className="w-[92px] px-2 py-2 font-semibold">
-                                    P. venta
-                                  </th>
-                                  <th className="w-[116px] px-2 py-2 font-semibold">
-                                    Estado
-                                  </th>
-                                  <th className="w-[108px] px-2 py-2 pr-3 text-right font-semibold">
-                                    Acciones
-                                  </th>
-                                </tr>
-                              </thead>
-                              <tbody>
-                                {itemsFiltrados.length === 0 ? (
-                                  <tr>
-                                    <td
-                                      colSpan={6}
-                                      className="px-4 py-10 text-center text-sm text-muted-foreground"
-                                    >
-                                      No hay productos en este filtro.
-                                    </td>
-                                  </tr>
-                                ) : (
-                                  itemsFiltrados.map((item) => {
-                                    const badge = badgeEstado(item);
-                                    const BadgeIcon = badge.icon;
-                                    const terminal = ESTADOS_TERMINALES.has(
-                                      item.estado,
-                                    );
-                                    const busy = busyItemId === item.id;
-                                    const mostrarCodigo =
-                                      !codigoYaEnDescripcion(item);
-                                    const costoArs = puedeConvertir
-                                      ? convertirAArs(item.precioUnitario)
-                                      : null;
-                                    const requiereAlta = !item.productoId;
-                                    const productoMatch = item.productoId
-                                      ? productos.find(
-                                          (p) => p.id === item.productoId,
-                                        )
-                                      : undefined;
-                                    const conf = nivelConfianza(item);
-                                    const confCls =
-                                      conf.nivel === "excelente"
-                                        ? "text-[color:var(--status-success-strong)] bg-[color:var(--status-success-strong)]/12"
-                                        : conf.nivel === "buena"
-                                          ? "text-[color:var(--status-warning)] bg-[color:var(--status-warning)]/12"
-                                          : "text-[color:var(--status-danger)] bg-[color:var(--status-danger)]/12";
-                                    const bordeEstado =
-                                      item.estado === "CONFIRMADO" ||
-                                      item.estado === "PRODUCTO_CREADO"
-                                        ? "before:bg-[color:var(--status-success-strong)]"
-                                        : item.estado === "SIN_COINCIDENCIA"
-                                          ? "before:bg-[color:var(--status-danger)]"
-                                          : item.estado === "IGNORADO"
-                                            ? "before:bg-border"
-                                            : "before:bg-[color:var(--status-warning)]";
+                          {/* Encabezado (solo en grilla) */}
+                          <div className="hidden gap-3 border-b border-border bg-muted/50 px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground lg:grid lg:grid-cols-[minmax(0,1fr)_72px_112px_112px_130px_auto]">
+                            <span>Producto</span>
+                            <span>Cant.</span>
+                            <span>Costo ({monedaFactura})</span>
+                            <span>P. venta</span>
+                            <span>Estado</span>
+                            <span className="text-right">Acciones</span>
+                          </div>
 
-                                    return (
-                                      <tr
-                                        key={item.id}
+                          <div className="divide-y divide-border">
+                            {itemsFiltrados.length === 0 ? (
+                              <div className="px-4 py-10 text-center text-sm text-muted-foreground">
+                                No hay productos en este filtro.
+                              </div>
+                            ) : (
+                              itemsFiltrados.map((item) => {
+                                const badge = badgeEstado(item);
+                                const BadgeIcon = badge.icon;
+                                const terminal = ESTADOS_TERMINALES.has(
+                                  item.estado,
+                                );
+                                const busy = busyItemId === item.id;
+                                const mostrarCodigo =
+                                  !codigoYaEnDescripcion(item);
+                                const costoArs = puedeConvertir
+                                  ? convertirAArs(item.precioUnitario)
+                                  : null;
+                                const requiereAlta = !item.productoId;
+                                const productoMatch = item.productoId
+                                  ? productos.find(
+                                      (p) => p.id === item.productoId,
+                                    )
+                                  : undefined;
+                                const conf = nivelConfianza(item);
+                                const confCls =
+                                  conf.nivel === "excelente"
+                                    ? "text-[color:var(--status-success-strong)] bg-[color:var(--status-success-strong)]/12"
+                                    : conf.nivel === "buena"
+                                      ? "text-[color:var(--status-warning)] bg-[color:var(--status-warning)]/12"
+                                      : "text-[color:var(--status-danger)] bg-[color:var(--status-danger)]/12";
+                                const bordeEstado =
+                                  item.estado === "CONFIRMADO" ||
+                                  item.estado === "PRODUCTO_CREADO"
+                                    ? "border-l-[color:var(--status-success-strong)]"
+                                    : item.estado === "SIN_COINCIDENCIA"
+                                      ? "border-l-[color:var(--status-danger)]"
+                                      : item.estado === "IGNORADO"
+                                        ? "border-l-border"
+                                        : "border-l-[color:var(--status-warning)]";
+                                const estadoLabel =
+                                  item.estado === "CONFIRMADO"
+                                    ? "Confirmado"
+                                    : item.estado === "PRODUCTO_CREADO"
+                                      ? "Creado"
+                                      : item.estado === "SIN_COINCIDENCIA"
+                                        ? "Sin match"
+                                        : item.estado === "IGNORADO"
+                                          ? "Ignorado"
+                                          : item.estado === "REQUIERE_REVISION"
+                                            ? "Revisar"
+                                            : "Sugerido";
+
+                                return (
+                                  <div
+                                    key={item.id}
+                                    className={cn(
+                                      "grid grid-cols-1 gap-x-3 gap-y-2.5 border-l-4 px-4 py-3.5 transition-colors lg:grid-cols-[minmax(0,1fr)_72px_112px_112px_130px_auto] lg:items-center",
+                                      bordeEstado,
+                                      terminal
+                                        ? "bg-muted/20 opacity-70"
+                                        : "hover:bg-muted/25",
+                                    )}
+                                  >
+                                    {/* Producto */}
+                                    <div className="min-w-0 space-y-1.5">
+                                      <Input
+                                        aria-label={`Descripción detectada para línea ${item.id}`}
+                                        value={item.textoOriginal}
+                                        onChange={(e) =>
+                                          updateItem(item.id, {
+                                            textoOriginal: e.target.value,
+                                          })
+                                        }
+                                        onBlur={(e) =>
+                                          guardarCampoItem(item, {
+                                            textoOriginal: e.target.value,
+                                          })
+                                        }
+                                        disabled={terminal || busy}
+                                        className="h-9 w-full rounded-lg border-border bg-background text-sm font-medium shadow-xs"
+                                      />
+                                      <div className="flex min-w-0 flex-wrap items-center gap-2">
+                                        {mostrarCodigo &&
+                                          item.codigoProveedor && (
+                                            <span className="shrink-0 font-mono text-[11px] text-muted-foreground">
+                                              #{item.codigoProveedor}
+                                            </span>
+                                          )}
+                                        {!terminal ? (
+                                          <button
+                                            type="button"
+                                            aria-label={`Producto existente para ${item.textoOriginal}`}
+                                            onClick={() =>
+                                              setItemIdParaMatch(item.id)
+                                            }
+                                            disabled={busy}
+                                            className={cn(
+                                              "inline-flex min-w-0 max-w-full items-center gap-1 rounded-md border border-border/70 bg-background px-2 py-1 text-xs font-medium transition-colors hover:border-primary/50 hover:text-primary disabled:opacity-50",
+                                              productoMatch
+                                                ? "text-foreground"
+                                                : "text-muted-foreground",
+                                            )}
+                                          >
+                                            <Search className="h-3 w-3 shrink-0 opacity-70" />
+                                            <span className="truncate">
+                                              {productoMatch
+                                                ? productoMatch.nombre
+                                                : "Elegir producto"}
+                                            </span>
+                                          </button>
+                                        ) : (
+                                          productoMatch && (
+                                            <span className="min-w-0 truncate text-xs text-muted-foreground">
+                                              {productoMatch.nombre}
+                                            </span>
+                                          )
+                                        )}
+                                      </div>
+                                    </div>
+
+                                    {/* Cantidad */}
+                                    <div className="flex items-center gap-2 lg:block">
+                                      <Label className="w-24 shrink-0 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground lg:hidden">
+                                        Cantidad
+                                      </Label>
+                                      <Input
+                                        aria-label={`Cantidad para ${item.textoOriginal}`}
+                                        type="number"
+                                        min={1}
+                                        step="1"
+                                        value={item.cantidad}
+                                        onChange={(e) => {
+                                          const n = Number(e.target.value);
+                                          if (Number.isFinite(n))
+                                            updateItem(item.id, {
+                                              cantidad: n,
+                                            });
+                                        }}
+                                        onBlur={(e) => {
+                                          const n = Math.max(
+                                            1,
+                                            Math.trunc(
+                                              Number(e.target.value) ||
+                                                item.cantidad,
+                                            ),
+                                          );
+                                          guardarCampoItem(item, {
+                                            cantidad: n,
+                                          });
+                                        }}
+                                        disabled={terminal || busy}
+                                        className="h-9 w-16 rounded-lg border-border bg-background px-2 text-center text-sm shadow-xs tabular-nums lg:w-full"
+                                      />
+                                    </div>
+
+                                    {/* Costo unitario */}
+                                    <div className="flex items-center gap-2 lg:block">
+                                      <Label className="w-24 shrink-0 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground lg:hidden">
+                                        Costo ({monedaFactura})
+                                      </Label>
+                                      <Input
+                                        aria-label={`Costo unitario para ${item.textoOriginal} en ${monedaFactura}`}
+                                        title={
+                                          costoArs != null
+                                            ? `${formatearArs(costoArs)} ARS`
+                                            : undefined
+                                        }
+                                        type="text"
+                                        inputMode="decimal"
+                                        value={formatearInputMonto(
+                                          item.precioUnitario,
+                                        )}
+                                        onChange={(e) =>
+                                          updateItem(item.id, {
+                                            precioUnitario: digitosAMonto(
+                                              e.target.value,
+                                            ),
+                                          })
+                                        }
+                                        onBlur={() =>
+                                          guardarCampoItem(item, {
+                                            precioUnitario: item.precioUnitario,
+                                          })
+                                        }
+                                        disabled={terminal || busy}
+                                        placeholder="—"
+                                        className="h-9 w-28 rounded-lg border-border bg-background px-2 text-sm shadow-xs tabular-nums lg:w-full"
+                                      />
+                                    </div>
+
+                                    {/* Precio de venta */}
+                                    <div className="flex items-center gap-2 lg:block">
+                                      <Label className="w-24 shrink-0 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground lg:hidden">
+                                        P. venta
+                                      </Label>
+                                      {productoMatch ? (
+                                        <div
+                                          className="flex h-9 w-28 items-center rounded-lg border border-border bg-muted/40 px-2 text-sm font-semibold tabular-nums text-foreground lg:w-full"
+                                          title="Precio de venta del producto existente — editalo con 'Editar producto'"
+                                        >
+                                          <span className="truncate">
+                                            {formatMoney(
+                                              Number(productoMatch.precioVenta),
+                                            )}
+                                          </span>
+                                        </div>
+                                      ) : (
+                                        <Input
+                                          aria-label={`Precio de venta para ${item.textoOriginal}`}
+                                          type="text"
+                                          inputMode="decimal"
+                                          value={formatearInputMonto(
+                                            precioVentaBorrador[item.id],
+                                          )}
+                                          onChange={(e) =>
+                                            setPrecioVentaBorrador((prev) => ({
+                                              ...prev,
+                                              [item.id]: digitosAMonto(
+                                                e.target.value,
+                                              ),
+                                            }))
+                                          }
+                                          disabled={terminal || busy}
+                                          placeholder="—"
+                                          className="h-9 w-28 rounded-lg border-border bg-background px-2 text-sm shadow-xs tabular-nums lg:w-full"
+                                        />
+                                      )}
+                                    </div>
+
+                                    {/* Estado */}
+                                    <div className="flex flex-wrap items-center gap-2 lg:flex-col lg:items-start lg:gap-1">
+                                      <span
                                         className={cn(
-                                          "relative border-b border-border align-top transition-colors last:border-b-0",
-                                          "before:absolute before:left-0 before:top-0 before:h-full before:w-1 before:content-['']",
-                                          bordeEstado,
-                                          terminal
-                                            ? "bg-muted/25 opacity-70"
-                                            : "hover:bg-muted/30",
+                                          "inline-flex items-center rounded-full px-2 py-0.5 font-mono text-xs font-bold",
+                                          confCls,
                                         )}
                                       >
-                                        {/* Producto: descripción editable + código + botón de match */}
-                                        <td className="px-3 py-2.5 pl-4 align-top">
-                                          <div className="min-w-0 space-y-1">
-                                            <Input
-                                              aria-label={`Descripción detectada para línea ${item.id}`}
-                                              value={item.textoOriginal}
-                                              onChange={(e) =>
-                                                updateItem(item.id, {
-                                                  textoOriginal: e.target.value,
-                                                })
-                                              }
-                                              onBlur={(e) =>
-                                                guardarCampoItem(item, {
-                                                  textoOriginal: e.target.value,
-                                                })
-                                              }
-                                              disabled={terminal || busy}
-                                              className={cn(
-                                                "h-8 rounded-lg border-border bg-background text-sm font-medium shadow-xs",
-                                              )}
-                                            />
-                                            <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                                              {mostrarCodigo &&
-                                                item.codigoProveedor && (
-                                                  <span className="font-mono text-[11px] text-muted-foreground">
-                                                    #{item.codigoProveedor}
-                                                  </span>
-                                                )}
-                                              {!terminal && (
-                                                <button
+                                        {conf.pct != null
+                                          ? `${conf.pct}%`
+                                          : "—"}
+                                      </span>
+                                      <span
+                                        className={cn(
+                                          "inline-flex items-center gap-1 text-[11px] font-semibold",
+                                          badge.cls,
+                                        )}
+                                      >
+                                        <BadgeIcon className="h-3 w-3 shrink-0" />
+                                        {estadoLabel}
+                                      </span>
+                                      {item.advertencias.length > 0 && (
+                                        <Tooltip>
+                                          <TooltipTrigger asChild>
+                                            <span className="inline-flex cursor-help items-center gap-1 text-[11px] text-[color:var(--status-warning)]">
+                                              <AlertTriangle className="h-3 w-3 shrink-0" />
+                                              Revisar
+                                            </span>
+                                          </TooltipTrigger>
+                                          <TooltipContent
+                                            side="bottom"
+                                            sideOffset={4}
+                                            className="max-w-xs"
+                                          >
+                                            {item.advertencias.map(
+                                              (advertencia, i) => (
+                                                <p key={i}>{advertencia}</p>
+                                              ),
+                                            )}
+                                          </TooltipContent>
+                                        </Tooltip>
+                                      )}
+                                    </div>
+
+                                    {/* Acciones */}
+                                    <div className="lg:justify-self-end">
+                                      {terminal ? (
+                                        <span className="text-[11px] font-medium text-muted-foreground">
+                                          Sin acciones
+                                        </span>
+                                      ) : (
+                                        <div
+                                          role="group"
+                                          aria-label={`Acciones para ${item.textoOriginal}`}
+                                          className="flex items-center gap-1.5"
+                                        >
+                                          {item.productoId && (
+                                            <Tooltip>
+                                              <TooltipTrigger asChild>
+                                                <Button
                                                   type="button"
-                                                  aria-label={`Producto existente para ${item.textoOriginal}`}
+                                                  size="icon-sm"
+                                                  aria-label={`Confirmar coincidencia para ${item.textoOriginal}`}
+                                                  className={cn(
+                                                    TABLE_ACTION_ICON_CLASS,
+                                                    "border-[color:var(--status-success-strong)]/35 bg-[color:var(--status-success-strong)]/14 text-[color:var(--status-success-strong)] hover:bg-[color:var(--status-success-strong)]/22",
+                                                  )}
                                                   onClick={() =>
-                                                    setItemIdParaMatch(item.id)
+                                                    confirmarItem(item)
                                                   }
                                                   disabled={busy}
-                                                  className={cn(
-                                                    "inline-flex min-w-0 max-w-full items-center gap-1 rounded-md border border-border/70 bg-background px-2 py-1 text-xs font-medium transition-colors hover:border-primary/50 hover:text-primary disabled:opacity-50",
-                                                    productoMatch
-                                                      ? "text-foreground"
-                                                      : "text-muted-foreground",
-                                                  )}
                                                 >
-                                                  <Search className="h-3 w-3 shrink-0 opacity-70" />
-                                                  <span className="truncate">
-                                                    {productoMatch
-                                                      ? productoMatch.nombre
-                                                      : "Elegir producto"}
-                                                  </span>
-                                                </button>
-                                              )}
-                                              {terminal && productoMatch && (
-                                                <span className="truncate text-xs text-muted-foreground">
-                                                  {productoMatch.nombre}
-                                                </span>
-                                              )}
-                                            </div>
-                                          </div>
-                                        </td>
-
-                                        {/* Cantidad */}
-                                        <td className="px-2 py-2.5 align-top">
-                                          <Input
-                                            aria-label={`Cantidad para ${item.textoOriginal}`}
-                                            type="number"
-                                            min={1}
-                                            step="1"
-                                            value={item.cantidad}
-                                            onChange={(e) => {
-                                              const n = Number(e.target.value);
-                                              if (Number.isFinite(n))
-                                                updateItem(item.id, {
-                                                  cantidad: n,
-                                                });
-                                            }}
-                                            onBlur={(e) => {
-                                              const n = Math.max(
-                                                1,
-                                                Math.trunc(
-                                                  Number(e.target.value) ||
-                                                    item.cantidad,
-                                                ),
-                                              );
-                                              guardarCampoItem(item, {
-                                                cantidad: n,
-                                              });
-                                            }}
-                                            disabled={terminal || busy}
-                                            className="h-8 w-12 rounded-lg border-border bg-background px-1.5 text-center text-sm shadow-xs tabular-nums"
-                                          />
-                                        </td>
-
-                                        {/* Costo unitario (ARS en tooltip) */}
-                                        <td className="px-2 py-2.5 align-top">
-                                          <Input
-                                            aria-label={`Costo unitario para ${item.textoOriginal} en ${monedaFactura}`}
-                                            title={
-                                              costoArs != null
-                                                ? `${formatearArs(costoArs)} ARS`
-                                                : undefined
-                                            }
-                                            type="text"
-                                            inputMode="decimal"
-                                            value={formatearInputMonto(
-                                              item.precioUnitario,
-                                            )}
-                                            onChange={(e) =>
-                                              updateItem(item.id, {
-                                                precioUnitario: digitosAMonto(
-                                                  e.target.value,
-                                                ),
-                                              })
-                                            }
-                                            onBlur={() =>
-                                              guardarCampoItem(item, {
-                                                precioUnitario:
-                                                  item.precioUnitario,
-                                              })
-                                            }
-                                            disabled={terminal || busy}
-                                            placeholder="—"
-                                            className="h-8 w-full rounded-lg border-border bg-background px-2 text-sm shadow-xs tabular-nums"
-                                          />
-                                        </td>
-
-                                        {/* Precio venta */}
-                                        <td className="px-2 py-2.5 align-top">
-                                          {productoMatch ? (
-                                            <div
-                                              className="flex h-8 items-center rounded-lg border border-border bg-muted/40 px-2 text-sm font-semibold tabular-nums text-foreground"
-                                              title="Precio de venta del producto existente — editalo con 'Editar producto'"
-                                            >
-                                              <span className="truncate">
-                                                {formatMoney(
-                                                  Number(
-                                                    productoMatch.precioVenta,
-                                                  ),
-                                                )}
-                                              </span>
-                                            </div>
-                                          ) : (
-                                            <Input
-                                              aria-label={`Precio de venta para ${item.textoOriginal}`}
-                                              type="text"
-                                              inputMode="decimal"
-                                              value={formatearInputMonto(
-                                                precioVentaBorrador[item.id],
-                                              )}
-                                              onChange={(e) =>
-                                                setPrecioVentaBorrador(
-                                                  (prev) => ({
-                                                    ...prev,
-                                                    [item.id]: digitosAMonto(
-                                                      e.target.value,
-                                                    ),
-                                                  }),
-                                                )
-                                              }
-                                              disabled={terminal || busy}
-                                              placeholder="—"
-                                              className="h-8 w-full rounded-lg border-border bg-background px-2 text-sm shadow-xs tabular-nums"
-                                            />
+                                                  {busy ? (
+                                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                                  ) : (
+                                                    <Check className="h-4 w-4" />
+                                                  )}
+                                                </Button>
+                                              </TooltipTrigger>
+                                              <TooltipContent
+                                                side="top"
+                                                sideOffset={8}
+                                              >
+                                                Confirmar coincidencia
+                                              </TooltipContent>
+                                            </Tooltip>
                                           )}
-                                        </td>
 
-                                        {/* Estado: chip de confianza + badge compacto */}
-                                        <td className="px-2 py-2.5 align-top">
-                                          <div className="flex flex-col gap-1">
-                                            <span
-                                              className={cn(
-                                                "inline-flex w-fit items-center rounded-full px-2 py-0.5 font-mono text-xs font-bold",
-                                                confCls,
-                                              )}
-                                            >
-                                              {conf.pct != null
-                                                ? `${conf.pct}%`
-                                                : "—"}
-                                            </span>
-                                            <span
-                                              className={cn(
-                                                "inline-flex items-center gap-1 text-[11px] font-semibold",
-                                                badge.cls,
-                                              )}
-                                            >
-                                              <BadgeIcon className="h-3 w-3 shrink-0" />
-                                              <span className="truncate">
-                                                {item.estado === "CONFIRMADO"
-                                                  ? "Confirmado"
-                                                  : item.estado ===
-                                                      "PRODUCTO_CREADO"
-                                                    ? "Creado"
-                                                    : item.estado ===
-                                                        "SIN_COINCIDENCIA"
-                                                      ? "Sin match"
-                                                      : item.estado ===
-                                                          "IGNORADO"
-                                                        ? "Ignorado"
-                                                        : item.estado ===
-                                                            "REQUIERE_REVISION"
-                                                          ? "Revisar"
-                                                          : "Sugerido"}
-                                              </span>
-                                            </span>
-                                            {item.advertencias.length > 0 && (
-                                              <Tooltip>
-                                                <TooltipTrigger asChild>
-                                                  <span className="inline-flex w-fit cursor-help items-center gap-1 text-[11px] text-[color:var(--status-warning)]">
-                                                    <AlertTriangle className="h-3 w-3 shrink-0" />
-                                                    Revisar
-                                                  </span>
-                                                </TooltipTrigger>
-                                                <TooltipContent
-                                                  side="bottom"
-                                                  sideOffset={4}
-                                                  className="max-w-xs"
-                                                >
-                                                  {item.advertencias.map(
-                                                    (advertencia, i) => (
-                                                      <p key={i}>
-                                                        {advertencia}
-                                                      </p>
-                                                    ),
+                                          {requiereAlta ? (
+                                            <Tooltip>
+                                              <TooltipTrigger asChild>
+                                                <Button
+                                                  type="button"
+                                                  size="icon-sm"
+                                                  variant="outline"
+                                                  aria-label={`Crear producto para ${item.textoOriginal}`}
+                                                  className={cn(
+                                                    TABLE_ACTION_ICON_CLASS,
+                                                    "border-primary/30 bg-primary/10 text-primary hover:bg-primary/18",
                                                   )}
-                                                </TooltipContent>
-                                              </Tooltip>
-                                            )}
-                                          </div>
-                                        </td>
-
-                                        {/* Acciones */}
-                                        <td className="px-2 py-2.5 pr-3 align-top">
-                                          {terminal ? (
-                                            <span className="block text-right text-[11px] font-medium text-muted-foreground">
-                                              —
-                                            </span>
+                                                  onClick={() =>
+                                                    setItemParaCrear(item)
+                                                  }
+                                                  disabled={busy}
+                                                >
+                                                  <Plus className="h-4 w-4" />
+                                                </Button>
+                                              </TooltipTrigger>
+                                              <TooltipContent
+                                                side="top"
+                                                sideOffset={8}
+                                              >
+                                                Crear producto nuevo con datos
+                                                precargados
+                                              </TooltipContent>
+                                            </Tooltip>
                                           ) : (
-                                            <div
-                                              role="group"
-                                              aria-label={`Acciones para ${item.textoOriginal}`}
-                                              className="flex items-center justify-end gap-1"
-                                            >
-                                              {item.productoId && (
-                                                <Tooltip>
-                                                  <TooltipTrigger asChild>
-                                                    <Button
-                                                      type="button"
-                                                      size="icon-sm"
-                                                      aria-label={`Confirmar coincidencia para ${item.textoOriginal}`}
-                                                      className={cn(
-                                                        TABLE_ACTION_ICON_CLASS,
-                                                        "border-[color:var(--status-success-strong)]/35 bg-[color:var(--status-success-strong)]/14 text-[color:var(--status-success-strong)] hover:bg-[color:var(--status-success-strong)]/22",
-                                                      )}
-                                                      onClick={() =>
-                                                        confirmarItem(item)
-                                                      }
-                                                      disabled={busy}
-                                                    >
-                                                      {busy ? (
-                                                        <Loader2 className="h-4 w-4 animate-spin" />
-                                                      ) : (
-                                                        <Check className="h-4 w-4" />
-                                                      )}
-                                                    </Button>
-                                                  </TooltipTrigger>
-                                                  <TooltipContent
-                                                    side="top"
-                                                    sideOffset={8}
-                                                  >
-                                                    Confirmar coincidencia
-                                                  </TooltipContent>
-                                                </Tooltip>
-                                              )}
-
-                                              {requiereAlta ? (
-                                                <Tooltip>
-                                                  <TooltipTrigger asChild>
-                                                    <Button
-                                                      type="button"
-                                                      size="icon-sm"
-                                                      variant="outline"
-                                                      aria-label={`Crear producto para ${item.textoOriginal}`}
-                                                      className={cn(
-                                                        TABLE_ACTION_ICON_CLASS,
-                                                        "border-primary/30 bg-primary/10 text-primary hover:bg-primary/18",
-                                                      )}
-                                                      onClick={() =>
-                                                        setItemParaCrear(item)
-                                                      }
-                                                      disabled={busy}
-                                                    >
-                                                      <Plus className="h-4 w-4" />
-                                                    </Button>
-                                                  </TooltipTrigger>
-                                                  <TooltipContent
-                                                    side="top"
-                                                    sideOffset={8}
-                                                  >
-                                                    Crear producto nuevo con
-                                                    datos precargados
-                                                  </TooltipContent>
-                                                </Tooltip>
-                                              ) : (
-                                                productoMatch && (
-                                                  <Tooltip>
-                                                    <TooltipTrigger asChild>
-                                                      <EditProductoDialog
-                                                        producto={productoMatch}
-                                                        onUpdated={() =>
-                                                          apiService
-                                                            .getProductos()
-                                                            .then(setProductos)
-                                                            .catch(() => {})
-                                                        }
-                                                        open={
-                                                          itemIdParaEditar ===
-                                                          item.id
-                                                        }
-                                                        onOpenChange={(v) =>
-                                                          setItemIdParaEditar(
-                                                            v ? item.id : null,
-                                                          )
-                                                        }
-                                                        trigger={
-                                                          <Button
-                                                            type="button"
-                                                            size="icon-sm"
-                                                            variant="outline"
-                                                            aria-label={`Editar producto existente para ${item.textoOriginal}`}
-                                                            className={cn(
-                                                              TABLE_ACTION_ICON_CLASS,
-                                                              "border-primary/30 bg-primary/10 text-primary hover:bg-primary/18",
-                                                            )}
-                                                            disabled={busy}
-                                                          >
-                                                            <PencilLine className="h-4 w-4" />
-                                                          </Button>
-                                                        }
-                                                      />
-                                                    </TooltipTrigger>
-                                                    <TooltipContent
-                                                      side="top"
-                                                      sideOffset={8}
-                                                    >
-                                                      Editar el producto ya
-                                                      existente que coincidió
-                                                    </TooltipContent>
-                                                  </Tooltip>
-                                                )
-                                              )}
-
+                                            productoMatch && (
                                               <Tooltip>
                                                 <TooltipTrigger asChild>
-                                                  <Button
-                                                    type="button"
-                                                    size="icon-sm"
-                                                    variant="ghost"
-                                                    aria-label={`Ignorar línea ${item.textoOriginal}`}
-                                                    className={cn(
-                                                      TABLE_ACTION_ICON_CLASS,
-                                                      "border-border bg-transparent text-muted-foreground hover:border-[color:var(--status-warning)]/40 hover:bg-[color:var(--status-warning)]/10 hover:text-[color:var(--status-warning)]",
-                                                    )}
-                                                    onClick={() =>
-                                                      ignorarItem(item)
+                                                  <EditProductoDialog
+                                                    producto={productoMatch}
+                                                    onUpdated={() =>
+                                                      apiService
+                                                        .getProductos()
+                                                        .then(setProductos)
+                                                        .catch(() => {})
                                                     }
-                                                    disabled={busy}
-                                                  >
-                                                    <X className="h-4 w-4" />
-                                                  </Button>
+                                                    open={
+                                                      itemIdParaEditar ===
+                                                      item.id
+                                                    }
+                                                    onOpenChange={(v) =>
+                                                      setItemIdParaEditar(
+                                                        v ? item.id : null,
+                                                      )
+                                                    }
+                                                    trigger={
+                                                      <Button
+                                                        type="button"
+                                                        size="icon-sm"
+                                                        variant="outline"
+                                                        aria-label={`Editar producto existente para ${item.textoOriginal}`}
+                                                        className={cn(
+                                                          TABLE_ACTION_ICON_CLASS,
+                                                          "border-primary/30 bg-primary/10 text-primary hover:bg-primary/18",
+                                                        )}
+                                                        disabled={busy}
+                                                      >
+                                                        <PencilLine className="h-4 w-4" />
+                                                      </Button>
+                                                    }
+                                                  />
                                                 </TooltipTrigger>
                                                 <TooltipContent
                                                   side="top"
                                                   sideOffset={8}
                                                 >
-                                                  Ignorar línea
+                                                  Editar el producto ya
+                                                  existente que coincidió
                                                 </TooltipContent>
                                               </Tooltip>
-                                            </div>
+                                            )
                                           )}
-                                        </td>
-                                      </tr>
-                                    );
-                                  })
-                                )}
-                              </tbody>
-                            </table>
+
+                                          <Tooltip>
+                                            <TooltipTrigger asChild>
+                                              <Button
+                                                type="button"
+                                                size="icon-sm"
+                                                variant="ghost"
+                                                aria-label={`Ignorar línea ${item.textoOriginal}`}
+                                                className={cn(
+                                                  TABLE_ACTION_ICON_CLASS,
+                                                  "border-border bg-transparent text-muted-foreground hover:border-[color:var(--status-warning)]/40 hover:bg-[color:var(--status-warning)]/10 hover:text-[color:var(--status-warning)]",
+                                                )}
+                                                onClick={() =>
+                                                  ignorarItem(item)
+                                                }
+                                                disabled={busy}
+                                              >
+                                                <X className="h-4 w-4" />
+                                              </Button>
+                                            </TooltipTrigger>
+                                            <TooltipContent
+                                              side="top"
+                                              sideOffset={8}
+                                            >
+                                              Ignorar línea
+                                            </TooltipContent>
+                                          </Tooltip>
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+                                );
+                              })
+                            )}
                           </div>
                         </div>
                       </TooltipProvider>
