@@ -42,10 +42,10 @@ El sistema opera bajo un **modelo de licenciamiento mensual (SaaS)**, integrando
 
 ## Roles y Accesos
 
-| Rol | Descripción | Restricciones |
-|:---|:---|:---|
-| `ADMIN` | Propietario sin restricciones. Puede gestionar empleados, sucursales y datos de facturación. | Ninguna |
-| `EMPLEADO` | Acceso operativo restringido a la sucursal asignada en su perfil. | No puede cambiar de sucursal ni ver datos de otras. |
+| Rol        | Descripción                                                                                  | Restricciones                                       |
+| :--------- | :------------------------------------------------------------------------------------------- | :-------------------------------------------------- |
+| `ADMIN`    | Propietario sin restricciones. Puede gestionar empleados, sucursales y datos de facturación. | Ninguna                                             |
+| `EMPLEADO` | Acceso operativo restringido a la sucursal asignada en su perfil.                            | No puede cambiar de sucursal ni ver datos de otras. |
 
 ### Sistema de Sesiones
 
@@ -169,16 +169,16 @@ Cada sucursal puede habilitar una tienda pública accesible sin login:
 
 Central de alertas en tiempo real:
 
-| Tipo | Descripción |
-|:---|:---|
-| `LOW_STOCK` | El stock de un producto cayó por debajo del mínimo configurado. |
-| `OUT_OF_STOCK` | Un producto llegó a cero unidades. |
-| `EXPIRATION_NEAR` | Un producto está próximo a su fecha de vencimiento. |
-| `PRODUCT_EXPIRED` | Un producto superó su fecha de vencimiento. |
-| `CONSIGNMENT_ALERT` | Una consignación lleva muchos días sin movimiento. |
-| `SUBSCRIPTION_EXPIRING` | El plan de suscripción está por vencer. |
-| `CLIENT_REGISTERED` | Un nuevo cliente se registró vía catálogo público. |
-| `NEW_ORDER` / `PAYMENT_RECEIVED` | Pedido o pago ingresado desde la tienda. |
+| Tipo                             | Descripción                                                     |
+| :------------------------------- | :-------------------------------------------------------------- |
+| `LOW_STOCK`                      | El stock de un producto cayó por debajo del mínimo configurado. |
+| `OUT_OF_STOCK`                   | Un producto llegó a cero unidades.                              |
+| `EXPIRATION_NEAR`                | Un producto está próximo a su fecha de vencimiento.             |
+| `PRODUCT_EXPIRED`                | Un producto superó su fecha de vencimiento.                     |
+| `CONSIGNMENT_ALERT`              | Una consignación lleva muchos días sin movimiento.              |
+| `SUBSCRIPTION_EXPIRING`          | El plan de suscripción está por vencer.                         |
+| `CLIENT_REGISTERED`              | Un nuevo cliente se registró vía catálogo público.              |
+| `NEW_ORDER` / `PAYMENT_RECEIVED` | Pedido o pago ingresado desde la tienda.                        |
 
 Las notificaciones usan **fingerprinting** para evitar duplicados. Las alertas de stock se envían vía **Socket.io** en tiempo real.
 
@@ -211,6 +211,7 @@ Sistema de monetización por membresía:
 ## Flujos Clave del Sistema
 
 ### Flujo: Venta POS Normal
+
 ```
 Empleado → Abre caja → Busca producto → Agrega al carrito →
 Selecciona cliente → Elige método de pago → Confirma venta →
@@ -218,6 +219,7 @@ Genera ticket (ShareLink) → Actualiza stock → Registra en sesión de caja
 ```
 
 ### Flujo: Consignación + Liquidación
+
 ```
 Admin/Empleado → Nueva Consignación → Elige cliente + productos + unidades →
 Genera Remito (ShareLink compartible) → Cliente vende X unidades →
@@ -226,6 +228,7 @@ Actualiza saldo deudor del cliente → Actualiza stock consignado
 ```
 
 ### Flujo: Control de Caja
+
 ```
 Inicio de turno → Abre sesión de caja con monto inicial →
 Ventas y pagos se vinculan automáticamente →

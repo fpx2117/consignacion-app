@@ -1,4 +1,9 @@
-import { PrismaClient, Prisma, EstadoGasto, FrecuenciaGasto } from "@prisma/client";
+import {
+  PrismaClient,
+  Prisma,
+  EstadoGasto,
+  FrecuenciaGasto,
+} from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import pg from "pg";
 import * as dotenv from "dotenv";
@@ -78,7 +83,9 @@ async function findLegacyGastos(target: string | undefined) {
       ...(target
         ? {
             OR: [
-              Number.isFinite(Number(target)) ? { id: Number(target) } : undefined,
+              Number.isFinite(Number(target))
+                ? { id: Number(target) }
+                : undefined,
               { motivo: { contains: target, mode: "insensitive" } },
             ].filter(Boolean) as Prisma.GastoWhereInput[],
           }
@@ -92,14 +99,22 @@ async function findLegacyGastos(target: string | undefined) {
   });
 }
 
-async function migrateLegacyGasto(gasto: LegacyGasto, dayOfMonth: number | null) {
+async function migrateLegacyGasto(
+  gasto: LegacyGasto,
+  dayOfMonth: number | null,
+) {
   const endDate = gasto.fechaVencimiento;
 
   if (!endDate) {
     throw new Error(`Gasto ${gasto.id} sin fecha final`);
   }
 
-  const dates = buildOccurrences(gasto.fecha, endDate, gasto.frecuencia, dayOfMonth);
+  const dates = buildOccurrences(
+    gasto.fecha,
+    endDate,
+    gasto.frecuencia,
+    dayOfMonth,
+  );
 
   if (dates.length <= 1) {
     return {

@@ -27,11 +27,7 @@ export type InvoiceFieldKey =
   | "total";
 
 export type InvoiceItemFieldKey =
-  | "description"
-  | "supplierCode"
-  | "quantity"
-  | "unitCost"
-  | "lineTotal";
+  "description" | "supplierCode" | "quantity" | "unitCost" | "lineTotal";
 
 export interface InvoiceExtractionFieldConfig {
   key: InvoiceFieldKey;
@@ -727,7 +723,9 @@ export const extractedInvoiceSchema = z.object({
  * Valida la forma mínima del JSON devuelto por el modelo antes de confiar en él
  * — defensa rápida antes de persistir o mandar a matching-engine.ts.
  */
-export function validateExtractedInvoice(data: unknown): InvoiceValidationResult {
+export function validateExtractedInvoice(
+  data: unknown,
+): InvoiceValidationResult {
   const resultado = extractedInvoiceSchema.safeParse(data);
   if (resultado.success) return { valid: true, errors: [] };
 

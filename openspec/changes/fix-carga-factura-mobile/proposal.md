@@ -12,7 +12,7 @@ El input de archivo está oculto (`className="hidden"`, línea 373-380) y se dis
 
 Es un problema documentado de Radix UI (`DismissableLayer`, la capa que usan `Dialog`/`Popover`/etc. para detectar "click afuera" y cerrarse): cuando el foco vuelve a la página después de que el selector nativo de archivos se cierra, algunos navegadores mobile (Chrome/Safari Android e iOS) disparan un evento de puntero/foco que Radix interpreta como una interacción "fuera" del diálogo, y lo cierra automáticamente — **antes** de que el usuario llegue a ver la vista previa o tocar "Analizar factura". Esto coincide exactamente con "se cierra solo una vez que subo la imagen".
 
-Este proyecto ya tiene un workaround para un problema *relacionado* (diálogos anidados, ver `nestedDialogOpen` línea 114-119 y `onInteractOutside`/`onEscapeKeyDown` en `DialogContent`, línea 354-355) — pero ese guard sólo cubre los diálogos anidados de Radix (crear/editar producto), no la interacción con el `<input type="file">` nativo, que es un caso distinto (no hay ningún componente Radix involucrado del lado del selector de archivos).
+Este proyecto ya tiene un workaround para un problema _relacionado_ (diálogos anidados, ver `nestedDialogOpen` línea 114-119 y `onInteractOutside`/`onEscapeKeyDown` en `DialogContent`, línea 354-355) — pero ese guard sólo cubre los diálogos anidados de Radix (crear/editar producto), no la interacción con el `<input type="file">` nativo, que es un caso distinto (no hay ningún componente Radix involucrado del lado del selector de archivos).
 
 ## Causa 2 — El botón disparador tarda porque el componente entero no renderiza nada hasta resolver una consulta de red
 
@@ -32,10 +32,10 @@ El comentario original (línea 335-337) explica la intención: evitar que el bot
 
 ## Riesgos
 
-| Riesgo | Mitigación |
-|---|---|
+| Riesgo                                                                                                                                                                                                           | Mitigación                                                                                                                                                                                                              |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | El guard contra el cierre del Dialog podría "atascarse" en `true` si el usuario cancela el selector de archivos sin disparar `onChange` (algunos navegadores viejos no emiten `cancel` en `<input type="file">`) | Se limpia el guard tanto en el evento `change` como en el evento `cancel` del input, y además con un timeout de seguridad corto (ver `design.md`) — nunca queda bloqueado el cierre normal del diálogo por mucho tiempo |
-| El fix de la Causa 2 hace que usuarios en planes sin la feature vean el botón un instante antes de que desaparezca | Aceptado explícitamente — es el trade-off que ya identificó el comentario original; se prioriza la experiencia de la mayoría (planes con la feature) |
+| El fix de la Causa 2 hace que usuarios en planes sin la feature vean el botón un instante antes de que desaparezca                                                                                               | Aceptado explícitamente — es el trade-off que ya identificó el comentario original; se prioriza la experiencia de la mayoría (planes con la feature)                                                                    |
 
 ## Criterios de Éxito
 

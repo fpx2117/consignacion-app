@@ -35,7 +35,11 @@ export async function cargarItemFacturaAccesible(
   }
 
   if (ESTADOS_TERMINALES.includes(item.estado)) {
-    return { ok: false, status: 409, error: `El item ya está en estado ${item.estado} y no se puede modificar.` };
+    return {
+      ok: false,
+      status: 409,
+      error: `El item ya está en estado ${item.estado} y no se puede modificar.`,
+    };
   }
 
   return { ok: true, item };

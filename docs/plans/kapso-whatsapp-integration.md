@@ -20,13 +20,13 @@ Este plan cubre la integración progresiva de WhatsApp en el sistema de consigna
 
 ### Problemas actuales que resuelve
 
-| Problema | Situación actual | Con Kapso |
-|---|---|---|
-| Aviso de vencimiento de consignaciones | Solo notificación interna en el sistema | WhatsApp directo al consignador |
-| Confirmación de pagos | El cliente debe entrar al sistema | Mensaje automático al recibir el pago |
-| Consulta de stock | El cliente llama o viene al local | Bot responde en segundos |
-| Remitos y comprobantes | PDF descargado manualmente | Enviado por WhatsApp automáticamente |
-| Reactivación de clientes inactivos | Requiere acción manual del operador | Campaña de broadcast automatizada |
+| Problema                               | Situación actual                        | Con Kapso                             |
+| -------------------------------------- | --------------------------------------- | ------------------------------------- |
+| Aviso de vencimiento de consignaciones | Solo notificación interna en el sistema | WhatsApp directo al consignador       |
+| Confirmación de pagos                  | El cliente debe entrar al sistema       | Mensaje automático al recibir el pago |
+| Consulta de stock                      | El cliente llama o viene al local       | Bot responde en segundos              |
+| Remitos y comprobantes                 | PDF descargado manualmente              | Enviado por WhatsApp automáticamente  |
+| Reactivación de clientes inactivos     | Requiere acción manual del operador     | Campaña de broadcast automatizada     |
 
 ### Casos de uso priorizados
 
@@ -146,14 +146,15 @@ npx prisma migrate dev --name add_kapso_fields
 
 Card nueva que se agrega **debajo** de la sección de tabs existente en `page.tsx`. Contiene:
 
-| Campo | Input | Descripción |
-|---|---|---|
-| Número del negocio | Tel con prefijo `+54` fijo | El número que verán los clientes |
-| API Key | Password input con toggle de visibilidad | Obtenida desde kapso.ai |
-| Phone Number ID | Text input | ID del número en Meta |
-| Webhook Secret | Password input con toggle | Para validar mensajes entrantes |
+| Campo              | Input                                    | Descripción                      |
+| ------------------ | ---------------------------------------- | -------------------------------- |
+| Número del negocio | Tel con prefijo `+54` fijo               | El número que verán los clientes |
+| API Key            | Password input con toggle de visibilidad | Obtenida desde kapso.ai          |
+| Phone Number ID    | Text input                               | ID del número en Meta            |
+| Webhook Secret     | Password input con toggle                | Para validar mensajes entrantes  |
 
 La card incluye:
+
 - Badge de estado: **Configurado** (verde) / **Sin configurar** (gris)
 - Botón "Probar conexión" que hace ping a Kapso y muestra si las credenciales son válidas
 - Link de ayuda → documentación de Kapso
@@ -169,23 +170,23 @@ Al leer teléfonos desde la base de datos (campo `telefono` de `Cliente`), norma
 ```typescript
 // src/lib/kapso/utils.ts
 export function normalizeArgentinePhone(phone: string): string {
-  const digits = phone.replace(/\D/g, '');
+  const digits = phone.replace(/\D/g, "");
 
-  if (digits.startsWith('54')) {
+  if (digits.startsWith("54")) {
     // 5411... → 54911...
-    if (!digits.startsWith('549')) {
-      return '549' + digits.slice(2);
+    if (!digits.startsWith("549")) {
+      return "549" + digits.slice(2);
     }
     return digits;
   }
 
   // 011... → 54911...
-  if (digits.startsWith('0')) {
-    return '549' + digits.slice(1);
+  if (digits.startsWith("0")) {
+    return "549" + digits.slice(1);
   }
 
   // 1136198377 → 5491136198377
-  return '549' + digits;
+  return "549" + digits;
 }
 ```
 
@@ -200,7 +201,7 @@ Implementar envío de mensajes desde los eventos ya existentes del sistema.
 #### 1.1 Cliente Kapso (`src/lib/kapso/client.ts`)
 
 ```typescript
-import { WhatsAppCloudAPI } from '@kapso/whatsapp-cloud-api';
+import { WhatsAppCloudAPI } from "@kapso/whatsapp-cloud-api";
 
 export const kapso = new WhatsAppCloudAPI({
   apiKey: process.env.KAPSO_API_KEY!,
@@ -242,14 +243,15 @@ Aprovechar los PDF ya generados en el sistema para enviarlos por WhatsApp.
 
 #### Documentos candidatos (ya existen como rutas PDF):
 
-| Documento | Ruta actual | Acción |
-|---|---|---|
-| Ticket de venta | `/ver/ticket/[id]` | Enviar PDF + mensaje al cliente |
-| Remito consignación | `/ver/remito/[id]` | Enviar al consignador al crear |
-| Comprobante de gasto | `/ver/gasto/[id]` | Enviar al administrador |
+| Documento             | Ruta actual               | Acción                            |
+| --------------------- | ------------------------- | --------------------------------- |
+| Ticket de venta       | `/ver/ticket/[id]`        | Enviar PDF + mensaje al cliente   |
+| Remito consignación   | `/ver/remito/[id]`        | Enviar al consignador al crear    |
+| Comprobante de gasto  | `/ver/gasto/[id]`         | Enviar al administrador           |
 | Historial/Liquidación | `/ver/historial/[id]/pdf` | Enviar al consignador al liquidar |
 
 **Flujo:**
+
 1. El evento de creación genera el PDF (ya existente)
 2. Se llama a `kapso.sendDocument()` con la URL pública del PDF
 3. Kapso entrega el documento por WhatsApp
@@ -274,12 +276,12 @@ export async function POST(req: Request) {
 
 #### 3.2 Comandos del bot (MVP)
 
-| Mensaje del usuario | Respuesta del bot |
-|---|---|
-| `SALDO` | Estado de cuenta del consignador |
-| `STOCK [producto]` | Stock disponible de ese producto |
-| `AYUDA` | Lista de comandos disponibles |
-| `REMITO [id]` | Reenvío del remito indicado |
+| Mensaje del usuario | Respuesta del bot                |
+| ------------------- | -------------------------------- |
+| `SALDO`             | Estado de cuenta del consignador |
+| `STOCK [producto]`  | Stock disponible de ese producto |
+| `AYUDA`             | Lista de comandos disponibles    |
+| `REMITO [id]`       | Reenvío del remito indicado      |
 
 #### 3.3 Identificación del usuario
 
@@ -317,11 +319,11 @@ Body: {
 
 ### Rate limits y costos
 
-| Plan | Mensajes/mes | Costo |
-|---|---|---|
-| Free | 2.000 | $0 |
-| Pro | 100.000 | $25/mes |
-| Platform | 1.000.000 | $299/mes |
+| Plan     | Mensajes/mes | Costo    |
+| -------- | ------------ | -------- |
+| Free     | 2.000        | $0       |
+| Pro      | 100.000      | $25/mes  |
+| Platform | 1.000.000    | $299/mes |
 
 Para el volumen inicial del sistema (PyME con pocas sucursales), el plan **Free** cubre holgadamente las notificaciones automáticas. El plan **Pro** es el objetivo al crecer.
 
@@ -348,19 +350,23 @@ Para el volumen inicial del sistema (PyME con pocas sucursales), el plan **Free*
 ## Criterios de Aceptación (por fase)
 
 ### Fase 1
+
 - [ ] Un consignador recibe un WhatsApp cuando su consignación está a 3 días de vencer
 - [ ] El sistema no falla si Kapso no está disponible
 - [ ] Los mensajes de WhatsApp quedan logueados como notificaciones internas también
 
 ### Fase 2
+
 - [ ] Al registrar una venta, el cliente puede recibir el ticket por WhatsApp si tiene número cargado
 - [ ] Al generar un remito, el consignador recibe el PDF en WhatsApp automáticamente
 
 ### Fase 3
+
 - [ ] Un consignador puede escribir `SALDO` en WhatsApp y recibir su estado de cuenta en menos de 5 segundos
 - [ ] Números no registrados en el sistema reciben un mensaje de "No encontramos tu cuenta"
 
 ### Fase 4
+
 - [ ] Un operador puede enviar un broadcast a todos los clientes de una sucursal desde el panel de settings
 - [ ] Los usuarios que respondieron `BAJA` no reciben broadcasts
 

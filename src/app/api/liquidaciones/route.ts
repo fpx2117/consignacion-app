@@ -1,4 +1,3 @@
-
 //src/app/api/liquidaciones/route.ts
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
@@ -41,7 +40,10 @@ export async function GET(req: Request) {
     return NextResponse.json({ data: liquidaciones });
   } catch (error) {
     console.error(error);
-    return NextResponse.json({ error: "Error al listar liquidaciones" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Error al listar liquidaciones" },
+      { status: 500 },
+    );
   }
 }
 

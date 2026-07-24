@@ -93,7 +93,11 @@ export function LoginForm() {
 
       <CardContent className="space-y-5">
         {error && (
-          <Alert variant="destructive" className="border-destructive/30" aria-live="assertive">
+          <Alert
+            variant="destructive"
+            className="border-destructive/30"
+            aria-live="assertive"
+          >
             <AlertDescription className="text-sm">{error}</AlertDescription>
           </Alert>
         )}
@@ -151,13 +155,16 @@ export function LoginForm() {
                 required
                 className={cn(
                   "pl-9 pr-10",
-                  error && "border-destructive/70 focus-visible:ring-destructive/40",
+                  error &&
+                    "border-destructive/70 focus-visible:ring-destructive/40",
                 )}
               />
 
               <button
                 type="button"
-                aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+                aria-label={
+                  showPassword ? "Ocultar contraseña" : "Mostrar contraseña"
+                }
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                 onClick={() => setShowPassword((prev) => !prev)}
                 disabled={loading}
@@ -171,11 +178,16 @@ export function LoginForm() {
             </div>
 
             {capsLockOn && (
-              <p className="text-xs text-[color:var(--status-warning)]">⚠️ Bloq Mayús activado</p>
+              <p className="text-xs text-[color:var(--status-warning)]">
+                ⚠️ Bloq Mayús activado
+              </p>
             )}
 
             {error && (
-              <p id="login-password-feedback" className="text-xs font-medium text-destructive">
+              <p
+                id="login-password-feedback"
+                className="text-xs font-medium text-destructive"
+              >
                 {error}
               </p>
             )}
@@ -190,7 +202,10 @@ export function LoginForm() {
                 onCheckedChange={(v) => setRemember(!!v)}
                 disabled={loading}
               />
-              <Label htmlFor="remember" className="text-sm text-muted-foreground">
+              <Label
+                htmlFor="remember"
+                className="text-sm text-muted-foreground"
+              >
                 Mantener sesión iniciada
               </Label>
             </div>
@@ -219,7 +234,9 @@ export function LoginForm() {
             Tus credenciales se transmiten de forma segura y se manejan mediante
             autenticación protegida (cookie HttpOnly).
           </p>
-          <p className="mt-2">Si no tenés acceso, contactá a un administrador.</p>
+          <p className="mt-2">
+            Si no tenés acceso, contactá a un administrador.
+          </p>
         </div>
       </CardContent>
     </Card>
@@ -235,7 +252,8 @@ function getLoginErrorMessage(error: unknown) {
     }
 
     if (error.status === 401) {
-      return typeof error.remainingAttempts === "number" && error.remainingAttempts >= 0
+      return typeof error.remainingAttempts === "number" &&
+        error.remainingAttempts >= 0
         ? `Correo o contrasena incorrectos. Te quedan ${formatRemainingAttempts(error.remainingAttempts)} antes del bloqueo temporal.`
         : "Correo o contrasena incorrectos. Revisa tus datos e intenta de nuevo.";
     }

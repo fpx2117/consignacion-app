@@ -24,7 +24,11 @@ function quitarAcentos(texto: string): string {
 
 /** Colapsa variantes de unidades: "100 ML" / "100ml" / "100  Ml" -> "100ml". */
 function colapsarUnidades(texto: string): string {
-  return texto.replace(UNIDAD_REGEX, (_match, cantidad: string, unidad: string) => `${cantidad}${unidad.toLowerCase()}`);
+  return texto.replace(
+    UNIDAD_REGEX,
+    (_match, cantidad: string, unidad: string) =>
+      `${cantidad}${unidad.toLowerCase()}`,
+  );
 }
 
 /** Normalización base: minúsculas, sin acentos, sin símbolos, espacios colapsados, unidades unificadas. */

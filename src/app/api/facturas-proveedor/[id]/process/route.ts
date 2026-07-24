@@ -27,6 +27,8 @@ import {
 } from "@/lib/ocr/matching-engine";
 import { normalizarProducto } from "@/lib/ocr/normalizar-producto";
 import { buscarCandidatosGlobales } from "@/lib/ai/catalogo-global-client";
+import type { FacturaValoresIaOriginal } from "@/lib/validators/factura-proveedor";
+import type { FacturaItemValoresIaOriginal } from "@/lib/validators/factura-proveedor-item";
 
 const PROCESABLES: EstadoFacturaProveedor[] = [
   EstadoFacturaProveedor.PENDIENTE,
@@ -200,15 +202,32 @@ export async function POST(
       const match = matches[index];
       const candidatoGlobal = candidatosGlobalesPorItem[index][0];
 
+      const textoOriginal = item.rawDescription;
+      const codigoProveedor = item.supplierCode;
+      const cantidad = Math.max(1, Math.trunc(item.quantity));
+      const precioUnitario = item.unitCost;
+      const totalLinea = item.lineTotal;
+
+      // Snapshot congelado de lo que propuso la IA, tomado con los mismos valores
+      // ya normalizados arriba (no el dato crudo) para que un futuro diff contra
+      // el campo vivo mida solo corrección humana — ver comentario en el schema.
+      const valoresIaOriginal: FacturaItemValoresIaOriginal = {
+        textoOriginal,
+        codigoProveedor,
+        cantidad,
+        precioUnitario,
+        totalLinea,
+      };
+
       return {
         facturaId,
-        textoOriginal: item.rawDescription,
+        textoOriginal,
         descripcionNormalizada:
           normalizarProducto(item.rawDescription).normalizado || null,
-        codigoProveedor: item.supplierCode,
-        cantidad: Math.max(1, Math.trunc(item.quantity)),
-        precioUnitario: item.unitCost,
-        totalLinea: item.lineTotal,
+        codigoProveedor,
+        cantidad,
+        precioUnitario,
+        totalLinea,
         confianzaExtraccion: item.confidence,
         productoId: match.productoId,
         matchScore: match.score,
@@ -220,8 +239,23 @@ export async function POST(
         candidatoGlobalNombre: candidatoGlobal?.nombreNormalizado ?? null,
         candidatoGlobalCodigoBarras: candidatoGlobal?.codigoBarras ?? null,
         candidatoGlobalScore: candidatoGlobal?.score ?? null,
+        valoresIaOriginal: valoresIaOriginal as Prisma.InputJsonValue,
       };
     });
+
+    const monedaDetectada = resultado.invoice.currency || factura.moneda;
+
+    // Snapshot congelado de la cabecera tal como la propuso la IA — ver comentario
+    // en el schema (FacturaProveedor.valoresIaOriginal) sobre por qué nunca se
+    // vuelve a tocar una vez creado.
+    const valoresIaOriginalFactura: FacturaValoresIaOriginal = {
+      proveedorNombreDetectado: resultado.supplier.name,
+      proveedorCuitDetectado: resultado.supplier.taxId,
+      numeroFactura: resultado.invoice.number,
+      fecha: resultado.invoice.date,
+      moneda: monedaDetectada,
+      totalDetectado: resultado.invoice.total,
+    };
 
     // { timeout: 15000 }: el default de Prisma (5000ms) alcanzaba a superarse en
     // facturas con muchos ítems cuando el insert era secuencial (N round-trips). Con
@@ -240,13 +274,16 @@ export async function POST(
             fecha: resultado.invoice.date
               ? new Date(resultado.invoice.date)
               : null,
-            moneda: resultado.invoice.currency || factura.moneda,
+            moneda: monedaDetectada,
             totalDetectado: resultado.invoice.total,
             ocrTextoCompleto: resultado.ocrText,
             confianzaOcr: resultado.globalConfidence,
             iaRespuestaCruda: resultado.aiRawResponse as Prisma.InputJsonValue,
             iaModeloUsado: resultado.aiModel,
             iaTokensUsados: resultado.aiUsage?.totalTokens ?? null,
+            rubroNegocio: rubroNegocio ?? null,
+            valoresIaOriginal:
+              valoresIaOriginalFactura as Prisma.InputJsonValue,
           },
         });
 

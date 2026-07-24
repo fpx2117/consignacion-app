@@ -22,12 +22,18 @@ export async function POST(req: Request) {
   if (!auth.ok) return auth.res;
   if (isGlobalSucursalView(auth)) {
     return NextResponse.json(
-      { error: "Vista global en modo solo lectura. Selecciona una sucursal para cargar una factura." },
+      {
+        error:
+          "Vista global en modo solo lectura. Selecciona una sucursal para cargar una factura.",
+      },
       { status: 409 },
     );
   }
   if (!requireRole(auth.user, ["ADMIN"])) {
-    return NextResponse.json({ error: "No tienes permisos (Admin requerido)" }, { status: 403 });
+    return NextResponse.json(
+      { error: "No tienes permisos (Admin requerido)" },
+      { status: 403 },
+    );
   }
 
   const cupo = await checkFacturaOcrLimit();
@@ -40,7 +46,10 @@ export async function POST(req: Request) {
     const file = formData.get("file") as File | null;
 
     if (!file) {
-      return NextResponse.json({ error: "No se encontró el archivo" }, { status: 400 });
+      return NextResponse.json(
+        { error: "No se encontró el archivo" },
+        { status: 400 },
+      );
     }
 
     const buffer = Buffer.from(await file.arrayBuffer());
@@ -53,7 +62,10 @@ export async function POST(req: Request) {
     });
 
     if (!validation.ok) {
-      return NextResponse.json({ error: validation.error }, { status: validation.status });
+      return NextResponse.json(
+        { error: validation.error },
+        { status: validation.status },
+      );
     }
 
     const storageDir = getFacturaProveedorStorageDir();

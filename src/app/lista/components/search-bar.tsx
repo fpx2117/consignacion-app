@@ -28,7 +28,11 @@ export function SearchBar({
       {/* Ícono lupa */}
       <Search
         className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 pointer-events-none transition-colors"
-        style={{ color: value ? "var(--store-primary,#007AFF)" : "var(--store-muted,#8A8F98)" }}
+        style={{
+          color: value
+            ? "var(--store-primary,#007AFF)"
+            : "var(--store-muted,#8A8F98)",
+        }}
       />
 
       <input

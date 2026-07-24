@@ -14,7 +14,13 @@ import {
 import { formatMoney } from "@/lib/date-format/utils-format";
 import { DashboardTendencia, DashboardFilter } from "@/lib/types";
 import { useTimezone } from "@/hooks/useTimezone";
-import { TrendingUp, DollarSign, Activity, Calendar, BarChart3 } from "lucide-react";
+import {
+  TrendingUp,
+  DollarSign,
+  Activity,
+  Calendar,
+  BarChart3,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   Area,
@@ -33,7 +39,12 @@ interface TendenciaSectionProps {
   filter?: DashboardFilter;
 }
 
-export function TendenciaSection({ trend, period, loading, filter = "all" }: TendenciaSectionProps) {
+export function TendenciaSection({
+  trend,
+  period,
+  loading,
+  filter = "all",
+}: TendenciaSectionProps) {
   // --- 1. HOOKS SIEMPRE AL PRINCIPIO ---
   const { tz } = useTimezone();
   const [metric, setMetric] = React.useState<"amounts" | "counts">("amounts");
@@ -67,7 +78,8 @@ export function TendenciaSection({ trend, period, loading, filter = "all" }: Ten
         }
         if (selectedMonth === "prev") {
           const lastMonth = currentMonth === 0 ? 11 : currentMonth - 1;
-          const yearOfLastMonth = currentMonth === 0 ? currentYear - 1 : currentYear;
+          const yearOfLastMonth =
+            currentMonth === 0 ? currentYear - 1 : currentYear;
           return dayMonth === lastMonth && dayYear === yearOfLastMonth;
         }
         return true;
@@ -94,9 +106,12 @@ export function TendenciaSection({ trend, period, loading, filter = "all" }: Ten
           <div className="h-12 w-12 rounded-full bg-primary/5 flex items-center justify-center mb-4">
             <BarChart3 className="h-6 w-6 text-primary/40" />
           </div>
-          <h3 className="text-sm font-bold text-foreground">Tendencia no disponible</h3>
+          <h3 className="text-sm font-bold text-foreground">
+            Tendencia no disponible
+          </h3>
           <p className="text-xs text-muted-foreground max-w-[250px] mt-1 leading-relaxed">
-            El gráfico detallado está optimizado para rangos de tiempo específicos. Selecciona hoy, esta semana o este mes.
+            El gráfico detallado está optimizado para rangos de tiempo
+            específicos. Selecciona hoy, esta semana o este mes.
           </p>
         </CardContent>
       </Card>
@@ -111,8 +126,12 @@ export function TendenciaSection({ trend, period, loading, filter = "all" }: Ten
             <TrendingUp className="h-4 w-4 text-primary" />
           </div>
           <div>
-            <h3 className="text-sm font-bold tracking-tight">Análisis de Tendencia</h3>
-            <p className="text-[12px] text-muted-foreground">Flujo operativo diario</p>
+            <h3 className="text-sm font-bold tracking-tight">
+              Análisis de Tendencia
+            </h3>
+            <p className="text-[12px] text-muted-foreground">
+              Flujo operativo diario
+            </p>
           </div>
         </div>
 
@@ -147,7 +166,9 @@ export function TendenciaSection({ trend, period, loading, filter = "all" }: Ten
       <Card className="border-none shadow-sm bg-card/50 backdrop-blur-md overflow-hidden">
         <CardContent className="p-0 pt-6">
           {loading ? (
-            <div className="px-6 pb-6"><Skeleton className="h-[300px] w-full rounded-xl" /></div>
+            <div className="px-6 pb-6">
+              <Skeleton className="h-[300px] w-full rounded-xl" />
+            </div>
           ) : chartData.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-20 text-muted-foreground/40">
               <Calendar className="h-10 w-10 mb-2 opacity-20" />
@@ -158,21 +179,61 @@ export function TendenciaSection({ trend, period, loading, filter = "all" }: Ten
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={chartData}>
                   <defs>
-                    <linearGradient id="colorPrimary" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3} />
-                      <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0} />
+                    <linearGradient
+                      id="colorPrimary"
+                      x1="0"
+                      y1="0"
+                      x2="0"
+                      y2="1"
+                    >
+                      <stop
+                        offset="5%"
+                        stopColor="hsl(var(--primary))"
+                        stopOpacity={0.3}
+                      />
+                      <stop
+                        offset="95%"
+                        stopColor="hsl(var(--primary))"
+                        stopOpacity={0}
+                      />
                     </linearGradient>
-                    <linearGradient id="colorSuccess" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="hsl(var(--success))" stopOpacity={0.3} />
-                      <stop offset="95%" stopColor="hsl(var(--success))" stopOpacity={0} />
+                    <linearGradient
+                      id="colorSuccess"
+                      x1="0"
+                      y1="0"
+                      x2="0"
+                      y2="1"
+                    >
+                      <stop
+                        offset="5%"
+                        stopColor="hsl(var(--success))"
+                        stopOpacity={0.3}
+                      />
+                      <stop
+                        offset="95%"
+                        stopColor="hsl(var(--success))"
+                        stopOpacity={0}
+                      />
                     </linearGradient>
                     <linearGradient id="colorBlue" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="hsl(var(--chart-3))" stopOpacity={0.3} />
-                      <stop offset="95%" stopColor="hsl(var(--chart-3))" stopOpacity={0} />
+                      <stop
+                        offset="5%"
+                        stopColor="hsl(var(--chart-3))"
+                        stopOpacity={0.3}
+                      />
+                      <stop
+                        offset="95%"
+                        stopColor="hsl(var(--chart-3))"
+                        stopOpacity={0}
+                      />
                     </linearGradient>
                   </defs>
 
-                  <CartesianGrid vertical={false} strokeDasharray="3 3" className="stroke-muted/30" />
+                  <CartesianGrid
+                    vertical={false}
+                    strokeDasharray="3 3"
+                    className="stroke-muted/30"
+                  />
 
                   <XAxis
                     dataKey="formattedDate"
@@ -183,7 +244,7 @@ export function TendenciaSection({ trend, period, loading, filter = "all" }: Ten
                     minTickGap={25}
                   />
 
-                  <YAxis hide domain={['auto', 'auto']} />
+                  <YAxis hide domain={["auto", "auto"]} />
 
                   <Tooltip
                     content={({ active, payload }) => {
@@ -207,28 +268,58 @@ export function TendenciaSection({ trend, period, loading, filter = "all" }: Ten
                       return (
                         <div className="rounded-xl border border-border bg-card/95 p-4 shadow-2xl backdrop-blur-xl ring-1 ring-border/50">
                           <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/80 mb-3">
-                            {new Date(data.date).toLocaleDateString("es-AR", { dateStyle: 'long', timeZone: tz })}
+                            {new Date(data.date).toLocaleDateString("es-AR", {
+                              dateStyle: "long",
+                              timeZone: tz,
+                            })}
                           </p>
                           <div className="space-y-2">
                             {metric === "amounts" ? (
                               <>
-                                {(filter === "all" || filter === "pos" || filter === "consignacion") && (
-                                  <MetricRow label="Ventas" value={formatMoney(vTotal)} color="bg-primary" />
+                                {(filter === "all" ||
+                                  filter === "pos" ||
+                                  filter === "consignacion") && (
+                                  <MetricRow
+                                    label="Ventas"
+                                    value={formatMoney(vTotal)}
+                                    color="bg-primary"
+                                  />
                                 )}
-                                {(filter === "all" || filter === "pos" || filter === "consignacion") && (
-                                  <MetricRow label="Pagos" value={formatMoney(pTotal)} color="bg-success" highlight />
+                                {(filter === "all" ||
+                                  filter === "pos" ||
+                                  filter === "consignacion") && (
+                                  <MetricRow
+                                    label="Pagos"
+                                    value={formatMoney(pTotal)}
+                                    color="bg-success"
+                                    highlight
+                                  />
                                 )}
                               </>
                             ) : (
                               <>
-                                {(filter === "all" || filter === "consignacion") && (
-                                  <MetricRow label="Consignaciones" value={data.consignaciones} color="bg-primary" />
+                                {(filter === "all" ||
+                                  filter === "consignacion") && (
+                                  <MetricRow
+                                    label="Consignaciones"
+                                    value={data.consignaciones}
+                                    color="bg-primary"
+                                  />
                                 )}
-                                {(filter === "all" || filter === "consignacion") && (
-                                  <MetricRow label="Liquidaciones" value={data.liquidaciones} color="bg-success" />
+                                {(filter === "all" ||
+                                  filter === "consignacion") && (
+                                  <MetricRow
+                                    label="Liquidaciones"
+                                    value={data.liquidaciones}
+                                    color="bg-success"
+                                  />
                                 )}
                                 {(filter === "all" || filter === "pos") && (
-                                  <MetricRow label="Ventas (Q)" value={vCount} color="bg-chart-3" />
+                                  <MetricRow
+                                    label="Ventas (Q)"
+                                    value={vCount}
+                                    color="bg-chart-3"
+                                  />
                                 )}
                               </>
                             )}
@@ -243,7 +334,13 @@ export function TendenciaSection({ trend, period, loading, filter = "all" }: Ten
                     <>
                       <Area
                         type="monotone"
-                        dataKey={filter === "pos" ? "ventasPosTotal" : filter === "consignacion" ? "ventasConsigTotal" : "ventasTotal"}
+                        dataKey={
+                          filter === "pos"
+                            ? "ventasPosTotal"
+                            : filter === "consignacion"
+                              ? "ventasConsigTotal"
+                              : "ventasTotal"
+                        }
                         stroke="hsl(var(--primary))"
                         strokeWidth={2}
                         fill="url(#colorPrimary)"
@@ -251,7 +348,13 @@ export function TendenciaSection({ trend, period, loading, filter = "all" }: Ten
                       />
                       <Area
                         type="monotone"
-                        dataKey={filter === "pos" ? "pagosPosTotal" : filter === "consignacion" ? "pagosConsigTotal" : "pagosTotal"}
+                        dataKey={
+                          filter === "pos"
+                            ? "pagosPosTotal"
+                            : filter === "consignacion"
+                              ? "pagosConsigTotal"
+                              : "pagosTotal"
+                        }
                         stroke="hsl(var(--success))"
                         strokeWidth={2}
                         fill="url(#colorSuccess)"
@@ -303,7 +406,17 @@ export function TendenciaSection({ trend, period, loading, filter = "all" }: Ten
   );
 }
 
-function MetricRow({ label, value, color, highlight }: { label: string, value: string | number, color: string, highlight?: boolean }) {
+function MetricRow({
+  label,
+  value,
+  color,
+  highlight,
+}: {
+  label: string;
+  value: string | number;
+  color: string;
+  highlight?: boolean;
+}) {
   return (
     <div className="flex items-center justify-between gap-6">
       <div className="flex items-center gap-2">

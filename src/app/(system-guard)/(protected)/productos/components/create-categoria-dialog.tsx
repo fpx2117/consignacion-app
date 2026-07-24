@@ -5,7 +5,15 @@ import { toast } from "sonner";
 import { apiService } from "@/lib/apiService";
 import { CATEGORY_PALETTE } from "@/lib/category-colors";
 import { cn } from "@/lib/utils";
-import { Loader2, Check, Plus, Pencil, Trash2, Tag, Layers } from "lucide-react";
+import {
+  Loader2,
+  Check,
+  Plus,
+  Pencil,
+  Trash2,
+  Tag,
+  Layers,
+} from "lucide-react";
 import { ManageSubcategoriasDialog } from "./manage-subcategorias-dialog";
 import {
   Dialog,
@@ -35,7 +43,9 @@ interface Props {
 export function CreateCategoriaDialog({ onCreated, trigger }: Props) {
   const [open, setOpen] = React.useState(false);
   const [loading, setLoading] = React.useState(false);
-  const [categorias, setCategorias] = React.useState<{ id: number; nombre: string; color?: string | null }[]>([]);
+  const [categorias, setCategorias] = React.useState<
+    { id: number; nombre: string; color?: string | null }[]
+  >([]);
 
   // Modos: 'list' | 'create' | 'edit'
   const [mode, setMode] = React.useState<"list" | "create" | "edit">("list");
@@ -46,11 +56,16 @@ export function CreateCategoriaDialog({ onCreated, trigger }: Props) {
   const [color, setColor] = React.useState("sky");
   const [saving, setSaving] = React.useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = React.useState(false);
-  const [categoryToDelete, setCategoryToDelete] = React.useState<number | null>(null);
+  const [categoryToDelete, setCategoryToDelete] = React.useState<number | null>(
+    null,
+  );
 
   // Subcategorías management
   const [subOpen, setSubOpen] = React.useState(false);
-  const [selectedCatForSub, setSelectedCatForSub] = React.useState<{ id: number, nombre: string } | null>(null);
+  const [selectedCatForSub, setSelectedCatForSub] = React.useState<{
+    id: number;
+    nombre: string;
+  } | null>(null);
 
   React.useEffect(() => {
     if (open) {
@@ -124,7 +139,10 @@ export function CreateCategoriaDialog({ onCreated, trigger }: Props) {
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         {trigger || (
-          <Button variant="outline" className="rounded-2xl border-border font-black uppercase text-[10px] tracking-widest h-12 px-6">
+          <Button
+            variant="outline"
+            className="rounded-2xl border-border font-black uppercase text-[10px] tracking-widest h-12 px-6"
+          >
             Administrar Categorías
           </Button>
         )}
@@ -135,10 +153,19 @@ export function CreateCategoriaDialog({ onCreated, trigger }: Props) {
           <div className="flex items-center justify-between mb-2">
             <DialogTitle className="text-xl font-bold italic tracking-tight flex items-center gap-2">
               <Tag className="w-5 h-5 text-primary" />
-              {mode === "list" ? "Administrar Categorías" : mode === "create" ? "Nueva Categoría" : "Editar Categoría"}
+              {mode === "list"
+                ? "Administrar Categorías"
+                : mode === "create"
+                  ? "Nueva Categoría"
+                  : "Editar Categoría"}
             </DialogTitle>
             {mode !== "list" && (
-              <Button variant="ghost" size="sm" onClick={() => setMode("list")} className="text-xs text-muted-foreground/80 hover:text-[color:var(--ui-fx-white)]">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setMode("list")}
+                className="text-xs text-muted-foreground/80 hover:text-[color:var(--ui-fx-white)]"
+              >
                 Volver
               </Button>
             )}
@@ -154,7 +181,10 @@ export function CreateCategoriaDialog({ onCreated, trigger }: Props) {
           {mode === "list" && (
             <div className="space-y-4">
               <Button
-                onClick={() => { resetForm(); setMode("create"); }}
+                onClick={() => {
+                  resetForm();
+                  setMode("create");
+                }}
                 className="w-full h-12 rounded-xl bg-primary/10 text-primary hover:bg-primary/20 border border-primary/20 flex gap-2"
               >
                 <Plus className="w-4 h-4" />
@@ -171,13 +201,26 @@ export function CreateCategoriaDialog({ onCreated, trigger }: Props) {
                 </div>
               ) : (
                 <div className="space-y-2">
-                  {categorias.map(cat => {
-                    const colorData = CATEGORY_PALETTE.find((c) => c.key === (cat.color || "sky")) || CATEGORY_PALETTE[0];
+                  {categorias.map((cat) => {
+                    const colorData =
+                      CATEGORY_PALETTE.find(
+                        (c) => c.key === (cat.color || "sky"),
+                      ) || CATEGORY_PALETTE[0];
                     return (
-                      <div key={cat.id} className="flex items-center justify-between p-3 rounded-xl border border-border/60 bg-card/30 hover:bg-card transition-colors">
+                      <div
+                        key={cat.id}
+                        className="flex items-center justify-between p-3 rounded-xl border border-border/60 bg-card/30 hover:bg-card transition-colors"
+                      >
                         <div className="flex items-center gap-3">
-                          <div className={cn("w-3 h-3 rounded-full shadow-sm", colorData.dot)} />
-                          <span className="font-semibold text-sm">{cat.nombre}</span>
+                          <div
+                            className={cn(
+                              "w-3 h-3 rounded-full shadow-sm",
+                              colorData.dot,
+                            )}
+                          />
+                          <span className="font-semibold text-sm">
+                            {cat.nombre}
+                          </span>
                         </div>
                         <div className="flex gap-1">
                           <Button
@@ -186,7 +229,10 @@ export function CreateCategoriaDialog({ onCreated, trigger }: Props) {
                             title="Gestionar Subcategorías"
                             className="w-8 h-8 text-muted-foreground/80 hover:text-primary hover:bg-primary/10"
                             onClick={() => {
-                              setSelectedCatForSub({ id: cat.id, nombre: cat.nombre });
+                              setSelectedCatForSub({
+                                id: cat.id,
+                                nombre: cat.nombre,
+                              });
                               setSubOpen(true);
                             }}
                           >
@@ -258,7 +304,7 @@ export function CreateCategoriaDialog({ onCreated, trigger }: Props) {
                         "hover:scale-110 hover:shadow-lg active:scale-95",
                         color === c.key
                           ? "ring-2 ring-white ring-offset-2 ring-offset-zinc-950 scale-110"
-                          : "opacity-70 hover:opacity-100"
+                          : "opacity-70 hover:opacity-100",
                       )}
                       style={{ backgroundColor: c.hex }}
                       title={c.label}
@@ -285,7 +331,9 @@ export function CreateCategoriaDialog({ onCreated, trigger }: Props) {
                   disabled={saving || !nombre}
                   className="flex-1 rounded-xl bg-primary text-primary-foreground font-bold h-12"
                 >
-                  {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                  {saving ? (
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  ) : null}
                   {mode === "create" ? "Crear Categoría" : "Guardar Cambios"}
                 </Button>
               </div>
@@ -294,15 +342,21 @@ export function CreateCategoriaDialog({ onCreated, trigger }: Props) {
         </div>
       </DialogContent>
 
-      <AlertDialog open={deleteConfirmOpen} onOpenChange={(open) => {
-        setDeleteConfirmOpen(open);
-        if (!open) setCategoryToDelete(null);
-      }}>
+      <AlertDialog
+        open={deleteConfirmOpen}
+        onOpenChange={(open) => {
+          setDeleteConfirmOpen(open);
+          if (!open) setCategoryToDelete(null);
+        }}
+      >
         <AlertDialogContent className="bg-background border-border rounded-3xl">
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-[color:var(--ui-fx-white)]">¿Seguro que deseas eliminar esta categoría?</AlertDialogTitle>
+            <AlertDialogTitle className="text-[color:var(--ui-fx-white)]">
+              ¿Seguro que deseas eliminar esta categoría?
+            </AlertDialogTitle>
             <AlertDialogDescription className="text-muted-foreground/80">
-              Los productos asociados quedarán &quot;Sin Categoría&quot;. Esta acción no se puede deshacer.
+              Los productos asociados quedarán &quot;Sin Categoría&quot;. Esta
+              acción no se puede deshacer.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -323,16 +377,14 @@ export function CreateCategoriaDialog({ onCreated, trigger }: Props) {
         </AlertDialogContent>
       </AlertDialog>
 
-      {
-        selectedCatForSub && (
-          <ManageSubcategoriasDialog
-            categoriaId={selectedCatForSub.id}
-            categoriaNombre={selectedCatForSub.nombre}
-            open={subOpen}
-            onOpenChange={setSubOpen}
-          />
-        )
-      }
-    </Dialog >
+      {selectedCatForSub && (
+        <ManageSubcategoriasDialog
+          categoriaId={selectedCatForSub.id}
+          categoriaNombre={selectedCatForSub.nombre}
+          open={subOpen}
+          onOpenChange={setSubOpen}
+        />
+      )}
+    </Dialog>
   );
 }

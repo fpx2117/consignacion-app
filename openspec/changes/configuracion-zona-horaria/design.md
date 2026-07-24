@@ -23,6 +23,7 @@ Tipo de columnas DateTime: TIMESTAMP WITHOUT TIME ZONE (todas las 56 columnas)
 **Lo que significa**: PostgreSQL almacena los valores como numeros puros sin offset (ej: `2026-03-14 21:14:29`). Cuando Node.js enviaba `new Date()` con el proceso en UTC, ese timestamp UTC quedaba grabado textualmente sin conversion.
 
 **Ejemplo real de la DB**:
+
 ```
 Venta ID 51: fecha_en_db = 2026-03-14 21:14:29 UTC
              fecha_real_ar = 2026-03-14 18:14:29 AR  (3 horas menos)
@@ -32,16 +33,16 @@ Venta ID 51: fecha_en_db = 2026-03-14 21:14:29 UTC
 
 **Columnas a corregir** (tablas operativas con `fecha` de negocio):
 
-| Tabla | Columna | Registros | Rango |
-|-------|---------|-----------|-------|
-| `Venta` | `fecha`, `fechaAnulacion` | ~50 | 2026-03-02 a hoy |
-| `Pago` | `fecha` | ~50 | 2026-03-02 a hoy |
-| `Consignacion` | `fecha` | verificar | verificar |
-| `Liquidacion` | `fecha` | verificar | verificar |
-| `Gasto` | `fecha` | ~3 | 2026-03-03 a 2026-03-06 |
-| `SesionCaja` | `fechaApertura`, `fechaCierre` | verificar | verificar |
-| `MovimientoCaja` | `fecha` | verificar | verificar |
-| `MovimientoStock` | `createdAt` | verificar | verificar |
+| Tabla             | Columna                        | Registros | Rango                   |
+| ----------------- | ------------------------------ | --------- | ----------------------- |
+| `Venta`           | `fecha`, `fechaAnulacion`      | ~50       | 2026-03-02 a hoy        |
+| `Pago`            | `fecha`                        | ~50       | 2026-03-02 a hoy        |
+| `Consignacion`    | `fecha`                        | verificar | verificar               |
+| `Liquidacion`     | `fecha`                        | verificar | verificar               |
+| `Gasto`           | `fecha`                        | ~3        | 2026-03-03 a 2026-03-06 |
+| `SesionCaja`      | `fechaApertura`, `fechaCierre` | verificar | verificar               |
+| `MovimientoCaja`  | `fecha`                        | verificar | verificar               |
+| `MovimientoStock` | `createdAt`                    | verificar | verificar               |
 
 **Columnas que NO se corrigen** (fechas de sistema / autenticacion / expirations — son correctas en UTC):
 
@@ -57,6 +58,7 @@ Venta ID 51: fecha_en_db = 2026-03-14 21:14:29 UTC
 **Eleccion**: agregar `zonaHoraria String @default("America/Argentina/Buenos_Aires")` al modelo `Configuracion`, que ya tiene relacion 1:1 con `Sucursal`.
 
 **Alternativas consideradas**:
+
 - Agregar campo directamente en modelo `Sucursal`.
 - Crear tabla nueva `ZonaHorariaConfig`.
 
@@ -67,6 +69,7 @@ Venta ID 51: fecha_en_db = 2026-03-14 21:14:29 UTC
 **Eleccion**: las funciones `nowAR(tz?)`, `startOfDayAR(date?, tz?)`, etc. aceptan `tz` como parametro opcional con fallback a `"America/Argentina/Buenos_Aires"`. La lectura de la DB la hacen los callers (rutas API, kpi-logic).
 
 **Alternativas consideradas**:
+
 - Hacer que `utils-date.ts` importe directamente `prisma` y lea la config internamente.
 - Usar una variable global/singleton para la timezone activa.
 
@@ -77,6 +80,7 @@ Venta ID 51: fecha_en_db = 2026-03-14 21:14:29 UTC
 **Eleccion**: crear `src/lib/get-configured-tz.ts` que hace `prisma.configuracion.findUnique` y devuelve el string IANA. Envuelto en `unstable_cache` de Next.js con tag `"config"` y TTL 60s.
 
 **Alternativas consideradas**:
+
 - Leer la timezone en cada request sin cache.
 - Pasar la timezone por header HTTP desde el cliente.
 
@@ -87,6 +91,7 @@ Venta ID 51: fecha_en_db = 2026-03-14 21:14:29 UTC
 **Eleccion**: lista estatica de ~80 timezones con `{ value, label, region, offset }`, con enfasis en Latinoamerica y coverage global.
 
 **Alternativas consideradas**:
+
 - Usar el paquete `Intl.supportedValuesOf("timeZone")` (da ~600 zonas).
 - Usar el paquete `timezone-support` o `date-fns-tz`.
 
@@ -97,6 +102,7 @@ Venta ID 51: fecha_en_db = 2026-03-14 21:14:29 UTC
 **Eleccion**: en `PUT /api/settings/general`, validar que el string recibido sea un IANA timezone valido via `Intl.DateTimeFormat(undefined, { timeZone: value })` y capturar el error si lanza `RangeError`.
 
 **Alternativas consideradas**:
+
 - Validar solo contra la lista curada del frontend.
 - No validar en backend (confiar en el selector UI).
 
@@ -107,6 +113,7 @@ Venta ID 51: fecha_en_db = 2026-03-14 21:14:29 UTC
 **Eleccion**: corregir los timestamps incorrectos mediante `UPDATE tabla SET columna = columna + INTERVAL 'N hours'` ejecutado en una transaccion con BEGIN/COMMIT y posibilidad de ROLLBACK. El offset `N` se calcula automaticamente como la diferencia entre la TZ del servidor PostgreSQL (`Etc/UTC`) y la TZ de destino configurada (ej: `America/Argentina/Buenos_Aires` = +3 horas). El script de deteccion corre primero en modo DRY-RUN para mostrar cuantos registros afectaria.
 
 **Alternativas consideradas**:
+
 - Mantener los datos como estan y solo ajustar la presentacion (mostrar siempre con offset en la UI).
 - Agregar una columna `fechaOriginalUTC` y calcular siempre en tiempo de lectura.
 - Usar `AT TIME ZONE` en las queries Prisma en vez de corregir los datos.
@@ -122,6 +129,7 @@ Venta ID 51: fecha_en_db = 2026-03-14 21:14:29 UTC
 **Eleccion**: hook que lee `zonaHoraria` del objeto de configuracion de sucursal (ya cacheado en el store/context de la app) y expone funciones `formatDate(d)`, `formatDateTime(d)` y el string `tz`.
 
 **Alternativas consideradas**:
+
 - Detectar siempre del navegador con `Intl.DateTimeFormat().resolvedOptions().timeZone`.
 - Pasar `tz` como prop a cada componente.
 
@@ -160,56 +168,136 @@ Frontend (componente que muestra fechas)
 
 ## Cambios en Archivos
 
-| Archivo | Accion | Descripcion |
-|---------|--------|-------------|
-| `prisma/schema.prisma` | Modificar | Agregar `zonaHoraria String @default("America/Argentina/Buenos_Aires")` en modelo `Configuracion`. |
-| `prisma/migrations/*_configuracion_zona_horaria/migration.sql` | Crear | `ALTER TABLE "Configuracion" ADD COLUMN "zonaHoraria" TEXT NOT NULL DEFAULT 'America/Argentina/Buenos_Aires'`. |
-| `src/lib/utils-date.ts` | Modificar | Parametrizar `tz` en todas las funciones `*AR()`. Mantener `"America/Argentina/Buenos_Aires"` como default. |
-| `src/lib/get-configured-tz.ts` | Crear | Helper server-side con `unstable_cache` que lee `Configuracion.zonaHoraria` por `sucursalId`. |
-| `src/lib/timezone-list.ts` | Crear | Lista curada `TIMEZONE_LIST: TimezoneOption[]` con ~80 entradas (`value`, `label`, `region`, `offsetLabel`). |
-| `src/app/api/settings/general/route.ts` | Modificar | Agregar `zonaHoraria` a `GeneralSettingsBody`, validacion IANA y `upsert`. |
-| `src/lib/apiService.ts` | Modificar | Exponer `zonaHoraria` en el tipo de respuesta de `getConfiguracionGeneral()`. |
-| `src/hooks/useTimezone.ts` | Crear | Hook `useTimezone()` que retorna `{ tz, formatDate, formatDateTime, formatDateOnly }`. |
-| `src/components/timezone-selector.tsx` | Crear | Combobox con busqueda, grupo por region, offset dinamico y preview "Hora actual: 14:32". |
+| Archivo                                                        | Accion    | Descripcion                                                                                                    |
+| -------------------------------------------------------------- | --------- | -------------------------------------------------------------------------------------------------------------- |
+| `prisma/schema.prisma`                                         | Modificar | Agregar `zonaHoraria String @default("America/Argentina/Buenos_Aires")` en modelo `Configuracion`.             |
+| `prisma/migrations/*_configuracion_zona_horaria/migration.sql` | Crear     | `ALTER TABLE "Configuracion" ADD COLUMN "zonaHoraria" TEXT NOT NULL DEFAULT 'America/Argentina/Buenos_Aires'`. |
+| `src/lib/utils-date.ts`                                        | Modificar | Parametrizar `tz` en todas las funciones `*AR()`. Mantener `"America/Argentina/Buenos_Aires"` como default.    |
+| `src/lib/get-configured-tz.ts`                                 | Crear     | Helper server-side con `unstable_cache` que lee `Configuracion.zonaHoraria` por `sucursalId`.                  |
+| `src/lib/timezone-list.ts`                                     | Crear     | Lista curada `TIMEZONE_LIST: TimezoneOption[]` con ~80 entradas (`value`, `label`, `region`, `offsetLabel`).   |
+| `src/app/api/settings/general/route.ts`                        | Modificar | Agregar `zonaHoraria` a `GeneralSettingsBody`, validacion IANA y `upsert`.                                     |
+| `src/lib/apiService.ts`                                        | Modificar | Exponer `zonaHoraria` en el tipo de respuesta de `getConfiguracionGeneral()`.                                  |
+| `src/hooks/useTimezone.ts`                                     | Crear     | Hook `useTimezone()` que retorna `{ tz, formatDate, formatDateTime, formatDateOnly }`.                         |
+| `src/components/timezone-selector.tsx`                         | Crear     | Combobox con busqueda, grupo por region, offset dinamico y preview "Hora actual: 14:32".                       |
 | `src/app/(system-guard)/(protected)/settings/general/page.tsx` | Modificar | Nueva seccion "Zona Horaria" con `TimezoneSelector`, sugerencia automatica del navegador y estado de guardado. |
-| `src/lib/kpi-logic.ts` | Modificar | `getDashboardKpis`, `getDashboardTendencia`, `getDashboardTopProductos` consumen `tz` via `getConfiguredTz`. |
-| `src/lib/reports/template-helpers.ts` | Modificar | `formatDateAR(date, withTime, tz?)` — `tz` opcional con fallback. |
-| `src/lib/reports/base/venta-report-template.ts` | Modificar | Recibir `zonaHoraria` en el payload del template y pasarla a `formatDateAR`. |
-| `src/lib/reports/base/gasto-report-template.ts` | Modificar | Idem para comprobantes de gastos. |
-| `src/lib/reports/base/remito-template.ts` | Modificar | Idem para remitos de consignacion. |
-| `src/lib/reports/base/inventory-report-template.ts` | Modificar | Idem para reportes de inventario. |
-| `src/app/api/settings/pos/cajas/turno/route.ts` | Modificar | `validarHorarioLaboral` lee `zonaHoraria` de config via `getConfiguredTz`. |
-| `src/app/api/historial/route.ts` | Modificar | `monthRangeAR` recibe `tz` de `getConfiguredTz`. |
-| `src/app/api/ventas/route.ts` | Modificar | `fecha: nowAR(tz)` donde `tz` viene de `getConfiguredTz(auth.activeSucursalId)`. |
+| `src/lib/kpi-logic.ts`                                         | Modificar | `getDashboardKpis`, `getDashboardTendencia`, `getDashboardTopProductos` consumen `tz` via `getConfiguredTz`.   |
+| `src/lib/reports/template-helpers.ts`                          | Modificar | `formatDateAR(date, withTime, tz?)` — `tz` opcional con fallback.                                              |
+| `src/lib/reports/base/venta-report-template.ts`                | Modificar | Recibir `zonaHoraria` en el payload del template y pasarla a `formatDateAR`.                                   |
+| `src/lib/reports/base/gasto-report-template.ts`                | Modificar | Idem para comprobantes de gastos.                                                                              |
+| `src/lib/reports/base/remito-template.ts`                      | Modificar | Idem para remitos de consignacion.                                                                             |
+| `src/lib/reports/base/inventory-report-template.ts`            | Modificar | Idem para reportes de inventario.                                                                              |
+| `src/app/api/settings/pos/cajas/turno/route.ts`                | Modificar | `validarHorarioLaboral` lee `zonaHoraria` de config via `getConfiguredTz`.                                     |
+| `src/app/api/historial/route.ts`                               | Modificar | `monthRangeAR` recibe `tz` de `getConfiguredTz`.                                                               |
+| `src/app/api/ventas/route.ts`                                  | Modificar | `fecha: nowAR(tz)` donde `tz` viene de `getConfiguredTz(auth.activeSucursalId)`.                               |
 
 ## Interfaces / Contratos
 
 ```ts
 // src/lib/timezone-list.ts
 export type TimezoneOption = {
-  value: string;       // IANA key, ej: "America/Santiago"
-  label: string;       // Nombre legible, ej: "Santiago (Chile)"
-  region: string;      // Grupo, ej: "Sudamerica"
+  value: string; // IANA key, ej: "America/Santiago"
+  label: string; // Nombre legible, ej: "Santiago (Chile)"
+  region: string; // Grupo, ej: "Sudamerica"
   offsetLabel: string; // Calculado dinamicamente, ej: "UTC-3"
 };
 
 export const TIMEZONE_LIST: TimezoneOption[] = [
-  { value: "America/Argentina/Buenos_Aires", label: "Buenos Aires (Argentina)", region: "Sudamerica", offsetLabel: "UTC-3" },
-  { value: "America/Santiago",               label: "Santiago (Chile)",          region: "Sudamerica", offsetLabel: "UTC-3" },
-  { value: "America/Bogota",                 label: "Bogota (Colombia)",         region: "Sudamerica", offsetLabel: "UTC-5" },
-  { value: "America/Lima",                   label: "Lima (Peru)",               region: "Sudamerica", offsetLabel: "UTC-5" },
-  { value: "America/Caracas",                label: "Caracas (Venezuela)",       region: "Sudamerica", offsetLabel: "UTC-4" },
-  { value: "America/La_Paz",                 label: "La Paz (Bolivia)",          region: "Sudamerica", offsetLabel: "UTC-4" },
-  { value: "America/Asuncion",               label: "Asuncion (Paraguay)",       region: "Sudamerica", offsetLabel: "UTC-4" },
-  { value: "America/Montevideo",             label: "Montevideo (Uruguay)",      region: "Sudamerica", offsetLabel: "UTC-3" },
-  { value: "America/Sao_Paulo",              label: "Sao Paulo (Brasil)",        region: "Sudamerica", offsetLabel: "UTC-3" },
-  { value: "America/Guayaquil",              label: "Guayaquil (Ecuador)",       region: "Sudamerica", offsetLabel: "UTC-5" },
-  { value: "America/Mexico_City",            label: "Ciudad de Mexico",          region: "Centroamerica", offsetLabel: "UTC-6" },
-  { value: "America/New_York",               label: "Nueva York (EEUU Este)",    region: "Norteamerica", offsetLabel: "UTC-5" },
-  { value: "America/Chicago",                label: "Chicago (EEUU Central)",    region: "Norteamerica", offsetLabel: "UTC-6" },
-  { value: "America/Los_Angeles",            label: "Los Angeles (EEUU Oeste)",  region: "Norteamerica", offsetLabel: "UTC-8" },
-  { value: "Europe/Madrid",                  label: "Madrid (Espana)",           region: "Europa", offsetLabel: "UTC+1" },
-  { value: "UTC",                            label: "UTC (Universal)",           region: "Universal", offsetLabel: "UTC+0" },
+  {
+    value: "America/Argentina/Buenos_Aires",
+    label: "Buenos Aires (Argentina)",
+    region: "Sudamerica",
+    offsetLabel: "UTC-3",
+  },
+  {
+    value: "America/Santiago",
+    label: "Santiago (Chile)",
+    region: "Sudamerica",
+    offsetLabel: "UTC-3",
+  },
+  {
+    value: "America/Bogota",
+    label: "Bogota (Colombia)",
+    region: "Sudamerica",
+    offsetLabel: "UTC-5",
+  },
+  {
+    value: "America/Lima",
+    label: "Lima (Peru)",
+    region: "Sudamerica",
+    offsetLabel: "UTC-5",
+  },
+  {
+    value: "America/Caracas",
+    label: "Caracas (Venezuela)",
+    region: "Sudamerica",
+    offsetLabel: "UTC-4",
+  },
+  {
+    value: "America/La_Paz",
+    label: "La Paz (Bolivia)",
+    region: "Sudamerica",
+    offsetLabel: "UTC-4",
+  },
+  {
+    value: "America/Asuncion",
+    label: "Asuncion (Paraguay)",
+    region: "Sudamerica",
+    offsetLabel: "UTC-4",
+  },
+  {
+    value: "America/Montevideo",
+    label: "Montevideo (Uruguay)",
+    region: "Sudamerica",
+    offsetLabel: "UTC-3",
+  },
+  {
+    value: "America/Sao_Paulo",
+    label: "Sao Paulo (Brasil)",
+    region: "Sudamerica",
+    offsetLabel: "UTC-3",
+  },
+  {
+    value: "America/Guayaquil",
+    label: "Guayaquil (Ecuador)",
+    region: "Sudamerica",
+    offsetLabel: "UTC-5",
+  },
+  {
+    value: "America/Mexico_City",
+    label: "Ciudad de Mexico",
+    region: "Centroamerica",
+    offsetLabel: "UTC-6",
+  },
+  {
+    value: "America/New_York",
+    label: "Nueva York (EEUU Este)",
+    region: "Norteamerica",
+    offsetLabel: "UTC-5",
+  },
+  {
+    value: "America/Chicago",
+    label: "Chicago (EEUU Central)",
+    region: "Norteamerica",
+    offsetLabel: "UTC-6",
+  },
+  {
+    value: "America/Los_Angeles",
+    label: "Los Angeles (EEUU Oeste)",
+    region: "Norteamerica",
+    offsetLabel: "UTC-8",
+  },
+  {
+    value: "Europe/Madrid",
+    label: "Madrid (Espana)",
+    region: "Europa",
+    offsetLabel: "UTC+1",
+  },
+  {
+    value: "UTC",
+    label: "UTC (Universal)",
+    region: "Universal",
+    offsetLabel: "UTC+0",
+  },
   // ... (~80 entradas total)
 ];
 ```
@@ -228,7 +316,7 @@ export const getConfiguredTz = unstable_cache(
     return config?.zonaHoraria ?? "America/Argentina/Buenos_Aires";
   },
   ["configured-tz"],
-  { revalidate: 60, tags: ["config"] }
+  { revalidate: 60, tags: ["config"] },
 );
 ```
 
@@ -257,13 +345,36 @@ export function useTimezone() {
   const tz = config?.zonaHoraria ?? "America/Argentina/Buenos_Aires";
 
   const formatDate = (d: string | Date | null | undefined) =>
-    d ? new Intl.DateTimeFormat("es-AR", { day: "2-digit", month: "2-digit", year: "numeric", timeZone: tz }).format(new Date(d)) : "—";
+    d
+      ? new Intl.DateTimeFormat("es-AR", {
+          day: "2-digit",
+          month: "2-digit",
+          year: "numeric",
+          timeZone: tz,
+        }).format(new Date(d))
+      : "—";
 
   const formatDateTime = (d: string | Date | null | undefined) =>
-    d ? new Intl.DateTimeFormat("es-AR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", timeZone: tz }).format(new Date(d)) : "—";
+    d
+      ? new Intl.DateTimeFormat("es-AR", {
+          day: "2-digit",
+          month: "2-digit",
+          year: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+          timeZone: tz,
+        }).format(new Date(d))
+      : "—";
 
   const formatDateOnly = (d: string | Date | null | undefined) =>
-    d ? new Intl.DateTimeFormat("es-AR", { day: "2-digit", month: "long", year: "numeric", timeZone: tz }).format(new Date(d)) : "—";
+    d
+      ? new Intl.DateTimeFormat("es-AR", {
+          day: "2-digit",
+          month: "long",
+          year: "numeric",
+          timeZone: tz,
+        }).format(new Date(d))
+      : "—";
 
   return { tz, formatDate, formatDateTime, formatDateOnly };
 }
@@ -272,17 +383,21 @@ export function useTimezone() {
 ### Contrato API (cambio aditivo)
 
 `PUT /api/settings/general` — body aceptado (nuevo campo):
+
 ```json
 {
   "zonaHoraria": "America/Santiago"
 }
 ```
+
 Error si IANA invalido:
+
 ```json
 { "error": "Zona horaria invalida: 'Foo/Bar' no es una timezone IANA valida." }
 ```
 
 `GET /api/settings/general` — respuesta (nuevo campo):
+
 ```json
 {
   "data": {
@@ -299,6 +414,7 @@ Error si IANA invalido:
 Detecta el desfase entre las fechas almacenadas y la TZ configurada. Solo lectura, no modifica nada.
 
 Respuesta:
+
 ```json
 {
   "data": {
@@ -307,10 +423,30 @@ Respuesta:
     "offsetHours": 3,
     "needsMigration": true,
     "tablas": [
-      { "tabla": "Venta",      "columna": "fecha",        "registros": 50, "sample": "2026-03-14 21:14 -> 2026-03-14 18:14" },
-      { "tabla": "Pago",       "columna": "fecha",        "registros": 50, "sample": "2026-03-14 21:14 -> 2026-03-14 18:14" },
-      { "tabla": "Gasto",      "columna": "fecha",        "registros": 3,  "sample": "2026-03-03 00:00 -> 2026-03-02 21:00" },
-      { "tabla": "SesionCaja", "columna": "fechaApertura","registros": 5,  "sample": "..." }
+      {
+        "tabla": "Venta",
+        "columna": "fecha",
+        "registros": 50,
+        "sample": "2026-03-14 21:14 -> 2026-03-14 18:14"
+      },
+      {
+        "tabla": "Pago",
+        "columna": "fecha",
+        "registros": 50,
+        "sample": "2026-03-14 21:14 -> 2026-03-14 18:14"
+      },
+      {
+        "tabla": "Gasto",
+        "columna": "fecha",
+        "registros": 3,
+        "sample": "2026-03-03 00:00 -> 2026-03-02 21:00"
+      },
+      {
+        "tabla": "SesionCaja",
+        "columna": "fechaApertura",
+        "registros": 5,
+        "sample": "..."
+      }
     ]
   }
 }
@@ -321,6 +457,7 @@ Respuesta:
 Ejecuta la correccion. Requiere rol ADMIN. Acepta `dryRun: true` para simular sin commitear.
 
 Request:
+
 ```json
 {
   "dryRun": false,
@@ -330,14 +467,15 @@ Request:
 ```
 
 Respuesta exitosa:
+
 ```json
 {
   "data": {
     "ejecutado": true,
     "dryRun": false,
     "tablas": [
-      { "tabla": "Venta",  "columna": "fecha",  "registrosActualizados": 50 },
-      { "tabla": "Pago",   "columna": "fecha",  "registrosActualizados": 50 }
+      { "tabla": "Venta", "columna": "fecha", "registrosActualizados": 50 },
+      { "tabla": "Pago", "columna": "fecha", "registrosActualizados": 50 }
     ],
     "totalRegistros": 163,
     "offsetHours": 3,
@@ -387,18 +525,18 @@ COMMIT;
 
 ## Estrategia de Pruebas
 
-| Capa | Que Probar | Enfoque |
-|------|------------|---------|
-| Unitaria | `utils-date.ts` con `tz` parametrizado | Verificar que `startOfDayAR(d, "America/Santiago")` retorna medianoche correcta en Santiago vs Buenos Aires. |
-| Unitaria | Validacion IANA en `PUT /api/settings/general` | String invalido -> 400; string valido -> 200. |
-| Unitaria | `getConfiguredTz(sucursalId)` | Retorna default cuando no hay config; retorna valor guardado cuando existe. |
-| Integracion | KPIs del dashboard con timezone distinta de AR | `startOfMonth` en "America/Mexico_City" filtra correctamente ventas del mes en esa TZ. |
-| Integracion | `GET /api/admin/timezone-migration` | Detecta offset correcto y cuenta registros afectados. |
-| Integracion | `POST /api/admin/timezone-migration` dryRun | No modifica DB, retorna registros que se afectarian. |
-| Integracion | `POST /api/admin/timezone-migration` real | Modifica DB y verifica que las fechas quedaron +3h. |
-| UI | `TimezoneSelector` | Muestra sugerencia del navegador; permite buscar y seleccionar; preview de hora actual se actualiza. |
-| UI | Banner de alerta de desfase en Settings | Aparece cuando `needsMigration=true`; desaparece tras ejecutar correccion. |
-| E2E smoke | Cambio de TZ en settings -> registro de venta -> ticket | La hora del ticket refleja la TZ configurada, no UTC. |
+| Capa        | Que Probar                                              | Enfoque                                                                                                      |
+| ----------- | ------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| Unitaria    | `utils-date.ts` con `tz` parametrizado                  | Verificar que `startOfDayAR(d, "America/Santiago")` retorna medianoche correcta en Santiago vs Buenos Aires. |
+| Unitaria    | Validacion IANA en `PUT /api/settings/general`          | String invalido -> 400; string valido -> 200.                                                                |
+| Unitaria    | `getConfiguredTz(sucursalId)`                           | Retorna default cuando no hay config; retorna valor guardado cuando existe.                                  |
+| Integracion | KPIs del dashboard con timezone distinta de AR          | `startOfMonth` en "America/Mexico_City" filtra correctamente ventas del mes en esa TZ.                       |
+| Integracion | `GET /api/admin/timezone-migration`                     | Detecta offset correcto y cuenta registros afectados.                                                        |
+| Integracion | `POST /api/admin/timezone-migration` dryRun             | No modifica DB, retorna registros que se afectarian.                                                         |
+| Integracion | `POST /api/admin/timezone-migration` real               | Modifica DB y verifica que las fechas quedaron +3h.                                                          |
+| UI          | `TimezoneSelector`                                      | Muestra sugerencia del navegador; permite buscar y seleccionar; preview de hora actual se actualiza.         |
+| UI          | Banner de alerta de desfase en Settings                 | Aparece cuando `needsMigration=true`; desaparece tras ejecutar correccion.                                   |
+| E2E smoke   | Cambio de TZ en settings -> registro de venta -> ticket | La hora del ticket refleja la TZ configurada, no UTC.                                                        |
 
 ## Migracion / Despliegue
 

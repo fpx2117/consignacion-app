@@ -25,7 +25,7 @@ function resolveWorkerPath(): string {
     "src",
     "worker-script",
     "node",
-    "index.js"
+    "index.js",
   );
   if (existsSync(cwdPath)) {
     return cwdPath;
@@ -42,7 +42,7 @@ function resolveWorkerPath(): string {
     "src",
     "worker-script",
     "node",
-    "index.js"
+    "index.js",
   );
 }
 

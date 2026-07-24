@@ -58,7 +58,8 @@ let launching: Promise<Browser> | null = null;
 // Si no se pide ningún reporte nuevo en este lapso, el browser compartido se
 // cierra proactivamente en vez de quedar residente indefinidamente (podía
 // pasar horas sin liberarse — ver openspec/changes/optimizacion-consumo-ram).
-const IDLE_SHUTDOWN_MS = Number(process.env.CHROMIUM_IDLE_SHUTDOWN_MS) || 10 * 60 * 1000;
+const IDLE_SHUTDOWN_MS =
+  Number(process.env.CHROMIUM_IDLE_SHUTDOWN_MS) || 10 * 60 * 1000;
 
 let idleTimer: NodeJS.Timeout | null = null;
 

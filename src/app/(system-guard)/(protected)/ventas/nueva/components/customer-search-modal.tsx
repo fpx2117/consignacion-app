@@ -11,7 +11,13 @@ import {
   CommandList,
   CommandSeparator,
 } from "@/components/ui/command";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import type { Cliente } from "@/lib/types";
 
@@ -51,13 +57,19 @@ export function CustomerSearchModal({
       >
         <DialogHeader className="sr-only">
           <DialogTitle>Buscar cliente</DialogTitle>
-          <DialogDescription>Seleccioná un cliente registrado o continuá como Consumidor Final</DialogDescription>
+          <DialogDescription>
+            Seleccioná un cliente registrado o continuá como Consumidor Final
+          </DialogDescription>
         </DialogHeader>
 
         <Command
           filter={(value, search) => {
             if (value === "consumidor-final") {
-              return search === "" ? 1 : "consumidor final".includes(search.toLowerCase()) ? 1 : 0;
+              return search === ""
+                ? 1
+                : "consumidor final".includes(search.toLowerCase())
+                  ? 1
+                  : 0;
             }
             const cliente = clientes.find((c) => String(c.id) === value);
             if (!cliente) return 0;
@@ -87,8 +99,12 @@ export function CustomerSearchModal({
 
             {/* Badge F7 — pegado al borde derecho */}
             <div className="hidden md:flex items-center gap-1.5 mr-4 px-2.5 py-1.5 rounded-lg bg-primary/10 border border-primary/20 shrink-0">
-              <kbd className="text-[11px] font-black font-mono text-primary tracking-tight">F7</kbd>
-              <span className="text-[10px] text-primary/70 font-semibold">clientes</span>
+              <kbd className="text-[11px] font-black font-mono text-primary tracking-tight">
+                F7
+              </kbd>
+              <span className="text-[10px] text-primary/70 font-semibold">
+                clientes
+              </span>
             </div>
           </div>
 
@@ -96,7 +112,9 @@ export function CustomerSearchModal({
             <CommandEmpty>
               <div className="flex flex-col items-center justify-center gap-2 py-10 text-muted-foreground">
                 <UserCircle2 className="h-10 w-10 opacity-30" />
-                <p className="text-sm font-medium">No se encontró ningún cliente</p>
+                <p className="text-sm font-medium">
+                  No se encontró ningún cliente
+                </p>
               </div>
             </CommandEmpty>
 
@@ -108,18 +126,25 @@ export function CustomerSearchModal({
                 className={cn(
                   "flex items-center gap-3 px-3 py-3 rounded-xl cursor-pointer",
                   "data-[selected=true]:bg-primary/10",
-                  selectedClienteId === "" && "bg-primary/5"
+                  selectedClienteId === "" && "bg-primary/5",
                 )}
               >
                 <div className="h-10 w-10 rounded-full bg-muted border border-border/50 flex items-center justify-center shrink-0">
                   <UserCircle2 className="h-5 w-5 text-muted-foreground/60" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="font-bold text-sm text-foreground">Consumidor Final</p>
-                  <p className="text-[11px] text-muted-foreground">Sin datos registrados</p>
+                  <p className="font-bold text-sm text-foreground">
+                    Consumidor Final
+                  </p>
+                  <p className="text-[11px] text-muted-foreground">
+                    Sin datos registrados
+                  </p>
                 </div>
                 {selectedClienteId === "" && (
-                  <Check className="h-4 w-4 text-primary shrink-0" aria-hidden="true" />
+                  <Check
+                    className="h-4 w-4 text-primary shrink-0"
+                    aria-hidden="true"
+                  />
                 )}
               </CommandItem>
             </CommandGroup>
@@ -147,25 +172,29 @@ export function CustomerSearchModal({
                     className={cn(
                       "flex items-center gap-3 px-3 py-3 rounded-xl cursor-pointer",
                       "data-[selected=true]:bg-primary/10",
-                      isSelected && "bg-primary/5"
+                      isSelected && "bg-primary/5",
                     )}
                   >
                     {/* Avatar con inicial */}
-                    <div className={cn(
-                      "h-10 w-10 rounded-full flex items-center justify-center shrink-0 font-black text-sm border",
-                      isSelected
-                        ? "bg-primary text-primary-foreground border-primary"
-                        : "bg-muted border-border/50 text-muted-foreground"
-                    )}>
+                    <div
+                      className={cn(
+                        "h-10 w-10 rounded-full flex items-center justify-center shrink-0 font-black text-sm border",
+                        isSelected
+                          ? "bg-primary text-primary-foreground border-primary"
+                          : "bg-muted border-border/50 text-muted-foreground",
+                      )}
+                    >
                       {cliente.nombre.charAt(0).toUpperCase()}
                     </div>
 
                     {/* Info */}
                     <div className="flex-1 min-w-0">
-                      <p className={cn(
-                        "font-bold text-sm leading-tight truncate",
-                        isSelected ? "text-primary" : "text-foreground"
-                      )}>
+                      <p
+                        className={cn(
+                          "font-bold text-sm leading-tight truncate",
+                          isSelected ? "text-primary" : "text-foreground",
+                        )}
+                      >
                         {cliente.nombre}
                       </p>
                       <div className="flex items-center gap-2 mt-0.5 flex-wrap">
@@ -185,7 +214,10 @@ export function CustomerSearchModal({
                     </div>
 
                     {isSelected && (
-                      <Check className="h-4 w-4 text-primary shrink-0" aria-hidden="true" />
+                      <Check
+                        className="h-4 w-4 text-primary shrink-0"
+                        aria-hidden="true"
+                      />
                     )}
                   </CommandItem>
                 );
@@ -200,15 +232,21 @@ export function CustomerSearchModal({
             </span>
             <div className="flex items-center gap-3 text-[10px] text-muted-foreground">
               <span className="flex items-center gap-1">
-                <kbd className="inline-flex h-4 items-center px-1 rounded border border-border bg-muted text-[9px] font-mono">↑↓</kbd>
+                <kbd className="inline-flex h-4 items-center px-1 rounded border border-border bg-muted text-[9px] font-mono">
+                  ↑↓
+                </kbd>
                 navegar
               </span>
               <span className="flex items-center gap-1">
-                <kbd className="inline-flex h-4 items-center px-1.5 rounded border border-border bg-muted text-[9px] font-mono">↵</kbd>
+                <kbd className="inline-flex h-4 items-center px-1.5 rounded border border-border bg-muted text-[9px] font-mono">
+                  ↵
+                </kbd>
                 seleccionar
               </span>
               <span className="flex items-center gap-1">
-                <kbd className="inline-flex h-4 items-center px-1.5 rounded border border-border bg-muted text-[9px] font-mono">Esc</kbd>
+                <kbd className="inline-flex h-4 items-center px-1.5 rounded border border-border bg-muted text-[9px] font-mono">
+                  Esc
+                </kbd>
                 cerrar
               </span>
             </div>

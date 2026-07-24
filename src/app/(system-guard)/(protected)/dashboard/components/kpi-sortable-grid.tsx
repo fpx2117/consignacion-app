@@ -38,7 +38,14 @@ export interface KpiConfig {
 }
 
 export function SortableKpiCard({ kpi }: { kpi: KpiConfig }) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: kpi.key });
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: kpi.key });
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -49,7 +56,10 @@ export function SortableKpiCard({ kpi }: { kpi: KpiConfig }) {
     <div
       ref={setNodeRef}
       style={style}
-      className={cn("relative h-full w-full will-change-transform", isDragging && "z-40 opacity-80")}
+      className={cn(
+        "relative h-full w-full will-change-transform",
+        isDragging && "z-40 opacity-80",
+      )}
     >
       <button
         type="button"
@@ -87,32 +97,39 @@ export function KpiSortableGrid({
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 10 } }),
-    useSensor(TouchSensor, { activationConstraint: { delay: 220, tolerance: 14 } }),
-    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+    useSensor(TouchSensor, {
+      activationConstraint: { delay: 220, tolerance: 14 },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    }),
   );
 
   const ids = React.useMemo(() => items.map((item) => item.key), [items]);
   const activeKpi = React.useMemo(
     () => items.find((item) => item.key === activeId) ?? null,
-    [activeId, items]
+    [activeId, items],
   );
 
   const handleDragStart = React.useCallback((event: DragStartEvent) => {
     setActiveId(String(event.active.id));
   }, []);
 
-  const handleDragEnd = React.useCallback((event: DragEndEvent) => {
-    const { active, over } = event;
-    setActiveId(null);
-    if (!over || active.id === over.id) return;
+  const handleDragEnd = React.useCallback(
+    (event: DragEndEvent) => {
+      const { active, over } = event;
+      setActiveId(null);
+      if (!over || active.id === over.id) return;
 
-    const oldIndex = ids.indexOf(String(active.id));
-    const newIndex = ids.indexOf(String(over.id));
+      const oldIndex = ids.indexOf(String(active.id));
+      const newIndex = ids.indexOf(String(over.id));
 
-    if (oldIndex < 0 || newIndex < 0) return;
+      if (oldIndex < 0 || newIndex < 0) return;
 
-    onReorder(arrayMove(ids, oldIndex, newIndex));
-  }, [ids, onReorder]);
+      onReorder(arrayMove(ids, oldIndex, newIndex));
+    },
+    [ids, onReorder],
+  );
 
   const handleDragCancel = React.useCallback(() => {
     setActiveId(null);

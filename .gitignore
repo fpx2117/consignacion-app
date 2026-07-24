@@ -59,5 +59,9 @@ eslint.json
 .agent/
 .codegraph/
 
+# scratch: archivos/carpetas sueltos que no son parte de la arquitectura
+# (backups, builds rotas, logs, screenshots temporales, caches)
+/_scratch/
+
 # cache de modelos de OCR (Tesseract.js descarga spa.traineddata en el primer uso)
 /.cache/

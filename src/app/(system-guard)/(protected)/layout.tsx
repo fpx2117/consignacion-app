@@ -1,7 +1,10 @@
 import { redirect } from "next/navigation";
 import { requireAuth } from "@/lib/auth/require-auth";
 import { prisma } from "@/lib/prisma";
-import { SidebarDock, type SidebarUserData } from "@/components/layout/sidebar-dock";
+import {
+  SidebarDock,
+  type SidebarUserData,
+} from "@/components/layout/sidebar-dock";
 import { SubscriptionGuard } from "@/components/auth/SubscriptionGuard";
 import { TopBar } from "@/components/layout/top-bar";
 import { GlobalReadonlyGuard } from "@/components/auth/global-readonly-guard";

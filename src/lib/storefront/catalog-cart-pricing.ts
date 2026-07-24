@@ -13,7 +13,10 @@ function roundMoney(value: number) {
 }
 
 export function getCatalogCartUnitPrice(
-  item: Pick<CatalogCartItem, "precioVenta" | "descuentoEfectivo" | "pricingMode">,
+  item: Pick<
+    CatalogCartItem,
+    "precioVenta" | "descuentoEfectivo" | "pricingMode"
+  >,
   context: CatalogCartPricingContext = {},
 ) {
   let price: number;
@@ -47,13 +50,19 @@ export function getCatalogCartOriginalDisplayPrice(
   item: Pick<CatalogCartItem, "precioVenta" | "descuentoEfectivo">,
   context: CatalogCartPricingContext = {},
 ) {
-  const basePrice = item.descuentoEfectivo?.precioOriginal ?? Number(item.precioVenta);
-  const interes = context.applyCardInterest ? Number(context.porcentajeInteresTarjeta) || 0 : 0;
+  const basePrice =
+    item.descuentoEfectivo?.precioOriginal ?? Number(item.precioVenta);
+  const interes = context.applyCardInterest
+    ? Number(context.porcentajeInteresTarjeta) || 0
+    : 0;
   return roundMoney(Number(basePrice) * (1 + interes / 100));
 }
 
 export function getCatalogCartLineSubtotal(
-  item: Pick<CatalogCartItem, "precioVenta" | "descuentoEfectivo" | "pricingMode" | "quantity">,
+  item: Pick<
+    CatalogCartItem,
+    "precioVenta" | "descuentoEfectivo" | "pricingMode" | "quantity"
+  >,
   context: CatalogCartPricingContext = {},
 ) {
   return roundMoney(getCatalogCartUnitPrice(item, context) * item.quantity);
@@ -64,6 +73,9 @@ export function getCatalogCartSubtotal(
   context: CatalogCartPricingContext = {},
 ) {
   return roundMoney(
-    cart.reduce((total, item) => total + getCatalogCartLineSubtotal(item, context), 0),
+    cart.reduce(
+      (total, item) => total + getCatalogCartLineSubtotal(item, context),
+      0,
+    ),
   );
 }

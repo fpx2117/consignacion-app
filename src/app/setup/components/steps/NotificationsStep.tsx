@@ -1,7 +1,13 @@
 "use client";
 
 import { motion } from "motion/react";
-import { BellRing, PackageSearch, CalendarClock, ShoppingCart, Package } from "lucide-react";
+import {
+  BellRing,
+  PackageSearch,
+  CalendarClock,
+  ShoppingCart,
+  Package,
+} from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { StepWrapper } from "../StepWrapper";
@@ -24,7 +30,9 @@ export function NotificationsStep({ data, onChange }: NotificationsStepProps) {
         >
           <BellRing className="w-8 h-8 text-[color:var(--brand-instagram)]" />
         </motion.div>
-        <h2 className="text-3xl font-black tracking-tight">Alertas y Notificaciones</h2>
+        <h2 className="text-3xl font-black tracking-tight">
+          Alertas y Notificaciones
+        </h2>
         <p className="text-muted-foreground text-lg">
           Configurá qué avisos querés recibir para mantener todo bajo control.
         </p>
@@ -42,23 +50,34 @@ export function NotificationsStep({ data, onChange }: NotificationsStepProps) {
             </div>
             <div>
               <h3 className="font-bold text-sm text-foreground">Stock Bajo</h3>
-              <p className="text-xs text-muted-foreground mt-0.5">Aviso cuando un producto llega al mínimo.</p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Aviso cuando un producto llega al mínimo.
+              </p>
             </div>
           </div>
           <div className="flex items-center gap-3 shrink-0">
             <div className="flex items-center gap-2">
-              <span className="text-[10px] font-bold text-muted-foreground uppercase">Mín:</span>
+              <span className="text-[10px] font-bold text-muted-foreground uppercase">
+                Mín:
+              </span>
               <Input
                 type="number"
                 min={1}
                 value={data.minStockGlobal}
-                onChange={(e) => onChange({ ...data, minStockGlobal: Number(e.target.value) || 1 })}
+                onChange={(e) =>
+                  onChange({
+                    ...data,
+                    minStockGlobal: Number(e.target.value) || 1,
+                  })
+                }
                 className="h-9 w-16 rounded-lg text-center font-bold text-xs bg-background/50 border-border/50"
               />
             </div>
             <Switch
               checked={data.notificarStockBajo}
-              onCheckedChange={(v) => onChange({ ...data, notificarStockBajo: v })}
+              onCheckedChange={(v) =>
+                onChange({ ...data, notificarStockBajo: v })
+              }
               className="data-[state=checked]:bg-[color:var(--brand-instagram)]"
             />
           </div>
@@ -73,8 +92,12 @@ export function NotificationsStep({ data, onChange }: NotificationsStepProps) {
               <CalendarClock className="h-4 w-4 text-[color:var(--status-warning)]" />
             </div>
             <div>
-              <h3 className="font-bold text-sm text-foreground">Vencimientos</h3>
-              <p className="text-xs text-muted-foreground mt-0.5">Aviso antes de que un producto caduque.</p>
+              <h3 className="font-bold text-sm text-foreground">
+                Vencimientos
+              </h3>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Aviso antes de que un producto caduque.
+              </p>
             </div>
           </div>
           <div className="flex items-center gap-3 shrink-0">
@@ -83,14 +106,23 @@ export function NotificationsStep({ data, onChange }: NotificationsStepProps) {
                 type="number"
                 min={1}
                 value={data.diasAnticipacionVencimiento}
-                onChange={(e) => onChange({ ...data, diasAnticipacionVencimiento: Number(e.target.value) || 1 })}
+                onChange={(e) =>
+                  onChange({
+                    ...data,
+                    diasAnticipacionVencimiento: Number(e.target.value) || 1,
+                  })
+                }
                 className="h-9 w-16 rounded-lg text-center font-bold text-xs bg-background/50 border-border/50"
               />
-              <span className="text-[10px] font-bold text-muted-foreground uppercase">días</span>
+              <span className="text-[10px] font-bold text-muted-foreground uppercase">
+                días
+              </span>
             </div>
             <Switch
               checked={data.notificarVencimientos}
-              onCheckedChange={(v) => onChange({ ...data, notificarVencimientos: v })}
+              onCheckedChange={(v) =>
+                onChange({ ...data, notificarVencimientos: v })
+              }
               className="data-[state=checked]:bg-[color:var(--brand-instagram)]"
             />
           </div>
@@ -105,8 +137,12 @@ export function NotificationsStep({ data, onChange }: NotificationsStepProps) {
               <ShoppingCart className="h-4 w-4 text-[color:var(--status-success-strong)]" />
             </div>
             <div>
-              <h3 className="font-bold text-sm text-foreground">Confirmación de Ventas</h3>
-              <p className="text-xs text-muted-foreground mt-0.5">Alerta al procesar cada venta.</p>
+              <h3 className="font-bold text-sm text-foreground">
+                Confirmación de Ventas
+              </h3>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Alerta al procesar cada venta.
+              </p>
             </div>
           </div>
           <Switch
@@ -125,8 +161,12 @@ export function NotificationsStep({ data, onChange }: NotificationsStepProps) {
               <Package className="h-4 w-4 text-[color:var(--primary)]" />
             </div>
             <div>
-              <h3 className="font-bold text-sm text-foreground">Consignaciones Activas</h3>
-              <p className="text-xs text-muted-foreground mt-0.5">Aviso cuando llevan mucho tiempo en la calle.</p>
+              <h3 className="font-bold text-sm text-foreground">
+                Consignaciones Activas
+              </h3>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Aviso cuando llevan mucho tiempo en la calle.
+              </p>
             </div>
           </div>
           <div className="flex items-center gap-3 shrink-0">
@@ -135,14 +175,23 @@ export function NotificationsStep({ data, onChange }: NotificationsStepProps) {
                 type="number"
                 min={1}
                 value={data.diasAvisoConsignacion}
-                onChange={(e) => onChange({ ...data, diasAvisoConsignacion: Number(e.target.value) || 1 })}
+                onChange={(e) =>
+                  onChange({
+                    ...data,
+                    diasAvisoConsignacion: Number(e.target.value) || 1,
+                  })
+                }
                 className="h-9 w-16 rounded-lg text-center font-bold text-xs bg-background/50 border-border/50"
               />
-              <span className="text-[10px] font-bold text-muted-foreground uppercase">días</span>
+              <span className="text-[10px] font-bold text-muted-foreground uppercase">
+                días
+              </span>
             </div>
             <Switch
               checked={data.notificarConsignacionesActivas}
-              onCheckedChange={(v) => onChange({ ...data, notificarConsignacionesActivas: v })}
+              onCheckedChange={(v) =>
+                onChange({ ...data, notificarConsignacionesActivas: v })
+              }
               className="data-[state=checked]:bg-[color:var(--brand-instagram)]"
             />
           </div>

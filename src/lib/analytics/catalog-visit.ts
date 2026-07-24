@@ -22,7 +22,11 @@ function getBucketStart(date = new Date()): Date {
   return new Date(time);
 }
 
-function hashVisitor(sucursalId: number, ip: string, userAgent: string): string {
+function hashVisitor(
+  sucursalId: number,
+  ip: string,
+  userAgent: string,
+): string {
   const normalizedAgent = userAgent.toLowerCase().slice(0, 180);
   const raw = `${sucursalId}|${ip}|${normalizedAgent}`;
   return createHash("sha256").update(raw).digest("hex");

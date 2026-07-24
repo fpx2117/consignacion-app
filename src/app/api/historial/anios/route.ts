@@ -22,7 +22,9 @@ type HistorialAniosRouteDeps = {
   requireAuth: typeof requireAuth;
   resolveTimezoneForAuth: typeof resolveTimezoneForAuth;
   buildSucursalWhere: typeof buildSucursalWhere;
-  findMovimientos: (where: ReturnType<typeof buildSucursalWhere>) => Promise<Array<{ createdAt: Date }>>;
+  findMovimientos: (
+    where: ReturnType<typeof buildSucursalWhere>,
+  ) => Promise<Array<{ createdAt: Date }>>;
   nowAR: typeof nowAR;
 };
 
@@ -40,7 +42,9 @@ const defaultDeps: HistorialAniosRouteDeps = {
   nowAR,
 };
 
-export async function handleGetHistorialYears(deps: HistorialAniosRouteDeps = defaultDeps) {
+export async function handleGetHistorialYears(
+  deps: HistorialAniosRouteDeps = defaultDeps,
+) {
   const auth = await deps.requireAuth();
   if (!auth.ok) return auth.res;
 
@@ -66,7 +70,10 @@ export async function handleGetHistorialYears(deps: HistorialAniosRouteDeps = de
     console.error("Error al obtener años del historial:", error);
 
     const timezone = await deps.resolveTimezoneForAuth(auth);
-    return NextResponse.json([getYearInTimezone(deps.nowAR(timezone.tz), timezone.tz)], { status: 200 });
+    return NextResponse.json(
+      [getYearInTimezone(deps.nowAR(timezone.tz), timezone.tz)],
+      { status: 200 },
+    );
   }
 }
 

@@ -1,6 +1,13 @@
 import { reportThemeCss } from "@/lib/reports/report-theme";
 import { getReportHeadAssets } from "@/lib/reports/tailwind-inline";
-import { brandInitials, escapeAttr, escapeHtml, formatDateAR, formatMoneyARS, resolveReportTimezone } from "@/lib/reports/template-helpers";
+import {
+  brandInitials,
+  escapeAttr,
+  escapeHtml,
+  formatDateAR,
+  formatMoneyARS,
+  resolveReportTimezone,
+} from "@/lib/reports/template-helpers";
 import { generateQRHtml } from "@/lib/reports/qr-helper";
 import type { BrandingDTO } from "@/lib/reports/types";
 
@@ -25,7 +32,8 @@ export interface VentaReportDTO {
 }
 
 const getTicketDetails = (id: number, numeroVenta?: number | null) => {
-  const numberToUse = (typeof numeroVenta === "number" && numeroVenta > 0) ? numeroVenta : id;
+  const numberToUse =
+    typeof numeroVenta === "number" && numeroVenta > 0 ? numeroVenta : id;
   const LIMITE_POR_SERIE = 1000;
   const serie = Math.floor((numberToUse - 1) / LIMITE_POR_SERIE) + 1;
   const numero = ((numberToUse - 1) % LIMITE_POR_SERIE) + 1;
@@ -43,7 +51,11 @@ function getMetodoPagoLabel(metodo: string): string {
   return metodo;
 }
 
-function buildVentaBody(data: VentaReportDTO, branding: BrandingDTO, qrHtml: string): string {
+function buildVentaBody(
+  data: VentaReportDTO,
+  branding: BrandingDTO,
+  qrHtml: string,
+): string {
   const ticket = getTicketDetails(data.id, data.numeroVenta);
   const tz = resolveReportTimezone(data.zonaHoraria);
 
@@ -58,13 +70,17 @@ function buildVentaBody(data: VentaReportDTO, branding: BrandingDTO, qrHtml: str
 
   const metodoPago = getMetodoPagoLabel(data.metodoPago);
   const hasDescuentoGlobal = (data.descuentoGlobal ?? 0) > 0;
-  const subtotalBruto = data.items.reduce((a, i) => a + i.precioUnitario * i.cantidad, 0);
+  const subtotalBruto = data.items.reduce(
+    (a, i) => a + i.precioUnitario * i.cantidad,
+    0,
+  );
   const totalDescuentoItems = data.items.reduce((a, i) => a + i.descuento, 0);
 
-  const itemRows = data.items.map((item, idx) => {
-    const bg = idx % 2 === 0 ? "#f8fafc" : "#ffffff";
-    const hasDesc = item.descuento > 0;
-    return `
+  const itemRows = data.items
+    .map((item, idx) => {
+      const bg = idx % 2 === 0 ? "#f8fafc" : "#ffffff";
+      const hasDesc = item.descuento > 0;
+      return `
       <tr style="background:${bg}">
         <td style="padding:7px 8px 7px 12px;font-weight:600;color:#1e293b;font-size:11px;max-width:200px;word-break:break-word">${escapeHtml(item.producto)}</td>
         <td style="padding:7px 8px;text-align:center;font-weight:700;color:#475569;font-size:11px">${item.cantidad}</td>
@@ -72,7 +88,8 @@ function buildVentaBody(data: VentaReportDTO, branding: BrandingDTO, qrHtml: str
         <td style="padding:7px 8px;text-align:right;font-weight:700;font-size:11px;white-space:nowrap;color:${hasDesc ? "#059669" : "#cbd5e1"}">${hasDesc ? `-${formatMoneyARS(item.descuento)}` : "—"}</td>
         <td style="padding:7px 12px 7px 8px;text-align:right;font-weight:800;font-size:11px;white-space:nowrap;color:#0f172a">${formatMoneyARS(item.subtotal)}</td>
       </tr>`;
-  }).join("");
+    })
+    .join("");
 
   return `<!DOCTYPE html>
 <html lang="es">
@@ -93,9 +110,10 @@ function buildVentaBody(data: VentaReportDTO, branding: BrandingDTO, qrHtml: str
 
     <!-- Logo + nombre -->
     <div style="display:flex;align-items:center;gap:12px">
-      ${branding.logoBase64
-        ? `<img src="${escapeAttr(branding.logoBase64)}" style="width:44px;height:44px;border-radius:10px;object-fit:contain;border:1px solid #e2e8f0"/>`
-        : `<div style="width:44px;height:44px;background:#0f172a;color:#fff;border-radius:10px;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:16px">${escapeHtml(brandBadge)}</div>`
+      ${
+        branding.logoBase64
+          ? `<img src="${escapeAttr(branding.logoBase64)}" style="width:44px;height:44px;border-radius:10px;object-fit:contain;border:1px solid #e2e8f0"/>`
+          : `<div style="width:44px;height:44px;background:#0f172a;color:#fff;border-radius:10px;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:16px">${escapeHtml(brandBadge)}</div>`
       }
       <div>
         <div style="font-size:17px;font-weight:900;color:#0f172a;letter-spacing:-0.3px">${escapeHtml(brandName)}</div>
@@ -155,36 +173,56 @@ function buildVentaBody(data: VentaReportDTO, branding: BrandingDTO, qrHtml: str
       </thead>
       <tbody>
         ${itemRows}
-        ${totalDescuentoItems > 0 ? `
+        ${
+          totalDescuentoItems > 0
+            ? `
         <tr style="background:#f0fdf4">
           <td colspan="3" style="padding:7px 8px 7px 12px;font-size:10px;font-weight:700;color:#059669">Descuentos aplicados</td>
           <td colspan="2" style="padding:7px 12px 7px 8px;text-align:right;font-size:11px;font-weight:900;color:#059669" class="money">-${formatMoneyARS(totalDescuentoItems)}</td>
-        </tr>` : ""}
-        ${hasDescuentoGlobal ? `
+        </tr>`
+            : ""
+        }
+        ${
+          hasDescuentoGlobal
+            ? `
         <tr style="background:#f0fdf4">
           <td colspan="3" style="padding:7px 8px 7px 12px;font-size:10px;font-weight:700;color:#059669">Descuento general</td>
           <td colspan="2" style="padding:7px 12px 7px 8px;text-align:right;font-size:11px;font-weight:900;color:#059669" class="money">-${formatMoneyARS(data.descuentoGlobal!)}</td>
-        </tr>` : ""}
+        </tr>`
+            : ""
+        }
       </tbody>
     </table>
 
     <!-- Totales resumen -->
     <div style="margin-top:8px;display:flex;flex-direction:column;align-items:flex-end;gap:3px">
-      ${subtotalBruto !== data.total ? `
+      ${
+        subtotalBruto !== data.total
+          ? `
       <div style="display:flex;gap:24px;font-size:10px;color:#64748b">
         <span>Subtotal</span>
         <span class="money" style="font-weight:600">${formatMoneyARS(subtotalBruto)}</span>
-      </div>` : ""}
-      ${totalDescuentoItems > 0 ? `
+      </div>`
+          : ""
+      }
+      ${
+        totalDescuentoItems > 0
+          ? `
       <div style="display:flex;gap:24px;font-size:10px;color:#059669">
         <span>Descuentos</span>
         <span class="money" style="font-weight:700">-${formatMoneyARS(totalDescuentoItems)}</span>
-      </div>` : ""}
-      ${hasDescuentoGlobal ? `
+      </div>`
+          : ""
+      }
+      ${
+        hasDescuentoGlobal
+          ? `
       <div style="display:flex;gap:24px;font-size:10px;color:#059669">
         <span>Dto. general</span>
         <span class="money" style="font-weight:700">-${formatMoneyARS(data.descuentoGlobal!)}</span>
-      </div>` : ""}
+      </div>`
+          : ""
+      }
       <div style="display:flex;gap:24px;padding-top:6px;border-top:2px solid #e2e8f0;margin-top:2px">
         <span style="font-size:12px;font-weight:900;color:#0f172a">TOTAL</span>
         <span class="money" style="font-size:16px;font-weight:900;color:#0f172a">${formatMoneyARS(data.total)}</span>
@@ -194,14 +232,18 @@ function buildVentaBody(data: VentaReportDTO, branding: BrandingDTO, qrHtml: str
 
   <!-- ══ FOOTER ═════════════════════════════════════════════════ -->
   <div style="border-top:1px solid #e2e8f0;padding-top:10px;display:flex;justify-content:space-between;align-items:center">
-    ${qrHtml ? `
+    ${
+      qrHtml
+        ? `
     <div style="display:flex;align-items:center;gap:10px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:8px 12px">
       ${qrHtml}
       <div>
         <div style="font-size:8px;font-weight:900;text-transform:uppercase;letter-spacing:1px;color:#94a3b8;margin-bottom:2px">Catálogo online</div>
         <div style="font-size:8px;color:#64748b;line-height:1.5">Escaneá para ver<br>todos nuestros productos</div>
       </div>
-    </div>` : `<div></div>`}
+    </div>`
+        : `<div></div>`
+    }
     <div style="text-align:right">
       <div style="font-size:10px;font-weight:600;color:#94a3b8">Gracias por su compra</div>
       ${footerText ? `<div style="font-size:9px;color:#94a3b8;margin-top:2px">${footerText}</div>` : ""}
@@ -212,14 +254,23 @@ function buildVentaBody(data: VentaReportDTO, branding: BrandingDTO, qrHtml: str
 </html>`;
 }
 
-export async function buildVentaHtmlAsync(data: VentaReportDTO, branding: BrandingDTO): Promise<string> {
+export async function buildVentaHtmlAsync(
+  data: VentaReportDTO,
+  branding: BrandingDTO,
+): Promise<string> {
   let qrHtml = "";
   if (data.catalogUrl) {
-    qrHtml = await generateQRHtml(data.catalogUrl, { size: 60, darkColor: "#0f172a" });
+    qrHtml = await generateQRHtml(data.catalogUrl, {
+      size: 60,
+      darkColor: "#0f172a",
+    });
   }
   return buildVentaBody(data, branding, qrHtml);
 }
 
-export function buildVentaHtml(data: VentaReportDTO, branding: BrandingDTO): string {
+export function buildVentaHtml(
+  data: VentaReportDTO,
+  branding: BrandingDTO,
+): string {
   return buildVentaBody(data, branding, "");
 }

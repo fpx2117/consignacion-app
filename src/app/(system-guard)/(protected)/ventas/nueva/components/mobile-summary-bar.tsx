@@ -30,7 +30,10 @@ export function MobileSummaryBar({
   onCobrar,
 }: MobileSummaryBarProps) {
   return (
-    <section className="w-full border-t border-border/40 bg-background/95 backdrop-blur-xl px-3 py-3" aria-label="Pago rapido">
+    <section
+      className="w-full border-t border-border/40 bg-background/95 backdrop-blur-xl px-3 py-3"
+      aria-label="Pago rapido"
+    >
       <div className="w-full max-w-2xl mx-auto space-y-3">
         <PaymentSelector
           metodoPago={metodoPago}
@@ -52,7 +55,9 @@ export function MobileSummaryBar({
               <span className="text-[10px] md:text-xs font-bold tracking-widest opacity-80 uppercase bg-foreground/10 px-2 py-1 rounded-md">
                 {cartLength} ITEMS
               </span>
-              <span className="text-lg md:text-xl tracking-tight">COBRAR {formatCurrency(totalAmount)}</span>
+              <span className="text-lg md:text-xl tracking-tight">
+                COBRAR {formatCurrency(totalAmount)}
+              </span>
               <span className="hidden md:inline-flex items-center justify-center h-5 px-2 rounded border border-white/40 bg-white/25 text-white text-[9px] font-black font-mono tracking-tight select-none">
                 F6
               </span>

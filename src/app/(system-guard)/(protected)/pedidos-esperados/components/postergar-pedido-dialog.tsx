@@ -35,7 +35,11 @@ function getTomorrowStr(tz: string) {
 function formatFechaCorta(fechaISO: string) {
   if (!fechaISO) return "—";
   const d = new Date(fechaISO);
-  return d.toLocaleDateString("es-AR", { day: "2-digit", month: "short", year: "numeric" });
+  return d.toLocaleDateString("es-AR", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
 }
 
 export function PostergarPedidoDialog({
@@ -47,8 +51,11 @@ export function PostergarPedidoDialog({
   const { tz } = useTimezone();
   const activeSucursalId = useSucursalStore((s) => s.activeSucursalId);
   const sucursalHeaders = React.useMemo<Record<string, string>>(
-    () => activeSucursalId ? { "x-sucursal-id": String(activeSucursalId) } : {} as Record<string, string>,
-    [activeSucursalId]
+    () =>
+      activeSucursalId
+        ? { "x-sucursal-id": String(activeSucursalId) }
+        : ({} as Record<string, string>),
+    [activeSucursalId],
   );
   const [nuevaFecha, setNuevaFecha] = React.useState("");
   const [motivo, setMotivo] = React.useState("");
@@ -91,7 +98,9 @@ export function PostergarPedidoDialog({
       onOpenChange(false);
       onSuccess();
     } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : "Error al postergar el pedido");
+      toast.error(
+        err instanceof Error ? err.message : "Error al postergar el pedido",
+      );
     } finally {
       setSaving(false);
     }
@@ -105,10 +114,15 @@ export function PostergarPedidoDialog({
         <DialogHeader className="p-6 pb-3 border-b bg-muted/20">
           <div className="flex items-center gap-2 text-[color:var(--theme-ocean-primary)] dark:text-[color:var(--theme-ocean-primary)]">
             <CalendarClock className="h-5 w-5" />
-            <DialogTitle className="text-xl font-bold italic tracking-tight">Postergar Pedido</DialogTitle>
+            <DialogTitle className="text-xl font-bold italic tracking-tight">
+              Postergar Pedido
+            </DialogTitle>
           </div>
           <DialogDescription className="text-muted-foreground text-sm">
-            Fecha original: <span className="font-bold text-foreground">{formatFechaCorta(pedido.fechaEsperada)}</span>
+            Fecha original:{" "}
+            <span className="font-bold text-foreground">
+              {formatFechaCorta(pedido.fechaEsperada)}
+            </span>
           </DialogDescription>
         </DialogHeader>
 
@@ -126,7 +140,9 @@ export function PostergarPedidoDialog({
               className="h-11 bg-muted/30 border-transparent text-sm"
             />
             {nuevaFecha && nuevaFecha < minFecha && (
-              <p className="text-xs text-[color:var(--status-danger)] font-bold">La nueva fecha debe ser a partir de mañana</p>
+              <p className="text-xs text-[color:var(--status-danger)] font-bold">
+                La nueva fecha debe ser a partir de mañana
+              </p>
             )}
           </div>
 
@@ -134,7 +150,9 @@ export function PostergarPedidoDialog({
           <div className="space-y-2">
             <Label className="text-xs font-bold uppercase text-muted-foreground">
               Motivo de postergación{" "}
-              <span className="normal-case font-normal text-muted-foreground/60">(opcional)</span>
+              <span className="normal-case font-normal text-muted-foreground/60">
+                (opcional)
+              </span>
             </Label>
             <Textarea
               placeholder="Ej: El proveedor avisó retraso en entrega..."

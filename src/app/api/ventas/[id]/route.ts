@@ -3,7 +3,10 @@ import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/auth/require-auth";
 import { MotivoMovimientoStock, TipoMovimientoStock } from "@prisma/client";
 import { z } from "zod";
-import { buildSucursalWhere, isGlobalSucursalView } from "@/lib/security/sucursalScope";
+import {
+  buildSucursalWhere,
+  isGlobalSucursalView,
+} from "@/lib/security/sucursalScope";
 import { nowAR } from "@/lib/date-format/utils-date";
 import { resolveTimezoneForAuth } from "@/lib/timezone/get-configured-tz";
 
@@ -19,7 +22,7 @@ function getErrorMessage(error: unknown): string {
 // GET: Obtener detalle de una venta
 export async function GET(
   _: Request,
-  { params }: { params: Promise<{ id: string }> } // 👈 Cambio 1: Tipo Promise
+  { params }: { params: Promise<{ id: string }> }, // 👈 Cambio 1: Tipo Promise
 ) {
   const auth = await requireAuth();
   if (!auth.ok) return auth.res;
@@ -52,12 +55,18 @@ export async function GET(
 // DELETE: Anular venta (soft-delete) con manejo de stock y roturas
 export async function DELETE(
   req: Request,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
   const auth = await requireAuth();
   if (!auth.ok) return auth.res;
   if (isGlobalSucursalView(auth)) {
-    return NextResponse.json({ error: "Vista global en modo solo lectura. Selecciona una sucursal para anular ventas." }, { status: 409 });
+    return NextResponse.json(
+      {
+        error:
+          "Vista global en modo solo lectura. Selecciona una sucursal para anular ventas.",
+      },
+      { status: 409 },
+    );
   }
 
   const { id: idParam } = await params;
@@ -77,7 +86,7 @@ export async function DELETE(
     if (!parsed.success) {
       return NextResponse.json(
         { error: "Validación fallida", details: parsed.error.flatten() },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -96,11 +105,17 @@ export async function DELETE(
     });
 
     if (!venta) {
-      return NextResponse.json({ error: "Venta no encontrada" }, { status: 404 });
+      return NextResponse.json(
+        { error: "Venta no encontrada" },
+        { status: 404 },
+      );
     }
 
     if (venta.anulada) {
-      return NextResponse.json({ error: "La venta ya fue anulada" }, { status: 400 });
+      return NextResponse.json(
+        { error: "La venta ya fue anulada" },
+        { status: 400 },
+      );
     }
 
     const sucursalId = venta.sucursalId;
@@ -121,7 +136,12 @@ export async function DELETE(
         if (!esRotura) {
           // Incrementar stock en StockSucursal (si existe registro)
           const stockSucursal = await tx.stockSucursal.findUnique({
-            where: { productoId_sucursalId: { productoId: detalle.productoId, sucursalId } },
+            where: {
+              productoId_sucursalId: {
+                productoId: detalle.productoId,
+                sucursalId,
+              },
+            },
           });
 
           if (stockSucursal) {
@@ -153,18 +173,23 @@ export async function DELETE(
         } else {
           // Rotura: registrar movimiento de pérdida sin devolver stock
           const stockSucursal = await tx.stockSucursal.findUnique({
-            where: { productoId_sucursalId: { productoId: detalle.productoId, sucursalId } },
+            where: {
+              productoId_sucursalId: {
+                productoId: detalle.productoId,
+                sucursalId,
+              },
+            },
           });
           const stockPrevio = stockSucursal?.stockDisponibleUnits ?? 0;
           await tx.movimientoStock.create({
-              data: {
-                productoId: detalle.productoId,
-                sucursalId,
-                tipo: TipoMovimientoStock.SALIDA,
-                motivo: MotivoMovimientoStock.ROTURA,
-                cantidad: detalle.units,
-                stockPrevio,
-                stockPosterior: stockPrevio, // stock no cambia
+            data: {
+              productoId: detalle.productoId,
+              sucursalId,
+              tipo: TipoMovimientoStock.SALIDA,
+              motivo: MotivoMovimientoStock.ROTURA,
+              cantidad: detalle.units,
+              stockPrevio,
+              stockPosterior: stockPrevio, // stock no cambia
               observaciones: `Rotura en anulación venta #${id} - ${motivo}`,
             },
           });
@@ -182,13 +207,15 @@ export async function DELETE(
       });
     });
 
-    return NextResponse.json({ success: true, message: "Venta anulada correctamente" });
-
+    return NextResponse.json({
+      success: true,
+      message: "Venta anulada correctamente",
+    });
   } catch (error) {
     console.error("Error anulando venta:", error);
     return NextResponse.json(
       { error: getErrorMessage(error) || "Error al anular la venta" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

@@ -13,7 +13,7 @@ if (!connectionString) {
 }
 
 /**
- * 2. Define the Global Type 
+ * 2. Define the Global Type
  * This prevents multiple instances of Prisma Client in development.
  */
 const globalForPrisma = globalThis as unknown as {

@@ -631,36 +631,36 @@ model ResetPasswordToken {
 }
 
 model Sucursal {
-  id                Int                @id @default(autoincrement())
-  nombre            String
-  esPrincipal       Boolean            @default(false)
-  activa            Boolean            @default(true)
+  id                        Int                @id @default(autoincrement())
+  nombre                    String
+  esPrincipal               Boolean            @default(false)
+  activa                    Boolean            @default(true)
   // Si es false, esta sucursal se excluye de la vista "Todas las Sucursales" del dashboard
   // (KPIs, tendencia, top productos/consignados, stock y gastos). No afecta su vista individual.
-  incluidaEnDashboardGlobal Boolean    @default(true)
-  createdAt         DateTime           @default(now())
-  updatedAt         DateTime           @updatedAt
-  branding          Branding?
-  cajas             Caja[]
-  clientes          Cliente[]
-  configuracion     Configuracion?
-  consignaciones    Consignacion[]
-  movimientos       MovimientoStock[]
-  notifications     Notification[]
-  productos         Producto[]
-  stockProductos    StockSucursal[]
-  usuarios          Usuario[]
-  ventas            Venta[]
-  gastos            Gasto[]
-  categoriasGasto   CategoriaGasto[]
-  categorias        Categoria[]
-  pagos             Pago[]
-  gastosCompartidos GastoSucursal[]
-  pedidosEsperados  PedidoEsperado[]
-  catalogVisits     CatalogVisit[]
-  storeSettings     StoreSettings?
-  facturasProveedor FacturaProveedor[]
-  proveedores       Proveedor[]
+  incluidaEnDashboardGlobal Boolean            @default(true)
+  createdAt                 DateTime           @default(now())
+  updatedAt                 DateTime           @updatedAt
+  branding                  Branding?
+  cajas                     Caja[]
+  clientes                  Cliente[]
+  configuracion             Configuracion?
+  consignaciones            Consignacion[]
+  movimientos               MovimientoStock[]
+  notifications             Notification[]
+  productos                 Producto[]
+  stockProductos            StockSucursal[]
+  usuarios                  Usuario[]
+  ventas                    Venta[]
+  gastos                    Gasto[]
+  categoriasGasto           CategoriaGasto[]
+  categorias                Categoria[]
+  pagos                     Pago[]
+  gastosCompartidos         GastoSucursal[]
+  pedidosEsperados          PedidoEsperado[]
+  catalogVisits             CatalogVisit[]
+  storeSettings             StoreSettings?
+  facturasProveedor         FacturaProveedor[]
+  proveedores               Proveedor[]
 }
 
 model StoreSettings {
@@ -794,6 +794,17 @@ model FacturaProveedor {
   iaRespuestaCruda         Json?
   iaModeloUsado            String?
   iaTokensUsados           Int?
+  // Rubro de Configuracion.rubroNegocio copiado (no referenciado) al momento de
+  // procesar esta factura — Configuracion.rubroNegocio es mutable, así que una
+  // copia evita que facturas viejas cambien de categoría si el rubro del negocio
+  // cambia después. Se usa para agrupar métricas de precisión/consumo por rubro.
+  rubroNegocio             String?
+  // Snapshot de los campos de cabecera tal como los propuso la IA, tomado una
+  // sola vez al crear la factura (ver process/route.ts) y nunca vuelto a tocar
+  // por PATCH /[id] — así el diff contra el campo vivo (que sí lo edita el
+  // usuario) mide corrección humana real. Shape: FacturaValoresIaOriginal
+  // (src/lib/validators/factura-proveedor.ts).
+  valoresIaOriginal        Json?
   creadoPor                Int
   createdAt                DateTime               @default(now())
   updatedAt                DateTime               @updatedAt
@@ -838,6 +849,12 @@ model FacturaProveedorItem {
   // src/lib/ai/validar-consistencia-factura.ts. Informativas: nunca bloquean la
   // confirmación manual del item.
   advertencias                String[]          @default([])
+  // Snapshot de textoOriginal/codigoProveedor/cantidad/precioUnitario/totalLinea
+  // tal como los propuso la IA, tomado una sola vez al crear el item (ver
+  // process/route.ts) y nunca vuelto a tocar por PATCH /items/[id] — así el
+  // diff contra el campo vivo mide corrección humana real, no lectura de la IA.
+  // Shape: FacturaItemValoresIaOriginal (src/lib/validators/factura-proveedor-item.ts).
+  valoresIaOriginal           Json?
   createdAt                   DateTime          @default(now())
   updatedAt                   DateTime          @updatedAt
 

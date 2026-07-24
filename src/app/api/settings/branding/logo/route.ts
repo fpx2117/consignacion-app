@@ -35,7 +35,10 @@ export async function DELETE() {
   const auth = await requireAuth();
   if (!auth.ok) return auth.res;
   if (!requireRole(auth.user, ["ADMIN"])) {
-    return NextResponse.json({ ok: false, error: "No autorizado" }, { status: 403 });
+    return NextResponse.json(
+      { ok: false, error: "No autorizado" },
+      { status: 403 },
+    );
   }
 
   try {
@@ -61,7 +64,7 @@ export async function DELETE() {
     console.error("DELETE BRANDING LOGO ERROR:", error);
     return NextResponse.json(
       { ok: false, error: "Error eliminando logo" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

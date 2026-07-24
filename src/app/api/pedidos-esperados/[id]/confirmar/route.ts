@@ -26,13 +26,19 @@ export async function POST(req: Request, { params }: RouteParams) {
   const auth = await requireAuth();
   if (!auth.ok) return auth.res;
   if (isGlobalSucursalView(auth)) {
-    return NextResponse.json({ error: "Vista global en modo solo lectura. Selecciona una sucursal para confirmar pedidos." }, { status: 409 });
+    return NextResponse.json(
+      {
+        error:
+          "Vista global en modo solo lectura. Selecciona una sucursal para confirmar pedidos.",
+      },
+      { status: 409 },
+    );
   }
 
   if (!requireRole(auth.user, ["ADMIN"])) {
     return NextResponse.json(
       { error: "No tienes permisos (Admin requerido)" },
-      { status: 403 }
+      { status: 403 },
     );
   }
 
@@ -50,8 +56,11 @@ export async function POST(req: Request, { params }: RouteParams) {
 
     if (!parsed.success) {
       return NextResponse.json(
-        { error: "Validación fallida", details: parsed.error.flatten().fieldErrors },
-        { status: 400 }
+        {
+          error: "Validación fallida",
+          details: parsed.error.flatten().fieldErrors,
+        },
+        { status: 400 },
       );
     }
 
@@ -62,7 +71,10 @@ export async function POST(req: Request, { params }: RouteParams) {
     });
 
     if (!pedido) {
-      return NextResponse.json({ error: "Pedido no encontrado" }, { status: 404 });
+      return NextResponse.json(
+        { error: "Pedido no encontrado" },
+        { status: 404 },
+      );
     }
 
     // 2. Verificar pertenencia a la sucursal activa
@@ -74,7 +86,7 @@ export async function POST(req: Request, { params }: RouteParams) {
     if (pedido.estado === "CONFIRMADO" || pedido.estado === "CANCELADO") {
       return NextResponse.json(
         { error: `No se puede confirmar un pedido en estado ${pedido.estado}` },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -87,7 +99,7 @@ export async function POST(req: Request, { params }: RouteParams) {
       if (!itemExistente) {
         return NextResponse.json(
           { error: `Item ${input.itemId} no pertenece a este pedido` },
-          { status: 400 }
+          { status: 400 },
         );
       }
       // Validar margen de sobre-entrega: cantidadRecibida <= cantidadEsperada * 2
@@ -96,125 +108,142 @@ export async function POST(req: Request, { params }: RouteParams) {
           {
             error: `La cantidad recibida para el item ${input.itemId} excede el doble de la cantidad esperada (${itemExistente.cantidadEsperada * 2})`,
           },
-          { status: 400 }
+          { status: 400 },
         );
       }
     }
 
     // Verificar que todos los itemId son válidos antes de continuar (ya fue validado arriba, esta guarda evita errores de undefined en la tx)
-    const allItemsValid = itemsInput.every((input) => itemsDelPedido.has(input.itemId));
+    const allItemsValid = itemsInput.every((input) =>
+      itemsDelPedido.has(input.itemId),
+    );
     if (!allItemsValid) {
-      return NextResponse.json({ error: "Items inválidos en el payload" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Items inválidos en el payload" },
+        { status: 400 },
+      );
     }
 
     // 5. Ejecutar todo dentro de una transacción atómica
-    const { pedidoActualizado, movimientos } = await prisma.$transaction(async (tx) => {
-      const movimientosCreados = [];
+    const { pedidoActualizado, movimientos } = await prisma.$transaction(
+      async (tx) => {
+        const movimientosCreados = [];
 
-      for (const input of itemsInput) {
-        if (input.cantidadRecibida <= 0) continue;
+        for (const input of itemsInput) {
+          if (input.cantidadRecibida <= 0) continue;
 
-        // Validado previamente: allItemsValid asegura que el item existe
-        const item = itemsDelPedido.get(input.itemId)!;
-
-        // a. Obtener StockSucursal actual
-        const stockActual = await tx.stockSucursal.findUnique({
-          where: {
-            productoId_sucursalId: {
-              productoId: item.productoId,
-              sucursalId,
-            },
-          },
-          select: { stockDisponibleUnits: true },
-        });
-
-        const stockPrevio = stockActual?.stockDisponibleUnits ?? 0;
-        const stockPosterior = stockPrevio + input.cantidadRecibida;
-
-        // b. Crear MovimientoStock
-        const movimiento = await tx.movimientoStock.create({
-          data: {
-            productoId: item.productoId,
-            sucursalId,
-            tipo: "ENTRADA",
-            motivo: "COMPRA",
-            cantidad: input.cantidadRecibida,
-            stockPrevio,
-            stockPosterior,
-            observaciones: `Confirmación de pedido #${id}`,
-          },
-        });
-        movimientosCreados.push(movimiento);
-
-        // c. Upsert StockSucursal incrementando stock disponible
-        await tx.stockSucursal.upsert({
-          where: {
-            productoId_sucursalId: {
-              productoId: item.productoId,
-              sucursalId,
-            },
-          },
-          create: {
-            productoId: item.productoId,
-            sucursalId,
-            stockDisponibleUnits: input.cantidadRecibida,
-            stockConsignadoUnits: 0,
-            stockMinUnits: 0,
-          },
-          update: {
-            stockDisponibleUnits: { increment: input.cantidadRecibida },
-          },
-        });
-
-        // c2. Sincronizar stockDisponibleUnits del Producto global
-        await tx.producto.update({
-          where: { id: item.productoId },
-          data: { stockDisponibleUnits: { increment: input.cantidadRecibida } },
-        });
-
-        // d. Actualizar PedidoEsperadoItem estado y cantidadRecibida
-        const estadoItem: EstadoItemPedido = input.cantidadRecibida >= item.cantidadEsperada
-          ? EstadoItemPedido.CONFIRMADO
-          : EstadoItemPedido.PARCIAL;
-
-        await tx.pedidoEsperadoItem.update({
-          where: { id: input.itemId },
-          data: {
-            cantidadRecibida: input.cantidadRecibida,
-            estado: estadoItem,
-          },
-        });
-      }
-
-      // Construir mapa de items actualizados para determinar estado del pedido
-      const itemsActualizados = new Map(pedido.items.map((i) => [i.id, i.estado]));
-      for (const input of itemsInput) {
-        if (input.cantidadRecibida > 0) {
+          // Validado previamente: allItemsValid asegura que el item existe
           const item = itemsDelPedido.get(input.itemId)!;
-          itemsActualizados.set(
-            input.itemId,
+
+          // a. Obtener StockSucursal actual
+          const stockActual = await tx.stockSucursal.findUnique({
+            where: {
+              productoId_sucursalId: {
+                productoId: item.productoId,
+                sucursalId,
+              },
+            },
+            select: { stockDisponibleUnits: true },
+          });
+
+          const stockPrevio = stockActual?.stockDisponibleUnits ?? 0;
+          const stockPosterior = stockPrevio + input.cantidadRecibida;
+
+          // b. Crear MovimientoStock
+          const movimiento = await tx.movimientoStock.create({
+            data: {
+              productoId: item.productoId,
+              sucursalId,
+              tipo: "ENTRADA",
+              motivo: "COMPRA",
+              cantidad: input.cantidadRecibida,
+              stockPrevio,
+              stockPosterior,
+              observaciones: `Confirmación de pedido #${id}`,
+            },
+          });
+          movimientosCreados.push(movimiento);
+
+          // c. Upsert StockSucursal incrementando stock disponible
+          await tx.stockSucursal.upsert({
+            where: {
+              productoId_sucursalId: {
+                productoId: item.productoId,
+                sucursalId,
+              },
+            },
+            create: {
+              productoId: item.productoId,
+              sucursalId,
+              stockDisponibleUnits: input.cantidadRecibida,
+              stockConsignadoUnits: 0,
+              stockMinUnits: 0,
+            },
+            update: {
+              stockDisponibleUnits: { increment: input.cantidadRecibida },
+            },
+          });
+
+          // c2. Sincronizar stockDisponibleUnits del Producto global
+          await tx.producto.update({
+            where: { id: item.productoId },
+            data: {
+              stockDisponibleUnits: { increment: input.cantidadRecibida },
+            },
+          });
+
+          // d. Actualizar PedidoEsperadoItem estado y cantidadRecibida
+          const estadoItem: EstadoItemPedido =
             input.cantidadRecibida >= item.cantidadEsperada
               ? EstadoItemPedido.CONFIRMADO
-              : EstadoItemPedido.PARCIAL,
-          );
+              : EstadoItemPedido.PARCIAL;
+
+          await tx.pedidoEsperadoItem.update({
+            where: { id: input.itemId },
+            data: {
+              cantidadRecibida: input.cantidadRecibida,
+              estado: estadoItem,
+            },
+          });
         }
-      }
 
-      // Determinar estado del pedido
-      const estadosItems = Array.from(itemsActualizados.values());
-      const estadoPedido: EstadoPedidoEsperado = estadosItems.every((e) => e === EstadoItemPedido.CONFIRMADO)
-        ? EstadoPedidoEsperado.CONFIRMADO
-        : EstadoPedidoEsperado.PARCIAL;
+        // Construir mapa de items actualizados para determinar estado del pedido
+        const itemsActualizados = new Map(
+          pedido.items.map((i) => [i.id, i.estado]),
+        );
+        for (const input of itemsInput) {
+          if (input.cantidadRecibida > 0) {
+            const item = itemsDelPedido.get(input.itemId)!;
+            itemsActualizados.set(
+              input.itemId,
+              input.cantidadRecibida >= item.cantidadEsperada
+                ? EstadoItemPedido.CONFIRMADO
+                : EstadoItemPedido.PARCIAL,
+            );
+          }
+        }
 
-      // Actualizar PedidoEsperado
-      const pedidoUpdated = await tx.pedidoEsperado.update({
-        where: { id },
-        data: { estado: estadoPedido },
-        select: { id: true, estado: true, updatedAt: true },
-      });
+        // Determinar estado del pedido
+        const estadosItems = Array.from(itemsActualizados.values());
+        const estadoPedido: EstadoPedidoEsperado = estadosItems.every(
+          (e) => e === EstadoItemPedido.CONFIRMADO,
+        )
+          ? EstadoPedidoEsperado.CONFIRMADO
+          : EstadoPedidoEsperado.PARCIAL;
 
-      return { pedidoActualizado: pedidoUpdated, movimientos: movimientosCreados };
-    });
+        // Actualizar PedidoEsperado
+        const pedidoUpdated = await tx.pedidoEsperado.update({
+          where: { id },
+          data: { estado: estadoPedido },
+          select: { id: true, estado: true, updatedAt: true },
+        });
+
+        return {
+          pedidoActualizado: pedidoUpdated,
+          movimientos: movimientosCreados,
+        };
+      },
+    );
 
     return NextResponse.json({
       pedido: pedidoActualizado,
@@ -232,7 +261,7 @@ export async function POST(req: Request, { params }: RouteParams) {
     console.error("Error al confirmar pedido:", error);
     return NextResponse.json(
       { error: "Error interno al confirmar pedido" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

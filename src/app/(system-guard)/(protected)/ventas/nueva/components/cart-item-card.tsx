@@ -50,12 +50,11 @@ export function CartItemCard({
         className={cn(
           "rounded-2xl border bg-card shadow-sm transition-all p-3 space-y-2",
           "border-border/50 hover:border-primary/20",
-          isLast && "ring-1 ring-primary/20"
+          isLast && "ring-1 ring-primary/20",
         )}
       >
         {/* ── Fila 1: thumbnail + nombre + precio unitario ───────────── */}
         <div className="flex items-center gap-3">
-
           {/* Thumbnail */}
           <div className="h-10 w-10 rounded-xl overflow-hidden flex items-center justify-center shrink-0 bg-muted border border-border/40 relative">
             {item.producto.imagenUrl ? (
@@ -67,7 +66,10 @@ export function CartItemCard({
                 className="object-cover"
               />
             ) : (
-              <Package className="h-4 w-4 text-muted-foreground/30" aria-hidden="true" />
+              <Package
+                className="h-4 w-4 text-muted-foreground/30"
+                aria-hidden="true"
+              />
             )}
           </div>
 
@@ -77,7 +79,8 @@ export function CartItemCard({
               {item.producto.nombre}
             </p>
             <p className="text-[11px] text-muted-foreground font-medium mt-0.5">
-              {formatCurrency(precioUnit)}<span className="opacity-50"> / u.</span>
+              {formatCurrency(precioUnit)}
+              <span className="opacity-50"> / u.</span>
               {bestDiscountPct && (
                 <span className="ml-1.5 inline-flex items-center gap-0.5 text-[10px] font-bold text-[color:var(--status-success-strong)]">
                   <BadgePercent className="h-2.5 w-2.5" aria-hidden="true" />
@@ -95,24 +98,32 @@ export function CartItemCard({
 
         {/* ── Fila 2: stepper + subtotal + eliminar ──────────────────── */}
         <div className="flex items-center justify-between gap-2">
-
           {/* Stepper */}
           <div className="flex items-center gap-0 bg-muted border border-border/60 rounded-xl overflow-hidden shrink-0">
             <button
               type="button"
-              onClick={() => item.quantity <= 1 ? onRemove(item.producto.id) : onUpdateQuantity(item.producto.id, -1)}
+              onClick={() =>
+                item.quantity <= 1
+                  ? onRemove(item.producto.id)
+                  : onUpdateQuantity(item.producto.id, -1)
+              }
               className={cn(
                 "h-8 w-8 flex items-center justify-center transition-colors",
                 item.quantity <= 1
                   ? "text-[color:var(--status-danger)]/60 hover:bg-[color:var(--status-danger)]/10 hover:text-[color:var(--status-danger)]"
-                  : "text-muted-foreground hover:bg-muted/80 hover:text-foreground"
+                  : "text-muted-foreground hover:bg-muted/80 hover:text-foreground",
               )}
-              aria-label={item.quantity <= 1 ? `Quitar ${item.producto.nombre}` : "Reducir cantidad"}
-            >
-              {item.quantity <= 1
-                ? <Trash2 className="h-3.5 w-3.5" />
-                : <Minus className="h-3.5 w-3.5" />
+              aria-label={
+                item.quantity <= 1
+                  ? `Quitar ${item.producto.nombre}`
+                  : "Reducir cantidad"
               }
+            >
+              {item.quantity <= 1 ? (
+                <Trash2 className="h-3.5 w-3.5" />
+              ) : (
+                <Minus className="h-3.5 w-3.5" />
+              )}
             </button>
 
             {/* Cantidad — clickeable para edición manual */}
@@ -165,7 +176,6 @@ export function CartItemCard({
               </span>
             )}
           </div>
-
         </div>
       </article>
 

@@ -10,8 +10,14 @@ test("resolveTimezoneWithDeps prioriza timezone de usuario valida", async () => 
   const resolved = await resolveTimezoneWithDeps(
     { userId: 7, sucursalId: 4 },
     {
-      getUserTimezoneRecord: async () => ({ id: 7, zonaHoraria: "Europe/Madrid" }),
-      getBranchTimezoneRecord: async () => ({ sucursalId: 4, zonaHoraria: "America/Bogota" }),
+      getUserTimezoneRecord: async () => ({
+        id: 7,
+        zonaHoraria: "Europe/Madrid",
+      }),
+      getBranchTimezoneRecord: async () => ({
+        sucursalId: 4,
+        zonaHoraria: "America/Bogota",
+      }),
     },
   );
 
@@ -30,7 +36,10 @@ test("resolveTimezoneWithDeps hereda sucursal cuando usuario no define timezone 
     { userId: 8, sucursalId: 3 },
     {
       getUserTimezoneRecord: async () => ({ id: 8, zonaHoraria: "Mars/Base" }),
-      getBranchTimezoneRecord: async () => ({ sucursalId: 3, zonaHoraria: "America/Santiago" }),
+      getBranchTimezoneRecord: async () => ({
+        sucursalId: 3,
+        zonaHoraria: "America/Santiago",
+      }),
     },
   );
 
@@ -46,9 +55,18 @@ test("resolveTimezoneWithDeps usa fallback tecnico y registra observabilidad cua
   const resolved = await resolveTimezoneWithDeps(
     { userId: 11, sucursalId: 2 },
     {
-      getUserTimezoneRecord: async () => ({ id: 11, zonaHoraria: "Invalid/User" }),
-      getBranchTimezoneRecord: async () => ({ sucursalId: 2, zonaHoraria: "Invalid/Branch" }),
-      logFallbackTimezone: (timezone) => fallbackLogs.push(`${timezone.userId}:${timezone.sucursalId}:${timezone.source}`),
+      getUserTimezoneRecord: async () => ({
+        id: 11,
+        zonaHoraria: "Invalid/User",
+      }),
+      getBranchTimezoneRecord: async () => ({
+        sucursalId: 2,
+        zonaHoraria: "Invalid/Branch",
+      }),
+      logFallbackTimezone: (timezone) =>
+        fallbackLogs.push(
+          `${timezone.userId}:${timezone.sucursalId}:${timezone.source}`,
+        ),
     },
   );
 

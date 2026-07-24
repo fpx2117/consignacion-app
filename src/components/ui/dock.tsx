@@ -31,7 +31,7 @@ const DEFAULT_DISABLEMAGNIFICATION = false;
 
 const dockVariants = cva(
   // ✅ sacamos mt-8 y height fija; no hardcodear layout
-  "supports-backdrop-blur:bg-card/10 supports-backdrop-blur:dark:bg-foreground/10 flex w-max items-center justify-center gap-2 rounded-2xl border p-2 backdrop-blur-md"
+  "supports-backdrop-blur:bg-card/10 supports-backdrop-blur:dark:bg-foreground/10 flex w-max items-center justify-center gap-2 rounded-2xl border p-2 backdrop-blur-md",
 );
 
 const Dock = React.forwardRef<HTMLDivElement, DockProps>(
@@ -47,14 +47,17 @@ const Dock = React.forwardRef<HTMLDivElement, DockProps>(
       orientation = "horizontal",
       ...props
     },
-    ref
+    ref,
   ) => {
     // ✅ un solo motion value para "la dimensión principal"
     const pointer = useMotionValue(Infinity);
 
     const renderChildren = () => {
       return React.Children.map(children, (child) => {
-        if (React.isValidElement<DockIconProps>(child) && child.type === DockIcon) {
+        if (
+          React.isValidElement<DockIconProps>(child) &&
+          child.type === DockIcon
+        ) {
           return React.cloneElement(child, {
             ...child.props,
             pointer,
@@ -78,25 +81,24 @@ const Dock = React.forwardRef<HTMLDivElement, DockProps>(
         }}
         onMouseLeave={() => pointer.set(Infinity)}
         {...props}
-        className={cn(
-          dockVariants({ className }),
-          {
-            "items-start": direction === "top",
-            "items-center": direction === "middle",
-            "items-end": direction === "bottom",
-          }
-        )}
+        className={cn(dockVariants({ className }), {
+          "items-start": direction === "top",
+          "items-center": direction === "middle",
+          "items-end": direction === "bottom",
+        })}
       >
         {renderChildren()}
       </motion.div>
     );
-  }
+  },
 );
 
 Dock.displayName = "Dock";
 
-export interface DockIconProps
-  extends Omit<MotionProps & React.HTMLAttributes<HTMLDivElement>, "children"> {
+export interface DockIconProps extends Omit<
+  MotionProps & React.HTMLAttributes<HTMLDivElement>,
+  "children"
+> {
   size?: number;
   magnification?: number;
   disableMagnification?: boolean;
@@ -123,28 +125,31 @@ const DockIcon = ({
   const padding = Math.max(6, size * 0.2);
   const defaultPointer = useMotionValue(Infinity);
 
-  const distanceCalc = useTransform(pointer ?? defaultPointer, (val: number) => {
-    const el = ref.current;
-    if (!el) return Infinity;
+  const distanceCalc = useTransform(
+    pointer ?? defaultPointer,
+    (val: number) => {
+      const el = ref.current;
+      if (!el) return Infinity;
 
-    const bounds = el.getBoundingClientRect();
+      const bounds = el.getBoundingClientRect();
 
-    // ✅ elegimos eje según orientación
-    if (orientation === "vertical") {
-      const centerY = bounds.y + bounds.height / 2;
-      return val - centerY;
-    }
+      // ✅ elegimos eje según orientación
+      if (orientation === "vertical") {
+        const centerY = bounds.y + bounds.height / 2;
+        return val - centerY;
+      }
 
-    const centerX = bounds.x + bounds.width / 2;
-    return val - centerX;
-  });
+      const centerX = bounds.x + bounds.width / 2;
+      return val - centerX;
+    },
+  );
 
   const targetSize = disableMagnification ? size : magnification;
 
   const sizeTransform = useTransform(
     distanceCalc,
     [-distance, 0, distance],
-    [size, targetSize, size]
+    [size, targetSize, size],
   );
 
   const scaleSize = useSpring(sizeTransform, {
@@ -161,7 +166,7 @@ const DockIcon = ({
         "flex aspect-square items-center justify-center rounded-full",
         // ✅ hover correcto si no hay magnify
         disableMagnification && "transition-colors hover:bg-muted",
-        className
+        className,
       )}
       {...props}
     >

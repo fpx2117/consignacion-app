@@ -4,10 +4,10 @@ import { Prisma } from "@prisma/client";
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
-  
+
   const sucursalIdParam = searchParams.get("sucursalId");
   const sucursalId = sucursalIdParam ? Number(sucursalIdParam) : 1;
-  
+
   const categoryIdParam = searchParams.get("categoryId");
   const subcategoryIdParam = searchParams.get("subcategoryId");
   const minPriceParam = searchParams.get("minPrice");
@@ -15,9 +15,11 @@ export async function GET(req: NextRequest) {
   const searchParam = searchParams.get("search");
   const pageParam = searchParams.get("page");
   const limitParam = searchParams.get("limit");
-  
+
   const page = pageParam ? Math.max(1, Number(pageParam)) : 1;
-  const limit = limitParam ? Math.min(100, Math.max(1, Number(limitParam))) : 20;
+  const limit = limitParam
+    ? Math.min(100, Math.max(1, Number(limitParam)))
+    : 20;
   const skip = (page - 1) * limit;
 
   const whereClause: Prisma.ProductoWhereInput = {
@@ -77,24 +79,27 @@ export async function GET(req: NextRequest) {
       }),
     ]);
 
-    return NextResponse.json({
-      data: productos,
-      pagination: {
-        total,
-        page,
-        limit,
-        totalPages: Math.ceil(total / limit),
+    return NextResponse.json(
+      {
+        data: productos,
+        pagination: {
+          total,
+          page,
+          limit,
+          totalPages: Math.ceil(total / limit),
+        },
       },
-    }, {
-      headers: {
-        "Cache-Control": "public, s-maxage=60, stale-while-revalidate=300",
+      {
+        headers: {
+          "Cache-Control": "public, s-maxage=60, stale-while-revalidate=300",
+        },
       },
-    });
+    );
   } catch (error) {
     console.error("Error al obtener catálogo:", error);
     return NextResponse.json(
       { error: "Error al obtener catálogo de productos" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

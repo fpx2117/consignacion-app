@@ -25,7 +25,10 @@ export async function GET(
   const { id } = await params;
   const facturaId = Number(id);
   if (!Number.isInteger(facturaId)) {
-    return NextResponse.json({ error: "Factura no encontrada" }, { status: 404 });
+    return NextResponse.json(
+      { error: "Factura no encontrada" },
+      { status: 404 },
+    );
   }
 
   const token = req.nextUrl.searchParams.get("token");
@@ -34,7 +37,10 @@ export async function GET(
     select: { archivoPath: true, archivoMime: true, sucursalId: true },
   });
   if (!factura) {
-    return NextResponse.json({ error: "Factura no encontrada" }, { status: 404 });
+    return NextResponse.json(
+      { error: "Factura no encontrada" },
+      { status: 404 },
+    );
   }
 
   let autorizado = verifyFacturaArchivoToken(facturaId, token);
@@ -50,11 +56,17 @@ export async function GET(
   // opaco (uuid.ext) sin separadores de path, pero lo validamos antes de usarlo en
   // un path.join para no depender únicamente de esa garantía.
   if (!/^[0-9a-f-]+\.(pdf|jpg|png|webp)$/i.test(factura.archivoPath)) {
-    return NextResponse.json({ error: "Archivo no encontrado" }, { status: 404 });
+    return NextResponse.json(
+      { error: "Archivo no encontrado" },
+      { status: 404 },
+    );
   }
 
   try {
-    const filePath = path.join(getFacturaProveedorStorageDir(), factura.archivoPath);
+    const filePath = path.join(
+      getFacturaProveedorStorageDir(),
+      factura.archivoPath,
+    );
     const buffer = await readFile(filePath);
 
     return new NextResponse(buffer, {
@@ -71,6 +83,9 @@ export async function GET(
     console.error("[FACTURA_PROVEEDOR_ARCHIVO_ERROR]", {
       message: error instanceof Error ? error.message : String(error),
     });
-    return NextResponse.json({ error: "Archivo no encontrado" }, { status: 404 });
+    return NextResponse.json(
+      { error: "Archivo no encontrado" },
+      { status: 404 },
+    );
   }
 }

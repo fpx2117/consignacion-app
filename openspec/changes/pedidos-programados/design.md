@@ -17,6 +17,7 @@ La deteccion de pedidos vencidos se implementa como un chequeo in-app al cargar 
 **Eleccion**: El campo stockDisponibleUnits de StockSucursal permanece inalterado al crear o programar un pedido. Solo se actualiza cuando el usuario confirma la llegada (total o parcial) a traves del dialog de confirmacion.
 
 **Alternativas consideradas**:
+
 - Reservar stock esperado en un campo separado (stockEsperadoUnits) para mostrar proyecciones
 - Actualizar el stock inmediatamente al crear el pedido (stock optimista)
 
@@ -29,6 +30,7 @@ La deteccion de pedidos vencidos se implementa como un chequeo in-app al cargar 
 **Eleccion**: Al postergar, se actualiza la fechaEsperada del PedidoEsperado original en lugar de crear un nuevo registro. El estado cambia a POSTERGADO. La fecha anterior y el motivo se registran en el campo observaciones (texto libre, append con timestamp).
 
 **Alternativas consideradas**:
+
 - Crear un nuevo PedidoEsperado con la nueva fecha y marcar el original como CANCELADO
 - Tabla separada de historial de postergaciones
 
@@ -41,6 +43,7 @@ La deteccion de pedidos vencidos se implementa como un chequeo in-app al cargar 
 **Eleccion**: Cuando un pedido pasa a estado VENCIDO (fechaEsperada <= hoy y estado PROGRAMADO), se crea un registro en el modelo Notification existente. La UI muestra un badge con el conteo de notificaciones no leidas, incluyendo las de tipo PEDIDO_VENCIDO.
 
 **Alternativas consideradas**:
+
 - Sistema de alertas propio separado del modelo Notification
 - Polling desde el cliente directamente a la tabla PedidoEsperado
 
@@ -53,6 +56,7 @@ La deteccion de pedidos vencidos se implementa como un chequeo in-app al cargar 
 **Eleccion**: Si el usuario reporta cantidadRecibida < cantidadEsperada en al menos un item, ese item queda en estado PARCIAL y el pedido pasa a estado PARCIAL. El usuario puede volver a abrir el pedido para confirmar o cancelar los items restantes.
 
 **Alternativas consideradas**:
+
 - Cancelar automaticamente los items no recibidos al confirmar parcialmente
 - Crear un pedido derivado con los items faltantes
 
@@ -65,6 +69,7 @@ La deteccion de pedidos vencidos se implementa como un chequeo in-app al cargar 
 **Eleccion**: Al confirmar un pedido (total o parcialmente), se crea un registro MovimientoStock por cada item con cantidad recibida > 0, usando tipo ENTRADA y motivo COMPRA. Estos son los valores ya existentes en los enums del schema.
 
 **Alternativas consideradas**:
+
 - Agregar un nuevo motivo REPOSICION_PROGRAMADA al enum MotivoMovimientoStock
 - Registrar un unico MovimientoStock por pedido en lugar de uno por item
 
@@ -77,6 +82,7 @@ La deteccion de pedidos vencidos se implementa como un chequeo in-app al cargar 
 **Eleccion**: Al cargar la seccion de pedidos esperados, el frontend llama a GET /api/pedidos-esperados que en el servidor actualiza el estado de pedidos PROGRAMADOS cuya fechaEsperada ya paso. Adicionalmente, se expone un endpoint GET /api/pedidos-esperados/check-vencidos que puede ser invocado por un cron externo (ej. Vercel Cron Jobs) para ejecutar el mismo chequeo periodicamente sin necesidad de que el usuario abra la seccion.
 
 **Alternativas consideradas**:
+
 - Cron job interno con node-cron o similar
 - Calcular el estado vencido dinamicamente en cada query sin escribir en la DB
 
@@ -137,23 +143,23 @@ La deteccion de pedidos vencidos se implementa como un chequeo in-app al cargar 
 
 ## Cambios en Archivos
 
-| Archivo | Accion | Descripcion |
-|---|---|---|
-| prisma/schema.prisma | Modificar | Agregar modelos PedidoEsperado, PedidoEsperadoItem y enums EstadoPedidoEsperado, EstadoItemPedido. Agregar tipo PEDIDO_VENCIDO al enum TipoNotificacion si existe. |
-| prisma/migrations/YYYYMMDD_pedidos_programados/migration.sql | Crear | Migracion generada por prisma migrate dev |
-| src/app/api/pedidos-esperados/route.ts | Crear | GET (lista por sucursal + lazy check de vencidos) y POST (crear pedido con items) |
-| src/app/api/pedidos-esperados/[id]/route.ts | Crear | GET (detalle del pedido con items) y PATCH (actualizar observaciones, cancelar) |
-| src/app/api/pedidos-esperados/[id]/confirmar/route.ts | Crear | POST: recibe cantidades recibidas por item, ejecuta MovimientoStock, actualiza estados |
-| src/app/api/pedidos-esperados/[id]/postergar/route.ts | Crear | POST: actualiza fechaEsperada y estado, appends a observaciones, crea Notification |
-| src/app/api/pedidos-esperados/check-vencidos/route.ts | Crear | GET: endpoint para cron, actualiza pedidos PROGRAMADOS vencidos y crea Notifications |
-| src/app/(system-guard)/(protected)/pedidos-esperados/page.tsx | Crear | Pagina principal de la seccion, lista de pedidos con filtros por estado |
-| src/app/(system-guard)/(protected)/pedidos-esperados/PedidosEsperadosView.tsx | Crear | Componente principal con tabla/tarjetas de pedidos y acciones |
-| src/app/(system-guard)/(protected)/pedidos-esperados/CreatePedidoDialog.tsx | Crear | Dialog de creacion: seleccion de productos del catalogo, cantidades, fecha |
-| src/app/(system-guard)/(protected)/pedidos-esperados/ConfirmarPedidoDialog.tsx | Crear | Dialog de confirmacion: tabla de items con input de cantidad recibida por item |
-| src/app/(system-guard)/(protected)/pedidos-esperados/PostergarPedidoDialog.tsx | Crear | Dialog de postergacion: datepicker para nueva fecha y campo de motivo opcional |
-| src/components/nav/Sidebar.tsx (o equivalente) | Modificar | Agregar enlace a /pedidos-esperados en el menu de navegacion |
-| src/lib/pedidos-esperados.ts | Crear | Funciones de servidor reutilizables: checkAndUpdateVencidos, confirmarItems, crearMovimientosStock |
-| src/types/pedidos-esperados.ts | Crear | Tipos TypeScript compartidos entre frontend y API |
+| Archivo                                                                        | Accion    | Descripcion                                                                                                                                                        |
+| ------------------------------------------------------------------------------ | --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| prisma/schema.prisma                                                           | Modificar | Agregar modelos PedidoEsperado, PedidoEsperadoItem y enums EstadoPedidoEsperado, EstadoItemPedido. Agregar tipo PEDIDO_VENCIDO al enum TipoNotificacion si existe. |
+| prisma/migrations/YYYYMMDD_pedidos_programados/migration.sql                   | Crear     | Migracion generada por prisma migrate dev                                                                                                                          |
+| src/app/api/pedidos-esperados/route.ts                                         | Crear     | GET (lista por sucursal + lazy check de vencidos) y POST (crear pedido con items)                                                                                  |
+| src/app/api/pedidos-esperados/[id]/route.ts                                    | Crear     | GET (detalle del pedido con items) y PATCH (actualizar observaciones, cancelar)                                                                                    |
+| src/app/api/pedidos-esperados/[id]/confirmar/route.ts                          | Crear     | POST: recibe cantidades recibidas por item, ejecuta MovimientoStock, actualiza estados                                                                             |
+| src/app/api/pedidos-esperados/[id]/postergar/route.ts                          | Crear     | POST: actualiza fechaEsperada y estado, appends a observaciones, crea Notification                                                                                 |
+| src/app/api/pedidos-esperados/check-vencidos/route.ts                          | Crear     | GET: endpoint para cron, actualiza pedidos PROGRAMADOS vencidos y crea Notifications                                                                               |
+| src/app/(system-guard)/(protected)/pedidos-esperados/page.tsx                  | Crear     | Pagina principal de la seccion, lista de pedidos con filtros por estado                                                                                            |
+| src/app/(system-guard)/(protected)/pedidos-esperados/PedidosEsperadosView.tsx  | Crear     | Componente principal con tabla/tarjetas de pedidos y acciones                                                                                                      |
+| src/app/(system-guard)/(protected)/pedidos-esperados/CreatePedidoDialog.tsx    | Crear     | Dialog de creacion: seleccion de productos del catalogo, cantidades, fecha                                                                                         |
+| src/app/(system-guard)/(protected)/pedidos-esperados/ConfirmarPedidoDialog.tsx | Crear     | Dialog de confirmacion: tabla de items con input de cantidad recibida por item                                                                                     |
+| src/app/(system-guard)/(protected)/pedidos-esperados/PostergarPedidoDialog.tsx | Crear     | Dialog de postergacion: datepicker para nueva fecha y campo de motivo opcional                                                                                     |
+| src/components/nav/Sidebar.tsx (o equivalente)                                 | Modificar | Agregar enlace a /pedidos-esperados en el menu de navegacion                                                                                                       |
+| src/lib/pedidos-esperados.ts                                                   | Crear     | Funciones de servidor reutilizables: checkAndUpdateVencidos, confirmarItems, crearMovimientosStock                                                                 |
+| src/types/pedidos-esperados.ts                                                 | Crear     | Tipos TypeScript compartidos entre frontend y API                                                                                                                  |
 
 ## Interfaces / Contratos Sugeridos
 
@@ -171,10 +177,7 @@ export type EstadoPedidoEsperado =
   | "CANCELADO";
 
 export type EstadoItemPedido =
-  | "PENDIENTE"
-  | "CONFIRMADO"
-  | "PARCIAL"
-  | "CANCELADO";
+  "PENDIENTE" | "CONFIRMADO" | "PARCIAL" | "CANCELADO";
 
 export interface PedidoEsperadoItem {
   id: number;
@@ -239,6 +242,7 @@ export interface UpdatePedidoRequest {
 **POST /api/pedidos-esperados**
 
 Request:
+
 ```json
 {
   "sucursalId": 1,
@@ -252,6 +256,7 @@ Request:
 ```
 
 Response 201:
+
 ```json
 {
   "id": 7,
@@ -286,6 +291,7 @@ Response 201:
 **POST /api/pedidos-esperados/7/confirmar (confirmacion parcial)**
 
 Request:
+
 ```json
 {
   "items": [
@@ -296,6 +302,7 @@ Request:
 ```
 
 Response 200:
+
 ```json
 {
   "pedido": {
@@ -329,6 +336,7 @@ Response 200:
 **POST /api/pedidos-esperados/7/postergar**
 
 Request:
+
 ```json
 {
   "nuevaFecha": "2026-03-25T08:00:00.000Z",
@@ -337,6 +345,7 @@ Request:
 ```
 
 Response 200:
+
 ```json
 {
   "id": 7,
@@ -349,19 +358,19 @@ Response 200:
 
 ## Estrategia de Pruebas
 
-| Capa | Que Probar | Enfoque |
-|---|---|---|
-| API - POST /api/pedidos-esperados | Crear pedido con items validos; rechazar si sucursalId no pertenece al usuario; rechazar si items vacio | Jest + supertest o prueba de integracion con DB de test |
-| API - POST confirmar (total) | Todos los items con cantidadRecibida == cantidadEsperada → estado CONFIRMADO, MovimientoStock creado por cada item, StockSucursal incrementado | Prueba de integracion con transaccion revertida al final |
-| API - POST confirmar (parcial) | Al menos un item con cantidadRecibida < cantidadEsperada → estado PARCIAL en pedido, items en PARCIAL; solo se crean movimientos con cantidad > 0 | Prueba de integracion |
-| API - POST postergar | fechaEsperada actualizada, estado POSTERGADO, observaciones con append, Notification creada | Prueba de integracion |
-| API - check-vencidos | Pedidos PROGRAMADOS con fechaEsperada pasada pasan a VENCIDO y se crean Notifications; pedidos futuros no se tocan | Prueba unitaria con fechas mockeadas |
-| Logica de negocio - checkAndUpdateVencidos | Idem check-vencidos pero a nivel funcion pura (sin HTTP) | Jest unitario con Prisma mockeado |
-| Logica de negocio - confirmarItems | Validar que la transaccion es atomica: si falla la creacion de un MovimientoStock, ningun item se actualiza | Jest con mock de Prisma.$transaction |
-| UI - CreatePedidoDialog | Seleccion de productos filtra por catalogo de la sucursal; validacion de cantidad > 0; fecha futura requerida | Vitest + Testing Library |
-| UI - ConfirmarPedidoDialog | Campos pre-llenados con cantidadEsperada; cantidadRecibida no puede superar cantidadEsperada; submit deshabilitado si todos en 0 | Vitest + Testing Library |
-| UI - PedidosEsperadosView | Lista muestra estado visual correcto; badge de notificacion se actualiza al confirmar un pedido | Vitest + Testing Library con fetch mockeado |
-| E2E | Flujo completo: crear pedido → simular fecha vencida → confirmar parcialmente → postergar el resto | Playwright (opcional, si el proyecto ya tiene E2E configurado) |
+| Capa                                       | Que Probar                                                                                                                                        | Enfoque                                                        |
+| ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
+| API - POST /api/pedidos-esperados          | Crear pedido con items validos; rechazar si sucursalId no pertenece al usuario; rechazar si items vacio                                           | Jest + supertest o prueba de integracion con DB de test        |
+| API - POST confirmar (total)               | Todos los items con cantidadRecibida == cantidadEsperada → estado CONFIRMADO, MovimientoStock creado por cada item, StockSucursal incrementado    | Prueba de integracion con transaccion revertida al final       |
+| API - POST confirmar (parcial)             | Al menos un item con cantidadRecibida < cantidadEsperada → estado PARCIAL en pedido, items en PARCIAL; solo se crean movimientos con cantidad > 0 | Prueba de integracion                                          |
+| API - POST postergar                       | fechaEsperada actualizada, estado POSTERGADO, observaciones con append, Notification creada                                                       | Prueba de integracion                                          |
+| API - check-vencidos                       | Pedidos PROGRAMADOS con fechaEsperada pasada pasan a VENCIDO y se crean Notifications; pedidos futuros no se tocan                                | Prueba unitaria con fechas mockeadas                           |
+| Logica de negocio - checkAndUpdateVencidos | Idem check-vencidos pero a nivel funcion pura (sin HTTP)                                                                                          | Jest unitario con Prisma mockeado                              |
+| Logica de negocio - confirmarItems         | Validar que la transaccion es atomica: si falla la creacion de un MovimientoStock, ningun item se actualiza                                       | Jest con mock de Prisma.$transaction                           |
+| UI - CreatePedidoDialog                    | Seleccion de productos filtra por catalogo de la sucursal; validacion de cantidad > 0; fecha futura requerida                                     | Vitest + Testing Library                                       |
+| UI - ConfirmarPedidoDialog                 | Campos pre-llenados con cantidadEsperada; cantidadRecibida no puede superar cantidadEsperada; submit deshabilitado si todos en 0                  | Vitest + Testing Library                                       |
+| UI - PedidosEsperadosView                  | Lista muestra estado visual correcto; badge de notificacion se actualiza al confirmar un pedido                                                   | Vitest + Testing Library con fetch mockeado                    |
+| E2E                                        | Flujo completo: crear pedido → simular fecha vencida → confirmar parcialmente → postergar el resto                                                | Playwright (opcional, si el proyecto ya tiene E2E configurado) |
 
 ## Migracion / Despliegue y Rollback Seguro
 

@@ -25,7 +25,9 @@ type ResolvedSucursalContext = {
   source: "cookie" | "jwt" | "default";
 };
 
-function parseSucursalId(value: string | number | null | undefined): number | null {
+function parseSucursalId(
+  value: string | number | null | undefined,
+): number | null {
   if (typeof value === "number") {
     return Number.isInteger(value) && value >= 0 ? value : null;
   }
@@ -40,14 +42,22 @@ function parseSucursalId(value: string | number | null | undefined): number | nu
 }
 
 function normalizeAllowedSucursalIds(ids: number[]): number[] {
-  return Array.from(new Set(ids.filter((id) => Number.isInteger(id) && id > 0))).sort((a, b) => a - b);
+  return Array.from(
+    new Set(ids.filter((id) => Number.isInteger(id) && id > 0)),
+  ).sort((a, b) => a - b);
 }
 
-function canUseGlobalView(user: SucursalAuthUser, sucursalId: number | null): boolean {
+function canUseGlobalView(
+  user: SucursalAuthUser,
+  sucursalId: number | null,
+): boolean {
   return user.rol === "ADMIN" && sucursalId === 0;
 }
 
-export function canAccessSucursalId(auth: SucursalAuthContext, sucursalId: number): boolean {
+export function canAccessSucursalId(
+  auth: SucursalAuthContext,
+  sucursalId: number,
+): boolean {
   if (!Number.isInteger(sucursalId) || sucursalId < 0) return false;
   if (canUseGlobalView(auth.user ?? {}, sucursalId)) return true;
   return (auth.allowedSucursalIds ?? []).includes(sucursalId);
@@ -56,10 +66,14 @@ export function canAccessSucursalId(auth: SucursalAuthContext, sucursalId: numbe
 export function resolveEffectiveSucursalContext(
   input: ResolveEffectiveSucursalInput,
 ): ResolvedSucursalContext | null {
-  const allowedSucursalIds = normalizeAllowedSucursalIds(input.allowedSucursalIds);
+  const allowedSucursalIds = normalizeAllowedSucursalIds(
+    input.allowedSucursalIds,
+  );
   if (allowedSucursalIds.length === 0) return null;
 
-  const ignoredClientSucursalId = parseSucursalId(input.clientRequestedSucursalId);
+  const ignoredClientSucursalId = parseSucursalId(
+    input.clientRequestedSucursalId,
+  );
   const cookieSucursalId = parseSucursalId(input.cookieSucursalId);
   const jwtSucursalId = parseSucursalId(input.jwtSucursalId);
 
@@ -73,7 +87,10 @@ export function resolveEffectiveSucursalContext(
     };
   }
 
-  if (cookieSucursalId !== null && allowedSucursalIds.includes(cookieSucursalId)) {
+  if (
+    cookieSucursalId !== null &&
+    allowedSucursalIds.includes(cookieSucursalId)
+  ) {
     return {
       activeSucursalId: cookieSucursalId,
       allowedSucursalIds,
@@ -108,7 +125,9 @@ export function resolveRequestedSucursalId(
 ): number {
   const parsedRequestedSucursalId = parseSucursalId(requestedSucursalId);
   if (parsedRequestedSucursalId === null) {
-    return typeof auth.activeSucursalId === "number" ? auth.activeSucursalId : 0;
+    return typeof auth.activeSucursalId === "number"
+      ? auth.activeSucursalId
+      : 0;
   }
 
   if (canAccessSucursalId(auth, parsedRequestedSucursalId)) {
@@ -122,7 +141,9 @@ export function isGlobalSucursalView(auth: SucursalAuthContext): boolean {
   return canUseGlobalView(auth?.user ?? {}, auth?.activeSucursalId ?? null);
 }
 
-export function buildSucursalWhere(auth: SucursalAuthContext): { sucursalId?: number } {
+export function buildSucursalWhere(auth: SucursalAuthContext): {
+  sucursalId?: number;
+} {
   if (isGlobalSucursalView(auth)) return {};
   const sucursalId = auth.activeSucursalId;
   return typeof sucursalId === "number" ? { sucursalId } : {};
@@ -130,7 +151,7 @@ export function buildSucursalWhere(auth: SucursalAuthContext): { sucursalId?: nu
 
 export function canAccessSucursalResource(
   auth: SucursalAuthContext,
-  resourceSucursalId: number | null | undefined
+  resourceSucursalId: number | null | undefined,
 ): boolean {
   if (isGlobalSucursalView(auth)) return true;
   return resourceSucursalId === auth?.activeSucursalId;

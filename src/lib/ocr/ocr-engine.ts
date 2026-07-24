@@ -31,7 +31,9 @@ const IMAGE_MIME_TYPES = [
 // ─── Helpers de tipo MIME ────────────────────────────────────────────
 
 export function esImagenSoportada(mimeType: string): boolean {
-  return IMAGE_MIME_TYPES.includes(mimeType as typeof IMAGE_MIME_TYPES[number]);
+  return IMAGE_MIME_TYPES.includes(
+    mimeType as (typeof IMAGE_MIME_TYPES)[number],
+  );
 }
 
 export function esPdf(mimeType: string): boolean {
@@ -58,11 +60,7 @@ export async function preprocesarImagen(buffer: Buffer): Promise<Buffer> {
     pipeline = pipeline.resize({ width: ANCHO_MINIMO_OCR, kernel: "lanczos3" });
   }
 
-  return pipeline
-    .normalize()
-    .sharpen()
-    .toFormat("png")
-    .toBuffer();
+  return pipeline.normalize().sharpen().toFormat("png").toBuffer();
 }
 
 // Ancho máximo para el fallback de visión (OCR + IA, ver invoice-ai-parser.ts):
@@ -96,9 +94,15 @@ export async function prepararImagenParaVision(
   let pipeline = sharp(buffer).rotate();
 
   if (permitirUpscale && anchoActual > 0 && anchoActual < ANCHO_MINIMO_VISION) {
-    pipeline = pipeline.resize({ width: ANCHO_MINIMO_VISION, kernel: "lanczos3" });
+    pipeline = pipeline.resize({
+      width: ANCHO_MINIMO_VISION,
+      kernel: "lanczos3",
+    });
   } else if (anchoActual > ANCHO_MAXIMO_VISION) {
-    pipeline = pipeline.resize({ width: ANCHO_MAXIMO_VISION, kernel: "lanczos3" });
+    pipeline = pipeline.resize({
+      width: ANCHO_MAXIMO_VISION,
+      kernel: "lanczos3",
+    });
   }
 
   // PNG (sin pérdida) en vez de re-comprimir como JPEG: la imagen ya viene
@@ -119,9 +123,15 @@ export async function prepararImagenParaVision(
 // bajar el techo acota el costo máximo por documento sin tocar la resolución
 // por página (no sacrifica precisión, solo cuántas páginas entran en una
 // factura excepcionalmente larga). Ver optimizacion-tokens-y-limite-costo.md.
-export async function rasterizarPdf(buffer: Buffer, maxPaginas = 3): Promise<Buffer> {
+export async function rasterizarPdf(
+  buffer: Buffer,
+  maxPaginas = 3,
+): Promise<Buffer> {
   console.log("[OCR] Rasterizando PDF con Chromium...");
-  const tempPath = path.join(os.tmpdir(), `ocr-factura-${crypto.randomUUID()}.pdf`);
+  const tempPath = path.join(
+    os.tmpdir(),
+    `ocr-factura-${crypto.randomUUID()}.pdf`,
+  );
   await writeFile(tempPath, buffer);
 
   try {
@@ -133,7 +143,10 @@ export async function rasterizarPdf(buffer: Buffer, maxPaginas = 3): Promise<Buf
       try {
         const page = await browser.newPage();
         const altoMaximo = 1600 * maxPaginas;
-        await page.setViewport({ width: 1240, height: Math.min(altoMaximo, 8000) });
+        await page.setViewport({
+          width: 1240,
+          height: Math.min(altoMaximo, 8000),
+        });
         // #toolbar=0 oculta la barra de herramientas del visor de PDF nativo de Chromium,
         // que de otro modo queda "impresa" en la captura y ensucia el OCR.
         await page.goto(`file://${tempPath.replace(/\\/g, "/")}#toolbar=0`, {
@@ -143,7 +156,10 @@ export async function rasterizarPdf(buffer: Buffer, maxPaginas = 3): Promise<Buf
         // Da tiempo al visor de PDF embebido de Chromium a terminar de renderizar.
         await new Promise((resolve) => setTimeout(resolve, 800));
 
-        const screenshot = await page.screenshot({ type: "png", fullPage: true });
+        const screenshot = await page.screenshot({
+          type: "png",
+          fullPage: true,
+        });
         return Buffer.from(screenshot);
       } finally {
         await browser.close().catch(() => {});
@@ -172,7 +188,10 @@ export async function extraerTextoPdf(buffer: Buffer): Promise<string | null> {
     }
     return null;
   } catch (error) {
-    console.warn("[OCR] pdf-parse falló, se usará Chromium como fallback:", error);
+    console.warn(
+      "[OCR] pdf-parse falló, se usará Chromium como fallback:",
+      error,
+    );
     return null;
   }
 }

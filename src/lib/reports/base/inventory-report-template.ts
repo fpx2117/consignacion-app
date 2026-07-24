@@ -1,6 +1,12 @@
 import { reportThemeCss } from "@/lib/reports/report-theme";
 import { getReportHeadAssets } from "@/lib/reports/tailwind-inline";
-import { escapeHtml, escapeAttr, brandInitials, formatDateAR, resolveReportTimezone } from "@/lib/reports/template-helpers";
+import {
+  escapeHtml,
+  escapeAttr,
+  brandInitials,
+  formatDateAR,
+  resolveReportTimezone,
+} from "@/lib/reports/template-helpers";
 import type { BrandingDTO } from "@/lib/reports/types";
 import { generateBarcodeDataUrl } from "@/lib/reports/barcode-helper";
 
@@ -55,7 +61,8 @@ async function fetchImageAsBase64(url: string): Promise<string> {
     const localMatch = url.match(/^\/api\/files\/([^/?#]+)$/);
     if (localMatch) {
       const { readFile } = await import("fs/promises");
-      const { resolveUploadFilesystemCandidates } = await import("@/lib/uploads/uploads");
+      const { resolveUploadFilesystemCandidates } =
+        await import("@/lib/uploads/uploads");
       const filename = localMatch[1];
       for (const filePath of resolveUploadFilesystemCandidates(filename)) {
         try {
@@ -99,11 +106,13 @@ export async function buildInventoryHtml(
   let stockCriticoGlobal = 0;
   let agotadosGlobal = 0;
 
-  const groupsProcesados = groups.map(group => {
+  const groupsProcesados = groups.map((group) => {
     let groupTotalStock = 0;
     let groupValorVenta = 0;
 
-    const itemsProcesados = (group.productos as ProductoInventario[] || []).map((p) => {
+    const itemsProcesados = (
+      (group.productos as ProductoInventario[]) || []
+    ).map((p) => {
       const stock = Number(p.stockDisponibleUnits) || 0;
       const precioVenta = Number(p.precioVenta) || 0;
       const precioCosto = Number(p.precioCosto) || 0;
@@ -132,10 +141,12 @@ export async function buildInventoryHtml(
     valorVentaTotalGlobal += groupValorVenta;
 
     // Separar en 3 buckets para renderizado por sección
-    type ProcesadoItem = typeof itemsProcesados[number];
-    const normales: ProcesadoItem[]  = itemsProcesados.filter(p => !p.isOut && !p.isLow);
-    const bajos: ProcesadoItem[]     = itemsProcesados.filter(p => p.isLow);
-    const agotados: ProcesadoItem[]  = itemsProcesados.filter(p => p.isOut);
+    type ProcesadoItem = (typeof itemsProcesados)[number];
+    const normales: ProcesadoItem[] = itemsProcesados.filter(
+      (p) => !p.isOut && !p.isLow,
+    );
+    const bajos: ProcesadoItem[] = itemsProcesados.filter((p) => p.isLow);
+    const agotados: ProcesadoItem[] = itemsProcesados.filter((p) => p.isOut);
 
     return {
       ...group,
@@ -148,7 +159,8 @@ export async function buildInventoryHtml(
     };
   });
 
-  const margenEstimadoTotalGlobal = valorVentaTotalGlobal - valorCostoTotalGlobal;
+  const margenEstimadoTotalGlobal =
+    valorVentaTotalGlobal - valorCostoTotalGlobal;
 
   // --- Precarga de barcodes en paralelo ---
   const barcodeMap = new Map<string, string>();
@@ -160,9 +172,11 @@ export async function buildInventoryHtml(
         if (!barcodeMap.has(code)) {
           barcodeMap.set(code, ""); // reservar slot
           barcodePromises.push(
-            generateBarcodeDataUrl(code, { height: 6, scale: 1 }).then((url) => {
-              barcodeMap.set(code, url);
-            })
+            generateBarcodeDataUrl(code, { height: 6, scale: 1 }).then(
+              (url) => {
+                barcodeMap.set(code, url);
+              },
+            ),
           );
         }
       }
@@ -180,7 +194,7 @@ export async function buildInventoryHtml(
         imagePromises.push(
           fetchImageAsBase64(imgUrl).then((dataUrl) => {
             imageMap.set(imgUrl, dataUrl);
-          })
+          }),
         );
       }
     }
@@ -216,12 +230,13 @@ export async function buildInventoryHtml(
         <div class="flex justify-between items-start border-b-2 border-slate-100 pb-6 mb-8">
           <div class="flex items-center gap-4">
 
-            ${branding.logoBase64
-      ? `<img src="${escapeAttr(branding.logoBase64)}" class="w-12 h-12 rounded-xl object-contain bg-white border border-slate-100 shadow-lg" />`
-      : `<div class="w-12 h-12 bg-slate-900 text-white flex items-center justify-center rounded-xl font-black text-xl shadow-lg">${escapeHtml(
-        badge
-      )}</div>`
-    }
+            ${
+              branding.logoBase64
+                ? `<img src="${escapeAttr(branding.logoBase64)}" class="w-12 h-12 rounded-xl object-contain bg-white border border-slate-100 shadow-lg" />`
+                : `<div class="w-12 h-12 bg-slate-900 text-white flex items-center justify-center rounded-xl font-black text-xl shadow-lg">${escapeHtml(
+                    badge,
+                  )}</div>`
+            }
 
             <div>
               <h1 class="text-xl font-black tracking-tight text-slate-900 uppercase">${escapeHtml(brandName)}</h1>
@@ -233,16 +248,19 @@ export async function buildInventoryHtml(
           <div class="text-right">
             <h2 class="text-[9px] font-black text-slate-400 uppercase tracking-[0.3em] mb-1">Estado General de Existencias</h2>
             <p class="text-xs font-bold text-slate-600 uppercase">${formatDateAR(new Date(), true, tz)}</p>
-            ${!conValuacion
-      ? `<p style="margin-top:4px;font-size:8px;font-weight:900;color:#64748b;background:#f1f5f9;padding:2px 8px;border-radius:6px;display:inline-block;text-transform:uppercase;letter-spacing:.08em;">Solo stock</p>`
-      : !conCostos
-        ? `<p style="margin-top:4px;font-size:8px;font-weight:900;color:#64748b;background:#f1f5f9;padding:2px 8px;border-radius:6px;display:inline-block;text-transform:uppercase;letter-spacing:.08em;">Sin costos</p>`
-        : ""
-    }
+            ${
+              !conValuacion
+                ? `<p style="margin-top:4px;font-size:8px;font-weight:900;color:#64748b;background:#f1f5f9;padding:2px 8px;border-radius:6px;display:inline-block;text-transform:uppercase;letter-spacing:.08em;">Solo stock</p>`
+                : !conCostos
+                  ? `<p style="margin-top:4px;font-size:8px;font-weight:900;color:#64748b;background:#f1f5f9;padding:2px 8px;border-radius:6px;display:inline-block;text-transform:uppercase;letter-spacing:.08em;">Sin costos</p>`
+                  : ""
+            }
           </div>
         </div>
 
-        ${conValuacion ? `
+        ${
+          conValuacion
+            ? `
         <div class="grid grid-cols-${conCostos ? "3" : "2"} gap-4 mb-8">
           <div class="bg-slate-50 rounded-2xl p-5 border border-slate-100">
             <h3 class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Total Productos</h3>
@@ -256,15 +274,21 @@ export async function buildInventoryHtml(
             <p class="text-[9px] uppercase font-bold text-white/40 mt-1 relative z-10">Stock actual a PVP</p>
           </div>
 
-          ${conCostos ? `
+          ${
+            conCostos
+              ? `
           <div class="bg-emerald-600 rounded-2xl p-5 text-white shadow-xl relative overflow-hidden">
             <h3 class="text-[9px] font-black text-white/60 uppercase tracking-widest mb-1 relative z-10">Margen Potencial</h3>
             <p class="text-2xl font-black money tracking-tighter relative z-10">${formatMoney(margenEstimadoTotalGlobal)}</p>
             <p class="text-[9px] uppercase font-bold text-white/60 mt-1 relative z-10">Utilidad bruta estimada</p>
           </div>
-          ` : ""}
+          `
+              : ""
+          }
         </div>
-        ` : ""}
+        `
+            : ""
+        }
 
         <div class="flex gap-3 mb-8 flex-wrap">
           <div class="px-3 py-1.5 rounded-lg border bg-emerald-50 border-emerald-200 text-emerald-700 text-[10px] font-black uppercase">
@@ -276,48 +300,90 @@ export async function buildInventoryHtml(
           <div class="px-3 py-1.5 rounded-lg border bg-red-50 border-red-200 text-red-700 text-[10px] font-black uppercase">
             ✕ Agotados: ${agotadosGlobal}
           </div>
-          ${!conValuacion ? `
+          ${
+            !conValuacion
+              ? `
           <div class="px-3 py-1.5 rounded-lg border bg-slate-100 border-slate-200 text-slate-500 text-[10px] font-black uppercase">
             ${totalStockUnitsGlobal} Unidades · ${totalItemsGlobal} Productos
           </div>
-          ` : ""}
+          `
+              : ""
+          }
         </div>
 
         <div class="flex-grow">
-          ${groupsProcesados.map(group => {
+          ${groupsProcesados
+            .map((group) => {
+              // Helper unificado — renderiza filas para las 3 secciones
+              type ProcItem = (typeof group.normales)[number];
+              const renderTabla = (items: ProcItem[], esAgotado = false) =>
+                items
+                  .map((p) => {
+                    const hasExpiry = p.fechaVencimiento != null;
+                    const expiryDate = hasExpiry
+                      ? new Date(p.fechaVencimiento as string | Date)
+                      : null;
+                    const isExpired = expiryDate && expiryDate < new Date();
+                    const codigoBarra = p.codigoBarra
+                      ? String(p.codigoBarra)
+                      : null;
+                    const barcodeUrl = codigoBarra
+                      ? barcodeMap.get(codigoBarra)
+                      : null;
+                    const barcodeCell = codigoBarra
+                      ? barcodeUrl
+                        ? `<img src="${barcodeUrl}" alt="${escapeHtml(codigoBarra)}" style="display:block;max-height:20px;max-width:120px;${esAgotado ? "opacity:.55;" : ""}" />`
+                        : `<span style="font-size:8px;color:#94a3b8;font-family:monospace;">${escapeHtml(codigoBarra)}</span>`
+                      : "";
 
-    // Helper unificado — renderiza filas para las 3 secciones
-    type ProcItem = typeof group.normales[number];
-    const renderTabla = (items: ProcItem[], esAgotado = false) => items.map((p) => {
-      const hasExpiry = p.fechaVencimiento != null;
-      const expiryDate = hasExpiry ? new Date(p.fechaVencimiento as string | Date) : null;
-      const isExpired = expiryDate && expiryDate < new Date();
-      const codigoBarra = p.codigoBarra ? String(p.codigoBarra) : null;
-      const barcodeUrl = codigoBarra ? barcodeMap.get(codigoBarra) : null;
-      const barcodeCell = codigoBarra
-        ? barcodeUrl
-          ? `<img src="${barcodeUrl}" alt="${escapeHtml(codigoBarra)}" style="display:block;max-height:20px;max-width:120px;${esAgotado ? "opacity:.55;" : ""}" />`
-          : `<span style="font-size:8px;color:#94a3b8;font-family:monospace;">${escapeHtml(codigoBarra)}</span>`
-        : "";
-
-      const imgUrl = p.imagenUrl ? String(p.imagenUrl) : null;
-      const imgDataUrl = imgUrl ? (imageMap.get(imgUrl) || null) : null;
-      const imgCell = imgDataUrl
-        ? `<img src="${escapeAttr(imgDataUrl)}" alt="${escapeHtml(String(p.nombre ?? ""))}" style="width:36px;height:36px;object-fit:cover;border-radius:8px;flex-shrink:0;${esAgotado ? "opacity:.45;filter:grayscale(1);" : ""}" />`
-        : `<div style="width:36px;height:36px;border-radius:8px;background:#f1f5f9;flex-shrink:0;display:flex;align-items:center;justify-content:center;">
+                    const imgUrl = p.imagenUrl ? String(p.imagenUrl) : null;
+                    const imgDataUrl = imgUrl
+                      ? imageMap.get(imgUrl) || null
+                      : null;
+                    const imgCell = imgDataUrl
+                      ? `<img src="${escapeAttr(imgDataUrl)}" alt="${escapeHtml(String(p.nombre ?? ""))}" style="width:36px;height:36px;object-fit:cover;border-radius:8px;flex-shrink:0;${esAgotado ? "opacity:.45;filter:grayscale(1);" : ""}" />`
+                      : `<div style="width:36px;height:36px;border-radius:8px;background:#f1f5f9;flex-shrink:0;display:flex;align-items:center;justify-content:center;">
             <span style="font-size:14px;opacity:.3;">🧴</span>
            </div>`;
 
-      // Estilos por estado
-      const rowBg    = esAgotado ? "#fef2f2"  : p.isLow ? "#fff7ed"  : "#f8fafc";
-      const borderL  = esAgotado ? "3px solid #e11d48" : p.isLow ? "3px solid #d97706" : "1px solid #f1f5f9";
-      const borderY  = esAgotado ? "1px solid #fecaca" : p.isLow ? "1px solid #fed7aa"  : "1px solid #f1f5f9";
-      const borderR  = esAgotado ? "1px solid #fecaca" : p.isLow ? "1px solid #fed7aa"  : "1px solid #f1f5f9";
-      const textNombre = esAgotado ? "#9f1239" : p.isLow ? "#92400e" : "#1e293b";
-      const stockBadgeBg = esAgotado ? "#fee2e2" : p.isLow ? "#ffedd5" : "#d1fae5";
-      const stockBadgeColor = esAgotado ? "#e11d48" : p.isLow ? "#d97706" : "#059669";
+                    // Estilos por estado
+                    const rowBg = esAgotado
+                      ? "#fef2f2"
+                      : p.isLow
+                        ? "#fff7ed"
+                        : "#f8fafc";
+                    const borderL = esAgotado
+                      ? "3px solid #e11d48"
+                      : p.isLow
+                        ? "3px solid #d97706"
+                        : "1px solid #f1f5f9";
+                    const borderY = esAgotado
+                      ? "1px solid #fecaca"
+                      : p.isLow
+                        ? "1px solid #fed7aa"
+                        : "1px solid #f1f5f9";
+                    const borderR = esAgotado
+                      ? "1px solid #fecaca"
+                      : p.isLow
+                        ? "1px solid #fed7aa"
+                        : "1px solid #f1f5f9";
+                    const textNombre = esAgotado
+                      ? "#9f1239"
+                      : p.isLow
+                        ? "#92400e"
+                        : "#1e293b";
+                    const stockBadgeBg = esAgotado
+                      ? "#fee2e2"
+                      : p.isLow
+                        ? "#ffedd5"
+                        : "#d1fae5";
+                    const stockBadgeColor = esAgotado
+                      ? "#e11d48"
+                      : p.isLow
+                        ? "#d97706"
+                        : "#059669";
 
-      return `
+                    return `
         <tr style="background:${rowBg};">
           <td style="padding:8px 0 8px 12px;border-top:${borderY};border-bottom:${borderY};border-left:${borderL};border-radius:10px 0 0 10px;">
             <div style="display:flex;align-items:center;gap:8px;">
@@ -329,13 +395,14 @@ export async function buildInventoryHtml(
             </div>
           </td>
           <td style="padding:8px 0;text-align:center;border-top:${borderY};border-bottom:${borderY};">
-            ${hasExpiry
-          ? `<div style="display:inline-flex;flex-direction:column;align-items:center;gap:2px;">
+            ${
+              hasExpiry
+                ? `<div style="display:inline-flex;flex-direction:column;align-items:center;gap:2px;">
                 <span style="font-weight:700;font-size:10px;color:${isExpired ? "#dc2626" : "#475569"};">${formatDateAR(p.fechaVencimiento as string | Date, false, tz)}</span>
                 ${isExpired ? '<span style="font-size:7px;color:#ef4444;font-weight:900;text-transform:uppercase;letter-spacing:.05em;">Vencido</span>' : ""}
               </div>`
-          : '<span style="font-size:9px;color:#cbd5e1;font-style:italic;">No vence</span>'
-        }
+                : '<span style="font-size:9px;color:#cbd5e1;font-style:italic;">No vence</span>'
+            }
           </td>
           <td style="padding:8px 0;text-align:center;border-top:${borderY};border-bottom:${borderY};">
             <span style="padding:3px 10px;border-radius:6px;font-weight:900;font-size:11px;background:${stockBadgeBg};color:${stockBadgeColor};">
@@ -344,13 +411,18 @@ export async function buildInventoryHtml(
           </td>
           ${conCostos ? `<td style="padding:8px 0;text-align:right;border-top:${borderY};border-bottom:${borderY};color:#94a3b8;font-size:11px;">${formatMoney(p.precioCosto)}</td>` : ""}
           <td style="padding:8px ${conValuacion ? "0" : "20px"} 8px 0;text-align:right;border-top:${borderY};border-bottom:${borderY};${!conValuacion ? `border-right:${borderR};border-radius:0 10px 10px 0;` : ""}font-weight:700;color:#334155;font-size:11px;">${formatMoney(p.precioVenta)}</td>
-          ${conValuacion ? `<td style="padding:8px 20px 8px 0;text-align:right;border-top:${borderY};border-bottom:${borderY};border-right:${borderR};border-radius:0 10px 10px 0;font-weight:900;color:${esAgotado ? "#94a3b8" : "#0f172a"};font-size:11px;">
+          ${
+            conValuacion
+              ? `<td style="padding:8px 20px 8px 0;text-align:right;border-top:${borderY};border-bottom:${borderY};border-right:${borderR};border-radius:0 10px 10px 0;font-weight:900;color:${esAgotado ? "#94a3b8" : "#0f172a"};font-size:11px;">
             ${esAgotado ? '<span style="color:#cbd5e1;font-style:italic;font-weight:400;font-size:9px;">—</span>' : formatMoney(p.subtotalVenta)}
-          </td>` : ""}
+          </td>`
+              : ""
+          }
         </tr>`;
-    }).join("");
+                  })
+                  .join("");
 
-    const tableHead = `
+              const tableHead = `
       <table class="w-full text-left mb-3">
         <thead>
           <tr style="font-size:8px;color:#94a3b8;font-weight:900;text-transform:uppercase;letter-spacing:.1em;">
@@ -364,9 +436,9 @@ export async function buildInventoryHtml(
         </thead>
         <tbody>`;
 
-    const tableClose = `</tbody></table>`;
+              const tableClose = `</tbody></table>`;
 
-    return `
+              return `
       <div class="mb-12 last:mb-0">
 
         <!-- Header de Sucursal -->
@@ -380,7 +452,9 @@ export async function buildInventoryHtml(
         </div>
 
         <!-- SECCIÓN 1: EN STOCK -->
-        ${group.normales.length > 0 ? `
+        ${
+          group.normales.length > 0
+            ? `
           <div class="mb-7">
             <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
               <div style="width:10px;height:10px;border-radius:50%;background:#059669;flex-shrink:0;"></div>
@@ -393,10 +467,14 @@ export async function buildInventoryHtml(
             </div>
             ${tableHead}${renderTabla(group.normales)}${tableClose}
           </div>
-        ` : ""}
+        `
+            : ""
+        }
 
         <!-- SECCIÓN 2: STOCK BAJO -->
-        ${group.bajos.length > 0 ? `
+        ${
+          group.bajos.length > 0
+            ? `
           <div class="mb-7">
             <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;padding:8px 12px;background:#fff7ed;border-radius:10px;border:1px solid #fed7aa;">
               <div style="width:10px;height:10px;border-radius:50%;background:#d97706;flex-shrink:0;"></div>
@@ -409,10 +487,14 @@ export async function buildInventoryHtml(
             </div>
             ${tableHead}${renderTabla(group.bajos)}${tableClose}
           </div>
-        ` : ""}
+        `
+            : ""
+        }
 
         <!-- SECCIÓN 3: AGOTADOS -->
-        ${group.agotados.length > 0 ? `
+        ${
+          group.agotados.length > 0
+            ? `
           <div class="mb-7">
             <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;padding:8px 12px;background:#fef2f2;border-radius:10px;border:1px solid #fecaca;">
               <div style="width:10px;height:10px;border-radius:50%;background:#e11d48;flex-shrink:0;"></div>
@@ -425,22 +507,26 @@ export async function buildInventoryHtml(
             </div>
             ${tableHead}${renderTabla(group.agotados, true)}${tableClose}
           </div>
-        ` : ""}
+        `
+            : ""
+        }
 
       </div>`;
-  }).join("")}
+            })
+            .join("")}
         </div>
 
-        ${footerText
-      ? `
+        ${
+          footerText
+            ? `
           <div class="mt-auto border-t border-slate-100 pt-6">
             <p class="text-[10px] font-semibold text-slate-400">${footerText}</p>
           </div>
         `
-      : `
+            : `
           <div class="mt-auto border-t border-slate-100 pt-6"></div>
         `
-    }
+        }
 
       </body>
     </html>

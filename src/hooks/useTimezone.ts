@@ -4,11 +4,19 @@ import * as React from "react";
 import { apiService } from "@/lib/apiService";
 import { TECHNICAL_FALLBACK_TZ } from "@/lib/timezone/timezone-constants";
 import type { TimezoneSource, Usuario } from "@/lib/types";
-import { formatDate, formatDateTime, formatDateWithOptions } from "@/lib/date-format/utils-format";
+import {
+  formatDate,
+  formatDateTime,
+  formatDateWithOptions,
+} from "@/lib/date-format/utils-format";
 
 type TimezoneSession = Pick<
   Usuario,
-  "rol" | "zonaHoraria" | "zonaHorariaSucursal" | "zonaHorariaResuelta" | "timezoneSource"
+  | "rol"
+  | "zonaHoraria"
+  | "zonaHorariaSucursal"
+  | "zonaHorariaResuelta"
+  | "timezoneSource"
 >;
 
 export const DEFAULT_TIMEZONE_SESSION: TimezoneSession = {
@@ -33,7 +41,9 @@ export function createTimezoneSessionStore(): TimezoneSessionStore {
 
 const sessionStore = createTimezoneSessionStore();
 
-function normalizeTimezoneSession(session: Partial<TimezoneSession>): TimezoneSession {
+function normalizeTimezoneSession(
+  session: Partial<TimezoneSession>,
+): TimezoneSession {
   return {
     rol: session.rol ?? "EMPLEADO",
     zonaHoraria: session.zonaHoraria ?? null,
@@ -70,7 +80,11 @@ export async function fetchTimezoneSessionWithApi(
 }
 
 async function fetchTimezoneSession(force = false): Promise<TimezoneSession> {
-  return fetchTimezoneSessionWithApi(() => apiService.me(), sessionStore, force);
+  return fetchTimezoneSessionWithApi(
+    () => apiService.me(),
+    sessionStore,
+    force,
+  );
 }
 
 export function resetTimezoneSessionCache() {
@@ -79,7 +93,9 @@ export function resetTimezoneSessionCache() {
 }
 
 export function useTimezone() {
-  const [session, setSession] = React.useState<TimezoneSession>(sessionStore.cachedSession ?? DEFAULT_TIMEZONE_SESSION);
+  const [session, setSession] = React.useState<TimezoneSession>(
+    sessionStore.cachedSession ?? DEFAULT_TIMEZONE_SESSION,
+  );
   const [isLoading, setIsLoading] = React.useState(!sessionStore.cachedSession);
 
   const refresh = React.useCallback(async () => {
@@ -148,8 +164,14 @@ export function useTimezone() {
     resolvedTimezone: tz,
     isLoading,
     refresh,
-    formatDate: React.useCallback((value: string | Date | null | undefined) => formatDate(value, tz), [tz]),
-    formatDateTime: React.useCallback((value: string | Date | null | undefined) => formatDateTime(value, tz), [tz]),
+    formatDate: React.useCallback(
+      (value: string | Date | null | undefined) => formatDate(value, tz),
+      [tz],
+    ),
+    formatDateTime: React.useCallback(
+      (value: string | Date | null | undefined) => formatDateTime(value, tz),
+      [tz],
+    ),
     formatDateOnly,
     formatWithOptions,
   };

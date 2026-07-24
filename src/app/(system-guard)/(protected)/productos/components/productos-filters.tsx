@@ -9,11 +9,14 @@ import {
   SelectContent,
   SelectItem,
   SelectTrigger,
-  SelectValue
+  SelectValue,
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { Separator } from "@/components/ui/separator";
-import { getCategoryColorByKey, getCategoryColorByName } from "@/lib/category-colors";
+import {
+  getCategoryColorByKey,
+  getCategoryColorByName,
+} from "@/lib/category-colors";
 import { apiService } from "@/lib/apiService";
 
 import type { Categoria } from "@/lib/types";
@@ -33,21 +36,28 @@ interface FiltersProps {
 }
 
 export function ProductosFilters({
-  query, setQuery,
-  stockFilter, setStockFilter,
-  categoryFilter, setCategoryFilter,
-  subCategoryFilter, setSubCategoryFilter, // Destructured new props
-  expiryFilter, setExpiryFilter,
-  categories
+  query,
+  setQuery,
+  stockFilter,
+  setStockFilter,
+  categoryFilter,
+  setCategoryFilter,
+  subCategoryFilter,
+  setSubCategoryFilter, // Destructured new props
+  expiryFilter,
+  setExpiryFilter,
+  categories,
 }: FiltersProps) {
-
   const [subcategories, setSubcategories] = React.useState<Categoria[]>([]);
 
   React.useEffect(() => {
     if (categoryFilter && categoryFilter !== "all") {
-      const selectedCategory = categories.find(cat => cat.nombre === categoryFilter);
+      const selectedCategory = categories.find(
+        (cat) => cat.nombre === categoryFilter,
+      );
       if (selectedCategory) {
-        apiService.getSubcategorias(selectedCategory.id)
+        apiService
+          .getSubcategorias(selectedCategory.id)
           .then(setSubcategories)
           .catch(() => setSubcategories([]));
       } else {
@@ -59,12 +69,16 @@ export function ProductosFilters({
     }
   }, [categoryFilter, categories, setSubCategoryFilter]);
 
-  const hasActiveFilters = stockFilter !== "all" || categoryFilter !== "all" || subCategoryFilter !== "all" || expiryFilter !== "all" || query !== "";
+  const hasActiveFilters =
+    stockFilter !== "all" ||
+    categoryFilter !== "all" ||
+    subCategoryFilter !== "all" ||
+    expiryFilter !== "all" ||
+    query !== "";
 
   return (
     <div className="p-4 space-y-4">
       <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between">
-
         <div className="relative w-full md:max-w-md">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/50" />
           <Input
@@ -100,10 +114,13 @@ export function ProductosFilters({
 
             <Separator orientation="vertical" className="h-5" />
 
-            <Select value={categoryFilter} onValueChange={(value) => {
-              setCategoryFilter(value);
-              setSubCategoryFilter("all"); // Reset subcategory when category changes
-            }}>
+            <Select
+              value={categoryFilter}
+              onValueChange={(value) => {
+                setCategoryFilter(value);
+                setSubCategoryFilter("all"); // Reset subcategory when category changes
+              }}
+            >
               <SelectTrigger className="h-9 border-none bg-transparent gap-2 px-3 text-xs font-medium focus:ring-0 w-[150px]">
                 <span className="text-muted-foreground">Categoría:</span>
                 <SelectValue placeholder="Todas" />
@@ -111,11 +128,18 @@ export function ProductosFilters({
               <SelectContent>
                 <SelectItem value="all">Todas</SelectItem>
                 {categories.map((cat) => {
-                  const color = cat.color ? getCategoryColorByKey(cat.color) : getCategoryColorByName(cat.nombre);
+                  const color = cat.color
+                    ? getCategoryColorByKey(cat.color)
+                    : getCategoryColorByName(cat.nombre);
                   return (
                     <SelectItem key={cat.id} value={cat.nombre}>
                       <span className="flex items-center gap-2">
-                        <span className={cn("h-2 w-2 rounded-full shrink-0", color.dot)} />
+                        <span
+                          className={cn(
+                            "h-2 w-2 rounded-full shrink-0",
+                            color.dot,
+                          )}
+                        />
                         {cat.nombre}
                       </span>
                     </SelectItem>
@@ -128,7 +152,10 @@ export function ProductosFilters({
             {categoryFilter !== "all" && subcategories.length > 0 && (
               <>
                 <Separator orientation="vertical" className="h-5" />
-                <Select value={subCategoryFilter} onValueChange={setSubCategoryFilter}>
+                <Select
+                  value={subCategoryFilter}
+                  onValueChange={setSubCategoryFilter}
+                >
                   <SelectTrigger className="h-9 border-none bg-transparent gap-2 px-3 text-xs font-medium focus:ring-0 w-[150px]">
                     <span className="text-muted-foreground">Subcategoría:</span>
                     <SelectValue placeholder="Todas" />

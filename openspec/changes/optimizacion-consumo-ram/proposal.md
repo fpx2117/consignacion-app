@@ -4,15 +4,15 @@
 
 ### Datos de Railway (línea base, reportados por el usuario)
 
-| Métrica | Valor |
-|---|---|
-| Promedio (baseline) | ~1.1 GB |
-| Mínimo | 0.49 GB |
-| Rango normal | 0.5 – 1.5 GB |
-| Pico máximo registrado | 3.2 GB (durante procesamiento de OCR + IA) |
-| Segundo pico | ~2.9 GB (procesamiento de imágenes) |
-| Tercer pico | ~2.8 GB (múltiples requests simultáneos) |
-| Distribución 24h | 35% del tiempo en 0.5-0.7GB, 50% en 0.7-1.5GB, 10% en 1.5-2.5GB, 5% en picos 2.5-3.2GB |
+| Métrica                | Valor                                                                                  |
+| ---------------------- | -------------------------------------------------------------------------------------- |
+| Promedio (baseline)    | ~1.1 GB                                                                                |
+| Mínimo                 | 0.49 GB                                                                                |
+| Rango normal           | 0.5 – 1.5 GB                                                                           |
+| Pico máximo registrado | 3.2 GB (durante procesamiento de OCR + IA)                                             |
+| Segundo pico           | ~2.9 GB (procesamiento de imágenes)                                                    |
+| Tercer pico            | ~2.8 GB (múltiples requests simultáneos)                                               |
+| Distribución 24h       | 35% del tiempo en 0.5-0.7GB, 50% en 0.7-1.5GB, 10% en 1.5-2.5GB, 5% en picos 2.5-3.2GB |
 
 1.1GB de promedio es alto para un proceso Node/Next.js que sirve un POS — el propio dashboard de Railway lo señala como fuera de rango típico. Con un límite de plan de 2GB, los picos de 3.2GB dejan solo ~0.8GB de margen antes de que Railway mate el proceso por OOM, lo cual es consistente con que el "tercer pico" ocurra específicamente en momentos de "múltiples requests simultáneos" — apunta a un problema de **concurrencia sin límite**, no solo de baseline alto.
 
@@ -36,7 +36,7 @@ Lo que sí encontré, con evidencia concreta en el código, son tres causas real
 
 ### Causa 3 — El pipeline pesado corre inline en el mismo proceso que sirve HTTP, sin aislamiento ni cola
 
-`POST /api/facturas-proveedor/[id]/process` (`src/app/api/facturas-proveedor/[id]/process/route.ts:76-80`) ejecuta `procesarFacturaConIA()` — que internamente hace `extraerTextoFactura()` (Tesseract + Sharp + potencialmente `launchOcrBrowser()` para PDFs escaneados) — **dentro del mismo proceso Node que atiende el resto del tráfico web**, sin cola ni límite. `launchOcrBrowser()` (`src/lib/ocr/ocr-engine.ts:121-146`) lanza una instancia *nueva* de Chromium por cada PDF escaneado que necesita rasterizado, con el flag `--single-process` (`resolve-executable-path.ts:96`), que reduce la cantidad de procesos del SO pero concentra más memoria en uno solo. Esta instancia se cierra correctamente en el `finally` (no es una fuga), pero si coincide en el tiempo con varios reportes PDF (Causa 2) y/o varias facturas procesándose a la vez, compiten por RAM sin ninguna coordinación entre sí.
+`POST /api/facturas-proveedor/[id]/process` (`src/app/api/facturas-proveedor/[id]/process/route.ts:76-80`) ejecuta `procesarFacturaConIA()` — que internamente hace `extraerTextoFactura()` (Tesseract + Sharp + potencialmente `launchOcrBrowser()` para PDFs escaneados) — **dentro del mismo proceso Node que atiende el resto del tráfico web**, sin cola ni límite. `launchOcrBrowser()` (`src/lib/ocr/ocr-engine.ts:121-146`) lanza una instancia _nueva_ de Chromium por cada PDF escaneado que necesita rasterizado, con el flag `--single-process` (`resolve-executable-path.ts:96`), que reduce la cantidad de procesos del SO pero concentra más memoria en uno solo. Esta instancia se cierra correctamente en el `finally` (no es una fuga), pero si coincide en el tiempo con varios reportes PDF (Causa 2) y/o varias facturas procesándose a la vez, compiten por RAM sin ninguna coordinación entre sí.
 
 ### Causa 4 (síntoma, no causa) — No hay instrumentación de memoria propia
 
@@ -85,23 +85,23 @@ Hoy la única visibilidad de RAM es el dashboard agregado de Railway (promedio +
 
 ## Áreas Afectadas
 
-| Área | Impacto | Descripción |
-|---|---|---|
-| `server.ts` | Modificado | Se elimina la precarga de Tesseract (líneas 176-179) |
-| `src/lib/chromium/resolve-executable-path.ts` | Modificado | Apagado por inactividad de `getSharedReportBrowser()`; slots de concurrencia para `launchOcrBrowser()` |
-| `src/lib/chromium/chromium-semaphore.ts` (o similar) | Nuevo | Semáforo compartido de concurrencia para tareas de Chromium |
+| Área                                                                                           | Impacto    | Descripción                                                                                                      |
+| ---------------------------------------------------------------------------------------------- | ---------- | ---------------------------------------------------------------------------------------------------------------- |
+| `server.ts`                                                                                    | Modificado | Se elimina la precarga de Tesseract (líneas 176-179)                                                             |
+| `src/lib/chromium/resolve-executable-path.ts`                                                  | Modificado | Apagado por inactividad de `getSharedReportBrowser()`; slots de concurrencia para `launchOcrBrowser()`           |
+| `src/lib/chromium/chromium-semaphore.ts` (o similar)                                           | Nuevo      | Semáforo compartido de concurrencia para tareas de Chromium                                                      |
 | `src/app/ver/**/pdf/route.ts` (8 archivos) y `src/app/ver/{ticket,remito,gasto}/[id]/route.ts` | Modificado | `await page.close()` sigue igual; se agrega adquisición/liberación del semáforo alrededor de `browser.newPage()` |
-| `src/lib/ocr/ocr-engine.ts` | Modificado | `rasterizarPdf()` adquiere/libera el mismo semáforo antes de `launchOcrBrowser()` |
-| `src/lib/observability/memory-logger.ts` (o similar) | Nuevo | Log periódico de `process.memoryUsage()` + estado de Tesseract/Chromium |
+| `src/lib/ocr/ocr-engine.ts`                                                                    | Modificado | `rasterizarPdf()` adquiere/libera el mismo semáforo antes de `launchOcrBrowser()`                                |
+| `src/lib/observability/memory-logger.ts` (o similar)                                           | Nuevo      | Log periódico de `process.memoryUsage()` + estado de Tesseract/Chromium                                          |
 
 ## Riesgos
 
-| Riesgo | Probabilidad | Mitigación |
-|---|---|---|
-| Primer OCR local después de un deploy/restart es más lento (~2-3s de carga de Tesseract) | Alta (esperado) | Es el trade-off explícito de la Decisión 1 — documentar en el rollout; si el timeout del proxy de Railway es un problema real, ajustar ese timeout en vez de revertir |
-| Bajo carga alta, reportes/OCR se encolan en vez de correr en paralelo, aumentando la latencia percibida de un reporte puntual | Media | Límite configurable por variable de entorno (`MAX_CHROMIUM_CONCURRENCY`), con timeout de espera en cola y mensaje de error claro si se supera (evita colgar el request indefinidamente) |
-| Apagar el browser compartido por inactividad hace que el primer reporte después de una pausa larga vuelva a pagar el arranque de ~2s | Alta (esperado) | Mismo trade-off que ya existe hoy en cada redeploy — aceptable porque libera RAM la mayor parte del tiempo |
-| El semáforo compartido introduce un punto único que, si tiene un bug (ej. no libera el slot en un path de error), bloquea todos los reportes/OCR futuros | Baja | `try/finally` obligatorio alrededor de cada adquisición, mismo patrón que ya usa el código existente para `page.close()` |
+| Riesgo                                                                                                                                                   | Probabilidad    | Mitigación                                                                                                                                                                              |
+| -------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Primer OCR local después de un deploy/restart es más lento (~2-3s de carga de Tesseract)                                                                 | Alta (esperado) | Es el trade-off explícito de la Decisión 1 — documentar en el rollout; si el timeout del proxy de Railway es un problema real, ajustar ese timeout en vez de revertir                   |
+| Bajo carga alta, reportes/OCR se encolan en vez de correr en paralelo, aumentando la latencia percibida de un reporte puntual                            | Media           | Límite configurable por variable de entorno (`MAX_CHROMIUM_CONCURRENCY`), con timeout de espera en cola y mensaje de error claro si se supera (evita colgar el request indefinidamente) |
+| Apagar el browser compartido por inactividad hace que el primer reporte después de una pausa larga vuelva a pagar el arranque de ~2s                     | Alta (esperado) | Mismo trade-off que ya existe hoy en cada redeploy — aceptable porque libera RAM la mayor parte del tiempo                                                                              |
+| El semáforo compartido introduce un punto único que, si tiene un bug (ej. no libera el slot en un path de error), bloquea todos los reportes/OCR futuros | Baja            | `try/finally` obligatorio alrededor de cada adquisición, mismo patrón que ya usa el código existente para `page.close()`                                                                |
 
 ## Plan de Reversión (Rollback)
 

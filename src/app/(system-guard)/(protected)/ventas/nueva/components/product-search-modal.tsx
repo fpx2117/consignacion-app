@@ -4,9 +4,25 @@ import * as React from "react";
 import Image from "next/image";
 import { Dialog as DialogPrimitive } from "radix-ui";
 import { Command as CommandPrimitive } from "cmdk";
-import { BadgePercent, Barcode, ChevronLeft, ChevronRight, Image as ImageIcon, Loader2, Package, Search, ShoppingCart } from "lucide-react";
+import {
+  BadgePercent,
+  Barcode,
+  ChevronLeft,
+  ChevronRight,
+  Image as ImageIcon,
+  Loader2,
+  Package,
+  Search,
+  ShoppingCart,
+} from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { Command, CommandEmpty, CommandGroup, CommandItem, CommandList } from "@/components/ui/command";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
 import { cn } from "@/lib/utils";
 import type { DescuentoNivel } from "@/lib/types";
 import type { ProductoConStock } from "../types";
@@ -36,18 +52,25 @@ export function ProductSearchModal({
   onSearchChange,
   loadingProductos = false,
 }: ProductSearchModalProps) {
-  const disponibles = productos.filter((p) => (p.stockDisponibleUnits ?? 0) > 0);
-  const agotados    = productos.filter((p) => (p.stockDisponibleUnits ?? 0) <= 0);
+  const disponibles = productos.filter(
+    (p) => (p.stockDisponibleUnits ?? 0) > 0,
+  );
+  const agotados = productos.filter((p) => (p.stockDisponibleUnits ?? 0) <= 0);
 
   // Debounce para no disparar un fetch por cada tecla
-  const searchTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
-  const handleSearchInput = React.useCallback((value: string) => {
-    if (!onSearchChange) return;
-    if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
-    searchTimerRef.current = setTimeout(() => {
-      onSearchChange(value);
-    }, 350);
-  }, [onSearchChange]);
+  const searchTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
+  const handleSearchInput = React.useCallback(
+    (value: string) => {
+      if (!onSearchChange) return;
+      if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+      searchTimerRef.current = setTimeout(() => {
+        onSearchChange(value);
+      }, 350);
+    },
+    [onSearchChange],
+  );
 
   const handleSelect = (producto: ProductoConStock) => {
     if ((producto.stockDisponibleUnits ?? 0) <= 0) return;
@@ -66,7 +89,7 @@ export function ProductSearchModal({
           aria-describedby={undefined}
           className={cn(
             "fixed left-1/2 top-1/2 z-50 -translate-x-1/2 -translate-y-1/2",
-            "w-[90vw] max-w-2xl",                          // ancho real
+            "w-[90vw] max-w-2xl", // ancho real
             "rounded-2xl border border-border/60 bg-background shadow-2xl overflow-hidden",
             "outline-none",
             "data-[state=open]:animate-in data-[state=closed]:animate-out",
@@ -74,8 +97,12 @@ export function ProductSearchModal({
             "data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95",
           )}
         >
-          <DialogPrimitive.Title className="sr-only">Buscar producto</DialogPrimitive.Title>
-          <DialogPrimitive.Description className="sr-only">Buscá por nombre o código de barra</DialogPrimitive.Description>
+          <DialogPrimitive.Title className="sr-only">
+            Buscar producto
+          </DialogPrimitive.Title>
+          <DialogPrimitive.Description className="sr-only">
+            Buscá por nombre o código de barra
+          </DialogPrimitive.Description>
 
           <Command
             filter={(value, search) => {
@@ -90,7 +117,6 @@ export function ProductSearchModal({
           >
             {/* ── Header ────────────────────────────────────────────────── */}
             <div className="flex items-center h-14 border-b border-border/60">
-
               {/* Ícono carrito */}
               <div className="flex items-center justify-center w-14 h-full shrink-0 border-r border-border/40">
                 <ShoppingCart className="h-5 w-5 text-primary" />
@@ -109,8 +135,12 @@ export function ProductSearchModal({
 
               {/* Badge F1 */}
               <div className="hidden md:flex items-center gap-1.5 mr-4 px-2.5 py-1.5 rounded-lg bg-primary/10 border border-primary/20 shrink-0">
-                <kbd className="text-[11px] font-black font-mono text-primary">F1</kbd>
-                <span className="text-[10px] text-primary/70 font-semibold">buscar</span>
+                <kbd className="text-[11px] font-black font-mono text-primary">
+                  F1
+                </kbd>
+                <span className="text-[10px] text-primary/70 font-semibold">
+                  buscar
+                </span>
               </div>
             </div>
 
@@ -119,31 +149,48 @@ export function ProductSearchModal({
               <CommandEmpty>
                 <div className="flex flex-col items-center justify-center gap-2 py-12 text-muted-foreground">
                   <Package className="h-10 w-10 opacity-30" />
-                  <p className="text-sm font-medium">No se encontró ningún producto</p>
-                  <p className="text-xs opacity-60">Probá con otro nombre o código</p>
+                  <p className="text-sm font-medium">
+                    No se encontró ningún producto
+                  </p>
+                  <p className="text-xs opacity-60">
+                    Probá con otro nombre o código
+                  </p>
                 </div>
               </CommandEmpty>
 
               {disponibles.length > 0 && (
-                <CommandGroup heading={
-                  <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/70">
-                    Disponibles ({disponibles.length})
-                  </span>
-                }>
+                <CommandGroup
+                  heading={
+                    <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/70">
+                      Disponibles ({disponibles.length})
+                    </span>
+                  }
+                >
                   {disponibles.map((p) => (
-                    <ProductRow key={p.id} producto={p} onSelect={handleSelect} />
+                    <ProductRow
+                      key={p.id}
+                      producto={p}
+                      onSelect={handleSelect}
+                    />
                   ))}
                 </CommandGroup>
               )}
 
               {agotados.length > 0 && (
-                <CommandGroup heading={
-                  <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/40">
-                    Sin stock ({agotados.length})
-                  </span>
-                }>
+                <CommandGroup
+                  heading={
+                    <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/40">
+                      Sin stock ({agotados.length})
+                    </span>
+                  }
+                >
                   {agotados.map((p) => (
-                    <ProductRow key={p.id} producto={p} onSelect={handleSelect} disabled />
+                    <ProductRow
+                      key={p.id}
+                      producto={p}
+                      onSelect={handleSelect}
+                      disabled
+                    />
                   ))}
                 </CommandGroup>
               )}
@@ -187,15 +234,21 @@ export function ProductSearchModal({
               </div>
               <div className="hidden sm:flex items-center gap-3 text-[10px] text-muted-foreground">
                 <span className="flex items-center gap-1">
-                  <kbd className="inline-flex h-4 items-center px-1 rounded border border-border bg-muted text-[9px] font-mono">↑↓</kbd>
+                  <kbd className="inline-flex h-4 items-center px-1 rounded border border-border bg-muted text-[9px] font-mono">
+                    ↑↓
+                  </kbd>
                   navegar
                 </span>
                 <span className="flex items-center gap-1">
-                  <kbd className="inline-flex h-4 items-center px-1.5 rounded border border-border bg-muted text-[9px] font-mono">↵</kbd>
+                  <kbd className="inline-flex h-4 items-center px-1.5 rounded border border-border bg-muted text-[9px] font-mono">
+                    ↵
+                  </kbd>
                   agregar
                 </span>
                 <span className="flex items-center gap-1">
-                  <kbd className="inline-flex h-4 items-center px-1.5 rounded border border-border bg-muted text-[9px] font-mono">Esc</kbd>
+                  <kbd className="inline-flex h-4 items-center px-1.5 rounded border border-border bg-muted text-[9px] font-mono">
+                    Esc
+                  </kbd>
                   cerrar
                 </span>
               </div>
@@ -219,7 +272,8 @@ function ProductRow({
 }) {
   const stock = p.stockDisponibleUnits ?? 0;
   const isLowStock = stock > 0 && stock <= (p.stockMinUnits ?? 5);
-  const descuentos = p.subcategoria?.descuentos as DescuentoNivel[] | null | undefined;
+  const descuentos = p.subcategoria?.descuentos as
+    DescuentoNivel[] | null | undefined;
   const hasDescuentos = Array.isArray(descuentos) && descuentos.length > 0;
 
   return (
@@ -230,13 +284,19 @@ function ProductRow({
       className={cn(
         "flex items-center gap-3 px-3 py-2.5 rounded-xl cursor-pointer transition-colors",
         "data-[selected=true]:bg-primary/10 data-[selected=true]:text-foreground",
-        disabled && "opacity-40 cursor-not-allowed"
+        disabled && "opacity-40 cursor-not-allowed",
       )}
     >
       {/* Imagen */}
       <div className="h-10 w-10 sm:h-12 sm:w-12 rounded-lg bg-muted border border-border/40 overflow-hidden flex items-center justify-center shrink-0 relative">
         {p.imagenUrl ? (
-          <Image src={p.imagenUrl} alt={p.nombre} fill sizes="48px" className="object-cover" />
+          <Image
+            src={p.imagenUrl}
+            alt={p.nombre}
+            fill
+            sizes="48px"
+            className="object-cover"
+          />
         ) : (
           <ImageIcon className="h-4 w-4 text-muted-foreground/30" />
         )}
@@ -255,12 +315,14 @@ function ProductRow({
           )}
           {hasDescuentos && (
             <span className="inline-flex items-center gap-0.5 text-[10px] font-bold text-[color:var(--status-success-strong)] bg-[color:var(--status-success-strong)]/10 px-1 rounded border border-[color:var(--status-success-strong)]/30">
-              <BadgePercent className="h-2.5 w-2.5" />{descuentos!.length} desc.
+              <BadgePercent className="h-2.5 w-2.5" />
+              {descuentos!.length} desc.
             </span>
           )}
           {p.codigoBarra && (
             <span className="hidden sm:inline-flex items-center gap-0.5 text-[10px] text-muted-foreground font-mono bg-muted px-1.5 rounded border border-border/40">
-              <Barcode className="h-2.5 w-2.5" />{p.codigoBarra}
+              <Barcode className="h-2.5 w-2.5" />
+              {p.codigoBarra}
             </span>
           )}
         </div>
@@ -272,16 +334,21 @@ function ProductRow({
           {formatCurrency(p.precioVenta)}
         </span>
         {disabled ? (
-          <Badge variant="destructive" className="text-[9px] h-4 px-1.5 rounded-md font-black">
+          <Badge
+            variant="destructive"
+            className="text-[9px] h-4 px-1.5 rounded-md font-black"
+          >
             AGOTADO
           </Badge>
         ) : (
-          <span className={cn(
-            "text-[10px] font-bold px-1.5 rounded-md",
-            isLowStock
-              ? "text-[color:var(--status-warning)] bg-[color:var(--status-warning)]/10"
-              : "text-[color:var(--status-success-strong)] bg-[color:var(--status-success-strong)]/10"
-          )}>
+          <span
+            className={cn(
+              "text-[10px] font-bold px-1.5 rounded-md",
+              isLowStock
+                ? "text-[color:var(--status-warning)] bg-[color:var(--status-warning)]/10"
+                : "text-[color:var(--status-success-strong)] bg-[color:var(--status-success-strong)]/10",
+            )}
+          >
             {stock} uds.
           </span>
         )}

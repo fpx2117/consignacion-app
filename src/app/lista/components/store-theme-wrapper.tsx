@@ -21,7 +21,7 @@ export function StoreThemeWrapper({
 }: StoreThemeWrapperProps) {
   const cssVars = React.useMemo(
     () => getStoreCSSVariables(settings.theme),
-    [settings.theme]
+    [settings.theme],
   );
 
   return (
@@ -30,15 +30,21 @@ export function StoreThemeWrapper({
       style={
         {
           "--store-primary-override": cssVars["--store-primary"],
-          "--store-primary-rgb-override": cssVars["--store-primary-rgb"] ?? hexToRgbStr(cssVars["--store-primary"]),
+          "--store-primary-rgb-override":
+            cssVars["--store-primary-rgb"] ??
+            hexToRgbStr(cssVars["--store-primary"]),
           "--store-secondary-override": cssVars["--store-secondary"],
           "--store-background-override": cssVars["--store-background"],
           "--store-surface-override": cssVars["--store-surface"],
-          "--store-surface-rgb-override": cssVars["--store-surface-rgb"] ?? hexToRgbStr(cssVars["--store-surface"]),
+          "--store-surface-rgb-override":
+            cssVars["--store-surface-rgb"] ??
+            hexToRgbStr(cssVars["--store-surface"]),
           "--store-text-override": cssVars["--store-text"],
           "--store-muted-override": cssVars["--store-muted"],
           "--store-whatsapp-override": cssVars["--store-whatsapp"],
-          "--store-whatsapp-rgb-override": cssVars["--store-whatsapp-rgb"] ?? hexToRgbStr(cssVars["--store-whatsapp"]),
+          "--store-whatsapp-rgb-override":
+            cssVars["--store-whatsapp-rgb"] ??
+            hexToRgbStr(cssVars["--store-whatsapp"]),
         } as React.CSSProperties
       }
       className={className}

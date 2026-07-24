@@ -7,10 +7,12 @@ Crear la interfaz de usuario pública y los endpoints de API necesarios para el 
 ## Alcance
 
 ### Dentro del Alcance
+
 - **Backend (API):** Endpoints para listar registros del modelo existente `Producto`, con soporte para paginación y filtrado (ej. por `precioVenta` y `categoriaId`/`subcategoriaId`), además de endpoints para consultar `Categoria` y `Subcategoria`.
 - **Frontend (UI Pública):** Componentes `ProductGrid` y `ProductCard` que lean directamente la estructura de datos de los modelos existentes y consuman las variables CSS creadas en la Fase 1 (settings).
 
 ### Fuera del Alcance
+
 - Modificar, crear o eliminar tablas en Prisma (se respeta el esquema actual).
 - Autenticación o roles de usuario (administradores vs clientes).
 - Carrito de compras, checkout y pasarelas de pago.
@@ -24,17 +26,17 @@ Crear la interfaz de usuario pública y los endpoints de API necesarios para el 
 
 ## Áreas Afectadas
 
-| Área | Impacto | Descripción |
-|------|---------|-------------|
-| API / Rutas de Backend | Nuevo | Endpoints para la obtención y filtrado del catálogo leyendo `Producto`, `Categoria` y `Subcategoria`. |
-| Componentes de Interfaz | Nuevo | Creación de componentes `ProductGrid` y `ProductCard` usando variables CSS de la Fase 1. |
+| Área                    | Impacto | Descripción                                                                                           |
+| ----------------------- | ------- | ----------------------------------------------------------------------------------------------------- |
+| API / Rutas de Backend  | Nuevo   | Endpoints para la obtención y filtrado del catálogo leyendo `Producto`, `Categoria` y `Subcategoria`. |
+| Componentes de Interfaz | Nuevo   | Creación de componentes `ProductGrid` y `ProductCard` usando variables CSS de la Fase 1.              |
 
 ## Riesgos
 
-| Riesgo | Probabilidad | Mitigación |
-|--------|--------------|------------|
-| Consultas a BD lentas por uso de filtros y paginación en grandes volúmenes | Media | Optimizar las consultas usando las relaciones e índices ya existentes en el esquema actual de Prisma. |
-| Desalineación con el motor de estilos actual | Baja | Usar estrictamente las variables CSS preexistentes de la Fase 1; revisar visualmente frente a guías de estilo. |
+| Riesgo                                                                     | Probabilidad | Mitigación                                                                                                     |
+| -------------------------------------------------------------------------- | ------------ | -------------------------------------------------------------------------------------------------------------- |
+| Consultas a BD lentas por uso de filtros y paginación en grandes volúmenes | Media        | Optimizar las consultas usando las relaciones e índices ya existentes en el esquema actual de Prisma.          |
+| Desalineación con el motor de estilos actual                               | Baja         | Usar estrictamente las variables CSS preexistentes de la Fase 1; revisar visualmente frente a guías de estilo. |
 
 ## Plan de Reversión (Rollback)
 

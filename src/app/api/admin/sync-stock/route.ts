@@ -12,7 +12,10 @@ export async function POST() {
   if (!auth.ok) return auth.res;
 
   if (!requireRole(auth.user, ["ADMIN"])) {
-    return NextResponse.json({ error: "Se requiere rol ADMIN" }, { status: 403 });
+    return NextResponse.json(
+      { error: "Se requiere rol ADMIN" },
+      { status: 403 },
+    );
   }
 
   try {
@@ -37,17 +40,20 @@ export async function POST() {
     for (const producto of productos) {
       const disponibleReal = producto.stockSucursals.reduce(
         (acc, s) => acc + (s.stockDisponibleUnits ?? 0),
-        0
+        0,
       );
       const consignadoReal = producto.stockSucursals.reduce(
         (acc, s) => acc + (s.stockConsignadoUnits ?? 0),
-        0
+        0,
       );
 
       const disponibleActual = producto.stockDisponibleUnits ?? 0;
       const consignadoActual = producto.stockConsignadoUnits ?? 0;
 
-      if (disponibleActual !== disponibleReal || consignadoActual !== consignadoReal) {
+      if (
+        disponibleActual !== disponibleReal ||
+        consignadoActual !== consignadoReal
+      ) {
         await prisma.producto.update({
           where: { id: producto.id },
           data: {
@@ -70,6 +76,9 @@ export async function POST() {
     });
   } catch (error) {
     console.error("Error en sync-stock:", error);
-    return NextResponse.json({ error: "Error interno al sincronizar stock" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Error interno al sincronizar stock" },
+      { status: 500 },
+    );
   }
 }

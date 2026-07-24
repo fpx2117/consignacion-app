@@ -2,21 +2,23 @@ import { createHmac } from "crypto";
 
 const _PDF_SECRET = process.env.SHARE_LINK_SECRET || process.env.PDF_SECRET;
 if (!_PDF_SECRET) {
-  throw new Error("FATAL: La variable de entorno SHARE_LINK_SECRET (o PDF_SECRET) es obligatoria.");
+  throw new Error(
+    "FATAL: La variable de entorno SHARE_LINK_SECRET (o PDF_SECRET) es obligatoria.",
+  );
 }
 const PDF_SECRET: string = _PDF_SECRET;
 
 // Duración por defecto: 7 días (en milisegundos)
-const DEFAULT_EXPIRATION_MS = 7 * 24 * 60 * 60 * 1000; 
+const DEFAULT_EXPIRATION_MS = 7 * 24 * 60 * 60 * 1000;
 
 export function generatePdfToken(id: number): string {
   // 1. Calculamos cuándo vence (Ahora + 7 días)
   const expiresAt = Date.now() + DEFAULT_EXPIRATION_MS;
-  
+
   // 2. Creamos la firma usando el ID y la FECHA de vencimiento
   // Esto evita que alguien cambie la fecha manualmente en la URL
   const dataToSign = `consignacion-${id}-${expiresAt}`;
-  
+
   const signature = createHmac("sha256", PDF_SECRET)
     .update(dataToSign)
     .digest("hex")
@@ -41,7 +43,7 @@ export function verifyPdfToken(id: number, tokenString: string): boolean {
   // 2. Chequeo de firma: ¿Es legítimo este timestamp para este ID?
   // Reconstruimos la firma esperada con los mismos datos
   const expectedData = `consignacion-${id}-${expiresAt}`;
-  
+
   const expectedSignature = createHmac("sha256", PDF_SECRET)
     .update(expectedData)
     .digest("hex")

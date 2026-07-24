@@ -11,16 +11,16 @@ La solucion se implementa con Next.js App Router y un servidor Node.js custom pa
 
 ## 2) Stack y runtime
 
-| Capa | Tecnologia | Notas |
-| :--- | :--- | :--- |
-| Web app | Next.js 16 + React 19 | App Router con Route Handlers |
-| Estilos | Tailwind CSS 4 + shadcn/Radix | UI de panel y tienda publica |
-| Persistencia | Prisma 7 + PostgreSQL | Adapter `@prisma/adapter-pg` |
-| Tiempo real | Socket.io 4 | Servido desde `server.ts` |
-| Auth | JWT (`jose`) + cookie HttpOnly | Sesion persistida en DB |
-| Validacion | Zod | Contratos de entrada/salida |
-| Reportes | Puppeteer | HTML a PDF |
-| Integraciones | MercadoPago, PayPal, Andreani, Resend | Cobros, envios y email |
+| Capa          | Tecnologia                            | Notas                         |
+| :------------ | :------------------------------------ | :---------------------------- |
+| Web app       | Next.js 16 + React 19                 | App Router con Route Handlers |
+| Estilos       | Tailwind CSS 4 + shadcn/Radix         | UI de panel y tienda publica  |
+| Persistencia  | Prisma 7 + PostgreSQL                 | Adapter `@prisma/adapter-pg`  |
+| Tiempo real   | Socket.io 4                           | Servido desde `server.ts`     |
+| Auth          | JWT (`jose`) + cookie HttpOnly        | Sesion persistida en DB       |
+| Validacion    | Zod                                   | Contratos de entrada/salida   |
+| Reportes      | Puppeteer                             | HTML a PDF                    |
+| Integraciones | MercadoPago, PayPal, Andreani, Resend | Cobros, envios y email        |
 
 ## 3) Arquitectura de alto nivel
 

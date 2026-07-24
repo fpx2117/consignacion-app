@@ -16,9 +16,10 @@ export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
     const estadoParam = searchParams.get("estado")?.trim();
-    const estado = estadoParam && ESTADOS_VALIDOS.has(estadoParam)
-      ? (estadoParam as EstadoFacturaProveedor)
-      : undefined;
+    const estado =
+      estadoParam && ESTADOS_VALIDOS.has(estadoParam)
+        ? (estadoParam as EstadoFacturaProveedor)
+        : undefined;
     const proveedorIdParam = searchParams.get("proveedorId");
     const proveedorId = proveedorIdParam ? Number(proveedorIdParam) : undefined;
 

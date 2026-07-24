@@ -6,5 +6,5 @@ import { createHash } from "crypto";
  * sea corto (64 chars), indexable y único por cada login.
  */
 export function getSessionHash(token: string): string {
-    return createHash("sha256").update(token).digest("hex");
+  return createHash("sha256").update(token).digest("hex");
 }

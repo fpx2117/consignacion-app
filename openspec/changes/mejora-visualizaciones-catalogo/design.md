@@ -19,6 +19,7 @@ page.tsx (Client Component)
 ```
 
 El período seleccionado en el header del dashboard ya viaja hasta las queries de Prisma. El problema no es que el período no se use — es que:
+
 1. Los bugs hacen que los datos calculados sean incorrectos.
 2. El KPI de visitas no indica en su subtítulo qué período está mostrando.
 3. Faltan KPIs relevantes para el canal digital.
@@ -36,14 +37,14 @@ El período seleccionado en el header del dashboard ya viaja hasta las queries d
 catalogo: {
   visitas: number;
   visitantesUnicos: number;
-};
+}
 
 // DESPUÉS
 catalogo: {
   visitas: number;
   visitantesUnicos: number;
-  productosVisibles: number;  // ← nuevo: productos activos visibles en el catálogo
-};
+  productosVisibles: number; // ← nuevo: productos activos visibles en el catálogo
+}
 ```
 
 ---
@@ -126,6 +127,7 @@ prisma.consignacion.count({ where: { ...sucursalWhere, fecha: dateWhere } }),
 ```
 
 Retornar ambos valores:
+
 ```typescript
 // ANTES en el return
 counts,
@@ -136,6 +138,7 @@ countEnPeriodo,      // consignaciones creadas en el período
 ```
 
 Actualizar el route para usar los campos correctos:
+
 ```typescript
 consignaciones: {
   total: stats.countEnPeriodo,      // creadas en período
@@ -171,15 +174,18 @@ prisma.consignacionDetalle.aggregate({
 ```
 
 Calcular en el return:
+
 ```typescript
-const unitsPendientesTotal = Math.max(0,
+const unitsPendientesTotal = Math.max(
+  0,
   (unitsPendientesAgg._sum.unitsEntregadas ?? 0) -
-  (unitsPendientesAgg._sum.unitsVendidasAcum ?? 0) -
-  (unitsPendientesAgg._sum.unitsDevueltasAcum ?? 0)
+    (unitsPendientesAgg._sum.unitsVendidasAcum ?? 0) -
+    (unitsPendientesAgg._sum.unitsDevueltasAcum ?? 0),
 );
 ```
 
 Retornar en el objeto:
+
 ```typescript
 // Nuevo campo en el return de kpi-logic:
 consignacionUnits: {
@@ -188,6 +194,7 @@ consignacionUnits: {
 ```
 
 Actualizar `dashboard-actions.ts` para leer el campo real:
+
 ```typescript
 consignacionUnits: {
   entregadas: 0,
@@ -206,10 +213,11 @@ consignacionUnits: {
 **Problema**: Si `config.porcentajeAumentoConsignacion` llega como `null` desde la DB, `?? 0` lo convierte a `0`. Pero si llega como el string `"null"` (JSON encoding edge case) o `NaN`, el cálculo rompe.
 
 **Solución**:
+
 ```typescript
 // ANTES (línea 37)
 const displayedPrice = isConsigne
-  ? basePrice * (1 + ((config.porcentajeAumentoConsignacion ?? 0) / 100))
+  ? basePrice * (1 + (config.porcentajeAumentoConsignacion ?? 0) / 100)
   : basePrice;
 
 // DESPUÉS
@@ -303,25 +311,25 @@ page.tsx → operativeKpis array
 
 ## Decisiones de Diseño
 
-| Decisión | Alternativa Descartada | Razón |
-|----------|----------------------|-------|
-| Guard defensivo para `catalogVisit` en lugar de tiparlo | Agregar type cast completo | El modelo puede no existir; el guard es más seguro en despliegues donde la migración no corrió |
-| Separar counts de consignaciones en kpi-logic (no en route) | Corregir solo en el route | La fuente de verdad debe ser kpi-logic; el route es solo transporte |
-| Query de units pendientes via `aggregate` | `findMany` + reduce en JS | `aggregate` es más eficiente y evita traer todos los detalles a memoria |
-| Subtítulo dinámico de período en el KPI card | Nueva prop en `KpiCard` | El subtítulo ya es una string libre; no se necesita cambiar la interfaz de `KpiCard` |
-| `productosVisibles` separado por scope (sucursal vs global) | Un solo conteo global | Debe ser consistente con el catálogo que ve el cliente público |
+| Decisión                                                    | Alternativa Descartada     | Razón                                                                                          |
+| ----------------------------------------------------------- | -------------------------- | ---------------------------------------------------------------------------------------------- |
+| Guard defensivo para `catalogVisit` en lugar de tiparlo     | Agregar type cast completo | El modelo puede no existir; el guard es más seguro en despliegues donde la migración no corrió |
+| Separar counts de consignaciones en kpi-logic (no en route) | Corregir solo en el route  | La fuente de verdad debe ser kpi-logic; el route es solo transporte                            |
+| Query de units pendientes via `aggregate`                   | `findMany` + reduce en JS  | `aggregate` es más eficiente y evita traer todos los detalles a memoria                        |
+| Subtítulo dinámico de período en el KPI card                | Nueva prop en `KpiCard`    | El subtítulo ya es una string libre; no se necesita cambiar la interfaz de `KpiCard`           |
+| `productosVisibles` separado por scope (sucursal vs global) | Un solo conteo global      | Debe ser consistente con el catálogo que ve el cliente público                                 |
 
 ---
 
 ## Archivos Modificados (Resumen)
 
-| Archivo | Tipo de cambio | Líneas estimadas |
-|---------|---------------|-----------------|
-| `src/lib/types.ts` | Extensión de tipo | +2 líneas |
-| `src/lib/kpi-logic.ts` | Fix B1, Fix B2, Fix B3, nuevo KPI | ~40 líneas |
-| `src/app/api/dashboard/kpi/route.ts` | Fix B2 (consume campos nuevos) | ~5 líneas |
-| `src/app/(system-guard)/(protected)/dashboard/actions/dashboard-actions.ts` | Fix B2, Fix B3 | ~10 líneas |
-| `src/app/(system-guard)/(protected)/dashboard/page.tsx` | Subtítulo dinámico, nuevo KPI | ~15 líneas |
-| `src/app/lista/components/product-card.tsx` | Fix B4 | ~3 líneas |
+| Archivo                                                                     | Tipo de cambio                    | Líneas estimadas |
+| --------------------------------------------------------------------------- | --------------------------------- | ---------------- |
+| `src/lib/types.ts`                                                          | Extensión de tipo                 | +2 líneas        |
+| `src/lib/kpi-logic.ts`                                                      | Fix B1, Fix B2, Fix B3, nuevo KPI | ~40 líneas       |
+| `src/app/api/dashboard/kpi/route.ts`                                        | Fix B2 (consume campos nuevos)    | ~5 líneas        |
+| `src/app/(system-guard)/(protected)/dashboard/actions/dashboard-actions.ts` | Fix B2, Fix B3                    | ~10 líneas       |
+| `src/app/(system-guard)/(protected)/dashboard/page.tsx`                     | Subtítulo dinámico, nuevo KPI     | ~15 líneas       |
+| `src/app/lista/components/product-card.tsx`                                 | Fix B4                            | ~3 líneas        |
 
 **Total estimado**: ~75 líneas de cambios netos (sin contar comentarios eliminados).

@@ -38,7 +38,10 @@ const THEME_ALIASES: Record<string, StoreTheme> = {
   tecnologia: "tech",
 };
 
-const RADII: Record<StoreTheme, Pick<ThemeStyles, "radiusClass" | "buttonRadiusClass" | "inputRadiusClass">> = {
+const RADII: Record<
+  StoreTheme,
+  Pick<ThemeStyles, "radiusClass" | "buttonRadiusClass" | "inputRadiusClass">
+> = {
   modern: {
     radiusClass: "rounded-[2rem]",
     buttonRadiusClass: "rounded-full",
@@ -88,13 +91,18 @@ const HOVERS: Record<StoreTheme, string> = {
   sunset: "hover:scale-[1.05]",
   barbie: "hover:scale-[1.05]",
   minimal: "hover:bg-foreground/90 transition-colors",
-  luxury: "hover:bg-transparent hover:text-primary border-2 border-primary transition-all",
+  luxury:
+    "hover:bg-transparent hover:text-primary border-2 border-primary transition-all",
   tech: "hover:shadow-[0_0_15px_rgba(var(--primary-rgb),0.5)] transition-shadow",
 };
 
-const SURFACES: Record<StoreTheme, Pick<ThemeStyles, "pageBgClass" | "cardBgClass" | "headerBgClass">> = {
+const SURFACES: Record<
+  StoreTheme,
+  Pick<ThemeStyles, "pageBgClass" | "cardBgClass" | "headerBgClass">
+> = {
   modern: {
-    pageBgClass: "bg-[linear-gradient(180deg,var(--secondary)_0%,var(--store-canvas)_65%)]",
+    pageBgClass:
+      "bg-[linear-gradient(180deg,var(--secondary)_0%,var(--store-canvas)_65%)]",
     cardBgClass: "bg-[color:var(--store-surface)]",
     headerBgClass: "bg-[color:rgba(var(--store-surface-rgb),0.9)]",
   },
@@ -102,19 +110,22 @@ const SURFACES: Record<StoreTheme, Pick<ThemeStyles, "pageBgClass" | "cardBgClas
     pageBgClass:
       "bg-[radial-gradient(circle_at_top_right,rgba(var(--primary-rgb),0.14),transparent_42%),linear-gradient(180deg,var(--secondary)_0%,var(--store-canvas)_72%)]",
     cardBgClass: "bg-[color:var(--store-surface)]",
-    headerBgClass: "bg-[linear-gradient(180deg,var(--secondary)_0%,rgba(var(--store-surface-rgb),0.95)_100%)]",
+    headerBgClass:
+      "bg-[linear-gradient(180deg,var(--secondary)_0%,rgba(var(--store-surface-rgb),0.95)_100%)]",
   },
   ocean: {
     pageBgClass:
       "bg-[radial-gradient(circle_at_top_right,rgba(var(--primary-rgb),0.16),transparent_44%),linear-gradient(180deg,var(--secondary)_0%,var(--store-canvas)_70%)]",
     cardBgClass: "bg-[color:var(--store-surface)]",
-    headerBgClass: "bg-[linear-gradient(180deg,var(--secondary)_0%,rgba(var(--store-surface-rgb),0.95)_100%)]",
+    headerBgClass:
+      "bg-[linear-gradient(180deg,var(--secondary)_0%,rgba(var(--store-surface-rgb),0.95)_100%)]",
   },
   sunset: {
     pageBgClass:
       "bg-[radial-gradient(circle_at_top_right,rgba(var(--primary-rgb),0.15),transparent_45%),linear-gradient(180deg,var(--secondary)_0%,var(--store-canvas)_74%)]",
     cardBgClass: "bg-[color:var(--store-surface)]",
-    headerBgClass: "bg-[linear-gradient(180deg,var(--secondary)_0%,rgba(var(--store-surface-rgb),0.95)_100%)]",
+    headerBgClass:
+      "bg-[linear-gradient(180deg,var(--secondary)_0%,rgba(var(--store-surface-rgb),0.95)_100%)]",
   },
   luxury: {
     pageBgClass:
@@ -131,13 +142,15 @@ const SURFACES: Record<StoreTheme, Pick<ThemeStyles, "pageBgClass" | "cardBgClas
     pageBgClass:
       "bg-[radial-gradient(circle_at_top_right,rgba(var(--primary-rgb),0.14),transparent_40%),linear-gradient(180deg,var(--secondary)_0%,var(--store-canvas)_70%)]",
     cardBgClass: "bg-[color:var(--store-surface)]",
-    headerBgClass: "bg-[linear-gradient(180deg,var(--secondary)_0%,rgba(var(--store-surface-rgb),0.95)_100%)]",
+    headerBgClass:
+      "bg-[linear-gradient(180deg,var(--secondary)_0%,rgba(var(--store-surface-rgb),0.95)_100%)]",
   },
   tech: {
     pageBgClass:
       "bg-[radial-gradient(circle_at_top_right,rgba(var(--primary-rgb),0.18),transparent_48%),linear-gradient(180deg,var(--secondary)_0%,var(--store-canvas)_75%)]",
     cardBgClass: "bg-[color:var(--store-surface)]",
-    headerBgClass: "bg-[linear-gradient(180deg,var(--secondary)_0%,rgba(var(--store-surface-rgb),0.94)_100%)]",
+    headerBgClass:
+      "bg-[linear-gradient(180deg,var(--secondary)_0%,rgba(var(--store-surface-rgb),0.94)_100%)]",
   },
 };
 
@@ -155,7 +168,9 @@ function resolveTheme(themeIdentifier: string | undefined | null): StoreTheme {
   return THEME_ALIASES[normalized] || "modern";
 }
 
-export function getThemeStyles(themeIdentifier: string | undefined | null): ThemeStyles {
+export function getThemeStyles(
+  themeIdentifier: string | undefined | null,
+): ThemeStyles {
   const theme = resolveTheme(themeIdentifier);
 
   return {

@@ -36,7 +36,10 @@ interface CartDrawerProps {
   config: PublicCatalogConfig;
   onUpdateQuantity: (id: number, delta: number) => void;
   onRemove: (id: number) => void;
-  onCheckout: (clienteData: PublicCheckoutCustomerData, envioData: PublicCheckoutShippingData) => void;
+  onCheckout: (
+    clienteData: PublicCheckoutCustomerData,
+    envioData: PublicCheckoutShippingData,
+  ) => void;
   loading: boolean;
 }
 
@@ -63,17 +66,18 @@ export function CartDrawer({
 }: CartDrawerProps) {
   const [step, setStep] = React.useState(1);
   const [showTicketPreview, setShowTicketPreview] = React.useState(true);
-  const [clienteData, setClienteData] = React.useState<PublicCheckoutCustomerData>({
-    nombre: "",
-    email: "",
-    documento: "",
-    telefono: "",
-    provincia: "",
-    localidad: "",
-    codigoPostal: "",
-    direccion: "",
-    altura: "",
-  });
+  const [clienteData, setClienteData] =
+    React.useState<PublicCheckoutCustomerData>({
+      nombre: "",
+      email: "",
+      documento: "",
+      telefono: "",
+      provincia: "",
+      localidad: "",
+      codigoPostal: "",
+      direccion: "",
+      altura: "",
+    });
   const [envioData, setEnvioData] = React.useState<PublicCheckoutShippingData>({
     metodoEnvio: null,
     costo: 0,
@@ -85,7 +89,7 @@ export function CartDrawer({
   const isMpMode = config.tiendaPaymentMode === "mercadopago";
   const showTicketPreviewSetting = ols?.cart?.showWhatsappPreview ?? true;
   const checkoutButtonText = isWhatsappMode
-    ? (ols?.cart?.whatsappButtonText?.trim() || "Enviar pedido por WhatsApp")
+    ? ols?.cart?.whatsappButtonText?.trim() || "Enviar pedido por WhatsApp"
     : "Ir al pago";
   const [isMobile, setIsMobile] = React.useState(false);
 
@@ -110,7 +114,9 @@ export function CartDrawer({
     } else {
       document.body.style.overflow = "";
     }
-    return () => { document.body.style.overflow = ""; };
+    return () => {
+      document.body.style.overflow = "";
+    };
   }, [isOpen]);
 
   const effectiveMode: DisplayMode = isMobile ? "bottom-sheet" : displayMode;
@@ -127,7 +133,10 @@ export function CartDrawer({
   };
 
   const handleContinue = () => {
-    if (step === 1) { setStep(2); return; }
+    if (step === 1) {
+      setStep(2);
+      return;
+    }
     if (step === 2) {
       if (!clienteData.nombre.trim()) {
         toast.error("Por favor completá tu nombre.");
@@ -144,17 +153,31 @@ export function CartDrawer({
       toast.error("Seleccioná un método de entrega.");
       return;
     }
-    if (envioData.metodoEnvio === "UBER_FLASH" || envioData.metodoEnvio === "ENCOMIENDA") {
-      if (!clienteData.direccion?.trim() || !clienteData.altura?.trim() || !clienteData.localidad?.trim() || !clienteData.provincia?.trim()) {
-        toast.error("Para este envío necesitamos domicilio, altura, localidad y provincia.");
+    if (
+      envioData.metodoEnvio === "UBER_FLASH" ||
+      envioData.metodoEnvio === "ENCOMIENDA"
+    ) {
+      if (
+        !clienteData.direccion?.trim() ||
+        !clienteData.altura?.trim() ||
+        !clienteData.localidad?.trim() ||
+        !clienteData.provincia?.trim()
+      ) {
+        toast.error(
+          "Para este envío necesitamos domicilio, altura, localidad y provincia.",
+        );
         return;
       }
     }
     onCheckout(clienteData, envioData);
   };
 
-  const requiresDeliveryAddress = envioData.metodoEnvio === "UBER_FLASH" || envioData.metodoEnvio === "ENCOMIENDA";
-  const selectedDeliveryNeedsDisclaimer = envioData.metodoEnvio === "UBER_FLASH" || envioData.metodoEnvio === "ENCOMIENDA";
+  const requiresDeliveryAddress =
+    envioData.metodoEnvio === "UBER_FLASH" ||
+    envioData.metodoEnvio === "ENCOMIENDA";
+  const selectedDeliveryNeedsDisclaimer =
+    envioData.metodoEnvio === "UBER_FLASH" ||
+    envioData.metodoEnvio === "ENCOMIENDA";
 
   // Animaciones según modo
   const panelAnim = isBottomSheet
@@ -184,19 +207,19 @@ export function CartDrawer({
         "max-h-[92vh] rounded-t-[28px]",
         "shadow-[0_-8px_40px_rgba(0,0,0,0.15)]",
         "bg-[var(--store-surface,#FFFFFF)]",
-        "sm:max-w-[430px] sm:mx-auto sm:left-0 sm:right-0"
+        "sm:max-w-[430px] sm:mx-auto sm:left-0 sm:right-0",
       )
     : isModal
       ? cn(
           "fixed inset-0 m-auto w-full max-w-md h-[90vh] z-[70] flex flex-col",
           "rounded-[28px] shadow-2xl overflow-hidden",
           "bg-[var(--store-surface,#FFFFFF)]",
-          "border border-gray-100"
+          "border border-gray-100",
         )
       : cn(
           "fixed top-0 right-0 bottom-0 w-full max-w-md z-[70] flex flex-col",
           "bg-[var(--store-surface,#FFFFFF)]",
-          "md:m-3 md:rounded-[24px] md:h-[calc(100vh-24px)] shadow-[-16px_0_50px_rgba(0,0,0,0.08)]"
+          "md:m-3 md:rounded-[24px] md:h-[calc(100vh-24px)] shadow-[-16px_0_50px_rgba(0,0,0,0.08)]",
         );
 
   const stepLabels = ["Tu pedido", "Tus datos", "Entrega"];
@@ -216,10 +239,7 @@ export function CartDrawer({
           />
 
           {/* Panel */}
-          <motion.aside
-            {...panelAnim}
-            className={panelClass}
-          >
+          <motion.aside {...panelAnim} className={panelClass}>
             {/* Barra de deslizamiento (solo bottom sheet) */}
             {isBottomSheet && (
               <div className="flex justify-center pt-3 pb-1 flex-shrink-0">
@@ -244,7 +264,8 @@ export function CartDrawer({
                   </h2>
                   {step === 1 && cart.length > 0 && (
                     <p className="text-sm text-[var(--store-muted,#8A8F98)]">
-                      {cart.length} {cart.length === 1 ? "producto" : "productos"}
+                      {cart.length}{" "}
+                      {cart.length === 1 ? "producto" : "productos"}
                     </p>
                   )}
                   {step > 1 && (
@@ -271,8 +292,8 @@ export function CartDrawer({
             {/* ── Contenido scrollable ── */}
             <div className="flex-1 overflow-y-auto overscroll-contain">
               {/* PASO 1: Resumen del pedido */}
-              {step === 1 && (
-                cart.length === 0 ? (
+              {step === 1 &&
+                (cart.length === 0 ? (
                   <motion.div
                     initial={{ opacity: 0, y: 16 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -281,14 +302,19 @@ export function CartDrawer({
                     <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mb-5">
                       <ShoppingBag className="h-9 w-9 text-gray-300" />
                     </div>
-                    <p className="text-lg font-bold text-[var(--store-text,#0F172A)]">Tu carrito está vacío</p>
+                    <p className="text-lg font-bold text-[var(--store-text,#0F172A)]">
+                      Tu carrito está vacío
+                    </p>
                     <p className="text-sm text-[var(--store-muted,#8A8F98)] mt-2 max-w-[220px]">
-                      Explorá el catálogo y agregá los productos que quieras pedir.
+                      Explorá el catálogo y agregá los productos que quieras
+                      pedir.
                     </p>
                     <button
                       onClick={onClose}
                       className="mt-6 px-6 py-2.5 rounded-full text-white text-sm font-bold transition-opacity hover:opacity-90"
-                      style={{ backgroundColor: "var(--store-primary,#007AFF)" }}
+                      style={{
+                        backgroundColor: "var(--store-primary,#007AFF)",
+                      }}
                     >
                       Ver catálogo
                     </button>
@@ -321,11 +347,16 @@ export function CartDrawer({
                     {showTicketPreviewSetting && ols && (
                       <div>
                         <button
-                          onClick={() => setShowTicketPreview(!showTicketPreview)}
+                          onClick={() =>
+                            setShowTicketPreview(!showTicketPreview)
+                          }
                           className="text-xs text-[var(--store-muted,#8A8F98)] flex items-center gap-1.5 hover:text-[var(--store-text,#0F172A)] transition-colors w-full justify-center py-2"
                         >
                           <Receipt className="h-3.5 w-3.5" />
-                          {showTicketPreview ? "Ocultar" : "Mostrar"} {isWhatsappMode ? "mensaje de WhatsApp" : "vista previa del ticket"}
+                          {showTicketPreview ? "Ocultar" : "Mostrar"}{" "}
+                          {isWhatsappMode
+                            ? "mensaje de WhatsApp"
+                            : "vista previa del ticket"}
                         </button>
 
                         <AnimatePresence>
@@ -343,19 +374,25 @@ export function CartDrawer({
                                   cartItems={cart}
                                   subtotal={`$${subtotalProductos.toLocaleString("es-AR", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`}
                                   total={`$${subtotalProductos.toLocaleString("es-AR", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`}
-                                  porcentajeAumentoConsignacion={config.porcentajeAumentoConsignacion}
+                                  porcentajeAumentoConsignacion={
+                                    config.porcentajeAumentoConsignacion
+                                  }
                                   className="mt-2"
                                 />
                               ) : (
-                              <CheckoutTicketPreview
-                                settings={ols}
-                                cartItems={cart}
-                                subtotal={`$${subtotalProductos.toLocaleString("es-AR", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`}
-                                total={`$${subtotalProductos.toLocaleString("es-AR", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`}
-                                porcentajeAumentoConsignacion={config.porcentajeAumentoConsignacion}
-                                porcentajeInteresTarjeta={config.porcentajeInteresTarjeta}
-                                className="mt-2"
-                              />
+                                <CheckoutTicketPreview
+                                  settings={ols}
+                                  cartItems={cart}
+                                  subtotal={`$${subtotalProductos.toLocaleString("es-AR", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`}
+                                  total={`$${subtotalProductos.toLocaleString("es-AR", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`}
+                                  porcentajeAumentoConsignacion={
+                                    config.porcentajeAumentoConsignacion
+                                  }
+                                  porcentajeInteresTarjeta={
+                                    config.porcentajeInteresTarjeta
+                                  }
+                                  className="mt-2"
+                                />
                               )}
                             </motion.div>
                           )}
@@ -363,8 +400,7 @@ export function CartDrawer({
                       </div>
                     )}
                   </div>
-                )
-              )}
+                ))}
 
               {/* PASO 2: Datos del cliente */}
               {step === 2 && (
@@ -374,7 +410,9 @@ export function CartDrawer({
                   className="px-5 py-4 space-y-4"
                 >
                   <div className="space-y-1.5">
-                    <Label className="text-sm font-semibold text-[var(--store-text,#0F172A)]">Nombre completo *</Label>
+                    <Label className="text-sm font-semibold text-[var(--store-text,#0F172A)]">
+                      Nombre completo *
+                    </Label>
                     <Input
                       name="nombre"
                       value={clienteData.nombre}
@@ -384,7 +422,9 @@ export function CartDrawer({
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="text-sm font-semibold text-[var(--store-text,#0F172A)]">Teléfono</Label>
+                    <Label className="text-sm font-semibold text-[var(--store-text,#0F172A)]">
+                      Teléfono
+                    </Label>
                     <Input
                       name="telefono"
                       value={clienteData.telefono ?? ""}
@@ -406,10 +446,14 @@ export function CartDrawer({
                       className="h-12 rounded-xl border-gray-200 bg-gray-50 text-[var(--store-text,#0F172A)] placeholder:text-gray-400 focus-visible:ring-[var(--store-primary,#007AFF)]"
                     />
                   </div>
-                  <div className={cn(
-                    "rounded-2xl border p-4 text-sm",
-                    isWhatsappMode ? "bg-emerald-50 border-emerald-100 text-emerald-700" : "bg-blue-50 border-blue-100 text-blue-700",
-                  )}>
+                  <div
+                    className={cn(
+                      "rounded-2xl border p-4 text-sm",
+                      isWhatsappMode
+                        ? "bg-emerald-50 border-emerald-100 text-emerald-700"
+                        : "bg-blue-50 border-blue-100 text-blue-700",
+                    )}
+                  >
                     {isWhatsappMode
                       ? "Vamos a preparar un mensaje con tu pedido para enviarlo directamente por WhatsApp."
                       : "Vamos a generar un checkout online con el detalle de tu pedido y un ticket digital como referencia."}
@@ -424,7 +468,9 @@ export function CartDrawer({
                   animate={{ opacity: 1, x: 0 }}
                   className="px-5 py-4 space-y-3"
                 >
-                  <h4 className="font-bold text-sm text-[var(--store-text,#0F172A)]">¿Cómo querés recibir tu pedido?</h4>
+                  <h4 className="font-bold text-sm text-[var(--store-text,#0F172A)]">
+                    ¿Cómo querés recibir tu pedido?
+                  </h4>
 
                   {[
                     {
@@ -454,29 +500,50 @@ export function CartDrawer({
                   ].map((option) => (
                     <div
                       key={option.id}
-                      onClick={() => setEnvioData({ metodoEnvio: option.id as "RETIRO_LOCAL" | "UBER_FLASH" | "ENCOMIENDA", costo: 0 })}
+                      onClick={() =>
+                        setEnvioData({
+                          metodoEnvio: option.id as
+                            "RETIRO_LOCAL" | "UBER_FLASH" | "ENCOMIENDA",
+                          costo: 0,
+                        })
+                      }
                       className={cn(
                         "p-4 border-2 rounded-2xl cursor-pointer flex items-center gap-4 transition-all",
                         envioData.metodoEnvio === option.id
                           ? "border-[var(--store-primary,#007AFF)] bg-[var(--store-primary,#007AFF)]/5"
-                          : "border-gray-100 hover:border-gray-200 bg-white"
+                          : "border-gray-100 hover:border-gray-200 bg-white",
                       )}
                     >
-                      <div className={`${option.color} p-2.5 rounded-xl flex-shrink-0`}>
-                        <option.icon className={`h-5 w-5 ${option.textColor}`} />
+                      <div
+                        className={`${option.color} p-2.5 rounded-xl flex-shrink-0`}
+                      >
+                        <option.icon
+                          className={`h-5 w-5 ${option.textColor}`}
+                        />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="font-bold text-sm text-[var(--store-text,#0F172A)]">{option.title}</p>
-                        <p className="text-xs text-[var(--store-muted,#8A8F98)] mt-0.5">{option.desc}</p>
+                        <p className="font-bold text-sm text-[var(--store-text,#0F172A)]">
+                          {option.title}
+                        </p>
+                        <p className="text-xs text-[var(--store-muted,#8A8F98)] mt-0.5">
+                          {option.desc}
+                        </p>
                       </div>
-                      <div className={cn(
-                        "h-5 w-5 rounded-full border-2 flex-shrink-0 transition-all",
-                        envioData.metodoEnvio === option.id
-                          ? "border-[var(--store-primary,#007AFF)]"
-                          : "border-gray-300"
-                      )}>
+                      <div
+                        className={cn(
+                          "h-5 w-5 rounded-full border-2 flex-shrink-0 transition-all",
+                          envioData.metodoEnvio === option.id
+                            ? "border-[var(--store-primary,#007AFF)]"
+                            : "border-gray-300",
+                        )}
+                      >
                         {envioData.metodoEnvio === option.id && (
-                          <div className="h-full w-full rounded-full scale-[0.55]" style={{ backgroundColor: "var(--store-primary,#007AFF)" }} />
+                          <div
+                            className="h-full w-full rounded-full scale-[0.55]"
+                            style={{
+                              backgroundColor: "var(--store-primary,#007AFF)",
+                            }}
+                          />
                         )}
                       </div>
                     </div>
@@ -484,7 +551,8 @@ export function CartDrawer({
 
                   {selectedDeliveryNeedsDisclaimer && (
                     <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
-                      El costo del envío no está incluido en el total. Te informaremos el valor por WhatsApp.
+                      El costo del envío no está incluido en el total. Te
+                      informaremos el valor por WhatsApp.
                     </div>
                   )}
 
@@ -492,26 +560,57 @@ export function CartDrawer({
                     <div className="space-y-3 pt-2">
                       <div className="h-px bg-gray-100" />
                       <div className="space-y-1.5">
-                        <Label className="text-sm font-semibold text-[var(--store-text,#0F172A)]">Domicilio *</Label>
-                        <Input name="direccion" value={clienteData.direccion ?? ""} onChange={handleInputChange} placeholder="Ej. Av. Santa Fe" className="h-12 rounded-xl border-gray-200 bg-gray-50" />
+                        <Label className="text-sm font-semibold text-[var(--store-text,#0F172A)]">
+                          Domicilio *
+                        </Label>
+                        <Input
+                          name="direccion"
+                          value={clienteData.direccion ?? ""}
+                          onChange={handleInputChange}
+                          placeholder="Ej. Av. Santa Fe"
+                          className="h-12 rounded-xl border-gray-200 bg-gray-50"
+                        />
                       </div>
                       <div className="grid grid-cols-2 gap-3">
                         <div className="space-y-1.5">
-                          <Label className="text-sm font-semibold text-[var(--store-text,#0F172A)]">Altura *</Label>
-                          <Input name="altura" value={clienteData.altura ?? ""} onChange={handleInputChange} placeholder="1234" className="h-12 rounded-xl border-gray-200 bg-gray-50" />
+                          <Label className="text-sm font-semibold text-[var(--store-text,#0F172A)]">
+                            Altura *
+                          </Label>
+                          <Input
+                            name="altura"
+                            value={clienteData.altura ?? ""}
+                            onChange={handleInputChange}
+                            placeholder="1234"
+                            className="h-12 rounded-xl border-gray-200 bg-gray-50"
+                          />
                         </div>
                         <div className="space-y-1.5">
-                          <Label className="text-sm font-semibold text-[var(--store-text,#0F172A)]">Localidad *</Label>
-                          <Input name="localidad" value={clienteData.localidad ?? ""} onChange={handleInputChange} placeholder="Ciudad" className="h-12 rounded-xl border-gray-200 bg-gray-50" />
+                          <Label className="text-sm font-semibold text-[var(--store-text,#0F172A)]">
+                            Localidad *
+                          </Label>
+                          <Input
+                            name="localidad"
+                            value={clienteData.localidad ?? ""}
+                            onChange={handleInputChange}
+                            placeholder="Ciudad"
+                            className="h-12 rounded-xl border-gray-200 bg-gray-50"
+                          />
                         </div>
                       </div>
                       <div className="space-y-1.5">
-                        <Label className="text-sm font-semibold text-[var(--store-text,#0F172A)]">Provincia *</Label>
-                        <Input name="provincia" value={clienteData.provincia ?? ""} onChange={handleInputChange} placeholder="Provincia" className="h-12 rounded-xl border-gray-200 bg-gray-50" />
+                        <Label className="text-sm font-semibold text-[var(--store-text,#0F172A)]">
+                          Provincia *
+                        </Label>
+                        <Input
+                          name="provincia"
+                          value={clienteData.provincia ?? ""}
+                          onChange={handleInputChange}
+                          placeholder="Provincia"
+                          className="h-12 rounded-xl border-gray-200 bg-gray-50"
+                        />
                       </div>
                     </div>
                   )}
-
                 </motion.div>
               )}
             </div>
@@ -521,7 +620,11 @@ export function CartDrawer({
               <div className="flex-shrink-0 border-t border-gray-100 bg-[var(--store-surface,#FFFFFF)] px-5 py-4 space-y-3">
                 {/* Resumen de precios en paso 1 */}
                 {step === 1 && ols && (
-                  <OrderSummary subtotal={subtotalProductos} settings={ols} cartItems={cart} />
+                  <OrderSummary
+                    subtotal={subtotalProductos}
+                    settings={ols}
+                    cartItems={cart}
+                  />
                 )}
 
                 {/* Botón principal */}
@@ -534,12 +637,13 @@ export function CartDrawer({
                     "disabled:opacity-50 disabled:cursor-not-allowed",
                     step === 3 && isWhatsappMode
                       ? "shadow-[0_4px_20px_rgba(37,211,102,0.35)]"
-                      : "shadow-[0_4px_16px_rgba(0,0,0,0.15)]"
+                      : "shadow-[0_4px_16px_rgba(0,0,0,0.15)]",
                   )}
                   style={{
-                    backgroundColor: step === 3 && isWhatsappMode
-                      ? "var(--store-whatsapp,#25D366)"
-                      : "var(--store-primary,#007AFF)",
+                    backgroundColor:
+                      step === 3 && isWhatsappMode
+                        ? "var(--store-whatsapp,#25D366)"
+                        : "var(--store-primary,#007AFF)",
                   }}
                 >
                   {loading ? (
@@ -547,7 +651,11 @@ export function CartDrawer({
                   ) : step === 3 ? (
                     <>
                       {isWhatsappMode ? (
-                        <svg viewBox="0 0 24 24" className="h-5 w-5 fill-white" xmlns="http://www.w3.org/2000/svg">
+                        <svg
+                          viewBox="0 0 24 24"
+                          className="h-5 w-5 fill-white"
+                          xmlns="http://www.w3.org/2000/svg"
+                        >
                           <path d={WHATSAPP_ICON_PATH} />
                         </svg>
                       ) : (

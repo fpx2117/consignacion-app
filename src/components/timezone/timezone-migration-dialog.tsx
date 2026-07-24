@@ -18,41 +18,41 @@ import { Checkbox } from "@/components/ui/checkbox";
 // ─── Tipos ───────────────────────────────────────────────────────────────────
 
 type TablaInfo = {
-  tabla:            string;
-  columna:          string;
-  registros:        number;
-  sample_stored:    string | null;
+  tabla: string;
+  columna: string;
+  registros: number;
+  sample_stored: string | null;
   sample_corrected: string | null;
 };
 
 type MigrationData = {
-  serverTz:              string;
-  configuredTz:          string;
-  offsetHours:           number;
-  needsMigration:        boolean;
+  serverTz: string;
+  configuredTz: string;
+  offsetHours: number;
+  needsMigration: boolean;
   timezoneMigrationDone: boolean;
-  tablas:                TablaInfo[];
+  tablas: TablaInfo[];
 };
 
 type DryRunTarget = {
-  tabla:   string;
+  tabla: string;
   columna: string;
   updated: number;
 };
 
 type DryRunResult = {
-  dryRun:    boolean;
+  dryRun: boolean;
   offsetHours: number;
-  interval:  string;
-  message:   string;
-  targets:   DryRunTarget[];
+  interval: string;
+  message: string;
+  targets: DryRunTarget[];
 };
 
 interface TimezoneMigrationDialogProps {
-  open:          boolean;
-  onOpenChange:  (open: boolean) => void;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
   migrationData: MigrationData;
-  onSuccess:     () => void;
+  onSuccess: () => void;
 }
 
 // ─── Componente ──────────────────────────────────────────────────────────────
@@ -65,8 +65,12 @@ export function TimezoneMigrationDialog({
 }: TimezoneMigrationDialogProps) {
   const [confirmed, setConfirmed] = React.useState(false);
   const [loading, setLoading] = React.useState(false);
-  const [dryRunResult, setDryRunResult] = React.useState<DryRunResult | null>(null);
-  const [step, setStep] = React.useState<"diagnostic" | "dryrun-preview" | "done">("diagnostic");
+  const [dryRunResult, setDryRunResult] = React.useState<DryRunResult | null>(
+    null,
+  );
+  const [step, setStep] = React.useState<
+    "diagnostic" | "dryrun-preview" | "done"
+  >("diagnostic");
 
   // Resetear estado al abrir/cerrar
   React.useEffect(() => {
@@ -100,7 +104,11 @@ export function TimezoneMigrationDialog({
       setDryRunResult(json.data);
       setStep("dryrun-preview");
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Error ejecutando el diagnóstico previo");
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Error ejecutando el diagnóstico previo",
+      );
     } finally {
       setLoading(false);
     }
@@ -126,10 +134,16 @@ export function TimezoneMigrationDialog({
       }
 
       setStep("done");
-      toast.success("Migración completada. Las fechas históricas fueron corregidas.");
+      toast.success(
+        "Migración completada. Las fechas históricas fueron corregidas.",
+      );
       onSuccess();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Error aplicando la corrección");
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Error aplicando la corrección",
+      );
     } finally {
       setLoading(false);
     }
@@ -137,7 +151,10 @@ export function TimezoneMigrationDialog({
 
   // ─── Render ───────────────────────────────────────────────────────────────
 
-  const totalRegistros = migrationData.tablas.reduce((sum, t) => sum + t.registros, 0);
+  const totalRegistros = migrationData.tablas.reduce(
+    (sum, t) => sum + t.registros,
+    0,
+  );
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -149,10 +166,14 @@ export function TimezoneMigrationDialog({
           </DialogTitle>
           <DialogDescription>
             La base de datos tiene{" "}
-            <span className="font-semibold text-foreground">{migrationData.offsetHours} horas</span> de
-            adelanto respecto a la zona horaria configurada (
-            <span className="font-semibold text-foreground">{migrationData.configuredTz}</span>).
-            Esta operación ajustará todas las fechas restando ese offset.
+            <span className="font-semibold text-foreground">
+              {migrationData.offsetHours} horas
+            </span>{" "}
+            de adelanto respecto a la zona horaria configurada (
+            <span className="font-semibold text-foreground">
+              {migrationData.configuredTz}
+            </span>
+            ). Esta operación ajustará todas las fechas restando ese offset.
           </DialogDescription>
         </DialogHeader>
 
@@ -162,12 +183,20 @@ export function TimezoneMigrationDialog({
             {/* Info de offset */}
             <div className="rounded-lg bg-yellow-50 dark:bg-yellow-950/20 border border-yellow-200 dark:border-yellow-800 p-3 text-sm space-y-1">
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Servidor PostgreSQL</span>
-                <span className="font-mono font-medium">{migrationData.serverTz}</span>
+                <span className="text-muted-foreground">
+                  Servidor PostgreSQL
+                </span>
+                <span className="font-mono font-medium">
+                  {migrationData.serverTz}
+                </span>
               </div>
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Zona horaria configurada</span>
-                <span className="font-mono font-medium">{migrationData.configuredTz}</span>
+                <span className="text-muted-foreground">
+                  Zona horaria configurada
+                </span>
+                <span className="font-mono font-medium">
+                  {migrationData.configuredTz}
+                </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Offset a corregir</span>
@@ -182,9 +211,15 @@ export function TimezoneMigrationDialog({
               <table className="w-full text-sm">
                 <thead className="bg-muted/50">
                   <tr>
-                    <th className="text-left px-3 py-2 font-medium text-muted-foreground">Tabla</th>
-                    <th className="text-left px-3 py-2 font-medium text-muted-foreground">Columna</th>
-                    <th className="text-right px-3 py-2 font-medium text-muted-foreground">Registros</th>
+                    <th className="text-left px-3 py-2 font-medium text-muted-foreground">
+                      Tabla
+                    </th>
+                    <th className="text-left px-3 py-2 font-medium text-muted-foreground">
+                      Columna
+                    </th>
+                    <th className="text-right px-3 py-2 font-medium text-muted-foreground">
+                      Registros
+                    </th>
                     <th className="text-left px-3 py-2 font-medium text-muted-foreground hidden md:table-cell">
                       Almacenado → Corregido
                     </th>
@@ -197,17 +232,27 @@ export function TimezoneMigrationDialog({
                       className={i % 2 === 0 ? "bg-background" : "bg-muted/20"}
                     >
                       <td className="px-3 py-2 font-mono text-xs">{t.tabla}</td>
-                      <td className="px-3 py-2 font-mono text-xs text-muted-foreground">{t.columna}</td>
-                      <td className="px-3 py-2 text-right tabular-nums">{t.registros.toLocaleString()}</td>
+                      <td className="px-3 py-2 font-mono text-xs text-muted-foreground">
+                        {t.columna}
+                      </td>
+                      <td className="px-3 py-2 text-right tabular-nums">
+                        {t.registros.toLocaleString()}
+                      </td>
                       <td className="px-3 py-2 hidden md:table-cell">
                         {t.sample_stored && t.sample_corrected ? (
                           <span className="text-xs font-mono text-muted-foreground">
-                            <span className="text-destructive">{t.sample_stored}</span>
+                            <span className="text-destructive">
+                              {t.sample_stored}
+                            </span>
                             {" → "}
-                            <span className="text-green-600 dark:text-green-400">{t.sample_corrected}</span>
+                            <span className="text-green-600 dark:text-green-400">
+                              {t.sample_corrected}
+                            </span>
                           </span>
                         ) : (
-                          <span className="text-xs text-muted-foreground italic">sin datos</span>
+                          <span className="text-xs text-muted-foreground italic">
+                            sin datos
+                          </span>
                         )}
                       </td>
                     </tr>
@@ -215,8 +260,12 @@ export function TimezoneMigrationDialog({
                 </tbody>
                 <tfoot className="border-t bg-muted/30">
                   <tr>
-                    <td colSpan={2} className="px-3 py-2 font-medium text-sm">Total</td>
-                    <td className="px-3 py-2 text-right font-bold tabular-nums">{totalRegistros.toLocaleString()}</td>
+                    <td colSpan={2} className="px-3 py-2 font-medium text-sm">
+                      Total
+                    </td>
+                    <td className="px-3 py-2 text-right font-bold tabular-nums">
+                      {totalRegistros.toLocaleString()}
+                    </td>
                     <td className="hidden md:table-cell" />
                   </tr>
                 </tfoot>
@@ -231,8 +280,9 @@ export function TimezoneMigrationDialog({
                 className="mt-0.5"
               />
               <span className="text-sm text-muted-foreground leading-snug">
-                Entiendo que esta operación modificará los datos de la base de datos de forma permanente
-                y que se recomienda tener un backup antes de proceder.
+                Entiendo que esta operación modificará los datos de la base de
+                datos de forma permanente y que se recomienda tener un backup
+                antes de proceder.
               </span>
             </label>
           </div>
@@ -245,16 +295,24 @@ export function TimezoneMigrationDialog({
               <p className="font-medium text-blue-800 dark:text-blue-300 mb-1">
                 Simulación completada (DRY-RUN)
               </p>
-              <p className="text-blue-700 dark:text-blue-400 text-xs">{dryRunResult.message}</p>
+              <p className="text-blue-700 dark:text-blue-400 text-xs">
+                {dryRunResult.message}
+              </p>
             </div>
 
             <div className="rounded-lg border overflow-hidden">
               <table className="w-full text-sm">
                 <thead className="bg-muted/50">
                   <tr>
-                    <th className="text-left px-3 py-2 font-medium text-muted-foreground">Tabla</th>
-                    <th className="text-left px-3 py-2 font-medium text-muted-foreground">Columna</th>
-                    <th className="text-right px-3 py-2 font-medium text-muted-foreground">A modificar</th>
+                    <th className="text-left px-3 py-2 font-medium text-muted-foreground">
+                      Tabla
+                    </th>
+                    <th className="text-left px-3 py-2 font-medium text-muted-foreground">
+                      Columna
+                    </th>
+                    <th className="text-right px-3 py-2 font-medium text-muted-foreground">
+                      A modificar
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
@@ -264,8 +322,12 @@ export function TimezoneMigrationDialog({
                       className={i % 2 === 0 ? "bg-background" : "bg-muted/20"}
                     >
                       <td className="px-3 py-2 font-mono text-xs">{t.tabla}</td>
-                      <td className="px-3 py-2 font-mono text-xs text-muted-foreground">{t.columna}</td>
-                      <td className="px-3 py-2 text-right tabular-nums font-medium">{t.updated.toLocaleString()}</td>
+                      <td className="px-3 py-2 font-mono text-xs text-muted-foreground">
+                        {t.columna}
+                      </td>
+                      <td className="px-3 py-2 text-right tabular-nums font-medium">
+                        {t.updated.toLocaleString()}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -274,8 +336,11 @@ export function TimezoneMigrationDialog({
 
             <p className="text-sm text-muted-foreground">
               Al confirmar, se aplicará la corrección de{" "}
-              <span className="font-semibold">-{dryRunResult.offsetHours}h</span> a todos los registros
-              listados arriba. Esta acción no se puede deshacer.
+              <span className="font-semibold">
+                -{dryRunResult.offsetHours}h
+              </span>{" "}
+              a todos los registros listados arriba. Esta acción no se puede
+              deshacer.
             </p>
           </div>
         )}
@@ -284,10 +349,12 @@ export function TimezoneMigrationDialog({
         {step === "done" && (
           <div className="flex flex-col items-center gap-3 py-6 text-center">
             <CheckCircle2 className="h-12 w-12 text-green-500" />
-            <p className="font-semibold text-foreground">Migración completada con éxito</p>
+            <p className="font-semibold text-foreground">
+              Migración completada con éxito
+            </p>
             <p className="text-sm text-muted-foreground">
-              Todas las fechas históricas fueron corregidas. La base de datos ahora refleja la hora
-              correcta de {migrationData.configuredTz}.
+              Todas las fechas históricas fueron corregidas. La base de datos
+              ahora refleja la hora correcta de {migrationData.configuredTz}.
             </p>
           </div>
         )}
@@ -328,9 +395,7 @@ export function TimezoneMigrationDialog({
           )}
 
           {step === "done" && (
-            <Button onClick={() => onOpenChange(false)}>
-              Cerrar
-            </Button>
+            <Button onClick={() => onOpenChange(false)}>Cerrar</Button>
           )}
         </DialogFooter>
       </DialogContent>

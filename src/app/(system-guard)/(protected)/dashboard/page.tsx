@@ -9,8 +9,14 @@ import { TopProductsSection } from "./components/top-products-section";
 import dynamic from "next/dynamic";
 // TendenciaSection contiene recharts — carga dinámica para no inflar el bundle inicial
 const TendenciaSection = dynamic(
-  () => import("./components/tendencia-section").then(m => m.TendenciaSection),
-  { ssr: false, loading: () => <div className="rounded-xl border bg-card h-64 animate-pulse" /> }
+  () =>
+    import("./components/tendencia-section").then((m) => m.TendenciaSection),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="rounded-xl border bg-card h-64 animate-pulse" />
+    ),
+  },
 );
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -26,9 +32,22 @@ import {
 } from "@/components/ui/sheet";
 
 import {
-  Handshake, AlertTriangle, Boxes, Wallet,
-  TrendingUp, Activity, Store, Package,
-  Calendar, Settings2, RotateCcw, BarChart3, Check, X, Shield, ShoppingCart
+  Handshake,
+  AlertTriangle,
+  Boxes,
+  Wallet,
+  TrendingUp,
+  Activity,
+  Store,
+  Package,
+  Calendar,
+  Settings2,
+  RotateCcw,
+  BarChart3,
+  Check,
+  X,
+  Shield,
+  ShoppingCart,
 } from "lucide-react";
 // ✅ @dnd-kit carga lazy — fuera del bundle inicial del dashboard
 const KpiSortableGrid = dynamic(
@@ -38,11 +57,14 @@ const KpiSortableGrid = dynamic(
     loading: () => (
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         {Array.from({ length: 4 }).map((_, i) => (
-          <div key={i} className="rounded-xl border bg-card h-28 animate-pulse" />
+          <div
+            key={i}
+            className="rounded-xl border bg-card h-28 animate-pulse"
+          />
         ))}
       </div>
     ),
-  }
+  },
 );
 
 import { formatNumber, formatMoney } from "@/lib/date-format/utils-format";
@@ -84,7 +106,9 @@ function KpiToggleMenuItem({
       onClick={() => onChange(!checked)}
       className={cn(
         "flex w-full items-center justify-between gap-2 rounded-lg px-2.5 py-2 text-left text-xs font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-primary/30",
-        checked ? "bg-[color:var(--status-success-strong)]/10" : "bg-transparent"
+        checked
+          ? "bg-[color:var(--status-success-strong)]/10"
+          : "bg-transparent",
       )}
     >
       <span className="truncate">{label}</span>
@@ -93,7 +117,7 @@ function KpiToggleMenuItem({
           "inline-flex items-center gap-1 rounded-full border px-1.5 py-0.5 text-[10px] font-semibold",
           checked
             ? "border-[color:var(--status-success-strong)]/30 bg-[color:var(--status-success-strong)]/10 text-[color:var(--status-success-strong)]"
-            : "border-border bg-muted/50 text-muted-foreground"
+            : "border-border bg-muted/50 text-muted-foreground",
         )}
       >
         {checked ? <Check className="h-3 w-3" /> : <X className="h-3 w-3" />}
@@ -116,24 +140,32 @@ export default function DashboardPage() {
   const [period, setPeriod] = React.useState<DashboardPeriod>("month");
   const [filter, setFilter] = React.useState<DashboardFilter>("all");
   const [showSensitiveData, setShowSensitiveData] = React.useState(false);
-  const [hiddenKpis, setHiddenKpis] = React.useState<Record<string, boolean>>({});
+  const [hiddenKpis, setHiddenKpis] = React.useState<Record<string, boolean>>(
+    {},
+  );
   const [kpiOrder, setKpiOrder] = React.useState<Record<KpiSection, string[]>>({
     operative: [],
     finance: [],
   });
   const [prefsLoaded, setPrefsLoaded] = React.useState(false);
-  const { kpis, consig, top, trend, loading, error, refresh } = useDashboard(period);
-  const ventasStats = kpis?.finanzas?.ventas as { total?: number; soloVenta?: number; soloConsig?: number } | undefined;
-  const pagosStats = kpis?.finanzas?.pagos as { total?: number; soloVenta?: number; soloDeuda?: number } | undefined;
+  const { kpis, consig, top, trend, loading, error, refresh } =
+    useDashboard(period);
+  const ventasStats = kpis?.finanzas?.ventas as
+    { total?: number; soloVenta?: number; soloConsig?: number } | undefined;
+  const pagosStats = kpis?.finanzas?.pagos as
+    { total?: number; soloVenta?: number; soloDeuda?: number } | undefined;
 
   const storageKey = React.useMemo(() => {
     const suffix = activeSucursalId ?? "global";
     return `${KPI_PREFS_STORAGE_KEY}-${suffix}`;
   }, [activeSucursalId]);
 
-  const maskMoney = React.useCallback((value: number) => {
-    return showSensitiveData ? formatMoney(value) : "••••••";
-  }, [showSensitiveData]);
+  const maskMoney = React.useCallback(
+    (value: number) => {
+      return showSensitiveData ? formatMoney(value) : "••••••";
+    },
+    [showSensitiveData],
+  );
 
   React.useEffect(() => {
     setPrefsLoaded(false);
@@ -168,7 +200,7 @@ export default function DashboardPage() {
 
     window.localStorage.setItem(
       storageKey,
-      JSON.stringify({ showSensitiveData, hiddenKpis, kpiOrder })
+      JSON.stringify({ showSensitiveData, hiddenKpis, kpiOrder }),
     );
   }, [showSensitiveData, hiddenKpis, kpiOrder, prefsLoaded, storageKey]);
 
@@ -244,7 +276,7 @@ export default function DashboardPage() {
           subtitle: "Deuda acumulada",
           icon: Activity,
           loading,
-        }
+        },
       );
     }
 
@@ -330,18 +362,27 @@ export default function DashboardPage() {
           formula: "Pagados + Recurrentes + Compartidos(prop.)",
           icon: Wallet,
           loading,
-          variant: (kpis?.finanzas?.ganancia?.gastos ?? 0) > 0 ? "warning" : "default",
+          variant:
+            (kpis?.finanzas?.ganancia?.gastos ?? 0) > 0 ? "warning" : "default",
         },
         {
           key: "proximos-vencimientos",
           title: "Próx. Vencimientos",
-          value: maskMoney((kpis?.proximosVencimientos || []).reduce((acc, g) => acc + Number(g.monto), 0)),
+          value: maskMoney(
+            (kpis?.proximosVencimientos || []).reduce(
+              (acc, g) => acc + Number(g.monto),
+              0,
+            ),
+          ),
           subtitle: `${kpis?.proximosVencimientos?.length ?? 0} gastos pendientes`,
           formula: "Pagos futuros y adeudados",
           icon: Calendar,
           loading,
-          variant: (kpis?.proximosVencimientos?.length ?? 0) > 0 ? "warning" : "default",
-        }
+          variant:
+            (kpis?.proximosVencimientos?.length ?? 0) > 0
+              ? "warning"
+              : "default",
+        },
       );
     }
 
@@ -395,11 +436,20 @@ export default function DashboardPage() {
     }
 
     return items;
-  }, [kpis, filter, loading, displayedGanancia, gananciaNetaSinGastos, maskMoney, ventasStats, pagosStats]);
+  }, [
+    kpis,
+    filter,
+    loading,
+    displayedGanancia,
+    gananciaNetaSinGastos,
+    maskMoney,
+    ventasStats,
+    pagosStats,
+  ]);
 
   const allVisibleKpis = React.useMemo(
     () => [...operativeKpis, ...financeKpis],
-    [operativeKpis, financeKpis]
+    [operativeKpis, financeKpis],
   );
 
   const visibleKpiCount = React.useMemo(() => {
@@ -418,7 +468,7 @@ export default function DashboardPage() {
     const byKey = new Map(operativeKpis.map((item) => [item.key, item]));
     const orderedKeys = mergeKpiOrder(
       operativeKpis.map((item) => item.key),
-      kpiOrder.operative
+      kpiOrder.operative,
     );
 
     return orderedKeys
@@ -431,7 +481,7 @@ export default function DashboardPage() {
     const byKey = new Map(financeKpis.map((item) => [item.key, item]));
     const orderedKeys = mergeKpiOrder(
       financeKpis.map((item) => item.key),
-      kpiOrder.finance
+      kpiOrder.finance,
     );
 
     return orderedKeys
@@ -453,7 +503,11 @@ export default function DashboardPage() {
   }, []);
 
   const handleReorder = React.useCallback(
-    (section: KpiSection, reorderedVisibleKeys: string[], sourceKpis: KpiConfig[]) => {
+    (
+      section: KpiSection,
+      reorderedVisibleKeys: string[],
+      sourceKpis: KpiConfig[],
+    ) => {
       setKpiOrder((prev) => {
         const availableKeys = sourceKpis.map((item) => item.key);
         const baseOrder = mergeKpiOrder(availableKeys, prev[section]);
@@ -464,7 +518,7 @@ export default function DashboardPage() {
         };
       });
     },
-    [hiddenKpis]
+    [hiddenKpis],
   );
 
   const resetKpiLayout = React.useCallback(() => {
@@ -482,13 +536,12 @@ export default function DashboardPage() {
           ? "grid-cols-1 sm:grid-cols-3"
           : count === 2
             ? "grid-cols-1 sm:grid-cols-2"
-            : "grid-cols-1"
+            : "grid-cols-1",
     );
 
   return (
     <div className="relative min-h-screen w-full">
       <div className="mx-auto max-w-[1800px] space-y-8 p-4 pb-32 sm:p-6 md:p-8 lg:p-10">
-
         <DashboardHeader
           period={period}
           setPeriod={setPeriod}
@@ -526,13 +579,19 @@ export default function DashboardPage() {
                       <Settings2 className="h-4 w-4" />
                     </span>
                     <div>
-                      <SheetTitle className="text-sm font-bold">Personalizar KPIs</SheetTitle>
+                      <SheetTitle className="text-sm font-bold">
+                        Personalizar KPIs
+                      </SheetTitle>
                       <SheetDescription className="mt-0.5 text-[11px]">
-                        Activa o desactiva tarjetas del dashboard segun lo que quieras ver.
+                        Activa o desactiva tarjetas del dashboard segun lo que
+                        quieras ver.
                       </SheetDescription>
                     </div>
                   </div>
-                  <Badge variant="outline" className="rounded-full text-[10px] font-bold">
+                  <Badge
+                    variant="outline"
+                    className="rounded-full text-[10px] font-bold"
+                  >
                     {visibleKpiCount}/{allVisibleKpis.length || 0}
                   </Badge>
                 </div>
@@ -560,7 +619,12 @@ export default function DashboardPage() {
                       <div className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
                         <Activity className="h-3 w-3" /> Estado Operativo
                       </div>
-                      <Badge variant="secondary" className="h-5 rounded-full px-1.5 text-[9px]">{visibleOperativeCount}/{operativeKpis.length}</Badge>
+                      <Badge
+                        variant="secondary"
+                        className="h-5 rounded-full px-1.5 text-[9px]"
+                      >
+                        {visibleOperativeCount}/{operativeKpis.length}
+                      </Badge>
                     </div>
                     {operativeKpis.map((item) => (
                       <KpiToggleMenuItem
@@ -577,7 +641,12 @@ export default function DashboardPage() {
                       <div className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
                         <BarChart3 className="h-3 w-3" /> Rentabilidad
                       </div>
-                      <Badge variant="secondary" className="h-5 rounded-full px-1.5 text-[9px]">{visibleFinanceCount}/{financeKpis.length}</Badge>
+                      <Badge
+                        variant="secondary"
+                        className="h-5 rounded-full px-1.5 text-[9px]"
+                      >
+                        {visibleFinanceCount}/{financeKpis.length}
+                      </Badge>
                     </div>
                     {financeKpis.map((item) => (
                       <KpiToggleMenuItem
@@ -614,12 +683,16 @@ export default function DashboardPage() {
 
         {/* SECCIÓN 1: OPERATIVIDAD Y RIESGO */}
         <section className="space-y-4">
-          <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-widest pl-1">Estado Operativo</h3>
+          <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-widest pl-1">
+            Estado Operativo
+          </h3>
           {orderedOperativeKpis.length > 0 ? (
             <KpiSortableGrid
               items={orderedOperativeKpis}
               className={gridCols(orderedOperativeKpis.length)}
-              onReorder={(keys) => handleReorder("operative", keys, operativeKpis)}
+              onReorder={(keys) =>
+                handleReorder("operative", keys, operativeKpis)
+              }
             />
           ) : (
             <Card className="border-dashed border-border/60 bg-card/60">
@@ -630,7 +703,9 @@ export default function DashboardPage() {
           )}
 
           {/* SECCIÓN 2: FINANZAS Y RENTABILIDAD */}
-          <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-widest pl-1 pt-4">Rentabilidad</h3>
+          <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-widest pl-1 pt-4">
+            Rentabilidad
+          </h3>
           {orderedFinanceKpis.length > 0 ? (
             <KpiSortableGrid
               items={orderedFinanceKpis}
@@ -646,10 +721,14 @@ export default function DashboardPage() {
           )}
         </section>
 
-        <div className={cn(
-          "grid grid-cols-1 gap-8",
-          (filter === "all" || filter === "consignacion") ? "lg:grid-cols-2" : ""
-        )}>
+        <div
+          className={cn(
+            "grid grid-cols-1 gap-8",
+            filter === "all" || filter === "consignacion"
+              ? "lg:grid-cols-2"
+              : "",
+          )}
+        >
           {(filter === "all" || filter === "consignacion") && (
             <div className="space-y-8">
               <OperationsSection consig={consig} loading={loading} />
@@ -661,7 +740,12 @@ export default function DashboardPage() {
         </div>
 
         <div className="pt-4">
-          <TendenciaSection trend={trend} period={period} loading={loading} filter={filter} />
+          <TendenciaSection
+            trend={trend}
+            period={period}
+            loading={loading}
+            filter={filter}
+          />
         </div>
       </div>
     </div>

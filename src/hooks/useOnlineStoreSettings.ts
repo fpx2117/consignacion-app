@@ -18,9 +18,10 @@ type UseOnlineStoreSettingsReturn = {
  * Si la API falla o la configuración no existe, usa los defaults.
  */
 export function useOnlineStoreSettings(
-  sucursalId: number = 1
+  sucursalId: number = 1,
 ): UseOnlineStoreSettingsReturn {
-  const [rawConfig, setRawConfig] = useState<Partial<OnlineStoreSettings> | null>(null);
+  const [rawConfig, setRawConfig] =
+    useState<Partial<OnlineStoreSettings> | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -58,11 +59,16 @@ export function useOnlineStoreSettings(
 
     return {
       storeName: rawConfig.storeName ?? defaultOnlineStoreSettings.storeName,
-      storeLogoUrl: rawConfig.storeLogoUrl ?? defaultOnlineStoreSettings.storeLogoUrl,
-      storeBannerUrl: rawConfig.storeBannerUrl ?? defaultOnlineStoreSettings.storeBannerUrl,
-      description: rawConfig.description ?? defaultOnlineStoreSettings.description,
-      openingHours: rawConfig.openingHours ?? defaultOnlineStoreSettings.openingHours,
-      addressText: rawConfig.addressText ?? defaultOnlineStoreSettings.addressText,
+      storeLogoUrl:
+        rawConfig.storeLogoUrl ?? defaultOnlineStoreSettings.storeLogoUrl,
+      storeBannerUrl:
+        rawConfig.storeBannerUrl ?? defaultOnlineStoreSettings.storeBannerUrl,
+      description:
+        rawConfig.description ?? defaultOnlineStoreSettings.description,
+      openingHours:
+        rawConfig.openingHours ?? defaultOnlineStoreSettings.openingHours,
+      addressText:
+        rawConfig.addressText ?? defaultOnlineStoreSettings.addressText,
       theme: {
         ...defaultOnlineStoreSettings.theme,
         ...(rawConfig.theme || {}),
@@ -74,7 +80,9 @@ export function useOnlineStoreSettings(
       promotions: {
         ...defaultOnlineStoreSettings.promotions,
         ...(rawConfig.promotions || {}),
-        items: rawConfig.promotions?.items ?? defaultOnlineStoreSettings.promotions.items,
+        items:
+          rawConfig.promotions?.items ??
+          defaultOnlineStoreSettings.promotions.items,
       },
       cart: {
         ...defaultOnlineStoreSettings.cart,
@@ -91,12 +99,15 @@ export function useOnlineStoreSettings(
     };
   }, [rawConfig]);
 
-  const updateSettings = useCallback((partial: Partial<OnlineStoreSettings>) => {
-    setRawConfig((prev) => ({
-      ...prev,
-      ...partial,
-    }));
-  }, []);
+  const updateSettings = useCallback(
+    (partial: Partial<OnlineStoreSettings>) => {
+      setRawConfig((prev) => ({
+        ...prev,
+        ...partial,
+      }));
+    },
+    [],
+  );
 
   return { settings, loading, error, refetch: fetchSettings, updateSettings };
 }

@@ -9,8 +9,14 @@ Reporte del usuario: al ver una factura en producción, la consola mostraba `Fai
 Consulté directamente la factura mencionada (id 44) contra la base de datos de producción (el `DATABASE_URL` local apunta al mismo Postgres de Railway):
 
 ```json
-{ "id": 44, "archivoPath": "d9ce2e0c-....jpg", "archivoMime": "image/jpeg",
-  "archivoEliminado": true, "sucursalId": 2, "estado": "CANCELADA" }
+{
+  "id": 44,
+  "archivoPath": "d9ce2e0c-....jpg",
+  "archivoMime": "image/jpeg",
+  "archivoEliminado": true,
+  "sucursalId": 2,
+  "estado": "CANCELADA"
+}
 ```
 
 **No es un bug de almacenamiento.** La factura 44 está `CANCELADA` y `archivoEliminado: true` — el archivo se purgó intencionalmente por `purgarArchivoFacturaSiFinalizada()` (`src/lib/ocr/aplicar-confirmacion.ts:260-291`) cuando la factura llegó a un estado terminal, tal como está diseñado. `factura-detalle-dialog.tsx:142` ya verifica `factura?.archivoEliminado` antes de intentar renderizar cualquier `<img>` — si el usuario abre esta factura desde el diálogo normal de la app, ve el mensaje "Imagen original eliminada...", **sin ningún request a `/archivo`**. El reporte original del usuario (antes del fix anterior) fue justamente sobre esta factura 44, con el `<a target="_blank">` viejo — es muy probable que el 404 actual venga de una pestaña/URL vieja que quedó abierta apuntando directo a `https://.../api/facturas-proveedor/44/archivo`, de antes de que se corrigiera el visor. `share-modal.js` (no existe en este repo) es una extensión del navegador intentando inyectarse en esa página de error JSON en blanco — explica el resto del ruido de consola.
@@ -21,7 +27,7 @@ Revisando el componente completo (`factura-detalle-dialog.tsx`) aparecieron 3 pr
 
 ### 1. `<img>` sin manejo de error — bug real
 
-`factura-detalle-dialog.tsx:155-159`: el `<img src={ARCHIVO(factura.id)}>` no tiene `onError`. Si el fetch de la imagen falla por *cualquier* motivo — una condición de carrera (alguien confirma/cancela la factura, purgando el archivo, mientras otro usuario ya tiene el diálogo abierto con `archivoEliminado: false` cargado en memoria), un blip de red, o cualquier 403/404/500 — el usuario ve el ícono de imagen rota nativo del navegador, sin ningún mensaje. Es exactamente el tipo de "esto está muy mal" que reportó el usuario, más allá del caso puntual de la factura 44.
+`factura-detalle-dialog.tsx:155-159`: el `<img src={ARCHIVO(factura.id)}>` no tiene `onError`. Si el fetch de la imagen falla por _cualquier_ motivo — una condición de carrera (alguien confirma/cancela la factura, purgando el archivo, mientras otro usuario ya tiene el diálogo abierto con `archivoEliminado: false` cargado en memoria), un blip de red, o cualquier 403/404/500 — el usuario ve el ícono de imagen rota nativo del navegador, sin ningún mensaje. Es exactamente el tipo de "esto está muy mal" que reportó el usuario, más allá del caso puntual de la factura 44.
 
 ### 2. El visor está apretado dentro de un modal angosto — UX real
 
@@ -45,10 +51,10 @@ El diálogo completo mide `sm:max-w-[720px]` con `max-h-[85vh]` (`factura-detall
 
 ## Riesgos
 
-| Riesgo | Mitigación |
-|---|---|
-| El layout de dos columnas puede verse raro en anchos intermedios (tablet) | Usar el breakpoint `lg:` (1024px) para el cambio a dos columnas, igual que el resto de dialogs grandes del proyecto — por debajo de eso se apila, igual que hoy |
-| `onError` en el `<img>` podría loopear si el fallback también intenta cargar la misma URL | El fallback no vuelve a intentar cargar ninguna imagen — reemplaza el `<img>` por el bloque de texto/ícono, no por otro recurso de red |
+| Riesgo                                                                                    | Mitigación                                                                                                                                                      |
+| ----------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| El layout de dos columnas puede verse raro en anchos intermedios (tablet)                 | Usar el breakpoint `lg:` (1024px) para el cambio a dos columnas, igual que el resto de dialogs grandes del proyecto — por debajo de eso se apila, igual que hoy |
+| `onError` en el `<img>` podría loopear si el fallback también intenta cargar la misma URL | El fallback no vuelve a intentar cargar ninguna imagen — reemplaza el `<img>` por el bloque de texto/ícono, no por otro recurso de red                          |
 
 ## Criterios de Éxito
 

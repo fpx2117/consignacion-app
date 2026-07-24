@@ -15,6 +15,7 @@ Se migró el motor de extracción a **OpenRouter** (facturación por tokens), ma
 ## Alcance
 
 ### Dentro del Alcance
+
 1. Reemplazo de `src/lib/modal/ocr-client.ts` (llamaba a Modal con la imagen/PDF completo) por `src/lib/ai/openrouter-client.ts` + `src/lib/ai/invoice-ai-parser.ts` (le manda a la IA sólo texto ya extraído localmente).
 2. Extracción de texto barata centralizada en `src/lib/ocr/extraer-texto-factura.ts` (PDF nativo / OCR Tesseract para escaneados e imágenes) — antes esta lógica vivía duplicada en un pipeline OCR viejo sin IA.
 3. Prompt y JSON schema generados dinámicamente desde una config declarativa (`src/modules/invoices/config/invoice-extraction.config.ts`), en vez de hardcodeados en un string.
@@ -23,31 +24,32 @@ Se migró el motor de extracción a **OpenRouter** (facturación por tokens), ma
 6. Variables de entorno: se retiran `MODAL_*`/`OCR_COLD_START_*`, se agregan `OPENROUTER_API_KEY`/`OPENROUTER_MODEL`/`OPENROUTER_BASE_URL`/`OPENROUTER_MAX_INPUT_CHARS`/`OPENROUTER_REASONING_EFFORT`.
 
 ### Fuera del Alcance
+
 - Matching de productos, aprendizaje de alias, UI de revisión — sin cambios (ver `ocr-pipeline-inteligente/proposal.md`).
 - Envío de imágenes/PDF a la IA — deliberadamente descartado: en el MVP sólo se manda texto, para mantener el costo por tokens predecible.
 - Caché de respuesta IA por hash de archivo/texto entre facturas distintas — no implementado; el único gate contra reprocesamiento accidental es el estado (`PROCESABLES` en `process/route.ts`).
 
 ## Áreas Afectadas
 
-| Área | Impacto | Descripción |
-|------|---------|-------------|
-| `src/lib/modal/` | Eliminado | Cliente de Modal completo |
-| `src/lib/ai/openrouter-client.ts` | Creado | Cliente HTTP de bajo nivel a OpenRouter |
-| `src/lib/ai/invoice-ai-parser.ts` | Creado | Orquestador: texto → prompt → OpenRouter → validación |
-| `src/lib/ocr/extraer-texto-factura.ts` | Creado | Extracción de texto centralizada (reutiliza `ocr-engine.ts`/`tesseract-service.ts`, sin cambios) |
-| `src/modules/invoices/config/invoice-extraction.config.ts` | Creado | Config declarativa de campos + builders de prompt/schema/validación |
-| `src/app/api/facturas-proveedor/[id]/process/route.ts` | Modificado | Swap del import Modal→IA, guarda auditoría IA |
-| `prisma/schema.prisma` | Modificado | +3 columnas auditoría en `FacturaProveedor`, -`modalJobId` |
-| `src/app/api/productos/ocr-factura/**`, `ocr-factura-dialog.tsx` | Eliminado | Pipeline OCR viejo sin referencias activas |
-| `.env` / `.env.example` | Modificado | Variables Modal → OpenRouter |
+| Área                                                             | Impacto    | Descripción                                                                                      |
+| ---------------------------------------------------------------- | ---------- | ------------------------------------------------------------------------------------------------ |
+| `src/lib/modal/`                                                 | Eliminado  | Cliente de Modal completo                                                                        |
+| `src/lib/ai/openrouter-client.ts`                                | Creado     | Cliente HTTP de bajo nivel a OpenRouter                                                          |
+| `src/lib/ai/invoice-ai-parser.ts`                                | Creado     | Orquestador: texto → prompt → OpenRouter → validación                                            |
+| `src/lib/ocr/extraer-texto-factura.ts`                           | Creado     | Extracción de texto centralizada (reutiliza `ocr-engine.ts`/`tesseract-service.ts`, sin cambios) |
+| `src/modules/invoices/config/invoice-extraction.config.ts`       | Creado     | Config declarativa de campos + builders de prompt/schema/validación                              |
+| `src/app/api/facturas-proveedor/[id]/process/route.ts`           | Modificado | Swap del import Modal→IA, guarda auditoría IA                                                    |
+| `prisma/schema.prisma`                                           | Modificado | +3 columnas auditoría en `FacturaProveedor`, -`modalJobId`                                       |
+| `src/app/api/productos/ocr-factura/**`, `ocr-factura-dialog.tsx` | Eliminado  | Pipeline OCR viejo sin referencias activas                                                       |
+| `.env` / `.env.example`                                          | Modificado | Variables Modal → OpenRouter                                                                     |
 
 ## Riesgos
 
-| Riesgo | Probabilidad | Mitigación |
-|--------|--------------|------------|
-| El modelo devuelve JSON que no cumple el schema esperado | Baja (se probó con `response_format: json_schema, strict: true`) | `validateExtractedInvoice()` rechaza antes de tocar la DB; la factura queda en `ERROR` con el mensaje |
-| Reasoning tokens (`qwen/qwen3.6-35b-a3b` con `reasoning`) elevan el costo por factura | Media | `OPENROUTER_REASONING_EFFORT=low` por defecto; tokens de reasoning quedan auditados en `iaTokensUsados` para monitorear |
-| Migración de Prisma contra la base de producción (Railway) con drift preexistente | Confirmada — se manejó manualmente | Se evitó `prisma migrate dev` (pedía reset por drift no relacionado); se escribió la migración a mano y se aplicó con `prisma migrate deploy`, que no usa shadow DB |
+| Riesgo                                                                                | Probabilidad                                                     | Mitigación                                                                                                                                                          |
+| ------------------------------------------------------------------------------------- | ---------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| El modelo devuelve JSON que no cumple el schema esperado                              | Baja (se probó con `response_format: json_schema, strict: true`) | `validateExtractedInvoice()` rechaza antes de tocar la DB; la factura queda en `ERROR` con el mensaje                                                               |
+| Reasoning tokens (`qwen/qwen3.6-35b-a3b` con `reasoning`) elevan el costo por factura | Media                                                            | `OPENROUTER_REASONING_EFFORT=low` por defecto; tokens de reasoning quedan auditados en `iaTokensUsados` para monitorear                                             |
+| Migración de Prisma contra la base de producción (Railway) con drift preexistente     | Confirmada — se manejó manualmente                               | Se evitó `prisma migrate dev` (pedía reset por drift no relacionado); se escribió la migración a mano y se aplicó con `prisma migrate deploy`, que no usa shadow DB |
 
 ## Plan de Reversión (Rollback)
 

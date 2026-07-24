@@ -11,8 +11,12 @@ export async function GET(req: Request) {
   const limit = Math.min(Number(searchParams.get("limit") ?? 10) || 10, 50);
   const sucursalId = auth.activeSucursalId;
   const isGlobal = auth.user.rol === "ADMIN" && sucursalId === 0;
-  const includedGlobalIds = isGlobal ? await getIncludedGlobalSucursalIds() : [];
-  const sucursalWhere = isGlobal ? { sucursalId: { in: includedGlobalIds } } : { sucursalId };
+  const includedGlobalIds = isGlobal
+    ? await getIncludedGlobalSucursalIds()
+    : [];
+  const sucursalWhere = isGlobal
+    ? { sucursalId: { in: includedGlobalIds } }
+    : { sucursalId };
 
   // Traemos consignaciones ABIERTAS con detalles + cliente
   const abiertas = await prisma.consignacion.findMany({
@@ -28,7 +32,8 @@ export async function GET(req: Request) {
   const conPendientes = abiertas
     .map((c) => {
       const pendientes = c.detalles.reduce((acc, d) => {
-        const p = d.unitsEntregadas - d.unitsVendidasAcum - d.unitsDevueltasAcum;
+        const p =
+          d.unitsEntregadas - d.unitsVendidasAcum - d.unitsDevueltasAcum;
         return acc + p;
       }, 0);
 

@@ -15,6 +15,7 @@ La estrategia es una migracion estructural en fases con compatibilidad temporal,
 **Resultado**: SI, factible con riesgo controlable.
 
 Motivos:
+
 - El proyecto ya usa alias `@/* -> src/*`, lo que permite redirigir imports gradualmente.
 - Los scripts de calidad disponibles (`lint`, `build`) y typecheck via `tsc --noEmit` permiten validar roturas de resolucion.
 - Prisma ya esta configurado explicitamente a `prisma/schema.prisma` y `prisma/seed.ts` (`prisma.config.ts`), habilitando limpieza de copias sin impacto de runtime.
@@ -117,36 +118,40 @@ Fase 4 (cierre)
 ## Criterios de compatibilidad
 
 ### Imports y aliases
+
 - Mantener `@/*` operativo en toda la migracion.
 - Introducir aliases de transicion solo si son necesarios y con fecha de retiro documentada.
 - Prohibir nuevos imports a rutas legacy una vez migrado cada dominio.
 
 ### App Router
+
 - No mover ni renombrar rutas en `src/app/**` durante reorganizacion estructural.
 - Cualquier cambio en imports internos de pages/layouts/route handlers debe ser transparente para URL final.
 
 ### APIs
+
 - Mantener rutas y metodos HTTP existentes en `src/app/api/**/route.ts`.
 - Reorganizacion solo interna (mover helpers/servicios), sin cambiar payloads ni codigos de estado.
 
 ### Prisma
+
 - Mantener `prisma.config.ts` apuntando a `prisma/schema.prisma` y seed canonico.
 - No cambiar ruta de migraciones (`prisma/migrations/**`).
 - Archivar copias historicas fuera del path principal para evitar uso accidental.
 
 ## Cambios en archivos
 
-| Archivo | Accion | Descripcion |
-|---------|--------|-------------|
-| `openspec/changes/reorganizacion-estructura-proyecto/proposal.md` | Crear | Propuesta base del cambio y alcance. |
-| `openspec/changes/reorganizacion-estructura-proyecto/design.md` | Crear | Diseno tecnico con fases, compatibilidad y rollback. |
-| `tsconfig.json` | Modificar (fase implementacion) | Ajuste de aliases y rutas de transicion. |
-| `eslint.config.mjs` | Modificar (fase implementacion) | Reglas para evitar imports legacy y ciclos de capa. |
-| `prisma/` | Modificar (fase implementacion) | Reubicar archivos historicos a `prisma/archive/`. |
-| `src/lib/**` | Modificar (fase implementacion) | Wrappers de compatibilidad y deprecacion progresiva. |
-| `src/features/**` | Crear (fase implementacion) | Nueva capa de dominio por vertical. |
-| `src/shared/**` | Crear (fase implementacion) | Capas transversales reutilizables. |
-| `docs/GUIA_TECNICA_PROYECTO.md` | Modificar (fase implementacion) | Actualizar source of truth de estructura final. |
+| Archivo                                                           | Accion                          | Descripcion                                          |
+| ----------------------------------------------------------------- | ------------------------------- | ---------------------------------------------------- |
+| `openspec/changes/reorganizacion-estructura-proyecto/proposal.md` | Crear                           | Propuesta base del cambio y alcance.                 |
+| `openspec/changes/reorganizacion-estructura-proyecto/design.md`   | Crear                           | Diseno tecnico con fases, compatibilidad y rollback. |
+| `tsconfig.json`                                                   | Modificar (fase implementacion) | Ajuste de aliases y rutas de transicion.             |
+| `eslint.config.mjs`                                               | Modificar (fase implementacion) | Reglas para evitar imports legacy y ciclos de capa.  |
+| `prisma/`                                                         | Modificar (fase implementacion) | Reubicar archivos historicos a `prisma/archive/`.    |
+| `src/lib/**`                                                      | Modificar (fase implementacion) | Wrappers de compatibilidad y deprecacion progresiva. |
+| `src/features/**`                                                 | Crear (fase implementacion)     | Nueva capa de dominio por vertical.                  |
+| `src/shared/**`                                                   | Crear (fase implementacion)     | Capas transversales reutilizables.                   |
+| `docs/GUIA_TECNICA_PROYECTO.md`                                   | Modificar (fase implementacion) | Actualizar source of truth de estructura final.      |
 
 ## Interfaces / contratos
 
@@ -165,13 +170,13 @@ export * from "@/features/notificaciones/notificaciones-types";
 
 ## Estrategia de validaciones automaticas
 
-| Capa | Que validar | Comando sugerido |
-|------|-------------|------------------|
-| Lint | Convenciones, imports legacy y errores estaticos | `npm run lint` |
-| Tipado | Imports rotos y resolucion TS | `npx tsc --noEmit` |
-| Build Next | Rutas App Router, handlers y bundling | `npm run build` |
-| Prisma | Integridad de source of truth | `npx prisma validate` |
-| Smoke API | Endpoints criticos siguen respondiendo | script de checks sobre `/api/health` + rutas clave |
+| Capa       | Que validar                                      | Comando sugerido                                   |
+| ---------- | ------------------------------------------------ | -------------------------------------------------- |
+| Lint       | Convenciones, imports legacy y errores estaticos | `npm run lint`                                     |
+| Tipado     | Imports rotos y resolucion TS                    | `npx tsc --noEmit`                                 |
+| Build Next | Rutas App Router, handlers y bundling            | `npm run build`                                    |
+| Prisma     | Integridad de source of truth                    | `npx prisma validate`                              |
+| Smoke API  | Endpoints criticos siguen respondiendo           | script de checks sobre `/api/health` + rutas clave |
 
 Si no existe suite de tests automatizados en `package.json`, se recomienda incluir en fase de implementacion un script minimo de smoke estructural en `scripts/checks/`.
 
@@ -184,18 +189,19 @@ Si no existe suite de tests automatizados en `package.json`, se recomienda inclu
 5. Ejecutar Fase 4 solo cuando `grep`/typecheck confirme cero referencias legacy.
 
 Rollback:
+
 - Revertir ultimo lote desplegado (fase acotada).
 - Mantener wrappers y aliases previos hasta recuperar estabilidad.
 - No requiere rollback de datos (sin cambios de esquema productivo).
 
 ## Riesgos y mitigaciones
 
-| Riesgo | Impacto | Mitigacion |
-|-------|---------|------------|
-| Error de import en runtime | Alto | Migracion por lotes + wrappers + typecheck previo a merge. |
-| Cambio accidental de path App Router | Alto | Politica: `src/app` inmovil durante este cambio. |
-| Confusion en comandos Prisma | Medio | Documentar explicitamente schema/seed canonicos y validar en CI. |
-| Deuda legacy permanente | Medio | Fecha de retiro obligatoria para cada wrapper + regla de lint bloqueante. |
+| Riesgo                               | Impacto | Mitigacion                                                                |
+| ------------------------------------ | ------- | ------------------------------------------------------------------------- |
+| Error de import en runtime           | Alto    | Migracion por lotes + wrappers + typecheck previo a merge.                |
+| Cambio accidental de path App Router | Alto    | Politica: `src/app` inmovil durante este cambio.                          |
+| Confusion en comandos Prisma         | Medio   | Documentar explicitamente schema/seed canonicos y validar en CI.          |
+| Deuda legacy permanente              | Medio   | Fecha de retiro obligatoria para cada wrapper + regla de lint bloqueante. |
 
 ## Plan de rollback
 

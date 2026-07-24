@@ -1,7 +1,11 @@
 import crypto from "crypto";
 import { NextResponse } from "next/server";
 import { Resend } from "resend";
-import { getAuthRateLimitDecision, getRequestIp, normalizeIdentity } from "@/lib/security/auth-rate-limit";
+import {
+  getAuthRateLimitDecision,
+  getRequestIp,
+  normalizeIdentity,
+} from "@/lib/security/auth-rate-limit";
 import {
   buildAuthThrottledResponse,
   FORGOT_PASSWORD_SAFE_MESSAGE,
@@ -14,9 +18,20 @@ type ForgotPasswordUser = {
 
 type ForgotPasswordRouteDeps = {
   findUserByEmail: (email: string) => Promise<ForgotPasswordUser | null>;
-  replaceResetToken: (email: string, tokenHash: string, expiresAt: Date) => Promise<void>;
-  sendResetEmail: (input: { email: string; nombre: string; token: string }) => Promise<void>;
-  getRateLimitDecision: (req: Request, email: string | null) => ReturnType<typeof getAuthRateLimitDecision>;
+  replaceResetToken: (
+    email: string,
+    tokenHash: string,
+    expiresAt: Date,
+  ) => Promise<void>;
+  sendResetEmail: (input: {
+    email: string;
+    nombre: string;
+    token: string;
+  }) => Promise<void>;
+  getRateLimitDecision: (
+    req: Request,
+    email: string | null,
+  ) => ReturnType<typeof getAuthRateLimitDecision>;
   recordAuditLog: (input: {
     userId?: number;
     action: string;
@@ -53,7 +68,10 @@ const defaultDeps: ForgotPasswordRouteDeps = {
     const resetLink = `${baseUrl}/reset-password?token=${token}`;
 
     if (!process.env.RESEND_API_KEY) {
-      console.warn("No RESEND_API_KEY found. Password reset email could not be sent for:", email);
+      console.warn(
+        "No RESEND_API_KEY found. Password reset email could not be sent for:",
+        email,
+      );
       return;
     }
 
@@ -80,20 +98,26 @@ const defaultDeps: ForgotPasswordRouteDeps = {
       `,
     });
   },
-  getRateLimitDecision: (req, email) => getAuthRateLimitDecision({
-    endpoint: "forgot-password",
-    ip: getRequestIp(req),
-    identity: email,
-  }),
+  getRateLimitDecision: (req, email) =>
+    getAuthRateLimitDecision({
+      endpoint: "forgot-password",
+      ip: getRequestIp(req),
+      identity: email,
+    }),
   recordAuditLog: async (input) => {
     const { recordAuditLog } = await import("@/lib/security/audit");
     await recordAuditLog(input);
   },
 };
 
-export async function handlePostForgotPassword(req: Request, deps: ForgotPasswordRouteDeps = defaultDeps) {
+export async function handlePostForgotPassword(
+  req: Request,
+  deps: ForgotPasswordRouteDeps = defaultDeps,
+) {
   try {
-    const body = await req.json().catch(() => null) as { email?: string } | null;
+    const body = (await req.json().catch(() => null)) as {
+      email?: string;
+    } | null;
     const email = normalizeIdentity(body?.email);
 
     const rateLimitDecision = deps.getRateLimitDecision(req, email);
@@ -116,7 +140,10 @@ export async function handlePostForgotPassword(req: Request, deps: ForgotPasswor
 
     const user = await deps.findUserByEmail(email);
     if (!user) {
-      return NextResponse.json({ message: FORGOT_PASSWORD_SAFE_MESSAGE }, { status: 200 });
+      return NextResponse.json(
+        { message: FORGOT_PASSWORD_SAFE_MESSAGE },
+        { status: 200 },
+      );
     }
 
     const token = crypto.randomBytes(32).toString("hex");
@@ -130,7 +157,10 @@ export async function handlePostForgotPassword(req: Request, deps: ForgotPasswor
       token,
     });
 
-    return NextResponse.json({ message: FORGOT_PASSWORD_SAFE_MESSAGE }, { status: 200 });
+    return NextResponse.json(
+      { message: FORGOT_PASSWORD_SAFE_MESSAGE },
+      { status: 200 },
+    );
   } catch (error) {
     console.error("Error en forgot-password:", error);
     return NextResponse.json(

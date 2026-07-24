@@ -18,7 +18,8 @@ import { EstadoItemFactura } from "@prisma/client";
 import { normalizarProducto } from "./normalizar-producto";
 import { scoresFuzzy, type ProductoMatch } from "./match-producto";
 
-export type MatchMotivo = "codigo_proveedor" | "alias" | "nombre_exacto" | "fuzzy" | null;
+export type MatchMotivo =
+  "codigo_proveedor" | "alias" | "nombre_exacto" | "fuzzy" | null;
 
 export type ResultadoMatching = {
   productoId: number | null;
@@ -37,7 +38,7 @@ export type ContextoMatching = {
 // Umbrales de clasificación (ver openspec: sección "Motor de matching").
 const UMBRAL_SEGURA = 0.95;
 const UMBRAL_PROBABLE = 0.85;
-const UMBRAL_REVISION = 0.70;
+const UMBRAL_REVISION = 0.7;
 // Si el segundo mejor candidato queda a menos de esto del primero, es ambiguo:
 // se fuerza revisión manual aunque el score crudo del primero fuera "seguro".
 const MARGEN_AMBIGUEDAD = 0.05;
@@ -52,7 +53,9 @@ export async function construirContextoMatching(params: {
       select: { id: true, nombre: true },
     }),
     params.proveedorId
-      ? prisma.productoProveedorAlias.findMany({ where: { proveedorId: params.proveedorId } })
+      ? prisma.productoProveedorAlias.findMany({
+          where: { proveedorId: params.proveedorId },
+        })
       : Promise.resolve([]),
   ]);
 
@@ -67,11 +70,18 @@ export async function construirContextoMatching(params: {
   const aliasPorCodigo = new Map<string, number>();
   const aliasPorTexto = new Map<string, number>();
   for (const alias of aliasProveedor) {
-    if (alias.codigoProveedor) aliasPorCodigo.set(alias.codigoProveedor, alias.productoId);
-    if (alias.textoNormalizado) aliasPorTexto.set(alias.textoNormalizado, alias.productoId);
+    if (alias.codigoProveedor)
+      aliasPorCodigo.set(alias.codigoProveedor, alias.productoId);
+    if (alias.textoNormalizado)
+      aliasPorTexto.set(alias.textoNormalizado, alias.productoId);
   }
 
-  return { productos, productosPorNombreNormalizado, aliasPorCodigo, aliasPorTexto };
+  return {
+    productos,
+    productosPorNombreNormalizado,
+    aliasPorCodigo,
+    aliasPorTexto,
+  };
 }
 
 function clasificarPorScore(score: number): EstadoItemFactura {
@@ -87,15 +97,21 @@ function mejorFuzzyEntreVariantes(
   productos: { id: number; nombre: string }[],
 ): { mejor: ProductoMatch; segundo: ProductoMatch | null } | null {
   const scoresDirectos = scoresFuzzy(normalizado, productos);
-  const scoresCorregidos = normalizadoCorregido !== normalizado
-    ? scoresFuzzy(normalizadoCorregido, productos)
-    : scoresDirectos;
+  const scoresCorregidos =
+    normalizadoCorregido !== normalizado
+      ? scoresFuzzy(normalizadoCorregido, productos)
+      : scoresDirectos;
 
   // Nos quedamos con la variante (directa o corregida) cuyo mejor candidato tenga
   // mayor score, y usamos SUS top-2 para el chequeo de ambigüedad.
-  const candidatos = scoresDirectos[0] && scoresCorregidos[0]
-    ? (scoresDirectos[0].score >= scoresCorregidos[0].score ? scoresDirectos : scoresCorregidos)
-    : (scoresDirectos[0] ? scoresDirectos : scoresCorregidos);
+  const candidatos =
+    scoresDirectos[0] && scoresCorregidos[0]
+      ? scoresDirectos[0].score >= scoresCorregidos[0].score
+        ? scoresDirectos
+        : scoresCorregidos
+      : scoresDirectos[0]
+        ? scoresDirectos
+        : scoresCorregidos;
 
   if (!candidatos[0] || candidatos[0].score <= 0) return null;
 
@@ -111,19 +127,38 @@ export function matchearItem(
   if (item.codigoProveedor) {
     const productoId = contexto.aliasPorCodigo.get(item.codigoProveedor);
     if (productoId) {
-      return { productoId, score: 1, motivo: "codigo_proveedor", estado: EstadoItemFactura.COINCIDENCIA_SEGURA };
+      return {
+        productoId,
+        score: 1,
+        motivo: "codigo_proveedor",
+        estado: EstadoItemFactura.COINCIDENCIA_SEGURA,
+      };
     }
   }
 
-  const { normalizado, normalizadoCorregido } = normalizarProducto(item.textoOriginal);
+  const { normalizado, normalizadoCorregido } = normalizarProducto(
+    item.textoOriginal,
+  );
   if (!normalizado) {
-    return { productoId: null, score: null, motivo: null, estado: EstadoItemFactura.SIN_COINCIDENCIA };
+    return {
+      productoId: null,
+      score: null,
+      motivo: null,
+      estado: EstadoItemFactura.SIN_COINCIDENCIA,
+    };
   }
 
   // Capa 2: alias por proveedor + texto exacto (ambas variantes de normalización)
-  const aliasProductoId = contexto.aliasPorTexto.get(normalizado) ?? contexto.aliasPorTexto.get(normalizadoCorregido);
+  const aliasProductoId =
+    contexto.aliasPorTexto.get(normalizado) ??
+    contexto.aliasPorTexto.get(normalizadoCorregido);
   if (aliasProductoId) {
-    return { productoId: aliasProductoId, score: 1, motivo: "alias", estado: EstadoItemFactura.COINCIDENCIA_SEGURA };
+    return {
+      productoId: aliasProductoId,
+      score: 1,
+      motivo: "alias",
+      estado: EstadoItemFactura.COINCIDENCIA_SEGURA,
+    };
   }
 
   // Capa 3: nombre exacto normalizado contra el catálogo (sin alias todavía, pero coincide letra a letra)
@@ -131,20 +166,41 @@ export function matchearItem(
     contexto.productosPorNombreNormalizado.get(normalizado) ??
     contexto.productosPorNombreNormalizado.get(normalizadoCorregido);
   if (nombreExactoId) {
-    return { productoId: nombreExactoId, score: 0.98, motivo: "nombre_exacto", estado: EstadoItemFactura.COINCIDENCIA_SEGURA };
+    return {
+      productoId: nombreExactoId,
+      score: 0.98,
+      motivo: "nombre_exacto",
+      estado: EstadoItemFactura.COINCIDENCIA_SEGURA,
+    };
   }
 
   // Capa 4: fuzzy, con chequeo de ambigüedad entre el 1° y 2° candidato
-  const resultado = mejorFuzzyEntreVariantes(normalizado, normalizadoCorregido, contexto.productos);
+  const resultado = mejorFuzzyEntreVariantes(
+    normalizado,
+    normalizadoCorregido,
+    contexto.productos,
+  );
   if (!resultado) {
-    return { productoId: null, score: 0, motivo: null, estado: EstadoItemFactura.SIN_COINCIDENCIA };
+    return {
+      productoId: null,
+      score: 0,
+      motivo: null,
+      estado: EstadoItemFactura.SIN_COINCIDENCIA,
+    };
   }
 
   const { mejor, segundo } = resultado;
-  const esAmbiguo = segundo !== null && mejor.score - segundo.score < MARGEN_AMBIGUEDAD;
-  const estado = esAmbiguo && mejor.score >= UMBRAL_REVISION
-    ? EstadoItemFactura.REQUIERE_REVISION
-    : clasificarPorScore(mejor.score);
+  const esAmbiguo =
+    segundo !== null && mejor.score - segundo.score < MARGEN_AMBIGUEDAD;
+  const estado =
+    esAmbiguo && mejor.score >= UMBRAL_REVISION
+      ? EstadoItemFactura.REQUIERE_REVISION
+      : clasificarPorScore(mejor.score);
 
-  return { productoId: mejor.productoId, score: mejor.score, motivo: "fuzzy", estado };
+  return {
+    productoId: mejor.productoId,
+    score: mejor.score,
+    motivo: "fuzzy",
+    estado,
+  };
 }

@@ -15,14 +15,21 @@ interface TeamStepProps {
 
 export function TeamStep({ staff, onChange }: TeamStepProps) {
   const addMember = () => {
-    onChange([...staff, { nombre: "", email: "", rol: "EMPLEADO", password: "" }]);
+    onChange([
+      ...staff,
+      { nombre: "", email: "", rol: "EMPLEADO", password: "" },
+    ]);
   };
 
   const removeMember = (index: number) => {
     onChange(staff.filter((_, i) => i !== index));
   };
 
-  const updateMember = (index: number, field: keyof StaffMember, value: string) => {
+  const updateMember = (
+    index: number,
+    field: keyof StaffMember,
+    value: string,
+  ) => {
     const updated = [...staff];
     updated[index] = { ...updated[index], [field]: value };
     onChange(updated);
@@ -39,9 +46,12 @@ export function TeamStep({ staff, onChange }: TeamStepProps) {
         >
           <Users className="w-8 h-8 text-fuchsia-500" />
         </motion.div>
-        <h2 className="text-3xl font-black tracking-tight">Tu Equipo Inicial</h2>
+        <h2 className="text-3xl font-black tracking-tight">
+          Tu Equipo Inicial
+        </h2>
         <p className="text-muted-foreground text-lg">
-          Añadí a las personas que trabajarán con vos. Podés omitir este paso y hacerlo más tarde.
+          Añadí a las personas que trabajarán con vos. Podés omitir este paso y
+          hacerlo más tarde.
         </p>
       </div>
 
@@ -57,7 +67,9 @@ export function TeamStep({ staff, onChange }: TeamStepProps) {
             <div className="absolute inset-0 bg-fuchsia-500/5 blur-3xl -z-10 rounded-full" />
 
             <div className="space-y-1.5 flex-1 w-full">
-              <Label className="text-[10px] font-bold uppercase tracking-widest text-foreground/70 pl-1">Nombre</Label>
+              <Label className="text-[10px] font-bold uppercase tracking-widest text-foreground/70 pl-1">
+                Nombre
+              </Label>
               <Input
                 value={member.nombre}
                 onChange={(e) => updateMember(index, "nombre", e.target.value)}
@@ -66,7 +78,9 @@ export function TeamStep({ staff, onChange }: TeamStepProps) {
               />
             </div>
             <div className="space-y-1.5 flex-1 w-full">
-              <Label className="text-[10px] font-bold uppercase tracking-widest text-foreground/70 pl-1">Email</Label>
+              <Label className="text-[10px] font-bold uppercase tracking-widest text-foreground/70 pl-1">
+                Email
+              </Label>
               <Input
                 type="email"
                 value={member.email}
@@ -76,11 +90,15 @@ export function TeamStep({ staff, onChange }: TeamStepProps) {
               />
             </div>
             <div className="space-y-1.5 flex-1 w-full">
-              <Label className="text-[10px] font-bold uppercase tracking-widest text-foreground/70 pl-1">Contraseña</Label>
+              <Label className="text-[10px] font-bold uppercase tracking-widest text-foreground/70 pl-1">
+                Contraseña
+              </Label>
               <Input
                 type="text"
                 value={member.password || ""}
-                onChange={(e) => updateMember(index, "password", e.target.value)}
+                onChange={(e) =>
+                  updateMember(index, "password", e.target.value)
+                }
                 className="h-11 rounded-xl bg-background/50 border-border/50 focus:border-fuchsia-500 focus:ring-4 focus:ring-fuchsia-500/10"
                 placeholder="(Opcional)"
               />
@@ -109,7 +127,8 @@ export function TeamStep({ staff, onChange }: TeamStepProps) {
         {staff.length === 0 && (
           <div className="text-center py-6">
             <p className="text-sm text-muted-foreground/50 italic">
-              No agregaste empleados todavía. Podés hacerlo después desde Configuración → Seguridad.
+              No agregaste empleados todavía. Podés hacerlo después desde
+              Configuración → Seguridad.
             </p>
           </div>
         )}

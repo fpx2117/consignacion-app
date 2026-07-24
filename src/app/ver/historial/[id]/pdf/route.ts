@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import type { Page } from "puppeteer-core";
 import { getSharedReportBrowser } from "@/lib/chromium/resolve-executable-path";
-import { withChromiumSlot, ChromiumBusyError } from "@/lib/chromium/chromium-semaphore";
+import {
+  withChromiumSlot,
+  ChromiumBusyError,
+} from "@/lib/chromium/chromium-semaphore";
 import { prisma } from "@/lib/prisma";
 import { getBranding } from "@/lib/reports/get-branding";
 import {
@@ -44,7 +47,8 @@ function getPublicOrigin(req: NextRequest): string {
     return `${proto}://${host}`;
   }
 
-  const envBase = process.env.NEXT_PUBLIC_APP_URL?.trim() || "http://localhost:3000";
+  const envBase =
+    process.env.NEXT_PUBLIC_APP_URL?.trim() || "http://localhost:3000";
   if (envBase.startsWith("http://") || envBase.startsWith("https://")) {
     return envBase.replace(/\/$/, "");
   }
@@ -53,12 +57,14 @@ function getPublicOrigin(req: NextRequest): string {
 }
 
 function redirectStatus(req: NextRequest, state: PublicLinkState) {
-  return NextResponse.redirect(new URL(`/x/status?state=${state}`, getPublicOrigin(req)));
+  return NextResponse.redirect(
+    new URL(`/x/status?state=${state}`, getPublicOrigin(req)),
+  );
 }
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
   let page: Page | null = null;
 
@@ -68,12 +74,15 @@ export async function GET(
     const { searchParams } = new URL(req.url);
     const anio = Number.parseInt(
       searchParams.get("anio") ?? String(getHistorialDefaultYear()),
-      10
+      10,
     );
     const code = searchParams.get("code");
 
     if (!Number.isFinite(mes) || mes < 0 || mes > 11) {
-      return NextResponse.json({ error: "Mes invalido (debe ser 0..11)" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Mes invalido (debe ser 0..11)" },
+        { status: 400 },
+      );
     }
     if (!Number.isFinite(anio) || anio < 2000 || anio > 2100) {
       return NextResponse.json({ error: "Ano invalido" }, { status: 400 });
@@ -86,7 +95,8 @@ export async function GET(
     const link = await prisma.shareLink.findUnique({ where: { codeHash } });
 
     if (!link) return redirectStatus(req, "invalid");
-    if (link.type !== "HISTORIAL_INVENTARIO") return redirectStatus(req, "invalid");
+    if (link.type !== "HISTORIAL_INVENTARIO")
+      return redirectStatus(req, "invalid");
     if (new Date() > link.expiresAt) return redirectStatus(req, "expired");
 
     const decodedTarget = decodeHistorialShareTarget(link.targetId);
@@ -115,7 +125,9 @@ export async function GET(
     const movimientos = await prisma.movimientoStock.findMany({
       where: {
         createdAt: { gte: start, lte: end },
-        ...(decodedTarget.sucursalId === null ? {} : { sucursalId: decodedTarget.sucursalId }),
+        ...(decodedTarget.sucursalId === null
+          ? {}
+          : { sucursalId: decodedTarget.sucursalId }),
       },
       include: { producto: { select: { nombre: true, codigoBarra: true } } },
       orderBy: { createdAt: "desc" },
@@ -126,7 +138,7 @@ export async function GET(
       movimientos as HistoryInventoryReportRow[],
       MESES[mes],
       anio,
-      branding
+      branding,
     );
 
     const pdfUint8Array = await withChromiumSlot(async () => {
@@ -163,7 +175,13 @@ export async function GET(
     return response;
   } catch (error) {
     if (error instanceof ChromiumBusyError) {
-      return NextResponse.json({ error: "Servidor ocupado generando otros reportes, reintentá en unos segundos." }, { status: 503 });
+      return NextResponse.json(
+        {
+          error:
+            "Servidor ocupado generando otros reportes, reintentá en unos segundos.",
+        },
+        { status: 503 },
+      );
     }
     console.error("PDF HISTORY INVENTORY ERROR:", error);
     return NextResponse.json({ error: "Error en PDF" }, { status: 500 });

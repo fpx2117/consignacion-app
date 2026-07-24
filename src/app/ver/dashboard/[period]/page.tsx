@@ -25,7 +25,9 @@ export default function DashboardReporteLoadingPage({
   const sucursalId = searchParams.get("sucursalId") || "1";
   const label = PERIOD_LABELS[period] ?? period;
 
-  const pdfUrl = code ? `/ver/dashboard/${period}/pdf?code=${code}&sucursalId=${sucursalId}` : null;
+  const pdfUrl = code
+    ? `/ver/dashboard/${period}/pdf?code=${code}&sucursalId=${sucursalId}`
+    : null;
   const fetchError = useReportPdfNavigation(pdfUrl);
 
   return (
@@ -33,7 +35,9 @@ export default function DashboardReporteLoadingPage({
       title="Generando Reporte"
       subtitle={`Dashboard · ${label}`}
       Icon={BarChart3}
-      errorMessage={fetchError ?? (code ? null : "Acceso no autorizado o enlace inválido.")}
+      errorMessage={
+        fetchError ?? (code ? null : "Acceso no autorizado o enlace inválido.")
+      }
     />
   );
 }

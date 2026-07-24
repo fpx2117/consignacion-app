@@ -22,7 +22,8 @@ const okAuth: GastoAuth = {
 
 test("handlePostGasto usa la timezone resuelta al parsear fechas explicitas", async () => {
   const parseCalls: Array<{ date: string; time: string; tz: string }> = [];
-  const createdDates: Array<{ fecha: Date; fechaVencimiento: Date | null }> = [];
+  const createdDates: Array<{ fecha: Date; fechaVencimiento: Date | null }> =
+    [];
   const startDate = new Date("2026-04-01T15:00:00.000Z");
   const endDate = new Date("2026-04-30T04:59:00.000Z");
 
@@ -40,7 +41,7 @@ test("handlePostGasto usa la timezone resuelta al parsear fechas explicitas", as
       }),
       headers: { "Content-Type": "application/json" },
     }),
-    ({
+    {
       requireAuth: async () => okAuth,
       isGlobalSucursalView: () => false,
       resolveTimezoneForAuth: async () => ({
@@ -58,16 +59,27 @@ test("handlePostGasto usa la timezone resuelta al parsear fechas explicitas", as
       },
       prisma: {
         gasto: {
-          create: async ({ data }: { data: { fecha: Date; fechaVencimiento: Date | null } }) => {
-            createdDates.push({ fecha: data.fecha, fechaVencimiento: data.fechaVencimiento });
-            return { id: 90, ...data, categoria: { id: 8, nombre: "Servicios" } };
+          create: async ({
+            data,
+          }: {
+            data: { fecha: Date; fechaVencimiento: Date | null };
+          }) => {
+            createdDates.push({
+              fecha: data.fecha,
+              fechaVencimiento: data.fechaVencimiento,
+            });
+            return {
+              id: 90,
+              ...data,
+              categoria: { id: 8, nombre: "Servicios" },
+            };
           },
         },
         gastoSucursal: {
           createMany: async () => ({ count: 0 }),
         },
       },
-    } as unknown as GastoDeps),
+    } as unknown as GastoDeps,
   );
 
   assert.equal(response.status, 201);
@@ -75,9 +87,18 @@ test("handlePostGasto usa la timezone resuelta al parsear fechas explicitas", as
     { date: "2026-04-01", time: "10:00", tz: "America/Bogota" },
     { date: "2026-04-29", time: "23:59", tz: "America/Bogota" },
   ]);
-  assert.deepEqual(createdDates.map((item) => ({ fecha: item.fecha.toISOString(), fechaVencimiento: item.fechaVencimiento?.toISOString() ?? null })), [
-    { fecha: "2026-04-01T15:00:00.000Z", fechaVencimiento: "2026-04-30T04:59:00.000Z" },
-  ]);
+  assert.deepEqual(
+    createdDates.map((item) => ({
+      fecha: item.fecha.toISOString(),
+      fechaVencimiento: item.fechaVencimiento?.toISOString() ?? null,
+    })),
+    [
+      {
+        fecha: "2026-04-01T15:00:00.000Z",
+        fechaVencimiento: "2026-04-30T04:59:00.000Z",
+      },
+    ],
+  );
 });
 
 test("handlePostGasto usa nowAR con la timezone resuelta cuando no recibe fecha", async () => {
@@ -94,7 +115,7 @@ test("handlePostGasto usa nowAR con la timezone resuelta cuando no recibe fecha"
       }),
       headers: { "Content-Type": "application/json" },
     }),
-    ({
+    {
       requireAuth: async () => okAuth,
       isGlobalSucursalView: () => false,
       resolveTimezoneForAuth: async () => ({
@@ -116,14 +137,18 @@ test("handlePostGasto usa nowAR con la timezone resuelta cuando no recibe fecha"
         gasto: {
           create: async ({ data }: { data: { fecha: Date } }) => {
             createdDate = data.fecha;
-            return { id: 91, ...data, categoria: { id: 5, nombre: "Movilidad" } };
+            return {
+              id: 91,
+              ...data,
+              categoria: { id: 5, nombre: "Movilidad" },
+            };
           },
         },
         gastoSucursal: {
           createMany: async () => ({ count: 0 }),
         },
       },
-    } as unknown as GastoDeps),
+    } as unknown as GastoDeps,
   );
 
   assert.equal(response.status, 201);

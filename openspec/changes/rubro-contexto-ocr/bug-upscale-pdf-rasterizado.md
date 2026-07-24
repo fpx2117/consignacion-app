@@ -67,7 +67,7 @@ concatenar varias páginas en una sola imagen.
 export async function prepararImagenParaVision(
   buffer: Buffer,
   opciones: { permitirUpscale?: boolean } = {},
-): Promise<Buffer>
+): Promise<Buffer>;
 ```
 
 - Default `permitirUpscale: true` — mantiene el comportamiento original para
@@ -77,7 +77,7 @@ export async function prepararImagenParaVision(
 
 ```ts
 // extraer-texto-factura.ts
-prepararImagenParaVision(imagenParaOcr, { permitirUpscale: false })
+prepararImagenParaVision(imagenParaOcr, { permitirUpscale: false });
 ```
 
 Con esto, la captura de Chromium se manda a su ancho real (1240px, o

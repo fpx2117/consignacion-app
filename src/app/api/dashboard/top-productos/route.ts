@@ -15,14 +15,26 @@ export async function GET(req: Request) {
   const userId = Number(auth.user.sub);
 
   try {
-    const data = await getDashboardTopProductos(sucursalId, period, isAdmin, limit, Number.isFinite(userId) ? userId : undefined);
-    return NextResponse.json({ data: { period, topVendidos: data } }, {
-      headers: {
-        "Cache-Control": "private, max-age=30, stale-while-revalidate=60",
+    const data = await getDashboardTopProductos(
+      sucursalId,
+      period,
+      isAdmin,
+      limit,
+      Number.isFinite(userId) ? userId : undefined,
+    );
+    return NextResponse.json(
+      { data: { period, topVendidos: data } },
+      {
+        headers: {
+          "Cache-Control": "private, max-age=30, stale-while-revalidate=60",
+        },
       },
-    });
+    );
   } catch (error: unknown) {
     console.error("Top Productos API Error:", error);
-    return NextResponse.json({ error: "Error al obtener los productos más vendidos" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Error al obtener los productos más vendidos" },
+      { status: 500 },
+    );
   }
 }

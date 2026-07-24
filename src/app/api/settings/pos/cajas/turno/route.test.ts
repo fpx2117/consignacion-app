@@ -1,6 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { handlePatchTurno, handlePostTurno, handlePutTurno } from "@/app/api/settings/pos/cajas/turno/route";
+import {
+  handlePatchTurno,
+  handlePostTurno,
+  handlePutTurno,
+} from "@/app/api/settings/pos/cajas/turno/route";
 
 type TurnoPostDeps = NonNullable<Parameters<typeof handlePostTurno>[1]>;
 type TurnoPatchDeps = NonNullable<Parameters<typeof handlePatchTurno>[1]>;
@@ -34,7 +38,7 @@ test("handlePostTurno valida horario laboral con la timezone resuelta", async ()
       body: JSON.stringify({ cajaId: 12, montoInicial: 5000 }),
       headers: { "Content-Type": "application/json" },
     }),
-    ({
+    {
       requireAuth: async () => okAuth,
       resolveTimezoneForAuth: async () => ({
         tz: "Europe/Madrid",
@@ -58,27 +62,37 @@ test("handlePostTurno valida horario laboral con la timezone resuelta", async ()
       },
       prisma: {
         horarioLaboral: {
-          findUnique: async () => ({ activo: true, horaInicio: "08:00", horaFin: "18:00" }),
+          findUnique: async () => ({
+            activo: true,
+            horaInicio: "08:00",
+            horaFin: "18:00",
+          }),
         },
         caja: {
           findUnique: async () => ({ id: 12, sucursalId: 4 }),
         },
         sesionCaja: {
           findFirst: async () => null,
-          create: async ({ data }: { data: { cajaId: number; usuarioId: number } }) => {
+          create: async ({
+            data,
+          }: {
+            data: { cajaId: number; usuarioId: number };
+          }) => {
             createdSessions.push(data);
             return { id: 81, ...data };
           },
         },
       },
-    } as unknown as TurnoPostDeps),
+    } as unknown as TurnoPostDeps,
   );
 
   assert.equal(response.status, 200);
   assert.deepEqual(nowCalls, ["Europe/Madrid"]);
   assert.deepEqual(dayCalls, ["Europe/Madrid"]);
   assert.deepEqual(timeCalls, ["Europe/Madrid"]);
-  assert.deepEqual(createdSessions, [{ cajaId: 12, usuarioId: 9, montoInicial: 5000, estado: "ABIERTA" }]);
+  assert.deepEqual(createdSessions, [
+    { cajaId: 12, usuarioId: 9, montoInicial: 5000, estado: "ABIERTA" },
+  ]);
 });
 
 test("handlePatchTurno genera la etiqueta de extension con la timezone resuelta", async () => {
@@ -91,7 +105,7 @@ test("handlePatchTurno genera la etiqueta de extension con la timezone resuelta"
       body: JSON.stringify({ minutos: 30 }),
       headers: { "Content-Type": "application/json" },
     }),
-    ({
+    {
       requireAuth: async () => okAuth,
       resolveTimezoneForAuth: async () => ({
         tz: "America/Bogota",
@@ -118,7 +132,7 @@ test("handlePatchTurno genera la etiqueta de extension con la timezone resuelta"
           },
         },
       },
-    } as unknown as TurnoPatchDeps),
+    } as unknown as TurnoPatchDeps,
   );
 
   assert.equal(response.status, 200);
@@ -133,10 +147,13 @@ test("handlePutTurno usa la timezone resuelta al fechar el cierre", async () => 
   const response = await handlePutTurno(
     new Request("http://localhost/api/settings/pos/cajas/turno", {
       method: "PUT",
-      body: JSON.stringify({ montoReal: 1200, observaciones: "Sin diferencias" }),
+      body: JSON.stringify({
+        montoReal: 1200,
+        observaciones: "Sin diferencias",
+      }),
       headers: { "Content-Type": "application/json" },
     }),
-    ({
+    {
       requireAuth: async () => okAuth,
       resolveTimezoneForAuth: async () => ({
         tz: "America/Santiago",
@@ -170,7 +187,7 @@ test("handlePutTurno usa la timezone resuelta al fechar el cierre", async () => 
           },
         },
       },
-    } as unknown as TurnoPutDeps),
+    } as unknown as TurnoPutDeps,
   );
 
   assert.equal(response.status, 200);

@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/auth/require-auth";
-import { buildSucursalWhere, isGlobalSucursalView } from "@/lib/security/sucursalScope";
+import {
+  buildSucursalWhere,
+  isGlobalSucursalView,
+} from "@/lib/security/sucursalScope";
 
 // GET: Obtener todas las categorías ordenadas por nombre (por sucursal)
 export async function GET(_req: NextRequest) {
@@ -24,7 +27,7 @@ export async function GET(_req: NextRequest) {
     console.error("Error al obtener categorías:", err);
     return NextResponse.json(
       { error: "Error al obtener categorías" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -35,7 +38,13 @@ export async function POST(req: NextRequest) {
   const auth = await requireAuth();
   if (!auth.ok) return auth.res;
   if (isGlobalSucursalView(auth)) {
-    return NextResponse.json({ error: "Vista global en modo solo lectura. Selecciona una sucursal para crear categorías." }, { status: 409 });
+    return NextResponse.json(
+      {
+        error:
+          "Vista global en modo solo lectura. Selecciona una sucursal para crear categorías.",
+      },
+      { status: 409 },
+    );
   }
 
   try {
@@ -46,7 +55,7 @@ export async function POST(req: NextRequest) {
     if (!nombre) {
       return NextResponse.json(
         { error: "El nombre es obligatorio" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -62,8 +71,11 @@ export async function POST(req: NextRequest) {
   } catch {
     // Manejo simple para nombres duplicados si tienes un constraint unique
     return NextResponse.json(
-      { error: "Error al crear la categoría. Quizás ya existe en esta sucursal." },
-      { status: 500 }
+      {
+        error:
+          "Error al crear la categoría. Quizás ya existe en esta sucursal.",
+      },
+      { status: 500 },
     );
   }
 }

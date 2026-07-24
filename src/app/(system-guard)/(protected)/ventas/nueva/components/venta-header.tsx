@@ -31,7 +31,9 @@ export function VentaHeader({
         </Button>
 
         <div className="flex items-center gap-2 min-w-0">
-          <h1 className="text-xl font-bold tracking-tight text-foreground truncate">Punto de Venta</h1>
+          <h1 className="text-xl font-bold tracking-tight text-foreground truncate">
+            Punto de Venta
+          </h1>
           {showQuickSaleTag && (
             <Badge
               variant="outline"

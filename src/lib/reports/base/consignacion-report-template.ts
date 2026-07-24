@@ -2,7 +2,12 @@
 // Reporte de Consignaciones - diseño premium con Tailwind
 import { reportThemeCss } from "@/lib/reports/report-theme";
 import { getReportHeadAssets } from "@/lib/reports/tailwind-inline";
-import { escapeHtml, escapeAttr, brandInitials, formatNumberAR } from "@/lib/reports/template-helpers";
+import {
+  escapeHtml,
+  escapeAttr,
+  brandInitials,
+  formatNumberAR,
+} from "@/lib/reports/template-helpers";
 import type { BrandingDTO } from "@/lib/reports/types";
 
 // ─────────────────────────────────────────────
@@ -46,7 +51,12 @@ export type ConsigReportData = {
   // Top productos más consignados
   topProductos: ConsigTopProducto[];
   // Tendencia de liquidaciones diarias
-  tendencia: { date: string; liquidaciones: number; ganancia: number; nuevasConsig: number }[];
+  tendencia: {
+    date: string;
+    liquidaciones: number;
+    ganancia: number;
+    nuevasConsig: number;
+  }[];
 };
 
 // ─────────────────────────────────────────────
@@ -54,28 +64,46 @@ export type ConsigReportData = {
 // ─────────────────────────────────────────────
 // fmt usa maximumFractionDigits:0 para montos enteros en este reporte
 const fmt = (n: number) =>
-  new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS", maximumFractionDigits: 0 }).format(n);
+  new Intl.NumberFormat("es-AR", {
+    style: "currency",
+    currency: "ARS",
+    maximumFractionDigits: 0,
+  }).format(n);
 
 // ─────────────────────────────────────────────
 // TEMPLATE
 // ─────────────────────────────────────────────
-export function buildConsigReportHtml(data: ConsigReportData, branding: BrandingDTO): string {
+export function buildConsigReportHtml(
+  data: ConsigReportData,
+  branding: BrandingDTO,
+): string {
   const brandName = branding.businessName || "Consignacion";
   const badge = brandInitials(brandName);
   const metaLine = [branding.address, branding.phone]
     .filter((v): v is string => typeof v === "string" && v.trim().length > 0)
-    .map(escapeHtml).join(" · ");
+    .map(escapeHtml)
+    .join(" · ");
   const footerText = branding.footerText ? escapeHtml(branding.footerText) : "";
 
   // Color primario del branding (con fallback indigo-700 ≈ #4338CA)
   const primaryColor = branding.primaryColor ?? "#4338CA";
 
-  const tasaRecuperacion = data.unitsVendidasTotal + data.unitsPendientesTotal > 0
-    ? Math.round((data.unitsVendidasTotal / (data.unitsVendidasTotal + data.unitsPendientesTotal)) * 100)
-    : 0;
+  const tasaRecuperacion =
+    data.unitsVendidasTotal + data.unitsPendientesTotal > 0
+      ? Math.round(
+          (data.unitsVendidasTotal /
+            (data.unitsVendidasTotal + data.unitsPendientesTotal)) *
+            100,
+        )
+      : 0;
 
   // Color para la barra de progreso de tasa de rotación
-  const tasaColor = tasaRecuperacion >= 60 ? "#059669" : tasaRecuperacion >= 30 ? "#D97706" : "#E11D48";
+  const tasaColor =
+    tasaRecuperacion >= 60
+      ? "#059669"
+      : tasaRecuperacion >= 30
+        ? "#D97706"
+        : "#E11D48";
 
   // Barra de progreso SVG para tasa de rotación
   const tasaProgressBar = `
@@ -84,10 +112,13 @@ export function buildConsigReportHtml(data: ConsigReportData, branding: Branding
     </div>`;
 
   // ─ Top clientes
-  const clientesHtml = data.topClientes.length > 0
-    ? data.topClientes.slice(0, 10).map((c, i) => {
-      const isAbierta = c.estado === "ABIERTA";
-      return `
+  const clientesHtml =
+    data.topClientes.length > 0
+      ? data.topClientes
+          .slice(0, 10)
+          .map((c, i) => {
+            const isAbierta = c.estado === "ABIERTA";
+            return `
         <tr class="group">
           <td class="py-3 pl-4 bg-slate-50 rounded-l-xl border-y border-l border-slate-100">
             <span class="text-[10px] font-black text-slate-300 w-5 inline-block">${i + 1}</span>
@@ -95,10 +126,11 @@ export function buildConsigReportHtml(data: ConsigReportData, branding: Branding
             <span class="text-[9px] text-slate-400 ml-1">#${c.folioNumero}</span>
           </td>
           <td class="py-3 bg-slate-50 border-y border-slate-100 text-center">
-            ${isAbierta
-          ? `<span class="text-[9px] text-emerald-700 font-bold bg-emerald-100 px-2 py-1 rounded border border-emerald-200 uppercase tracking-wider">Abierta</span>`
-          : `<span class="text-[9px] text-slate-600 font-bold bg-slate-100 px-2 py-1 rounded border border-slate-200 uppercase tracking-wider">Cerrada</span>`
-        }
+            ${
+              isAbierta
+                ? `<span class="text-[9px] text-emerald-700 font-bold bg-emerald-100 px-2 py-1 rounded border border-emerald-200 uppercase tracking-wider">Abierta</span>`
+                : `<span class="text-[9px] text-slate-600 font-bold bg-slate-100 px-2 py-1 rounded border border-slate-200 uppercase tracking-wider">Cerrada</span>`
+            }
           </td>
           <td class="py-3 bg-slate-50 border-y border-slate-100 text-center">
             <div class="text-xs font-black ${c.unitsPendientes > 0 ? "text-amber-600" : "text-slate-400"} money">${formatNumberAR(c.unitsPendientes)} u.</div>
@@ -113,16 +145,21 @@ export function buildConsigReportHtml(data: ConsigReportData, branding: Branding
             <div class="text-[9px] text-slate-400">saldo</div>
           </td>
         </tr>`;
-    }).join("")
-    : `<tr><td colspan="5" class="py-4 text-center text-xs text-slate-400">Sin consignaciones en el periodo</td></tr>`;
+          })
+          .join("")
+      : `<tr><td colspan="5" class="py-4 text-center text-xs text-slate-400">Sin consignaciones en el periodo</td></tr>`;
 
   // ─ Top productos
-  const productosHtml = data.topProductos.length > 0
-    ? data.topProductos.slice(0, 5).map((p, i) => {
-      const tasaP = p.unitsEntregadas > 0
-        ? Math.round((p.unitsVendidas / p.unitsEntregadas) * 100)
-        : 0;
-      return `
+  const productosHtml =
+    data.topProductos.length > 0
+      ? data.topProductos
+          .slice(0, 5)
+          .map((p, i) => {
+            const tasaP =
+              p.unitsEntregadas > 0
+                ? Math.round((p.unitsVendidas / p.unitsEntregadas) * 100)
+                : 0;
+            return `
         <div class="flex items-center justify-between py-2.5 border-b border-slate-100 last:border-0 gap-4">
           <div class="flex items-center gap-2 min-w-0">
             <span class="text-[10px] font-black text-slate-300 shrink-0 w-4">${i + 1}</span>
@@ -139,19 +176,25 @@ export function buildConsigReportHtml(data: ConsigReportData, branding: Branding
             </div>
           </div>
         </div>`;
-    }).join("")
-    : `<p class="text-xs text-slate-400 py-4">Sin datos</p>`;
+          })
+          .join("")
+      : `<p class="text-xs text-slate-400 py-4">Sin datos</p>`;
 
   // ─ Tendencia
-  const tendHtml = data.tendencia.length > 0
-    ? data.tendencia.map(t => `
+  const tendHtml =
+    data.tendencia.length > 0
+      ? data.tendencia
+          .map(
+            (t) => `
       <tr>
         <td class="py-2 pl-4 bg-slate-50 rounded-l-xl border-y border-l border-slate-100 text-[10px] font-bold text-slate-500">${escapeHtml(t.date)}</td>
         <td class="py-2 bg-slate-50 border-y border-slate-100 text-center text-[10px] font-bold text-sky-600">${formatNumberAR(t.nuevasConsig)}</td>
         <td class="py-2 bg-slate-50 border-y border-slate-100 text-center text-[10px] font-bold text-amber-600">${formatNumberAR(t.liquidaciones)}</td>
         <td class="py-2 pr-4 bg-slate-50 rounded-r-xl border-y border-r border-slate-100 text-right text-[10px] font-black text-emerald-600 money">${fmt(t.ganancia)}</td>
-      </tr>`).join("")
-    : `<tr><td colspan="4" class="py-4 text-center text-xs text-slate-400">Sin datos de tendencia para periodo historico.</td></tr>`;
+      </tr>`,
+          )
+          .join("")
+      : `<tr><td colspan="4" class="py-4 text-center text-xs text-slate-400">Sin datos de tendencia para periodo historico.</td></tr>`;
 
   return `<!DOCTYPE html>
 <html>
@@ -170,10 +213,11 @@ export function buildConsigReportHtml(data: ConsigReportData, branding: Branding
   <!-- HEADER -->
   <div class="flex justify-between items-start border-b-2 border-slate-100 pb-8 mb-8">
     <div class="flex items-center gap-4">
-      ${branding.logoBase64
-      ? `<img src="${escapeAttr(branding.logoBase64)}" class="w-14 h-14 rounded-2xl object-contain bg-white border border-slate-100 shadow-lg" />`
-      : `<div class="w-14 h-14 text-white flex items-center justify-center rounded-2xl font-black text-2xl shadow-lg" style="background-color:${primaryColor}">${escapeHtml(badge)}</div>`
-    }
+      ${
+        branding.logoBase64
+          ? `<img src="${escapeAttr(branding.logoBase64)}" class="w-14 h-14 rounded-2xl object-contain bg-white border border-slate-100 shadow-lg" />`
+          : `<div class="w-14 h-14 text-white flex items-center justify-center rounded-2xl font-black text-2xl shadow-lg" style="background-color:${primaryColor}">${escapeHtml(badge)}</div>`
+      }
       <div>
         <h1 class="text-2xl font-black tracking-tight text-slate-900">${escapeHtml(brandName)}</h1>
         <p class="text-xs font-bold text-slate-400 uppercase tracking-[0.2em]">Reporte de Consignaciones</p>
@@ -214,14 +258,18 @@ export function buildConsigReportHtml(data: ConsigReportData, branding: Branding
   </div>
 
   <!-- SALDO PENDIENTE -->
-  ${data.saldoPendienteClientes > 0 ? `
+  ${
+    data.saldoPendienteClientes > 0
+      ? `
   <div class="bg-rose-50 border border-rose-200 rounded-2xl p-5 mb-6 flex items-center justify-between">
     <div>
       <p class="text-xs font-black text-rose-700 uppercase tracking-widest">Saldo pendiente de clientes</p>
       <p class="text-[10px] text-rose-500 mt-0.5">Deuda acumulada por consignaciones no liquidadas</p>
     </div>
     <p class="text-2xl font-black text-rose-700 money">${fmt(data.saldoPendienteClientes)}</p>
-  </div>` : ""}
+  </div>`
+      : ""
+  }
 
   <!-- CLIENTES + TOP PRODUCTOS -->
   <div class="grid grid-cols-5 gap-6 mb-8">

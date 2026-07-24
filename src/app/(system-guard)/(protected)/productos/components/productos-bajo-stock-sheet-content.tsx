@@ -1,4 +1,7 @@
-import { StockDrawerProductList, type ProductoStockAlertItem } from "./stock-drawer-product-list";
+import {
+  StockDrawerProductList,
+  type ProductoStockAlertItem,
+} from "./stock-drawer-product-list";
 
 interface ProductosBajoStockSheetContentProps {
   productos: ProductoStockAlertItem[];

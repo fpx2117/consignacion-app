@@ -34,29 +34,29 @@ El cambio tambien debera identificar y reemplazar los hardcodes existentes en sc
 
 ## Areas afectadas
 
-| Area | Impacto | Descripcion |
-|------|---------|-------------|
-| `prisma/schema.prisma` | Modificado | Incorporar soporte persistente para zona horaria por usuario y revisar defaults hardcodeados. |
-| `src/lib/get-configured-tz.ts` | Modificado | Centralizar la precedencia `usuario > sucursal > fallback tecnico`. |
-| `src/lib/utils-date.ts` | Modificado | Resolver rangos y calculos de fecha con la zona horaria efectiva, sin asumir Buenos Aires. |
-| `src/lib/utils-format.ts` | Modificado | Formatear fechas/horas usando la zona horaria resuelta. |
-| `src/lib/reports/template-helpers.ts` | Modificado | Unificar el formateo de reportes con la misma fuente de verdad. |
-| `src/lib/pedidos-esperados.ts` | Modificado | Eliminar supuestos fijos de zona horaria en logica operativa. |
-| `src/app/api/settings/**` | Modificado | Exponer y persistir configuracion de zona horaria por usuario, manteniendo compatibilidad con sucursal. |
-| `src/app/api/settings/pos/cajas/turno/route.ts` | Modificado | Validar horarios operativos con la zona horaria efectiva. |
-| `src/app/api/ventas/[id]/route.ts` | Modificado | Dejar de responder con fechas calculadas bajo hardcodes locales. |
-| `src/app/api/historial/anios/route.ts` | Modificado | Calcular rangos y agregaciones anuales con la precedencia definida. |
-| `src/app/(system-guard)/(protected)/gastos/page.tsx` | Modificado | Ajustar filtros y presentacion para la zona horaria resuelta. |
-| `src/app/**` y componentes UI relacionados | Modificado | Revisar otras rutas/pantallas que hoy consumen fallbacks implicitos o formateo local inconsistente. |
+| Area                                                 | Impacto    | Descripcion                                                                                             |
+| ---------------------------------------------------- | ---------- | ------------------------------------------------------------------------------------------------------- |
+| `prisma/schema.prisma`                               | Modificado | Incorporar soporte persistente para zona horaria por usuario y revisar defaults hardcodeados.           |
+| `src/lib/get-configured-tz.ts`                       | Modificado | Centralizar la precedencia `usuario > sucursal > fallback tecnico`.                                     |
+| `src/lib/utils-date.ts`                              | Modificado | Resolver rangos y calculos de fecha con la zona horaria efectiva, sin asumir Buenos Aires.              |
+| `src/lib/utils-format.ts`                            | Modificado | Formatear fechas/horas usando la zona horaria resuelta.                                                 |
+| `src/lib/reports/template-helpers.ts`                | Modificado | Unificar el formateo de reportes con la misma fuente de verdad.                                         |
+| `src/lib/pedidos-esperados.ts`                       | Modificado | Eliminar supuestos fijos de zona horaria en logica operativa.                                           |
+| `src/app/api/settings/**`                            | Modificado | Exponer y persistir configuracion de zona horaria por usuario, manteniendo compatibilidad con sucursal. |
+| `src/app/api/settings/pos/cajas/turno/route.ts`      | Modificado | Validar horarios operativos con la zona horaria efectiva.                                               |
+| `src/app/api/ventas/[id]/route.ts`                   | Modificado | Dejar de responder con fechas calculadas bajo hardcodes locales.                                        |
+| `src/app/api/historial/anios/route.ts`               | Modificado | Calcular rangos y agregaciones anuales con la precedencia definida.                                     |
+| `src/app/(system-guard)/(protected)/gastos/page.tsx` | Modificado | Ajustar filtros y presentacion para la zona horaria resuelta.                                           |
+| `src/app/**` y componentes UI relacionados           | Modificado | Revisar otras rutas/pantallas que hoy consumen fallbacks implicitos o formateo local inconsistente.     |
 
 ## Riesgos
 
-| Riesgo | Probabilidad | Mitigacion |
-|--------|--------------|------------|
-| Inconsistencias entre modulos si parte del codigo sigue usando hardcodes | Alta | Inventario explicito de puntos afectados y adopcion obligatoria del resolver comun. |
-| Regresiones en calculos de rangos (hoy, mes, ano, turnos) | Media | Cubrir utilidades y endpoints criticos con pruebas sobre distintas zonas horarias. |
-| Confusion operativa por convivencia de configuracion por usuario y por sucursal | Media | Documentar la precedencia en UI, API y artefactos de OpenSpec. |
-| Dependencia prolongada del fallback tecnico | Media | Tratarlo como compatibilidad temporal, medir uso y planificar retiro posterior. |
+| Riesgo                                                                          | Probabilidad | Mitigacion                                                                          |
+| ------------------------------------------------------------------------------- | ------------ | ----------------------------------------------------------------------------------- |
+| Inconsistencias entre modulos si parte del codigo sigue usando hardcodes        | Alta         | Inventario explicito de puntos afectados y adopcion obligatoria del resolver comun. |
+| Regresiones en calculos de rangos (hoy, mes, ano, turnos)                       | Media        | Cubrir utilidades y endpoints criticos con pruebas sobre distintas zonas horarias.  |
+| Confusion operativa por convivencia de configuracion por usuario y por sucursal | Media        | Documentar la precedencia en UI, API y artefactos de OpenSpec.                      |
+| Dependencia prolongada del fallback tecnico                                     | Media        | Tratarlo como compatibilidad temporal, medir uso y planificar retiro posterior.     |
 
 ## Plan de Reversion (Rollback)
 

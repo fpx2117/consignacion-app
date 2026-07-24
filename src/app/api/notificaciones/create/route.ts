@@ -23,13 +23,14 @@ export async function POST(req: Request) {
     if (!parsed.success) {
       return NextResponse.json(
         { error: "Validacion fallida", details: parsed.error.flatten() },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
     const sucursalId = auth.activeSucursalId;
     const fingerprint =
-      parsed.data.fingerprint || `${parsed.data.type}:${parsed.data.productoId ?? "SYSTEM"}:S${sucursalId}`;
+      parsed.data.fingerprint ||
+      `${parsed.data.type}:${parsed.data.productoId ?? "SYSTEM"}:S${sucursalId}`;
 
     const notification = await prisma.notification.upsert({
       where: {
@@ -57,17 +58,22 @@ export async function POST(req: Request) {
     });
 
     return NextResponse.json({ success: true, notification });
-
   } catch (error) {
     console.error("❌ Error creando notificación:", error);
 
-    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2003") {
-      return NextResponse.json({ error: "El Producto ID referido no existe." }, { status: 400 });
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === "P2003"
+    ) {
+      return NextResponse.json(
+        { error: "El Producto ID referido no existe." },
+        { status: 400 },
+      );
     }
 
     return NextResponse.json(
       { error: "Error al crear la notificación" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

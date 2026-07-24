@@ -54,7 +54,11 @@ async function acquire(): Promise<void> {
     const timeout = setTimeout(() => {
       const idx = queue.indexOf(onTurn);
       if (idx >= 0) queue.splice(idx, 1);
-      reject(new ChromiumBusyError("Timeout esperando un slot de Chromium disponible"));
+      reject(
+        new ChromiumBusyError(
+          "Timeout esperando un slot de Chromium disponible",
+        ),
+      );
     }, ACQUIRE_TIMEOUT_MS);
 
     function onTurn() {
@@ -95,7 +99,10 @@ export function getChromiumSlotStats() {
 Diff conceptual sobre `src/app/ver/dashboard/[period]/pdf/route.ts` (mismo patrón para el resto de `src/app/ver/**/pdf/route.ts` y `src/app/ver/{ticket,remito,gasto}/[id]/route.ts`):
 
 ```typescript
-import { withChromiumSlot, ChromiumBusyError } from "@/lib/chromium/chromium-semaphore";
+import {
+  withChromiumSlot,
+  ChromiumBusyError,
+} from "@/lib/chromium/chromium-semaphore";
 
 // ...dentro del try existente, reemplazando las líneas 253-264 actuales:
 const pdfBytes = await withChromiumSlot(async () => {
@@ -137,9 +144,15 @@ Diff conceptual sobre `rasterizarPdf()` (`src/lib/ocr/ocr-engine.ts:121-146`):
 ```typescript
 import { withChromiumSlot } from "@/lib/chromium/chromium-semaphore";
 
-export async function rasterizarPdf(buffer: Buffer, maxPaginas = 3): Promise<Buffer> {
+export async function rasterizarPdf(
+  buffer: Buffer,
+  maxPaginas = 3,
+): Promise<Buffer> {
   console.log("[OCR] Rasterizando PDF con Chromium...");
-  const tempPath = path.join(os.tmpdir(), `ocr-factura-${crypto.randomUUID()}.pdf`);
+  const tempPath = path.join(
+    os.tmpdir(),
+    `ocr-factura-${crypto.randomUUID()}.pdf`,
+  );
   await writeFile(tempPath, buffer);
 
   try {
@@ -148,13 +161,19 @@ export async function rasterizarPdf(buffer: Buffer, maxPaginas = 3): Promise<Buf
       try {
         const page = await browser.newPage();
         const altoMaximo = 1600 * maxPaginas;
-        await page.setViewport({ width: 1240, height: Math.min(altoMaximo, 8000) });
+        await page.setViewport({
+          width: 1240,
+          height: Math.min(altoMaximo, 8000),
+        });
         await page.goto(`file://${tempPath.replace(/\\/g, "/")}#toolbar=0`, {
           waitUntil: "networkidle0",
           timeout: 30000,
         });
         await new Promise((resolve) => setTimeout(resolve, 800));
-        const screenshot = await page.screenshot({ type: "png", fullPage: true });
+        const screenshot = await page.screenshot({
+          type: "png",
+          fullPage: true,
+        });
         return Buffer.from(screenshot);
       } finally {
         await browser.close().catch(() => {});
@@ -175,7 +194,8 @@ export async function rasterizarPdf(buffer: Buffer, maxPaginas = 3): Promise<Buf
 Diff conceptual sobre `src/lib/chromium/resolve-executable-path.ts:55-76`:
 
 ```typescript
-const IDLE_SHUTDOWN_MS = Number(process.env.CHROMIUM_IDLE_SHUTDOWN_MS) || 10 * 60 * 1000;
+const IDLE_SHUTDOWN_MS =
+  Number(process.env.CHROMIUM_IDLE_SHUTDOWN_MS) || 10 * 60 * 1000;
 
 let sharedBrowser: Browser | null = null;
 let launching: Promise<Browser> | null = null;
@@ -273,11 +293,11 @@ startMemoryLogger();
 
 ## Variables de entorno nuevas (todas opcionales, con default)
 
-| Variable | Default | Uso |
-|---|---|---|
-| `MAX_CHROMIUM_CONCURRENCY` | `2` | Tareas de Chromium (reportes + OCR) simultáneas permitidas |
+| Variable                    | Default           | Uso                                                                     |
+| --------------------------- | ----------------- | ----------------------------------------------------------------------- |
+| `MAX_CHROMIUM_CONCURRENCY`  | `2`               | Tareas de Chromium (reportes + OCR) simultáneas permitidas              |
 | `CHROMIUM_IDLE_SHUTDOWN_MS` | `600000` (10 min) | Tiempo de inactividad antes de cerrar el browser compartido de reportes |
-| `MEMORY_LOG_INTERVAL_MS` | `300000` (5 min) | Frecuencia del log de memoria |
+| `MEMORY_LOG_INTERVAL_MS`    | `300000` (5 min)  | Frecuencia del log de memoria                                           |
 
 Ninguna es obligatoria — el sistema funciona con los defaults sin configuración adicional en Railway.
 
@@ -290,7 +310,7 @@ Ninguna es obligatoria — el sistema funciona con los defaults sin configuraci�
 
 ## Riesgos técnicos adicionales (no cubiertos en `proposal.md`)
 
-- El semáforo es en memoria del proceso — si Railway corre más de una réplica del proceso web, cada réplica tiene su propio cupo de `MAX_CHROMIUM_CONCURRENCY`, no es un límite global cross-réplica. Es aceptable para este cambio (el objetivo es acotar el consumo *por proceso*, que es lo que Railway mide y factura), pero vale documentarlo explícitamente para no asumir que "2" es un límite de toda la app.
+- El semáforo es en memoria del proceso — si Railway corre más de una réplica del proceso web, cada réplica tiene su propio cupo de `MAX_CHROMIUM_CONCURRENCY`, no es un límite global cross-réplica. Es aceptable para este cambio (el objetivo es acotar el consumo _por proceso_, que es lo que Railway mide y factura), pero vale documentarlo explícitamente para no asumir que "2" es un límite de toda la app.
 - `getChromiumSlotStats()`/`isTesseractWorkerLoaded()` son funciones de solo lectura sin side-effects — no hay riesgo de que la instrumentación en sí misma consuma RAM relevante o interfiera con el semáforo.
 
 ## Roadmap de Implementación (por fases)
@@ -326,4 +346,4 @@ Ninguna es obligatoria — el sistema funciona con los defaults sin configuraci�
 
 ---
 
-Las 4 fases son independientes y aditivas — se puede implementar y deployar cualquier subconjunto sin dejar nada roto ni a medio camino. El orden sugerido (1→4) va de menor a mayor complejidad/riesgo, y la Fase 4 (instrumentación) idealmente se deploya primero en la práctica para tener una línea base de `rssMb` *antes* de las Fases 1-3, aunque numéricamente se liste al final por depender de `getChromiumSlotStats()` de la Fase 2.
+Las 4 fases son independientes y aditivas — se puede implementar y deployar cualquier subconjunto sin dejar nada roto ni a medio camino. El orden sugerido (1→4) va de menor a mayor complejidad/riesgo, y la Fase 4 (instrumentación) idealmente se deploya primero en la práctica para tener una línea base de `rssMb` _antes_ de las Fases 1-3, aunque numéricamente se liste al final por depender de `getChromiumSlotStats()` de la Fase 2.

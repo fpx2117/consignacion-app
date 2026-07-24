@@ -80,7 +80,9 @@ export function EditClienteDialog({
       onUpdated?.();
     } catch (err: unknown) {
       console.error(err);
-      alert(err instanceof Error ? err.message : "No se pudo actualizar el cliente");
+      alert(
+        err instanceof Error ? err.message : "No se pudo actualizar el cliente",
+      );
     } finally {
       setSaving(false);
     }
@@ -111,7 +113,6 @@ export function EditClienteDialog({
 
         <form onSubmit={save} className="flex flex-col">
           <div className="p-6 space-y-5">
-
             {/* Sección Datos */}
             <div className="space-y-4">
               <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-muted-foreground/70">
@@ -119,7 +120,10 @@ export function EditClienteDialog({
               </div>
 
               <div className="space-y-2 group">
-                <Label htmlFor="edit-nombre" className="text-xs font-medium ml-1 group-focus-within:text-primary transition-colors">
+                <Label
+                  htmlFor="edit-nombre"
+                  className="text-xs font-medium ml-1 group-focus-within:text-primary transition-colors"
+                >
                   Nombre Completo <span className="text-destructive">*</span>
                 </Label>
                 <div className="relative">
@@ -135,7 +139,10 @@ export function EditClienteDialog({
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2 group">
-                  <Label htmlFor="edit-telefono" className="text-xs font-medium ml-1 group-focus-within:text-primary transition-colors">
+                  <Label
+                    htmlFor="edit-telefono"
+                    className="text-xs font-medium ml-1 group-focus-within:text-primary transition-colors"
+                  >
                     Teléfono
                   </Label>
                   <div className="relative">
@@ -150,7 +157,10 @@ export function EditClienteDialog({
                 </div>
 
                 <div className="space-y-2 group">
-                  <Label htmlFor="edit-direccion" className="text-xs font-medium ml-1 group-focus-within:text-primary transition-colors">
+                  <Label
+                    htmlFor="edit-direccion"
+                    className="text-xs font-medium ml-1 group-focus-within:text-primary transition-colors"
+                  >
                     Dirección
                   </Label>
                   <div className="relative">
@@ -173,11 +183,17 @@ export function EditClienteDialog({
               <div className="flex items-center justify-between">
                 <div className="space-y-1">
                   <div className="flex items-center gap-2">
-                    <Power className={`h-4 w-4 ${activo ? "text-[color:var(--status-success-strong)]" : "text-muted-foreground"}`} />
-                    <span className="font-semibold text-sm">Estado del Cliente</span>
+                    <Power
+                      className={`h-4 w-4 ${activo ? "text-[color:var(--status-success-strong)]" : "text-muted-foreground"}`}
+                    />
+                    <span className="font-semibold text-sm">
+                      Estado del Cliente
+                    </span>
                   </div>
                   <p className="text-xs text-muted-foreground max-w-[250px]">
-                    {activo ? "El cliente puede realizar operaciones." : "Cliente inactivo. No podrá operar."}
+                    {activo
+                      ? "El cliente puede realizar operaciones."
+                      : "Cliente inactivo. No podrá operar."}
                   </p>
                 </div>
 

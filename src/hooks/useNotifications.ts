@@ -54,7 +54,9 @@ type SocketNotificationPayload = {
   };
 };
 
-function parseHistoricalNotification(notification: NotificationWithFingerprint): AppNotification {
+function parseHistoricalNotification(
+  notification: NotificationWithFingerprint,
+): AppNotification {
   let ventaId: number | undefined;
   let consignacionId: number | undefined;
 
@@ -69,7 +71,11 @@ function parseHistoricalNotification(notification: NotificationWithFingerprint):
   return { ...notification, ventaId, consignacionId };
 }
 
-export function useNotifications({ limit = 50, onlyUnreadOnLoad = false, ttlMs = 30_000 }: UseNotificationsProps = {}) {
+export function useNotifications({
+  limit = 50,
+  onlyUnreadOnLoad = false,
+  ttlMs = 30_000,
+}: UseNotificationsProps = {}) {
   const { socket, isConnected } = useSocket();
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -104,7 +110,9 @@ export function useNotifications({ limit = 50, onlyUnreadOnLoad = false, ttlMs =
 
       if (data.data) {
         // Parse fingerprint for historical sales
-        const mappedData = (data.data as NotificationWithFingerprint[]).map(parseHistoricalNotification);
+        const mappedData = (data.data as NotificationWithFingerprint[]).map(
+          parseHistoricalNotification,
+        );
         setNotifications(mappedData);
         setUnreadCount(data.unreadCount || 0);
         notificationsCache = {
@@ -113,7 +121,6 @@ export function useNotifications({ limit = 50, onlyUnreadOnLoad = false, ttlMs =
           ts: Date.now(),
         };
       }
-
     } catch (error) {
       console.error("Error cargando notificaciones:", error);
     } finally {
@@ -150,12 +157,14 @@ export function useNotifications({ limit = 50, onlyUnreadOnLoad = false, ttlMs =
           id: Number(newNotif.id) || Date.now(), // Fallback por si no viene ID
           type: newNotif.type,
           title: newNotif.title,
-          description: newNotif.message || newNotif.description || "Nueva notificación",
+          description:
+            newNotif.message || newNotif.description || "Nueva notificación",
           read: false,
           createdAt: new Date().toISOString(),
-          producto: typeof newNotif.data?.productId === "number"
-            ? { id: newNotif.data.productId, nombre: "..." }
-            : undefined,
+          producto:
+            typeof newNotif.data?.productId === "number"
+              ? { id: newNotif.data.productId, nombre: "..." }
+              : undefined,
           ventaId,
           consignacionId,
         };
@@ -163,7 +172,7 @@ export function useNotifications({ limit = 50, onlyUnreadOnLoad = false, ttlMs =
         const updated = [formatted, ...prev];
         notificationsCache = {
           notifications: updated,
-            unreadCount: notificationsCache?.unreadCount ?? 0,
+          unreadCount: notificationsCache?.unreadCount ?? 0,
           ts: Date.now(),
         };
         return updated;
@@ -211,7 +220,6 @@ export function useNotifications({ limit = 50, onlyUnreadOnLoad = false, ttlMs =
       });
 
       toast.success("Notificaciones marcadas como leídas");
-
     } catch (error) {
       console.error("Error marcando como leídas:", error);
       // Revertir si falla (opcional)

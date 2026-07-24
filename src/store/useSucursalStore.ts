@@ -61,7 +61,9 @@ export const useSucursalStore = create<SucursalState>()((set) => ({
 
     if (!res.ok) {
       const data = await res.json().catch(() => ({}));
-      throw new Error(data?.error ?? `Error al cambiar sucursal (${res.status})`);
+      throw new Error(
+        data?.error ?? `Error al cambiar sucursal (${res.status})`,
+      );
     }
 
     set({ activeSucursalId: id });

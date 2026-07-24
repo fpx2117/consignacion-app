@@ -52,14 +52,46 @@ const SERVER_PAGE_LIMIT = 50; // Registros por fetch server-side
 
 // --- Utilidades de color para avatares ---
 const AVATAR_PALETTES = [
-  { bg: "bg-[color:var(--theme-ocean-primary)]/15 dark:bg-[color:var(--theme-ocean-primary)]/20", text: "text-[color:var(--theme-ocean-primary)] dark:text-[color:var(--theme-ocean-primary)]", ring: "ring-[color:var(--theme-ocean-primary)]/20" },
-  { bg: "bg-[color:var(--status-success-strong)]/15 dark:bg-[color:var(--status-success-strong)]/20", text: "text-[color:var(--status-success-strong)] dark:text-[color:var(--status-success-strong)]", ring: "ring-[color:var(--status-success-strong)]/20" },
-  { bg: "bg-[color:var(--status-warning)]/15 dark:bg-[color:var(--status-warning)]/20", text: "text-[color:var(--status-warning)] dark:text-[color:var(--status-warning)]", ring: "ring-[color:var(--status-warning)]/20" },
-  { bg: "bg-rose-500/15 dark:bg-rose-500/20", text: "text-rose-600 dark:text-rose-400", ring: "ring-rose-500/20" },
-  { bg: "bg-cyan-500/15 dark:bg-cyan-500/20", text: "text-cyan-600 dark:text-cyan-400", ring: "ring-cyan-500/20" },
-  { bg: "bg-[color:var(--primary)]/15 dark:bg-[color:var(--primary)]/20", text: "text-[color:var(--primary)] dark:text-[color:var(--primary)]", ring: "ring-[color:var(--primary)]/20" },
-  { bg: "bg-[color:var(--brand-instagram)]/15 dark:bg-[color:var(--brand-instagram)]/20", text: "text-[color:var(--brand-instagram)] dark:text-[color:var(--brand-instagram)]", ring: "ring-[color:var(--brand-instagram)]/20" },
-  { bg: "bg-teal-500/15 dark:bg-teal-500/20", text: "text-teal-600 dark:text-teal-400", ring: "ring-teal-500/20" },
+  {
+    bg: "bg-[color:var(--theme-ocean-primary)]/15 dark:bg-[color:var(--theme-ocean-primary)]/20",
+    text: "text-[color:var(--theme-ocean-primary)] dark:text-[color:var(--theme-ocean-primary)]",
+    ring: "ring-[color:var(--theme-ocean-primary)]/20",
+  },
+  {
+    bg: "bg-[color:var(--status-success-strong)]/15 dark:bg-[color:var(--status-success-strong)]/20",
+    text: "text-[color:var(--status-success-strong)] dark:text-[color:var(--status-success-strong)]",
+    ring: "ring-[color:var(--status-success-strong)]/20",
+  },
+  {
+    bg: "bg-[color:var(--status-warning)]/15 dark:bg-[color:var(--status-warning)]/20",
+    text: "text-[color:var(--status-warning)] dark:text-[color:var(--status-warning)]",
+    ring: "ring-[color:var(--status-warning)]/20",
+  },
+  {
+    bg: "bg-rose-500/15 dark:bg-rose-500/20",
+    text: "text-rose-600 dark:text-rose-400",
+    ring: "ring-rose-500/20",
+  },
+  {
+    bg: "bg-cyan-500/15 dark:bg-cyan-500/20",
+    text: "text-cyan-600 dark:text-cyan-400",
+    ring: "ring-cyan-500/20",
+  },
+  {
+    bg: "bg-[color:var(--primary)]/15 dark:bg-[color:var(--primary)]/20",
+    text: "text-[color:var(--primary)] dark:text-[color:var(--primary)]",
+    ring: "ring-[color:var(--primary)]/20",
+  },
+  {
+    bg: "bg-[color:var(--brand-instagram)]/15 dark:bg-[color:var(--brand-instagram)]/20",
+    text: "text-[color:var(--brand-instagram)] dark:text-[color:var(--brand-instagram)]",
+    ring: "ring-[color:var(--brand-instagram)]/20",
+  },
+  {
+    bg: "bg-teal-500/15 dark:bg-teal-500/20",
+    text: "text-teal-600 dark:text-teal-400",
+    ring: "ring-teal-500/20",
+  },
 ];
 
 function getAvatarPalette(name: string) {
@@ -97,36 +129,37 @@ export default function ConsignacionesPage() {
   const [serverTotal, setServerTotal] = React.useState(0);
   const [serverTotalPages, setServerTotalPages] = React.useState(1);
 
-
-
   // Debounce de búsqueda (300ms)
   React.useEffect(() => {
     const timer = setTimeout(() => setDebouncedQ(q), 300);
     return () => clearTimeout(timer);
   }, [q]);
 
-  const load = React.useCallback(async (page: number = 1, search: string = "", estado: string = "TODAS") => {
-    setLoading(true);
-    try {
-      const res = await apiService.getConsignacionesPaginadas({
-        page,
-        limit: SERVER_PAGE_LIMIT,
-        search,
-        estado,
-      });
-      // apiRequest devuelve ApiResponse<{data, total, page, totalPages}>
-      const payload = res.data;
-      const rows: Row[] = (payload?.data ?? []) as Row[];
-      setData(rows);
-      setServerTotal(payload?.total ?? 0);
-      setServerTotalPages(payload?.totalPages ?? 1);
-      setServerPage(payload?.page ?? page);
-    } catch {
-      toast.error("Error cargando datos");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const load = React.useCallback(
+    async (page: number = 1, search: string = "", estado: string = "TODAS") => {
+      setLoading(true);
+      try {
+        const res = await apiService.getConsignacionesPaginadas({
+          page,
+          limit: SERVER_PAGE_LIMIT,
+          search,
+          estado,
+        });
+        // apiRequest devuelve ApiResponse<{data, total, page, totalPages}>
+        const payload = res.data;
+        const rows: Row[] = (payload?.data ?? []) as Row[];
+        setData(rows);
+        setServerTotal(payload?.total ?? 0);
+        setServerTotalPages(payload?.totalPages ?? 1);
+        setServerPage(payload?.page ?? page);
+      } catch {
+        toast.error("Error cargando datos");
+      } finally {
+        setLoading(false);
+      }
+    },
+    [],
+  );
 
   React.useEffect(() => {
     load(1, debouncedQ, activeTab);
@@ -158,7 +191,8 @@ export default function ConsignacionesPage() {
     });
 
     return Object.values(groups).sort(
-      (a, b) => new Date(b.lastActivity).getTime() - new Date(a.lastActivity).getTime()
+      (a, b) =>
+        new Date(b.lastActivity).getTime() - new Date(a.lastActivity).getTime(),
     );
   }, [data]);
 
@@ -166,10 +200,12 @@ export default function ConsignacionesPage() {
   const totalPages = Math.ceil(groupedData.length / ITEMS_PER_PAGE);
   const paginatedGroups = groupedData.slice(
     (currentPage - 1) * ITEMS_PER_PAGE,
-    currentPage * ITEMS_PER_PAGE
+    currentPage * ITEMS_PER_PAGE,
   );
 
-  React.useEffect(() => { setCurrentPage(1); }, [debouncedQ, activeTab]);
+  React.useEffect(() => {
+    setCurrentPage(1);
+  }, [debouncedQ, activeTab]);
 
   const stats = React.useMemo(
     () => ({
@@ -177,10 +213,13 @@ export default function ConsignacionesPage() {
       abiertas: data.filter((c) => c.estado === "ABIERTA").length,
       items: data.reduce((acc, c) => acc + (c._count?.detalles || 0), 0),
     }),
-    [data, serverTotal]
+    [data, serverTotal],
   );
 
-  const eficacia = stats.total > 0 ? Math.round(((stats.total - stats.abiertas) / stats.total) * 100) : 0;
+  const eficacia =
+    stats.total > 0
+      ? Math.round(((stats.total - stats.abiertas) / stats.total) * 100)
+      : 0;
 
   return (
     <div className="max-w-5xl mx-auto space-y-5 sm:space-y-6 p-3 sm:p-4 md:p-8 animate-in fade-in duration-500 min-h-screen pb-32">
@@ -203,7 +242,10 @@ export default function ConsignacionesPage() {
           size="lg"
           className="h-11 sm:h-12 md:h-14 rounded-2xl bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg shadow-primary/25 px-5 sm:px-6 font-bold transition-all hover:scale-[1.02] active:scale-95 w-full sm:w-auto"
         >
-          <Link href="/consignaciones/nueva" className="gap-2 text-sm md:text-base">
+          <Link
+            href="/consignaciones/nueva"
+            className="gap-2 text-sm md:text-base"
+          >
             <Plus className="h-5 w-5 stroke-[3px]" /> Nueva Operación
           </Link>
         </Button>
@@ -211,9 +253,24 @@ export default function ConsignacionesPage() {
 
       {/* ── KPI CARDS ──────────────────────────────────── */}
       <div className="grid grid-cols-3 gap-2 sm:gap-3 md:gap-4">
-        <StatCard label="Activas" value={stats.abiertas} icon={Clock} color="orange" />
-        <StatCard label="Items" value={stats.items} icon={Package} color="blue" />
-        <StatCard label="Eficacia" value={`${eficacia}%`} icon={TrendingUp} color="emerald" />
+        <StatCard
+          label="Activas"
+          value={stats.abiertas}
+          icon={Clock}
+          color="orange"
+        />
+        <StatCard
+          label="Items"
+          value={stats.items}
+          icon={Package}
+          color="blue"
+        />
+        <StatCard
+          label="Eficacia"
+          value={`${eficacia}%`}
+          icon={TrendingUp}
+          color="emerald"
+        />
       </div>
 
       {/* ── FILTROS Y BUSCADOR ─────────────────────────── */}
@@ -227,15 +284,28 @@ export default function ConsignacionesPage() {
             className="pl-10 h-10 sm:h-11 bg-muted/40 border-transparent focus-visible:border-primary/30 focus-visible:ring-primary/20 rounded-xl text-sm sm:text-base w-full transition-all"
           />
         </div>
-        <Tabs defaultValue="TODAS" onValueChange={setActiveTab} className="w-full sm:w-auto">
+        <Tabs
+          defaultValue="TODAS"
+          onValueChange={setActiveTab}
+          className="w-full sm:w-auto"
+        >
           <TabsList className="grid grid-cols-3 h-10 sm:h-11 bg-muted/40 rounded-xl p-1 w-full sm:w-auto gap-0.5">
-            <TabsTrigger value="TODAS" className="rounded-lg font-bold text-[11px] sm:text-xs data-[state=active]:shadow-sm">
+            <TabsTrigger
+              value="TODAS"
+              className="rounded-lg font-bold text-[11px] sm:text-xs data-[state=active]:shadow-sm"
+            >
               Todas
             </TabsTrigger>
-            <TabsTrigger value="ABIERTA" className="rounded-lg font-bold text-[11px] sm:text-xs data-[state=active]:shadow-sm">
+            <TabsTrigger
+              value="ABIERTA"
+              className="rounded-lg font-bold text-[11px] sm:text-xs data-[state=active]:shadow-sm"
+            >
               Abiertas
             </TabsTrigger>
-            <TabsTrigger value="CERRADA" className="rounded-lg font-bold text-[11px] sm:text-xs data-[state=active]:shadow-sm">
+            <TabsTrigger
+              value="CERRADA"
+              className="rounded-lg font-bold text-[11px] sm:text-xs data-[state=active]:shadow-sm"
+            >
               Cerradas
             </TabsTrigger>
           </TabsList>
@@ -256,7 +326,9 @@ export default function ConsignacionesPage() {
               <XCircle className="h-10 w-10" />
             </div>
             <p className="text-lg font-bold">No se encontraron resultados</p>
-            <p className="text-sm mt-1 text-muted-foreground/60">Intenta con otra búsqueda o filtro</p>
+            <p className="text-sm mt-1 text-muted-foreground/60">
+              Intenta con otra búsqueda o filtro
+            </p>
           </div>
         ) : (
           <AnimatePresence mode="popLayout">
@@ -289,7 +361,9 @@ export default function ConsignacionesPage() {
           </Button>
 
           <div className="flex flex-col items-center select-none">
-            <span className="text-sm font-black text-foreground">Página {currentPage}</span>
+            <span className="text-sm font-black text-foreground">
+              Página {currentPage}
+            </span>
             <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
               de {totalPages}
             </span>
@@ -325,7 +399,9 @@ export default function ConsignacionesPage() {
           </Button>
 
           <span className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest">
-            {(serverPage - 1) * SERVER_PAGE_LIMIT + 1}–{Math.min(serverPage * SERVER_PAGE_LIMIT, serverTotal)} de {serverTotal}
+            {(serverPage - 1) * SERVER_PAGE_LIMIT + 1}–
+            {Math.min(serverPage * SERVER_PAGE_LIMIT, serverTotal)} de{" "}
+            {serverTotal}
           </span>
 
           <Button
@@ -365,17 +441,20 @@ function StatCard({
   const styles = {
     blue: {
       icon: "text-[color:var(--theme-ocean-primary)]",
-      iconBg: "bg-[color:var(--theme-ocean-primary)]/10 dark:bg-[color:var(--theme-ocean-primary)]/15",
+      iconBg:
+        "bg-[color:var(--theme-ocean-primary)]/10 dark:bg-[color:var(--theme-ocean-primary)]/15",
       glow: "group-hover:shadow-blue-500/5",
     },
     orange: {
       icon: "text-[color:var(--status-warning)]",
-      iconBg: "bg-[color:var(--status-warning)]/10 dark:bg-[color:var(--status-warning)]/15",
+      iconBg:
+        "bg-[color:var(--status-warning)]/10 dark:bg-[color:var(--status-warning)]/15",
       glow: "group-hover:shadow-orange-500/5",
     },
     emerald: {
       icon: "text-[color:var(--status-success-strong)]",
-      iconBg: "bg-[color:var(--status-success-strong)]/10 dark:bg-[color:var(--status-success-strong)]/15",
+      iconBg:
+        "bg-[color:var(--status-success-strong)]/10 dark:bg-[color:var(--status-success-strong)]/15",
       glow: "group-hover:shadow-emerald-500/5",
     },
   };
@@ -387,7 +466,7 @@ function StatCard({
       className={cn(
         "group bg-card border border-border rounded-2xl p-3 sm:p-4 md:p-5 flex items-center justify-between",
         "shadow-sm hover:shadow-md transition-all duration-300",
-        s.glow
+        s.glow,
       )}
     >
       <div className="min-w-0">
@@ -401,7 +480,7 @@ function StatCard({
       <div
         className={cn(
           "h-9 w-9 sm:h-10 sm:w-10 rounded-xl flex items-center justify-center shrink-0 ml-2 transition-transform group-hover:scale-110",
-          s.iconBg
+          s.iconBg,
         )}
       >
         <Icon className={cn("h-4 w-4 sm:h-5 sm:w-5", s.icon)} />
@@ -427,7 +506,7 @@ function ClientFolder({ group }: { group: ClientGroup }) {
         "rounded-2xl border overflow-hidden transition-all duration-300",
         isOpen
           ? "bg-card border-primary/30 shadow-lg shadow-primary/5 ring-1 ring-primary/10"
-          : "bg-card border-border hover:border-border/80 shadow-sm hover:shadow-md"
+          : "bg-card border-border hover:border-border/80 shadow-sm hover:shadow-md",
       )}
     >
       {/* ── FOLDER HEADER ──────────────────────────── */}
@@ -435,7 +514,9 @@ function ClientFolder({ group }: { group: ClientGroup }) {
         onClick={() => setIsOpen(!isOpen)}
         className={cn(
           "w-full flex items-center justify-between p-3 sm:p-4 cursor-pointer select-none transition-colors text-left",
-          isOpen ? "bg-primary/[0.03] dark:bg-primary/[0.06]" : "hover:bg-muted/30"
+          isOpen
+            ? "bg-primary/[0.03] dark:bg-primary/[0.06]"
+            : "hover:bg-muted/30",
         )}
       >
         <div className="flex items-center gap-3 sm:gap-4 flex-1 min-w-0">
@@ -446,7 +527,7 @@ function ClientFolder({ group }: { group: ClientGroup }) {
               palette.bg,
               palette.text,
               palette.ring,
-              isOpen && "scale-105 ring-2"
+              isOpen && "scale-105 ring-2",
             )}
           >
             {initials}
@@ -455,10 +536,12 @@ function ClientFolder({ group }: { group: ClientGroup }) {
           {/* Info del cliente */}
           <div className="flex flex-col justify-center min-w-0 gap-0.5">
             <div className="flex items-center gap-2 min-w-0">
-              <Folder className={cn(
-                "h-3.5 w-3.5 shrink-0 transition-colors",
-                isOpen ? "text-primary" : "text-muted-foreground/40"
-              )} />
+              <Folder
+                className={cn(
+                  "h-3.5 w-3.5 shrink-0 transition-colors",
+                  isOpen ? "text-primary" : "text-muted-foreground/40",
+                )}
+              />
               <h3 className="text-sm sm:text-base font-black text-foreground tracking-tight leading-tight truncate">
                 {group.clienteNombre}
               </h3>
@@ -468,7 +551,8 @@ function ClientFolder({ group }: { group: ClientGroup }) {
               {group.totalAbiertas > 0 ? (
                 <span className="inline-flex items-center gap-1 text-[10px] sm:text-xs font-bold text-[color:var(--status-warning)] dark:text-[color:var(--status-warning)] bg-[color:var(--status-warning)]/10 dark:bg-[color:var(--status-warning)]/15 px-1.5 py-0.5 rounded-md">
                   <Clock className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
-                  {group.totalAbiertas} {group.totalAbiertas === 1 ? "activa" : "activas"}
+                  {group.totalAbiertas}{" "}
+                  {group.totalAbiertas === 1 ? "activa" : "activas"}
                 </span>
               ) : (
                 <span className="inline-flex items-center gap-1 text-[10px] sm:text-xs font-bold text-[color:var(--status-success-strong)] dark:text-[color:var(--status-success-strong)] bg-[color:var(--status-success-strong)]/10 dark:bg-[color:var(--status-success-strong)]/15 px-1.5 py-0.5 rounded-md">
@@ -489,7 +573,7 @@ function ClientFolder({ group }: { group: ClientGroup }) {
             "h-8 w-8 sm:h-9 sm:w-9 shrink-0 rounded-full flex items-center justify-center transition-all duration-300 ml-2",
             isOpen
               ? "bg-primary/10 text-primary rotate-180"
-              : "text-muted-foreground/30 group-hover:text-muted-foreground"
+              : "text-muted-foreground/30 group-hover:text-muted-foreground",
           )}
         >
           <ChevronDown className="h-4 w-4 sm:h-5 sm:w-5" />
@@ -521,7 +605,10 @@ function ClientFolder({ group }: { group: ClientGroup }) {
                     asChild
                     className="w-full sm:w-auto rounded-xl border-border bg-card hover:bg-card hover:border-primary/30 text-muted-foreground hover:text-foreground h-10 sm:h-11 shadow-sm transition-all"
                   >
-                    <Link href={`/clientes/${group.clienteId}`} className="flex items-center gap-2 text-sm">
+                    <Link
+                      href={`/clientes/${group.clienteId}`}
+                      className="flex items-center gap-2 text-sm"
+                    >
                       <FolderOpen className="h-4 w-4" />
                       <span>Ver Historial Completo</span>
                       <ChevronRight className="h-4 w-4 ml-1 opacity-50" />
@@ -545,20 +632,29 @@ function ConsignacionRowRemito({ c, index }: { c: Row; index: number }) {
 
   const theme = isAbierta
     ? {
-      accent: "border-l-orange-500",
-      badge: "bg-[color:var(--status-warning)]/10 dark:bg-[color:var(--status-warning)]/15 text-[color:var(--status-warning)] dark:text-[color:var(--status-warning)]",
-      dateText: "text-[color:var(--status-warning)] dark:text-[color:var(--status-warning)]",
-      dateBg: "bg-[color:var(--status-warning)]/8 dark:bg-[color:var(--status-warning)]/10 border-[color:var(--status-warning)]/15",
-    }
+        accent: "border-l-orange-500",
+        badge:
+          "bg-[color:var(--status-warning)]/10 dark:bg-[color:var(--status-warning)]/15 text-[color:var(--status-warning)] dark:text-[color:var(--status-warning)]",
+        dateText:
+          "text-[color:var(--status-warning)] dark:text-[color:var(--status-warning)]",
+        dateBg:
+          "bg-[color:var(--status-warning)]/8 dark:bg-[color:var(--status-warning)]/10 border-[color:var(--status-warning)]/15",
+      }
     : {
-      accent: "border-l-emerald-500",
-      badge: "bg-[color:var(--status-success-strong)]/10 dark:bg-[color:var(--status-success-strong)]/15 text-[color:var(--status-success-strong)] dark:text-[color:var(--status-success-strong)]",
-      dateText: "text-[color:var(--status-success-strong)] dark:text-[color:var(--status-success-strong)]",
-      dateBg: "bg-[color:var(--status-success-strong)]/8 dark:bg-[color:var(--status-success-strong)]/10 border-[color:var(--status-success-strong)]/15",
-    };
+        accent: "border-l-emerald-500",
+        badge:
+          "bg-[color:var(--status-success-strong)]/10 dark:bg-[color:var(--status-success-strong)]/15 text-[color:var(--status-success-strong)] dark:text-[color:var(--status-success-strong)]",
+        dateText:
+          "text-[color:var(--status-success-strong)] dark:text-[color:var(--status-success-strong)]",
+        dateBg:
+          "bg-[color:var(--status-success-strong)]/8 dark:bg-[color:var(--status-success-strong)]/10 border-[color:var(--status-success-strong)]/15",
+      };
 
   const dateObj = new Date(c.fecha);
-  const month = dateObj.toLocaleDateString("es-AR", { month: "short" }).toUpperCase().replace(".", "");
+  const month = dateObj
+    .toLocaleDateString("es-AR", { month: "short" })
+    .toUpperCase()
+    .replace(".", "");
   const day = dateObj.getDate();
 
   return (
@@ -574,7 +670,7 @@ function ConsignacionRowRemito({ c, index }: { c: Row; index: number }) {
           "bg-card hover:bg-card/90 dark:hover:bg-card/90",
           "hover:shadow-md hover:border-border/80",
           "border-l-[3px]",
-          theme.accent
+          theme.accent,
         )}
       >
         {/* Date block */}
@@ -582,19 +678,26 @@ function ConsignacionRowRemito({ c, index }: { c: Row; index: number }) {
           className={cn(
             "flex flex-col items-center justify-center h-12 w-12 sm:h-14 sm:w-14 shrink-0 rounded-lg border transition-colors",
             theme.dateBg,
-            theme.dateText
+            theme.dateText,
           )}
         >
           <span className="text-[8px] sm:text-[9px] font-black tracking-widest leading-none mb-0.5 opacity-80">
             {month}
           </span>
-          <span className="text-lg sm:text-2xl font-black leading-none">{day}</span>
+          <span className="text-lg sm:text-2xl font-black leading-none">
+            {day}
+          </span>
         </div>
 
         {/* Info */}
         <div className="flex-1 min-w-0 flex flex-col justify-center gap-0.5">
           <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
-            <span className={cn("px-1.5 py-0.5 rounded text-[9px] sm:text-[10px] font-bold uppercase tracking-wider", theme.badge)}>
+            <span
+              className={cn(
+                "px-1.5 py-0.5 rounded text-[9px] sm:text-[10px] font-bold uppercase tracking-wider",
+                theme.badge,
+              )}
+            >
               {isAbierta ? "Abierta" : "Cerrada"}
             </span>
             {!isAbierta && (
@@ -607,7 +710,7 @@ function ConsignacionRowRemito({ c, index }: { c: Row; index: number }) {
           <h4
             className={cn(
               "text-base sm:text-lg font-black tracking-tight truncate",
-              isAbierta ? "text-foreground" : "text-muted-foreground"
+              isAbierta ? "text-foreground" : "text-muted-foreground",
             )}
           >
             <Hash className="inline h-3 w-3 sm:h-3.5 sm:w-3.5 mr-0.5 opacity-40" />
@@ -616,7 +719,9 @@ function ConsignacionRowRemito({ c, index }: { c: Row; index: number }) {
 
           <div className="flex items-center gap-1.5 text-muted-foreground">
             <Package className="h-3 w-3" />
-            <span className="text-[10px] sm:text-xs font-semibold">{c._count?.detalles || 0} items</span>
+            <span className="text-[10px] sm:text-xs font-semibold">
+              {c._count?.detalles || 0} items
+            </span>
           </div>
         </div>
 
@@ -624,7 +729,7 @@ function ConsignacionRowRemito({ c, index }: { c: Row; index: number }) {
         <div className="pl-1 sm:pl-2 shrink-0">
           <ChevronRight
             className={cn(
-              "h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground/30 group-hover:text-foreground group-hover:translate-x-0.5 transition-all"
+              "h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground/30 group-hover:text-foreground group-hover:translate-x-0.5 transition-all",
             )}
           />
         </div>

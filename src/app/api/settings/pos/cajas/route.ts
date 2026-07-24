@@ -19,7 +19,10 @@ export async function GET() {
     return NextResponse.json({ data: cajas });
   } catch (error) {
     console.error("Error al obtener las cajas:", error);
-    return NextResponse.json({ error: "Error al obtener las cajas" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Error al obtener las cajas" },
+      { status: 500 },
+    );
   }
 }
 
@@ -28,7 +31,10 @@ export async function POST(req: Request) {
   if (!auth.ok) return auth.res;
 
   if (!requireRole(auth.user, ["ADMIN"])) {
-    return NextResponse.json({ error: "Solo admin puede crear cajas." }, { status: 403 });
+    return NextResponse.json(
+      { error: "Solo admin puede crear cajas." },
+      { status: 403 },
+    );
   }
 
   try {
@@ -36,19 +42,32 @@ export async function POST(req: Request) {
     const nombreNormalizado = nombre?.trim();
 
     if (!nombreNormalizado) {
-      return NextResponse.json({ error: "Nombre obligatorio." }, { status: 400 });
+      return NextResponse.json(
+        { error: "Nombre obligatorio." },
+        { status: 400 },
+      );
     }
 
     const nuevaCaja = await prisma.caja.create({
-      data: { nombre: nombreNormalizado, activa: true, sucursalId: auth.activeSucursalId },
+      data: {
+        nombre: nombreNormalizado,
+        activa: true,
+        sucursalId: auth.activeSucursalId,
+      },
     });
     return NextResponse.json({ data: nuevaCaja });
   } catch (error) {
-    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === "P2002"
+    ) {
       return NextResponse.json({ error: "Ya existe." }, { status: 400 });
     }
 
     console.error("Error al crear la caja:", error);
-    return NextResponse.json({ error: "Error al crear la caja" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Error al crear la caja" },
+      { status: 500 },
+    );
   }
 }

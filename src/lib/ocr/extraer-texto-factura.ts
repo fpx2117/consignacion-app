@@ -45,7 +45,11 @@ export async function extraerTextoFactura(input: {
       prepararImagenParaVision(imagenParaOcr, { permitirUpscale: false }),
     ]);
     const resultado = await recognizeImage(preprocesada);
-    return { texto: resultado.texto, confianzaOcr: resultado.confianza, imagenParaVision };
+    return {
+      texto: resultado.texto,
+      confianzaOcr: resultado.confianza,
+      imagenParaVision,
+    };
   }
 
   if (esImagenSoportada(mimeType)) {
@@ -54,8 +58,14 @@ export async function extraerTextoFactura(input: {
       prepararImagenParaVision(buffer),
     ]);
     const resultado = await recognizeImage(preprocesada);
-    return { texto: resultado.texto, confianzaOcr: resultado.confianza, imagenParaVision };
+    return {
+      texto: resultado.texto,
+      confianzaOcr: resultado.confianza,
+      imagenParaVision,
+    };
   }
 
-  throw new FormatoFacturaNoSoportadoError(`Tipo de archivo no soportado para OCR: ${mimeType}`);
+  throw new FormatoFacturaNoSoportadoError(
+    `Tipo de archivo no soportado para OCR: ${mimeType}`,
+  );
 }

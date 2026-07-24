@@ -12,6 +12,7 @@
 Este documento describe los **flujos completos** del sistema de detección de sucursal y verificación de paquetes/planes, resultantes del rediseño completo implementado en la sesión anterior.
 
 **Bugs Resueltos (10):**
+
 1. Triple fuente de verdad (header/cookie/JWT) → Single Source of Truth: cookie httpOnly
 2. Zustand rehydration prematura → Store sin persist, hidratación SSR
 3. Cache stale SubscriptionGuard (5min) → PlanLimits como prop desde layout
@@ -113,6 +114,7 @@ Este documento describe los **flujos completos** del sistema de detección de su
 ```
 
 **Archivos Involved:**
+
 - `src/app/api/auth/login/route.ts` (líneas 35-41, 43-44)
 - `src/lib/auth/require-auth.ts` (resolve sucursal desde cookie)
 - `src/lib/auth/core.ts` (signUserJwt, setAuthCookie)
@@ -171,6 +173,7 @@ Este documento describe los **flujos completos** del sistema de detección de su
 ```
 
 **Archivos Involved:**
+
 - `src/app/api/sucursal/switch/route.ts` (endpoint completo)
 - `src/components/top-bar.tsx` (handleSwitch async)
 - `src/store/useSucursalStore.ts` (switchSucursal action)
@@ -228,6 +231,7 @@ Este documento describe los **flujos completos** del sistema de detección de su
 ```
 
 **Archivos Involved:**
+
 - `src/app/(system-guard)/(protected)/layout.tsx` (getSidebarUserData)
 - `src/lib/subscriptions/require-subscription.ts` (getActivePlanLimits con cache)
 - `src/components/SubscriptionGuard.tsx` (recibe props, NO fetch)
@@ -270,6 +274,7 @@ Este documento describe los **flujos completos** del sistema de detección de su
 ```
 
 **Archivos Involved:**
+
 - `src/lib/subscriptions/require-subscription.ts` (checkFeature, checkProductLimit)
 - `src/app/api/subscriptions/current/route.ts` (incluye planLimits en response)
 
@@ -309,6 +314,7 @@ Este documento describe los **flujos completos** del sistema de detección de su
 ```
 
 **Archivos Involved:**
+
 - `src/app/api/sucursal/switch/route.ts` (validación sucursalId === 0)
 - `src/components/global-readonly-guard.tsx` (bloqueo de UI)
 - `src/lib/sucursalScope.ts` (buildSucursalWhere, isGlobalSucursalView)
@@ -352,6 +358,7 @@ MENSAJES SUPPORTED:
 ```
 
 **Archivos Involved:**
+
 - `src/lib/broadcast-channel.ts` (Channel API + fallback)
 - `src/hooks/useBroadcastChannel.ts` (Hook React para escuchar)
 - `src/store/useSucursalStore.ts` (postAppMessage en switchSucursal)
@@ -397,6 +404,7 @@ SCENARIO: Usuario hace upgrade de Pro a Enterprise
 ```
 
 **Archivos Involved:**
+
 - `src/app/(system-guard)/(protected)/settings/subscriptions/page.tsx`
 - `src/components/SubscriptionStatusCard.tsx`
 - `src/components/SubscriptionGuard.tsx`
@@ -437,6 +445,7 @@ PRIMER ACCESO DESPUÉS DEL DEPLOY:
 ```
 
 **Archivos Involved:**
+
 - `src/store/useSucursalStore.ts` (hydrate action + cleanup)
 - `src/components/sidebar-dock.tsx` (llama hydrate en useEffect)
 
@@ -535,21 +544,21 @@ FALLBACK (browsers antiguos):
 
 ### Archivos Nuevos
 
-| Archivo | Líneas | Propósito |
-|---------|--------|-----------|
-| `src/lib/broadcast-channel.ts` | 60 | Utilidad Channel API con fallback |
-| `src/hooks/useBroadcastChannel.ts` | 44 | Hook React para escuchar mensajes |
-| `src/app/api/sucursal/switch/route.ts` | 62 | Endpoint POST cambio de sucursal |
+| Archivo                                | Líneas | Propósito                         |
+| -------------------------------------- | ------ | --------------------------------- |
+| `src/lib/broadcast-channel.ts`         | 60     | Utilidad Channel API con fallback |
+| `src/hooks/useBroadcastChannel.ts`     | 44     | Hook React para escuchar mensajes |
+| `src/app/api/sucursal/switch/route.ts` | 62     | Endpoint POST cambio de sucursal  |
 
 ### Archivos Modificados Principales
 
-| Archivo | Cambios | Propósito |
-|---------|---------|-----------|
-| `src/store/useSucursalStore.ts` | +116/-116 | Store sin persist, hydrate(), switchSucursal() |
-| `src/lib/auth/require-auth.ts` | +18/-18 | Solo cookie para ADMIN, JWT para EMPLEADO |
-| `src/components/SubscriptionGuard.tsx` | +74/-74 | Recibe planLimits como prop |
-| `src/components/sidebar-dock.tsx` | +28/-28 | hydrate() + BroadcastChannel |
-| `src/components/top-bar.tsx` | +40/-40 | switchSucursal async + loading |
+| Archivo                                | Cambios   | Propósito                                      |
+| -------------------------------------- | --------- | ---------------------------------------------- |
+| `src/store/useSucursalStore.ts`        | +116/-116 | Store sin persist, hydrate(), switchSucursal() |
+| `src/lib/auth/require-auth.ts`         | +18/-18   | Solo cookie para ADMIN, JWT para EMPLEADO      |
+| `src/components/SubscriptionGuard.tsx` | +74/-74   | Recibe planLimits como prop                    |
+| `src/components/sidebar-dock.tsx`      | +28/-28   | hydrate() + BroadcastChannel                   |
+| `src/components/top-bar.tsx`           | +40/-40   | switchSucursal async + loading                 |
 
 ---
 
@@ -585,6 +594,7 @@ FALLBACK (browsers antiguos):
 **Problema:** Antes, el JWT tenía sucursalId fijo por 7 días.
 
 **Solución Actual:**
+
 1. Admin actualiza `usuario.sucursalId` en DB
 2. Empleado hace logout/login → Cookie nueva con sucursal actualizada
 3. No depende de expiración de JWT
@@ -594,6 +604,7 @@ FALLBACK (browsers antiguos):
 **Problema:** Antes, subscription_limits en localStorage no se invalidaba.
 
 **Solución Actual:**
+
 1. Pago cancelado → subscription.status = "CANCELADO"
 2. BroadcastChannel "plan-changed" → router.refresh()
 3. Nuevo planLimits desde DB → features se actualizan inmediatamente
@@ -603,6 +614,7 @@ FALLBACK (browsers antiguos):
 **Problema:** Cambio en una pestaña no se reflejaba en otras.
 
 **Solución Actual:**
+
 1. Cambio sucursal/plan → BroadcastChannel.postMessage()
 2. Todas las pestañas reciben mensaje
 3. Cada una hace router.refresh() → datos actualizados
@@ -658,4 +670,4 @@ npm run test:e2e
 
 **Fin de Documentación** ✅
 
-*Documento generado por JARVIS (Orquestador SDD) - 15/03/2026*
+_Documento generado por JARVIS (Orquestador SDD) - 15/03/2026_

@@ -48,8 +48,8 @@ Además del batching (que es el fix real), se pasa `{ timeout: 15000 }` a `prism
 
 ## Áreas Afectadas
 
-| Área | Impacto | Descripción |
-|---|---|---|
+| Área                                                   | Impacto    | Descripción                                                                                                  |
+| ------------------------------------------------------ | ---------- | ------------------------------------------------------------------------------------------------------------ |
 | `src/app/api/facturas-proveedor/[id]/process/route.ts` | Modificado | Matching movido fuera de la transacción; `createMany` en vez de loop de `create()`; timeout explícito de 15s |
 
 ## Riesgo

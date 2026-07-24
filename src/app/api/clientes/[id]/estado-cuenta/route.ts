@@ -21,8 +21,10 @@ export async function GET(_: Request, { params }: RouteContext) {
   }
 
   const sucursalWhere = buildSucursalWhere(auth);
-  const pagosWhere = Object.keys(sucursalWhere).length > 0 ? sucursalWhere : undefined;
-  const ventasWhere = Object.keys(sucursalWhere).length > 0 ? sucursalWhere : undefined;
+  const pagosWhere =
+    Object.keys(sucursalWhere).length > 0 ? sucursalWhere : undefined;
+  const ventasWhere =
+    Object.keys(sucursalWhere).length > 0 ? sucursalWhere : undefined;
 
   const cliente = await prisma.cliente.findFirst({
     where: { id, ...sucursalWhere },
@@ -42,7 +44,10 @@ export async function GET(_: Request, { params }: RouteContext) {
   });
 
   if (!cliente) {
-    return NextResponse.json({ error: "Cliente no encontrado" }, { status: 404 });
+    return NextResponse.json(
+      { error: "Cliente no encontrado" },
+      { status: 404 },
+    );
   }
 
   return NextResponse.json({

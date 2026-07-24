@@ -20,5 +20,8 @@ export function formatearInputMonto(valor: number | null | undefined): string {
   // los tipos de apiService.ts digan `number` — sin este Number(), un valor
   // así rompía acá con "toFixed is not a function" (ver factura-proveedor-dialog
   // -> initialValuesParaNuevoProducto, que no siempre convierte antes de pasarlo).
-  return Number(valor).toFixed(2);
+  return new Intl.NumberFormat("es-AR", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(Number(valor));
 }

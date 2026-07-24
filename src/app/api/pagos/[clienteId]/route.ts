@@ -9,16 +9,16 @@ interface RouteContext {
   params: Promise<{ clienteId: string }>;
 }
 
-export async function POST(
-  req: NextRequest,
-  { params }: RouteContext
-) {
+export async function POST(req: NextRequest, { params }: RouteContext) {
   const auth = await requireAuth();
   if (!auth.ok) return auth.res;
   if (isGlobalSucursalView(auth)) {
     return NextResponse.json(
-      { error: "Vista global en modo solo lectura. Selecciona una sucursal para registrar pagos." },
-      { status: 409 }
+      {
+        error:
+          "Vista global en modo solo lectura. Selecciona una sucursal para registrar pagos.",
+      },
+      { status: 409 },
     );
   }
 
@@ -29,7 +29,10 @@ export async function POST(
     const clienteId = Number(clienteIdStr);
 
     if (!Number.isFinite(clienteId)) {
-      return NextResponse.json({ error: "ID de cliente invalido" }, { status: 400 });
+      return NextResponse.json(
+        { error: "ID de cliente invalido" },
+        { status: 400 },
+      );
     }
 
     const body = await req.json().catch(() => null);
@@ -38,7 +41,7 @@ export async function POST(
     if (!parsed.success) {
       return NextResponse.json(
         { error: "Validacion fallida", details: parsed.error.flatten() },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -54,7 +57,7 @@ export async function POST(
     if (!sesionActiva) {
       return NextResponse.json(
         { error: "No puedes cobrar pagos sin abrir tu turno de caja primero." },
-        { status: 403 }
+        { status: 403 },
       );
     }
 
@@ -89,7 +92,10 @@ export async function POST(
         return { pago: nuevoPago, saldo: clienteActualizado.saldoCuenta };
       })
       .catch((error: unknown) => {
-        if (error instanceof Error && error.message === "CLIENTE_NO_ENCONTRADO") {
+        if (
+          error instanceof Error &&
+          error.message === "CLIENTE_NO_ENCONTRADO"
+        ) {
           return null;
         }
 
@@ -97,12 +103,18 @@ export async function POST(
       });
 
     if (!result) {
-      return NextResponse.json({ error: "Cliente no encontrado" }, { status: 404 });
+      return NextResponse.json(
+        { error: "Cliente no encontrado" },
+        { status: 404 },
+      );
     }
 
     return NextResponse.json({ data: result }, { status: 201 });
   } catch (error) {
     console.error("Error al registrar pago:", error);
-    return NextResponse.json({ error: "Error al registrar el pago" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Error al registrar el pago" },
+      { status: 500 },
+    );
   }
 }

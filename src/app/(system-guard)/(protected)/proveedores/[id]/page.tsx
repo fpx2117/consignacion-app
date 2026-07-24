@@ -52,7 +52,10 @@ export default function ProveedorDetallePage() {
     <div className="mx-auto w-full max-w-7xl space-y-8 p-4 md:p-8 min-h-screen bg-transparent">
       {/* Volver */}
       <Link href="/proveedores">
-        <Button variant="ghost" className="gap-2 rounded-xl text-muted-foreground hover:text-foreground -ml-2">
+        <Button
+          variant="ghost"
+          className="gap-2 rounded-xl text-muted-foreground hover:text-foreground -ml-2"
+        >
           <ArrowLeft className="h-4 w-4" /> Volver a Proveedores
         </Button>
       </Link>
@@ -62,7 +65,9 @@ export default function ProveedorDetallePage() {
         <Skeleton className="h-32 w-full rounded-[2rem]" />
       ) : !proveedor ? (
         <div className="flex flex-col items-center justify-center py-20 text-center space-y-4 opacity-50">
-          <div className="bg-muted/50 p-6 rounded-full"><Truck className="h-12 w-12 text-muted-foreground" /></div>
+          <div className="bg-muted/50 p-6 rounded-full">
+            <Truck className="h-12 w-12 text-muted-foreground" />
+          </div>
           <h3 className="text-xl font-bold">Proveedor no encontrado</h3>
         </div>
       ) : (
@@ -75,7 +80,9 @@ export default function ProveedorDetallePage() {
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
               <div className="flex items-center gap-5">
                 <Avatar className="h-20 w-20 border-2 border-background shadow-md">
-                  <AvatarFallback className={`font-black text-2xl ${proveedor.activo ? 'bg-[color:var(--status-success-strong)] text-[color:var(--status-success-strong)]' : 'bg-[color:var(--status-warning)] text-[color:var(--status-warning)]'}`}>
+                  <AvatarFallback
+                    className={`font-black text-2xl ${proveedor.activo ? "bg-[color:var(--status-success-strong)] text-[color:var(--status-success-strong)]" : "bg-[color:var(--status-warning)] text-[color:var(--status-warning)]"}`}
+                  >
                     {getInitials(proveedor.nombre)}
                   </AvatarFallback>
                 </Avatar>
@@ -91,10 +98,12 @@ export default function ProveedorDetallePage() {
                       {proveedor.activo ? "ACTIVO" : "INACTIVO"}
                     </Badge>
                     <span className="inline-flex items-center gap-1.5 rounded-lg bg-muted/60 px-2.5 py-1 font-medium text-muted-foreground font-mono">
-                      <Hash className="h-3.5 w-3.5" /> {proveedor.cuit || "Sin CUIT"}
+                      <Hash className="h-3.5 w-3.5" />{" "}
+                      {proveedor.cuit || "Sin CUIT"}
                     </span>
                     <span className="inline-flex items-center gap-1.5 rounded-lg bg-muted/60 px-2.5 py-1 font-medium text-muted-foreground">
-                      <Coins className="h-3.5 w-3.5" /> {proveedor.monedaPreferida}
+                      <Coins className="h-3.5 w-3.5" />{" "}
+                      {proveedor.monedaPreferida}
                     </span>
                   </div>
                 </div>

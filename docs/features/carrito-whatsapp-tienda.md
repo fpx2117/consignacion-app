@@ -49,10 +49,12 @@ La propuesta es reutilizar la base actual del catálogo y del drawer, pero cambi
 **Elección**: extender el drawer actual en vez de crear un carrito nuevo.
 
 **Alternativas consideradas**:
+
 - crear un checkout nuevo desde cero,
 - crear una página separada de carrito.
 
 **Justificación**:
+
 - ya existe estado, estructura visual y navegación por pasos,
 - reduce costo de implementación,
 - preserva la experiencia actual del catálogo.
@@ -62,10 +64,12 @@ La propuesta es reutilizar la base actual del catálogo y del drawer, pero cambi
 **Elección**: convivir con ambos flujos.
 
 **Alternativas consideradas**:
+
 - reemplazar el botón por producto,
 - eliminar el CTA individual.
 
 **Justificación**:
+
 - el CTA individual sirve para consultas rápidas,
 - el carrito sirve para intención de compra real,
 - ambos usos resuelven necesidades distintas.
@@ -75,10 +79,12 @@ La propuesta es reutilizar la base actual del catálogo y del drawer, pero cambi
 **Elección**: crear una función reutilizable para obtener precio unitario efectivo, subtotal por ítem y total del carrito.
 
 **Alternativas consideradas**:
+
 - seguir calculando en cada componente,
 - recalcular en el mensaje de WhatsApp con lógica inline.
 
 **Justificación**:
+
 - hoy el drawer mezcla precio base y precio con descuento,
 - el catálogo muestra una cosa y el checkout puede usar otra,
 - una sola fuente de verdad reduce errores.
@@ -88,10 +94,12 @@ La propuesta es reutilizar la base actual del catálogo y del drawer, pero cambi
 **Elección**: guardar el carrito por sucursal en almacenamiento local del navegador.
 
 **Alternativas consideradas**:
+
 - no persistir,
 - persistir en backend.
 
 **Justificación**:
+
 - es suficiente para el caso de uso,
 - evita perder selección al refrescar,
 - no obliga a crear modelo de pedido todavía.
@@ -101,10 +109,12 @@ La propuesta es reutilizar la base actual del catálogo y del drawer, pero cambi
 **Elección**: implementar primero el mensaje a WhatsApp y dejar Mercado Pago fuera del alcance inmediato de este cambio.
 
 **Alternativas consideradas**:
+
 - soportar Mercado Pago y WhatsApp al mismo tiempo en esta misma fase,
 - rehacer todo el checkout actual.
 
 **Justificación**:
+
 - el requerimiento actual es claro: finalizar por WhatsApp,
 - MP hoy tiene inconsistencias de pricing con descuentos y consignación,
 - dividir por fases baja riesgo.
@@ -187,17 +197,20 @@ Link tienda: https://.../lista
 ## Datos mínimos sugeridos para el flujo WhatsApp
 
 ### Paso 1: Carrito
+
 - productos,
 - cantidades,
 - subtotal,
 - total.
 
 ### Paso 2: Datos del cliente
+
 - nombre,
 - teléfono,
 - observaciones opcionales.
 
 ### Paso 3: Entrega
+
 - retiro en local,
 - envío a domicilio,
 - retiro en sucursal.
@@ -206,23 +219,24 @@ Para la fase WhatsApp, conviene simplificar el formulario actual y no exigir ema
 
 ## Cambios en Archivos
 
-| Archivo | Acción | Descripción |
-|---------|--------|-------------|
-| `src/app/lista/catalog-client.tsx` | Modificar | Persistencia del carrito, apertura/cierre, helpers de carrito y callback final a WhatsApp |
-| `src/app/lista/components/store-header.tsx` | Modificar | Mostrar CTA visible del carrito con contador |
-| `src/app/lista/components/cart-drawer.tsx` | Modificar | Reorientar flujo del drawer a pedido por WhatsApp y simplificar formulario |
-| `src/app/lista/components/product-card.tsx` | Modificar | Mantener agregar al carrito y eventualmente reforzar feedback de cantidad/stock |
-| `src/app/lista/components/product-modal.tsx` | Modificar | Mantener agregar al carrito con misma lógica de pricing/stock |
-| `src/lib/types.ts` | Modificar | Ajustar tipos del carrito y, si hace falta, tipar payload del mensaje WhatsApp |
-| `src/lib/` | Crear | Utilidad compartida para cálculo de precios del carrito y util de mensaje WhatsApp |
-| `src/app/(system-guard)/(protected)/settings/whatsapp/page.tsx` | Modificar | Opcional: agregar plantilla específica para pedido por carrito |
-| `src/app/(system-guard)/(protected)/settings/whatsapp/components/TemplateEditor.tsx` | Modificar | Opcional: soportar variables del pedido por carrito |
+| Archivo                                                                              | Acción    | Descripción                                                                               |
+| ------------------------------------------------------------------------------------ | --------- | ----------------------------------------------------------------------------------------- |
+| `src/app/lista/catalog-client.tsx`                                                   | Modificar | Persistencia del carrito, apertura/cierre, helpers de carrito y callback final a WhatsApp |
+| `src/app/lista/components/store-header.tsx`                                          | Modificar | Mostrar CTA visible del carrito con contador                                              |
+| `src/app/lista/components/cart-drawer.tsx`                                           | Modificar | Reorientar flujo del drawer a pedido por WhatsApp y simplificar formulario                |
+| `src/app/lista/components/product-card.tsx`                                          | Modificar | Mantener agregar al carrito y eventualmente reforzar feedback de cantidad/stock           |
+| `src/app/lista/components/product-modal.tsx`                                         | Modificar | Mantener agregar al carrito con misma lógica de pricing/stock                             |
+| `src/lib/types.ts`                                                                   | Modificar | Ajustar tipos del carrito y, si hace falta, tipar payload del mensaje WhatsApp            |
+| `src/lib/`                                                                           | Crear     | Utilidad compartida para cálculo de precios del carrito y util de mensaje WhatsApp        |
+| `src/app/(system-guard)/(protected)/settings/whatsapp/page.tsx`                      | Modificar | Opcional: agregar plantilla específica para pedido por carrito                            |
+| `src/app/(system-guard)/(protected)/settings/whatsapp/components/TemplateEditor.tsx` | Modificar | Opcional: soportar variables del pedido por carrito                                       |
 
 ## Nuevas Utilidades Recomendadas
 
 ### `src/lib/catalog-cart-pricing.ts`
 
 Responsabilidad:
+
 - resolver precio unitario efectivo,
 - aplicar descuento efectivo,
 - contemplar modo consignación si corresponde,
@@ -260,6 +274,7 @@ export function getCatalogCartLinePricing(
 ### `src/lib/catalog-whatsapp.ts`
 
 Responsabilidad:
+
 - normalizar número,
 - construir mensaje,
 - devolver URL `wa.me`.
@@ -285,64 +300,75 @@ type CatalogWhatsappCheckoutInput = {
   total: number;
 };
 
-export function buildCatalogWhatsappUrl(input: CatalogWhatsappCheckoutInput): string | null;
+export function buildCatalogWhatsappUrl(
+  input: CatalogWhatsappCheckoutInput,
+): string | null;
 ```
 
 ## Riesgos y Edge Cases
 
 ### Riesgo 1: Inconsistencia de precios
+
 - hoy la UI pública y el drawer no usan exactamente la misma lógica,
 - si no se centraliza, el mensaje puede salir con totales distintos a lo que el usuario vio.
 
 ### Riesgo 2: Stock insuficiente
+
 - hoy no hay tope fuerte al incrementar cantidad en carrito,
 - el usuario podría intentar pedir más de lo disponible.
 
 ### Riesgo 3: Número de WhatsApp mal formateado
+
 - `wa.me` requiere número limpio,
 - si se usa el valor crudo con `+`, espacios o guiones puede fallar.
 
 ### Riesgo 4: Formulario demasiado pesado
+
 - el flujo actual pide email y dirección demasiado temprano,
 - para un pedido por WhatsApp eso agrega fricción innecesaria.
 
 ### Riesgo 5: Coexistencia con Mercado Pago
+
 - si no se separa bien el alcance, se mezcla pedido por WhatsApp con checkout online y se duplica complejidad.
 
 ## Estrategia de Implementación por Fases
 
 ### Fase 1: Hacer visible y persistente el carrito
+
 - agregar botón de carrito al header,
 - persistir `cart` en `localStorage`,
 - restaurar carrito al cargar,
 - mostrar contador correcto.
 
 ### Fase 2: Unificar precios y stock
+
 - crear util compartida de pricing,
 - usarla en drawer y mensaje final,
 - limitar cantidad por stock disponible,
 - mostrar subtotales correctos.
 
 ### Fase 3: Checkout por WhatsApp
+
 - simplificar pasos del drawer,
 - pedir datos mínimos,
 - construir URL de WhatsApp,
 - abrir mensaje con items y total.
 
 ### Fase 4: Ajustes de configuración
+
 - opcionalmente crear plantilla específica para carrito,
 - dejar variables futuras para personalización.
 
 ## Estrategia de Pruebas
 
-| Capa | Qué Probar | Enfoque |
-|------|------------|---------|
-| Unitaria | cálculo de precios del carrito | tests a utilidad de pricing |
-| Unitaria | generación de URL/mensaje WhatsApp | tests a utilidad de formateo |
-| Integración | agregar/quitar/cambiar cantidad | prueba desde `CatalogClient` + `CartDrawer` |
-| Integración | persistencia de carrito | verificar restauración desde `localStorage` |
-| Integración | stock máximo | impedir cantidad mayor al disponible |
-| Manual/E2E | flujo completo hasta abrir WhatsApp | probar en `/lista` con productos con y sin descuento |
+| Capa        | Qué Probar                          | Enfoque                                              |
+| ----------- | ----------------------------------- | ---------------------------------------------------- |
+| Unitaria    | cálculo de precios del carrito      | tests a utilidad de pricing                          |
+| Unitaria    | generación de URL/mensaje WhatsApp  | tests a utilidad de formateo                         |
+| Integración | agregar/quitar/cambiar cantidad     | prueba desde `CatalogClient` + `CartDrawer`          |
+| Integración | persistencia de carrito             | verificar restauración desde `localStorage`          |
+| Integración | stock máximo                        | impedir cantidad mayor al disponible                 |
+| Manual/E2E  | flujo completo hasta abrir WhatsApp | probar en `/lista` con productos con y sin descuento |
 
 ## Recomendación Final
 

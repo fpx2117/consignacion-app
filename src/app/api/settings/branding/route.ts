@@ -31,7 +31,9 @@ type BrandingBody = {
   storefrontContent?: StorefrontContent | null;
 };
 
-type BrandingWithBanners = Prisma.BrandingGetPayload<{ include: { banners: true } }>;
+type BrandingWithBanners = Prisma.BrandingGetPayload<{
+  include: { banners: true };
+}>;
 
 function toBase64(data: Uint8Array | null | undefined) {
   return data ? Buffer.from(data).toString("base64") : null;
@@ -58,8 +60,13 @@ function serializeBranding(branding: BrandingWithBanners | null) {
   };
 }
 
-function hasBannerPayload(banner: BrandingBannerInput): banner is { bannerData: string; bannerMime: string } {
-  return typeof banner.bannerData === "string" && typeof banner.bannerMime === "string";
+function hasBannerPayload(
+  banner: BrandingBannerInput,
+): banner is { bannerData: string; bannerMime: string } {
+  return (
+    typeof banner.bannerData === "string" &&
+    typeof banner.bannerMime === "string"
+  );
 }
 
 export async function GET() {
@@ -78,7 +85,10 @@ export async function GET() {
 
     return NextResponse.json({ data: serializeBranding(branding) });
   } catch {
-    return NextResponse.json({ error: "Error al obtener branding" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Error al obtener branding" },
+      { status: 500 },
+    );
   }
 }
 
@@ -125,7 +135,9 @@ export async function PUT(req: Request) {
       ...(whatsappMessage !== undefined && { whatsappMessage }),
       ...(themeIdentifier !== undefined && { themeIdentifier }),
       ...(isBannerSlider !== undefined && { isBannerSlider }),
-      ...(storefrontContent !== undefined && { storefrontContent: storefrontContent ?? Prisma.JsonNull }),
+      ...(storefrontContent !== undefined && {
+        storefrontContent: storefrontContent ?? Prisma.JsonNull,
+      }),
     };
 
     if (typeof logoData === "string" && typeof logoMime === "string") {
@@ -158,7 +170,8 @@ export async function PUT(req: Request) {
         instagramUrl: instagramUrl ?? null,
         facebookUrl: facebookUrl ?? null,
         whatsappNumber: whatsappNumber ?? null,
-        whatsappMessage: whatsappMessage ?? "Hola, estoy buscando {nombre_producto}",
+        whatsappMessage:
+          whatsappMessage ?? "Hola, estoy buscando {nombre_producto}",
         themeIdentifier: themeIdentifier ?? "modern",
         isBannerSlider: isBannerSlider ?? false,
         storefrontContent: storefrontContent ?? Prisma.JsonNull,
@@ -206,6 +219,9 @@ export async function PUT(req: Request) {
     });
   } catch (error) {
     console.error("Error actualizando branding:", error);
-    return NextResponse.json({ error: "Error al actualizar branding" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Error al actualizar branding" },
+      { status: 500 },
+    );
   }
 }

@@ -9,7 +9,6 @@ const pool = new pg.Pool({ connectionString });
 const adapter = new PrismaPg(pool);
 const prisma = new PrismaClient({ adapter });
 
-
 async function seedPlans() {
   console.log("🌱 Sincronizando planes de suscripción...");
 
@@ -51,7 +50,9 @@ async function seedPromoCodes() {
 
   for (const promo of promoCodes) {
     // Verificamos si el planId existe antes de crear el promo code para evitar errores de FK
-    const planExists = await prisma.plan.findUnique({ where: { id: promo.planId } });
+    const planExists = await prisma.plan.findUnique({
+      where: { id: promo.planId },
+    });
 
     if (planExists) {
       console.log(`Upserting promo code: ${promo.code}...`);
@@ -65,7 +66,9 @@ async function seedPromoCodes() {
         create: promo,
       });
     } else {
-      console.warn(`⚠️ Saltando promo ${promo.code}: Plan ID ${promo.planId} no encontrado.`);
+      console.warn(
+        `⚠️ Saltando promo ${promo.code}: Plan ID ${promo.planId} no encontrado.`,
+      );
     }
   }
   console.log("✅ Códigos promocionales verificados.");
@@ -76,7 +79,6 @@ async function main() {
     console.log("🚀 Iniciando Seed Master...");
     // Conectar explícitamente
     await prisma.$connect();
-
 
     await seedPlans();
     await seedPromoCodes();

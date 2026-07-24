@@ -6,7 +6,7 @@ Cubre **Parte 1** y **Parte 2** de `proposal.md` — las dos únicas secciones c
 
 ### Proveedor es global hoy, por decisión explícita anterior
 
-`prisma/schema.prisma:740-754` — `Proveedor` no tiene `sucursalId`. El comentario en `src/app/api/proveedores/route.ts:2-3` lo confirma: *"Global al negocio (sin sucursalId): el aprendizaje de proveedor (alias, códigos, formato de factura) se comparte entre todas las sucursales."* Los 4 endpoints CRUD (`proveedores/route.ts` GET/POST, `proveedores/[id]/route.ts` PATCH/DELETE) no filtran ni verifican pertenencia por sucursal en absoluto.
+`prisma/schema.prisma:740-754` — `Proveedor` no tiene `sucursalId`. El comentario en `src/app/api/proveedores/route.ts:2-3` lo confirma: _"Global al negocio (sin sucursalId): el aprendizaje de proveedor (alias, códigos, formato de factura) se comparte entre todas las sucursales."_ Los 4 endpoints CRUD (`proveedores/route.ts` GET/POST, `proveedores/[id]/route.ts` PATCH/DELETE) no filtran ni verifican pertenencia por sucursal en absoluto.
 
 `FacturaProveedor`, en cambio, **ya es sucursal-scoped** (`sucursalId Int` no-nulo, `prisma/schema.prisma:759`), y su endpoint de listado ya usa el mecanismo estándar del proyecto:
 
@@ -19,6 +19,7 @@ const facturas = await prisma.facturaProveedor.findMany({ where: { ...sucursalWh
 ### El mecanismo de scoping ya existe y tiene un precedente casi idéntico: `Cliente`
 
 `src/lib/security/sucursalScope.ts` expone las piezas reutilizables:
+
 - `buildSucursalWhere(auth)` → `{}` en vista global, `{ sucursalId: auth.activeSucursalId }` en el resto (línea 125-129).
 - `isGlobalSucursalView(auth)` → `true` sólo si `rol === "ADMIN"` y `activeSucursalId === 0` (línea 121-123, delega en `canUseGlobalView` línea 46-48).
 - `canAccessSucursalResource(auth, resourceSucursalId)` → `true` en vista global, o si coincide con `auth.activeSucursalId` (línea 131-137).
@@ -50,7 +51,7 @@ Sin `sucursalId` en el `where`, hoy esto ya es "correcto" solo porque `Proveedor
 
 ### El visor de imagen: el backend ya existe, la UI nunca lo llama
 
-`src/app/api/facturas-proveedor/[id]/archivo/route.ts` sirve el archivo (líneas 47-60), pero está gateado por un token HMAC de 10 minutos (`src/lib/security/factura-proveedor-token.ts:15`) generado por `generateFacturaArchivoToken()` — función que **no se llama desde ningún componente de la UI hoy** (`grep` de `generateFacturaArchivoToken` sólo devuelve su propia definición). El comentario del propio archivo lo confirma: *"para casos donde hace falta acceso al documento sin pasar por la sesión normal (ej. visor externo de corta vida)"* — está diseñado para un consumidor externo (Modal, el worker de OCR), no para el navegador del usuario.
+`src/app/api/facturas-proveedor/[id]/archivo/route.ts` sirve el archivo (líneas 47-60), pero está gateado por un token HMAC de 10 minutos (`src/lib/security/factura-proveedor-token.ts:15`) generado por `generateFacturaArchivoToken()` — función que **no se llama desde ningún componente de la UI hoy** (`grep` de `generateFacturaArchivoToken` sólo devuelve su propia definición). El comentario del propio archivo lo confirma: _"para casos donde hace falta acceso al documento sin pasar por la sesión normal (ej. visor externo de corta vida)"_ — está diseñado para un consumidor externo (Modal, el worker de OCR), no para el navegador del usuario.
 
 `src/app/(system-guard)/(protected)/proveedores/components/factura-detalle-dialog.tsx:108-113` sólo maneja el caso `archivoEliminado === true` (mensaje "Imagen original eliminada"). Cuando `archivoEliminado === false` no pasa nada — no hay ningún `<img>`/`<iframe>` en el componente.
 
@@ -101,7 +102,10 @@ Una sola columna nullable con default — migración aditiva pura, mismo patrón
 Diff conceptual sobre `src/app/api/proveedores/route.ts`:
 
 ```typescript
-import { buildSucursalWhere, isGlobalSucursalView } from "@/lib/security/sucursalScope";
+import {
+  buildSucursalWhere,
+  isGlobalSucursalView,
+} from "@/lib/security/sucursalScope";
 
 export async function GET(_req: NextRequest) {
   const auth = await requireAuth();
@@ -110,9 +114,15 @@ export async function GET(_req: NextRequest) {
   const isGlobal = isGlobalSucursalView(auth);
   const proveedores = await prisma.proveedor.findMany({
     where: { activo: true, ...buildSucursalWhere(auth) },
-    orderBy: isGlobal ? [{ sucursalId: "asc" }, { nombre: "asc" }] : [{ nombre: "asc" }],
+    orderBy: isGlobal
+      ? [{ sucursalId: "asc" }, { nombre: "asc" }]
+      : [{ nombre: "asc" }],
   });
-  return NextResponse.json(proveedores, { headers: { "Cache-Control": "private, max-age=60, stale-while-revalidate=120" } });
+  return NextResponse.json(proveedores, {
+    headers: {
+      "Cache-Control": "private, max-age=60, stale-while-revalidate=120",
+    },
+  });
 }
 ```
 
@@ -126,7 +136,10 @@ export async function POST(req: NextRequest) {
   if (!auth.ok) return auth.res;
   if (isGlobalSucursalView(auth)) {
     return NextResponse.json(
-      { error: "Vista global en modo solo lectura. Selecciona una sucursal para crear un proveedor." },
+      {
+        error:
+          "Vista global en modo solo lectura. Selecciona una sucursal para crear un proveedor.",
+      },
       { status: 409 },
     );
   }
@@ -136,7 +149,7 @@ export async function POST(req: NextRequest) {
       nombre: parsed.data.nombre.trim(),
       cuit: parsed.data.cuit?.trim() || null,
       monedaPreferida: parsed.data.monedaPreferida,
-      sucursalId: auth.activeSucursalId,   // NUEVO
+      sucursalId: auth.activeSucursalId, // NUEVO
     },
   });
   // ...
@@ -150,18 +163,35 @@ export async function POST(req: NextRequest) {
 Diff conceptual sobre `src/app/api/proveedores/[id]/route.ts`, mismo patrón que `clientes/[id]/route.ts:60-63`:
 
 ```typescript
-import { canAccessSucursalResource, isGlobalSucursalView } from "@/lib/security/sucursalScope";
+import {
+  canAccessSucursalResource,
+  isGlobalSucursalView,
+} from "@/lib/security/sucursalScope";
 
-export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function PATCH(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+) {
   const auth = await requireAuth();
   if (!auth.ok) return auth.res;
   if (isGlobalSucursalView(auth)) {
-    return NextResponse.json({ error: "Vista global en modo solo lectura. Selecciona una sucursal para editar un proveedor." }, { status: 409 });
+    return NextResponse.json(
+      {
+        error:
+          "Vista global en modo solo lectura. Selecciona una sucursal para editar un proveedor.",
+      },
+      { status: 409 },
+    );
   }
   // ...
-  const existing = await prisma.proveedor.findUnique({ where: { id: proveedorId } });
+  const existing = await prisma.proveedor.findUnique({
+    where: { id: proveedorId },
+  });
   if (!existing || !canAccessSucursalResource(auth, existing.sucursalId)) {
-    return NextResponse.json({ error: "Proveedor no encontrado" }, { status: 404 });
+    return NextResponse.json(
+      { error: "Proveedor no encontrado" },
+      { status: 404 },
+    );
   }
   // ...update existente sin cambios...
 }
@@ -179,7 +209,7 @@ if (!proveedorId && resultado.supplier.name) {
   const match = await prisma.proveedor.findFirst({
     where: {
       nombre: { equals: resultado.supplier.name, mode: "insensitive" },
-      sucursalId: factura.sucursalId,   // NUEVO
+      sucursalId: factura.sucursalId, // NUEVO
     },
   });
   if (match) proveedorId = match.id;
@@ -197,7 +227,7 @@ export interface Proveedor {
   cuit: string | null;
   monedaPreferida: string;
   activo: boolean;
-  sucursalId: number | null;   // NUEVO
+  sucursalId: number | null; // NUEVO
   createdAt: string;
   updatedAt: string;
 }
@@ -212,11 +242,17 @@ Campo solo de lectura desde el cliente — no se agrega a `CreateProveedorInput`
 `src/app/api/facturas-proveedor/[id]/archivo/route.ts` hoy sólo acepta `?token=` (HMAC, sin sesión). Se agrega una segunda vía de autenticación **en el mismo archivo** — no un archivo nuevo, para no duplicar la lectura del filesystem ni la validación del nombre opaco:
 
 ```typescript
-export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function GET(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+) {
   const { id } = await params;
   const facturaId = Number(id);
   if (!Number.isInteger(facturaId)) {
-    return NextResponse.json({ error: "Factura no encontrada" }, { status: 404 });
+    return NextResponse.json(
+      { error: "Factura no encontrada" },
+      { status: 404 },
+    );
   }
 
   const token = req.nextUrl.searchParams.get("token");
@@ -230,7 +266,9 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
         where: { id: facturaId },
         select: { sucursalId: true },
       });
-      autorizado = Boolean(factura) && canAccessSucursalResource(auth, factura!.sucursalId);
+      autorizado =
+        Boolean(factura) &&
+        canAccessSucursalResource(auth, factura!.sucursalId);
     }
   }
 
@@ -249,28 +287,34 @@ Las dos vías coexisten sin interferirse: el worker de OCR sigue usando `?token=
 Diff conceptual, dentro del bloque `{/* Body */}` de `src/app/(system-guard)/(protected)/proveedores/components/factura-detalle-dialog.tsx`, antes de la tabla de ítems:
 
 ```tsx
-{!factura?.archivoEliminado && factura && (
-  <div className="mb-4 rounded-2xl border border-border/50 overflow-hidden bg-muted/20">
-    {factura.archivoMime.startsWith("image/") ? (
-      <a href={API_ROUTES.FACTURAS_PROVEEDOR.ARCHIVO(factura.id)} target="_blank" rel="noreferrer">
-        <img
-          src={API_ROUTES.FACTURAS_PROVEEDOR.ARCHIVO(factura.id)}
-          alt="Factura original"
-          className="w-full max-h-72 object-contain hover:opacity-90 transition-opacity cursor-zoom-in"
-        />
-      </a>
-    ) : (
-      <a
-        href={API_ROUTES.FACTURAS_PROVEEDOR.ARCHIVO(factura.id)}
-        target="_blank"
-        rel="noreferrer"
-        className="flex items-center justify-center gap-2 p-6 text-sm font-medium text-primary hover:underline"
-      >
-        <FileText className="h-4 w-4" /> Abrir PDF original
-      </a>
-    )}
-  </div>
-)}
+{
+  !factura?.archivoEliminado && factura && (
+    <div className="mb-4 rounded-2xl border border-border/50 overflow-hidden bg-muted/20">
+      {factura.archivoMime.startsWith("image/") ? (
+        <a
+          href={API_ROUTES.FACTURAS_PROVEEDOR.ARCHIVO(factura.id)}
+          target="_blank"
+          rel="noreferrer"
+        >
+          <img
+            src={API_ROUTES.FACTURAS_PROVEEDOR.ARCHIVO(factura.id)}
+            alt="Factura original"
+            className="w-full max-h-72 object-contain hover:opacity-90 transition-opacity cursor-zoom-in"
+          />
+        </a>
+      ) : (
+        <a
+          href={API_ROUTES.FACTURAS_PROVEEDOR.ARCHIVO(factura.id)}
+          target="_blank"
+          rel="noreferrer"
+          className="flex items-center justify-center gap-2 p-6 text-sm font-medium text-primary hover:underline"
+        >
+          <FileText className="h-4 w-4" /> Abrir PDF original
+        </a>
+      )}
+    </div>
+  );
+}
 ```
 
 No hace falta token en el cliente: el navegador ya manda la cookie de sesión al pedir `<img src="/api/facturas-proveedor/123/archivo">`, la misma que usa para cualquier otra llamada a la API. `API_ROUTES.FACTURAS_PROVEEDOR.ARCHIVO(id)` es una entrada nueva en el objeto de rutas existente (`src/lib/apiService.ts`, junto al resto de `FACTURAS_PROVEEDOR.*`).

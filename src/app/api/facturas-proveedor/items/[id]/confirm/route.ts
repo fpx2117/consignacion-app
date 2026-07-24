@@ -24,13 +24,19 @@ export async function POST(
   const auth = await requireAuth();
   if (!auth.ok) return auth.res;
   if (!requireRole(auth.user, ["ADMIN"])) {
-    return NextResponse.json({ error: "No tienes permisos (Admin requerido)" }, { status: 403 });
+    return NextResponse.json(
+      { error: "No tienes permisos (Admin requerido)" },
+      { status: 403 },
+    );
   }
 
   const { id } = await params;
   const itemId = Number(id);
   if (!Number.isInteger(itemId)) {
-    return NextResponse.json({ error: "Item de factura no encontrado" }, { status: 404 });
+    return NextResponse.json(
+      { error: "Item de factura no encontrado" },
+      { status: 404 },
+    );
   }
 
   const body = await req.json().catch(() => null);
@@ -44,13 +50,21 @@ export async function POST(
 
   const cargado = await cargarItemFacturaAccesible(auth, itemId);
   if (!cargado.ok) {
-    return NextResponse.json({ error: cargado.error }, { status: cargado.status });
+    return NextResponse.json(
+      { error: cargado.error },
+      { status: cargado.status },
+    );
   }
   const { item } = cargado;
 
-  const producto = await prisma.producto.findUnique({ where: { id: parsed.data.productoId } });
+  const producto = await prisma.producto.findUnique({
+    where: { id: parsed.data.productoId },
+  });
   if (!producto || producto.sucursalId !== item.factura.sucursalId) {
-    return NextResponse.json({ error: "El producto elegido no pertenece a esta sucursal" }, { status: 400 });
+    return NextResponse.json(
+      { error: "El producto elegido no pertenece a esta sucursal" },
+      { status: 400 },
+    );
   }
 
   try {
@@ -83,7 +97,10 @@ export async function POST(
         data: {
           productoId: parsed.data.productoId,
           estado: EstadoItemFactura.CONFIRMADO,
-          matchMotivo: item.productoId === parsed.data.productoId ? item.matchMotivo : "manual",
+          matchMotivo:
+            item.productoId === parsed.data.productoId
+              ? item.matchMotivo
+              : "manual",
         },
       });
 
@@ -103,6 +120,9 @@ export async function POST(
     });
   } catch (error) {
     console.error("[FACTURA_PROVEEDOR_ITEM_CONFIRM_ERROR]", { itemId, error });
-    return NextResponse.json({ error: "Error al confirmar el item" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Error al confirmar el item" },
+      { status: 500 },
+    );
   }
 }

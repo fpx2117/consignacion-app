@@ -8,21 +8,21 @@ Reducir primero los advisories con mayor riesgo efectivo para el runtime expuest
 
 Fecha de corte: 2026-03-18.
 
-| Estado | Total | High | Moderate | Notas |
-|--------|-------|------|----------|-------|
-| Antes del lote Fase 5 | 14 | 8 | 6 | `next`, `socket.io-parser`, `axios`, `flatted`, `hono`, `@hono/node-server`, `prisma/@prisma/dev` y transitivas de `chevrotain`/`lodash`. |
-| Despues del lote Fase 5 | 7 | 0 | 7 | Queda solo la cadena dev-only `prisma -> @prisma/dev -> @mrleebo/prisma-ast -> chevrotain -> lodash`. |
+| Estado                  | Total | High | Moderate | Notas                                                                                                                                     |
+| ----------------------- | ----- | ---- | -------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| Antes del lote Fase 5   | 14    | 8    | 6        | `next`, `socket.io-parser`, `axios`, `flatted`, `hono`, `@hono/node-server`, `prisma/@prisma/dev` y transitivas de `chevrotain`/`lodash`. |
+| Despues del lote Fase 5 | 7     | 0    | 7        | Queda solo la cadena dev-only `prisma -> @prisma/dev -> @mrleebo/prisma-ast -> chevrotain -> lodash`.                                     |
 
 ## Priorizacion aplicada
 
-| Prioridad | Paquete | Superficie | Riesgo efectivo | Decision |
-|-----------|---------|------------|-----------------|----------|
-| P1 | `next` | framework HTTP/app router | Runtime expuesto a internet | Actualizar a `16.2.0`. |
-| P1 | `socket.io-parser` | red/tiempo real | Parser de mensajes expuesto por `server.ts` | Forzar `4.2.6` por `overrides`. |
-| P1 | `axios` via `node-andreani` | integracion server-side en `POST /api/public/envios/cotizar` | Dependencia directa en endpoint publico | Forzar `1.13.6` por `overrides`. |
-| P2 | `@hono/node-server` y `hono` | toolchain dev/CLI | No corre en el runtime de la app, pero tenia advisories altos | Forzar versiones corregidas para reducir baseline sin tocar codigo funcional. |
-| P2 | `flatted` | tooling de lint/cache | No expuesto en runtime, fix directo disponible | Forzar `3.4.2`. |
-| P3 | `prisma/@prisma/dev` + `@mrleebo/prisma-ast` + `chevrotain/lodash` | CLI de Prisma solamente | Residual dev-only y sin remediacion segura publicada en la linea actual | Mitigar y dejar seguimiento documentado. |
+| Prioridad | Paquete                                                            | Superficie                                                   | Riesgo efectivo                                                         | Decision                                                                      |
+| --------- | ------------------------------------------------------------------ | ------------------------------------------------------------ | ----------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
+| P1        | `next`                                                             | framework HTTP/app router                                    | Runtime expuesto a internet                                             | Actualizar a `16.2.0`.                                                        |
+| P1        | `socket.io-parser`                                                 | red/tiempo real                                              | Parser de mensajes expuesto por `server.ts`                             | Forzar `4.2.6` por `overrides`.                                               |
+| P1        | `axios` via `node-andreani`                                        | integracion server-side en `POST /api/public/envios/cotizar` | Dependencia directa en endpoint publico                                 | Forzar `1.13.6` por `overrides`.                                              |
+| P2        | `@hono/node-server` y `hono`                                       | toolchain dev/CLI                                            | No corre en el runtime de la app, pero tenia advisories altos           | Forzar versiones corregidas para reducir baseline sin tocar codigo funcional. |
+| P2        | `flatted`                                                          | tooling de lint/cache                                        | No expuesto en runtime, fix directo disponible                          | Forzar `3.4.2`.                                                               |
+| P3        | `prisma/@prisma/dev` + `@mrleebo/prisma-ast` + `chevrotain/lodash` | CLI de Prisma solamente                                      | Residual dev-only y sin remediacion segura publicada en la linea actual | Mitigar y dejar seguimiento documentado.                                      |
 
 ## Lote aplicado
 
@@ -55,9 +55,9 @@ Fecha de corte: 2026-03-18.
 
 ## Advisories pendientes y mitigacion temporal
 
-| Estado | Cadena | Severidad | Motivo de pendiente | Mitigacion temporal |
-|--------|--------|-----------|---------------------|---------------------|
-| Pendiente | `prisma -> @prisma/dev -> @mrleebo/prisma-ast -> chevrotain -> lodash` | Moderate | `npm audit` solo ofrece una bajada mayor a `prisma@6.19.2`, pero la linea actual publicada de Prisma 7 sigue trayendo `@prisma/dev` vulnerable y no hay fix compatible confirmado para `@mrleebo/prisma-ast`/`chevrotain`. | Riesgo acotado a toolchain local/CI; no se expone en runtime. Mantener Prisma fuera de superficies publicas, revisar release notes de Prisma en cada upgrade y reintentar cierre cuando el upstream publique fix verificable. |
+| Estado    | Cadena                                                                 | Severidad | Motivo de pendiente                                                                                                                                                                                                        | Mitigacion temporal                                                                                                                                                                                                           |
+| --------- | ---------------------------------------------------------------------- | --------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Pendiente | `prisma -> @prisma/dev -> @mrleebo/prisma-ast -> chevrotain -> lodash` | Moderate  | `npm audit` solo ofrece una bajada mayor a `prisma@6.19.2`, pero la linea actual publicada de Prisma 7 sigue trayendo `@prisma/dev` vulnerable y no hay fix compatible confirmado para `@mrleebo/prisma-ast`/`chevrotain`. | Riesgo acotado a toolchain local/CI; no se expone en runtime. Mantener Prisma fuera de superficies publicas, revisar release notes de Prisma en cada upgrade y reintentar cierre cuando el upstream publique fix verificable. |
 
 ## Criterio de mantenimiento
 

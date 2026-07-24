@@ -20,14 +20,25 @@ type CartListProps = {
   onSetQuantity: (productId: number, qty: number) => void;
 };
 
-export function CartList({ cart, getDiscountInfo, onRemoveItem, onUpdateQuantity, onSetQuantity }: CartListProps) {
+export function CartList({
+  cart,
+  getDiscountInfo,
+  onRemoveItem,
+  onUpdateQuantity,
+  onSetQuantity,
+}: CartListProps) {
   if (cart.length === 0) {
     return (
-      <div className="h-full flex flex-col items-center justify-center text-muted-foreground/30 gap-3" role="status">
+      <div
+        className="h-full flex flex-col items-center justify-center text-muted-foreground/30 gap-3"
+        role="status"
+      >
         <div className="p-5 rounded-full bg-muted/50 border border-border/40">
           <ShoppingCart className="h-10 w-10 opacity-30" aria-hidden="true" />
         </div>
-        <p className="text-sm font-black tracking-widest uppercase">Ticket vacio</p>
+        <p className="text-sm font-black tracking-widest uppercase">
+          Ticket vacio
+        </p>
       </div>
     );
   }

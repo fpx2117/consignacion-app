@@ -5,7 +5,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/auth/require-auth";
-import { buildSucursalWhere, isGlobalSucursalView } from "@/lib/security/sucursalScope";
+import {
+  buildSucursalWhere,
+  isGlobalSucursalView,
+} from "@/lib/security/sucursalScope";
 import { createProveedorSchema } from "@/lib/validators/proveedor";
 
 // GET: listar proveedores activos de la sucursal activa (o todos, en vista global)
@@ -17,7 +20,9 @@ export async function GET(_req: NextRequest) {
     const isGlobal = isGlobalSucursalView(auth);
     const proveedores = await prisma.proveedor.findMany({
       where: { activo: true, ...buildSucursalWhere(auth) },
-      orderBy: isGlobal ? [{ sucursalId: "asc" }, { nombre: "asc" }] : [{ nombre: "asc" }],
+      orderBy: isGlobal
+        ? [{ sucursalId: "asc" }, { nombre: "asc" }]
+        : [{ nombre: "asc" }],
     });
     return NextResponse.json(proveedores, {
       headers: {
@@ -39,7 +44,10 @@ export async function POST(req: NextRequest) {
   if (!auth.ok) return auth.res;
   if (isGlobalSucursalView(auth)) {
     return NextResponse.json(
-      { error: "Vista global en modo solo lectura. Selecciona una sucursal para crear un proveedor." },
+      {
+        error:
+          "Vista global en modo solo lectura. Selecciona una sucursal para crear un proveedor.",
+      },
       { status: 409 },
     );
   }

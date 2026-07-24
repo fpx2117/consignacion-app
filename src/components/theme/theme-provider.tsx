@@ -26,7 +26,9 @@ const ThemeContext = React.createContext<ThemeContextValue | null>(null);
 
 function getSystemTheme(): ResolvedTheme {
   if (typeof window === "undefined") return "light";
-  return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+  return window.matchMedia("(prefers-color-scheme: dark)").matches
+    ? "dark"
+    : "light";
 }
 
 function getStoredTheme(storageKey: string, fallback: Theme): Theme {
@@ -47,7 +49,11 @@ function applyTheme(options: {
 }) {
   if (typeof document === "undefined") return;
 
-  const { attribute = "class", disableTransitionOnChange, resolvedTheme } = options;
+  const {
+    attribute = "class",
+    disableTransitionOnChange,
+    resolvedTheme,
+  } = options;
   const root = document.documentElement;
 
   let cleanupTransition: (() => void) | undefined;
@@ -55,7 +61,9 @@ function applyTheme(options: {
   if (disableTransitionOnChange) {
     const style = document.createElement("style");
     style.appendChild(
-      document.createTextNode("*,*::before,*::after{transition:none!important}")
+      document.createTextNode(
+        "*,*::before,*::after{transition:none!important}",
+      ),
     );
     document.head.appendChild(style);
     cleanupTransition = () => {
@@ -86,9 +94,11 @@ export function ThemeProvider({
   storageKey = DEFAULT_STORAGE_KEY,
 }: ThemeProviderProps) {
   const [theme, setThemeState] = React.useState<Theme>(() =>
-    getStoredTheme(storageKey, defaultTheme)
+    getStoredTheme(storageKey, defaultTheme),
   );
-  const [systemTheme, setSystemTheme] = React.useState<ResolvedTheme>(() => getSystemTheme());
+  const [systemTheme, setSystemTheme] = React.useState<ResolvedTheme>(() =>
+    getSystemTheme(),
+  );
 
   React.useEffect(() => {
     const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
@@ -112,7 +122,7 @@ export function ThemeProvider({
         window.localStorage.setItem(storageKey, nextTheme);
       }
     },
-    [storageKey]
+    [storageKey],
   );
 
   const resolvedTheme = React.useMemo<ResolvedTheme>(() => {
@@ -137,10 +147,12 @@ export function ThemeProvider({
       resolvedTheme,
       setTheme,
     }),
-    [resolvedTheme, setTheme, theme]
+    [resolvedTheme, setTheme, theme],
   );
 
-  return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
+  return (
+    <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>
+  );
 }
 
 export function useTheme() {

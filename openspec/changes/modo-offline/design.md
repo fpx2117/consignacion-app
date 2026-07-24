@@ -26,6 +26,7 @@ La arquitectura separa claramente:
 **Eleccion**: usar `IndexedDB` para cache de lecturas y outbox transaccional.
 
 **Alternativas consideradas**:
+
 - `localStorage` (simple, no transaccional, baja capacidad).
 - Cache HTTP del browser sin modelo de dominio.
 
@@ -36,6 +37,7 @@ La arquitectura separa claramente:
 **Eleccion**: toda mutacion offline se guarda como item de outbox y se sincroniza luego.
 
 **Alternativas consideradas**:
+
 - Reintento inmediato en memoria sin persistencia.
 - Guardar solo payload final de venta sin historial de intentos.
 
@@ -46,6 +48,7 @@ La arquitectura separa claramente:
 **Eleccion**: cada mutacion incluye `clientMutationId` estable y unico por dispositivo.
 
 **Alternativas consideradas**:
+
 - Deduplicar solo por timestamp.
 - Deduplicar por hash parcial de payload.
 
@@ -54,10 +57,12 @@ La arquitectura separa claramente:
 ### Decision: Politica de conflictos por dominio
 
 **Eleccion**:
+
 - Catalogo/configuracion: LWW por `updatedAt`.
 - Ventas/pagos/stock/caja: no LWW; requiere conciliacion explicita.
 
 **Alternativas consideradas**:
+
 - LWW global para todos los dominios.
 - Bloqueo pesimista estricto cross-device.
 
@@ -68,6 +73,7 @@ La arquitectura separa claramente:
 **Eleccion**: agregar contratos `push` y `pull` en `/api/sync/*` para separar sincronizacion de APIs de negocio.
 
 **Alternativas consideradas**:
+
 - Reutilizar endpoints actuales (`/api/ventas`, `/api/pagos`) sin capa de sync.
 - Un solo endpoint monolitico de sync sin version.
 
@@ -94,43 +100,36 @@ Reconexion detectada
 
 ## Cambios en Archivos
 
-| Archivo | Accion | Descripcion |
-|---------|--------|-------------|
-| `src/lib/offline/contracts.ts` | Crear | Tipos de outbox, estados de sync y contratos de payload push/pull. |
-| `src/lib/offline/indexeddb.ts` | Crear | Inicializacion de DB local, stores de cache y outbox, helpers transaccionales. |
-| `src/lib/offline/outbox.ts` | Crear | Alta, lectura por estado, retires y marcado de resultados de sync. |
-| `src/lib/offline/sync-engine.ts` | Crear | Orquestador de sincronizacion, backoff, checkpoints y metricas basicas. |
-| `src/lib/offline/connectivity.ts` | Crear | Deteccion de conectividad y eventos online/offline para UI. |
-| `src/lib/apiService.ts` | Modificar | Wrapper para modo offline: lecturas desde cache y mutaciones a outbox cuando no hay red. |
-| `src/store/useSucursalStore.ts` | Modificar | Estado global de conectividad, cola pendiente y ultimo sync exitoso por sucursal. |
-| `src/components/top-bar.tsx` | Modificar | Indicador visual de estado online/offline y resumen de pendientes. |
-| `src/app/(system-guard)/(protected)/layout.tsx` | Modificar | Boot de inicializacion offline y listener de reconexion para disparar sync. |
-| `src/app/(system-guard)/(protected)/ventas/nueva/page.tsx` | Modificar | Permitir venta offline con estado pendiente y mensajes de reconciliacion. |
-| `src/app/api/ventas/route.ts` | Modificar | Soporte de `clientMutationId`, deduplicacion e insercion idempotente de ventas sync. |
-| `src/app/api/pagos/route.ts` | Modificar | Soporte de pagos provenientes de sync offline con validaciones de dominio. |
-| `src/app/api/clientes/route.ts` | Modificar | Endpoint preparado para pull incremental de clientes con `updatedAt`. |
-| `src/app/api/sync/push/route.ts` | Crear | Recibe lote de mutaciones offline y devuelve ACK/CONFLICT/REJECTED por item. |
-| `src/app/api/sync/pull/route.ts` | Crear | Entrega deltas por entidad desde checkpoint para refrescar cache local. |
-| `prisma/schema.prisma` | Modificar | Tablas de auditoria/idempotencia de sync y campos de rastreo de origen offline. |
-| `prisma/migrations/*` | Crear | Migracion no destructiva para soporte de idempotencia y estados de sincronizacion. |
-| `public/manifest.webmanifest` | Crear | Definicion PWA minima para app shell y metadata instalable. |
-| `public/sw.js` | Crear | Service Worker para app shell/cache de recursos y fallback offline controlado. |
-| `server.ts` | Modificar | Headers y rutas requeridas para SW/PWA en despliegue con servidor custom. |
+| Archivo                                                    | Accion    | Descripcion                                                                              |
+| ---------------------------------------------------------- | --------- | ---------------------------------------------------------------------------------------- |
+| `src/lib/offline/contracts.ts`                             | Crear     | Tipos de outbox, estados de sync y contratos de payload push/pull.                       |
+| `src/lib/offline/indexeddb.ts`                             | Crear     | Inicializacion de DB local, stores de cache y outbox, helpers transaccionales.           |
+| `src/lib/offline/outbox.ts`                                | Crear     | Alta, lectura por estado, retires y marcado de resultados de sync.                       |
+| `src/lib/offline/sync-engine.ts`                           | Crear     | Orquestador de sincronizacion, backoff, checkpoints y metricas basicas.                  |
+| `src/lib/offline/connectivity.ts`                          | Crear     | Deteccion de conectividad y eventos online/offline para UI.                              |
+| `src/lib/apiService.ts`                                    | Modificar | Wrapper para modo offline: lecturas desde cache y mutaciones a outbox cuando no hay red. |
+| `src/store/useSucursalStore.ts`                            | Modificar | Estado global de conectividad, cola pendiente y ultimo sync exitoso por sucursal.        |
+| `src/components/top-bar.tsx`                               | Modificar | Indicador visual de estado online/offline y resumen de pendientes.                       |
+| `src/app/(system-guard)/(protected)/layout.tsx`            | Modificar | Boot de inicializacion offline y listener de reconexion para disparar sync.              |
+| `src/app/(system-guard)/(protected)/ventas/nueva/page.tsx` | Modificar | Permitir venta offline con estado pendiente y mensajes de reconciliacion.                |
+| `src/app/api/ventas/route.ts`                              | Modificar | Soporte de `clientMutationId`, deduplicacion e insercion idempotente de ventas sync.     |
+| `src/app/api/pagos/route.ts`                               | Modificar | Soporte de pagos provenientes de sync offline con validaciones de dominio.               |
+| `src/app/api/clientes/route.ts`                            | Modificar | Endpoint preparado para pull incremental de clientes con `updatedAt`.                    |
+| `src/app/api/sync/push/route.ts`                           | Crear     | Recibe lote de mutaciones offline y devuelve ACK/CONFLICT/REJECTED por item.             |
+| `src/app/api/sync/pull/route.ts`                           | Crear     | Entrega deltas por entidad desde checkpoint para refrescar cache local.                  |
+| `prisma/schema.prisma`                                     | Modificar | Tablas de auditoria/idempotencia de sync y campos de rastreo de origen offline.          |
+| `prisma/migrations/*`                                      | Crear     | Migracion no destructiva para soporte de idempotencia y estados de sincronizacion.       |
+| `public/manifest.webmanifest`                              | Crear     | Definicion PWA minima para app shell y metadata instalable.                              |
+| `public/sw.js`                                             | Crear     | Service Worker para app shell/cache de recursos y fallback offline controlado.           |
+| `server.ts`                                                | Modificar | Headers y rutas requeridas para SW/PWA en despliegue con servidor custom.                |
 
 ## Interfaces / Contratos Sugeridos
 
 ```ts
-type OfflineMutationType =
-  | "VENTA_CREATE"
-  | "PAGO_CREATE"
-  | "CLIENTE_CREATE";
+type OfflineMutationType = "VENTA_CREATE" | "PAGO_CREATE" | "CLIENTE_CREATE";
 
 type OfflineMutationStatus =
-  | "PENDING"
-  | "SYNCING"
-  | "ACKED"
-  | "CONFLICT"
-  | "REJECTED";
+  "PENDING" | "SYNCING" | "ACKED" | "CONFLICT" | "REJECTED";
 
 interface OfflineOutboxItem<TPayload = unknown> {
   id: string; // uuid local
@@ -171,8 +170,16 @@ interface SyncPullResponse {
   data: {
     productos: Array<{ id: number; updatedAt: string }>;
     clientes: Array<{ id: number; updatedAt: string }>;
-    ventas: Array<{ id: number; updatedAt: string; origen: "ONLINE" | "OFFLINE_SYNC" }>;
-    pagos: Array<{ id: number; updatedAt: string; origen: "ONLINE" | "OFFLINE_SYNC" }>;
+    ventas: Array<{
+      id: number;
+      updatedAt: string;
+      origen: "ONLINE" | "OFFLINE_SYNC";
+    }>;
+    pagos: Array<{
+      id: number;
+      updatedAt: string;
+      origen: "ONLINE" | "OFFLINE_SYNC";
+    }>;
   };
 }
 ```
@@ -195,9 +202,7 @@ Ejemplo `POST /api/sync/push` request:
       "payload": {
         "clienteId": 10,
         "metodoPago": "EFECTIVO",
-        "items": [
-          { "productoId": 88, "units": 1, "precioUnitario": 12500 }
-        ]
+        "items": [{ "productoId": 88, "units": 1, "precioUnitario": 12500 }]
       },
       "status": "PENDING",
       "retryCount": 0,
@@ -225,14 +230,14 @@ Ejemplo `POST /api/sync/push` response:
 
 ## Estrategia de Pruebas
 
-| Capa | Que Probar | Enfoque |
-|------|------------|---------|
-| Unitaria | Transiciones de estado de outbox y politicas de retry | Tests puros sobre `src/lib/offline/outbox.ts` y `src/lib/offline/sync-engine.ts` |
-| Unitaria | Serializacion/validacion de contratos `push` y `pull` | Tests de tipos/validadores en `src/lib/offline/contracts.ts` |
-| Integracion API | `POST /api/sync/push` con mutacion nueva y repetida | Verificar idempotencia por `clientMutationId` y respuestas consistentes |
-| Integracion API | Conflicto de stock al sincronizar venta | Verificar `CONFLICT` con `conflictCode=STOCK` sin duplicar efectos |
-| Integracion UI | Venta en offline queda pendiente y se confirma al reconectar | Simular desconexion/reconexion en `ventas/nueva` |
-| E2E | Flujo completo POS offline -> sync -> estado final | Escenario de usuario con perdida de red y recuperacion |
+| Capa            | Que Probar                                                   | Enfoque                                                                          |
+| --------------- | ------------------------------------------------------------ | -------------------------------------------------------------------------------- |
+| Unitaria        | Transiciones de estado de outbox y politicas de retry        | Tests puros sobre `src/lib/offline/outbox.ts` y `src/lib/offline/sync-engine.ts` |
+| Unitaria        | Serializacion/validacion de contratos `push` y `pull`        | Tests de tipos/validadores en `src/lib/offline/contracts.ts`                     |
+| Integracion API | `POST /api/sync/push` con mutacion nueva y repetida          | Verificar idempotencia por `clientMutationId` y respuestas consistentes          |
+| Integracion API | Conflicto de stock al sincronizar venta                      | Verificar `CONFLICT` con `conflictCode=STOCK` sin duplicar efectos               |
+| Integracion UI  | Venta en offline queda pendiente y se confirma al reconectar | Simular desconexion/reconexion en `ventas/nueva`                                 |
+| E2E             | Flujo completo POS offline -> sync -> estado final           | Escenario de usuario con perdida de red y recuperacion                           |
 
 ## Migracion / Despliegue y Rollback Seguro
 

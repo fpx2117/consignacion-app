@@ -29,9 +29,9 @@ function getDatePartsInTz(date: Date, tz: string) {
   }).formatToParts(date);
 
   return {
-    year:    Number(parts.find((p) => p.type === "year")!.value),
-    month:   Number(parts.find((p) => p.type === "month")!.value) - 1,
-    day:     Number(parts.find((p) => p.type === "day")!.value),
+    year: Number(parts.find((p) => p.type === "year")!.value),
+    month: Number(parts.find((p) => p.type === "month")!.value) - 1,
+    day: Number(parts.find((p) => p.type === "day")!.value),
     weekday: parts.find((p) => p.type === "weekday")!.value, // "Mon", "Tue"...
   };
 }
@@ -40,14 +40,22 @@ function getDatePartsInTz(date: Date, tz: string) {
 function getTzOffsetMinutes(tz: string, date: Date): number {
   const utcStr = new Intl.DateTimeFormat("en-CA", {
     timeZone: "UTC",
-    year: "numeric", month: "2-digit", day: "2-digit",
-    hour: "2-digit", minute: "2-digit", second: "2-digit",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
     hour12: false,
   }).format(date);
   const tzStr = new Intl.DateTimeFormat("en-CA", {
     timeZone: tz,
-    year: "numeric", month: "2-digit", day: "2-digit",
-    hour: "2-digit", minute: "2-digit", second: "2-digit",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
     hour12: false,
   }).format(date);
 
@@ -58,7 +66,7 @@ function getTzOffsetMinutes(tz: string, date: Date): number {
   };
 
   const utcMs = parseStr(utcStr).getTime();
-  const tzMs  = parseStr(tzStr).getTime();
+  const tzMs = parseStr(tzStr).getTime();
   return Math.round((utcMs - tzMs) / 60_000);
 }
 
@@ -71,7 +79,7 @@ function getTzOffsetMinutes(tz: string, date: Date): number {
 export function nowAR(tz = TZ_AR): Date {
   const now = new Date();
   const processOffsetMin = now.getTimezoneOffset(); // +180 si servidor en UTC
-  const tzOffsetMin = getTzOffsetMinutes(tz, now);  // offset de la TZ objetivo
+  const tzOffsetMin = getTzOffsetMinutes(tz, now); // offset de la TZ objetivo
 
   if (processOffsetMin === tzOffsetMin) return now;
 
@@ -102,7 +110,13 @@ export function startOfWeekAR(date?: Date, tz = TZ_AR): Date {
   const d = date ?? nowAR(tz);
   const { year, month, day, weekday } = getDatePartsInTz(d, tz);
   const weekdayMap: Record<string, number> = {
-    Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6,
+    Sun: 0,
+    Mon: 1,
+    Tue: 2,
+    Wed: 3,
+    Thu: 4,
+    Fri: 5,
+    Sat: 6,
   };
   const dow = weekdayMap[weekday] ?? 0;
   const daysBack = dow === 0 ? 6 : dow - 1;
@@ -123,13 +137,19 @@ export function startOfMonthAR(date?: Date, tz = TZ_AR): Date {
  * @param year  Año
  * @param month Mes 0-indexed
  */
-export function monthRangeAR(year: number, month: number, tz = TZ_AR): { start: Date; end: Date } {
+export function monthRangeAR(
+  year: number,
+  month: number,
+  tz = TZ_AR,
+): { start: Date; end: Date } {
   const refDate = new Date(Date.UTC(year, month, 15)); // mitad del mes como referencia
   const tzOffsetMin = getTzOffsetMinutes(tz, refDate);
   const start = new Date(Date.UTC(year, month, 1) + tzOffsetMin * 60_000);
   const lastDay = new Date(Date.UTC(year, month + 1, 0)).getUTCDate();
   // Fin: último día del mes + 23:59:59.999 en TZ → en UTC
-  const end = new Date(Date.UTC(year, month, lastDay + 1) + tzOffsetMin * 60_000- 1);
+  const end = new Date(
+    Date.UTC(year, month, lastDay + 1) + tzOffsetMin * 60_000 - 1,
+  );
   return { start, end };
 }
 
@@ -140,7 +160,13 @@ export function getDayOfWeekAR(date?: Date, tz = TZ_AR): number {
   const d = date ?? nowAR(tz);
   const { weekday } = getDatePartsInTz(d, tz);
   const weekdayMap: Record<string, number> = {
-    Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6,
+    Sun: 0,
+    Mon: 1,
+    Tue: 2,
+    Wed: 3,
+    Thu: 4,
+    Fri: 5,
+    Sat: 6,
   };
   return weekdayMap[weekday] ?? 0;
 }
@@ -264,7 +290,14 @@ export function parseDateTimeInputAR(
   const hours = Number(hoursStr);
   const minutes = Number(minutesStr);
 
-  if (!Number.isFinite(hours) || !Number.isFinite(minutes) || hours < 0 || hours > 23 || minutes < 0 || minutes > 59) {
+  if (
+    !Number.isFinite(hours) ||
+    !Number.isFinite(minutes) ||
+    hours < 0 ||
+    hours > 23 ||
+    minutes < 0 ||
+    minutes > 59
+  ) {
     throw new Error(`Hora invalida: ${timeValue}`);
   }
 
@@ -287,7 +320,11 @@ export function isExpired(dateStr: string | Date, tz = TZ_AR): boolean {
 }
 
 /** ¿Vence dentro de `days` días? (default 7) */
-export function isExpiringSoon(dateStr: string | Date, days = 7, tz = TZ_AR): boolean {
+export function isExpiringSoon(
+  dateStr: string | Date,
+  days = 7,
+  tz = TZ_AR,
+): boolean {
   const diff = diffDaysUTC(dateStr, tz);
   return diff >= 0 && diff <= days;
 }

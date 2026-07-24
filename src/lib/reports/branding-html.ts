@@ -38,7 +38,9 @@ export function brandingHeaderHtml(b: BrandingDTO) {
  */
 export function brandingFooterHtml(b: BrandingDTO) {
   const txt =
-    typeof b.footerText === "string" && b.footerText.trim().length > 0 ? b.footerText.trim() : "";
+    typeof b.footerText === "string" && b.footerText.trim().length > 0
+      ? b.footerText.trim()
+      : "";
 
   if (!txt) return "";
 
@@ -58,8 +60,10 @@ function safeCssColor(input: unknown, fallback: string) {
   const v = input.trim();
 
   const hex = /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/;
-  const rgb = /^rgba?\(\s*\d{1,3}\s*,\s*\d{1,3}\s*,\s*\d{1,3}(\s*,\s*(0|1|0?\.\d+))?\s*\)$/;
-  const hsl = /^hsla?\(\s*\d{1,3}\s*,\s*\d{1,3}%\s*,\s*\d{1,3}%(\s*,\s*(0|1|0?\.\d+))?\s*\)$/;
+  const rgb =
+    /^rgba?\(\s*\d{1,3}\s*,\s*\d{1,3}\s*,\s*\d{1,3}(\s*,\s*(0|1|0?\.\d+))?\s*\)$/;
+  const hsl =
+    /^hsla?\(\s*\d{1,3}\s*,\s*\d{1,3}%\s*,\s*\d{1,3}%(\s*,\s*(0|1|0?\.\d+))?\s*\)$/;
   const cssVar = /^var\(\s*--[a-zA-Z0-9-_]+\s*\)$/;
 
   if (hex.test(v) || rgb.test(v) || hsl.test(v) || cssVar.test(v)) return v;

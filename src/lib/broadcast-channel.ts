@@ -32,7 +32,7 @@ export function postAppMessage(message: BroadcastMessage): void {
 }
 
 export function subscribeAppMessages(
-  callback: (message: BroadcastMessage) => void
+  callback: (message: BroadcastMessage) => void,
 ): () => void {
   // BroadcastChannel listener
   const ch = getChannel();
@@ -53,7 +53,9 @@ export function subscribeAppMessages(
       const parsed = JSON.parse(event.newValue);
       const { _ts: _, ...message } = parsed;
       callback(message as BroadcastMessage);
-    } catch { /* ignore malformed */ }
+    } catch {
+      /* ignore malformed */
+    }
   };
   window.addEventListener("storage", handler);
   return () => window.removeEventListener("storage", handler);

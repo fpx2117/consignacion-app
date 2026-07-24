@@ -13,7 +13,10 @@ export default function DashboardLoading() {
       {/* KPI Cards — 4 columnas */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {Array.from({ length: 4 }).map((_, i) => (
-          <div key={i} className="rounded-xl border bg-card p-5 flex flex-col gap-3">
+          <div
+            key={i}
+            className="rounded-xl border bg-card p-5 flex flex-col gap-3"
+          >
             <div className="flex items-center justify-between">
               <div className="h-4 w-24 rounded bg-muted" />
               <div className="h-8 w-8 rounded-lg bg-muted" />
@@ -27,7 +30,10 @@ export default function DashboardLoading() {
       {/* Segunda fila KPIs */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {Array.from({ length: 4 }).map((_, i) => (
-          <div key={i} className="rounded-xl border bg-card p-5 flex flex-col gap-3">
+          <div
+            key={i}
+            className="rounded-xl border bg-card p-5 flex flex-col gap-3"
+          >
             <div className="h-4 w-28 rounded bg-muted" />
             <div className="h-7 w-24 rounded bg-muted" />
             <div className="h-3 w-16 rounded bg-muted" />
@@ -46,7 +52,10 @@ export default function DashboardLoading() {
         <div className="rounded-xl border bg-card p-5">
           <div className="h-5 w-36 rounded bg-muted mb-4" />
           {Array.from({ length: 5 }).map((_, i) => (
-            <div key={i} className="flex items-center gap-3 py-3 border-b last:border-0">
+            <div
+              key={i}
+              className="flex items-center gap-3 py-3 border-b last:border-0"
+            >
               <div className="h-8 w-8 rounded-full bg-muted flex-shrink-0" />
               <div className="flex-1 h-4 rounded bg-muted" />
               <div className="h-4 w-16 rounded bg-muted" />
@@ -56,7 +65,10 @@ export default function DashboardLoading() {
         <div className="rounded-xl border bg-card p-5">
           <div className="h-5 w-36 rounded bg-muted mb-4" />
           {Array.from({ length: 5 }).map((_, i) => (
-            <div key={i} className="flex items-center gap-3 py-3 border-b last:border-0">
+            <div
+              key={i}
+              className="flex items-center gap-3 py-3 border-b last:border-0"
+            >
               <div className="h-4 w-24 rounded bg-muted" />
               <div className="flex-1 h-4 rounded bg-muted" />
               <div className="h-4 w-20 rounded bg-muted" />

@@ -9,15 +9,18 @@ interface RouteContext {
   params: Promise<{ id: string }>;
 }
 
-export async function PATCH(
-  _req: Request,
-  { params }: RouteContext
-) {
+export async function PATCH(_req: Request, { params }: RouteContext) {
   // Auth: Requiere usuario autenticado
   const auth = await requireAuth();
   if (!auth.ok) return auth.res;
   if (isGlobalSucursalView(auth)) {
-    return NextResponse.json({ error: "Vista global en modo solo lectura. Selecciona una sucursal para actualizar notificaciones." }, { status: 409 });
+    return NextResponse.json(
+      {
+        error:
+          "Vista global en modo solo lectura. Selecciona una sucursal para actualizar notificaciones.",
+      },
+      { status: 409 },
+    );
   }
 
   try {
@@ -34,8 +37,11 @@ export async function PATCH(
 
     if (!existingNotification) {
       return NextResponse.json(
-        { error: "La notificación no existe o no pertenece a la sucursal activa" },
-        { status: 404 }
+        {
+          error:
+            "La notificación no existe o no pertenece a la sucursal activa",
+        },
+        { status: 404 },
       );
     }
 
@@ -48,20 +54,22 @@ export async function PATCH(
     });
 
     return NextResponse.json({ success: true, notification });
-
   } catch (error) {
     console.error("Error al marcar notificación:", error);
 
-    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2025") {
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === "P2025"
+    ) {
       return NextResponse.json(
         { error: "La notificación no existe o ya fue eliminada" },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
     return NextResponse.json(
       { error: "Error interno del servidor" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

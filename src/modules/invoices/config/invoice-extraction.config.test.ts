@@ -5,7 +5,12 @@ import { validateExtractedInvoice } from "@/modules/invoices/config/invoice-extr
 function jsonValido(overrides: Record<string, unknown> = {}) {
   return {
     supplier: { name: "Proveedor SA", taxId: "20-12345678-9" },
-    invoice: { number: "0001-00001234", date: "2026-07-02", currency: "ARS", total: 1000 },
+    invoice: {
+      number: "0001-00001234",
+      date: "2026-07-02",
+      currency: "ARS",
+      total: 1000,
+    },
     items: [
       {
         rawDescription: "Producto A",
@@ -43,7 +48,9 @@ test("rechaza cuando falta 'supplier'", () => {
 });
 
 test("rechaza cuando 'invoice.total' tiene el tipo incorrecto", () => {
-  const data = jsonValido({ invoice: { number: null, date: null, currency: "ARS", total: "1000" } });
+  const data = jsonValido({
+    invoice: { number: null, date: null, currency: "ARS", total: "1000" },
+  });
   const resultado = validateExtractedInvoice(data);
   assert.equal(resultado.valid, false);
 });
@@ -77,7 +84,12 @@ test("rechaza cuando falta 'warnings'", () => {
 // de este schema. Ver openspec/changes/mejora-precision-lineas-factura-ocr/.
 test("NO detecta montos incorrectos bien tipados (responsabilidad de validarConsistenciaFactura, no de este schema)", () => {
   const data = jsonValido({
-    invoice: { number: null, date: "2026-07-02", currency: "ARS", total: 180700 },
+    invoice: {
+      number: null,
+      date: "2026-07-02",
+      currency: "ARS",
+      total: 180700,
+    },
     items: [
       {
         rawDescription: "BALDO BORGOÑA 6X2",

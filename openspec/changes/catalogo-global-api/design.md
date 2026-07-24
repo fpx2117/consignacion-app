@@ -17,7 +17,7 @@ Ninguna de estas cuatro fuentes le dice al modelo "estos son productos reales qu
 
 **Elección**: servicio externo `catalogo-global-api`, con su propio código, `package.json`/Next.js/Prisma, **base de datos Postgres propia** (no la de ningún cliente) y **deploy independiente** — no un módulo más de `src/` de la app cliente ni parte operativa de este repo.
 
-**Por qué tiene que ser una base de datos y un deploy separados (esto no es negociable)**: el proyecto es explícitamente single-tenant — un deploy de base de datos por cliente (ver `Configuracion.sucursalId @unique @default(1)` y el resto del modelo, todo escrito asumiendo una sola empresa por instancia). Si `ProductoGlobal` viviera en el schema Prisma de `consignacion-app`, cada cliente tendría su **propia copia** del catálogo, poblada por su **propio cron** — exactamente lo que esta propuesta busca evitar (duplicación, y cada instancia pegándole por separado a una API no oficial de Precios Claros con rate limit desconocido, ver Decisión 6). Un catálogo global compartido por *todos* los negocios necesita, por definición, vivir en una base de datos que no pertenece a ningún cliente individual.
+**Por qué tiene que ser una base de datos y un deploy separados (esto no es negociable)**: el proyecto es explícitamente single-tenant — un deploy de base de datos por cliente (ver `Configuracion.sucursalId @unique @default(1)` y el resto del modelo, todo escrito asumiendo una sola empresa por instancia). Si `ProductoGlobal` viviera en el schema Prisma de `consignacion-app`, cada cliente tendría su **propia copia** del catálogo, poblada por su **propio cron** — exactamente lo que esta propuesta busca evitar (duplicación, y cada instancia pegándole por separado a una API no oficial de Precios Claros con rate limit desconocido, ver Decisión 6). Un catálogo global compartido por _todos_ los negocios necesita, por definición, vivir en una base de datos que no pertenece a ningún cliente individual.
 
 **Estado actual**: originalmente se planteó convivir en el mismo repositorio, pero operativamente el servicio ya fue separado del árbol de `consignacion-app`. La justificación arquitectónica importante sigue siendo la misma: el aislamiento real lo garantizan la **base de datos distinta**, el **deploy independiente** y el **contrato HTTP explícito** entre servicios.
 
@@ -140,7 +140,9 @@ Response:
 ```
 
 ### `GET /catalogo/barcode/:codigoBarras` — lookup exacto, sin scoring.
+
 ### `GET /health` — usado por el cliente HTTP de este repo para decidir si vale la pena intentar (ver Decisión 4).
+
 ### `POST /admin/import/csv` — protegido con una API key de admin distinta a la de instancia; no expuesto a instancias de cliente.
 
 Ranking v1 (simple, sin pesos configurables todavía): coincidencia exacta de código de barras > coincidencia exacta de `nombreBusqueda`/alias > `similarity()` de `pg_trgm` sobre `nombreBusqueda`, filtrado siempre por `rubro` primero (nunca se devuelven candidatos de otro rubro).
@@ -166,7 +168,7 @@ Eso dejó de ser así en algún punto entre este diseño original y `rubro-conte
 - La IA **nunca ve** el candidato global — no hay cambio de prompt ni de schema de extracción para esto. El valor práctico pasa a ser: cuando no hay match local, el candidato global mejora el prellenado del formulario "crear producto nuevo" (`initialValuesParaNuevoProducto` en `factura-proveedor-dialog.tsx`) con un nombre/código de barras normalizados en vez del texto OCR crudo — y si el usuario confirma con ese producto (nuevo o existente), `productoGlobalId` queda guardado en el `ProductoProveedorAlias` (Decisión 5, sin cambios).
 - Esto conserva todas las propiedades no negociables del diseño original: nunca bloquea el pipeline (mismo `buscarCandidatosGlobales()` que degrada a `[]`), no agrega una segunda pasada de IA, no cambia el schema/JSON de extracción, y sigue siendo aditivo/reversible.
 
-Las Decisiones 1, 2, 3, 5 y 6 de abajo, y el modelo de datos de la API central, no cambian. Lo que cambia es únicamente *quién* consume `buscarCandidatosGlobales()` y *cuándo* (después de la IA, no antes) — la sección de Decisión 4 y el diagrama de secuencia que sigue quedan como registro histórico de la primera versión del diseño, no como el flujo implementado.
+Las Decisiones 1, 2, 3, 5 y 6 de abajo, y el modelo de datos de la API central, no cambian. Lo que cambia es únicamente _quién_ consume `buscarCandidatosGlobales()` y _cuándo_ (después de la IA, no antes) — la sección de Decisión 4 y el diagrama de secuencia que sigue quedan como registro histórico de la primera versión del diseño, no como el flujo implementado.
 
 ## Decisión 4: resiliencia — la API central nunca bloquea el procesamiento de una factura
 
@@ -182,20 +184,28 @@ export async function buscarCandidatosGlobales(params: {
   if (!process.env.CATALOGO_API_URL) return []; // feature-off si no está configurada
 
   try {
-    const res = await fetch(`${process.env.CATALOGO_API_URL}/catalogo/ocr-candidatos`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${process.env.CATALOGO_API_KEY}`,
+    const res = await fetch(
+      `${process.env.CATALOGO_API_URL}/catalogo/ocr-candidatos`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${process.env.CATALOGO_API_KEY}`,
+        },
+        body: JSON.stringify(params),
+        signal: AbortSignal.timeout(
+          Number(process.env.CATALOGO_API_TIMEOUT_MS ?? 2000),
+        ),
       },
-      body: JSON.stringify(params),
-      signal: AbortSignal.timeout(Number(process.env.CATALOGO_API_TIMEOUT_MS ?? 2000)),
-    });
+    );
     if (!res.ok) throw new Error(`catalogo-global-api respondió ${res.status}`);
     const data = await res.json();
     return data.candidatos ?? [];
   } catch (error) {
-    logger.warn("catalogo-global-api no disponible, continuando sin candidatos globales", { error });
+    logger.warn(
+      "catalogo-global-api no disponible, continuando sin candidatos globales",
+      { error },
+    );
     return [];
   }
 }
@@ -247,7 +257,7 @@ model ProductoProveedorAlias {
 }
 ```
 
-**Por qué no un modelo nuevo `AliasProductoGlobal` en este repo**: `ProductoProveedorAlias` ya resuelve "la próxima vez que aparezca este texto, no vuelvas a preguntarle a la IA" — el propósito del borrador original para un modelo separado. Duplicar el concepto en dos tablas locales sería redundante; la única información nueva es *de dónde salió* la sugerencia, que es un campo, no una tabla.
+**Por qué no un modelo nuevo `AliasProductoGlobal` en este repo**: `ProductoProveedorAlias` ya resuelve "la próxima vez que aparezca este texto, no vuelvas a preguntarle a la IA" — el propósito del borrador original para un modelo separado. Duplicar el concepto en dos tablas locales sería redundante; la única información nueva es _de dónde salió_ la sugerencia, que es un campo, no una tabla.
 
 **Flujo**: `POST /api/facturas-proveedor/items/[id]/create-product` (o el flujo de confirmación existente en `factura-proveedor-dialog.tsx`) — cuando el item confirmado tenía `origenCandidato: "GLOBAL"` con un `productoGlobalId`, ese id se guarda en el alias creado/actualizado. No se vuelve a consultar la API central para ese texto+proveedor en adelante.
 
@@ -255,7 +265,7 @@ model ProductoProveedorAlias {
 
 **Elección**: el catálogo de `ProductoGlobal` para el rubro piloto (`kiosco`/`almacen`) se puebla con un job programado, dentro del propio servicio `catalogo-global-api`, que consulta la API pública de Precios Claros (Secretaría de Comercio) y escribe directo a la base — sin un CSV intermedio como paso obligatorio. Mismo patrón operativo que los crons ya existentes en `consignacion-app` (`GET /api/cron/check-vencimientos`, protegido con `Authorization: Bearer $CRON_SECRET`, disparado por un scheduler externo): acá sería `GET /catalogo-global-api/api/cron/sync-precios-claros`, con su propio `CRON_SECRET`. Fuente pública, la misma que usan varios proyectos open source de terceros (ej. `martjanz/precios-claros`, `OpenDataCordoba/precios_claros`).
 
-**Por qué upsert directo y no un CSV intermedio versionado**: un CSV en git/bucket da trazabilidad, pero para un catálogo piloto de un par de miles de productos es más ceremonia de la que hace falta antes de tener evidencia de que se necesita revisar/revertir corridas manualmente. La seguridad no depende de tener el archivo — depende de que el *código* que escribe sea el mismo, valide y nunca trunque, sin importar si lo dispara el cron o un import manual:
+**Por qué upsert directo y no un CSV intermedio versionado**: un CSV en git/bucket da trazabilidad, pero para un catálogo piloto de un par de miles de productos es más ceremonia de la que hace falta antes de tener evidencia de que se necesita revisar/revertir corridas manualmente. La seguridad no depende de tener el archivo — depende de que el _código_ que escribe sea el mismo, valide y nunca trunque, sin importar si lo dispara el cron o un import manual:
 
 - **Una sola función interna de validación/escritura** (`upsertProductoGlobal()`, o el nombre que se le dé en el repo de la API central) usada tanto por el cron como por `POST /admin/import/csv` (que sigue existiendo para overrides puntuales, tarea 1.8) — no hay dos implementaciones distintas de "qué es válido escribir en `ProductoGlobal`", solo dos disparadores distintos de la misma lógica.
 - **Log estructurado por corrida** (cantidad de productos nuevos/actualizados/rechazados, errores, duración) — mismo patrón `console.log` grepeable que el resto del proyecto (ver `evaluacion-y-metricas.md`, sección 7) — es la auditoría real, no un diff de archivo.
@@ -268,7 +278,7 @@ model ProductoProveedorAlias {
 - `GET /sucursales?offset=&limit=` → **1924 sucursales actualmente** (no ~2350 como en las referencias de 2018-2019 usadas para este diseño — el número cambia con el tiempo, no es una constante) de cadenas grandes (Libertad, Jumbo, Vea, Día, etc.), con `id` (formato compuesto `"<comercioId>-<banderaId>-<sucursalId>"`, ej. `"9-3-5251"`), `comercioRazonSocial`, `banderaDescripcion`, `provincia`, `localidad`.
 - `GET /productos?id_sucursal=<id>&offset=&limit=` → confirmado en vivo: productos **de esa sucursal puntual**, cada uno `{id (código de barras EAN), marca, nombre, presentacion, precio, precioMin, precioMax}` — **sin campo de categoría**, tal como se documentó. `id_sucursal` debe ser el `id` compuesto que devuelve `/sucursales` (no un número de sucursal suelto). La respuesta trae `total`/`maxLimitPermitido` para paginar, igual que documentaban los scrapers de referencia.
 
-**Qué hace el cron en cada corrida**: la API no tiene un endpoint "dame todos los productos del rubro kiosco" ni un campo de categoría en el producto — solo permite listar productos *por sucursal*:
+**Qué hace el cron en cada corrida**: la API no tiene un endpoint "dame todos los productos del rubro kiosco" ni un campo de categoría en el producto — solo permite listar productos _por sucursal_:
 
 1. Usa una lista fija y chica de sucursales representativas (5-15, de cadenas distintas, en config) — no las ~1924. Los productos de marca nacional (Coca-Cola, Imperial, etc.) tienen el mismo código de barras sin importar qué sucursal los reporte, así que un puñado de sucursales grandes ya cubre la mayoría del universo de kiosco/almacén.
 2. Pagina `/productos?id_sucursal=` para cada una (usando `total`/`maxLimitPermitido` que devuelve la propia API, mismo patrón que los scrapers de referencia).
@@ -283,36 +293,40 @@ model ProductoProveedorAlias {
 - `upsertProductoGlobal()` **DEBE** ser upsert por `(codigoBarras, fuente)` (mismo unique constraint ya definido en el modelo, sección "Modelo de datos") — nunca un truncate-and-reload, así que una corrida con menos productos que la anterior no borra los que faltan, solo no los actualiza.
 - Frecuencia del cron baja (ej. semanal) — el catálogo de marcas/presentaciones cambia poco; no hace falta sync diario ni tiempo real.
 
-**Por qué no esperar a tener una fuente "oficial" antes de empezar**: el objetivo de esta iteración es validar si tener *algún* catálogo de referencia real mejora la normalización OCR (ver `evaluacion-y-metricas.md`) — Precios Claros, con todas sus limitaciones, da datos reales de código de barras/marca/presentación sin el costo de curar cientos de productos a mano.
+**Por qué no esperar a tener una fuente "oficial" antes de empezar**: el objetivo de esta iteración es validar si tener _algún_ catálogo de referencia real mejora la normalización OCR (ver `evaluacion-y-metricas.md`) — Precios Claros, con todas sus limitaciones, da datos reales de código de barras/marca/presentación sin el costo de curar cientos de productos a mano.
 
 ## Escenarios (Given/When/Then)
 
 **Escenario 1 — candidato global usado exitosamente**
+
 - **Dado** que `Configuracion.rubroNegocio = "kiosco"` y la línea OCR es `"COCA-COLA 8x2,25"` sin match local ni alias de proveedor
 - **Cuando** se procesa la factura
 - **Entonces** el sistema DEBE consultar `catalogo-global-api` filtrando por rubro `"kiosco"`, incluir los candidatos devueltos en el prompt de la IA, y el resultado normalizado DEBE poder referenciar el `productoGlobalId` elegido si el modelo tuvo confianza suficiente.
 
 **Escenario 2 — API central caída**
+
 - **Dado** que `CATALOGO_API_URL` está configurada pero el servicio no responde dentro del timeout
 - **Cuando** se procesa la factura
 - **Entonces** el sistema DEBE continuar el procesamiento normalmente con catálogo local + alias + IA, sin candidatos globales, y NO DEBE fallar ni devolver error al usuario por esta causa.
 
 **Escenario 3 — texto ya resuelto localmente**
+
 - **Dado** que ya existe un `ProductoProveedorAlias` con `textoNormalizado` igual al texto OCR de la línea, para ese mismo proveedor
 - **Cuando** se procesa la factura
 - **Entonces** el sistema NO DEBE consultar la API central para esa línea — el alias local tiene prioridad y resuelve sin llamado externo (mismo orden ya vigente: local → alias de proveedor → global).
 
 **Escenario 4 — confirmación de usuario persiste la vinculación**
+
 - **Dado** que el usuario confirma en la UI un item cuyo candidato vino de la API central
 - **Cuando** se guarda el `FacturaProveedorItem` confirmado
 - **Entonces** el sistema DEBE crear o actualizar el `ProductoProveedorAlias` correspondiente con `productoGlobalId` seteado, de forma que la próxima aparición del mismo texto para ese proveedor NO DEBERÍA volver a consultar la API central ni a la IA.
 
 ## Riesgos y mitigación
 
-| Riesgo | Mitigación |
-|---|---|
-| API central se vuelve punto único de falla para todas las instancias | Fallback a `[]` (Decisión 4) — degrada, no bloquea. |
-| Calidad del catálogo global insuficiente al inicio (solo rubro piloto, clasificación por heurística) | Rollout progresivo por rubro — se activa primero kiosco/almacén (cubierto por el sync de Precios Claros, Decisión 6), el resto sigue sin candidatos globales hasta tener datos. |
-| API de Precios Claros no oficial, sin SLA, puede cambiar de forma o dejar de responder | Cron aislado (batch, no en el camino de una request de OCR), validación defensiva de la respuesta antes de upsertear, corrida abortada y logueada ante forma inesperada, catálogo existente nunca se trunca (ver Decisión 6). |
-| Scoring trigram devuelve candidatos incorrectos con score alto | El prompt a la IA (ver `proposal.md` punto 4) instruye explícitamente "no inventar, preferir bajar confianza si no hay evidencia suficiente" — mismo principio que `mejora-precision-lineas-factura-ocr`; un candidato global es una sugerencia, no una verdad impuesta. |
-| Costo/latencia de un segundo servicio HTTP por factura | Timeout corto + llamados en paralelo por línea (Decisión 4) — objetivo de diseño: no agregar más de ~2s al procesamiento total de una factura típica. |
+| Riesgo                                                                                               | Mitigación                                                                                                                                                                                                                                                               |
+| ---------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| API central se vuelve punto único de falla para todas las instancias                                 | Fallback a `[]` (Decisión 4) — degrada, no bloquea.                                                                                                                                                                                                                      |
+| Calidad del catálogo global insuficiente al inicio (solo rubro piloto, clasificación por heurística) | Rollout progresivo por rubro — se activa primero kiosco/almacén (cubierto por el sync de Precios Claros, Decisión 6), el resto sigue sin candidatos globales hasta tener datos.                                                                                          |
+| API de Precios Claros no oficial, sin SLA, puede cambiar de forma o dejar de responder               | Cron aislado (batch, no en el camino de una request de OCR), validación defensiva de la respuesta antes de upsertear, corrida abortada y logueada ante forma inesperada, catálogo existente nunca se trunca (ver Decisión 6).                                            |
+| Scoring trigram devuelve candidatos incorrectos con score alto                                       | El prompt a la IA (ver `proposal.md` punto 4) instruye explícitamente "no inventar, preferir bajar confianza si no hay evidencia suficiente" — mismo principio que `mejora-precision-lineas-factura-ocr`; un candidato global es una sugerencia, no una verdad impuesta. |
+| Costo/latencia de un segundo servicio HTTP por factura                                               | Timeout corto + llamados en paralelo por línea (Decisión 4) — objetivo de diseño: no agregar más de ~2s al procesamiento total de una factura típica.                                                                                                                    |

@@ -98,6 +98,7 @@ Implementar el modulo de pedidos de reposicion programados. Permite crear pedido
 ## Fase 2 completada - Notas adicionales
 
 **Función compartida creada**: `src/lib/pedidos-esperados.ts`
+
 - `checkAndUpdateVencidos(sucursalId?)` — actualiza estados PROGRAMADO/POSTERGADO → VENCIDO
 - Usada por el GET de `/api/pedidos-esperados` (lazy check) y por `/api/pedidos-esperados/check-vencidos`
 
@@ -112,21 +113,25 @@ Implementar el modulo de pedidos de reposicion programados. Permite crear pedido
 ## Notas adicionales (agregadas por el sub-agente de implementacion)
 
 **Patron de autenticacion/sucursal detectado**:
+
 - `requireAuth()` retorna `{ ok, res, user, activeSucursalId }`
 - `sucursalId` se obtiene SIEMPRE de `auth.activeSucursalId`, nunca del body
 - Rol admin requerido para mutaciones: `requireRole(auth.user, ["ADMIN"])`
 - Archivo: `src/lib/requireAuth.ts`
 
 **Patron de validators**:
+
 - El directorio es `src/lib/validators/` (no `validations/`)
 - Se crea el archivo como `src/lib/validators/pedidos-esperados.ts`
 
 **Migracion**:
+
 - `prisma migrate dev` fallo por drift entre historial y BD (la BD tiene cambios manuales aplicados)
 - Se uso `prisma db push` exitosamente como alternativa de desarrollo
 - Para produccion: crear la migracion SQL manualmente con `prisma migrate diff`
 
 **F1.4 (seeds)**:
+
 - El archivo `prisma/seed.ts` solo tiene seeds de planes y codigos promo, no de datos de dominio
 - No existe directorio `prisma/seeds/`
 - SALTADO: no hay sistema de seeds de datos de dominio establecido
@@ -136,6 +141,7 @@ Implementar el modulo de pedidos de reposicion programados. Permite crear pedido
 ## Fase 3 completada - Notas adicionales
 
 **Estructura de archivos creada** (distinta al tasks.md original — se siguio el patron del proyecto):
+
 - `src/app/(system-guard)/(protected)/pedidos-esperados/page.tsx` — pagina principal
 - `src/app/(system-guard)/(protected)/pedidos-esperados/components/pedidos-esperados-view.tsx` — vista principal
 - `src/app/(system-guard)/(protected)/pedidos-esperados/components/pedido-estado-badge.tsx`
@@ -146,6 +152,7 @@ Implementar el modulo de pedidos de reposicion programados. Permite crear pedido
 - `src/hooks/usePedidosEsperados.ts`
 
 **Navegacion**:
+
 - Link agregado en `src/components/sidebar-dock.tsx` dentro de NAV_BUSINESS
 - Icono: `ClipboardList` de lucide-react
 - Ruta: `/pedidos-esperados`
@@ -154,6 +161,7 @@ Implementar el modulo de pedidos de reposicion programados. Permite crear pedido
 **Toast/notificaciones**: proyecto usa `sonner` — todos los toast usan `toast.success()` / `toast.error()`
 
 **Desviaciones del design doc original**:
+
 - Ruta es `/pedidos-esperados` no `/productos/pedidos-esperados` — mas limpio y consistente con el sidebar
 - Componentes en `pedidos-esperados/components/` no en `src/components/pedidos-esperados/` — patron del proyecto
 - El badge de vencidos esta en el header de la vista, no en el sidebar (requeriria un store Zustand separado)

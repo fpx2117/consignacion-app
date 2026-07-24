@@ -12,7 +12,10 @@ export async function GET(_: Request, { params }: RouteParams) {
     const { code } = await params;
 
     if (!code) {
-      return NextResponse.json({ error: "Código no proporcionado" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Código no proporcionado" },
+        { status: 400 },
+      );
     }
 
     const producto = await prisma.producto.findFirst({
@@ -22,12 +25,15 @@ export async function GET(_: Request, { params }: RouteParams) {
         activo: true, // Solo productos vigentes
       },
       include: {
-        categoria: true
-      }
+        categoria: true,
+      },
     });
 
     if (!producto) {
-      return NextResponse.json({ error: "Producto no encontrado" }, { status: 404 });
+      return NextResponse.json(
+        { error: "Producto no encontrado" },
+        { status: 404 },
+      );
     }
 
     return NextResponse.json({ data: producto });

@@ -48,10 +48,14 @@ export function DesktopSummary({
   onCobrar,
 }: DesktopSummaryProps) {
   return (
-    <aside className="hidden lg:flex w-[380px] bg-background border-l border-border/40 flex-col shadow-xl z-20" aria-label="Resumen de compra">
+    <aside
+      className="hidden lg:flex w-[380px] bg-background border-l border-border/40 flex-col shadow-xl z-20"
+      aria-label="Resumen de compra"
+    >
       <div className="p-6 border-b bg-muted/10">
         <h2 className="font-black text-lg flex items-center gap-2 text-foreground tracking-tight">
-          <ShoppingCart className="h-5 w-5 text-primary" aria-hidden="true" /> Resumen de Compra
+          <ShoppingCart className="h-5 w-5 text-primary" aria-hidden="true" />{" "}
+          Resumen de Compra
         </h2>
         <p className="text-[11px] text-muted-foreground font-bold uppercase tracking-wider mt-1 opacity-60">
           Detalle de items facturados
@@ -62,18 +66,30 @@ export function DesktopSummary({
         {cart.length === 0 ? (
           <div className="h-full flex flex-col items-center justify-center text-center opacity-30 gap-3">
             <div className="p-4 rounded-full border-2 border-dashed border-muted-foreground/50">
-              <Barcode className="h-8 w-8 text-muted-foreground" aria-hidden="true" />
+              <Barcode
+                className="h-8 w-8 text-muted-foreground"
+                aria-hidden="true"
+              />
             </div>
-            <p className="text-[10px] font-black tracking-widest uppercase">Esperando items...</p>
+            <p className="text-[10px] font-black tracking-widest uppercase">
+              Esperando items...
+            </p>
           </div>
         ) : (
           <div className="space-y-4">
             {cart.map((item) => (
-              <div key={`${item.producto.id}-sidebar`} className="flex justify-between items-start text-sm group">
+              <div
+                key={`${item.producto.id}-sidebar`}
+                className="flex justify-between items-start text-sm group"
+              >
                 <div className="flex gap-3 min-w-0 pr-4">
-                  <span className="font-bold w-6 text-right tabular-nums text-muted-foreground shrink-0">{item.quantity}</span>
+                  <span className="font-bold w-6 text-right tabular-nums text-muted-foreground shrink-0">
+                    {item.quantity}
+                  </span>
                   <div className="flex flex-col min-w-0">
-                    <span className="font-semibold text-foreground leading-tight">{item.producto.nombre}</span>
+                    <span className="font-semibold text-foreground leading-tight">
+                      {item.producto.nombre}
+                    </span>
                     <span className="text-[10px] text-muted-foreground mt-0.5">
                       {formatCurrency(item.producto.precioVenta)} c/u
                     </span>
@@ -105,20 +121,29 @@ export function DesktopSummary({
           {totalDescuento > 0 && (
             <div className="flex justify-between text-sm text-muted-foreground font-medium">
               <span>Desc. x Producto</span>
-              <span className="text-[color:var(--status-success-strong)] font-bold">- {formatCurrency(totalDescuento)}</span>
+              <span className="text-[color:var(--status-success-strong)] font-bold">
+                - {formatCurrency(totalDescuento)}
+              </span>
             </div>
           )}
           {montoDescuentoGlobal > 0 && (
             <div className="flex justify-between text-sm text-[color:var(--status-success-strong)] font-bold">
               <span>
-                Desc. General {descuentoTipo === "PORCENTAJE" ? `(${descuentoValor ?? 0}%)` : ""}
+                Desc. General{" "}
+                {descuentoTipo === "PORCENTAJE"
+                  ? `(${descuentoValor ?? 0}%)`
+                  : ""}
               </span>
               <span>- {formatCurrency(montoDescuentoGlobal)}</span>
             </div>
           )}
           <div className="flex justify-between items-end pt-2 border-t border-border/50">
-            <span className="text-sm font-black uppercase text-muted-foreground tracking-widest">Total</span>
-            <span className="text-3xl font-black text-primary tabular-nums">{formatCurrency(totalAmount)}</span>
+            <span className="text-sm font-black uppercase text-muted-foreground tracking-widest">
+              Total
+            </span>
+            <span className="text-3xl font-black text-primary tabular-nums">
+              {formatCurrency(totalAmount)}
+            </span>
           </div>
         </div>
 
@@ -145,7 +170,9 @@ export function DesktopSummary({
               <span className="text-xs font-bold tracking-widest opacity-80 uppercase bg-foreground/10 px-2 py-1 rounded-md">
                 {cart.length} ITEMS
               </span>
-              <span className="text-xl tracking-tight">COBRAR {formatCurrency(totalAmount)}</span>
+              <span className="text-xl tracking-tight">
+                COBRAR {formatCurrency(totalAmount)}
+              </span>
               <span className="inline-flex items-center justify-center h-5 px-2 rounded border border-white/40 bg-white/25 text-white text-[9px] font-black font-mono tracking-tight select-none">
                 F6
               </span>

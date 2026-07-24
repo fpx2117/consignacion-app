@@ -46,7 +46,7 @@ export async function GET(req: NextRequest) {
     console.error("Error al obtener categorías de catálogo:", error);
     return NextResponse.json(
       { error: "Error al obtener categorías" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

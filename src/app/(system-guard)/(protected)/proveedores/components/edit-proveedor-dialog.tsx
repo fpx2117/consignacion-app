@@ -84,7 +84,11 @@ export function EditProveedorDialog({
       onUpdated?.();
     } catch (err: unknown) {
       console.error(err);
-      alert(err instanceof Error ? err.message : "No se pudo actualizar el proveedor");
+      alert(
+        err instanceof Error
+          ? err.message
+          : "No se pudo actualizar el proveedor",
+      );
     } finally {
       setSaving(false);
     }
@@ -115,7 +119,6 @@ export function EditProveedorDialog({
 
         <form onSubmit={save} className="flex flex-col">
           <div className="p-6 space-y-5">
-
             {/* Sección Datos */}
             <div className="space-y-4">
               <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-muted-foreground/70">
@@ -123,8 +126,12 @@ export function EditProveedorDialog({
               </div>
 
               <div className="space-y-2 group">
-                <Label htmlFor="edit-nombre" className="text-xs font-medium ml-1 group-focus-within:text-primary transition-colors">
-                  Nombre / Razón Social <span className="text-destructive">*</span>
+                <Label
+                  htmlFor="edit-nombre"
+                  className="text-xs font-medium ml-1 group-focus-within:text-primary transition-colors"
+                >
+                  Nombre / Razón Social{" "}
+                  <span className="text-destructive">*</span>
                 </Label>
                 <div className="relative">
                   <Truck className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
@@ -139,7 +146,10 @@ export function EditProveedorDialog({
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2 group">
-                  <Label htmlFor="edit-cuit" className="text-xs font-medium ml-1 group-focus-within:text-primary transition-colors">
+                  <Label
+                    htmlFor="edit-cuit"
+                    className="text-xs font-medium ml-1 group-focus-within:text-primary transition-colors"
+                  >
                     CUIT
                   </Label>
                   <div className="relative">
@@ -154,7 +164,10 @@ export function EditProveedorDialog({
                 </div>
 
                 <div className="space-y-2 group">
-                  <Label htmlFor="edit-moneda" className="text-xs font-medium ml-1 group-focus-within:text-primary transition-colors">
+                  <Label
+                    htmlFor="edit-moneda"
+                    className="text-xs font-medium ml-1 group-focus-within:text-primary transition-colors"
+                  >
                     Moneda Preferida
                   </Label>
                   <Select value={moneda} onValueChange={setMoneda}>
@@ -183,11 +196,17 @@ export function EditProveedorDialog({
               <div className="flex items-center justify-between">
                 <div className="space-y-1">
                   <div className="flex items-center gap-2">
-                    <Power className={`h-4 w-4 ${activo ? "text-[color:var(--status-success-strong)]" : "text-muted-foreground"}`} />
-                    <span className="font-semibold text-sm">Estado del Proveedor</span>
+                    <Power
+                      className={`h-4 w-4 ${activo ? "text-[color:var(--status-success-strong)]" : "text-muted-foreground"}`}
+                    />
+                    <span className="font-semibold text-sm">
+                      Estado del Proveedor
+                    </span>
                   </div>
                   <p className="text-xs text-muted-foreground max-w-[250px]">
-                    {activo ? "El proveedor está activo y disponible." : "Proveedor inactivo. No aparecerá en las listas."}
+                    {activo
+                      ? "El proveedor está activo y disponible."
+                      : "Proveedor inactivo. No aparecerá en las listas."}
                   </p>
                 </div>
 

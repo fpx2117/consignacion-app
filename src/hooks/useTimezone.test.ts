@@ -53,8 +53,15 @@ test("fetchTimezoneSessionWithApi permite force refresh y reemplaza la timezone 
   ];
   let index = 0;
 
-  const first = await fetchTimezoneSessionWithApi(async () => responses[index++], store);
-  const refreshed = await fetchTimezoneSessionWithApi(async () => responses[index++], store, true);
+  const first = await fetchTimezoneSessionWithApi(
+    async () => responses[index++],
+    store,
+  );
+  const refreshed = await fetchTimezoneSessionWithApi(
+    async () => responses[index++],
+    store,
+    true,
+  );
 
   assert.equal(first.zonaHorariaResuelta, "America/Santiago");
   assert.equal(refreshed.zonaHorariaResuelta, "Europe/Madrid");
@@ -72,17 +79,24 @@ test("fetchTimezoneSessionWithApi cae al fallback tecnico cuando falla la carga 
 
 test("fetchTimezoneSessionWithApi reutiliza cache previa ante error posterior", async () => {
   const store = createTimezoneSessionStore();
-  await fetchTimezoneSessionWithApi(async () => ({
-    rol: "EMPLEADO" as const,
-    zonaHoraria: null,
-    zonaHorariaSucursal: "America/Bogota",
-    zonaHorariaResuelta: "America/Bogota",
-    timezoneSource: "branch" as const,
-  }), store);
+  await fetchTimezoneSessionWithApi(
+    async () => ({
+      rol: "EMPLEADO" as const,
+      zonaHoraria: null,
+      zonaHorariaSucursal: "America/Bogota",
+      zonaHorariaResuelta: "America/Bogota",
+      timezoneSource: "branch" as const,
+    }),
+    store,
+  );
 
-  const session = await fetchTimezoneSessionWithApi(async () => {
-    throw new Error("network");
-  }, store, true);
+  const session = await fetchTimezoneSessionWithApi(
+    async () => {
+      throw new Error("network");
+    },
+    store,
+    true,
+  );
 
   assert.equal(session.zonaHorariaResuelta, "America/Bogota");
   assert.equal(session.timezoneSource, "branch");

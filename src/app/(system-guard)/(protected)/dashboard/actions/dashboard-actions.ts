@@ -1,7 +1,12 @@
 "use server";
 
 import { requireAuth } from "@/lib/auth/require-auth";
-import { getDashboardKpis, getDashboardTopProductos, getDashboardTopConsignados, getDashboardTendencia } from "@/lib/dashboard/kpi-logic";
+import {
+  getDashboardKpis,
+  getDashboardTopProductos,
+  getDashboardTopConsignados,
+  getDashboardTendencia,
+} from "@/lib/dashboard/kpi-logic";
 import { prisma } from "@/lib/prisma";
 import { resolveRequestedSucursalId } from "@/lib/security/sucursalScope";
 import type {
@@ -30,16 +35,24 @@ class UnauthorizedError extends Error {
  */
 export async function fetchDashboardKpis(
   period: DashboardPeriod = "month",
-  requestedSucursalId?: number
+  requestedSucursalId?: number,
 ): Promise<DashboardKpis> {
   const auth = await requireAuth();
   if (!auth.ok) throw new UnauthorizedError();
 
   const { user } = auth;
   const isAdmin = user.rol === "ADMIN";
-  const scopedSucursalId = resolveRequestedSucursalId(auth, requestedSucursalId);
+  const scopedSucursalId = resolveRequestedSucursalId(
+    auth,
+    requestedSucursalId,
+  );
   const userId = Number(user.sub);
-  const stats = await getDashboardKpis(scopedSucursalId, period, isAdmin, Number.isFinite(userId) ? userId : undefined);
+  const stats = await getDashboardKpis(
+    scopedSucursalId,
+    period,
+    isAdmin,
+    Number.isFinite(userId) ? userId : undefined,
+  );
 
   return {
     period,
@@ -96,7 +109,8 @@ export async function fetchDashboardKpis(
       visitantesUnicos: stats.catalogo?.visitantesUnicos ?? 0,
       productosVisibles: stats.catalogo?.productosVisibles ?? 0,
     },
-    proximosVencimientos: stats.proximosVencimientos as unknown as DashboardKpis["proximosVencimientos"],
+    proximosVencimientos:
+      stats.proximosVencimientos as unknown as DashboardKpis["proximosVencimientos"],
   };
 }
 
@@ -110,13 +124,16 @@ export async function fetchDashboardKpis(
  */
 export async function fetchDashboardConsignaciones(
   limit: number = 5,
-  requestedSucursalId?: number
+  requestedSucursalId?: number,
 ): Promise<DashboardConsignacionesResponse> {
   const auth = await requireAuth();
   if (!auth.ok) throw new UnauthorizedError();
 
   const { user } = auth;
-  const scopedSucursalId = resolveRequestedSucursalId(auth, requestedSucursalId);
+  const scopedSucursalId = resolveRequestedSucursalId(
+    auth,
+    requestedSucursalId,
+  );
   const safeLimit = Math.min(limit, 50);
   const isGlobal = user.rol === "ADMIN" && scopedSucursalId === 0;
   const sucursalWhere = isGlobal ? {} : { sucursalId: scopedSucursalId };
@@ -133,7 +150,9 @@ export async function fetchDashboardConsignaciones(
   const pendientesPrioridad = abiertas
     .map((c) => {
       const unitsPendientes = c.detalles.reduce((acc, d) => {
-        return acc + (d.unitsEntregadas - d.unitsVendidasAcum - d.unitsDevueltasAcum);
+        return (
+          acc + (d.unitsEntregadas - d.unitsVendidasAcum - d.unitsDevueltasAcum)
+        );
       }, 0);
       return { ...c, unitsPendientes };
     })
@@ -163,9 +182,12 @@ export async function fetchDashboardConsignaciones(
   ]);
 
   return {
-    pendientesPrioridad: pendientesPrioridad as unknown as DashboardConsignacionesResponse["pendientesPrioridad"],
-    ultimasConsignaciones: ultimasConsignaciones as unknown as DashboardConsignacionesResponse["ultimasConsignaciones"],
-    ultimasLiquidaciones: ultimasLiquidaciones as unknown as DashboardConsignacionesResponse["ultimasLiquidaciones"],
+    pendientesPrioridad:
+      pendientesPrioridad as unknown as DashboardConsignacionesResponse["pendientesPrioridad"],
+    ultimasConsignaciones:
+      ultimasConsignaciones as unknown as DashboardConsignacionesResponse["ultimasConsignaciones"],
+    ultimasLiquidaciones:
+      ultimasLiquidaciones as unknown as DashboardConsignacionesResponse["ultimasLiquidaciones"],
   };
 }
 
@@ -180,7 +202,7 @@ export async function fetchDashboardConsignaciones(
 export async function fetchDashboardTopProductos(
   period: DashboardPeriod = "month",
   limit: number = 5,
-  requestedSucursalId?: number
+  requestedSucursalId?: number,
 ): Promise<DashboardTopProductos> {
   const auth = await requireAuth();
   if (!auth.ok) throw new UnauthorizedError();
@@ -188,12 +210,27 @@ export async function fetchDashboardTopProductos(
   const { user } = auth;
   const isAdmin = user.rol === "ADMIN";
   const safeLimit = Math.min(limit, 50);
-  const scopedSucursalId = resolveRequestedSucursalId(auth, requestedSucursalId);
+  const scopedSucursalId = resolveRequestedSucursalId(
+    auth,
+    requestedSucursalId,
+  );
   const userId = Number(user.sub);
 
   const [topVendidos, topConsignados] = await Promise.all([
-    getDashboardTopProductos(scopedSucursalId, period, isAdmin, safeLimit, Number.isFinite(userId) ? userId : undefined),
-    getDashboardTopConsignados(scopedSucursalId, period, isAdmin, safeLimit, Number.isFinite(userId) ? userId : undefined),
+    getDashboardTopProductos(
+      scopedSucursalId,
+      period,
+      isAdmin,
+      safeLimit,
+      Number.isFinite(userId) ? userId : undefined,
+    ),
+    getDashboardTopConsignados(
+      scopedSucursalId,
+      period,
+      isAdmin,
+      safeLimit,
+      Number.isFinite(userId) ? userId : undefined,
+    ),
   ]);
 
   return {
@@ -213,35 +250,45 @@ export async function fetchDashboardTopProductos(
  */
 export async function fetchDashboardTendencia(
   period: Exclude<DashboardPeriod, "all"> = "month",
-  requestedSucursalId?: number
+  requestedSucursalId?: number,
 ): Promise<DashboardTendencia> {
   const auth = await requireAuth();
   if (!auth.ok) throw new UnauthorizedError();
 
   const { user } = auth;
   const isAdmin = user.rol === "ADMIN";
-  const scopedSucursalId = resolveRequestedSucursalId(auth, requestedSucursalId);
+  const scopedSucursalId = resolveRequestedSucursalId(
+    auth,
+    requestedSucursalId,
+  );
   const userId = Number(user.sub);
 
-  const data = await getDashboardTendencia(scopedSucursalId, period, isAdmin, Number.isFinite(userId) ? userId : undefined);
+  const data = await getDashboardTendencia(
+    scopedSucursalId,
+    period,
+    isAdmin,
+    Number.isFinite(userId) ? userId : undefined,
+  );
 
-  const series = (data.series ?? []).map((point: {
-    date?: string;
-    ventasTotal?: number;
-    ventasPosTotal?: number;
-    ventasConsigTotal?: number;
-    pagosTotal?: number;
-  }) => ({
-    date: point.date as string,
-    consignaciones: 0,
-    liquidaciones: 0,
-    ventasCount: 0,
-    ventasTotal: point.ventasTotal ?? 0,
-    ventasPosTotal: point.ventasPosTotal ?? 0,
-    ventasConsigTotal: point.ventasConsigTotal ?? 0,
-    pagosCount: 0,
-    pagosTotal: point.pagosTotal ?? 0,
-  }));
+  const series = (data.series ?? []).map(
+    (point: {
+      date?: string;
+      ventasTotal?: number;
+      ventasPosTotal?: number;
+      ventasConsigTotal?: number;
+      pagosTotal?: number;
+    }) => ({
+      date: point.date as string,
+      consignaciones: 0,
+      liquidaciones: 0,
+      ventasCount: 0,
+      ventasTotal: point.ventasTotal ?? 0,
+      ventasPosTotal: point.ventasPosTotal ?? 0,
+      ventasConsigTotal: point.ventasConsigTotal ?? 0,
+      pagosCount: 0,
+      pagosTotal: point.pagosTotal ?? 0,
+    }),
+  );
 
   const from = series[0]?.date ?? new Date().toISOString().slice(0, 10);
   const to = series[series.length - 1]?.date ?? from;

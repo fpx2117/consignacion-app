@@ -1,59 +1,79 @@
 // src/lib/reports/base/dashboard-report-template.ts
 import { REPORT_COLORS, reportThemeCss } from "@/lib/reports/report-theme";
-import { escapeHtml, formatMoneyARS, formatNumberAR } from "@/lib/reports/template-helpers";
+import {
+  escapeHtml,
+  formatMoneyARS,
+  formatNumberAR,
+} from "@/lib/reports/template-helpers";
 import { getReportHeadAssets } from "@/lib/reports/tailwind-inline";
 import type { BrandingDTO } from "@/lib/reports/types";
-import { brandingHeaderHtml, brandingFooterHtml } from "@/lib/reports/branding-html";
+import {
+  brandingHeaderHtml,
+  brandingFooterHtml,
+} from "@/lib/reports/branding-html";
 
 export type DashboardReportData = {
-    period: string;
-    periodLabel: string;
-    fechaGeneracion: string;
+  period: string;
+  periodLabel: string;
+  fechaGeneracion: string;
 
-    // Finanzas
-    gananciaBruta: number;
-    gananciaNeta: number;
-    gananciaConsignacion: number;
-    gananciaDirecta: number;
-    gastos: number;
-    utilidadNeta: number;
-    ingresosCaja: number;
-    cantidadVentas: number;
-    cantidadPagos: number;
+  // Finanzas
+  gananciaBruta: number;
+  gananciaNeta: number;
+  gananciaConsignacion: number;
+  gananciaDirecta: number;
+  gastos: number;
+  utilidadNeta: number;
+  ingresosCaja: number;
+  cantidadVentas: number;
+  cantidadPagos: number;
 
-    // Catalogo publico
-    catalogoVisitas: number;
-    catalogoVisitantesUnicos: number;
-    catalogoProductosVisibles?: number;
+  // Catalogo publico
+  catalogoVisitas: number;
+  catalogoVisitantesUnicos: number;
+  catalogoProductosVisibles?: number;
 
-    // Stock
-    stockDisponible: number;
-    stockConsignado: number;
+  // Stock
+  stockDisponible: number;
+  stockConsignado: number;
 
-    // Consignaciones
-    consignacionesAbiertas: number;
-    consignacionesCerradas: number;
-    unitsPendientes: number;
+  // Consignaciones
+  consignacionesAbiertas: number;
+  consignacionesCerradas: number;
+  unitsPendientes: number;
 
-    // Tendencia (optional, can be empty array for "all" period)
-    tendencia: { date: string; ventasTotal: number; pagosTotal: number }[];
+  // Tendencia (optional, can be empty array for "all" period)
+  tendencia: { date: string; ventasTotal: number; pagosTotal: number }[];
 
-    // Finanzas adicionales
-    saldoGlobal?: number;
+  // Finanzas adicionales
+  saldoGlobal?: number;
 
-    // Gastos detallados
-    gastosDetalle: { motivo: string; categoria: string; monto: number; fecha: string; esCompartido: boolean }[];
+  // Gastos detallados
+  gastosDetalle: {
+    motivo: string;
+    categoria: string;
+    monto: number;
+    fecha: string;
+    esCompartido: boolean;
+  }[];
 };
 
 const fmt = (n: number) => formatMoneyARS(n, 2);
 const fmtN = (n: number) => formatNumberAR(n);
 
 function statusBadge(label: string, bg: string, text: string): string {
-    return `<span style="display:inline-block;padding:1px 6px;border-radius:4px;font-size:9px;font-weight:700;background:${bg};color:${text};margin-left:6px;vertical-align:middle;">${label}</span>`;
+  return `<span style="display:inline-block;padding:1px 6px;border-radius:4px;font-size:9px;font-weight:700;background:${bg};color:${text};margin-left:6px;vertical-align:middle;">${label}</span>`;
 }
 
-function kpiBox(label: string, value: string, accent: string, sub?: string, badge?: string, formula?: string): string {
-    return `
+function kpiBox(
+  label: string,
+  value: string,
+  accent: string,
+  sub?: string,
+  badge?: string,
+  formula?: string,
+): string {
+  return `
     <div style="background:${REPORT_COLORS.surface}; border:1px solid ${REPORT_COLORS.line}; border-radius:10px; padding:14px 16px; min-width:140px; flex:1;">
       <div style="font-size:10px; font-weight:700; color:${accent}; text-transform:uppercase; letter-spacing:.06em; margin-bottom:4px;">${escapeHtml(label)}</div>
       <div style="font-size:20px; font-weight:800; color:${REPORT_COLORS.text}; line-height:1.1;">${escapeHtml(value)}${badge ?? ""}</div>
@@ -63,37 +83,49 @@ function kpiBox(label: string, value: string, accent: string, sub?: string, badg
 }
 
 function sectionTitle(title: string, color: string): string {
-    return `<h2 style="font-size:13px; font-weight:700; text-transform:uppercase; letter-spacing:.08em; color:${color}; border-bottom:2px solid ${color}20; padding-bottom:6px; margin:22px 0 12px;">${escapeHtml(title)}</h2>`;
+  return `<h2 style="font-size:13px; font-weight:700; text-transform:uppercase; letter-spacing:.08em; color:${color}; border-bottom:2px solid ${color}20; padding-bottom:6px; margin:22px 0 12px;">${escapeHtml(title)}</h2>`;
 }
 
-export function buildDashboardReportHtml(data: DashboardReportData, branding: BrandingDTO): string {
-    const color = branding.primaryColor || REPORT_COLORS.brandDefault;
+export function buildDashboardReportHtml(
+  data: DashboardReportData,
+  branding: BrandingDTO,
+): string {
+  const color = branding.primaryColor || REPORT_COLORS.brandDefault;
 
-    const pctConsig = data.gananciaBruta > 0
-        ? Math.round((data.gananciaConsignacion / data.gananciaBruta) * 100)
-        : 0;
-    const pctDirecta = data.gananciaBruta > 0
-        ? Math.round((data.gananciaDirecta / data.gananciaBruta) * 100)
-        : 0;
+  const pctConsig =
+    data.gananciaBruta > 0
+      ? Math.round((data.gananciaConsignacion / data.gananciaBruta) * 100)
+      : 0;
+  const pctDirecta =
+    data.gananciaBruta > 0
+      ? Math.round((data.gananciaDirecta / data.gananciaBruta) * 100)
+      : 0;
 
-    // --- Badges de estado ---
-    const utilidadBadge = data.utilidadNeta > 0
-        ? statusBadge("POSITIVO", "#d1fae5", "#059669")
-        : statusBadge("NEGATIVO", "#ffe4e6", "#E11D48");
-    const gastosBadge = data.gastos > data.gananciaBruta * 0.3
-        ? statusBadge("ALTO", "#fef3c7", "#D97706")
-        : statusBadge("NORMAL", "#d1fae5", "#059669");
+  // --- Badges de estado ---
+  const utilidadBadge =
+    data.utilidadNeta > 0
+      ? statusBadge("POSITIVO", "#d1fae5", "#059669")
+      : statusBadge("NEGATIVO", "#ffe4e6", "#E11D48");
+  const gastosBadge =
+    data.gastos > data.gananciaBruta * 0.3
+      ? statusBadge("ALTO", "#fef3c7", "#D97706")
+      : statusBadge("NORMAL", "#d1fae5", "#059669");
 
-    const tendenciaRows = data.tendencia.length > 0
-        ? data.tendencia.map((p) => `
+  const tendenciaRows =
+    data.tendencia.length > 0
+      ? data.tendencia
+          .map(
+            (p) => `
         <tr>
           <td style="padding:5px 8px; font-size:11px; border-bottom:1px solid ${REPORT_COLORS.lineSoft};">${escapeHtml(p.date)}</td>
           <td style="padding:5px 8px; font-size:11px; border-bottom:1px solid ${REPORT_COLORS.lineSoft}; text-align:right;">${fmt(p.ventasTotal)}</td>
           <td style="padding:5px 8px; font-size:11px; border-bottom:1px solid ${REPORT_COLORS.lineSoft}; text-align:right;">${fmt(p.pagosTotal)}</td>
-        </tr>`).join("")
-        : `<tr><td colspan="3" style="text-align:center; color:${REPORT_COLORS.textSubtle}; font-size:11px; padding:12px;">Sin datos de tendencia para el período histórico.</td></tr>`;
+        </tr>`,
+          )
+          .join("")
+      : `<tr><td colspan="3" style="text-align:center; color:${REPORT_COLORS.textSubtle}; font-size:11px; padding:12px;">Sin datos de tendencia para el período histórico.</td></tr>`;
 
-    const dashboardExtraCss = `
+  const dashboardExtraCss = `
     ${reportThemeCss(color)}
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { background:${REPORT_COLORS.paper}; color:${REPORT_COLORS.text}; padding:20px 24px; font-size:13px; }
@@ -108,7 +140,7 @@ export function buildDashboardReportHtml(data: DashboardReportData, branding: Br
     .no-break table tbody tr { break-inside: avoid; page-break-inside: avoid; }
     `;
 
-    return `<!DOCTYPE html>
+  return `<!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
@@ -148,7 +180,9 @@ export function buildDashboardReportHtml(data: DashboardReportData, branding: Br
     </div>
   </div>
 
-  ${data.gastosDetalle.length > 0 ? `
+  ${
+    data.gastosDetalle.length > 0
+      ? `
   <div class="no-break">
     ${sectionTitle("Detalle de Gastos", REPORT_COLORS.danger)}
     <table>
@@ -162,7 +196,9 @@ export function buildDashboardReportHtml(data: DashboardReportData, branding: Br
         </tr>
       </thead>
       <tbody>
-        ${data.gastosDetalle.map((g) => `
+        ${data.gastosDetalle
+          .map(
+            (g) => `
         <tr>
           <td style="padding:5px 8px; font-size:11px; border-bottom:1px solid ${REPORT_COLORS.lineSoft}; white-space:nowrap;">${escapeHtml(g.fecha)}</td>
           <td style="padding:5px 8px; font-size:11px; border-bottom:1px solid ${REPORT_COLORS.lineSoft};">${escapeHtml(g.motivo)}</td>
@@ -173,7 +209,9 @@ export function buildDashboardReportHtml(data: DashboardReportData, branding: Br
             </span>
           </td>
           <td style="padding:5px 8px; font-size:11px; border-bottom:1px solid ${REPORT_COLORS.lineSoft}; text-align:right; font-weight:700; color:${REPORT_COLORS.danger};">${escapeHtml(fmt(g.monto))}</td>
-        </tr>`).join("")}
+        </tr>`,
+          )
+          .join("")}
       </tbody>
       <tfoot>
         <tr>
@@ -183,7 +221,9 @@ export function buildDashboardReportHtml(data: DashboardReportData, branding: Br
       </tfoot>
     </table>
   </div>
-  ` : ""}
+  `
+      : ""
+  }
 
   ${sectionTitle("Stock", color)}
   <div class="no-break">
@@ -209,7 +249,9 @@ export function buildDashboardReportHtml(data: DashboardReportData, branding: Br
     </div>
   </div>
 
-  ${data.tendencia.length > 0 ? `
+  ${
+    data.tendencia.length > 0
+      ? `
   <div class="no-break">
     ${sectionTitle("Tendencia Diaria", color)}
     <table>
@@ -223,7 +265,9 @@ export function buildDashboardReportHtml(data: DashboardReportData, branding: Br
       <tbody>${tendenciaRows}</tbody>
     </table>
   </div>
-  ` : ""}
+  `
+      : ""
+  }
 
   ${brandingFooterHtml(branding)}
 </body>

@@ -81,7 +81,11 @@ export type StoreLayoutConfig = {
   desktopLayout: "mobile-centered" | "wide-ecommerce" | "with-cart-sidebar";
   // Online Store — Destacados
   featuredProductIds: number[];
-  featuredSections: Array<{ title: string; productIds: number[]; displayMode: "slider-auto" | "slider-static" | "grid" }>;
+  featuredSections: Array<{
+    title: string;
+    productIds: number[];
+    displayMode: "slider-auto" | "slider-static" | "grid";
+  }>;
 };
 
 export type OnlineStorePromoFormItem = {

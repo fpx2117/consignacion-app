@@ -2,9 +2,10 @@
 
 ## Enfoque Técnico
 
-La arquitectura busca proporcionar un motor de personalización de temas para un e-commerce, en donde el usuario (administrador de la tienda) puede modificar aspectos visuales como colores, fuentes y layout desde un Panel de Configuración y visualizar los cambios en tiempo real. 
+La arquitectura busca proporcionar un motor de personalización de temas para un e-commerce, en donde el usuario (administrador de la tienda) puede modificar aspectos visuales como colores, fuentes y layout desde un Panel de Configuración y visualizar los cambios en tiempo real.
 
 La solución técnica se basa en:
+
 1.  **Persistencia Estructurada Flexibles:** Un esquema de Prisma (`StoreSettings`) que utiliza campos estructurados y JSON para almacenar la configuración de temas.
 2.  **Inyección Dinámica de CSS:** Consumo de estos ajustes a través del backend e inyección como variables nativas CSS (ej. `var(--color-primary)`) en la etiqueta raíz (ej. `:root` o `<body>`), permitiendo a Tailwind CSS reaccionar a estos valores sin necesidad de re-compilar el código.
 3.  **Tipografía Reactiva:** Carga de fuentes de Google Fonts (o integración de `next/font` de manera dinámica) basada en los valores leídos de la configuración.
@@ -56,14 +57,14 @@ La solución técnica se basa en:
 
 ## Cambios en Archivos
 
-| Archivo | Acción | Descripción |
-|---------|--------|-------------|
-| `prisma/schema.prisma` | Modificar | Añadir modelo `StoreSettings` y relación con la Tienda/Tenant. |
-| `tailwind.config.js/ts` | Modificar | Configurar colores y tipografías para mapear hacia variables CSS personalizadas (ej. `var(--color-primary)`). |
-| `src/context/ThemeContext.tsx` | Crear | Contexto de React o Store de Zustand para manejar el estado del tema. |
-| `src/components/ThemeInjector.tsx` | Crear | Componente cliente que lee el contexto y actualiza las variables CSS de forma global, y monta fuentes en `<head>`. |
-| `src/components/admin/ThemeEditor.tsx` | Crear | Panel de configuración con campos de control (color picker, select de fuentes). |
-| `src/app/api/settings/route.ts` | Crear | Endpoints de API para leer (`GET`) y actualizar (`PATCH`) los valores guardados en base de datos. |
+| Archivo                                | Acción    | Descripción                                                                                                        |
+| -------------------------------------- | --------- | ------------------------------------------------------------------------------------------------------------------ |
+| `prisma/schema.prisma`                 | Modificar | Añadir modelo `StoreSettings` y relación con la Tienda/Tenant.                                                     |
+| `tailwind.config.js/ts`                | Modificar | Configurar colores y tipografías para mapear hacia variables CSS personalizadas (ej. `var(--color-primary)`).      |
+| `src/context/ThemeContext.tsx`         | Crear     | Contexto de React o Store de Zustand para manejar el estado del tema.                                              |
+| `src/components/ThemeInjector.tsx`     | Crear     | Componente cliente que lee el contexto y actualiza las variables CSS de forma global, y monta fuentes en `<head>`. |
+| `src/components/admin/ThemeEditor.tsx` | Crear     | Panel de configuración con campos de control (color picker, select de fuentes).                                    |
+| `src/app/api/settings/route.ts`        | Crear     | Endpoints de API para leer (`GET`) y actualizar (`PATCH`) los valores guardados en base de datos.                  |
 
 ## Interfaces / Contratos
 
@@ -94,24 +95,24 @@ export interface StoreThemeConfig {
     bodyFont: string;
   };
   layout: {
-    navbarStyle: 'standard' | 'minimal' | 'centered';
-    productCardStyle: 'bordered' | 'shadow' | 'flat';
+    navbarStyle: "standard" | "minimal" | "centered";
+    productCardStyle: "bordered" | "shadow" | "flat";
   };
 }
 ```
 
 ## Estrategia de Pruebas
 
-| Capa | Qué Probar | Enfoque |
-|------|------------|---------|
-| Unitaria | Función que genera los strings de variables CSS. | Validar que una configuración dada genere correctamente las sentencias como `--color-primary: #xxxxxx;`. |
-| Integración | Endpoints de API Settings. | Simular (Mock) Prisma. Validar que los permisos de administrador funcionen, que `GET` devuelva `theme` parseado y `PATCH` actualice con esquema JSON válido. |
-| E2E | Previsualización en el Panel Admin. | Usar Playwright o Cypress. Modificar un color, validar que se inyecta en el CSS del Preview sin recargar, hacer clic en "Guardar" y recargar la página para verificar la persistencia. |
+| Capa        | Qué Probar                                       | Enfoque                                                                                                                                                                                |
+| ----------- | ------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Unitaria    | Función que genera los strings de variables CSS. | Validar que una configuración dada genere correctamente las sentencias como `--color-primary: #xxxxxx;`.                                                                               |
+| Integración | Endpoints de API Settings.                       | Simular (Mock) Prisma. Validar que los permisos de administrador funcionen, que `GET` devuelva `theme` parseado y `PATCH` actualice con esquema JSON válido.                           |
+| E2E         | Previsualización en el Panel Admin.              | Usar Playwright o Cypress. Modificar un color, validar que se inyecta en el CSS del Preview sin recargar, hacer clic en "Guardar" y recargar la página para verificar la persistencia. |
 
 ## Migración / Despliegue
 
 - Se debe ejecutar `npx prisma db push` o `prisma migrate dev` para crear el nuevo modelo `StoreSettings`.
-- Para tiendas existentes, se requerirá un script de seed o migración de datos (`seed.ts`) que inserte un registro `StoreSettings` por defecto para todas las tiendas para evitar caídas (crashes) cuando intenten cargar su tema inicial (o se debe manejar en el código una carga gracefully con *fallback* al tema por defecto).
+- Para tiendas existentes, se requerirá un script de seed o migración de datos (`seed.ts`) que inserte un registro `StoreSettings` por defecto para todas las tiendas para evitar caídas (crashes) cuando intenten cargar su tema inicial (o se debe manejar en el código una carga gracefully con _fallback_ al tema por defecto).
 
 ## Preguntas Abiertas
 

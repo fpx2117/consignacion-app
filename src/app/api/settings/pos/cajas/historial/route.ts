@@ -7,7 +7,10 @@ export async function GET() {
   if (!auth.ok) return auth.res;
 
   if (!requireRole(auth.user, ["ADMIN"])) {
-    return NextResponse.json({ error: "No tienes permisos para ver el historial." }, { status: 403 });
+    return NextResponse.json(
+      { error: "No tienes permisos para ver el historial." },
+      { status: 403 },
+    );
   }
 
   try {
@@ -24,6 +27,9 @@ export async function GET() {
     return NextResponse.json({ data: historial });
   } catch (error) {
     console.error("Error al obtener historial de cajas:", error);
-    return NextResponse.json({ error: "Error al obtener el historial de cajas" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Error al obtener el historial de cajas" },
+      { status: 500 },
+    );
   }
 }

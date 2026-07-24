@@ -28,6 +28,7 @@ export const CORPUS_KIOSCO_ALMACEN: CasoReferencia[] = [
 ```
 
 **DEBE** incluir casos de los tres tipos, no solo los que "deberían" matchear:
+
 - Casos donde el catálogo local ya resuelve (para confirmar que agregar candidatos globales no empeora ni interfiere con lo que ya funcionaba).
 - Casos donde solo el catálogo global puede resolver (el caso de uso central de esta propuesta).
 - Casos donde ni local ni global deberían encontrar nada — para medir falsos positivos (candidato global de alto score mal aplicado a un producto que no existe en el catálogo).
@@ -36,13 +37,13 @@ export const CORPUS_KIOSCO_ALMACEN: CasoReferencia[] = [
 
 Correr el corpus contra el pipeline (con y sin candidatos globales) y calcular:
 
-| Métrica | Definición | Por qué importa |
-|---|---|---|
-| **Hit rate global** | % de líneas con `resultadoEsperado: match_global` donde el candidato correcto apareció en el top-3 devuelto por `POST /catalogo/ocr-candidatos` | Mide si el catálogo/scoring de la API central sirve, antes de siquiera llegar a la IA |
-| **Precisión del top-1** | De las líneas donde el candidato correcto apareció, % donde además fue el candidato con mayor score (no un candidato #2 o #3 correcto tapado por uno incorrecto con score más alto) | Si el top-1 no es confiable, el desempate (punto 4 de `integracion-ocr-kiosco-almacen.md`) está mal calibrado |
-| **Tasa de falsos positivos** | % de líneas `sin_match_esperado` donde igual se devolvió un candidato con score alto (ej. > 80) | Mide sobre-confianza del scoring — un score alto en un producto que no corresponde es peor que no devolver nada, porque induce a la IA a "inventar con respaldo aparente" |
-| **Mejora neta end-to-end** | % de líneas donde el resultado final de `procesarFacturaConIA()` (con candidatos globales) coincide con `nombreCorrectoEsperado`, comparado contra el mismo % sin candidatos globales | La métrica que realmente importa — las anteriores son diagnóstico, esta es la que decide si el cambio se despliega |
-| **Regresión en casos ya resueltos localmente** | % de líneas `match_local` donde el resultado sigue siendo correcto con candidatos globales agregados al prompt | Confirma que agregar una tercera fuente no degrada lo que ya funcionaba (riesgo real: más candidatos en el prompt pueden confundir al modelo incluso cuando el catálogo local ya tenía la respuesta) |
+| Métrica                                        | Definición                                                                                                                                                                            | Por qué importa                                                                                                                                                                                      |
+| ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Hit rate global**                            | % de líneas con `resultadoEsperado: match_global` donde el candidato correcto apareció en el top-3 devuelto por `POST /catalogo/ocr-candidatos`                                       | Mide si el catálogo/scoring de la API central sirve, antes de siquiera llegar a la IA                                                                                                                |
+| **Precisión del top-1**                        | De las líneas donde el candidato correcto apareció, % donde además fue el candidato con mayor score (no un candidato #2 o #3 correcto tapado por uno incorrecto con score más alto)   | Si el top-1 no es confiable, el desempate (punto 4 de `integracion-ocr-kiosco-almacen.md`) está mal calibrado                                                                                        |
+| **Tasa de falsos positivos**                   | % de líneas `sin_match_esperado` donde igual se devolvió un candidato con score alto (ej. > 80)                                                                                       | Mide sobre-confianza del scoring — un score alto en un producto que no corresponde es peor que no devolver nada, porque induce a la IA a "inventar con respaldo aparente"                            |
+| **Mejora neta end-to-end**                     | % de líneas donde el resultado final de `procesarFacturaConIA()` (con candidatos globales) coincide con `nombreCorrectoEsperado`, comparado contra el mismo % sin candidatos globales | La métrica que realmente importa — las anteriores son diagnóstico, esta es la que decide si el cambio se despliega                                                                                   |
+| **Regresión en casos ya resueltos localmente** | % de líneas `match_local` donde el resultado sigue siendo correcto con candidatos globales agregados al prompt                                                                        | Confirma que agregar una tercera fuente no degrada lo que ya funcionaba (riesgo real: más candidatos en el prompt pueden confundir al modelo incluso cuando el catálogo local ya tenía la respuesta) |
 
 **DEBE** correrse este cálculo antes de activar `CATALOGO_API_URL` en cualquier instancia de producción (bloquea la tarea 2.10 de `tasks.md`) y **DEBERÍA** volver a correrse cada vez que cambie el scoring de la API central o el CSV del catálogo piloto, para detectar regresiones.
 
@@ -82,6 +83,7 @@ console.log("[CatalogoGlobal] resolución de línea", {
 `integracion-ocr-kiosco-almacen.md` (sección 6) deja explícito que la IA no debe "adivinar" variante/sabor cuando el texto no la menciona. Falta la regla concreta para cuando dos candidatos empatan en score dentro de un margen (ej. diferencia < 5 puntos):
 
 **DEBE** aplicarse esta regla, en orden, antes de mandarle candidatos a la IA:
+
 1. Si uno de los empatados matchea la presentación parseada (`parsearNotacionPack()`, sección 4 de `integracion-ocr-kiosco-almacen.md`) y el otro no, gana el que matchea.
 2. Si siguen empatados, **NO DEBE** elegirse ninguno automáticamente — se mandan ambos (máximo 2-3) a la IA con una instrucción explícita en el prompt: "si dos candidatos son igualmente probables y el texto no distingue cuál, marcar `requiere_revision: true` en vez de elegir uno al azar".
 3. El resultado de un empate no resuelto **DEBE** quedar visible en la UI de revisión como tal (no como una elección silenciosa) — mismo patrón ya usado para advertencias de línea en `mejora-precision-lineas-factura-ocr`.
@@ -97,13 +99,14 @@ Además del log de resolución de línea (punto 4), agregar al mismo log estruct
 ```typescript
 console.log("[CatalogoGlobal] consulta", {
   rubro,
-  timedOut: boolean,       // distingue timeout de "respondió pero sin candidatos"
+  timedOut: boolean, // distingue timeout de "respondió pero sin candidatos"
   candidatosDevueltos: number,
   elapsedMs: number,
 });
 ```
 
 Esto permite, con solo grep sobre logs de Railway (mismo patrón que el resto del proyecto, sin dashboard nuevo):
+
 - Separar "la API central está caída/lenta" (`timedOut: true`, requiere atención de infraestructura) de "el catálogo no tiene ese producto" (`timedOut: false, candidatosDevueltos: 0`, requiere ampliar el CSV, no arreglar infraestructura) — dos problemas con solución distinta que hoy quedarían indistinguibles bajo el mismo fallback silencioso a `[]` (`design.md`, Decisión 4).
 - Calcular, ya en producción real (no solo en el corpus offline), la tasa de uso efectivo de candidatos globales por rubro, para decidir cuándo expandir el CSV a un rubro nuevo (Fase 3 de `tasks.md`).
 

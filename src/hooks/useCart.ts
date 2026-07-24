@@ -17,7 +17,10 @@ type UseCartReturn = {
   hydrated: boolean;
   openCart: () => void;
   closeCart: () => void;
-  addToCart: (product: PublicCatalogProduct, pricingMode?: "default" | "consigne") => void;
+  addToCart: (
+    product: PublicCatalogProduct,
+    pricingMode?: "default" | "consigne",
+  ) => void;
   removeFromCart: (productId: number) => void;
   updateQuantity: (productId: number, quantity: number) => void;
   clearCart: () => void;
@@ -68,20 +71,23 @@ export function useCart(options: UseCartOptions = {}): UseCartReturn {
   const closeCart = useCallback(() => setIsOpen(false), []);
 
   const addToCart = useCallback(
-    (product: PublicCatalogProduct, pricingMode: "default" | "consigne" = "default") => {
+    (
+      product: PublicCatalogProduct,
+      pricingMode: "default" | "consigne" = "default",
+    ) => {
       setCart((prev) => {
         const existing = prev.find((item) => item.id === product.id);
         if (existing) {
           return prev.map((item) =>
             item.id === product.id
               ? { ...item, quantity: item.quantity + 1 }
-              : item
+              : item,
           );
         }
         return [...prev, { ...product, quantity: 1, pricingMode }];
       });
     },
-    []
+    [],
   );
 
   const removeFromCart = useCallback((productId: number) => {
@@ -95,8 +101,8 @@ export function useCart(options: UseCartOptions = {}): UseCartReturn {
     }
     setCart((prev) =>
       prev.map((item) =>
-        item.id === productId ? { ...item, quantity } : item
-      )
+        item.id === productId ? { ...item, quantity } : item,
+      ),
     );
   }, []);
 
@@ -107,13 +113,16 @@ export function useCart(options: UseCartOptions = {}): UseCartReturn {
 
   const itemCount = useMemo(
     () => cart.reduce((acc, item) => acc + item.quantity, 0),
-    [cart]
+    [cart],
   );
 
   const subtotal = useMemo(
     () =>
-      cart.reduce((acc, item) => acc + Number(item.precioVenta) * item.quantity, 0),
-    [cart]
+      cart.reduce(
+        (acc, item) => acc + Number(item.precioVenta) * item.quantity,
+        0,
+      ),
+    [cart],
   );
 
   const total = subtotal;

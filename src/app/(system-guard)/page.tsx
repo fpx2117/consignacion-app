@@ -10,7 +10,10 @@ async function getPublicCatalogRedirect() {
   const { modoUnificado } = await getTiendaGlobalConfig();
 
   if (modoUnificado) {
-    const principal = await prisma.sucursal.findFirst({ where: { esPrincipal: true }, select: { id: true } });
+    const principal = await prisma.sucursal.findFirst({
+      where: { esPrincipal: true },
+      select: { id: true },
+    });
     const config = await prisma.configuracion.findUnique({
       where: { sucursalId: principal?.id ?? 1 },
       select: { mostrarListaPrecios: true },
@@ -20,7 +23,11 @@ async function getPublicCatalogRedirect() {
 
   // Modo "por sucursal": redirige a la primera sucursal que optó in y ya definió su slug.
   const config = await prisma.configuracion.findFirst({
-    where: { mostrarListaPrecios: true, mostrarEnTiendaOnline: true, tiendaSlug: { not: null } },
+    where: {
+      mostrarListaPrecios: true,
+      mostrarEnTiendaOnline: true,
+      tiendaSlug: { not: null },
+    },
     select: { tiendaSlug: true },
     orderBy: { sucursalId: "asc" },
   });

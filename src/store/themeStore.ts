@@ -6,7 +6,7 @@ interface ThemeState {
   previewTheme: StoreThemeConfig | null;
   isSaving: boolean;
   error: string | null;
-  
+
   // Actions
   initTheme: (theme: StoreThemeConfig) => void;
   updatePreview: (partialTheme: Partial<StoreThemeConfig>) => void;
@@ -30,9 +30,9 @@ export const useThemeStore = create<ThemeState>((set, get) => ({
 
   updatePreview: (partialTheme) => {
     set((state) => ({
-      previewTheme: state.previewTheme 
-        ? { ...state.previewTheme, ...partialTheme } 
-        : null
+      previewTheme: state.previewTheme
+        ? { ...state.previewTheme, ...partialTheme }
+        : null,
     }));
   },
 
@@ -63,7 +63,7 @@ export const useThemeStore = create<ThemeState>((set, get) => ({
       }
 
       await response.json();
-      
+
       // Assume the API returns the updated theme or we just use the previewTheme
       set({
         activeTheme: previewTheme,

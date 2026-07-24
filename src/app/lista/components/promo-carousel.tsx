@@ -34,7 +34,8 @@ export function PromoCarousel({ items, className = "" }: PromoCarouselProps) {
             transition={{ delay: i * 0.06 }}
             className="flex-shrink-0 w-[240px] sm:w-[280px] snap-start rounded-2xl p-4 flex items-center gap-3 shadow-sm"
             style={{
-              backgroundColor: promo.backgroundColor || "var(--store-surface,#FFFFFF)",
+              backgroundColor:
+                promo.backgroundColor || "var(--store-surface,#FFFFFF)",
               color: promo.textColor || "var(--store-text,#0F172A)",
             }}
           >
@@ -48,7 +49,9 @@ export function PromoCarousel({ items, className = "" }: PromoCarouselProps) {
 
             {/* Texto */}
             <div className="min-w-0 flex-1">
-              <p className="font-bold text-sm leading-tight truncate">{promo.title}</p>
+              <p className="font-bold text-sm leading-tight truncate">
+                {promo.title}
+              </p>
               {promo.description && (
                 <p className="text-xs mt-0.5 opacity-75 leading-snug line-clamp-2">
                   {promo.description}

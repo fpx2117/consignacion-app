@@ -80,8 +80,8 @@ export default function VentaDetailPage() {
   const [brokenItems, setBrokenItems] = React.useState<number[]>([]);
 
   const toggleBrokenItem = (id: number) => {
-    setBrokenItems(prev =>
-      prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
+    setBrokenItems((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
     );
   };
 
@@ -91,7 +91,9 @@ export default function VentaDetailPage() {
       const res = await apiService.getVenta(id);
       setVenta(res);
     } catch (e: unknown) {
-      toast.error(e instanceof Error ? e.message : "Error cargando datos de la venta");
+      toast.error(
+        e instanceof Error ? e.message : "Error cargando datos de la venta",
+      );
     } finally {
       setLoading(false);
     }
@@ -108,7 +110,7 @@ export default function VentaDetailPage() {
     // 1. Redirigimos a nuestra página de carga intermedia
     // Al ser inmediato, el navegador NO lo bloquea.
     const url = `/ticket-loading/${venta.id}`;
-    window.open(url, '_blank');
+    window.open(url, "_blank");
   };
 
   // --- Anular Venta ---
@@ -135,22 +137,27 @@ export default function VentaDetailPage() {
   // --- Cálculos ---
   const detalles = venta?.detalles ?? [];
   const totalItems = detalles.reduce((acc, d) => acc + d.units, 0);
-  const metodoPago = (venta as Venta & { metodoPago?: string })?.metodoPago ?? "Efectivo";
+  const metodoPago =
+    (venta as Venta & { metodoPago?: string })?.metodoPago ?? "Efectivo";
   const clienteNombre = venta?.cliente?.nombre || "Consumidor Final";
-  const descuentoGlobal = Number((venta as Venta & { descuentoGlobal?: number })?.descuentoGlobal ?? 0);
+  const descuentoGlobal = Number(
+    (venta as Venta & { descuentoGlobal?: number })?.descuentoGlobal ?? 0,
+  );
   const isAnulada = venta?.anulada === true;
 
   // Pérdida por rotura: suma de precioCosto * units de los ítems marcados como rotura
   const perdidaRotura = detalles
-    .filter(d => (d as { esRotura?: boolean }).esRotura)
-    .reduce((acc, d) => acc + Number(d.producto?.precioCosto ?? 0) * d.units, 0);
+    .filter((d) => (d as { esRotura?: boolean }).esRotura)
+    .reduce(
+      (acc, d) => acc + Number(d.producto?.precioCosto ?? 0) * d.units,
+      0,
+    );
 
   // Número visual de ticket (001)
-  const ticketNumber = String(venta?.numeroVenta || id).padStart(3, '0');
+  const ticketNumber = String(venta?.numeroVenta || id).padStart(3, "0");
 
   return (
     <div className="max-w-6xl mx-auto space-y-8 pb-10 px-4 sm:px-0 animate-in fade-in duration-500">
-
       {/* Action Bar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <Button
@@ -163,14 +170,17 @@ export default function VentaDetailPage() {
         </Button>
 
         <div className="flex flex-wrap gap-2 items-center">
-
           {/* BOTÓN ANULAR (solo si no está anulada) */}
           {!isAnulada && (
             <Button
               variant="outline"
               size="sm"
               disabled={loading || !venta}
-              onClick={() => { setVoidMotivo(""); setBrokenItems([]); setVoidOpen(true); }}
+              onClick={() => {
+                setVoidMotivo("");
+                setBrokenItems([]);
+                setVoidOpen(true);
+              }}
               className="border-[color:var(--status-danger)] text-[color:var(--status-danger)] bg-[color:var(--status-danger)] hover:bg-[color:var(--status-danger)] hover:text-[color:var(--status-danger)] dark:border-[color:var(--status-danger)]/20 dark:bg-[color:var(--status-danger)]/10 dark:text-[color:var(--status-danger)]"
             >
               <Trash2 className="h-4 w-4 mr-2" />
@@ -186,7 +196,9 @@ export default function VentaDetailPage() {
             size="sm"
             onClick={handleDownloadPdf}
             disabled={loading || isAnulada}
-            title={isAnulada ? "No se puede imprimir una venta anulada" : undefined}
+            title={
+              isAnulada ? "No se puede imprimir una venta anulada" : undefined
+            }
           >
             <Printer className="h-4 w-4 mr-2 text-[color:var(--primary)]" />
             Imprimir Ticket
@@ -202,7 +214,8 @@ export default function VentaDetailPage() {
               <AlertTriangle className="h-5 w-5" /> Anular Venta #{ticketNumber}
             </DialogTitle>
             <DialogDescription>
-              Seleccioná el motivo de anulación. El stock se devolverá automáticamente, excepto los ítems marcados como rotura.
+              Seleccioná el motivo de anulación. El stock se devolverá
+              automáticamente, excepto los ítems marcados como rotura.
             </DialogDescription>
           </DialogHeader>
 
@@ -216,8 +229,12 @@ export default function VentaDetailPage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="Error de carga">Error de carga</SelectItem>
-                  <SelectItem value="Devolución del cliente">Devolución del cliente</SelectItem>
-                  <SelectItem value="Mal estado / Rotura">Mal estado / Rotura</SelectItem>
+                  <SelectItem value="Devolución del cliente">
+                    Devolución del cliente
+                  </SelectItem>
+                  <SelectItem value="Mal estado / Rotura">
+                    Mal estado / Rotura
+                  </SelectItem>
                   <SelectItem value="Otro">Otro</SelectItem>
                 </SelectContent>
               </Select>
@@ -242,11 +259,17 @@ export default function VentaDetailPage() {
                         htmlFor={`broken-${d.id}`}
                         className="flex-1 text-sm cursor-pointer"
                       >
-                        <span className="font-medium">{d.producto?.nombre ?? `Producto #${d.productoId}`}</span>
-                        <span className="text-muted-foreground ml-2">× {d.units}</span>
+                        <span className="font-medium">
+                          {d.producto?.nombre ?? `Producto #${d.productoId}`}
+                        </span>
+                        <span className="text-muted-foreground ml-2">
+                          × {d.units}
+                        </span>
                       </label>
                       {brokenItems.includes(d.id) && (
-                        <Badge variant="destructive" className="text-[10px]">ROTO</Badge>
+                        <Badge variant="destructive" className="text-[10px]">
+                          ROTO
+                        </Badge>
                       )}
                     </div>
                   ))}
@@ -256,8 +279,13 @@ export default function VentaDetailPage() {
                     Pérdida estimada por rotura:{" "}
                     {formatCurrency(
                       detalles
-                        .filter(d => brokenItems.includes(d.id))
-                        .reduce((acc, d) => acc + Number(d.producto?.precioCosto ?? 0) * d.units, 0)
+                        .filter((d) => brokenItems.includes(d.id))
+                        .reduce(
+                          (acc, d) =>
+                            acc +
+                            Number(d.producto?.precioCosto ?? 0) * d.units,
+                          0,
+                        ),
                     )}
                   </p>
                 )}
@@ -266,7 +294,11 @@ export default function VentaDetailPage() {
           </div>
 
           <DialogFooter>
-            <Button variant="ghost" onClick={() => setVoidOpen(false)} disabled={isDeleting}>
+            <Button
+              variant="ghost"
+              onClick={() => setVoidOpen(false)}
+              disabled={isDeleting}
+            >
               Cancelar
             </Button>
             <Button
@@ -281,37 +313,59 @@ export default function VentaDetailPage() {
       </Dialog>
 
       {/* Header Profile (Card Principal) */}
-      <div className={cn(
-        "flex flex-col md:flex-row md:items-center justify-between gap-6 border rounded-2xl p-6 shadow-sm relative overflow-hidden",
-        isAnulada ? "bg-[color:var(--status-danger)]/50 dark:bg-[color:var(--status-danger)]/20 border-[color:var(--status-danger)] dark:border-[color:var(--status-danger)]/40" : "bg-card"
-      )}>
+      <div
+        className={cn(
+          "flex flex-col md:flex-row md:items-center justify-between gap-6 border rounded-2xl p-6 shadow-sm relative overflow-hidden",
+          isAnulada
+            ? "bg-[color:var(--status-danger)]/50 dark:bg-[color:var(--status-danger)]/20 border-[color:var(--status-danger)] dark:border-[color:var(--status-danger)]/40"
+            : "bg-card",
+        )}
+      >
         {/* Decoración de fondo */}
-        <div className={cn(
-          "absolute top-0 right-0 w-32 h-32 rounded-full blur-3xl -mr-10 -mt-10",
-          isAnulada ? "bg-[color:var(--status-danger)]/10" : "bg-[color:var(--primary)]/5"
-        )} />
+        <div
+          className={cn(
+            "absolute top-0 right-0 w-32 h-32 rounded-full blur-3xl -mr-10 -mt-10",
+            isAnulada
+              ? "bg-[color:var(--status-danger)]/10"
+              : "bg-[color:var(--primary)]/5",
+          )}
+        />
 
         <div className="flex items-center gap-4 relative z-10">
-          <div className={cn(
-            "p-4 rounded-2xl hidden sm:block font-bold",
-            isAnulada ? "bg-[color:var(--status-danger)]/10" : "bg-[color:var(--primary)]/10"
-          )}>
-            {isAnulada
-              ? <Ban className="h-8 w-8 text-[color:var(--status-danger)]" />
-              : <ShoppingCart className="h-8 w-8 text-[color:var(--primary)] dark:text-[color:var(--primary)]" />
-            }
+          <div
+            className={cn(
+              "p-4 rounded-2xl hidden sm:block font-bold",
+              isAnulada
+                ? "bg-[color:var(--status-danger)]/10"
+                : "bg-[color:var(--primary)]/10",
+            )}
+          >
+            {isAnulada ? (
+              <Ban className="h-8 w-8 text-[color:var(--status-danger)]" />
+            ) : (
+              <ShoppingCart className="h-8 w-8 text-[color:var(--primary)] dark:text-[color:var(--primary)]" />
+            )}
           </div>
           <div>
             <div className="flex items-center gap-2 mb-1 flex-wrap">
-              <Badge variant="outline" className="font-mono text-[10px] border-[color:var(--primary)]/30 text-[color:var(--primary)] dark:text-[color:var(--primary)]">
+              <Badge
+                variant="outline"
+                className="font-mono text-[10px] border-[color:var(--primary)]/30 text-[color:var(--primary)] dark:text-[color:var(--primary)]"
+              >
                 TICKET #{ticketNumber}
               </Badge>
               {isAnulada ? (
-                <Badge variant="destructive" className="px-3 py-0.5 font-bold uppercase text-[9px] tracking-tighter rounded-full">
+                <Badge
+                  variant="destructive"
+                  className="px-3 py-0.5 font-bold uppercase text-[9px] tracking-tighter rounded-full"
+                >
                   ✕ ANULADA
                 </Badge>
               ) : (
-                <Badge variant="outline" className="px-3 py-0.5 font-bold uppercase text-[9px] tracking-tighter rounded-full border-[color:var(--status-success-strong)]/50 text-[color:var(--status-success-strong)] bg-[color:var(--status-success-strong)]/10">
+                <Badge
+                  variant="outline"
+                  className="px-3 py-0.5 font-bold uppercase text-[9px] tracking-tighter rounded-full border-[color:var(--status-success-strong)]/50 text-[color:var(--status-success-strong)] bg-[color:var(--status-success-strong)]/10"
+                >
                   ● Confirmada
                 </Badge>
               )}
@@ -337,17 +391,18 @@ export default function VentaDetailPage() {
                 <AlertTriangle className="h-3 w-3" />
                 Motivo: {venta.motivoAnulacion}
                 {venta.fechaAnulacion && (
-                    <span className="text-muted-foreground font-normal ml-1">
-                     — {formatWithOptions(venta.fechaAnulacion, {
-                        day: "2-digit",
-                        month: "short",
-                        year: "numeric",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                        hour12: false,
-                      })}
-                   </span>
-                 )}
+                  <span className="text-muted-foreground font-normal ml-1">
+                    —{" "}
+                    {formatWithOptions(venta.fechaAnulacion, {
+                      day: "2-digit",
+                      month: "short",
+                      year: "numeric",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                      hour12: false,
+                    })}
+                  </span>
+                )}
               </p>
             )}
             {isAnulada && perdidaRotura > 0 && (
@@ -362,11 +417,16 @@ export default function VentaDetailPage() {
         {/* Total Gigante en el Header */}
         <div className="text-right relative z-10 flex flex-col items-end">
           {descuentoGlobal > 0 && !loading && (
-            <Badge variant="outline" className="mb-2 bg-[color:var(--status-success-strong)]/15 text-[color:var(--status-success-strong)] border-[color:var(--status-success-strong)]/40 font-bold">
+            <Badge
+              variant="outline"
+              className="mb-2 bg-[color:var(--status-success-strong)]/15 text-[color:var(--status-success-strong)] border-[color:var(--status-success-strong)]/40 font-bold"
+            >
               Descuento General: -{formatCurrency(descuentoGlobal)}
             </Badge>
           )}
-          <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest mb-1">Total Abonado</p>
+          <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest mb-1">
+            Total Abonado
+          </p>
 
           <div className="text-4xl md:text-5xl font-black tracking-tighter text-foreground">
             {loading ? (
@@ -387,7 +447,9 @@ export default function VentaDetailPage() {
           loading={loading}
         />
         <KpiCard
-          icon={<CreditCard className="text-[color:var(--status-success-strong)]" />}
+          icon={
+            <CreditCard className="text-[color:var(--status-success-strong)]" />
+          }
           title="Método de Pago"
           value={metodoPago}
           loading={loading}
@@ -399,19 +461,21 @@ export default function VentaDetailPage() {
           value={venta?.cliente ? "Registrado" : "Casual"}
           loading={loading}
         />
-      </div >
+      </div>
 
       {/* Main Content Grid */}
-      < div className="grid grid-cols-1 lg:grid-cols-12 gap-8" >
-
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
         {/* Columna Izquierda (8): Detalle de Venta */}
-        < div className="lg:col-span-8 space-y-4" >
+        <div className="lg:col-span-8 space-y-4">
           <Card className="shadow-lg border-border bg-card/40 backdrop-blur">
             <CardHeader>
               <CardTitle className="text-xl font-bold flex items-center gap-2 text-foreground">
-                <FileText className="h-5 w-5 text-[color:var(--primary)]" /> Items Vendidos
+                <FileText className="h-5 w-5 text-[color:var(--primary)]" />{" "}
+                Items Vendidos
               </CardTitle>
-              <CardDescription className="text-muted-foreground">Productos incluidos en el ticket.</CardDescription>
+              <CardDescription className="text-muted-foreground">
+                Productos incluidos en el ticket.
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               {loading ? (
@@ -425,19 +489,22 @@ export default function VentaDetailPage() {
               )}
             </CardContent>
           </Card>
-        </div >
+        </div>
 
         {/* Columna Derecha (4): Acciones */}
-        < div className="lg:col-span-4 space-y-6" >
+        <div className="lg:col-span-4 space-y-6">
           {isAnulada ? (
             <Card className="border-[color:var(--status-danger)] dark:border-[color:var(--status-danger)]/40 bg-[color:var(--status-danger)]/50 dark:bg-[color:var(--status-danger)]/20 shadow-none">
               <CardContent className="p-5 flex items-start gap-3">
                 <Ban className="h-5 w-5 text-[color:var(--status-danger)] mt-0.5 shrink-0" />
                 <div className="text-sm space-y-1">
-                  <p className="font-bold text-[color:var(--status-danger)] dark:text-[color:var(--status-danger)]">Venta Anulada</p>
+                  <p className="font-bold text-[color:var(--status-danger)] dark:text-[color:var(--status-danger)]">
+                    Venta Anulada
+                  </p>
                   <p className="text-muted-foreground text-xs">
-                    El stock fue devuelto al inventario para los ítems no dañados.
-                    Los ítems marcados como rotura no recuperaron stock.
+                    El stock fue devuelto al inventario para los ítems no
+                    dañados. Los ítems marcados como rotura no recuperaron
+                    stock.
                   </p>
                   {perdidaRotura > 0 && (
                     <p className="text-xs text-[color:var(--status-danger)] font-semibold pt-1">
@@ -452,9 +519,12 @@ export default function VentaDetailPage() {
               <Card className="shadow-xl border-[color:var(--primary)]/20 bg-[color:var(--primary)]/5 dark:bg-[color:var(--primary)]/10 overflow-hidden">
                 <CardHeader className="pb-3">
                   <CardTitle className="text-lg font-bold flex items-center gap-2">
-                    <Share2 className="h-5 w-5 text-[color:var(--primary)]" /> Comprobante
+                    <Share2 className="h-5 w-5 text-[color:var(--primary)]" />{" "}
+                    Comprobante
                   </CardTitle>
-                  <CardDescription>Opciones del documento digital.</CardDescription>
+                  <CardDescription>
+                    Opciones del documento digital.
+                  </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-3">
                   <Button
@@ -471,7 +541,10 @@ export default function VentaDetailPage() {
                     onClick={() => {
                       const phone = venta?.cliente?.telefono || "";
                       const name = venta?.cliente?.nombre || "Cliente";
-                      window.open(`/ticket-loading/${venta?.id}?mode=whatsapp&phone=${encodeURIComponent(phone)}&name=${encodeURIComponent(name)}`, '_blank');
+                      window.open(
+                        `/ticket-loading/${venta?.id}?mode=whatsapp&phone=${encodeURIComponent(phone)}&name=${encodeURIComponent(name)}`,
+                        "_blank",
+                      );
                     }}
                     variant="outline"
                     className="w-full justify-start bg-[color:var(--status-success-strong)] text-[color:var(--status-success-strong)] border-[color:var(--status-success-strong)] hover:bg-[color:var(--status-success-strong)] dark:bg-[color:var(--status-success-strong)]/10 dark:text-[color:var(--status-success-strong)] dark:border-[color:var(--status-success-strong)]/20 shadow-sm h-12"
@@ -487,22 +560,33 @@ export default function VentaDetailPage() {
                 <CardContent className="p-4 flex items-start gap-3">
                   <CheckCircle2 className="h-5 w-5 text-[color:var(--status-success-strong)] mt-0.5" />
                   <div className="text-xs text-muted-foreground space-y-1">
-                    <p className="font-medium text-foreground">Stock Actualizado</p>
-                    <p>Las unidades se descontaron automáticamente del inventario al momento de la venta.</p>
+                    <p className="font-medium text-foreground">
+                      Stock Actualizado
+                    </p>
+                    <p>
+                      Las unidades se descontaron automáticamente del inventario
+                      al momento de la venta.
+                    </p>
                   </div>
                 </CardContent>
               </Card>
             </>
           )}
-        </div >
-      </div >
-    </div >
+        </div>
+      </div>
+    </div>
   );
 }
 
 // --- Subcomponentes ---
 
-function KpiCard({ title, value, loading, icon, textTransform }: {
+function KpiCard({
+  title,
+  value,
+  loading,
+  icon,
+  textTransform,
+}: {
   title: string;
   value: string;
   loading: boolean;
@@ -512,7 +596,9 @@ function KpiCard({ title, value, loading, icon, textTransform }: {
   return (
     <Card className="shadow-md border-border bg-card transition-all hover:translate-y-[-2px]">
       <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0 text-muted-foreground">
-        <CardTitle className="text-[10px] font-black uppercase tracking-[0.1em]">{title}</CardTitle>
+        <CardTitle className="text-[10px] font-black uppercase tracking-[0.1em]">
+          {title}
+        </CardTitle>
         <div className="h-8 w-8 rounded-full bg-background border border-border flex items-center justify-center shadow-inner">
           {icon}
         </div>
@@ -521,7 +607,12 @@ function KpiCard({ title, value, loading, icon, textTransform }: {
         {loading ? (
           <Skeleton className="h-8 w-24" />
         ) : (
-          <div className={cn("text-2xl font-black tracking-tighter text-foreground", textTransform)}>
+          <div
+            className={cn(
+              "text-2xl font-black tracking-tighter text-foreground",
+              textTransform,
+            )}
+          >
             {value}
           </div>
         )}
@@ -538,31 +629,42 @@ function ProductRowVenta({ d }: { d: VentaDetalle }) {
   const esRotura = d.esRotura === true;
 
   return (
-    <div className={cn(
-      "group rounded-xl border p-4 transition-all",
-      esRotura
-        ? "border-[color:var(--status-danger)] bg-[color:var(--status-danger)]/50 dark:bg-[color:var(--status-danger)]/20 dark:border-[color:var(--status-danger)]/40"
-        : "border-border bg-background hover:bg-[color:var(--primary)]/50 hover:border-[color:var(--primary)] dark:hover:bg-[color:var(--primary)]/10 dark:hover:border-[color:var(--primary)]"
-    )}>
+    <div
+      className={cn(
+        "group rounded-xl border p-4 transition-all",
+        esRotura
+          ? "border-[color:var(--status-danger)] bg-[color:var(--status-danger)]/50 dark:bg-[color:var(--status-danger)]/20 dark:border-[color:var(--status-danger)]/40"
+          : "border-border bg-background hover:bg-[color:var(--primary)]/50 hover:border-[color:var(--primary)] dark:hover:bg-[color:var(--primary)]/10 dark:hover:border-[color:var(--primary)]",
+      )}
+    >
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-
         {/* Info Producto */}
         <div className="space-y-1">
           <div className="flex items-center gap-2 flex-wrap">
-            <p className={cn(
-              "font-bold text-lg tracking-tight italic",
-              esRotura ? "line-through text-[color:var(--status-danger)]" : "text-foreground group-hover:text-[color:var(--primary)] transition-colors"
-            )}>
+            <p
+              className={cn(
+                "font-bold text-lg tracking-tight italic",
+                esRotura
+                  ? "line-through text-[color:var(--status-danger)]"
+                  : "text-foreground group-hover:text-[color:var(--primary)] transition-colors",
+              )}
+            >
               {d.producto?.nombre ?? `Producto #${d.productoId}`}
             </p>
             {esRotura && (
-              <Badge variant="destructive" className="text-[10px] font-bold shrink-0">
+              <Badge
+                variant="destructive"
+                className="text-[10px] font-bold shrink-0"
+              >
                 <Flame className="h-3 w-3 mr-1" /> ROTO
               </Badge>
             )}
           </div>
           <div className="flex items-center gap-3 flex-wrap mt-2">
-            <Badge variant="secondary" className="text-[10px] font-mono bg-muted border-border text-foreground/80">
+            <Badge
+              variant="secondary"
+              className="text-[10px] font-mono bg-muted border-border text-foreground/80"
+            >
               {formatCurrency(precio)} ud.
             </Badge>
 
@@ -572,7 +674,7 @@ function ProductRowVenta({ d }: { d: VentaDetalle }) {
                 "text-[10px] uppercase font-bold tracking-tight",
                 descuento > 0
                   ? "border-[color:var(--status-success-strong)] text-[color:var(--status-success-strong)] bg-[color:var(--status-success-strong)] dark:bg-[color:var(--status-success-strong)]/30 dark:border-[color:var(--status-success-strong)]/50 dark:text-[color:var(--status-success-strong)]"
-                  : "border-muted-foreground/20 text-muted-foreground bg-muted/30"
+                  : "border-muted-foreground/20 text-muted-foreground bg-muted/30",
               )}
             >
               {descuento > 0
@@ -585,17 +687,42 @@ function ProductRowVenta({ d }: { d: VentaDetalle }) {
         {/* Info Cantidad y Total */}
         <div className="text-right flex items-center gap-6 sm:gap-10">
           <div className="flex flex-col items-end">
-            <span className="text-[9px] font-black text-muted-foreground uppercase mb-0.5">Cantidad</span>
-            <span className={cn("text-xl font-black", esRotura ? "text-[color:var(--status-danger)]" : "text-foreground")}>{d.units}</span>
+            <span className="text-[9px] font-black text-muted-foreground uppercase mb-0.5">
+              Cantidad
+            </span>
+            <span
+              className={cn(
+                "text-xl font-black",
+                esRotura
+                  ? "text-[color:var(--status-danger)]"
+                  : "text-foreground",
+              )}
+            >
+              {d.units}
+            </span>
           </div>
 
           <div className="h-8 w-px bg-border" />
 
           <div className="flex flex-col items-end min-w-[80px]">
-            <span className={cn("text-[9px] font-black uppercase mb-0.5", esRotura ? "text-[color:var(--status-danger)]" : "text-[color:var(--primary)]")}>
+            <span
+              className={cn(
+                "text-[9px] font-black uppercase mb-0.5",
+                esRotura
+                  ? "text-[color:var(--status-danger)]"
+                  : "text-[color:var(--primary)]",
+              )}
+            >
               {esRotura ? "Perdido" : "Subtotal"}
             </span>
-            <span className={cn("text-xl font-black", esRotura ? "line-through text-[color:var(--status-danger)]" : "text-foreground")}>
+            <span
+              className={cn(
+                "text-xl font-black",
+                esRotura
+                  ? "line-through text-[color:var(--status-danger)]"
+                  : "text-foreground",
+              )}
+            >
               {formatCurrency(subtotal)}
             </span>
           </div>

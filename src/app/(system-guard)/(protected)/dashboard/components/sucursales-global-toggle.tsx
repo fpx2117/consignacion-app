@@ -17,7 +17,9 @@ interface SucursalesGlobalToggleProps {
   onChanged: () => void;
 }
 
-export function SucursalesGlobalToggle({ onChanged }: SucursalesGlobalToggleProps) {
+export function SucursalesGlobalToggle({
+  onChanged,
+}: SucursalesGlobalToggleProps) {
   const [open, setOpen] = React.useState(false);
   const [loading, setLoading] = React.useState(false);
   const [sucursales, setSucursales] = React.useState<SucursalResumen[]>([]);
@@ -29,7 +31,9 @@ export function SucursalesGlobalToggle({ onChanged }: SucursalesGlobalToggleProp
       const data = await apiService.getSucursales();
       setSucursales(data.filter((s) => s.activa));
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Error al cargar sucursales");
+      toast.error(
+        err instanceof Error ? err.message : "Error al cargar sucursales",
+      );
     } finally {
       setLoading(false);
     }
@@ -43,23 +47,33 @@ export function SucursalesGlobalToggle({ onChanged }: SucursalesGlobalToggleProp
     setSavingId(sucursal.id);
     // Optimista
     setSucursales((prev) =>
-      prev.map((s) => (s.id === sucursal.id ? { ...s, incluidaEnDashboardGlobal: next } : s))
+      prev.map((s) =>
+        s.id === sucursal.id ? { ...s, incluidaEnDashboardGlobal: next } : s,
+      ),
     );
     try {
-      await apiService.updateSucursal(sucursal.id, { incluidaEnDashboardGlobal: next });
+      await apiService.updateSucursal(sucursal.id, {
+        incluidaEnDashboardGlobal: next,
+      });
       onChanged();
     } catch (err) {
       // Revertir en caso de error
       setSucursales((prev) =>
-        prev.map((s) => (s.id === sucursal.id ? { ...s, incluidaEnDashboardGlobal: !next } : s))
+        prev.map((s) =>
+          s.id === sucursal.id ? { ...s, incluidaEnDashboardGlobal: !next } : s,
+        ),
       );
-      toast.error(err instanceof Error ? err.message : "Error al actualizar la sucursal");
+      toast.error(
+        err instanceof Error ? err.message : "Error al actualizar la sucursal",
+      );
     } finally {
       setSavingId(null);
     }
   };
 
-  const excludedCount = sucursales.filter((s) => !s.incluidaEnDashboardGlobal).length;
+  const excludedCount = sucursales.filter(
+    (s) => !s.incluidaEnDashboardGlobal,
+  ).length;
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -80,11 +94,18 @@ export function SucursalesGlobalToggle({ onChanged }: SucursalesGlobalToggleProp
           <span>Sucursales en Global</span>
         </button>
       </PopoverTrigger>
-      <PopoverContent align="end" className="w-80 rounded-2xl p-3 border-border/60 shadow-xl">
+      <PopoverContent
+        align="end"
+        className="w-80 rounded-2xl p-3 border-border/60 shadow-xl"
+      >
         <div className="mb-2 space-y-0.5 px-1">
-          <p className="text-xs font-bold text-foreground">Sucursales en la Vista Global</p>
+          <p className="text-xs font-bold text-foreground">
+            Sucursales en la Vista Global
+          </p>
           <p className="text-[11px] text-muted-foreground leading-relaxed">
-            Desactivá una sucursal para que no sume en los KPIs, tendencia y top productos de &quot;Todas las Sucursales&quot;. Su vista individual no cambia.
+            Desactivá una sucursal para que no sume en los KPIs, tendencia y top
+            productos de &quot;Todas las Sucursales&quot;. Su vista individual
+            no cambia.
           </p>
         </div>
 
@@ -99,14 +120,18 @@ export function SucursalesGlobalToggle({ onChanged }: SucursalesGlobalToggleProp
                 key={s.id}
                 className={cn(
                   "flex items-center justify-between gap-2 rounded-xl px-2.5 py-2 transition-colors",
-                  s.incluidaEnDashboardGlobal ? "bg-transparent" : "bg-muted/40"
+                  s.incluidaEnDashboardGlobal
+                    ? "bg-transparent"
+                    : "bg-muted/40",
                 )}
               >
                 <span className="truncate text-xs font-medium text-foreground/90">
                   {s.nombre}
                 </span>
                 <div className="flex items-center gap-2">
-                  {savingId === s.id && <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />}
+                  {savingId === s.id && (
+                    <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
+                  )}
                   <Switch
                     size="sm"
                     checked={s.incluidaEnDashboardGlobal}

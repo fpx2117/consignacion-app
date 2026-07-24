@@ -8,15 +8,58 @@ const inter = Inter({
   display: "swap",
 });
 
-const THEME_COLORS: Record<string, { primary: string; secondary: string; bg: string; text: string }> = {
-  modern:   { primary: "#0891b2", secondary: "#22d3ee", bg: "#f0f9ff", text: "#164e63" },
-  nature:   { primary: "#166534", secondary: "#22c55e", bg: "#f0fdf4", text: "#14532d" },
-  ocean:    { primary: "#1e40af", secondary: "#06b6d4", bg: "#f0f9ff", text: "#1e3a5f" },
-  sunset:   { primary: "#c2410c", secondary: "#f59e0b", bg: "#fffbeb", text: "#7c2d12" },
-  luxury:   { primary: "#1e293b", secondary: "#c9a84c", bg: "#fafaf9", text: "#1c1917" },
-  minimal:  { primary: "#000000", secondary: "#6b7280", bg: "#ffffff", text: "#000000" },
-  barbie:   { primary: "#db2777", secondary: "#f472b6", bg: "#fdf2f8", text: "#831843" },
-  tech:     { primary: "#6366f1", secondary: "#818cf8", bg: "#0f172a", text: "#f1f5f9" },
+const THEME_COLORS: Record<
+  string,
+  { primary: string; secondary: string; bg: string; text: string }
+> = {
+  modern: {
+    primary: "#0891b2",
+    secondary: "#22d3ee",
+    bg: "#f0f9ff",
+    text: "#164e63",
+  },
+  nature: {
+    primary: "#166534",
+    secondary: "#22c55e",
+    bg: "#f0fdf4",
+    text: "#14532d",
+  },
+  ocean: {
+    primary: "#1e40af",
+    secondary: "#06b6d4",
+    bg: "#f0f9ff",
+    text: "#1e3a5f",
+  },
+  sunset: {
+    primary: "#c2410c",
+    secondary: "#f59e0b",
+    bg: "#fffbeb",
+    text: "#7c2d12",
+  },
+  luxury: {
+    primary: "#1e293b",
+    secondary: "#c9a84c",
+    bg: "#fafaf9",
+    text: "#1c1917",
+  },
+  minimal: {
+    primary: "#000000",
+    secondary: "#6b7280",
+    bg: "#ffffff",
+    text: "#000000",
+  },
+  barbie: {
+    primary: "#db2777",
+    secondary: "#f472b6",
+    bg: "#fdf2f8",
+    text: "#831843",
+  },
+  tech: {
+    primary: "#6366f1",
+    secondary: "#818cf8",
+    bg: "#0f172a",
+    text: "#f1f5f9",
+  },
 };
 
 function hexToRgb(hex: string) {
@@ -89,10 +132,22 @@ export function renderCatalogPage(
   return (
     <>
       {/* Preload de imágenes del comercio para carga instantánea */}
-      <link rel="preload" as="image" href={`/api/public/branding-media?type=banner&sucursalId=${sucursalId}`} />
-      <link rel="preload" as="image" href={`/api/public/branding-media?type=logo&sucursalId=${sucursalId}`} />
+      <link
+        rel="preload"
+        as="image"
+        href={`/api/public/branding-media?type=banner&sucursalId=${sucursalId}`}
+      />
+      <link
+        rel="preload"
+        as="image"
+        href={`/api/public/branding-media?type=logo&sucursalId=${sucursalId}`}
+      />
       <style dangerouslySetInnerHTML={{ __html: cssVars }} />
-      <div data-theme={themeId} data-store-config="true" className={inter.className}>
+      <div
+        data-theme={themeId}
+        data-store-config="true"
+        className={inter.className}
+      >
         <CatalogClient
           initialData={null}
           initialError={null}

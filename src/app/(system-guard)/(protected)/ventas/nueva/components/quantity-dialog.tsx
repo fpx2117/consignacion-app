@@ -103,21 +103,28 @@ export function QuantityDialog({
 
           {/* Atajos rápidos */}
           <div className="flex gap-1.5">
-            {[1, 2, 5, 10].filter((n) => n <= maxStock).map((n) => (
-              <button
-                key={n}
-                type="button"
-                onClick={() => setValue(String(n))}
-                className="flex-1 rounded-lg border border-border/60 bg-muted/50 py-1.5 text-xs font-bold text-muted-foreground hover:bg-primary/10 hover:text-primary hover:border-primary/30 transition-colors"
-              >
-                {n}
-              </button>
-            ))}
+            {[1, 2, 5, 10]
+              .filter((n) => n <= maxStock)
+              .map((n) => (
+                <button
+                  key={n}
+                  type="button"
+                  onClick={() => setValue(String(n))}
+                  className="flex-1 rounded-lg border border-border/60 bg-muted/50 py-1.5 text-xs font-bold text-muted-foreground hover:bg-primary/10 hover:text-primary hover:border-primary/30 transition-colors"
+                >
+                  {n}
+                </button>
+              ))}
           </div>
         </div>
 
         <DialogFooter className="gap-2 sm:gap-2">
-          <Button variant="outline" size="sm" onClick={onClose} className="flex-1">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onClose}
+            className="flex-1"
+          >
             Cancelar
           </Button>
           <Button

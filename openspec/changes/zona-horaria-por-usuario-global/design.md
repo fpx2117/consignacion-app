@@ -23,6 +23,7 @@ La implementacion se apoya en cuatro lineamientos:
 **Eleccion**: agregar `zonaHoraria String?` nullable al modelo `Usuario` en `prisma/schema.prisma`.
 
 **Alternativas consideradas**:
+
 - Guardarla en `Configuracion` y seguir derivando por sucursal.
 - Crear una tabla nueva `UsuarioPreferencia` o `TimezonePreference`.
 - Guardarla en el JWT o en localStorage.
@@ -34,6 +35,7 @@ La implementacion se apoya en cuatro lineamientos:
 **Eleccion**: conservar `Configuracion.zonaHoraria` y `timezoneMigrationDone` como configuracion de sucursal/fallback organizacional.
 
 **Alternativas consideradas**:
+
 - Mover todo a usuario y eliminar el campo de sucursal.
 - Duplicar el valor de sucursal en todos los usuarios.
 
@@ -44,6 +46,7 @@ La implementacion se apoya en cuatro lineamientos:
 **Eleccion**: reconvertir `src/lib/get-configured-tz.ts` en el modulo central del dominio timezone, exportando un resolver rico y wrappers de compatibilidad minima.
 
 **Alternativas consideradas**:
+
 - Crear otro helper paralelo (`getEffectiveTz`) y dejar `getConfiguredTz` intacto.
 - Seguir pasando `sucursalId` a todos lados y que cada caller combine logica propia.
 
@@ -54,6 +57,7 @@ La implementacion se apoya en cuatro lineamientos:
 **Eleccion**: la resolucion server-side consulta primero `Usuario.zonaHoraria`; si no existe, usa `Configuracion.zonaHoraria`; si tampoco existe o es invalida, usa una constante tecnica unica.
 
 **Alternativas consideradas**:
+
 - Priorizar sucursal por encima del usuario.
 - Mezclar con timezone del navegador como cuarto nivel.
 - Fallar la request si falta configuracion.
@@ -65,6 +69,7 @@ La implementacion se apoya en cuatro lineamientos:
 **Eleccion**: en `src/app/ver/remito/[id]/route.ts`, el remito de `Consignacion` intentaria usar usuario del recurso solo si existiera una referencia durable y semantica en el modelo. Como hoy `Consignacion` no persiste `userId`/`usuarioId` ni otra relacion equivalente de autoria, la resolucion queda explicitamente en `sucursal > fallback tecnico`.
 
 **Alternativas consideradas**:
+
 - Inferir el usuario desde `Liquidacion -> Venta -> SesionCaja.usuarioId`.
 - Reutilizar el usuario autenticado que genero el share link del remito.
 - Agregar en este ajuste fino un nuevo campo de autoria a `Consignacion`.
@@ -76,6 +81,7 @@ La implementacion se apoya en cuatro lineamientos:
 **Eleccion**: cuando el contexto venga con vista global, el resolver usa primero el usuario y, si necesita fallback de sucursal, busca la sucursal principal (`Sucursal.esPrincipal = true`) o, en ultima instancia, la primera sucursal activa.
 
 **Alternativas consideradas**:
+
 - Seguir usando `0 ? 1 : sucursalId` como hoy en KPIs/reportes.
 - Ignorar el nivel sucursal en vista global.
 
@@ -86,6 +92,7 @@ La implementacion se apoya en cuatro lineamientos:
 **Eleccion**: el endpoint de preferencia por usuario actualiza solo `Usuario.zonaHoraria`. La correccion historica de timestamps sigue siendo una operacion exclusiva de la configuracion de sucursal en `src/app/api/admin/timezone-migration/route.ts`.
 
 **Alternativas consideradas**:
+
 - Ejecutar la migracion historica cada vez que un usuario cambia su timezone.
 - Mover `timezoneMigrationDone` al usuario.
 
@@ -96,6 +103,7 @@ La implementacion se apoya en cuatro lineamientos:
 **Eleccion**: extender `/api/auth/me` para exponer `zonaHoraria`, `zonaHorariaSucursal` y `zonaHorariaResuelta`, y hacer que `src/hooks/useTimezone.ts` lea esa respuesta en lugar de `/api/settings/general`.
 
 **Alternativas consideradas**:
+
 - Seguir leyendo `/api/settings/general` desde el hook.
 - Resolver siempre desde el navegador con `Intl.DateTimeFormat().resolvedOptions().timeZone`.
 - Pasar `tz` por props manualmente en todas las pantallas.
@@ -152,44 +160,44 @@ PDF route
 
 ## Cambios en Archivos
 
-| Archivo | Accion | Descripcion |
-|---------|--------|-------------|
-| `prisma/schema.prisma` | Modificar | Agregar `Usuario.zonaHoraria String?` y mantener `Configuracion.zonaHoraria` como fallback de sucursal. |
-| `prisma/migrations/*_usuario_zona_horaria_global/migration.sql` | Crear | `ALTER TABLE "Usuario" ADD COLUMN "zonaHoraria" TEXT NULL`. Sin backfill obligatorio. |
-| `src/lib/get-configured-tz.ts` | Modificar | Convertirlo en resolver central con precedencia `user > branch > fallback`, validacion IANA, soporte vista global y metadatos `source`. |
-| `src/lib/utils-date.ts` | Modificar | Mantener funciones puras, pero prohibir defaults distribuidos: el fallback tecnico solo puede venir del resolver central. |
-| `src/lib/utils-format.ts` | Modificar | Aceptar `tz` explicita o consumir helper comun; eliminar hardcodes actuales de Buenos Aires. |
-| `src/lib/reports/template-helpers.ts` | Modificar | Reemplazar default hardcodeado por constante importada desde el resolver y exigir `tz` explicita en templates nuevos. |
-| `src/lib/pedidos-esperados.ts` | Modificar | Resolver timezone efectiva por sucursal/usuario y quitar `toLocaleDateString` hardcodeado. |
-| `src/lib/kpi-logic.ts` | Modificar | Reemplazar atajos `isGlobal ? 1 : sucursalId` por el resolver unico. |
-| `src/app/api/auth/me/route.ts` | Modificar | Exponer timezone personal, timezone de sucursal fallback y timezone resuelta para UI. |
-| `src/app/api/settings/general/route.ts` | Modificar | Limitar semantica a configuracion de sucursal, conservar migracion historica y dejar explicito que ya no define la timezone global del usuario. |
-| `src/app/api/settings/profile/timezone/route.ts` | Crear | GET/PUT para leer/guardar `Usuario.zonaHoraria` del usuario autenticado. |
-| `src/lib/apiService.ts` | Modificar | Agregar metodos `getProfileTimezone()` / `updateProfileTimezone()` y tipar nuevos campos de `/api/auth/me`. |
-| `src/lib/types.ts` | Modificar | Extender `Usuario` y `Configuracion` con campos de timezone necesarios para UI. |
-| `src/hooks/useTimezone.ts` | Modificar | Leer timezone resuelta del usuario autenticado, no de settings general por sucursal. |
-| `src/app/(system-guard)/(protected)/settings/general/page.tsx` | Modificar | Separar visualmente `Mi zona horaria` (usuario) de `Zona horaria de sucursal` (fallback admin). |
-| `src/app/api/settings/pos/cajas/turno/route.ts` | Modificar | Validar horarios y tags de extension/cierre con la timezone resuelta del usuario logueado. |
-| `src/app/api/settings/pos/cajas/cerrar/route.ts` | Modificar | Cerrar caja usando timezone resuelta, no solo la de sucursal. |
-| `src/app/api/ventas/route.ts` | Modificar | Crear ventas con `nowAR(tz)` obtenido del resolver, no de `getConfiguredTz(auth.activeSucursalId)` directo. |
-| `src/app/api/ventas/[id]/route.ts` | Modificar | Anular ventas con `fechaAnulacion` en timezone resuelta y dejar de depender del default de `nowAR()`. |
-| `src/app/api/historial/route.ts` | Modificar | Calcular rangos mensuales con timezone resuelta. |
-| `src/app/api/historial/anios/route.ts` | Modificar | Determinar el año visible via helper en timezone, no con `Date#getFullYear()` directo. |
-| `src/app/api/gastos/route.ts` | Modificar | Crear gastos y recurrencias con timezone resuelta del usuario. |
-| `src/app/api/gastos/[id]/route.ts` | Modificar | Editar gastos con timezone resuelta del usuario. |
-| `src/app/ver/ticket/[id]/route.ts` | Modificar | Resolver timezone efectiva sin asumir solo sucursal; propagarla al template. |
-| `src/app/ver/gasto/[id]/route.ts` | Modificar | Idem comprobante de gasto. |
-| `src/app/ver/remito/[id]/route.ts` | Modificar | Idem remitos. |
-| `src/app/ver/inventario/[id]/pdf/route.ts` | Modificar | Quitar dependencia a sucursal 1 / branch-only resolver. |
-| `src/app/ver/dashboard/[period]/pdf/route.ts` | Modificar | Resolver timezone para vista global sin hardcode de sucursal principal. |
-| `src/app/ver/pos/[period]/pdf/route.ts` | Modificar | Idem POS PDF. |
-| `src/app/ver/consig/[period]/pdf/route.ts` | Modificar | Idem reporte de consignaciones. |
-| `src/app/(system-guard)/(protected)/gastos/components/gastos-list.tsx` | Modificar | Dejar de usar `formatDateTime()` hardcodeado y consumir `useTimezone()`. |
-| `src/app/(system-guard)/(protected)/dashboard/page.tsx` | Modificar | Fechas de vencimiento de KPI con timezone resuelta. |
-| `src/app/(system-guard)/(protected)/clientes/details/history-tabs.tsx` | Modificar | Fechas historicas con hook/helper comun. |
-| `src/app/(system-guard)/(protected)/ventas/[id]/page.tsx` | Modificar | Eliminar helper local `formatDate()` basado en timezone del navegador. |
-| `src/app/(system-guard)/(protected)/consignaciones/[id]/page.tsx` | Modificar | Eliminar formatter local sin timezone explicita. |
-| `src/app/(system-guard)/(protected)/caja/historial/page.tsx` | Modificar | Formatear aperturas/cierres con timezone resuelta. |
+| Archivo                                                                | Accion    | Descripcion                                                                                                                                     |
+| ---------------------------------------------------------------------- | --------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| `prisma/schema.prisma`                                                 | Modificar | Agregar `Usuario.zonaHoraria String?` y mantener `Configuracion.zonaHoraria` como fallback de sucursal.                                         |
+| `prisma/migrations/*_usuario_zona_horaria_global/migration.sql`        | Crear     | `ALTER TABLE "Usuario" ADD COLUMN "zonaHoraria" TEXT NULL`. Sin backfill obligatorio.                                                           |
+| `src/lib/get-configured-tz.ts`                                         | Modificar | Convertirlo en resolver central con precedencia `user > branch > fallback`, validacion IANA, soporte vista global y metadatos `source`.         |
+| `src/lib/utils-date.ts`                                                | Modificar | Mantener funciones puras, pero prohibir defaults distribuidos: el fallback tecnico solo puede venir del resolver central.                       |
+| `src/lib/utils-format.ts`                                              | Modificar | Aceptar `tz` explicita o consumir helper comun; eliminar hardcodes actuales de Buenos Aires.                                                    |
+| `src/lib/reports/template-helpers.ts`                                  | Modificar | Reemplazar default hardcodeado por constante importada desde el resolver y exigir `tz` explicita en templates nuevos.                           |
+| `src/lib/pedidos-esperados.ts`                                         | Modificar | Resolver timezone efectiva por sucursal/usuario y quitar `toLocaleDateString` hardcodeado.                                                      |
+| `src/lib/kpi-logic.ts`                                                 | Modificar | Reemplazar atajos `isGlobal ? 1 : sucursalId` por el resolver unico.                                                                            |
+| `src/app/api/auth/me/route.ts`                                         | Modificar | Exponer timezone personal, timezone de sucursal fallback y timezone resuelta para UI.                                                           |
+| `src/app/api/settings/general/route.ts`                                | Modificar | Limitar semantica a configuracion de sucursal, conservar migracion historica y dejar explicito que ya no define la timezone global del usuario. |
+| `src/app/api/settings/profile/timezone/route.ts`                       | Crear     | GET/PUT para leer/guardar `Usuario.zonaHoraria` del usuario autenticado.                                                                        |
+| `src/lib/apiService.ts`                                                | Modificar | Agregar metodos `getProfileTimezone()` / `updateProfileTimezone()` y tipar nuevos campos de `/api/auth/me`.                                     |
+| `src/lib/types.ts`                                                     | Modificar | Extender `Usuario` y `Configuracion` con campos de timezone necesarios para UI.                                                                 |
+| `src/hooks/useTimezone.ts`                                             | Modificar | Leer timezone resuelta del usuario autenticado, no de settings general por sucursal.                                                            |
+| `src/app/(system-guard)/(protected)/settings/general/page.tsx`         | Modificar | Separar visualmente `Mi zona horaria` (usuario) de `Zona horaria de sucursal` (fallback admin).                                                 |
+| `src/app/api/settings/pos/cajas/turno/route.ts`                        | Modificar | Validar horarios y tags de extension/cierre con la timezone resuelta del usuario logueado.                                                      |
+| `src/app/api/settings/pos/cajas/cerrar/route.ts`                       | Modificar | Cerrar caja usando timezone resuelta, no solo la de sucursal.                                                                                   |
+| `src/app/api/ventas/route.ts`                                          | Modificar | Crear ventas con `nowAR(tz)` obtenido del resolver, no de `getConfiguredTz(auth.activeSucursalId)` directo.                                     |
+| `src/app/api/ventas/[id]/route.ts`                                     | Modificar | Anular ventas con `fechaAnulacion` en timezone resuelta y dejar de depender del default de `nowAR()`.                                           |
+| `src/app/api/historial/route.ts`                                       | Modificar | Calcular rangos mensuales con timezone resuelta.                                                                                                |
+| `src/app/api/historial/anios/route.ts`                                 | Modificar | Determinar el año visible via helper en timezone, no con `Date#getFullYear()` directo.                                                          |
+| `src/app/api/gastos/route.ts`                                          | Modificar | Crear gastos y recurrencias con timezone resuelta del usuario.                                                                                  |
+| `src/app/api/gastos/[id]/route.ts`                                     | Modificar | Editar gastos con timezone resuelta del usuario.                                                                                                |
+| `src/app/ver/ticket/[id]/route.ts`                                     | Modificar | Resolver timezone efectiva sin asumir solo sucursal; propagarla al template.                                                                    |
+| `src/app/ver/gasto/[id]/route.ts`                                      | Modificar | Idem comprobante de gasto.                                                                                                                      |
+| `src/app/ver/remito/[id]/route.ts`                                     | Modificar | Idem remitos.                                                                                                                                   |
+| `src/app/ver/inventario/[id]/pdf/route.ts`                             | Modificar | Quitar dependencia a sucursal 1 / branch-only resolver.                                                                                         |
+| `src/app/ver/dashboard/[period]/pdf/route.ts`                          | Modificar | Resolver timezone para vista global sin hardcode de sucursal principal.                                                                         |
+| `src/app/ver/pos/[period]/pdf/route.ts`                                | Modificar | Idem POS PDF.                                                                                                                                   |
+| `src/app/ver/consig/[period]/pdf/route.ts`                             | Modificar | Idem reporte de consignaciones.                                                                                                                 |
+| `src/app/(system-guard)/(protected)/gastos/components/gastos-list.tsx` | Modificar | Dejar de usar `formatDateTime()` hardcodeado y consumir `useTimezone()`.                                                                        |
+| `src/app/(system-guard)/(protected)/dashboard/page.tsx`                | Modificar | Fechas de vencimiento de KPI con timezone resuelta.                                                                                             |
+| `src/app/(system-guard)/(protected)/clientes/details/history-tabs.tsx` | Modificar | Fechas historicas con hook/helper comun.                                                                                                        |
+| `src/app/(system-guard)/(protected)/ventas/[id]/page.tsx`              | Modificar | Eliminar helper local `formatDate()` basado en timezone del navegador.                                                                          |
+| `src/app/(system-guard)/(protected)/consignaciones/[id]/page.tsx`      | Modificar | Eliminar formatter local sin timezone explicita.                                                                                                |
+| `src/app/(system-guard)/(protected)/caja/historial/page.tsx`           | Modificar | Formatear aperturas/cierres con timezone resuelta.                                                                                              |
 
 ## Interfaces / Contratos
 
@@ -228,8 +236,13 @@ export type ResolvedTimezone = {
   sucursalId: number | null;
 };
 
-export async function resolveTimezone(input: ResolveTimezoneInput): Promise<ResolvedTimezone>;
-export async function resolveTimezoneForAuth(auth: { user: { sub: string }; activeSucursalId: number }): Promise<ResolvedTimezone>;
+export async function resolveTimezone(
+  input: ResolveTimezoneInput,
+): Promise<ResolvedTimezone>;
+export async function resolveTimezoneForAuth(auth: {
+  user: { sub: string };
+  activeSucursalId: number;
+}): Promise<ResolvedTimezone>;
 
 // Wrapper transicional solo para compatibilidad con callers viejos.
 export async function getConfiguredTz(sucursalId: number): Promise<string>;
@@ -264,7 +277,12 @@ type MeResponse = {
     zonaHorariaSucursal: string | null;
     zonaHorariaResuelta: string;
     timezoneSource: "user" | "branch" | "fallback";
-    sucursalesPermitidas: Array<{ id: number; nombre: string; esPrincipal: boolean; activa: boolean }>;
+    sucursalesPermitidas: Array<{
+      id: number;
+      nombre: string;
+      esPrincipal: boolean;
+      activa: boolean;
+    }>;
   };
 };
 ```
@@ -300,21 +318,21 @@ Si alguno de esos modulos queda afuera, el cambio seguiria teniendo comportamien
 
 ## Estrategia de Pruebas
 
-| Capa | Que Probar | Enfoque |
-|------|------------|---------|
-| Unitaria | `resolveTimezone()` con usuario, sucursal y fallback | Mock de Prisma: usuario con timezone propia, usuario sin timezone, config sucursal invalida, vista global. |
-| Unitaria | Validacion IANA de endpoints nuevos | `PUT /api/settings/profile/timezone` acepta IANA valida, rechaza invalida y acepta `null`. |
-| Unitaria | `utils-date.ts` y `utils-format.ts` con tz explicita | Casos `America/Bogota`, `America/Santiago`, `Europe/Madrid` y cambio de dia/mes. |
-| Unitaria | `useTimezone()` | Resuelve `zonaHorariaResuelta` desde `/api/auth/me` y deja de depender de `/api/settings/general`. |
-| Integracion | `/api/auth/me` | Devuelve `zonaHoraria`, `zonaHorariaSucursal`, `zonaHorariaResuelta`, `timezoneSource` consistentes con DB. |
-| Integracion | `/api/settings/general` | Sigue guardando timezone de sucursal y no pisa `Usuario.zonaHoraria`. |
-| Integracion | `/api/settings/profile/timezone` | Actualizar a una tz propia cambia `source` a `user`; limpiar a `null` vuelve a `branch`. |
-| Integracion | Ventas/gastos/caja | `nowAR()` y `parseDateTimeInputAR()` reciben la timezone resuelta del usuario. |
-| Integracion | Historial/KPI | Rangos mensuales/anuales respetan la timezone efectiva sin usar `id=1` en vista global. |
-| Integracion | Reportes PDF | Ticket, gasto, remito, inventario y dashboard renderizan con la misma tz resuelta. |
-| UI | `settings/general/page.tsx` | Usuario comun puede editar `Mi zona horaria`; admin ademas ve fallback de sucursal y estado de migracion. |
-| UI | Pantallas criticas | Dashboard, gastos, detalle de venta, detalle de consignacion y historial de cliente muestran fechas coherentes tras cambiar la preferencia. |
-| E2E smoke | Cambio de timezone personal -> navegar modulos | Un usuario cambia a `America/Bogota` y ve el mismo desplazamiento en dashboard, gastos, ticket y caja sin tocar la configuracion de sucursal. |
+| Capa        | Que Probar                                           | Enfoque                                                                                                                                       |
+| ----------- | ---------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| Unitaria    | `resolveTimezone()` con usuario, sucursal y fallback | Mock de Prisma: usuario con timezone propia, usuario sin timezone, config sucursal invalida, vista global.                                    |
+| Unitaria    | Validacion IANA de endpoints nuevos                  | `PUT /api/settings/profile/timezone` acepta IANA valida, rechaza invalida y acepta `null`.                                                    |
+| Unitaria    | `utils-date.ts` y `utils-format.ts` con tz explicita | Casos `America/Bogota`, `America/Santiago`, `Europe/Madrid` y cambio de dia/mes.                                                              |
+| Unitaria    | `useTimezone()`                                      | Resuelve `zonaHorariaResuelta` desde `/api/auth/me` y deja de depender de `/api/settings/general`.                                            |
+| Integracion | `/api/auth/me`                                       | Devuelve `zonaHoraria`, `zonaHorariaSucursal`, `zonaHorariaResuelta`, `timezoneSource` consistentes con DB.                                   |
+| Integracion | `/api/settings/general`                              | Sigue guardando timezone de sucursal y no pisa `Usuario.zonaHoraria`.                                                                         |
+| Integracion | `/api/settings/profile/timezone`                     | Actualizar a una tz propia cambia `source` a `user`; limpiar a `null` vuelve a `branch`.                                                      |
+| Integracion | Ventas/gastos/caja                                   | `nowAR()` y `parseDateTimeInputAR()` reciben la timezone resuelta del usuario.                                                                |
+| Integracion | Historial/KPI                                        | Rangos mensuales/anuales respetan la timezone efectiva sin usar `id=1` en vista global.                                                       |
+| Integracion | Reportes PDF                                         | Ticket, gasto, remito, inventario y dashboard renderizan con la misma tz resuelta.                                                            |
+| UI          | `settings/general/page.tsx`                          | Usuario comun puede editar `Mi zona horaria`; admin ademas ve fallback de sucursal y estado de migracion.                                     |
+| UI          | Pantallas criticas                                   | Dashboard, gastos, detalle de venta, detalle de consignacion y historial de cliente muestran fechas coherentes tras cambiar la preferencia.   |
+| E2E smoke   | Cambio de timezone personal -> navegar modulos       | Un usuario cambia a `America/Bogota` y ve el mismo desplazamiento en dashboard, gastos, ticket y caja sin tocar la configuracion de sucursal. |
 
 ## Migracion / Despliegue
 

@@ -5,6 +5,7 @@ Documento complementario a `proposal.md`/`design.md` de este cambio. Enfoque aco
 ## 1. Por qué kiosco/almacén primero
 
 Son los dos rubros con:
+
 - **Mayor proporción de productos con código de barras real** (EAN-13 impreso en el empaque) — a diferencia de indumentaria, ferretería o servicios, donde el código de barras suele ser interno del negocio o no existir.
 - **Catálogo más estable entre negocios distintos**: una Coca-Cola de 2.25L es el mismo producto en cualquier kiosco del país. En rubros como indumentaria o decoración, el "mismo nombre" puede ser un producto distinto en cada local (sin SKU universal).
 - **Fuentes públicas ya existentes y gratuitas** que cubren casi exactamente este universo: Precios Claros (Secretaría de Comercio) y Open Food Facts tienen su mayor cobertura justo en alimentos, bebidas, limpieza y almacén — no en ferretería o indumentaria.
@@ -15,12 +16,12 @@ Por estas tres razones, kiosco/almacén es el rubro piloto natural para el scrap
 
 Patrones de error reales observados (ver ejemplos en `proposal.md`), categorizados para saber qué mitigación aplica a cada uno:
 
-| Patrón | Ejemplo | Causa | Mitigación |
-|---|---|---|---|
-| Notación de pack/multiplicación | `COCA-COLA 8x2,25` | El proveedor factura "8 unidades de 2.25L" en una sola línea abreviada; la coma decimal se confunde con separador de miles en el prompt actual | Parseo de presentación como parte del candidato global (sección 4) — no depende de que el modelo "adivine" qué significa `8x2,25` |
-| Asteriscos/mayúsculas de sistemas de facturación viejos | `LATA IMPERIAL *IPA* 24X473` | Sistemas de punto de venta de proveedores usan `*` para resaltar variante | `normalizeText()` ya limpia esto (sección 3) antes de comparar |
-| Abreviaturas de unidad OCR-corrompidas | `armaf odyssey go manco edp io0nl` (`io0nl` → `100ml`) | El OCR confunde `1`/`i`, `0`/`o` en fuentes chicas de ticket térmico | Reglas de post-corrección específicas de unidad (sección 3) — no genéricas de texto |
-| Nombre de marca mal transcripto | `lattafa` → debería ser `lattafa` (marca real) pero a veces aparece `lataffa` | Error de tipeo del cajero/proveedor al cargar el ticket, no del OCR de imagen | Búsqueda por alias + trigram tolera esto sin regla ad-hoc (candidato global ya lo resuelve por similitud) |
+| Patrón                                                  | Ejemplo                                                                       | Causa                                                                                                                                          | Mitigación                                                                                                                        |
+| ------------------------------------------------------- | ----------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| Notación de pack/multiplicación                         | `COCA-COLA 8x2,25`                                                            | El proveedor factura "8 unidades de 2.25L" en una sola línea abreviada; la coma decimal se confunde con separador de miles en el prompt actual | Parseo de presentación como parte del candidato global (sección 4) — no depende de que el modelo "adivine" qué significa `8x2,25` |
+| Asteriscos/mayúsculas de sistemas de facturación viejos | `LATA IMPERIAL *IPA* 24X473`                                                  | Sistemas de punto de venta de proveedores usan `*` para resaltar variante                                                                      | `normalizeText()` ya limpia esto (sección 3) antes de comparar                                                                    |
+| Abreviaturas de unidad OCR-corrompidas                  | `armaf odyssey go manco edp io0nl` (`io0nl` → `100ml`)                        | El OCR confunde `1`/`i`, `0`/`o` en fuentes chicas de ticket térmico                                                                           | Reglas de post-corrección específicas de unidad (sección 3) — no genéricas de texto                                               |
+| Nombre de marca mal transcripto                         | `lattafa` → debería ser `lattafa` (marca real) pero a veces aparece `lataffa` | Error de tipeo del cajero/proveedor al cargar el ticket, no del OCR de imagen                                                                  | Búsqueda por alias + trigram tolera esto sin regla ad-hoc (candidato global ya lo resuelve por similitud)                         |
 
 La distinción importante: no todos los errores son "de OCR de imagen" — varios ejemplos (`8x2,25`, `lataffa`) vienen de cómo el proveedor mismo abrevia en su propio sistema de facturación, texto que luego se lee perfectamente bien pero significa algo no evidente. Por eso la mitigación no es "mejorar el OCR", es darle al modelo (y al matching) una referencia real de productos para comparar.
 
@@ -50,7 +51,9 @@ export function normalizarPresentacionOcr(texto: string): string {
  * Extrae la notación "8x2,25" / "24x473" (pack x presentación) como dato
  * estructurado, en vez de dejarla como texto libre para que la IA la interprete.
  */
-export function parsearNotacionPack(texto: string): { cantidadPack: number; presentacionUnidad: string } | null {
+export function parsearNotacionPack(
+  texto: string,
+): { cantidadPack: number; presentacionUnidad: string } | null {
   const match = texto.match(/(\d+)\s*x\s*(\d+[.,]?\d*)/i);
   if (!match) return null;
   return {
@@ -109,6 +112,7 @@ Esto es una extensión concreta del flujo ya descrito en `design.md` (sección "
 ## 6. Qué NO conviene meter en el prompt de la IA para estos rubros
 
 Con candidatos ya pre-filtrados y con presentación estructurada (sección 4), el prompt para kiosco/almacén **no necesita** pedirle a la IA que:
+
 - calcule conversiones de unidad (ej. "2250ml = 2.25L") — eso ya lo resuelve el parseo estructurado antes de llegar al modelo;
 - elija entre variantes de sabor/línea cuando el texto OCR no las menciona — si el texto dice solo "COCA-COLA" sin más detalle, ningún candidato debería preferirse sobre otro por sabor; el modelo debe marcar `requiere_revision: true` en vez de adivinar (mismo principio ya vigente: "no inventar", ver `invoice-extraction.config.ts`);
 - resolver por sí sola la notación `8x2,25` como texto libre — es una tarea de parseo determinístico (sección 3), no de lenguaje natural, y dejarla en manos del modelo es precisamente el tipo de ambigüedad que causó el bug documentado en `mejora-precision-lineas-factura-ocr`.
@@ -134,5 +138,5 @@ Texto OCR: `LATA IMPERIAL *IPA* 24X473`, rubro `kiosco`.
 3. Sin `ProductoProveedorAlias` previo para este proveedor.
 4. `parsearNotacionPack("LATA IMPERIAL *IPA* 24X473")` → `{ cantidadPack: 24, presentacionUnidad: "473" }`.
 5. `POST /catalogo/ocr-candidatos` con `{ rubro: "kiosco", descripcion: "LATA IMPERIAL *IPA* 24X473", presentacionHint: 473 }` → la API central filtra por rubro, matchea "imperial" + "ipa" por trigram, y desempata por `presentacion.valor === 473` → devuelve `Imperial IPA Lata 473 ml` con score alto.
-6. El candidato entra al prompt ya con presentación resuelta — la IA solo tiene que confirmar que "Imperial IPA Lata 473 ml" es una lectura razonable de "LATA IMPERIAL *IPA* 24X473", no inferir de cero qué es "473".
+6. El candidato entra al prompt ya con presentación resuelta — la IA solo tiene que confirmar que "Imperial IPA Lata 473 ml" es una lectura razonable de "LATA IMPERIAL _IPA_ 24X473", no inferir de cero qué es "473".
 7. Usuario confirma → se persiste `ProductoProveedorAlias` con `productoGlobalId` (ver `design.md`, Decisión 5) → la próxima factura del mismo proveedor con este texto exacto resuelve en el paso 3, sin volver a llamar a la API central.

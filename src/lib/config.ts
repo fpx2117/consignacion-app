@@ -25,7 +25,10 @@ export async function obtenerConfiguracionGlobal(sucursalId: number = 1) {
 
     return nuevaConfig;
   } catch (error) {
-    console.error(`⚠️ Error obteniendo configuración para sucursal ${sucursalId}:`, error);
+    console.error(
+      `⚠️ Error obteniendo configuración para sucursal ${sucursalId}:`,
+      error,
+    );
 
     // Fallback compatible con el modelo
     return {

@@ -76,7 +76,9 @@ export function GastosList({
   onDelete,
 }: GastosListProps) {
   const { tz, formatDateTime } = useTimezone();
-  const [expandedGroups, setExpandedGroups] = React.useState<Record<string, boolean>>({});
+  const [expandedGroups, setExpandedGroups] = React.useState<
+    Record<string, boolean>
+  >({});
 
   const entries = React.useMemo<GastoEntry[]>(() => {
     const grouped = new Map<string, GastoItem[]>();
@@ -84,7 +86,9 @@ export function GastosList({
 
     for (const gasto of gastos) {
       const shouldGroup = Boolean(
-        gasto.recurrenciaId && gasto.esRecurrente && (gasto.cuotaTotal ?? 0) > 1,
+        gasto.recurrenciaId &&
+        gasto.esRecurrente &&
+        (gasto.cuotaTotal ?? 0) > 1,
       );
 
       if (!shouldGroup || !gasto.recurrenciaId) {
@@ -161,10 +165,17 @@ export function GastosList({
         }
 
         const first = entry.gastos[0];
-        const paidCount = entry.gastos.filter((g) => g.estado === "PAGADO").length;
-        const pendingItems = entry.gastos.filter((g) => g.estado === "PENDIENTE");
+        const paidCount = entry.gastos.filter(
+          (g) => g.estado === "PAGADO",
+        ).length;
+        const pendingItems = entry.gastos.filter(
+          (g) => g.estado === "PENDIENTE",
+        );
         const nextPending = pendingItems[0] ?? null;
-        const pendingTotal = pendingItems.reduce((acc, gasto) => acc + Number(gasto.monto), 0);
+        const pendingTotal = pendingItems.reduce(
+          (acc, gasto) => acc + Number(gasto.monto),
+          0,
+        );
         const expanded = Boolean(expandedGroups[entry.recurrenciaId]);
 
         return (
@@ -185,22 +196,35 @@ export function GastosList({
 
                   <div className="min-w-0">
                     <div className="mb-1 flex flex-wrap items-center gap-2">
-                      <h3 className={`${gastosTypography.itemTitle} truncate`}>{first.motivo}</h3>
-                      <Badge variant="outline" className="rounded-full border-primary/30 bg-primary/5 px-2 text-[10px] font-semibold text-primary">
+                      <h3 className={`${gastosTypography.itemTitle} truncate`}>
+                        {first.motivo}
+                      </h3>
+                      <Badge
+                        variant="outline"
+                        className="rounded-full border-primary/30 bg-primary/5 px-2 text-[10px] font-semibold text-primary"
+                      >
                         {paidCount}/{entry.gastos.length} cuotas pagadas
                       </Badge>
-                      <Badge variant="secondary" className={`${gastosTypography.badge} rounded-full bg-primary/5 px-2 py-0.5 text-primary/70`}>
+                      <Badge
+                        variant="secondary"
+                        className={`${gastosTypography.badge} rounded-full bg-primary/5 px-2 py-0.5 text-primary/70`}
+                      >
                         {first.categoria?.nombre}
                       </Badge>
                     </div>
 
                     <div className="flex flex-col gap-1 text-xs font-bold text-muted-foreground sm:flex-row sm:flex-wrap sm:items-center sm:gap-4">
                       <span className="flex items-center gap-1.5">
-                        <Repeat className="h-3.5 w-3.5" /> {entry.gastos.length} cuotas materializadas
+                        <Repeat className="h-3.5 w-3.5" /> {entry.gastos.length}{" "}
+                        cuotas materializadas
                       </span>
                       {nextPending && (
                         <span className="flex items-center gap-1.5 text-[color:var(--status-warning)]/90">
-                          <AlertTriangle className="h-3.5 w-3.5" /> Proxima cuota: {formatDateTime(nextPending.fechaVencimiento ?? nextPending.fecha)}
+                          <AlertTriangle className="h-3.5 w-3.5" /> Proxima
+                          cuota:{" "}
+                          {formatDateTime(
+                            nextPending.fechaVencimiento ?? nextPending.fecha,
+                          )}
                         </span>
                       )}
                     </div>
@@ -299,32 +323,49 @@ function renderGastoCard({
                 : "bg-[color:var(--status-success-strong)]/10 text-[color:var(--status-success-strong)]",
             )}
           >
-            {gasto.esRecurrente ? <Repeat className="h-7 w-7" /> : <Receipt className="h-7 w-7" />}
+            {gasto.esRecurrente ? (
+              <Repeat className="h-7 w-7" />
+            ) : (
+              <Receipt className="h-7 w-7" />
+            )}
           </div>
 
           <div className="min-w-0 flex-1">
             <div className="mb-1 flex flex-wrap items-center gap-2">
-              <h3 className={`${gastosTypography.itemTitle} truncate`}>{gasto.motivo}</h3>
+              <h3 className={`${gastosTypography.itemTitle} truncate`}>
+                {gasto.motivo}
+              </h3>
 
               {gasto.cuotaActual && gasto.cuotaTotal && (
-                <Badge variant="outline" className="rounded-full border-primary/30 bg-primary/5 px-2 text-[10px] font-semibold text-primary">
+                <Badge
+                  variant="outline"
+                  className="rounded-full border-primary/30 bg-primary/5 px-2 text-[10px] font-semibold text-primary"
+                >
                   Cuota {gasto.cuotaActual}/{gasto.cuotaTotal}
                 </Badge>
               )}
 
-              <Badge variant="secondary" className={`${gastosTypography.badge} rounded-full bg-primary/5 px-2 py-0.5 text-primary/70`}>
+              <Badge
+                variant="secondary"
+                className={`${gastosTypography.badge} rounded-full bg-primary/5 px-2 py-0.5 text-primary/70`}
+              >
                 {gasto.categoria?.nombre}
               </Badge>
 
               {(gasto.esCompartido || gasto.esVistaCompartida) && (
-                <Badge variant="outline" className={`${gastosTypography.badge} flex items-center gap-1 rounded-full border-[color:var(--primary)]/40 bg-[color:var(--primary)]/10 px-2 py-0.5 text-[color:var(--primary)]`}>
+                <Badge
+                  variant="outline"
+                  className={`${gastosTypography.badge} flex items-center gap-1 rounded-full border-[color:var(--primary)]/40 bg-[color:var(--primary)]/10 px-2 py-0.5 text-[color:var(--primary)]`}
+                >
                   <GitFork className="h-2.5 w-2.5" /> Compartido
                 </Badge>
               )}
             </div>
 
             <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-4">
-              <span className={`${gastosTypography.meta} flex items-center gap-1.5`}>
+              <span
+                className={`${gastosTypography.meta} flex items-center gap-1.5`}
+              >
                 <Calendar className="h-3 w-3" /> {formatDateTime(gasto.fecha)}
               </span>
 
@@ -332,10 +373,13 @@ function renderGastoCard({
                 <span
                   className={cn(
                     `${gastosTypography.meta} flex items-center gap-1.5`,
-                    isOverdue ? "text-destructive" : "text-[color:var(--status-warning)]/80",
+                    isOverdue
+                      ? "text-destructive"
+                      : "text-[color:var(--status-warning)]/80",
                   )}
                 >
-                  <AlertTriangle className="h-3 w-3" /> Vence: {formatDateTime(gasto.fechaVencimiento)}
+                  <AlertTriangle className="h-3 w-3" /> Vence:{" "}
+                  {formatDateTime(gasto.fechaVencimiento)}
                 </span>
               )}
             </div>
@@ -366,11 +410,18 @@ function renderGastoCard({
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-12 w-12 rounded-2xl bg-muted/20 transition-all hover:bg-primary/10 hover:text-primary">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-12 w-12 rounded-2xl bg-muted/20 transition-all hover:bg-primary/10 hover:text-primary"
+              >
                 <MoreVertical className="h-5 w-5" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56 rounded-[1.5rem] border-none p-2 shadow-2xl">
+            <DropdownMenuContent
+              align="end"
+              className="w-56 rounded-[1.5rem] border-none p-2 shadow-2xl"
+            >
               <DropdownMenuItem
                 onClick={() => onShare(gasto)}
                 className="cursor-pointer gap-3 rounded-xl py-3 font-bold transition-colors focus:bg-[color:var(--status-success-strong)]/10 focus:text-[color:var(--status-success-strong)]"
@@ -394,7 +445,9 @@ function renderGastoCard({
                         <CheckCircle2 className="h-4 w-4 text-[color:var(--status-success-strong)]" />
                       )}
                     </div>
-                    {gasto.estado === "PAGADO" ? "Marcar como Pendiente" : "Marcar como Pagado"}
+                    {gasto.estado === "PAGADO"
+                      ? "Marcar como Pendiente"
+                      : "Marcar como Pagado"}
                   </DropdownMenuItem>
 
                   <DropdownMenuItem

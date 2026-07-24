@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { decryptCode, encryptCode, generateShortCode, hashCode } from "@/lib/sharing/share-links";
+import {
+  decryptCode,
+  encryptCode,
+  generateShortCode,
+  hashCode,
+} from "@/lib/sharing/share-links";
 import { requireAuth } from "@/lib/auth/require-auth";
 
 export const dynamic = "force-dynamic";
@@ -8,7 +13,7 @@ export const runtime = "nodejs";
 
 export async function GET(
   _req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
   // Auth: Requiere usuario autenticado
   const auth = await requireAuth();
@@ -81,7 +86,10 @@ export async function GET(
     }
 
     if (!created) {
-      return NextResponse.json({ error: "No se pudo generar link" }, { status: 500 });
+      return NextResponse.json(
+        { error: "No se pudo generar link" },
+        { status: 500 },
+      );
     }
   }
 

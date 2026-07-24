@@ -53,6 +53,7 @@ Eliminar los archivos `loading.tsx` creados. Cero impacto funcional.
   - Skeleton: header + barra búsqueda + tabla con **6 filas** con avatar circular (`h-10 w-10 rounded-full`) + nombre + email.
 
 - [ ] **1.5** Crear `src/app/(system-guard)/(protected)/ventas/loading.tsx`
+
   > **Nota**: No existe `ventas/page.tsx` como listado. Hay `ventas/[id]/page.tsx` y `ventas/nueva/page.tsx`. Crear el `loading.tsx` en el directorio padre `ventas/` para que aplique a las subrutas dinámicas.
   - Skeleton: layout de dos columnas (lista izquierda `w-2/3` + panel derecho `w-1/3`) con items tipo cart.
 
@@ -106,6 +107,7 @@ Eliminar los archivos `loading.tsx` creados. Cero impacto funcional.
 ### Contexto de implementación
 
 Actualmente `requireAuth()` en `src/lib/requireAuth.ts` (línea 10) ejecuta:
+
 1. `getAuthTokenFromCookies()` → lee cookie de JWT
 2. `verifyUserJwt(token)` → decodifica el JWT
 3. `prisma.userSession.findUnique()` → query a la DB por cada llamada
@@ -154,6 +156,7 @@ Remover el wrapper `cache()` en `requireAuth.ts`. La función vuelve a ser la im
 ### Contexto de implementación
 
 `SubscriptionGuard` (`src/components/SubscriptionGuard.tsx`) actualmente:
+
 - Es un Client Component (`"use client"`)
 - Hace `fetch("/api/subscriptions/current")` en cada montaje y cambio de `pathname`
 - Muestra `<Loader2 className="animate-spin">` bloqueando toda la pantalla mientras carga
@@ -174,8 +177,12 @@ Revertir `layout.tsx` al estado anterior (con `<SubscriptionGuard>`). Mantener e
 ---
 
 - [ ] **3.1** Agregar función `checkSubscription()` en `src/app/(system-guard)/(protected)/layout.tsx`:
+
   ```typescript
-  async function checkSubscription(origin: string, cookieHeader: string): Promise<boolean> {
+  async function checkSubscription(
+    origin: string,
+    cookieHeader: string,
+  ): Promise<boolean> {
     if (!origin) return true; // fail-open si no hay origin
     try {
       const res = await fetch(`${origin}/api/subscriptions/current`, {
@@ -242,14 +249,18 @@ Eliminar el wrapper `unstable_cache`. La función vuelve a ser async directa. Re
   - Envolver con `unstable_cache`:
     ```typescript
     export const getDashboardKpis = unstable_cache(
-      async (sucursalId: number, period: DashboardPeriod, isAdmin: boolean = false) => {
+      async (
+        sucursalId: number,
+        period: DashboardPeriod,
+        isAdmin: boolean = false,
+      ) => {
         // ... implementación actual sin cambios ...
       },
       ["dashboard-kpis"], // cache key base
       {
         revalidate: 60,
         tags: ["dashboard", "kpis"],
-      }
+      },
     );
     ```
   - ⚠️ Verificar que la firma exportada mantiene la misma forma que consume el route handler `/api/dashboard/kpi/route.ts`
@@ -503,45 +514,45 @@ Restaurar `"use client"` en `src/app/(system-guard)/(protected)/dashboard/page.t
 
 ## Resumen de Archivos Afectados
 
-| Archivo | Fase | Acción |
-|---------|------|--------|
-| `src/app/(system-guard)/(protected)/dashboard/loading.tsx` | 1 | **Crear** |
-| `src/app/(system-guard)/(protected)/productos/loading.tsx` | 1 | **Crear** |
-| `src/app/(system-guard)/(protected)/consignaciones/loading.tsx` | 1 | **Crear** |
-| `src/app/(system-guard)/(protected)/clientes/loading.tsx` | 1 | **Crear** |
-| `src/app/(system-guard)/(protected)/ventas/loading.tsx` | 1 | **Crear** |
-| `src/app/(system-guard)/(protected)/gastos/loading.tsx` | 1 | **Crear** |
-| `src/app/(system-guard)/(protected)/pedidos-esperados/loading.tsx` | 1 | **Crear** |
-| `src/app/(system-guard)/(protected)/liquidaciones/loading.tsx` | 1 | **Crear** |
-| `src/app/(system-guard)/(protected)/caja/loading.tsx` | 1 | **Crear** |
-| `src/app/(system-guard)/(protected)/settings/loading.tsx` | 1 | **Crear** |
-| `src/app/(system-guard)/(protected)/settings/subscriptions/loading.tsx` | 1 | **Crear** |
-| `src/app/(system-guard)/(protected)/settings/branding/loading.tsx` | 1 | **Crear** |
-| `src/app/(system-guard)/(protected)/settings/tienda/loading.tsx` | 1 | **Crear** |
-| `src/app/(system-guard)/(protected)/settings/whatsapp/loading.tsx` | 1 | **Crear** |
-| `src/app/(system-guard)/(protected)/settings/branches/loading.tsx` | 1 | **Crear** |
-| `src/app/(system-guard)/(protected)/settings/security/loading.tsx` | 1 | **Crear** |
-| `src/app/(system-guard)/(protected)/settings/pos/loading.tsx` | 1 | **Crear** |
-| `src/app/(system-guard)/(protected)/settings/notifications/loading.tsx` | 1 | **Crear** |
-| `src/lib/requireAuth.ts` | 2 | **Modificar** — agregar `cache()` wrapper |
-| `src/app/(system-guard)/(protected)/layout.tsx` | 2, 3 | **Modificar** — usar `requireAuth()` + `checkSubscription()` |
-| `src/components/SubscriptionGuard.tsx` | 3 | **Modificar** — convertir en pass-through |
-| `src/lib/kpi-logic.ts` | 4 | **Modificar** — agregar `unstable_cache` |
-| `src/lib/apiService.ts` | 4 | **Modificar** — cambiar default de `no-store` a `default` |
-| `next.config.ts` | 5 | **Modificar** — remotePatterns + formats de imagen |
-| `src/app/(system-guard)/(protected)/productos/components/productos-view.tsx` | 5 | **Modificar** — `<img>` → `<Image>` + framer-motion |
-| `src/app/(system-guard)/(protected)/settings/branding/page.tsx` | 5 | **Modificar** — `<img>` → `<Image>` |
-| `src/app/lista/components/cart-drawer.tsx` | 5 | **Modificar** — `<img>` → `<Image>` + framer-motion |
-| `src/app/lista/components/store-footer.tsx` | 5 | **Modificar** — `<img>` → `<Image>` |
-| `src/app/lista/components/product-card.tsx` | 5 | **Modificar** — framer-motion |
-| `src/app/lista/components/product-modal.tsx` | 5 | **Modificar** — framer-motion |
-| `src/app/(system-guard)/(protected)/dashboard/components/tendencia-section.tsx` | 5 | **Modificar** — dynamic import recharts |
-| `src/app/(system-guard)/(protected)/dashboard/page.tsx` | 5, 7 | **Modificar** — dynamic dnd-kit + convertir a Server Component |
-| *(16 archivos con `framer-motion` listados en 5.2)* | 5 | **Modificar** — migration a `motion/react` |
-| `src/app/layout.tsx` | 6 | **Modificar** — eliminar `rootCssVariablesStyle()` |
-| `src/lib/theme/color-tokens.ts` | 6 | **Modificar** — agregar JSDoc warning |
-| `src/app/(system-guard)/(protected)/dashboard/components/dashboard-client-shell.tsx` | 7 | **Crear** |
-| `src/app/(system-guard)/(protected)/dashboard/hooks/use-dashboard.ts` | 7 | **Modificar** — aceptar `initialData` |
+| Archivo                                                                              | Fase | Acción                                                         |
+| ------------------------------------------------------------------------------------ | ---- | -------------------------------------------------------------- |
+| `src/app/(system-guard)/(protected)/dashboard/loading.tsx`                           | 1    | **Crear**                                                      |
+| `src/app/(system-guard)/(protected)/productos/loading.tsx`                           | 1    | **Crear**                                                      |
+| `src/app/(system-guard)/(protected)/consignaciones/loading.tsx`                      | 1    | **Crear**                                                      |
+| `src/app/(system-guard)/(protected)/clientes/loading.tsx`                            | 1    | **Crear**                                                      |
+| `src/app/(system-guard)/(protected)/ventas/loading.tsx`                              | 1    | **Crear**                                                      |
+| `src/app/(system-guard)/(protected)/gastos/loading.tsx`                              | 1    | **Crear**                                                      |
+| `src/app/(system-guard)/(protected)/pedidos-esperados/loading.tsx`                   | 1    | **Crear**                                                      |
+| `src/app/(system-guard)/(protected)/liquidaciones/loading.tsx`                       | 1    | **Crear**                                                      |
+| `src/app/(system-guard)/(protected)/caja/loading.tsx`                                | 1    | **Crear**                                                      |
+| `src/app/(system-guard)/(protected)/settings/loading.tsx`                            | 1    | **Crear**                                                      |
+| `src/app/(system-guard)/(protected)/settings/subscriptions/loading.tsx`              | 1    | **Crear**                                                      |
+| `src/app/(system-guard)/(protected)/settings/branding/loading.tsx`                   | 1    | **Crear**                                                      |
+| `src/app/(system-guard)/(protected)/settings/tienda/loading.tsx`                     | 1    | **Crear**                                                      |
+| `src/app/(system-guard)/(protected)/settings/whatsapp/loading.tsx`                   | 1    | **Crear**                                                      |
+| `src/app/(system-guard)/(protected)/settings/branches/loading.tsx`                   | 1    | **Crear**                                                      |
+| `src/app/(system-guard)/(protected)/settings/security/loading.tsx`                   | 1    | **Crear**                                                      |
+| `src/app/(system-guard)/(protected)/settings/pos/loading.tsx`                        | 1    | **Crear**                                                      |
+| `src/app/(system-guard)/(protected)/settings/notifications/loading.tsx`              | 1    | **Crear**                                                      |
+| `src/lib/requireAuth.ts`                                                             | 2    | **Modificar** — agregar `cache()` wrapper                      |
+| `src/app/(system-guard)/(protected)/layout.tsx`                                      | 2, 3 | **Modificar** — usar `requireAuth()` + `checkSubscription()`   |
+| `src/components/SubscriptionGuard.tsx`                                               | 3    | **Modificar** — convertir en pass-through                      |
+| `src/lib/kpi-logic.ts`                                                               | 4    | **Modificar** — agregar `unstable_cache`                       |
+| `src/lib/apiService.ts`                                                              | 4    | **Modificar** — cambiar default de `no-store` a `default`      |
+| `next.config.ts`                                                                     | 5    | **Modificar** — remotePatterns + formats de imagen             |
+| `src/app/(system-guard)/(protected)/productos/components/productos-view.tsx`         | 5    | **Modificar** — `<img>` → `<Image>` + framer-motion            |
+| `src/app/(system-guard)/(protected)/settings/branding/page.tsx`                      | 5    | **Modificar** — `<img>` → `<Image>`                            |
+| `src/app/lista/components/cart-drawer.tsx`                                           | 5    | **Modificar** — `<img>` → `<Image>` + framer-motion            |
+| `src/app/lista/components/store-footer.tsx`                                          | 5    | **Modificar** — `<img>` → `<Image>`                            |
+| `src/app/lista/components/product-card.tsx`                                          | 5    | **Modificar** — framer-motion                                  |
+| `src/app/lista/components/product-modal.tsx`                                         | 5    | **Modificar** — framer-motion                                  |
+| `src/app/(system-guard)/(protected)/dashboard/components/tendencia-section.tsx`      | 5    | **Modificar** — dynamic import recharts                        |
+| `src/app/(system-guard)/(protected)/dashboard/page.tsx`                              | 5, 7 | **Modificar** — dynamic dnd-kit + convertir a Server Component |
+| _(16 archivos con `framer-motion` listados en 5.2)_                                  | 5    | **Modificar** — migration a `motion/react`                     |
+| `src/app/layout.tsx`                                                                 | 6    | **Modificar** — eliminar `rootCssVariablesStyle()`             |
+| `src/lib/theme/color-tokens.ts`                                                      | 6    | **Modificar** — agregar JSDoc warning                          |
+| `src/app/(system-guard)/(protected)/dashboard/components/dashboard-client-shell.tsx` | 7    | **Crear**                                                      |
+| `src/app/(system-guard)/(protected)/dashboard/hooks/use-dashboard.ts`                | 7    | **Modificar** — aceptar `initialData`                          |
 
 ---
 

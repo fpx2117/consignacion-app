@@ -10,7 +10,12 @@ export async function GET(req: Request) {
   const sucursalIdParam = searchParams.get("sucursalId");
   const sucursalIdParsed = sucursalIdParam ? Number(sucursalIdParam) : null;
 
-  if (sucursalIdParam && (sucursalIdParsed === null || !Number.isFinite(sucursalIdParsed) || sucursalIdParsed <= 0)) {
+  if (
+    sucursalIdParam &&
+    (sucursalIdParsed === null ||
+      !Number.isFinite(sucursalIdParsed) ||
+      sucursalIdParsed <= 0)
+  ) {
     return NextResponse.json({ error: "sucursalId inválido" }, { status: 400 });
   }
 
@@ -20,21 +25,32 @@ export async function GET(req: Request) {
     const data = await getPublicCatalogDataCached(sucursalId);
 
     if (data?.config?.sucursalId) {
-      void trackPublicCatalogVisit(data.config.sucursalId, req.headers).catch((visitError) => {
-        console.warn("Catalog visit tracking failed:", visitError);
-      });
+      void trackPublicCatalogVisit(data.config.sucursalId, req.headers).catch(
+        (visitError) => {
+          console.warn("Catalog visit tracking failed:", visitError);
+        },
+      );
     }
 
-    return NextResponse.json({ data }, {
-      headers: {
-        "Cache-Control": "public, s-maxage=60, stale-while-revalidate=60",
+    return NextResponse.json(
+      { data },
+      {
+        headers: {
+          "Cache-Control": "public, s-maxage=60, stale-while-revalidate=60",
+        },
       },
-    });
+    );
   } catch (error: unknown) {
     if (error instanceof PublicCatalogError) {
-      return NextResponse.json({ error: error.message }, { status: error.status });
+      return NextResponse.json(
+        { error: error.message },
+        { status: error.status },
+      );
     }
     console.error("Error public lista-precios:", error);
-    return NextResponse.json({ error: "Error al obtener los productos" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Error al obtener los productos" },
+      { status: 500 },
+    );
   }
 }

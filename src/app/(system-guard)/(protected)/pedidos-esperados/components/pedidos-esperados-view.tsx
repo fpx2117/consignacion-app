@@ -5,7 +5,10 @@ import { motion } from "motion/react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useSucursalStore } from "@/store/useSucursalStore";
-import type { PedidoEsperado, EstadoPedidoEsperado } from "@/types/pedidos-esperados";
+import type {
+  PedidoEsperado,
+  EstadoPedidoEsperado,
+} from "@/types/pedidos-esperados";
 
 // UI
 import { Card } from "@/components/ui/card";
@@ -81,7 +84,11 @@ import { PostergarPedidoDialog } from "./postergar-pedido-dialog";
 function formatFecha(fechaISO: string) {
   if (!fechaISO) return "—";
   const d = new Date(fechaISO);
-  return d.toLocaleDateString("es-AR", { day: "2-digit", month: "short", year: "numeric" });
+  return d.toLocaleDateString("es-AR", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
 }
 
 function formatFechaRelativa(fechaISO: string) {
@@ -90,7 +97,9 @@ function formatFechaRelativa(fechaISO: string) {
   hoy.setHours(0, 0, 0, 0);
   const fecha = new Date(fechaISO);
   fecha.setHours(0, 0, 0, 0);
-  const diff = Math.round((fecha.getTime() - hoy.getTime()) / (1000 * 60 * 60 * 24));
+  const diff = Math.round(
+    (fecha.getTime() - hoy.getTime()) / (1000 * 60 * 60 * 24),
+  );
   if (diff === 0) return "hoy";
   if (diff === 1) return "mañana";
   if (diff === -1) return "ayer";
@@ -98,7 +107,12 @@ function formatFechaRelativa(fechaISO: string) {
   return `en ${diff} días`;
 }
 
-const ESTADOS_ACTIVOS: EstadoPedidoEsperado[] = ["PROGRAMADO", "VENCIDO", "PARCIAL", "POSTERGADO"];
+const ESTADOS_ACTIVOS: EstadoPedidoEsperado[] = [
+  "PROGRAMADO",
+  "VENCIDO",
+  "PARCIAL",
+  "POSTERGADO",
+];
 const ESTADOS_SOLO_VER: EstadoPedidoEsperado[] = ["CONFIRMADO", "CANCELADO"];
 
 // ─── TIPOS DE FILTROS ─────────────────────────────────────────────────────────
@@ -120,8 +134,11 @@ const FILTROS_DEFECTO: Filtros = {
 export function PedidosEsperadosView() {
   const activeSucursalId = useSucursalStore((s) => s.activeSucursalId);
   const sucursalHeaders = React.useMemo<Record<string, string>>(
-    () => activeSucursalId ? { "x-sucursal-id": String(activeSucursalId) } : {} as Record<string, string>,
-    [activeSucursalId]
+    () =>
+      activeSucursalId
+        ? { "x-sucursal-id": String(activeSucursalId) }
+        : ({} as Record<string, string>),
+    [activeSucursalId],
   );
 
   const [pedidos, setPedidos] = React.useState<PedidoEsperado[]>([]);
@@ -130,8 +147,10 @@ export function PedidosEsperadosView() {
 
   // Dialogs
   const [dialogCrear, setDialogCrear] = React.useState(false);
-  const [selectedPedido, setSelectedPedido] = React.useState<PedidoEsperado | null>(null);
-  const [detallePedido, setDetallePedido] = React.useState<PedidoEsperado | null>(null);
+  const [selectedPedido, setSelectedPedido] =
+    React.useState<PedidoEsperado | null>(null);
+  const [detallePedido, setDetallePedido] =
+    React.useState<PedidoEsperado | null>(null);
   const [dialogConfirmar, setDialogConfirmar] = React.useState(false);
   const [dialogPostergar, setDialogPostergar] = React.useState(false);
   const [dialogCancelar, setDialogCancelar] = React.useState(false);
@@ -163,7 +182,11 @@ export function PedidosEsperadosView() {
       });
       if (!res.ok) throw new Error("Error al cargar pedidos");
       const data = await res.json();
-      const arr = Array.isArray(data) ? data : Array.isArray(data?.data) ? data.data : [];
+      const arr = Array.isArray(data)
+        ? data
+        : Array.isArray(data?.data)
+          ? data.data
+          : [];
       setPedidos(arr);
     } catch {
       toast.error("No se pudieron cargar los pedidos");
@@ -179,13 +202,21 @@ export function PedidosEsperadosView() {
 
   React.useEffect(() => {
     setCurrentPage(1);
-  }, [filtros.estado, filtros.fechaDesde, filtros.fechaHasta, activeSucursalId]);
+  }, [
+    filtros.estado,
+    filtros.fechaDesde,
+    filtros.fechaHasta,
+    activeSucursalId,
+  ]);
 
-  const totalPages = Math.max(1, Math.ceil(pedidos.length / Math.max(1, itemsPerPage)));
+  const totalPages = Math.max(
+    1,
+    Math.ceil(pedidos.length / Math.max(1, itemsPerPage)),
+  );
   const pageStart = (currentPage - 1) * itemsPerPage;
   const pagedPedidos = React.useMemo(
     () => pedidos.slice(pageStart, pageStart + itemsPerPage),
-    [pedidos, pageStart, itemsPerPage]
+    [pedidos, pageStart, itemsPerPage],
   );
 
   React.useEffect(() => {
@@ -235,13 +266,16 @@ export function PedidosEsperadosView() {
         headers: sucursalHeaders,
       });
       const payload = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(payload?.error || "Error al eliminar pedido");
+      if (!res.ok)
+        throw new Error(payload?.error || "Error al eliminar pedido");
       toast.success("Pedido cancelado eliminado");
       setDialogEliminar(false);
       setSelectedPedido(null);
       fetchPedidos();
     } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : "No se pudo eliminar el pedido");
+      toast.error(
+        err instanceof Error ? err.message : "No se pudo eliminar el pedido",
+      );
     } finally {
       setEliminandoId(null);
     }
@@ -249,12 +283,13 @@ export function PedidosEsperadosView() {
 
   // ── Stats ───────────────────────────────────────────────────────────────────
   const vencidos = pedidos.filter((p) => p.estado === "VENCIDO").length;
-  const activos = pedidos.filter((p) => ESTADOS_ACTIVOS.includes(p.estado)).length;
+  const activos = pedidos.filter((p) =>
+    ESTADOS_ACTIVOS.includes(p.estado),
+  ).length;
 
   // ─────────────────────────────────────────────────────────────────────────
   return (
     <div className="max-w-[1400px] mx-auto space-y-8 p-6 md:p-10 pb-20 text-foreground font-sans">
-
       {/* HEADER */}
       <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-border/40">
         <div className="space-y-1.5">
@@ -318,8 +353,12 @@ export function PedidosEsperadosView() {
             fechaDesde={filtros.fechaDesde}
             fechaHasta={filtros.fechaHasta}
             onEstadoChange={(v) => setFiltros((f) => ({ ...f, estado: v }))}
-            onFechaDesdeChange={(v) => setFiltros((f) => ({ ...f, fechaDesde: v }))}
-            onFechaHastaChange={(v) => setFiltros((f) => ({ ...f, fechaHasta: v }))}
+            onFechaDesdeChange={(v) =>
+              setFiltros((f) => ({ ...f, fechaDesde: v }))
+            }
+            onFechaHastaChange={(v) =>
+              setFiltros((f) => ({ ...f, fechaHasta: v }))
+            }
             onLimpiar={() => setFiltros(FILTROS_DEFECTO)}
           />
         </Card>
@@ -328,7 +367,9 @@ export function PedidosEsperadosView() {
         {loading && (
           <div className="h-[300px] flex flex-col items-center justify-center gap-4 bg-card/30 rounded-2xl border border-border/50">
             <Loader2 className="h-12 w-12 animate-spin text-primary opacity-50" />
-            <span className="text-sm font-medium text-muted-foreground animate-pulse">Cargando pedidos...</span>
+            <span className="text-sm font-medium text-muted-foreground animate-pulse">
+              Cargando pedidos...
+            </span>
           </div>
         )}
 
@@ -346,12 +387,24 @@ export function PedidosEsperadosView() {
                     <Table>
                       <TableHeader className="bg-muted/30">
                         <TableRow className="hover:bg-transparent border-b border-border/60">
-                          <TableHead className="pl-6 font-bold text-xs uppercase tracking-wider text-muted-foreground/70">Fecha esperada</TableHead>
-                          <TableHead className="font-bold text-xs uppercase tracking-wider text-muted-foreground/70">Estado</TableHead>
-                          <TableHead className="font-bold text-xs uppercase tracking-wider text-muted-foreground/70 text-center">Items</TableHead>
-                          <TableHead className="font-bold text-xs uppercase tracking-wider text-muted-foreground/70">Productos</TableHead>
-                          <TableHead className="font-bold text-xs uppercase tracking-wider text-muted-foreground/70">Observaciones</TableHead>
-                          <TableHead className="font-bold text-xs uppercase tracking-wider text-muted-foreground/70 text-right pr-6">Acciones</TableHead>
+                          <TableHead className="pl-6 font-bold text-xs uppercase tracking-wider text-muted-foreground/70">
+                            Fecha esperada
+                          </TableHead>
+                          <TableHead className="font-bold text-xs uppercase tracking-wider text-muted-foreground/70">
+                            Estado
+                          </TableHead>
+                          <TableHead className="font-bold text-xs uppercase tracking-wider text-muted-foreground/70 text-center">
+                            Items
+                          </TableHead>
+                          <TableHead className="font-bold text-xs uppercase tracking-wider text-muted-foreground/70">
+                            Productos
+                          </TableHead>
+                          <TableHead className="font-bold text-xs uppercase tracking-wider text-muted-foreground/70">
+                            Observaciones
+                          </TableHead>
+                          <TableHead className="font-bold text-xs uppercase tracking-wider text-muted-foreground/70 text-right pr-6">
+                            Acciones
+                          </TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -361,8 +414,14 @@ export function PedidosEsperadosView() {
                             pedido={pedido}
                             idx={idx}
                             onVer={() => setDetallePedido(pedido)}
-                            onConfirmar={() => { setSelectedPedido(pedido); setDialogConfirmar(true); }}
-                            onPostergar={() => { setSelectedPedido(pedido); setDialogPostergar(true); }}
+                            onConfirmar={() => {
+                              setSelectedPedido(pedido);
+                              setDialogConfirmar(true);
+                            }}
+                            onPostergar={() => {
+                              setSelectedPedido(pedido);
+                              setDialogPostergar(true);
+                            }}
                             onCancelar={() => handleCancelar(pedido)}
                             onEliminar={() => handleEliminar(pedido)}
                           />
@@ -378,8 +437,14 @@ export function PedidosEsperadosView() {
                         pedido={pedido}
                         idx={idx}
                         onVer={() => setDetallePedido(pedido)}
-                        onConfirmar={() => { setSelectedPedido(pedido); setDialogConfirmar(true); }}
-                        onPostergar={() => { setSelectedPedido(pedido); setDialogPostergar(true); }}
+                        onConfirmar={() => {
+                          setSelectedPedido(pedido);
+                          setDialogConfirmar(true);
+                        }}
+                        onPostergar={() => {
+                          setSelectedPedido(pedido);
+                          setDialogPostergar(true);
+                        }}
                         onCancelar={() => handleCancelar(pedido)}
                         onEliminar={() => handleEliminar(pedido)}
                       />
@@ -390,25 +455,42 @@ export function PedidosEsperadosView() {
                 <Card className="p-3 sm:p-4 border-border/60 bg-card/40 backdrop-blur-xl rounded-2xl">
                   <div className="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
                     <p className="text-xs sm:text-sm text-muted-foreground">
-                      Mostrando <span className="font-bold text-foreground">{pagedPedidos.length}</span> de <span className="font-bold text-foreground">{pedidos.length}</span> pedidos
+                      Mostrando{" "}
+                      <span className="font-bold text-foreground">
+                        {pagedPedidos.length}
+                      </span>{" "}
+                      de{" "}
+                      <span className="font-bold text-foreground">
+                        {pedidos.length}
+                      </span>{" "}
+                      pedidos
                     </p>
 
                     <div className="flex items-center gap-2">
-                      <label className="text-xs text-muted-foreground">Por pagina</label>
+                      <label className="text-xs text-muted-foreground">
+                        Por pagina
+                      </label>
                       <select
                         value={String(itemsPerPage)}
                         onChange={(e) => {
                           const value = Number(e.target.value);
-                          setItemsPerPage(Number.isFinite(value) && value > 0 ? value : 25);
+                          setItemsPerPage(
+                            Number.isFinite(value) && value > 0 ? value : 25,
+                          );
                           setCurrentPage(1);
                         }}
                         className="h-9 rounded-lg border border-border bg-background px-2 text-sm"
                       >
-                        {[10, 25, 50, 100, pedidos.length].filter((v, i, arr) => v > 0 && arr.indexOf(v) === i).sort((a, b) => a - b).map((size) => (
-                          <option key={size} value={size}>
-                            {size === pedidos.length ? `Maximo (${size})` : size}
-                          </option>
-                        ))}
+                        {[10, 25, 50, 100, pedidos.length]
+                          .filter((v, i, arr) => v > 0 && arr.indexOf(v) === i)
+                          .sort((a, b) => a - b)
+                          .map((size) => (
+                            <option key={size} value={size}>
+                              {size === pedidos.length
+                                ? `Maximo (${size})`
+                                : size}
+                            </option>
+                          ))}
                       </select>
 
                       <Button
@@ -416,7 +498,9 @@ export function PedidosEsperadosView() {
                         size="sm"
                         className="rounded-lg"
                         disabled={currentPage <= 1}
-                        onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                        onClick={() =>
+                          setCurrentPage((p) => Math.max(1, p - 1))
+                        }
                       >
                         Anterior
                       </Button>
@@ -428,7 +512,9 @@ export function PedidosEsperadosView() {
                         size="sm"
                         className="rounded-lg"
                         disabled={currentPage >= totalPages}
-                        onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                        onClick={() =>
+                          setCurrentPage((p) => Math.min(totalPages, p + 1))
+                        }
                       >
                         Siguiente
                       </Button>
@@ -451,13 +537,19 @@ export function PedidosEsperadosView() {
         pedido={selectedPedido}
         open={dialogConfirmar}
         onOpenChange={setDialogConfirmar}
-        onSuccess={() => { fetchPedidos(); setSelectedPedido(null); }}
+        onSuccess={() => {
+          fetchPedidos();
+          setSelectedPedido(null);
+        }}
       />
       <PostergarPedidoDialog
         pedido={selectedPedido}
         open={dialogPostergar}
         onOpenChange={setDialogPostergar}
-        onSuccess={() => { fetchPedidos(); setSelectedPedido(null); }}
+        onSuccess={() => {
+          fetchPedidos();
+          setSelectedPedido(null);
+        }}
       />
 
       <PedidoDetalleDialog
@@ -473,21 +565,34 @@ export function PedidosEsperadosView() {
             <div className="mx-auto bg-[color:var(--status-danger)] dark:bg-[color:var(--status-danger)]/30 p-3 rounded-full w-fit mb-2">
               <AlertCircle className="h-8 w-8 text-[color:var(--status-danger)]" />
             </div>
-            <AlertDialogTitle className="text-xl font-bold text-center">¿Cancelar pedido?</AlertDialogTitle>
+            <AlertDialogTitle className="text-xl font-bold text-center">
+              ¿Cancelar pedido?
+            </AlertDialogTitle>
             <AlertDialogDescription className="text-center text-muted-foreground">
-              Esta acción no se puede deshacer. El pedido quedará marcado como cancelado y no podrá confirmarse.
+              Esta acción no se puede deshacer. El pedido quedará marcado como
+              cancelado y no podrá confirmarse.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="grid grid-cols-2 gap-3 sm:flex sm:justify-center pt-2">
-            <AlertDialogCancel className="h-11 rounded-xl mt-0" onClick={() => setDialogCancelar(false)}>
+            <AlertDialogCancel
+              className="h-11 rounded-xl mt-0"
+              onClick={() => setDialogCancelar(false)}
+            >
               Volver
             </AlertDialogCancel>
             <AlertDialogAction
               className="h-11 rounded-xl bg-[color:var(--status-danger)] hover:bg-[color:var(--status-danger)] text-[color:var(--ui-fx-white)] font-bold"
-              onClick={(e) => { e.preventDefault(); confirmCancelar(); }}
+              onClick={(e) => {
+                e.preventDefault();
+                confirmCancelar();
+              }}
               disabled={cancelandoId !== null}
             >
-              {cancelandoId !== null ? <Loader2 className="h-4 w-4 animate-spin" /> : "Sí, cancelar"}
+              {cancelandoId !== null ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                "Sí, cancelar"
+              )}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -499,21 +604,33 @@ export function PedidosEsperadosView() {
             <div className="mx-auto bg-[color:var(--status-danger)] dark:bg-[color:var(--status-danger)]/30 p-3 rounded-full w-fit mb-2">
               <Trash2 className="h-8 w-8 text-[color:var(--status-danger)]" />
             </div>
-            <AlertDialogTitle className="text-xl font-bold text-center">¿Eliminar pedido cancelado?</AlertDialogTitle>
+            <AlertDialogTitle className="text-xl font-bold text-center">
+              ¿Eliminar pedido cancelado?
+            </AlertDialogTitle>
             <AlertDialogDescription className="text-center text-muted-foreground">
               Se eliminará de forma permanente y no se podrá recuperar.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="grid grid-cols-2 gap-3 sm:flex sm:justify-center pt-2">
-            <AlertDialogCancel className="h-11 rounded-xl mt-0" onClick={() => setDialogEliminar(false)}>
+            <AlertDialogCancel
+              className="h-11 rounded-xl mt-0"
+              onClick={() => setDialogEliminar(false)}
+            >
               Volver
             </AlertDialogCancel>
             <AlertDialogAction
               className="h-11 rounded-xl bg-[color:var(--status-danger)] hover:bg-[color:var(--status-danger)] text-[color:var(--ui-fx-white)] font-bold"
-              onClick={(e) => { e.preventDefault(); confirmEliminar(); }}
+              onClick={(e) => {
+                e.preventDefault();
+                confirmEliminar();
+              }}
               disabled={eliminandoId !== null}
             >
-              {eliminandoId !== null ? <Loader2 className="h-4 w-4 animate-spin" /> : "Sí, eliminar"}
+              {eliminandoId !== null ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                "Sí, eliminar"
+              )}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -531,25 +648,29 @@ const ITEM_ESTADO_CONFIG: Record<
   PENDIENTE: {
     label: "Pendiente",
     icon: Clock,
-    className: "bg-[color:var(--theme-ocean-primary)]/10 text-[color:var(--theme-ocean-primary)] border-[color:var(--theme-ocean-primary)]/20",
+    className:
+      "bg-[color:var(--theme-ocean-primary)]/10 text-[color:var(--theme-ocean-primary)] border-[color:var(--theme-ocean-primary)]/20",
     dot: "bg-[color:var(--theme-ocean-primary)]",
   },
   CONFIRMADO: {
     label: "Confirmado",
     icon: CheckCircle2,
-    className: "bg-[color:var(--status-success-strong)]/10 text-[color:var(--status-success-strong)] border-[color:var(--status-success-strong)]/20",
+    className:
+      "bg-[color:var(--status-success-strong)]/10 text-[color:var(--status-success-strong)] border-[color:var(--status-success-strong)]/20",
     dot: "bg-[color:var(--status-success-strong)]",
   },
   PARCIAL: {
     label: "Parcial",
     icon: ArrowDownToLine,
-    className: "bg-yellow-500/10 text-yellow-700 border-yellow-500/20 dark:text-yellow-400",
+    className:
+      "bg-yellow-500/10 text-yellow-700 border-yellow-500/20 dark:text-yellow-400",
     dot: "bg-yellow-500",
   },
   CANCELADO: {
     label: "Cancelado",
     icon: MinusCircle,
-    className: "bg-muted/40 text-muted-foreground border-border/40 line-through",
+    className:
+      "bg-muted/40 text-muted-foreground border-border/40 line-through",
     dot: "bg-muted-foreground/50",
   },
 };
@@ -571,9 +692,16 @@ function PedidoDetalleDialog({
 
   if (!pedido) return null;
 
-  const totalEsperado = pedido.items.reduce((a, i) => a + i.cantidadEsperada, 0);
-  const totalRecibido = pedido.items.reduce((a, i) => a + i.cantidadRecibida, 0);
-  const pctRecibido = totalEsperado > 0 ? Math.round((totalRecibido / totalEsperado) * 100) : 0;
+  const totalEsperado = pedido.items.reduce(
+    (a, i) => a + i.cantidadEsperada,
+    0,
+  );
+  const totalRecibido = pedido.items.reduce(
+    (a, i) => a + i.cantidadRecibida,
+    0,
+  );
+  const pctRecibido =
+    totalEsperado > 0 ? Math.round((totalRecibido / totalEsperado) * 100) : 0;
 
   return (
     <>
@@ -602,7 +730,6 @@ function PedidoDetalleDialog({
 
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="sm:max-w-[680px] p-0 overflow-hidden border-none shadow-2xl bg-background rounded-2xl">
-
           {/* HEADER */}
           <DialogHeader className="p-6 pb-4 border-b bg-gradient-to-r from-primary/5 via-primary/3 to-transparent">
             <div className="flex items-start justify-between gap-3">
@@ -616,7 +743,9 @@ function PedidoDetalleDialog({
                       Pedido #{pedido.id}
                     </DialogTitle>
                     <DialogDescription className="text-xs mt-0.5 text-muted-foreground">
-                      {formatFecha(pedido.fechaEsperada)} · {pedido.items.length} producto{pedido.items.length !== 1 ? "s" : ""}
+                      {formatFecha(pedido.fechaEsperada)} ·{" "}
+                      {pedido.items.length} producto
+                      {pedido.items.length !== 1 ? "s" : ""}
                     </DialogDescription>
                   </div>
                 </div>
@@ -628,7 +757,9 @@ function PedidoDetalleDialog({
             {pedido.estado !== "CANCELADO" && (
               <div className="mt-4 space-y-1.5">
                 <div className="flex items-center justify-between text-xs">
-                  <span className="font-bold text-muted-foreground uppercase tracking-wider">Recepción de stock</span>
+                  <span className="font-bold text-muted-foreground uppercase tracking-wider">
+                    Recepción de stock
+                  </span>
                   <span className="font-black text-foreground tabular-nums">
                     {totalRecibido} / {totalEsperado} unidades ({pctRecibido}%)
                   </span>
@@ -640,8 +771,8 @@ function PedidoDetalleDialog({
                       pctRecibido === 100
                         ? "bg-[color:var(--status-success-strong)]"
                         : pctRecibido > 0
-                        ? "bg-yellow-500"
-                        : "bg-[color:var(--theme-ocean-primary)]"
+                          ? "bg-yellow-500"
+                          : "bg-[color:var(--theme-ocean-primary)]",
                     )}
                     style={{ width: `${pctRecibido}%` }}
                   />
@@ -653,9 +784,12 @@ function PedidoDetalleDialog({
           {/* CUERPO */}
           <div className="p-5 space-y-3 max-h-[55vh] overflow-y-auto">
             {pedido.items.map((item) => {
-              const estadoCfg = ITEM_ESTADO_CONFIG[item.estado] ?? ITEM_ESTADO_CONFIG.PENDIENTE;
+              const estadoCfg =
+                ITEM_ESTADO_CONFIG[item.estado] ?? ITEM_ESTADO_CONFIG.PENDIENTE;
               const IconEstado = estadoCfg.icon;
-              const imgUrl = (item.producto as { imagenUrl?: string | null }).imagenUrl ?? null;
+              const imgUrl =
+                (item.producto as { imagenUrl?: string | null }).imagenUrl ??
+                null;
 
               return (
                 <div
@@ -665,25 +799,33 @@ function PedidoDetalleDialog({
                     item.estado === "CANCELADO"
                       ? "bg-muted/10 border-border/30 opacity-60"
                       : item.estado === "CONFIRMADO"
-                      ? "bg-[color:var(--status-success-strong)]/5 border-[color:var(--status-success-strong)]/15"
-                      : item.estado === "PARCIAL"
-                      ? "bg-yellow-500/5 border-yellow-500/15"
-                      : "bg-background border-border/40 hover:border-border/70"
+                        ? "bg-[color:var(--status-success-strong)]/5 border-[color:var(--status-success-strong)]/15"
+                        : item.estado === "PARCIAL"
+                          ? "bg-yellow-500/5 border-yellow-500/15"
+                          : "bg-background border-border/40 hover:border-border/70",
                   )}
                 >
                   {/* Imagen del producto */}
                   <button
                     type="button"
-                    onClick={() => { if (imgUrl) setVisorImagen(imgUrl); }}
+                    onClick={() => {
+                      if (imgUrl) setVisorImagen(imgUrl);
+                    }}
                     className={cn(
                       "h-14 w-14 rounded-xl shrink-0 overflow-hidden border border-border/30 bg-muted/50 flex items-center justify-center",
-                      imgUrl ? "cursor-zoom-in group relative hover:ring-2 hover:ring-primary/40 transition-all" : "cursor-default"
+                      imgUrl
+                        ? "cursor-zoom-in group relative hover:ring-2 hover:ring-primary/40 transition-all"
+                        : "cursor-default",
                     )}
                   >
                     {imgUrl ? (
                       <div className="relative h-14 w-14">
                         {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={imgUrl} alt={item.producto.nombre} className="h-14 w-14 object-cover" />
+                        <img
+                          src={imgUrl}
+                          alt={item.producto.nombre}
+                          className="h-14 w-14 object-cover"
+                        />
                         <div className="absolute inset-0 bg-black/0 group-hover:bg-black/35 transition-colors flex items-center justify-center">
                           <ZoomIn className="h-4 w-4 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
                         </div>
@@ -695,7 +837,9 @@ function PedidoDetalleDialog({
 
                   {/* Info del producto */}
                   <div className="flex-1 min-w-0 space-y-0.5">
-                    <p className="font-bold text-sm text-foreground leading-tight">{item.producto.nombre}</p>
+                    <p className="font-bold text-sm text-foreground leading-tight">
+                      {item.producto.nombre}
+                    </p>
                     {item.producto.sku && (
                       <div className="flex items-center gap-1 text-[10px] text-muted-foreground font-mono">
                         <Hash className="h-2.5 w-2.5" />
@@ -706,9 +850,17 @@ function PedidoDetalleDialog({
                     <div className="pt-0.5">
                       <Badge
                         variant="outline"
-                        className={cn("text-[10px] px-1.5 py-0 h-5 font-bold border gap-1 uppercase", estadoCfg.className)}
+                        className={cn(
+                          "text-[10px] px-1.5 py-0 h-5 font-bold border gap-1 uppercase",
+                          estadoCfg.className,
+                        )}
                       >
-                        <span className={cn("h-1.5 w-1.5 rounded-full shrink-0", estadoCfg.dot)} />
+                        <span
+                          className={cn(
+                            "h-1.5 w-1.5 rounded-full shrink-0",
+                            estadoCfg.dot,
+                          )}
+                        />
                         <IconEstado className="h-2.5 w-2.5" />
                         {estadoCfg.label}
                       </Badge>
@@ -718,27 +870,37 @@ function PedidoDetalleDialog({
                   {/* Cantidades */}
                   <div className="flex items-center gap-2 shrink-0">
                     <div className="text-center min-w-[44px]">
-                      <p className="text-[10px] font-bold uppercase text-muted-foreground tracking-wider">Esp.</p>
-                      <p className="text-lg font-black tabular-nums text-foreground">{item.cantidadEsperada}</p>
+                      <p className="text-[10px] font-bold uppercase text-muted-foreground tracking-wider">
+                        Esp.
+                      </p>
+                      <p className="text-lg font-black tabular-nums text-foreground">
+                        {item.cantidadEsperada}
+                      </p>
                     </div>
-                    <div className={cn(
-                      "h-8 w-px rounded-full",
-                      item.cantidadRecibida === item.cantidadEsperada
-                        ? "bg-[color:var(--status-success-strong)]/40"
-                        : item.cantidadRecibida > 0
-                        ? "bg-yellow-500/40"
-                        : "bg-border/60"
-                    )} />
-                    <div className="text-center min-w-[44px]">
-                      <p className="text-[10px] font-bold uppercase text-muted-foreground tracking-wider">Recib.</p>
-                      <p className={cn(
-                        "text-lg font-black tabular-nums",
+                    <div
+                      className={cn(
+                        "h-8 w-px rounded-full",
                         item.cantidadRecibida === item.cantidadEsperada
-                          ? "text-[color:var(--status-success-strong)]"
+                          ? "bg-[color:var(--status-success-strong)]/40"
                           : item.cantidadRecibida > 0
-                          ? "text-yellow-600 dark:text-yellow-400"
-                          : "text-muted-foreground"
-                      )}>
+                            ? "bg-yellow-500/40"
+                            : "bg-border/60",
+                      )}
+                    />
+                    <div className="text-center min-w-[44px]">
+                      <p className="text-[10px] font-bold uppercase text-muted-foreground tracking-wider">
+                        Recib.
+                      </p>
+                      <p
+                        className={cn(
+                          "text-lg font-black tabular-nums",
+                          item.cantidadRecibida === item.cantidadEsperada
+                            ? "text-[color:var(--status-success-strong)]"
+                            : item.cantidadRecibida > 0
+                              ? "text-yellow-600 dark:text-yellow-400"
+                              : "text-muted-foreground",
+                        )}
+                      >
                         {item.cantidadRecibida}
                       </p>
                     </div>
@@ -750,8 +912,12 @@ function PedidoDetalleDialog({
             {/* Observaciones */}
             {pedido.observaciones && (
               <div className="rounded-xl border border-border/50 p-3.5 bg-muted/20 mt-2">
-                <p className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider mb-1.5">Observaciones</p>
-                <p className="text-sm text-foreground/80 italic">{pedido.observaciones}</p>
+                <p className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider mb-1.5">
+                  Observaciones
+                </p>
+                <p className="text-sm text-foreground/80 italic">
+                  {pedido.observaciones}
+                </p>
               </div>
             )}
           </div>
@@ -760,25 +926,37 @@ function PedidoDetalleDialog({
           <div className="px-5 py-4 border-t bg-muted/10 flex items-center justify-between gap-4">
             <div className="flex items-center gap-4">
               <div className="text-center">
-                <p className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider">Esperado</p>
-                <p className="text-xl font-black tabular-nums text-foreground">{totalEsperado}</p>
+                <p className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider">
+                  Esperado
+                </p>
+                <p className="text-xl font-black tabular-nums text-foreground">
+                  {totalEsperado}
+                </p>
               </div>
               <div className="h-8 w-px bg-border/60 rounded-full" />
               <div className="text-center">
-                <p className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider">Recibido</p>
-                <p className={cn(
-                  "text-xl font-black tabular-nums",
-                  totalRecibido === totalEsperado
-                    ? "text-[color:var(--status-success-strong)]"
-                    : totalRecibido > 0
-                    ? "text-yellow-600 dark:text-yellow-400"
-                    : "text-muted-foreground"
-                )}>
+                <p className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider">
+                  Recibido
+                </p>
+                <p
+                  className={cn(
+                    "text-xl font-black tabular-nums",
+                    totalRecibido === totalEsperado
+                      ? "text-[color:var(--status-success-strong)]"
+                      : totalRecibido > 0
+                        ? "text-yellow-600 dark:text-yellow-400"
+                        : "text-muted-foreground",
+                  )}
+                >
                   {totalRecibido}
                 </p>
               </div>
             </div>
-            <Button variant="outline" className="rounded-xl h-9" onClick={() => onOpenChange(false)}>
+            <Button
+              variant="outline"
+              className="rounded-xl h-9"
+              onClick={() => onOpenChange(false)}
+            >
               Cerrar
             </Button>
           </div>
@@ -808,7 +986,9 @@ function PedidoRow({
   const isVencido = pedido.estado === "VENCIDO";
   const soloVer = ESTADOS_SOLO_VER.includes(pedido.estado);
   const canDelete = pedido.estado === "CANCELADO";
-  const productosNombres = pedido.items.map((it) => it.producto.nombre).join(", ");
+  const productosNombres = pedido.items
+    .map((it) => it.producto.nombre)
+    .join(", ");
 
   return (
     <motion.tr
@@ -817,16 +997,22 @@ function PedidoRow({
       transition={{ delay: idx * 0.03 }}
       className={cn(
         "group border-b border-border/40 hover:bg-muted/30 transition-colors",
-        isVencido && "bg-[color:var(--status-danger)]/5"
+        isVencido && "bg-[color:var(--status-danger)]/5",
       )}
     >
       <TableCell className="pl-6 py-4">
         <div className="space-y-0.5">
-          <p className="font-bold text-sm text-foreground tabular-nums">{formatFecha(pedido.fechaEsperada)}</p>
-          <p className={cn(
-            "text-[10px] font-bold",
-            isVencido ? "text-[color:var(--status-danger)]" : "text-muted-foreground"
-          )}>
+          <p className="font-bold text-sm text-foreground tabular-nums">
+            {formatFecha(pedido.fechaEsperada)}
+          </p>
+          <p
+            className={cn(
+              "text-[10px] font-bold",
+              isVencido
+                ? "text-[color:var(--status-danger)]"
+                : "text-muted-foreground",
+            )}
+          >
             {formatFechaRelativa(pedido.fechaEsperada)}
           </p>
         </div>
@@ -837,22 +1023,32 @@ function PedidoRow({
       </TableCell>
 
       <TableCell className="text-center">
-        <span className="font-bold text-foreground tabular-nums">{pedido.items.length}</span>
+        <span className="font-bold text-foreground tabular-nums">
+          {pedido.items.length}
+        </span>
       </TableCell>
 
       <TableCell className="max-w-[200px]">
-        <p className="text-sm text-muted-foreground truncate" title={productosNombres}>
+        <p
+          className="text-sm text-muted-foreground truncate"
+          title={productosNombres}
+        >
           {productosNombres || "—"}
         </p>
       </TableCell>
 
       <TableCell className="max-w-[160px]">
         {pedido.observaciones ? (
-          <p className="text-xs text-muted-foreground truncate italic" title={pedido.observaciones}>
+          <p
+            className="text-xs text-muted-foreground truncate italic"
+            title={pedido.observaciones}
+          >
             {pedido.observaciones}
           </p>
         ) : (
-          <span className="text-xs text-muted-foreground/40 italic">Sin observaciones</span>
+          <span className="text-xs text-muted-foreground/40 italic">
+            Sin observaciones
+          </span>
         )}
       </TableCell>
 
@@ -869,33 +1065,33 @@ function PedidoRow({
           </Button>
           {!soloVer && (
             <>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-8 px-3 rounded-lg text-xs font-bold text-[color:var(--status-success-strong)] hover:bg-[color:var(--status-success-strong)]/10"
-              onClick={onConfirmar}
-            >
-              <PackageCheck className="h-3.5 w-3.5 mr-1" />
-              {pedido.estado === "PARCIAL" ? "Completar" : "Confirmar"}
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-8 px-3 rounded-lg text-xs font-bold text-[color:var(--theme-ocean-primary)] hover:bg-[color:var(--theme-ocean-primary)]/10"
-              onClick={onPostergar}
-            >
-              <CalendarClock className="h-3.5 w-3.5 mr-1" />
-              Postergar
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-8 px-3 rounded-lg text-xs font-bold text-[color:var(--status-danger)] hover:bg-[color:var(--status-danger)]/10"
-              onClick={onCancelar}
-            >
-              <XCircle className="h-3.5 w-3.5 mr-1" />
-              Cancelar
-            </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 px-3 rounded-lg text-xs font-bold text-[color:var(--status-success-strong)] hover:bg-[color:var(--status-success-strong)]/10"
+                onClick={onConfirmar}
+              >
+                <PackageCheck className="h-3.5 w-3.5 mr-1" />
+                {pedido.estado === "PARCIAL" ? "Completar" : "Confirmar"}
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 px-3 rounded-lg text-xs font-bold text-[color:var(--theme-ocean-primary)] hover:bg-[color:var(--theme-ocean-primary)]/10"
+                onClick={onPostergar}
+              >
+                <CalendarClock className="h-3.5 w-3.5 mr-1" />
+                Postergar
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 px-3 rounded-lg text-xs font-bold text-[color:var(--status-danger)] hover:bg-[color:var(--status-danger)]/10"
+                onClick={onCancelar}
+              >
+                <XCircle className="h-3.5 w-3.5 mr-1" />
+                Cancelar
+              </Button>
             </>
           )}
           {canDelete && (
@@ -935,7 +1131,9 @@ function MobilePedidoCard({
   const isVencido = pedido.estado === "VENCIDO";
   const soloVer = ESTADOS_SOLO_VER.includes(pedido.estado);
   const canDelete = pedido.estado === "CANCELADO";
-  const productosNombres = pedido.items.map((it) => it.producto.nombre).join(", ");
+  const productosNombres = pedido.items
+    .map((it) => it.producto.nombre)
+    .join(", ");
 
   return (
     <motion.div
@@ -943,93 +1141,118 @@ function MobilePedidoCard({
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: idx * 0.05 }}
     >
-      <Card className={cn(
-        "p-4 border-border/50 shadow-sm rounded-2xl relative overflow-hidden space-y-3",
-        isVencido && "border-[color:var(--status-danger)]/30 bg-[color:var(--status-danger)]/5"
-      )}>
-        <div className={cn(
-          "absolute left-0 top-0 bottom-0 w-1.5",
-          pedido.estado === "VENCIDO" ? "bg-[color:var(--status-danger)]" :
-          pedido.estado === "PROGRAMADO" ? "bg-[color:var(--theme-ocean-primary)]" :
-          pedido.estado === "PARCIAL" ? "bg-yellow-500" :
-          pedido.estado === "CONFIRMADO" ? "bg-[color:var(--status-success-strong)]" :
-          "bg-muted-foreground"
-        )} />
+      <Card
+        className={cn(
+          "p-4 border-border/50 shadow-sm rounded-2xl relative overflow-hidden space-y-3",
+          isVencido &&
+            "border-[color:var(--status-danger)]/30 bg-[color:var(--status-danger)]/5",
+        )}
+      >
+        <div
+          className={cn(
+            "absolute left-0 top-0 bottom-0 w-1.5",
+            pedido.estado === "VENCIDO"
+              ? "bg-[color:var(--status-danger)]"
+              : pedido.estado === "PROGRAMADO"
+                ? "bg-[color:var(--theme-ocean-primary)]"
+                : pedido.estado === "PARCIAL"
+                  ? "bg-yellow-500"
+                  : pedido.estado === "CONFIRMADO"
+                    ? "bg-[color:var(--status-success-strong)]"
+                    : "bg-muted-foreground",
+          )}
+        />
 
         <div className="flex items-start justify-between pl-3 gap-3">
           <div className="space-y-1 flex-1">
             <div className="flex items-center gap-2">
               <PedidoEstadoBadge estado={pedido.estado} size="sm" />
-              <span className={cn(
-                "text-[10px] font-bold",
-                isVencido ? "text-[color:var(--status-danger)]" : "text-muted-foreground"
-              )}>
+              <span
+                className={cn(
+                  "text-[10px] font-bold",
+                  isVencido
+                    ? "text-[color:var(--status-danger)]"
+                    : "text-muted-foreground",
+                )}
+              >
                 {formatFechaRelativa(pedido.fechaEsperada)}
               </span>
             </div>
-            <p className="font-bold text-foreground text-sm">{formatFecha(pedido.fechaEsperada)}</p>
-            <p className="text-xs text-muted-foreground truncate">{productosNombres}</p>
+            <p className="font-bold text-foreground text-sm">
+              {formatFecha(pedido.fechaEsperada)}
+            </p>
+            <p className="text-xs text-muted-foreground truncate">
+              {productosNombres}
+            </p>
           </div>
 
           <div className="flex items-center gap-2">
             <Badge variant="outline" className="text-xs font-bold tabular-nums">
-              {pedido.items.length} {pedido.items.length === 1 ? "item" : "items"}
+              {pedido.items.length}{" "}
+              {pedido.items.length === 1 ? "item" : "items"}
             </Badge>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="icon" className="h-9 w-9 rounded-xl border-border/60">
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-9 w-9 rounded-xl border-border/60"
+                >
                   <MoreVertical className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-48 rounded-xl border-border/60 shadow-xl">
-                  <DropdownMenuItem
-                    className="flex items-center gap-2.5 font-semibold cursor-pointer rounded-lg"
-                    onClick={onVer}
-                  >
-                    <Eye className="h-4 w-4" />
-                    Ver detalle
-                  </DropdownMenuItem>
-                  {!soloVer && (
-                    <>
-                      <DropdownMenuSeparator />
-                  <DropdownMenuItem
-                    className="flex items-center gap-2.5 font-semibold text-[color:var(--status-success-strong)] cursor-pointer rounded-lg focus:text-[color:var(--status-success-strong)] focus:bg-[color:var(--status-success-strong)] dark:focus:bg-[color:var(--status-success-strong)]/40"
-                    onClick={onConfirmar}
-                  >
-                    <PackageCheck className="h-4 w-4" />
-                    {pedido.estado === "PARCIAL" ? "Completar" : "Confirmar"}
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    className="flex items-center gap-2.5 font-semibold text-[color:var(--theme-ocean-primary)] cursor-pointer rounded-lg focus:text-[color:var(--theme-ocean-primary)] focus:bg-[color:var(--theme-ocean-primary)] dark:focus:bg-[color:var(--theme-ocean-primary)]/40"
-                    onClick={onPostergar}
-                  >
-                    <CalendarClock className="h-4 w-4" />
-                    Postergar
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem
-                    className="flex items-center gap-2.5 font-semibold text-[color:var(--status-danger)] cursor-pointer rounded-lg focus:text-[color:var(--status-danger)] focus:bg-[color:var(--status-danger)] dark:focus:bg-[color:var(--status-danger)]/40"
-                    onClick={onCancelar}
-                  >
-                    <XCircle className="h-4 w-4" />
-                    Cancelar
-                  </DropdownMenuItem>
-                    </>
-                  )}
-                  {canDelete && (
-                    <>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem
-                        className="flex items-center gap-2.5 font-semibold text-[color:var(--status-danger)] cursor-pointer rounded-lg focus:text-[color:var(--status-danger)] focus:bg-[color:var(--status-danger)] dark:focus:bg-[color:var(--status-danger)]/40"
-                        onClick={onEliminar}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                        Eliminar
-                      </DropdownMenuItem>
-                    </>
-                  )}
-                </DropdownMenuContent>
-              </DropdownMenu>
+              <DropdownMenuContent
+                align="end"
+                className="w-48 rounded-xl border-border/60 shadow-xl"
+              >
+                <DropdownMenuItem
+                  className="flex items-center gap-2.5 font-semibold cursor-pointer rounded-lg"
+                  onClick={onVer}
+                >
+                  <Eye className="h-4 w-4" />
+                  Ver detalle
+                </DropdownMenuItem>
+                {!soloVer && (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      className="flex items-center gap-2.5 font-semibold text-[color:var(--status-success-strong)] cursor-pointer rounded-lg focus:text-[color:var(--status-success-strong)] focus:bg-[color:var(--status-success-strong)] dark:focus:bg-[color:var(--status-success-strong)]/40"
+                      onClick={onConfirmar}
+                    >
+                      <PackageCheck className="h-4 w-4" />
+                      {pedido.estado === "PARCIAL" ? "Completar" : "Confirmar"}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      className="flex items-center gap-2.5 font-semibold text-[color:var(--theme-ocean-primary)] cursor-pointer rounded-lg focus:text-[color:var(--theme-ocean-primary)] focus:bg-[color:var(--theme-ocean-primary)] dark:focus:bg-[color:var(--theme-ocean-primary)]/40"
+                      onClick={onPostergar}
+                    >
+                      <CalendarClock className="h-4 w-4" />
+                      Postergar
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      className="flex items-center gap-2.5 font-semibold text-[color:var(--status-danger)] cursor-pointer rounded-lg focus:text-[color:var(--status-danger)] focus:bg-[color:var(--status-danger)] dark:focus:bg-[color:var(--status-danger)]/40"
+                      onClick={onCancelar}
+                    >
+                      <XCircle className="h-4 w-4" />
+                      Cancelar
+                    </DropdownMenuItem>
+                  </>
+                )}
+                {canDelete && (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      className="flex items-center gap-2.5 font-semibold text-[color:var(--status-danger)] cursor-pointer rounded-lg focus:text-[color:var(--status-danger)] focus:bg-[color:var(--status-danger)] dark:focus:bg-[color:var(--status-danger)]/40"
+                      onClick={onEliminar}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                      Eliminar
+                    </DropdownMenuItem>
+                  </>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
 
@@ -1057,7 +1280,8 @@ function QuickStat({
   const colors = {
     default: "bg-primary/5 text-primary",
     blue: "bg-[color:var(--theme-ocean-primary)]/10 text-[color:var(--theme-ocean-primary)]",
-    emerald: "bg-[color:var(--status-success-strong)]/10 text-[color:var(--status-success-strong)]",
+    emerald:
+      "bg-[color:var(--status-success-strong)]/10 text-[color:var(--status-success-strong)]",
     red: "bg-[color:var(--status-danger)]/10 text-[color:var(--status-danger)]",
   };
 
@@ -1068,8 +1292,12 @@ function QuickStat({
           <Icon className="h-5 w-5" />
         </div>
         <div>
-          <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground/80">{label}</p>
-          <h3 className="text-2xl font-black tracking-tight text-foreground tabular-nums">{value}</h3>
+          <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground/80">
+            {label}
+          </p>
+          <h3 className="text-2xl font-black tracking-tight text-foreground tabular-nums">
+            {value}
+          </h3>
         </div>
       </div>
     </Card>
@@ -1083,10 +1311,17 @@ function EmptyState({ onCrear }: { onCrear: () => void }) {
         <PackageSearch className="h-12 w-12 opacity-40" />
       </div>
       <div className="space-y-1 text-center">
-        <p className="text-lg font-bold text-foreground">No hay pedidos programados</p>
-        <p className="text-sm text-muted-foreground">Creá un pedido para empezar a hacer seguimiento del stock entrante.</p>
+        <p className="text-lg font-bold text-foreground">
+          No hay pedidos programados
+        </p>
+        <p className="text-sm text-muted-foreground">
+          Creá un pedido para empezar a hacer seguimiento del stock entrante.
+        </p>
       </div>
-      <Button onClick={onCrear} className="mt-2 rounded-xl font-bold shadow-lg shadow-primary/20">
+      <Button
+        onClick={onCrear}
+        className="mt-2 rounded-xl font-bold shadow-lg shadow-primary/20"
+      >
         <Plus className="h-4 w-4 mr-2" />
         Crear primer pedido
       </Button>

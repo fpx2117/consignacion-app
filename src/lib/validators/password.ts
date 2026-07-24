@@ -10,7 +10,9 @@ export interface PasswordValidationResult {
 
 const MIN_LENGTH = 8;
 
-export function validatePasswordStrength(password: string): PasswordValidationResult {
+export function validatePasswordStrength(
+  password: string,
+): PasswordValidationResult {
   const errors: string[] = [];
 
   if (!password || typeof password !== "string") {

@@ -16,19 +16,25 @@ function getPublicOrigin(req: NextRequest): string {
     return `${proto}://${host}`;
   }
 
-  const envBase = process.env.NEXT_PUBLIC_APP_URL?.trim() || "http://localhost:3000";
-  if (envBase.startsWith("http://") || envBase.startsWith("https://")) return envBase.replace(/\/$/, "");
+  const envBase =
+    process.env.NEXT_PUBLIC_APP_URL?.trim() || "http://localhost:3000";
+  if (envBase.startsWith("http://") || envBase.startsWith("https://"))
+    return envBase.replace(/\/$/, "");
   return `https://${envBase.replace(/\/$/, "")}`;
 }
 
-function redirectAbs(req: NextRequest, path: string, cookieToSet?: { name: string, value: string }) {
+function redirectAbs(
+  req: NextRequest,
+  path: string,
+  cookieToSet?: { name: string; value: string },
+) {
   const url = new URL(path, getPublicOrigin(req));
   const res = NextResponse.redirect(url);
 
   if (cookieToSet) {
     res.cookies.set(cookieToSet.name, cookieToSet.value, {
-      path: '/',
-      maxAge: 60 * 60 * 24 // 24 horas de validez
+      path: "/",
+      maxAge: 60 * 60 * 24, // 24 horas de validez
     });
   }
 
@@ -37,7 +43,7 @@ function redirectAbs(req: NextRequest, path: string, cookieToSet?: { name: strin
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: Promise<{ code: string }> }
+  { params }: { params: Promise<{ code: string }> },
 ) {
   const { code } = await params;
   const codeHash = hashCode(code);
@@ -45,7 +51,8 @@ export async function GET(
   const link = await prisma.shareLink.findUnique({ where: { codeHash } });
 
   if (!link) return redirectAbs(req, `/x/status?state=invalid`);
-  if (new Date() > link.expiresAt) return redirectAbs(req, `/x/status?state=expired`);
+  if (new Date() > link.expiresAt)
+    return redirectAbs(req, `/x/status?state=expired`);
 
   const cookieName = `v_${codeHash}`;
   const hasViewedCookie = req.cookies.get(cookieName);
@@ -81,7 +88,10 @@ export async function GET(
       destPath = `/ver/historial/${historialTarget.mes}`;
       const query = `?code=${encodeURIComponent(code)}&anio=${historialTarget.anio}`;
 
-      return redirectAbs(req, `${destPath}${query}`, { name: cookieName, value: "1" });
+      return redirectAbs(req, `${destPath}${query}`, {
+        name: cookieName,
+        value: "1",
+      });
     }
     case "INVENTARIO":
       // A diferencia de TICKET/REMITO (que no tienen pantalla de carga propia),
@@ -93,7 +103,12 @@ export async function GET(
       const fullId = link.targetId || 11; // Default S1 Today
       const sucursalId = Math.floor(fullId / 10);
       const periodId = fullId % 10;
-      const PERIOD_MAP: Record<number, string> = { 1: "today", 2: "week", 3: "month", 4: "all" };
+      const PERIOD_MAP: Record<number, string> = {
+        1: "today",
+        2: "week",
+        3: "month",
+        4: "all",
+      };
       const periodName = PERIOD_MAP[periodId] ?? "month";
       destPath = `/ver/dashboard/${periodName}`;
       destPath += `?code=${encodeURIComponent(code)}&sucursalId=${sucursalId}`;
@@ -103,7 +118,12 @@ export async function GET(
       const fullId = link.targetId || 11;
       const sucursalId = Math.floor(fullId / 10);
       const periodId = fullId % 10;
-      const PERIOD_MAP_POS: Record<number, string> = { 1: "today", 2: "week", 3: "month", 4: "all" };
+      const PERIOD_MAP_POS: Record<number, string> = {
+        1: "today",
+        2: "week",
+        3: "month",
+        4: "all",
+      };
       const periodName = PERIOD_MAP_POS[periodId] ?? "month";
       destPath = `/ver/pos/${periodName}`;
       destPath += `?code=${encodeURIComponent(code)}&sucursalId=${sucursalId}`;
@@ -113,7 +133,12 @@ export async function GET(
       const fullId = link.targetId || 11;
       const sucursalId = Math.floor(fullId / 10);
       const periodId = fullId % 10;
-      const PERIOD_MAP_CONSIG: Record<number, string> = { 1: "today", 2: "week", 3: "month", 4: "all" };
+      const PERIOD_MAP_CONSIG: Record<number, string> = {
+        1: "today",
+        2: "week",
+        3: "month",
+        4: "all",
+      };
       const periodName = PERIOD_MAP_CONSIG[periodId] ?? "month";
       destPath = `/ver/consig/${periodName}`;
       destPath += `?code=${encodeURIComponent(code)}&sucursalId=${sucursalId}`;

@@ -16,7 +16,7 @@ const prisma = new PrismaClient({ adapter });
 async function main() {
   // 1. Productos con stock en Producto pero SIN StockSucursal
   console.log("=== Productos con stock en Producto pero SIN StockSucursal ===");
-  
+
   const productosSinStockSucursal = await prisma.producto.findMany({
     where: {
       stockDisponibleUnits: { gt: 0 },
@@ -33,7 +33,7 @@ async function main() {
   const sinSucursal = [];
   for (const p of productosSinStockSucursal) {
     const tieneSucursal = await prisma.stockSucursal.findFirst({
-      where: { productoId: p.id }
+      where: { productoId: p.id },
     });
     if (!tieneSucursal) {
       sinSucursal.push(p);
@@ -41,13 +41,15 @@ async function main() {
   }
 
   console.log(`Total: ${sinSucursal.length}`);
-  sinSucursal.forEach(p => {
+  sinSucursal.forEach((p) => {
     console.log(`  ID ${p.id}: ${p.nombre} - stock: ${p.stockDisponibleUnits}`);
   });
 
   // 2. Productos con inconsistencia entre Producto y StockSucursal
-  console.log("\n=== Productos con inconsistencia (Producto vs StockSucursal) ===");
-  
+  console.log(
+    "\n=== Productos con inconsistencia (Producto vs StockSucursal) ===",
+  );
+
   const todosProductos = await prisma.producto.findMany({
     select: {
       id: true,
@@ -59,27 +61,40 @@ async function main() {
           sucursalId: true,
           stockDisponibleUnits: true,
           stockConsignadoUnits: true,
-        }
-      }
-    }
+        },
+      },
+    },
   });
 
   let inconsistentes = 0;
   for (const p of todosProductos) {
-    const sumaDisponible = p.stockSucursals.reduce((acc, s) => acc + (s.stockDisponibleUnits ?? 0), 0);
-    const sumaConsignado = p.stockSucursals.reduce((acc, s) => acc + (s.stockConsignadoUnits ?? 0), 0);
-    
-    if (p.stockDisponibleUnits !== sumaDisponible || p.stockConsignadoUnits !== sumaConsignado) {
+    const sumaDisponible = p.stockSucursals.reduce(
+      (acc, s) => acc + (s.stockDisponibleUnits ?? 0),
+      0,
+    );
+    const sumaConsignado = p.stockSucursals.reduce(
+      (acc, s) => acc + (s.stockConsignadoUnits ?? 0),
+      0,
+    );
+
+    if (
+      p.stockDisponibleUnits !== sumaDisponible ||
+      p.stockConsignadoUnits !== sumaConsignado
+    ) {
       inconsistentes++;
       console.log(`  ID ${p.id}: ${p.nombre}`);
-      console.log(`    Producto: disponible=${p.stockDisponibleUnits}, consignado=${p.stockConsignadoUnits}`);
-      console.log(`    Suma Sucursales: disponible=${sumaDisponible}, consignado=${sumaConsignado}`);
+      console.log(
+        `    Producto: disponible=${p.stockDisponibleUnits}, consignado=${p.stockConsignadoUnits}`,
+      );
+      console.log(
+        `    Suma Sucursales: disponible=${sumaDisponible}, consignado=${sumaConsignado}`,
+      );
     }
   }
-  
+
   console.log(`\nTotal con inconsistencia: ${inconsistentes}`);
 }
 
 main()
-  .catch(e => console.error("Error:", e))
+  .catch((e) => console.error("Error:", e))
   .finally(() => prisma.$disconnect());

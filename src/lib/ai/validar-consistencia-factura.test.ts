@@ -6,7 +6,9 @@ import {
 } from "@/lib/ai/validar-consistencia-factura";
 import type { ExtractedInvoiceData } from "@/modules/invoices/config/invoice-extraction.config";
 
-function item(overrides: Partial<ExtractedInvoiceData["items"][number]>): ExtractedInvoiceData["items"][number] {
+function item(
+  overrides: Partial<ExtractedInvoiceData["items"][number]>,
+): ExtractedInvoiceData["items"][number] {
   return {
     rawDescription: "Item",
     supplierCode: null,
@@ -45,7 +47,10 @@ test("detecta una línea individualmente inconsistente (unitCost*quantity != lin
 
   assert.equal(resultado.itemsConAdvertencia.size, 1);
   assert.ok(resultado.itemsConAdvertencia.get(0)![0].includes("no coincide"));
-  assert.equal(resultado.confidenceMaximaPorItem.get(0), CONFIDENCE_MAXIMA_SI_INCONSISTENTE);
+  assert.equal(
+    resultado.confidenceMaximaPorItem.get(0),
+    CONFIDENCE_MAXIMA_SI_INCONSISTENTE,
+  );
 });
 
 test("no da falso positivo cuando falta unitCost o lineTotal", () => {
@@ -108,7 +113,10 @@ test("suma de líneas vs total de factura detecta el desfasaje aunque cada líne
   assert.equal(resultado.confidenceMaximaPorItem.size, datos.items.length);
   assert.equal(resultado.itemsConAdvertencia.size, datos.items.length);
   for (let i = 0; i < datos.items.length; i++) {
-    assert.equal(resultado.confidenceMaximaPorItem.get(i), CONFIDENCE_MAXIMA_SI_INCONSISTENTE);
+    assert.equal(
+      resultado.confidenceMaximaPorItem.get(i),
+      CONFIDENCE_MAXIMA_SI_INCONSISTENTE,
+    );
     assert.equal(resultado.itemsConAdvertencia.get(i)!.length, 1);
   }
 });
@@ -127,10 +135,18 @@ test("una línea que sí falla el chequeo #1 no queda duplicada por la propagaci
   // La línea 0 ya tenía su propia advertencia (chequeo #1) — la propagación del
   // chequeo #2 no debe agregarle una segunda advertencia genérica encima.
   assert.equal(resultado.itemsConAdvertencia.get(0)!.length, 1);
-  assert.ok(resultado.itemsConAdvertencia.get(0)![0].includes("no coincide con el total de línea"));
+  assert.ok(
+    resultado.itemsConAdvertencia
+      .get(0)![0]
+      .includes("no coincide con el total de línea"),
+  );
   // La línea 1 sí es "nueva" para la propagación.
   assert.equal(resultado.itemsConAdvertencia.get(1)!.length, 1);
-  assert.ok(resultado.itemsConAdvertencia.get(1)![0].includes("no coincide con la suma"));
+  assert.ok(
+    resultado.itemsConAdvertencia
+      .get(1)![0]
+      .includes("no coincide con la suma"),
+  );
 });
 
 test("factura sin total detectado no dispara el chequeo de cabecera", () => {

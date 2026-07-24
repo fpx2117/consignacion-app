@@ -3,14 +3,25 @@
 import { NextResponse } from "next/server";
 import { revalidateTag } from "next/cache";
 import { prisma } from "@/lib/prisma";
-import { Prisma, TipoMovimientoStock, MotivoMovimientoStock } from "@prisma/client";
+import {
+  Prisma,
+  TipoMovimientoStock,
+  MotivoMovimientoStock,
+} from "@prisma/client";
 import { requireAuth, requireRole } from "@/lib/auth/require-auth";
-import { createProductoSchema, type CreateProductoInput } from "@/lib/validators/producto";
+import {
+  createProductoSchema,
+  type CreateProductoInput,
+} from "@/lib/validators/producto";
 import { sendNotification } from "@/lib/notificaciones/socket-trigger";
 import { NOTIFICATION_TYPE } from "@/lib/notificaciones/types";
 import { obtenerConfiguracionGlobal } from "@/lib/config";
 import { checkProductLimit } from "@/lib/subscriptions/require-subscription";
-import { buildSucursalWhere, isGlobalSucursalView, resolveRequestedSucursalId } from "@/lib/security/sucursalScope";
+import {
+  buildSucursalWhere,
+  isGlobalSucursalView,
+  resolveRequestedSucursalId,
+} from "@/lib/security/sucursalScope";
 import { calcularDescuentoEfectivo } from "@/lib/storefront/descuento-utils";
 
 type ProductoCreateBody = CreateProductoInput & {
@@ -38,7 +49,10 @@ export async function GET(req: Request) {
     const sucursalParam = searchParams.get("sucursalId");
     const sucursalParamNum = sucursalParam ? Number(sucursalParam) : NaN;
 
-    const requestedSucursalId = resolveRequestedSucursalId(auth, sucursalParamNum);
+    const requestedSucursalId = resolveRequestedSucursalId(
+      auth,
+      sucursalParamNum,
+    );
     const requestedAuth = { ...auth, activeSucursalId: requestedSucursalId };
     const isGlobal = isGlobalSucursalView(requestedAuth);
     const sucursalWhere = buildSucursalWhere(requestedAuth);
@@ -56,16 +70,23 @@ export async function GET(req: Request) {
     if (limitParam && parseInt(limitParam, 10) > 200) {
       return NextResponse.json(
         { error: "El parámetro 'limit' no puede superar 200." },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
     const page = Math.max(1, parseInt(pageParam || "1", 10) || 1);
-    const limit = Math.min(200, Math.max(1, parseInt(limitParam || "50", 10) || 50));
+    const limit = Math.min(
+      200,
+      Math.max(1, parseInt(limitParam || "50", 10) || 50),
+    );
     const skip = (page - 1) * limit;
 
     const whereClauses: Prisma.ProductoWhereInput[] = [{ activo: true }];
-    const canUseSharedBranchScope = !isGlobal && scope === "branch-stock" && Number.isFinite(requestedSucursalId) && requestedSucursalId > 0;
+    const canUseSharedBranchScope =
+      !isGlobal &&
+      scope === "branch-stock" &&
+      Number.isFinite(requestedSucursalId) &&
+      requestedSucursalId > 0;
 
     if (canUseSharedBranchScope) {
       whereClauses.push({
@@ -91,25 +112,35 @@ export async function GET(req: Request) {
       whereClauses.push({ categoriaId: Number(categoriaId) });
     }
 
-    const where: Prisma.ProductoWhereInput = whereClauses.length === 1
-      ? whereClauses[0]
-      : { AND: whereClauses };
+    const where: Prisma.ProductoWhereInput =
+      whereClauses.length === 1 ? whereClauses[0] : { AND: whereClauses };
 
     const includeConfig = {
       categoria: true,
       subcategoria: true,
       stockSucursals: {
-        ...(isGlobal ? {} : { where: { sucursalId: requestedSucursalId } })
-      }
+        ...(isGlobal ? {} : { where: { sucursalId: requestedSucursalId } }),
+      },
     } satisfies Prisma.ProductoInclude;
 
     const mapProducto = (p: ProductoListado) => {
       const branchStock = p.stockSucursals[0];
-      const stockDisponibleGlobal = p.stockSucursals.reduce((acc, s) => acc + (s.stockDisponibleUnits || 0), 0);
-      const stockConsignadoGlobal = p.stockSucursals.reduce((acc, s) => acc + (s.stockConsignadoUnits || 0), 0);
-      const stockMinGlobal = p.stockSucursals.reduce((acc, s) => acc + (s.stockMinUnits || 0), 0);
+      const stockDisponibleGlobal = p.stockSucursals.reduce(
+        (acc, s) => acc + (s.stockDisponibleUnits || 0),
+        0,
+      );
+      const stockConsignadoGlobal = p.stockSucursals.reduce(
+        (acc, s) => acc + (s.stockConsignadoUnits || 0),
+        0,
+      );
+      const stockMinGlobal = p.stockSucursals.reduce(
+        (acc, s) => acc + (s.stockMinUnits || 0),
+        0,
+      );
 
-      const precioEfectivo = Number(branchStock?.precioVentaOverride ?? p.precioVenta);
+      const precioEfectivo = Number(
+        branchStock?.precioVentaOverride ?? p.precioVenta,
+      );
 
       return {
         ...p,
@@ -125,7 +156,9 @@ export async function GET(req: Request) {
         descuentoEfectivo: calcularDescuentoEfectivo({
           descuentoActivo: p.descuentoActivo,
           tipoDescuento: p.tipoDescuento,
-          descuentoPorcentaje: p.descuentoPorcentaje ? Number(p.descuentoPorcentaje) : null,
+          descuentoPorcentaje: p.descuentoPorcentaje
+            ? Number(p.descuentoPorcentaje)
+            : null,
           descuentoMonto: p.descuentoMonto ? Number(p.descuentoMonto) : null,
           descuentoDesde: p.descuentoDesde,
           descuentoHasta: p.descuentoHasta,
@@ -141,11 +174,14 @@ export async function GET(req: Request) {
         include: includeConfig,
         orderBy: { id: "desc" },
       });
-      return NextResponse.json({ data: productos.map(mapProducto) }, {
-        headers: {
-          "Cache-Control": "private, max-age=20, stale-while-revalidate=60",
+      return NextResponse.json(
+        { data: productos.map(mapProducto) },
+        {
+          headers: {
+            "Cache-Control": "private, max-age=20, stale-while-revalidate=60",
+          },
         },
-      });
+      );
     }
 
     // Con paginación → count + findMany en paralelo
@@ -162,22 +198,25 @@ export async function GET(req: Request) {
 
     const totalPages = Math.ceil(total / limit);
 
-    return NextResponse.json({
-      data: productos.map(mapProducto),
-      total,
-      page,
-      limit,
-      totalPages,
-    }, {
-      headers: {
-        "Cache-Control": "private, max-age=20, stale-while-revalidate=60",
+    return NextResponse.json(
+      {
+        data: productos.map(mapProducto),
+        total,
+        page,
+        limit,
+        totalPages,
       },
-    });
+      {
+        headers: {
+          "Cache-Control": "private, max-age=20, stale-while-revalidate=60",
+        },
+      },
+    );
   } catch (error) {
     console.error("Error obteniendo productos:", error);
     return NextResponse.json(
       { error: "Error interno al obtener productos" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -191,11 +230,20 @@ export async function POST(req: Request) {
     const auth = await requireAuth();
     if (!auth.ok) return auth.res;
     if (isGlobalSucursalView(auth)) {
-      return NextResponse.json({ error: "Vista global en modo solo lectura. Selecciona una sucursal para crear productos." }, { status: 409 });
+      return NextResponse.json(
+        {
+          error:
+            "Vista global en modo solo lectura. Selecciona una sucursal para crear productos.",
+        },
+        { status: 409 },
+      );
     }
 
     if (!requireRole(auth.user, ["ADMIN"])) {
-      return NextResponse.json({ error: "No tienes permisos (Admin requerido)" }, { status: 403 });
+      return NextResponse.json(
+        { error: "No tienes permisos (Admin requerido)" },
+        { status: 403 },
+      );
     }
 
     const sucursalId = auth.activeSucursalId;
@@ -203,19 +251,24 @@ export async function POST(req: Request) {
     // Guard: Verificar límite de productos del plan
     const productCheck = await checkProductLimit();
     if (!productCheck.allowed) {
-      return NextResponse.json({ error: productCheck.message, limitReached: true }, { status: 403 });
+      return NextResponse.json(
+        { error: productCheck.message, limitReached: true },
+        { status: 403 },
+      );
     }
 
-    const body = (await req.json().catch(() => null)) as ProductoCreateBody | null;
+    const body = (await req
+      .json()
+      .catch(() => null)) as ProductoCreateBody | null;
     const parsed = createProductoSchema.safeParse(body);
 
     if (!parsed.success) {
       return NextResponse.json(
         {
           error: "Validación fallida",
-          details: parsed.error.flatten().fieldErrors
+          details: parsed.error.flatten().fieldErrors,
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -224,7 +277,6 @@ export async function POST(req: Request) {
 
     // --- TRANSACCIÓN ATÓMICA ---
     const created = await prisma.$transaction(async (tx) => {
-
       // 1. Crear el producto
       const nuevoProducto = await tx.producto.create({
         data: {
@@ -241,18 +293,24 @@ export async function POST(req: Request) {
           sku: data.sku?.trim() || null,
           categoriaId: data.categoriaId ?? null,
           subcategoriaId: body?.subcategoriaId ?? null,
-          fechaVencimiento: data.fechaVencimiento ? new Date(data.fechaVencimiento) : null,
+          fechaVencimiento: data.fechaVencimiento
+            ? new Date(data.fechaVencimiento)
+            : null,
           imagenUrl: data.imagenUrl || null,
           sucursalId,
           tipoDescuento: data.tipoDescuento ?? "porcentaje",
           descuentoPorcentaje: data.descuentoPorcentaje ?? null,
           descuentoMonto: data.descuentoMonto ?? null,
           descuentoActivo: data.descuentoActivo ?? false,
-          descuentoDesde: data.descuentoDesde ? new Date(data.descuentoDesde) : null,
-          descuentoHasta: data.descuentoHasta ? new Date(data.descuentoHasta) : null,
+          descuentoDesde: data.descuentoDesde
+            ? new Date(data.descuentoDesde)
+            : null,
+          descuentoHasta: data.descuentoHasta
+            ? new Date(data.descuentoHasta)
+            : null,
           atributosExtra: data.atributosExtra ?? undefined,
         },
-        include: { categoria: true, subcategoria: true }
+        include: { categoria: true, subcategoria: true },
       });
 
       // 2. Crear el registro de StockSucursal para la sucursal activa
@@ -263,7 +321,7 @@ export async function POST(req: Request) {
           stockDisponibleUnits: stockInicial,
           stockConsignadoUnits: 0,
           stockMinUnits: data.stockMinUnits ?? 0,
-        }
+        },
       });
 
       // 3. Registrar el movimiento inicial
@@ -278,7 +336,7 @@ export async function POST(req: Request) {
             stockPrevio: 0,
             stockPosterior: stockInicial,
             observaciones: "Carga inicial de stock al crear producto",
-          }
+          },
         });
       }
 
@@ -286,24 +344,27 @@ export async function POST(req: Request) {
     });
 
     // --- LÓGICA DE NOTIFICACIONES ---
-    const configGlobal = await obtenerConfiguracionGlobal(auth.activeSucursalId);
-    const umbralAlerta = created.stockMinUnits > 0
-      ? created.stockMinUnits
-      : configGlobal.minStockGlobal;
+    const configGlobal = await obtenerConfiguracionGlobal(
+      auth.activeSucursalId,
+    );
+    const umbralAlerta =
+      created.stockMinUnits > 0
+        ? created.stockMinUnits
+        : configGlobal.minStockGlobal;
 
     if (stockInicial === 0) {
       await sendNotification({
         type: NOTIFICATION_TYPE.OUT_OF_STOCK,
         title: "Nuevo Producto Sin Stock",
         message: `Se ha creado "${created.nombre}" sin inventario.`,
-        data: { productId: created.id }
+        data: { productId: created.id },
       });
     } else if (stockInicial <= umbralAlerta) {
       await sendNotification({
         type: NOTIFICATION_TYPE.LOW_STOCK,
         title: "Stock Bajo al Crear",
         message: `"${created.nombre}" inicia con ${stockInicial} u. (Mínimo: ${umbralAlerta}).`,
-        data: { productId: created.id }
+        data: { productId: created.id },
       });
     }
 
@@ -311,21 +372,27 @@ export async function POST(req: Request) {
     revalidateTag("public-catalog", "default");
 
     return NextResponse.json({ data: created }, { status: 201 });
-
   } catch (error) {
     // Manejo de duplicados (Unique Constraints)
-    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
-      const field = Array.isArray(error.meta?.target) ? String(error.meta.target[0]) : "desconocido";
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === "P2002"
+    ) {
+      const field = Array.isArray(error.meta?.target)
+        ? String(error.meta.target[0])
+        : "desconocido";
       return NextResponse.json(
-        { error: `El valor en el campo '${field}' ya está registrado en otro producto.` },
-        { status: 400 }
+        {
+          error: `El valor en el campo '${field}' ya está registrado en otro producto.`,
+        },
+        { status: 400 },
       );
     }
 
     console.error("Error al obtener productos:", error);
     return NextResponse.json(
       { error: "Error interno al obtener productos" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

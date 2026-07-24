@@ -10,7 +10,9 @@ export function escapeHtml(value: unknown): string {
 }
 
 export function escapeAttr(value: unknown): string {
-  return escapeHtml(value).replace(/[\r\n]+/g, " ").trim();
+  return escapeHtml(value)
+    .replace(/[\r\n]+/g, " ")
+    .trim();
 }
 
 export function formatDateAR(
@@ -37,7 +39,10 @@ export function resolveReportTimezone(tz?: string | null): string {
   return tz ?? TECHNICAL_FALLBACK_TZ;
 }
 
-export function formatMoneyARS(amount: number, maximumFractionDigits = 2): string {
+export function formatMoneyARS(
+  amount: number,
+  maximumFractionDigits = 2,
+): string {
   return new Intl.NumberFormat("es-AR", {
     style: "currency",
     currency: "ARS",

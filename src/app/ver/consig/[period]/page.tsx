@@ -25,7 +25,9 @@ export default function ConsigReporteLoadingPage({
   const sucursalId = searchParams.get("sucursalId") || "1";
   const label = PERIOD_LABELS[period] ?? period;
 
-  const pdfUrl = code ? `/ver/consig/${period}/pdf?code=${code}&sucursalId=${sucursalId}` : null;
+  const pdfUrl = code
+    ? `/ver/consig/${period}/pdf?code=${code}&sucursalId=${sucursalId}`
+    : null;
   const fetchError = useReportPdfNavigation(pdfUrl);
 
   return (
@@ -33,7 +35,9 @@ export default function ConsigReporteLoadingPage({
       title="Generando Reporte"
       subtitle={`Consignaciones · ${label}`}
       Icon={Handshake}
-      errorMessage={fetchError ?? (code ? null : "Acceso no autorizado o enlace inválido.")}
+      errorMessage={
+        fetchError ?? (code ? null : "Acceso no autorizado o enlace inválido.")
+      }
     />
   );
 }

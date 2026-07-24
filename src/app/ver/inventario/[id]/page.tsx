@@ -25,7 +25,9 @@ export default function InventarioLoadingPage({
   // cachea el link por sucursal sin distinguir las opciones elegidas). En
   // ese caso se pide el PDF directo. Sin esos params (ej. entrando desde un
   // link corto /x/[code] compartido) se usa el flujo normal de link firmado.
-  const directOptions = ["conCostos", "conValuacion", "soloConStock"].some((k) => searchParams.has(k));
+  const directOptions = ["conCostos", "conValuacion", "soloConStock"].some(
+    (k) => searchParams.has(k),
+  );
 
   useEffect(() => {
     if (directOptions) {
@@ -34,14 +36,20 @@ export default function InventarioLoadingPage({
     }
 
     let mounted = true;
-    apiService.getInventarioPdfUrl(id)
+    apiService
+      .getInventarioPdfUrl(id)
       .then((url) => {
         if (mounted && url) setPdfUrl(url);
       })
       .catch(() => {
-        if (mounted) setLinkError("No se pudo generar el reporte de inventario. Intentá nuevamente.");
+        if (mounted)
+          setLinkError(
+            "No se pudo generar el reporte de inventario. Intentá nuevamente.",
+          );
       });
-    return () => { mounted = false; };
+    return () => {
+      mounted = false;
+    };
   }, [id, directOptions, searchParams]);
 
   const fetchError = useReportPdfNavigation(pdfUrl);

@@ -1,7 +1,14 @@
 import bcrypt from "bcryptjs";
 import { NextResponse } from "next/server";
-import { getAuthRateLimitDecision, getRequestIp, normalizeIdentity } from "@/lib/security/auth-rate-limit";
-import { buildAuthThrottledResponse, reportAuthRateLimitEvent } from "@/lib/security/auth-security-monitor";
+import {
+  getAuthRateLimitDecision,
+  getRequestIp,
+  normalizeIdentity,
+} from "@/lib/security/auth-rate-limit";
+import {
+  buildAuthThrottledResponse,
+  reportAuthRateLimitEvent,
+} from "@/lib/security/auth-security-monitor";
 import { getRealClientData } from "@/lib/clientData";
 import { getSessionHash } from "@/lib/security/session-hash";
 
@@ -35,9 +42,17 @@ type LoginRouteDeps = {
   }) => Promise<string>;
   setAuthCookie: (token: string, remember?: boolean) => Promise<unknown>;
   setActiveSucursalCookie: (sucursalId: number | null) => Promise<void>;
-  getRateLimitDecision: (req: Request, email: string | null) => ReturnType<typeof getAuthRateLimitDecision>;
+  getRateLimitDecision: (
+    req: Request,
+    email: string | null,
+  ) => ReturnType<typeof getAuthRateLimitDecision>;
   getClientData: () => Promise<ClientData>;
-  createUserSession: (input: { user: LoginUser; token: string; clientData: ClientData; remember: boolean }) => Promise<void>;
+  createUserSession: (input: {
+    user: LoginUser;
+    token: string;
+    clientData: ClientData;
+    remember: boolean;
+  }) => Promise<void>;
   recordAuditLog: (input: {
     userId?: number;
     action: string;
@@ -74,11 +89,12 @@ const defaultDeps: LoginRouteDeps = {
       sameSite: "lax",
     });
   },
-  getRateLimitDecision: (req, email) => getAuthRateLimitDecision({
-    endpoint: "login",
-    ip: getRequestIp(req),
-    identity: email,
-  }),
+  getRateLimitDecision: (req, email) =>
+    getAuthRateLimitDecision({
+      endpoint: "login",
+      ip: getRequestIp(req),
+      identity: email,
+    }),
   getClientData: getRealClientData,
   createUserSession: async ({ user, token, clientData, remember }) => {
     const { prisma } = await import("@/lib/prisma");
@@ -105,7 +121,10 @@ const defaultDeps: LoginRouteDeps = {
   },
 };
 
-export async function handlePostLogin(req: Request, deps: LoginRouteDeps = defaultDeps) {
+export async function handlePostLogin(
+  req: Request,
+  deps: LoginRouteDeps = defaultDeps,
+) {
   const body = (await req.json().catch(() => null)) as LoginBody | null;
   const email = normalizeIdentity(body?.email);
   const password = String(body?.password || "");
@@ -189,9 +208,13 @@ export async function POST(req: Request) {
   return handlePostLogin(req);
 }
 
-function buildInvalidLoginResponse(rateLimitDecision: ReturnType<LoginRouteDeps["getRateLimitDecision"]>) {
+function buildInvalidLoginResponse(
+  rateLimitDecision: ReturnType<LoginRouteDeps["getRateLimitDecision"]>,
+) {
   const headers = new Headers(rateLimitDecision.headers);
-  const remainingAttempts = rateLimitDecision.matchedRules.find((rule) => rule.name === "identity")?.remaining;
+  const remainingAttempts = rateLimitDecision.matchedRules.find(
+    (rule) => rule.name === "identity",
+  )?.remaining;
 
   if (typeof remainingAttempts === "number") {
     headers.set(REMAINING_ATTEMPTS_HEADER, String(remainingAttempts));

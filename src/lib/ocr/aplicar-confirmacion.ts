@@ -11,13 +11,18 @@
 
 import { unlink } from "fs/promises";
 import path from "path";
-import { Prisma, TipoMovimientoStock, MotivoMovimientoStock } from "@prisma/client";
+import {
+  Prisma,
+  TipoMovimientoStock,
+  MotivoMovimientoStock,
+} from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { getFacturaProveedorStorageDir } from "@/lib/uploads/uploads";
 
 type TxClient = Prisma.TransactionClient;
 
-export type AlertaVariacionCosto = "normal" | "advertencia" | "alerta_fuerte" | null;
+export type AlertaVariacionCosto =
+  "normal" | "advertencia" | "alerta_fuerte" | null;
 
 export function calcularVariacionCosto(
   costoAnterior: number | null,
@@ -28,24 +33,40 @@ export function calcularVariacionCosto(
   }
   const variacionPct = ((costoNuevo - costoAnterior) / costoAnterior) * 100;
   const abs = Math.abs(variacionPct);
-  const alerta: AlertaVariacionCosto = abs > 40 ? "alerta_fuerte" : abs > 15 ? "advertencia" : "normal";
+  const alerta: AlertaVariacionCosto =
+    abs > 40 ? "alerta_fuerte" : abs > 15 ? "advertencia" : "normal";
   return { variacionPct, alerta };
 }
 
 /** Suma stock a un producto existente en la sucursal, generando el MovimientoStock. Mismo patrón que confirmar/route.ts. */
 export async function aplicarMovimientoStock(
   tx: TxClient,
-  params: { productoId: number; sucursalId: number; cantidad: number; observaciones: string },
+  params: {
+    productoId: number;
+    sucursalId: number;
+    cantidad: number;
+    observaciones: string;
+  },
 ) {
   const stockActual = await tx.stockSucursal.findUnique({
-    where: { productoId_sucursalId: { productoId: params.productoId, sucursalId: params.sucursalId } },
+    where: {
+      productoId_sucursalId: {
+        productoId: params.productoId,
+        sucursalId: params.sucursalId,
+      },
+    },
   });
 
   const stockPrevio = stockActual?.stockDisponibleUnits ?? 0;
   const stockPosterior = stockPrevio + params.cantidad;
 
   await tx.stockSucursal.upsert({
-    where: { productoId_sucursalId: { productoId: params.productoId, sucursalId: params.sucursalId } },
+    where: {
+      productoId_sucursalId: {
+        productoId: params.productoId,
+        sucursalId: params.sucursalId,
+      },
+    },
     create: {
       productoId: params.productoId,
       sucursalId: params.sucursalId,
@@ -60,7 +81,10 @@ export async function aplicarMovimientoStock(
     where: { productoId: params.productoId },
     select: { stockDisponibleUnits: true },
   });
-  const stockGlobal = todosStocks.reduce((acc, s) => acc + (s.stockDisponibleUnits ?? 0), 0);
+  const stockGlobal = todosStocks.reduce(
+    (acc, s) => acc + (s.stockDisponibleUnits ?? 0),
+    0,
+  );
 
   await tx.producto.update({
     where: { id: params.productoId },
@@ -113,7 +137,8 @@ export async function registrarCostoYAlias(
     productoNuevo?: boolean;
   },
 ): Promise<{ variacionPct: number | null; alerta: AlertaVariacionCosto }> {
-  let variacion: { variacionPct: number | null; alerta: AlertaVariacionCosto } = { variacionPct: null, alerta: null };
+  let variacion: { variacionPct: number | null; alerta: AlertaVariacionCosto } =
+    { variacionPct: null, alerta: null };
 
   if (params.precioUnitario !== null && params.precioUnitario >= 0) {
     let costoAnterior: number | null = null;
@@ -152,7 +177,12 @@ export async function registrarCostoYAlias(
   if (params.proveedorId) {
     if (params.codigoProveedor) {
       await tx.productoProveedorAlias.upsert({
-        where: { proveedorId_codigoProveedor: { proveedorId: params.proveedorId, codigoProveedor: params.codigoProveedor } },
+        where: {
+          proveedorId_codigoProveedor: {
+            proveedorId: params.proveedorId,
+            codigoProveedor: params.codigoProveedor,
+          },
+        },
         create: {
           proveedorId: params.proveedorId,
           productoId: params.productoId,
@@ -163,7 +193,9 @@ export async function registrarCostoYAlias(
         update: {
           productoId: params.productoId,
           usoCount: { increment: 1 },
-          ...(params.productoGlobalId ? { productoGlobalId: params.productoGlobalId } : {}),
+          ...(params.productoGlobalId
+            ? { productoGlobalId: params.productoGlobalId }
+            : {}),
         },
       });
     } else if (params.descripcionNormalizada) {
@@ -180,7 +212,9 @@ export async function registrarCostoYAlias(
           data: {
             productoId: params.productoId,
             usoCount: { increment: 1 },
-            ...(params.productoGlobalId ? { productoGlobalId: params.productoGlobalId } : {}),
+            ...(params.productoGlobalId
+              ? { productoGlobalId: params.productoGlobalId }
+              : {}),
           },
         });
       } else {
@@ -229,7 +263,12 @@ export async function convertirCostoAArs(
   const moneda = monedaOrigen.trim().toUpperCase();
 
   if (moneda === "ARS" || precioUnitario === null) {
-    return { precioConvertido: precioUnitario, monedaFinal: "ARS", tipoCambioAplicado: null, advertencia: null };
+    return {
+      precioConvertido: precioUnitario,
+      monedaFinal: "ARS",
+      tipoCambioAplicado: null,
+      advertencia: null,
+    };
   }
 
   if (moneda === "USD") {
@@ -252,7 +291,10 @@ export async function convertirCostoAArs(
 }
 
 /** Si todos los items de la factura quedaron en un estado terminal, marca la factura como CONFIRMADA. */
-export async function actualizarEstadoFacturaSiCompleta(tx: TxClient, facturaId: number) {
+export async function actualizarEstadoFacturaSiCompleta(
+  tx: TxClient,
+  facturaId: number,
+) {
   const pendientes = await tx.facturaProveedorItem.count({
     where: {
       facturaId,
@@ -277,21 +319,29 @@ export async function actualizarEstadoFacturaSiCompleta(tx: TxClient, facturaId:
  * del rollback. Es idempotente: si la factura no está finalizada o ya se purgó,
  * no hace nada, así que las rutas pueden invocarla sin condicionar.
  */
-export async function purgarArchivoFacturaSiFinalizada(facturaId: number): Promise<boolean> {
+export async function purgarArchivoFacturaSiFinalizada(
+  facturaId: number,
+): Promise<boolean> {
   const factura = await prisma.facturaProveedor.findUnique({
     where: { id: facturaId },
     select: { estado: true, archivoPath: true, archivoEliminado: true },
   });
   if (!factura || factura.archivoEliminado) return false;
-  if (factura.estado !== "CONFIRMADA" && factura.estado !== "CANCELADA") return false;
+  if (factura.estado !== "CONFIRMADA" && factura.estado !== "CANCELADA")
+    return false;
 
   // Borra el archivo del disco. El nombre siempre es opaco (uuid.ext); igual se
   // valida antes de armar el path. Si ya no existe (ENOENT), se ignora.
   if (/^[0-9a-f-]+\.(pdf|jpg|png|webp)$/i.test(factura.archivoPath)) {
     try {
-      await unlink(path.join(getFacturaProveedorStorageDir(), factura.archivoPath));
+      await unlink(
+        path.join(getFacturaProveedorStorageDir(), factura.archivoPath),
+      );
     } catch (error) {
-      const code = error instanceof Error ? (error as NodeJS.ErrnoException).code : undefined;
+      const code =
+        error instanceof Error
+          ? (error as NodeJS.ErrnoException).code
+          : undefined;
       if (code !== "ENOENT") {
         console.error("[FACTURA_PURGE_ARCHIVO_ERROR]", { facturaId, error });
       }

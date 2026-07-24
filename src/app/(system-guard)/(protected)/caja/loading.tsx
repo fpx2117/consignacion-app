@@ -33,7 +33,10 @@ export default function CajaLoading() {
       <div className="rounded-xl border bg-card p-5">
         <div className="h-5 w-40 rounded bg-muted mb-4" />
         {Array.from({ length: 6 }).map((_, i) => (
-          <div key={i} className="flex items-center gap-4 py-3 border-b last:border-0">
+          <div
+            key={i}
+            className="flex items-center gap-4 py-3 border-b last:border-0"
+          >
             <div className="h-8 w-8 rounded-lg bg-muted flex-shrink-0" />
             <div className="flex-1">
               <div className="h-4 w-40 rounded bg-muted mb-1" />

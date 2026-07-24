@@ -17,4 +17,16 @@ export const updateFacturaProveedorItemSchema = z.object({
   totalLinea: z.number().nonnegative().nullable().optional(),
 });
 
-export type UpdateFacturaProveedorItemInput = z.infer<typeof updateFacturaProveedorItemSchema>;
+export type UpdateFacturaProveedorItemInput = z.infer<
+  typeof updateFacturaProveedorItemSchema
+>;
+
+// Shape del snapshot que process/route.ts guarda en FacturaProveedorItem.valoresIaOriginal
+// — mismo set de campos que este schema permite editar, derivado con .pick() para
+// que no pueda divergir en silencio de lo que realmente es editable.
+export const facturaItemValoresIaOriginalSchema =
+  updateFacturaProveedorItemSchema.required();
+
+export type FacturaItemValoresIaOriginal = z.infer<
+  typeof facturaItemValoresIaOriginalSchema
+>;

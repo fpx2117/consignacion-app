@@ -40,16 +40,32 @@ export function WhatsAppPreview({
           {storeName.charAt(0).toUpperCase()}
         </div>
         <div className="flex-1 min-w-0">
-          <p className="text-white font-semibold text-sm truncate">{storeName}</p>
+          <p className="text-white font-semibold text-sm truncate">
+            {storeName}
+          </p>
           <p className="text-emerald-300 text-xs">en línea</p>
         </div>
         {/* Íconos decorativos estilo WhatsApp */}
         <div className="flex items-center gap-3 text-white/60">
-          <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.81 19.79 19.79 0 01.1 1.18 2 2 0 012.1 0h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.91 7.09a16 16 0 006 6l.45-.45a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 14.92z"/>
+          <svg
+            className="h-4 w-4"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+          >
+            <path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.81 19.79 19.79 0 01.1 1.18 2 2 0 012.1 0h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.91 7.09a16 16 0 006 6l.45-.45a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 14.92z" />
           </svg>
-          <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/>
+          <svg
+            className="h-4 w-4"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+          >
+            <circle cx="12" cy="12" r="1" />
+            <circle cx="19" cy="12" r="1" />
+            <circle cx="5" cy="12" r="1" />
           </svg>
         </div>
       </div>
@@ -76,12 +92,19 @@ export function WhatsAppPreview({
           {/* Lista de productos */}
           <div className="space-y-0.5">
             {cartItems.map((item) => (
-              <div key={item.id} className="flex justify-between text-xs text-gray-600 gap-2">
+              <div
+                key={item.id}
+                className="flex justify-between text-xs text-gray-600 gap-2"
+              >
                 <span className="truncate">
-                  • {item.nombre} <span className="font-bold">x{item.quantity}</span>
+                  • {item.nombre}{" "}
+                  <span className="font-bold">x{item.quantity}</span>
                 </span>
                 <span className="flex-shrink-0 font-medium">
-                  ${getCatalogCartLineSubtotal(item, { porcentajeAumentoConsignacion }).toLocaleString("es-AR")}
+                  $
+                  {getCatalogCartLineSubtotal(item, {
+                    porcentajeAumentoConsignacion,
+                  }).toLocaleString("es-AR")}
                 </span>
               </div>
             ))}
@@ -104,14 +127,20 @@ export function WhatsAppPreview({
 
           {/* Footer opcional */}
           {template.footer && (
-            <p className="text-xs text-gray-400 italic mt-1">{template.footer}</p>
+            <p className="text-xs text-gray-400 italic mt-1">
+              {template.footer}
+            </p>
           )}
 
           {/* Timestamp estilo WhatsApp */}
           <div className="flex justify-end items-center gap-1 mt-1">
             <span className="text-[10px] text-gray-400">{timeStr}</span>
-            <svg className="h-3 w-3 text-[#4FC3F7]" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M18 7l-1.41-1.41-6.34 6.34 1.41 1.41L18 7zm4.24-1.41L11.66 16.17 7.48 12l-1.41 1.41L11.66 19l12-12-1.42-1.41zM.41 13.41L6 19l1.41-1.41L1.83 12 .41 13.41z"/>
+            <svg
+              className="h-3 w-3 text-[#4FC3F7]"
+              viewBox="0 0 24 24"
+              fill="currentColor"
+            >
+              <path d="M18 7l-1.41-1.41-6.34 6.34 1.41 1.41L18 7zm4.24-1.41L11.66 16.17 7.48 12l-1.41 1.41L11.66 19l12-12-1.42-1.41zM.41 13.41L6 19l1.41-1.41L1.83 12 .41 13.41z" />
             </svg>
           </div>
         </div>

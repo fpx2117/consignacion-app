@@ -1,6 +1,7 @@
 # Propuesta de Feature: carga de factura con IA en Pedidos Esperados
 
 ## Estado
+
 Documentado para planificación futura. No implementado. Requiere decisión del usuario en "Decisiones de diseño abiertas" antes de arrancar.
 
 ## Contexto
@@ -33,6 +34,7 @@ model PedidoEsperadoItem {
 ```
 
 Puntos clave:
+
 - **No tiene `proveedorId` ni ningún campo de proveedor.**
 - **No tiene precio/costo esperado** — solo cantidades.
 - `productoId` es obligatorio: no soporta líneas "sin match" pendientes de creación de producto (a diferencia de facturas).
@@ -45,6 +47,7 @@ Puntos clave:
 Pipeline completo de OCR + IA + matching + registro de costo, pensado para facturas reales de compra. Modelos (`prisma/schema.prisma:775-910`): `FacturaProveedor` (con `proveedorId`, `totalDetectado`, moneda, estado) y `FacturaProveedorItem` (con `productoId` **nullable**, `precioUnitario`, `matchScore`, `candidatoGlobal*`, `advertencias`).
 
 Flujo:
+
 1. Upload (`POST /api/facturas-proveedor/upload`) — guarda el archivo en disco, crea `FacturaProveedor` en `PENDIENTE`.
 2. Procesamiento (`POST /api/facturas-proveedor/[id]/process`, `src/app/api/facturas-proveedor/[id]/process/route.ts`):
    - `procesarFacturaConIA()` (`src/lib/ai/invoice-ai-parser.ts:86-183`) — **función pura respecto a la DB**: recibe `{ buffer, mimeType, rubroNegocio? }`, extrae texto local (Tesseract/pdf-parse), arma prompt (`invoice-extraction.config.ts`), llama a OpenRouter, valida con Zod, corre validación aritmética determinística (`validar-consistencia-factura.ts`). Devuelve `{ supplier, invoice, items[], warnings, globalConfidence, aiModel, aiUsage, aiRawResponse }`. **No escribe nada en la base.**
@@ -110,12 +113,12 @@ Importante: esto **no es** "traer el flujo de facturas a pedidos esperados". Ped
 
 ## Riesgos y mitigaciones
 
-| Riesgo | Mitigación |
-|---|---|
-| Costo de IA (OpenRouter) por cada intento de "cargar con IA", incluso si el usuario después no crea el pedido | Mismo costo/latencia que ya existe hoy en facturas; no es un riesgo nuevo, es el mismo trade-off ya aceptado en `/productos`. Evaluar si debe contar contra el mismo límite de plan (`checkFacturaOcrLimit`). |
-| Duplicar lógica de matching/UI ya escrita para facturas | Se reutiliza `procesarFacturaConIA` y `matchearItem`/`construirContextoMatching` sin modificarlos — el único código nuevo es el endpoint (orquestación) y la UI de revisión, que puede compartir componentes visuales (badges de estado) con `factura-proveedor-dialog.tsx` si se extraen a algo común. |
-| Usuario sube una factura real de compra (con costos) esperando que se registre el costo, y no pasa nada porque Pedido Esperado no maneja costo | Dejar explícito en la UI (copy) que esto es para *planificar* la llegada, no para registrar la compra — el registro de costo real sigue siendo por `/productos` → "Cargar por factura" cuando la mercadería efectivamente llega. |
-| Archivo temporal en memoria para requests grandes (fotos de alta resolución) | Mismo límite de tamaño que ya aplica en `validateUploadCandidate` para `upload/route.ts` de facturas. |
+| Riesgo                                                                                                                                         | Mitigación                                                                                                                                                                                                                                                                                              |
+| ---------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Costo de IA (OpenRouter) por cada intento de "cargar con IA", incluso si el usuario después no crea el pedido                                  | Mismo costo/latencia que ya existe hoy en facturas; no es un riesgo nuevo, es el mismo trade-off ya aceptado en `/productos`. Evaluar si debe contar contra el mismo límite de plan (`checkFacturaOcrLimit`).                                                                                           |
+| Duplicar lógica de matching/UI ya escrita para facturas                                                                                        | Se reutiliza `procesarFacturaConIA` y `matchearItem`/`construirContextoMatching` sin modificarlos — el único código nuevo es el endpoint (orquestación) y la UI de revisión, que puede compartir componentes visuales (badges de estado) con `factura-proveedor-dialog.tsx` si se extraen a algo común. |
+| Usuario sube una factura real de compra (con costos) esperando que se registre el costo, y no pasa nada porque Pedido Esperado no maneja costo | Dejar explícito en la UI (copy) que esto es para _planificar_ la llegada, no para registrar la compra — el registro de costo real sigue siendo por `/productos` → "Cargar por factura" cuando la mercadería efectivamente llega.                                                                        |
+| Archivo temporal en memoria para requests grandes (fotos de alta resolución)                                                                   | Mismo límite de tamaño que ya aplica en `validateUploadCandidate` para `upload/route.ts` de facturas.                                                                                                                                                                                                   |
 
 ## Preguntas abiertas
 

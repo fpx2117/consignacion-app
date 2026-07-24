@@ -43,12 +43,20 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
 // Extendemos el tipo Producto para asegurar que TS reconozca el stock
 type ProductoConStock = Producto & { stockDisponibleUnits?: number };
-type Item = { productoId: number; unitsEntregadas: number; producto?: ProductoConStock };
+type Item = {
+  productoId: number;
+  unitsEntregadas: number;
+  producto?: ProductoConStock;
+};
 
 const formatCurrency = (value: number) => {
   return new Intl.NumberFormat("es-AR", {
@@ -84,7 +92,8 @@ export default function NuevaConsignacionPage() {
   });
 
   // --- Helper de Cálculo ---
-  const aplicarAumento = (precio: number) => precio * (1 + porcentajeAumento / 100);
+  const aplicarAumento = (precio: number) =>
+    precio * (1 + porcentajeAumento / 100);
 
   // --- Initial Load ---
   const fetchData = React.useCallback(async () => {
@@ -95,18 +104,21 @@ export default function NuevaConsignacionPage() {
       const [c, p, config] = await Promise.all([
         apiService.getClientes(),
         apiService.getProductos(),
-        apiService.getConfiguracionGeneral()
+        apiService.getConfiguracionGeneral(),
       ]);
 
       const clientesFiltrados = (c ?? []).filter(
-        (cliente) => (cliente.nombre ?? "").toLowerCase() !== "consumidor final"
+        (cliente) =>
+          (cliente.nombre ?? "").toLowerCase() !== "consumidor final",
       );
 
       setClientes(clientesFiltrados);
       setProductos((p ?? []) as ProductoConStock[]);
 
       // getConfiguracionGeneral devuelve `any`, accedemos defensivamente
-      const pAumento = (config as { porcentajeAumentoConsignacion?: number } | null)?.porcentajeAumentoConsignacion ?? 0;
+      const pAumento =
+        (config as { porcentajeAumentoConsignacion?: number } | null)
+          ?.porcentajeAumentoConsignacion ?? 0;
       setPorcentajeAumento(pAumento);
     } catch {
       setError("Error al cargar datos iniciales.");
@@ -164,7 +176,7 @@ export default function NuevaConsignacionPage() {
         }
 
         return prev.map((i) =>
-          i.productoId === productoId ? { ...i, unitsEntregadas: nextQty } : i
+          i.productoId === productoId ? { ...i, unitsEntregadas: nextQty } : i,
         );
       }
 
@@ -177,7 +189,14 @@ export default function NuevaConsignacionPage() {
         return prev;
       }
 
-      return [...prev, { productoId: Number(productoId), unitsEntregadas: units, producto: selectedProducto }];
+      return [
+        ...prev,
+        {
+          productoId: Number(productoId),
+          unitsEntregadas: units,
+          producto: selectedProducto,
+        },
+      ];
     });
 
     setProductoId("");
@@ -202,7 +221,8 @@ export default function NuevaConsignacionPage() {
       setErrorDialog({
         open: true,
         title: "Falta Cliente",
-        description: "Por favor selecciona un destinatario para la consignación.",
+        description:
+          "Por favor selecciona un destinatario para la consignación.",
       });
       return;
     }
@@ -234,7 +254,10 @@ export default function NuevaConsignacionPage() {
       setErrorDialog({
         open: true,
         title: "Error en la operación",
-        description: e instanceof Error ? e.message : "Ocurrió un error inesperado al procesar la solicitud.",
+        description:
+          e instanceof Error
+            ? e.message
+            : "Ocurrió un error inesperado al procesar la solicitud.",
       });
     } finally {
       setSaving(false);
@@ -266,8 +289,12 @@ export default function NuevaConsignacionPage() {
         >
           <ArrowLeft className="mr-2 h-4 w-4" /> Volver al listado
         </Button>
-        <h1 className="text-4xl font-black tracking-tight text-foreground">Nueva Consignación</h1>
-        <p className="text-muted-foreground">Genera una nueva entrega de mercadería a un cliente.</p>
+        <h1 className="text-4xl font-black tracking-tight text-foreground">
+          Nueva Consignación
+        </h1>
+        <p className="text-muted-foreground">
+          Genera una nueva entrega de mercadería a un cliente.
+        </p>
       </div>
 
       {error && (
@@ -284,7 +311,8 @@ export default function NuevaConsignacionPage() {
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <div className="space-y-1">
                 <CardTitle className="text-lg flex items-center gap-2 text-foreground">
-                  <User className="h-5 w-5 text-[color:var(--primary)] dark:text-[color:var(--primary)]" /> Cliente
+                  <User className="h-5 w-5 text-[color:var(--primary)] dark:text-[color:var(--primary)]" />{" "}
+                  Cliente
                 </CardTitle>
               </div>
 
@@ -307,13 +335,19 @@ export default function NuevaConsignacionPage() {
                 <select
                   className="flex h-12 w-full rounded-xl border border-input bg-background px-3 py-2 text-sm text-foreground focus:border-[color:var(--primary)] focus:ring-1 focus:ring-[color:var(--primary)] outline-none appearance-none dark:bg-foreground/40"
                   value={clienteId}
-                  onChange={(e) => setClienteId(e.target.value ? Number(e.target.value) : "")}
+                  onChange={(e) =>
+                    setClienteId(e.target.value ? Number(e.target.value) : "")
+                  }
                 >
                   <option value="" className="text-muted-foreground">
                     Seleccionar destinatario...
                   </option>
                   {clientes.map((c) => (
-                    <option key={c.id} value={c.id} className="text-foreground bg-background dark:bg-card">
+                    <option
+                      key={c.id}
+                      value={c.id}
+                      className="text-foreground bg-background dark:bg-card"
+                    >
                       {c.nombre}
                     </option>
                   ))}
@@ -330,7 +364,8 @@ export default function NuevaConsignacionPage() {
           <Card className="border-border/50 bg-card/50 backdrop-blur-sm shadow-sm border-l-4 border-l-emerald-500 dark:bg-card/50">
             <CardHeader className="pb-2">
               <CardTitle className="text-lg flex items-center gap-2 text-foreground">
-                <BadgePercent className="h-5 w-5 text-[color:var(--status-success-strong)]" /> Ajuste de Precios
+                <BadgePercent className="h-5 w-5 text-[color:var(--status-success-strong)]" />{" "}
+                Ajuste de Precios
               </CardTitle>
             </CardHeader>
 
@@ -341,12 +376,16 @@ export default function NuevaConsignacionPage() {
                     <span className="text-4xl font-black text-[color:var(--status-success-strong)] dark:text-[color:var(--status-success-strong)]">
                       {porcentajeAumento}%
                     </span>
-                    <Badge variant="outline" className="bg-[color:var(--status-success-strong)]/10 text-[color:var(--status-success-strong)] border-[color:var(--status-success-strong)]/20 uppercase text-[10px] font-bold">
+                    <Badge
+                      variant="outline"
+                      className="bg-[color:var(--status-success-strong)]/10 text-[color:var(--status-success-strong)] border-[color:var(--status-success-strong)]/20 uppercase text-[10px] font-bold"
+                    >
                       Configurado
                     </Badge>
                   </div>
                   <p className="text-sm text-muted-foreground">
-                    Este aumento se aplicará a todos los productos de esta consignación.
+                    Este aumento se aplicará a todos los productos de esta
+                    consignación.
                   </p>
                 </div>
 
@@ -366,7 +405,8 @@ export default function NuevaConsignacionPage() {
           <Card className="border-border/50 bg-card/50 backdrop-blur-sm shadow-sm dark:bg-card/50">
             <CardHeader>
               <CardTitle className="text-lg flex items-center gap-2 text-foreground">
-                <Package className="h-5 w-5 text-[color:var(--primary)] dark:text-[color:var(--primary)]" /> Agregar Productos
+                <Package className="h-5 w-5 text-[color:var(--primary)] dark:text-[color:var(--primary)]" />{" "}
+                Agregar Productos
               </CardTitle>
             </CardHeader>
 
@@ -382,27 +422,38 @@ export default function NuevaConsignacionPage() {
                       <Button
                         variant="outline"
                         role="combobox"
-                        className={`w-full justify-between h-12 border-input bg-background text-left font-normal text-foreground hover:bg-muted dark:bg-foreground/40 dark:hover:bg-foreground/60 ${isAgotado ? "border-[color:var(--status-danger)] dark:border-[color:var(--status-danger)] bg-[color:var(--status-danger)]/50 dark:bg-[color:var(--status-danger)]/10" : ""
-                          }`}
+                        className={`w-full justify-between h-12 border-input bg-background text-left font-normal text-foreground hover:bg-muted dark:bg-foreground/40 dark:hover:bg-foreground/60 ${
+                          isAgotado
+                            ? "border-[color:var(--status-danger)] dark:border-[color:var(--status-danger)] bg-[color:var(--status-danger)]/50 dark:bg-[color:var(--status-danger)]/10"
+                            : ""
+                        }`}
                         disabled={loading}
                       >
                         {productoId ? (
                           <span className="truncate flex items-center gap-2">
                             {productos.find((p) => p.id === productoId)?.nombre}
                             {isAgotado && (
-                              <Badge variant="destructive" className="h-5 px-1.5 text-[10px]">
+                              <Badge
+                                variant="destructive"
+                                className="h-5 px-1.5 text-[10px]"
+                              >
                                 AGOTADO
                               </Badge>
                             )}
                           </span>
                         ) : (
-                          <span className="text-muted-foreground">Buscar producto...</span>
+                          <span className="text-muted-foreground">
+                            Buscar producto...
+                          </span>
                         )}
                         <Search className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                       </Button>
                     </PopoverTrigger>
 
-                    <PopoverContent className="w-[300px] sm:w-[400px] p-0" align="start">
+                    <PopoverContent
+                      className="w-[300px] sm:w-[400px] p-0"
+                      align="start"
+                    >
                       <Command>
                         <CommandInput placeholder="Buscar..." />
                         <CommandList>
@@ -411,7 +462,8 @@ export default function NuevaConsignacionPage() {
                           </CommandEmpty>
                           <CommandGroup>
                             {productos.map((p) => {
-                              const agotado = (p.stockDisponibleUnits ?? 0) <= 0;
+                              const agotado =
+                                (p.stockDisponibleUnits ?? 0) <= 0;
                               return (
                                 <CommandItem
                                   key={p.id}
@@ -423,14 +475,21 @@ export default function NuevaConsignacionPage() {
                                   className="flex justify-between items-center py-3 cursor-pointer"
                                 >
                                   <div className="flex flex-col">
-                                    <span className={`text-sm font-medium ${agotado ? "text-muted-foreground" : ""}`}>
+                                    <span
+                                      className={`text-sm font-medium ${agotado ? "text-muted-foreground" : ""}`}
+                                    >
                                       {p.nombre}
                                     </span>
                                     <span
-                                      className={`text-[10px] ${agotado ? "text-[color:var(--status-danger)] font-bold" : "text-muted-foreground"
-                                        }`}
+                                      className={`text-[10px] ${
+                                        agotado
+                                          ? "text-[color:var(--status-danger)] font-bold"
+                                          : "text-muted-foreground"
+                                      }`}
                                     >
-                                      {agotado ? "SIN STOCK" : `Stock: ${p.stockDisponibleUnits ?? 0}`}
+                                      {agotado
+                                        ? "SIN STOCK"
+                                        : `Stock: ${p.stockDisponibleUnits ?? 0}`}
                                     </span>
                                   </div>
                                   <Badge
@@ -472,7 +531,9 @@ export default function NuevaConsignacionPage() {
               {isAgotado && (
                 <div className="rounded-lg bg-[color:var(--status-danger)] border border-[color:var(--status-danger)] p-3 flex items-center gap-3 text-[color:var(--status-danger)] dark:bg-[color:var(--status-danger)]/20 dark:border-[color:var(--status-danger)]/50 dark:text-[color:var(--status-danger)]">
                   <AlertTriangle className="h-5 w-5" />
-                  <span className="text-sm font-medium">Producto agotado. No se puede agregar.</span>
+                  <span className="text-sm font-medium">
+                    Producto agotado. No se puede agregar.
+                  </span>
                 </div>
               )}
 
@@ -495,9 +556,13 @@ export default function NuevaConsignacionPage() {
               <CardHeader className="bg-muted/30 border-b border-border/50 pb-4 dark:bg-card/5">
                 <div className="flex justify-between items-center">
                   <CardTitle className="text-lg flex items-center gap-2 text-foreground">
-                    <ShoppingCart className="h-5 w-5 text-[color:var(--primary)] dark:text-[color:var(--primary)]" /> Resumen
+                    <ShoppingCart className="h-5 w-5 text-[color:var(--primary)] dark:text-[color:var(--primary)]" />{" "}
+                    Resumen
                   </CardTitle>
-                  <Badge variant="outline" className="border-[color:var(--primary)] text-[color:var(--primary)] dark:border-[color:var(--primary)]/30 dark:text-[color:var(--primary)]">
+                  <Badge
+                    variant="outline"
+                    className="border-[color:var(--primary)] text-[color:var(--primary)] dark:border-[color:var(--primary)]/30 dark:text-[color:var(--primary)]"
+                  >
                     {items.length} Ítems
                   </Badge>
                 </div>
@@ -513,7 +578,9 @@ export default function NuevaConsignacionPage() {
                         className="py-12 text-center border-2 border-dashed border-border rounded-xl"
                       >
                         <ShoppingCart className="h-10 w-10 text-muted-foreground mx-auto mb-3 opacity-50" />
-                        <p className="text-sm text-muted-foreground">Agrega productos para comenzar</p>
+                        <p className="text-sm text-muted-foreground">
+                          Agrega productos para comenzar
+                        </p>
                       </motion.div>
                     ) : (
                       items.map((i) => {
@@ -534,9 +601,13 @@ export default function NuevaConsignacionPage() {
                                 x{i.unitsEntregadas}
                               </div>
                               <div className="min-w-0">
-                                <p className="font-medium text-sm text-foreground truncate">{i.producto?.nombre}</p>
+                                <p className="font-medium text-sm text-foreground truncate">
+                                  {i.producto?.nombre}
+                                </p>
                                 <div className="flex items-center gap-2">
-                                  <p className="text-[10px] text-muted-foreground line-through">{formatCurrency(precioBase)}</p>
+                                  <p className="text-[10px] text-muted-foreground line-through">
+                                    {formatCurrency(precioBase)}
+                                  </p>
                                   <p className="text-[11px] font-bold text-[color:var(--status-success-strong)] dark:text-[color:var(--status-success-strong)]">
                                     Final: {formatCurrency(precioFinal)}
                                   </p>
@@ -546,7 +617,9 @@ export default function NuevaConsignacionPage() {
 
                             <div className="flex items-center gap-3 pl-2">
                               <span className="text-sm font-bold text-foreground tabular-nums">
-                                {formatCurrency(precioFinal * i.unitsEntregadas)}
+                                {formatCurrency(
+                                  precioFinal * i.unitsEntregadas,
+                                )}
                               </span>
                               <button
                                 onClick={() => removeItem(i.productoId)}
@@ -568,13 +641,17 @@ export default function NuevaConsignacionPage() {
                     <div className="space-y-3">
                       <div className="flex justify-between text-sm text-muted-foreground">
                         <span>Cantidad Total</span>
-                        <span className="text-foreground font-medium">{totalUnits} u.</span>
+                        <span className="text-foreground font-medium">
+                          {totalUnits} u.
+                        </span>
                       </div>
                       <div className="flex justify-between items-baseline">
                         <span className="text-sm font-bold uppercase tracking-wider text-[color:var(--primary)] dark:text-[color:var(--primary)]">
                           Valor Total
                         </span>
-                        <span className="text-3xl font-black text-foreground tracking-tight">{formatCurrency(totalAmount)}</span>
+                        <span className="text-3xl font-black text-foreground tracking-tight">
+                          {formatCurrency(totalAmount)}
+                        </span>
                       </div>
                     </div>
 
@@ -583,12 +660,18 @@ export default function NuevaConsignacionPage() {
                       disabled={saving}
                       className="w-full h-14 bg-[color:var(--primary)] hover:bg-[color:var(--primary)] text-[color:var(--ui-fx-white)] rounded-xl font-bold text-lg shadow-lg shadow-indigo-500/20 dark:shadow-indigo-900/20 transition-all hover:scale-[1.02] active:scale-[0.98]"
                     >
-                      {saving ? <Loader2 className="animate-spin h-6 w-6" /> : "Confirmar Consignación"}
+                      {saving ? (
+                        <Loader2 className="animate-spin h-6 w-6" />
+                      ) : (
+                        "Confirmar Consignación"
+                      )}
                     </Button>
 
                     <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
                       <Info className="h-3 w-3" />
-                      <span>El stock se descontará del inventario general.</span>
+                      <span>
+                        El stock se descontará del inventario general.
+                      </span>
                     </div>
                   </div>
                 )}
@@ -607,7 +690,9 @@ export default function NuevaConsignacionPage() {
         description={
           <span>
             La operación{" "}
-            <span className="text-[color:var(--status-success-strong)] dark:text-[color:var(--status-success-strong)] font-mono font-bold">#{createdId}</span>{" "}
+            <span className="text-[color:var(--status-success-strong)] dark:text-[color:var(--status-success-strong)] font-mono font-bold">
+              #{createdId}
+            </span>{" "}
             se ha registrado correctamente.
             <br />
             ¿Deseas descargar el remito?
@@ -619,7 +704,9 @@ export default function NuevaConsignacionPage() {
 
       <ErrorDialog
         open={errorDialog.open}
-        onOpenChange={(isOpen) => setErrorDialog((prev) => ({ ...prev, open: isOpen }))}
+        onOpenChange={(isOpen) =>
+          setErrorDialog((prev) => ({ ...prev, open: isOpen }))
+        }
         title={errorDialog.title}
         description={errorDialog.description}
       />

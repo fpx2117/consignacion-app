@@ -26,7 +26,10 @@ export function PaymentSelector({
   onOpenDescuento,
 }: PaymentSelectorProps) {
   return (
-    <section aria-label="Metodo de pago" className="grid grid-cols-4 gap-2 md:gap-3">
+    <section
+      aria-label="Metodo de pago"
+      className="grid grid-cols-4 gap-2 md:gap-3"
+    >
       {opciones.map((metodo) => {
         if (metodo.value === "OTRO") {
           return (
@@ -38,7 +41,9 @@ export function PaymentSelector({
               aria-label="Aplicar descuento general (F5)"
             >
               <BadgePercent className="h-5 w-5" aria-hidden="true" />
-              <span className="text-[10px] tracking-wider uppercase font-bold">Desc.</span>
+              <span className="text-[10px] tracking-wider uppercase font-bold">
+                Desc.
+              </span>
               <FKeyBadge label="F5" active={false} />
             </button>
           );
@@ -62,8 +67,16 @@ export function PaymentSelector({
             aria-label={`Seleccionar pago ${metodo.label} (${fkey})`}
             aria-pressed={isSelected}
           >
-            <Icon className={cn("h-5 w-5", isSelected ? "opacity-100" : "opacity-60")} aria-hidden="true" />
-            <span className="text-[10px] tracking-wider uppercase">{metodo.label}</span>
+            <Icon
+              className={cn(
+                "h-5 w-5",
+                isSelected ? "opacity-100" : "opacity-60",
+              )}
+              aria-hidden="true"
+            />
+            <span className="text-[10px] tracking-wider uppercase">
+              {metodo.label}
+            </span>
             <FKeyBadge label={fkey} active={isSelected} />
           </button>
         );
@@ -80,7 +93,7 @@ function FKeyBadge({ label, active }: { label: string; active: boolean }) {
         "hidden md:inline-flex items-center justify-center rounded px-1.5 h-4 text-[9px] font-black font-mono border select-none tracking-tight",
         active
           ? "bg-white/25 border-white/40 text-white"
-          : "bg-background/70 border-border text-muted-foreground"
+          : "bg-background/70 border-border text-muted-foreground",
       )}
     >
       {label}

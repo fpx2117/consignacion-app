@@ -7,8 +7,7 @@ import { handleGetFile } from "@/app/api/files/[...path]/route";
 import { buildOpaqueUploadFilename } from "@/lib/uploads/uploads";
 
 const PNG_BUFFER = Buffer.from([
-  0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
-  0x00, 0x00, 0x00, 0x0d,
+  0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00, 0x00, 0x0d,
 ]);
 
 test("handleGetFile sirve archivos permitidos con headers defensivos", async () => {
@@ -26,7 +25,10 @@ test("handleGetFile sirve archivos permitidos con headers defensivos", async () 
   assert.equal(response.headers.get("Content-Type"), "image/png");
   assert.equal(response.headers.get("X-Content-Type-Options"), "nosniff");
   assert.match(response.headers.get("Content-Disposition") ?? "", /^inline;/);
-  assert.equal(Buffer.from(await response.arrayBuffer()).equals(PNG_BUFFER), true);
+  assert.equal(
+    Buffer.from(await response.arrayBuffer()).equals(PNG_BUFFER),
+    true,
+  );
 });
 
 test("handleGetFile rechaza rutas ambiguas antes de tocar el filesystem", async () => {
@@ -44,7 +46,10 @@ test("handleGetFile rechaza rutas ambiguas antes de tocar el filesystem", async 
 test("handleGetFile rechaza tipos existentes fuera de la allowlist servible", async () => {
   const uploadDir = await mkdtemp(path.join(tmpdir(), "consignacion-files-"));
   const filename = `${buildOpaqueUploadFilename("png").replace(/\.png$/i, "")}.svg`;
-  await writeFile(path.join(uploadDir, filename), Buffer.from("<svg></svg>", "utf8"));
+  await writeFile(
+    path.join(uploadDir, filename),
+    Buffer.from("<svg></svg>", "utf8"),
+  );
 
   const response = await handleGetFile(
     new Request(`http://localhost/api/files/${filename}`),
@@ -68,5 +73,8 @@ test("handleGetFile mantiene compatibilidad transitoria para nombres legacy de a
 
   assert.equal(response.status, 200);
   assert.equal(response.headers.get("Content-Type"), "image/png");
-  assert.equal(Buffer.from(await response.arrayBuffer()).equals(PNG_BUFFER), true);
+  assert.equal(
+    Buffer.from(await response.arrayBuffer()).equals(PNG_BUFFER),
+    true,
+  );
 });

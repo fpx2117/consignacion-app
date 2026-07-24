@@ -12,7 +12,11 @@ function isTypingTarget(target: EventTarget | null) {
   return ["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName);
 }
 
-export const useBarcodeScanner = ({ onScan, enabled = true, minLength = 3 }: UseBarcodeScannerProps) => {
+export const useBarcodeScanner = ({
+  onScan,
+  enabled = true,
+  minLength = 3,
+}: UseBarcodeScannerProps) => {
   const buffer = useRef<string>("");
   const lastKeyTime = useRef<number>(0);
 
