@@ -13,6 +13,7 @@ La lógica de cálculo existente en el preview (que ya funciona correctamente) n
 **Elección**: Extraer el cálculo de `precioEfectivo` a una variable `useMemo` o `const` en el cuerpo del componente, calculada a partir de `pv`, `tipoDescuento`, `descuentoPorcentaje`, `descuentoMonto` y `descuentoActivo`.
 
 **Alternativas consideradas**:
+
 - Crear un custom hook `useRentabilidadConDescuento` — sobreingeniería para un cálculo simple.
 - Duplicar la lógica en el bloque de rentabilidad y en el preview — viola DRY.
 
@@ -23,6 +24,7 @@ La lógica de cálculo existente en el preview (que ya funciona correctamente) n
 **Elección**: No usar la función `calcularDescuentoEfectivo` del módulo `descuento-utils.ts` para este cálculo.
 
 **Alternativas consideradas**:
+
 - Importar y usar `calcularDescuentoEfectivo` — requiere construir un objeto producto parcial y manejar fechas, agrega complejidad innecesaria.
 
 **Justificación**: `calcularDescuentoEfectivo` está diseñada para el backend/catálogo y requiere fechas. En el formulario, el usuario está configurando el descuento en tiempo real y las fechas son opcionales. La lógica del preview en el formulario ya es más simple y adecuada para este contexto (solo verifica si hay valor numérico, sin validar fechas).
@@ -32,6 +34,7 @@ La lógica de cálculo existente en el preview (que ya funciona correctamente) n
 **Elección**: Agregar un pequeño badge/badge inline con texto "c/desc." o similar, usando un color ambar/warning para indicar que la rentabilidad está afectada por el descuento. En el diálogo de creación se usará "RENTABILIDAD ESTIMADA (c/desc.)" y en edición "Rentabilidad Proyectada (c/desc.)".
 
 **Alternativas consideradas**:
+
 - Tooltip — requiere hover, no visible a simple vista.
 - Color diferente para todo el bloque — podría confundirse con el estado de error (ganancia negativa).
 
@@ -74,11 +77,11 @@ Estados del formulario
 
 ## Cambios en Archivos
 
-| Archivo | Acción | Descripción |
-|---------|--------|-------------|
-| `src/app/(...)/productos/components/create-producto-dialog.tsx` | Modificar | Líneas 142-156: Agregar cálculo de `precioEfectivo` y usarlo para rentabilidad. Líneas 328-349: Badge "c/desc." y mensajes de advertencia dinámicos. |
-| `src/app/(...)/productos/components/edit-producto-dialog.tsx` | Modificar | Líneas 167-181: Ídem. Líneas 347-367: Badge "c/desc." y mensajes de advertencia dinámicos. |
-| `src/app/(...)/productos/components/productos-view.tsx` | Modificar | `ProductoRow`: Importar `calcularDescuentoEfectivo`, calcular `precioEfectivo` y `margenEfectivo`. Celda de precio ahora muestra: badge "-XX%", precio original tachado, precio final en rojo, y margen recalculado con color warning si hay descuento. |
+| Archivo                                                         | Acción    | Descripción                                                                                                                                                                                                                                             |
+| --------------------------------------------------------------- | --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `src/app/(...)/productos/components/create-producto-dialog.tsx` | Modificar | Líneas 142-156: Agregar cálculo de `precioEfectivo` y usarlo para rentabilidad. Líneas 328-349: Badge "c/desc." y mensajes de advertencia dinámicos.                                                                                                    |
+| `src/app/(...)/productos/components/edit-producto-dialog.tsx`   | Modificar | Líneas 167-181: Ídem. Líneas 347-367: Badge "c/desc." y mensajes de advertencia dinámicos.                                                                                                                                                              |
+| `src/app/(...)/productos/components/productos-view.tsx`         | Modificar | `ProductoRow`: Importar `calcularDescuentoEfectivo`, calcular `precioEfectivo` y `margenEfectivo`. Celda de precio ahora muestra: badge "-XX%", precio original tachado, precio final en rojo, y margen recalculado con color warning si hay descuento. |
 
 ## Cambios de Código (Referencia)
 
@@ -95,8 +98,14 @@ const esGananciaNegativa = pv > 0 && pc > 0 && gananciaUnitaria < 0;
 // DESPUÉS:
 const pv = toNumber(precioVenta) || 0;
 const pc = toNumber(precioCosto) || 0;
-const dpct = descuentoActivo && tipoDescuento === "porcentaje" ? (toNumber(descuentoPorcentaje) ?? 0) : 0;
-const dmonto = descuentoActivo && tipoDescuento === "monto" ? (toNumber(descuentoMonto) ?? 0) : 0;
+const dpct =
+  descuentoActivo && tipoDescuento === "porcentaje"
+    ? (toNumber(descuentoPorcentaje) ?? 0)
+    : 0;
+const dmonto =
+  descuentoActivo && tipoDescuento === "monto"
+    ? (toNumber(descuentoMonto) ?? 0)
+    : 0;
 const precioEfectivo = descuentoActivo
   ? tipoDescuento === "porcentaje" && dpct > 0
     ? pv * (1 - dpct / 100)
@@ -105,9 +114,13 @@ const precioEfectivo = descuentoActivo
       : pv
   : pv;
 const gananciaUnitaria = precioEfectivo - pc;
-const margenPorcentaje = precioEfectivo > 0 ? (gananciaUnitaria / precioEfectivo) * 100 : 0;
+const margenPorcentaje =
+  precioEfectivo > 0 ? (gananciaUnitaria / precioEfectivo) * 100 : 0;
 const esGananciaNegativa = precioEfectivo > 0 && pc > 0 && gananciaUnitaria < 0;
-const muestraDescuento = descuentoActivo && ((tipoDescuento === "porcentaje" && dpct > 0) || (tipoDescuento === "monto" && dmonto > 0));
+const muestraDescuento =
+  descuentoActivo &&
+  ((tipoDescuento === "porcentaje" && dpct > 0) ||
+    (tipoDescuento === "monto" && dmonto > 0));
 ```
 
 ## Interfaces / Contratos
@@ -116,11 +129,11 @@ No se introducen nuevas interfaces. Los tipos existentes (`Producto`, `UpdatePro
 
 ## Estrategia de Pruebas
 
-| Capa | Qué Probar | Enfoque |
-|------|------------|---------|
-| Manual | Todos los escenarios de la especificación | Probar en UI: crear/editar producto con y sin descuento, verificar valores y etiquetas |
-| Manual | Edge case: descuento que lleva precio bajo costo | Verificar que el botón se deshabilita y se muestra advertencia |
-| Manual | Toggle de descuento on/off | Verificar que la rentabilidad se recalcula instantáneamente |
+| Capa   | Qué Probar                                       | Enfoque                                                                                |
+| ------ | ------------------------------------------------ | -------------------------------------------------------------------------------------- |
+| Manual | Todos los escenarios de la especificación        | Probar en UI: crear/editar producto con y sin descuento, verificar valores y etiquetas |
+| Manual | Edge case: descuento que lleva precio bajo costo | Verificar que el botón se deshabilita y se muestra advertencia                         |
+| Manual | Toggle de descuento on/off                       | Verificar que la rentabilidad se recalcula instantáneamente                            |
 
 **Nota**: El proyecto no tiene framework de testing automatizado configurado. Se realizará verificación manual exhaustiva.
 

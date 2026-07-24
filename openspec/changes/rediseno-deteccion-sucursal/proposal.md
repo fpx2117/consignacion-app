@@ -62,6 +62,7 @@ El rediseno se basa en tres principios fundamentales:
 ### 1. Single Source of Truth: Cookie HttpOnly
 
 La sucursal activa se almacena **exclusivamente** en una cookie HttpOnly (`active_sucursal_id`) gestionada por el server. Esto elimina la triple fuente de verdad (header/cookie/JWT) y garantiza que:
+
 - Todas las requests del mismo browser session usan la misma sucursal.
 - El client no puede manipular directamente el valor (seguridad).
 - La cookie viaja automaticamente en cada request (sin logica manual en `apiService`).
@@ -78,37 +79,37 @@ El endpoint `/api/subscriptions/current` incluye headers `ETag` y `Cache-Control
 
 ## Areas afectadas
 
-| Area | Impacto | Descripcion |
-|------|---------|-------------|
-| `src/store/useSucursalStore.ts` | Modificado | Eliminar middleware `persist`, eliminar sync a cookie/localStorage. Store solo en memoria, hidratado desde server props. |
-| `src/lib/auth/require-auth.ts` | Modificado | Resolver `activeSucursalId` solo desde cookie HttpOnly. Eliminar fallback a header y JWT payload. |
-| `src/lib/auth/core.ts` | Modificado | Remover `sucursalId` del payload JWT en `signToken`. Ajustar `verifyToken` para no esperar `sucursalId`. |
-| `src/lib/apiService.ts` | Modificado | Eliminar header `x-sucursal-id` y parametro `__sid`. Las requests dependen de la cookie automatica. |
-| `src/lib/sucursalScope.ts` | Modificado | Ajustar `isGlobalSucursalView` y `buildSucursalWhere` para tratamiento explicito de `id=0` sin depender de registro DB. |
-| `src/lib/subscriptions/require-subscription.ts` | Modificado | Unificar queries para resolver suscripcion a nivel sistema/tenant. Agregar headers ETag en response. |
-| `src/components/SubscriptionGuard.tsx` | Modificado | Eliminar `configCache` module-level y `checkedRef`. Consumir estado de query reactiva (React Query o fetch con polling). |
-| `src/components/top-bar.tsx` | Modificado | Cambiar handler de seleccion de sucursal para llamar a `PUT /api/sucursal/active` en vez de setear cookie/header manualmente. |
-| `src/components/sidebar-dock.tsx` | Modificado | Ajustar hidratacion del store — recibir datos de sucursales como props desde layout SSR. |
-| `src/app/(system-guard)/(protected)/layout.tsx` | Modificado | Pasar sucursal activa y sucursales permitidas como props a los children. Leer cookie HttpOnly en server. |
-| `src/app/api/auth/login/route.ts` | Modificado | Setear cookie HttpOnly `active_sucursal_id` al hacer login (sucursal por defecto del usuario). Remover `sucursalId` del JWT. |
-| `src/app/api/auth/me/route.ts` | Modificado | Leer sucursal activa desde cookie en vez de JWT. |
-| `src/app/api/sucursal/active/route.ts` | Nuevo | Endpoint `PUT` para cambiar sucursal activa: valida acceso, setea cookie HttpOnly, retorna sucursal. |
-| `src/app/api/subscriptions/current/route.ts` | Modificado | Agregar headers ETag/Last-Modified. Resolver suscripcion a nivel sistema (no usuario). |
-| `src/constants/subscriptions.ts` | Sin cambios | Los planes y limites se mantienen. Solo cambia como se consultan. |
-| `src/components/global-readonly-guard.tsx` | Modificado | Ajustar deteccion de vista global para usar el nuevo patron sin depender de store persistido. |
-| `src/hooks/useBroadcastChannel.ts` | Nuevo | Hook para sincronizar estado de sucursal y suscripcion entre pestanas via BroadcastChannel API. |
-| `src/hooks/useSubscriptionPolling.ts` | Nuevo | Hook para polling de `/api/subscriptions/current` con ETag, invalida cache local al detectar cambio. |
+| Area                                            | Impacto     | Descripcion                                                                                                                   |
+| ----------------------------------------------- | ----------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| `src/store/useSucursalStore.ts`                 | Modificado  | Eliminar middleware `persist`, eliminar sync a cookie/localStorage. Store solo en memoria, hidratado desde server props.      |
+| `src/lib/auth/require-auth.ts`                  | Modificado  | Resolver `activeSucursalId` solo desde cookie HttpOnly. Eliminar fallback a header y JWT payload.                             |
+| `src/lib/auth/core.ts`                          | Modificado  | Remover `sucursalId` del payload JWT en `signToken`. Ajustar `verifyToken` para no esperar `sucursalId`.                      |
+| `src/lib/apiService.ts`                         | Modificado  | Eliminar header `x-sucursal-id` y parametro `__sid`. Las requests dependen de la cookie automatica.                           |
+| `src/lib/sucursalScope.ts`                      | Modificado  | Ajustar `isGlobalSucursalView` y `buildSucursalWhere` para tratamiento explicito de `id=0` sin depender de registro DB.       |
+| `src/lib/subscriptions/require-subscription.ts` | Modificado  | Unificar queries para resolver suscripcion a nivel sistema/tenant. Agregar headers ETag en response.                          |
+| `src/components/SubscriptionGuard.tsx`          | Modificado  | Eliminar `configCache` module-level y `checkedRef`. Consumir estado de query reactiva (React Query o fetch con polling).      |
+| `src/components/top-bar.tsx`                    | Modificado  | Cambiar handler de seleccion de sucursal para llamar a `PUT /api/sucursal/active` en vez de setear cookie/header manualmente. |
+| `src/components/sidebar-dock.tsx`               | Modificado  | Ajustar hidratacion del store — recibir datos de sucursales como props desde layout SSR.                                      |
+| `src/app/(system-guard)/(protected)/layout.tsx` | Modificado  | Pasar sucursal activa y sucursales permitidas como props a los children. Leer cookie HttpOnly en server.                      |
+| `src/app/api/auth/login/route.ts`               | Modificado  | Setear cookie HttpOnly `active_sucursal_id` al hacer login (sucursal por defecto del usuario). Remover `sucursalId` del JWT.  |
+| `src/app/api/auth/me/route.ts`                  | Modificado  | Leer sucursal activa desde cookie en vez de JWT.                                                                              |
+| `src/app/api/sucursal/active/route.ts`          | Nuevo       | Endpoint `PUT` para cambiar sucursal activa: valida acceso, setea cookie HttpOnly, retorna sucursal.                          |
+| `src/app/api/subscriptions/current/route.ts`    | Modificado  | Agregar headers ETag/Last-Modified. Resolver suscripcion a nivel sistema (no usuario).                                        |
+| `src/constants/subscriptions.ts`                | Sin cambios | Los planes y limites se mantienen. Solo cambia como se consultan.                                                             |
+| `src/components/global-readonly-guard.tsx`      | Modificado  | Ajustar deteccion de vista global para usar el nuevo patron sin depender de store persistido.                                 |
+| `src/hooks/useBroadcastChannel.ts`              | Nuevo       | Hook para sincronizar estado de sucursal y suscripcion entre pestanas via BroadcastChannel API.                               |
+| `src/hooks/useSubscriptionPolling.ts`           | Nuevo       | Hook para polling de `/api/subscriptions/current` con ETag, invalida cache local al detectar cambio.                          |
 
 ## Riesgos
 
-| Riesgo | Probabilidad | Mitigacion |
-|--------|--------------|------------|
-| **Sesion perdida al migrar cookie**: Usuarios activos pierden su sucursal seleccionada al deployar porque el JWT ya no la contiene y la cookie HttpOnly aun no existe. | Alta | Implementar fallback temporal: si la cookie no existe, leer `sucursalId` del JWT (legacy) y crear la cookie. Eliminar fallback en v2. |
-| **BroadcastChannel no soportado en Safari < 15.4**: Usuarios en Safari antiguo no tendran sync entre pestanas. | Baja | BroadcastChannel tiene soporte 95%+. Degradacion graciosa: sin sync, cada pestana opera independiente (comportamiento actual). |
-| **Polling de suscripcion agrega carga al server**: Cada pestana hace un request cada 60s. Con muchos usuarios concurrentes, puede ser significativo. | Media | ETag con `304 Not Modified` minimiza payload. El endpoint es ligero (query simple + comparacion de hash). Ajustar intervalo si se detecta carga. |
-| **Race condition al cambiar sucursal**: Si el usuario cambia de sucursal mientras hay requests en vuelo, las responses pueden mezclar datos de ambas sucursales. | Media | El endpoint `PUT /api/sucursal/active` retorna la sucursal setteada. El client espera confirmacion antes de actualizar el store. Las requests en vuelo se descartan si la sucursal cambio (abort controller). |
-| **Regresion en Vista Global**: La Vista Global (`id=0`) es usada por admins para ver datos consolidados. El refactor de `buildSucursalWhere` podria romper queries existentes. | Media | Tests dedicados para Vista Global. Revisar todas las llamadas a `buildSucursalWhere` y `isGlobalSucursalView` antes del deploy. |
-| **Config `usarControlDeCaja` keyed por sucursal rompe config existente**: Usuarios que ya tienen la config en localStorage sin scope pierden la configuracion al migrar. | Baja | Migracion en el hook: si existe la key sin scope, copiarla a la key con scope de la sucursal activa y eliminar la key legacy. |
+| Riesgo                                                                                                                                                                         | Probabilidad | Mitigacion                                                                                                                                                                                                    |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Sesion perdida al migrar cookie**: Usuarios activos pierden su sucursal seleccionada al deployar porque el JWT ya no la contiene y la cookie HttpOnly aun no existe.         | Alta         | Implementar fallback temporal: si la cookie no existe, leer `sucursalId` del JWT (legacy) y crear la cookie. Eliminar fallback en v2.                                                                         |
+| **BroadcastChannel no soportado en Safari < 15.4**: Usuarios en Safari antiguo no tendran sync entre pestanas.                                                                 | Baja         | BroadcastChannel tiene soporte 95%+. Degradacion graciosa: sin sync, cada pestana opera independiente (comportamiento actual).                                                                                |
+| **Polling de suscripcion agrega carga al server**: Cada pestana hace un request cada 60s. Con muchos usuarios concurrentes, puede ser significativo.                           | Media        | ETag con `304 Not Modified` minimiza payload. El endpoint es ligero (query simple + comparacion de hash). Ajustar intervalo si se detecta carga.                                                              |
+| **Race condition al cambiar sucursal**: Si el usuario cambia de sucursal mientras hay requests en vuelo, las responses pueden mezclar datos de ambas sucursales.               | Media        | El endpoint `PUT /api/sucursal/active` retorna la sucursal setteada. El client espera confirmacion antes de actualizar el store. Las requests en vuelo se descartan si la sucursal cambio (abort controller). |
+| **Regresion en Vista Global**: La Vista Global (`id=0`) es usada por admins para ver datos consolidados. El refactor de `buildSucursalWhere` podria romper queries existentes. | Media        | Tests dedicados para Vista Global. Revisar todas las llamadas a `buildSucursalWhere` y `isGlobalSucursalView` antes del deploy.                                                                               |
+| **Config `usarControlDeCaja` keyed por sucursal rompe config existente**: Usuarios que ya tienen la config en localStorage sin scope pierden la configuracion al migrar.       | Baja         | Migracion en el hook: si existe la key sin scope, copiarla a la key con scope de la sucursal activa y eliminar la key legacy.                                                                                 |
 
 ## Plan de Reversion (Rollback)
 

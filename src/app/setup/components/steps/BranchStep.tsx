@@ -24,9 +24,12 @@ export function BranchStep({ data, onChange }: BranchStepProps) {
         >
           <Store className="w-8 h-8 text-[color:var(--status-success-strong)]" />
         </motion.div>
-        <h2 className="text-3xl font-black tracking-tight">Tu Primera Sucursal</h2>
+        <h2 className="text-3xl font-black tracking-tight">
+          Tu Primera Sucursal
+        </h2>
         <p className="text-muted-foreground text-lg">
-          Cada punto de venta necesita un nombre y al menos una terminal de cobro.
+          Cada punto de venta necesita un nombre y al menos una terminal de
+          cobro.
         </p>
       </div>
 
@@ -38,7 +41,8 @@ export function BranchStep({ data, onChange }: BranchStepProps) {
         <div className="space-y-2">
           <Label className="text-xs font-bold uppercase tracking-widest text-foreground/80 pl-2 flex items-center gap-1.5">
             <Store className="h-3 w-3" />
-            Nombre de la Sucursal <span className="text-[color:var(--status-danger)]">*</span>
+            Nombre de la Sucursal{" "}
+            <span className="text-[color:var(--status-danger)]">*</span>
           </Label>
           <Input
             autoFocus
@@ -48,7 +52,8 @@ export function BranchStep({ data, onChange }: BranchStepProps) {
             className="h-14 rounded-2xl bg-background/50 border-border/50 focus:border-[color:var(--status-success-strong)] focus:ring-4 focus:ring-[color:var(--status-success-strong)]/10 text-lg font-semibold"
           />
           <p className="text-xs text-muted-foreground/60 pl-2">
-            Si tenés un solo local, podés dejarlo como &quot;Sucursal Principal&quot;.
+            Si tenés un solo local, podés dejarlo como &quot;Sucursal
+            Principal&quot;.
           </p>
         </div>
 
@@ -65,16 +70,20 @@ export function BranchStep({ data, onChange }: BranchStepProps) {
         <div className="space-y-2">
           <Label className="text-xs font-bold uppercase tracking-widest text-foreground/80 pl-2 flex items-center gap-1.5">
             <Monitor className="h-3 w-3" />
-            Nombre de la Terminal <span className="text-[color:var(--status-danger)]">*</span>
+            Nombre de la Terminal{" "}
+            <span className="text-[color:var(--status-danger)]">*</span>
           </Label>
           <Input
             value={data.terminalNombre}
-            onChange={(e) => onChange({ ...data, terminalNombre: e.target.value })}
+            onChange={(e) =>
+              onChange({ ...data, terminalNombre: e.target.value })
+            }
             placeholder="Ej: Caja Mostrador 1, Planta Alta..."
             className="h-14 rounded-2xl bg-background/50 border-border/50 focus:border-[color:var(--status-success-strong)] focus:ring-4 focus:ring-[color:var(--status-success-strong)]/10 text-lg font-semibold"
           />
           <p className="text-xs text-muted-foreground/60 pl-2">
-            La terminal representa un punto de cobro físico. Podés agregar más después.
+            La terminal representa un punto de cobro físico. Podés agregar más
+            después.
           </p>
         </div>
 
@@ -84,11 +93,17 @@ export function BranchStep({ data, onChange }: BranchStepProps) {
             <Monitor className="h-5 w-5 text-[color:var(--status-success-strong)]" />
           </div>
           <div>
-            <p className="text-xs font-bold text-[color:var(--status-success-strong)]">Vista Previa</p>
+            <p className="text-xs font-bold text-[color:var(--status-success-strong)]">
+              Vista Previa
+            </p>
             <p className="text-sm text-muted-foreground">
-              <span className="font-semibold text-foreground">{data.nombre || "Mi Sucursal"}</span>
+              <span className="font-semibold text-foreground">
+                {data.nombre || "Mi Sucursal"}
+              </span>
               {" → "}
-              <span className="font-semibold text-foreground">{data.terminalNombre || "Mi Caja"}</span>
+              <span className="font-semibold text-foreground">
+                {data.terminalNombre || "Mi Caja"}
+              </span>
             </p>
           </div>
         </div>

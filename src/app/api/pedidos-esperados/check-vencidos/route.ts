@@ -32,7 +32,7 @@ export async function POST() {
     console.error("Error al chequear pedidos vencidos:", error);
     return NextResponse.json(
       { error: "Error interno al chequear pedidos vencidos" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

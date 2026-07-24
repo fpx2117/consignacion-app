@@ -10,10 +10,7 @@ export type EstadoPedidoEsperado =
   | "CANCELADO";
 
 export type EstadoItemPedido =
-  | "PENDIENTE"
-  | "CONFIRMADO"
-  | "PARCIAL"
-  | "CANCELADO";
+  "PENDIENTE" | "CONFIRMADO" | "PARCIAL" | "CANCELADO";
 
 export interface PedidoEsperadoItemProducto {
   id: number;

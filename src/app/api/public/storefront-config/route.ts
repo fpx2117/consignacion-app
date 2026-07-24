@@ -53,36 +53,39 @@ export async function GET(req: NextRequest) {
       ? storeSettings.onlineStoreConfig
       : onlineStoreSettingsSchema.parse({});
 
-    return NextResponse.json({
-      businessName: branding?.businessName ?? null,
-      primaryColor: branding?.primaryColor ?? "#111827",
-      secondaryColor: branding?.secondaryColor ?? "#3b82f6",
-      themeIdentifier: branding?.themeIdentifier ?? "modern",
-      bannerData: bannerBase64,
-      bannerMime: branding?.bannerMime ?? null,
-      logoData: logoBase64,
-      logoMime: branding?.logoMime ?? null,
-      storefrontContent: branding?.storefrontContent ?? null,
-      footerText: branding?.footerText ?? null,
-      phone: branding?.phone ?? null,
-      address: branding?.address ?? null,
-      whatsappNumber: branding?.whatsappNumber ?? null,
-      whatsappMessage: branding?.whatsappMessage ?? null,
-      facebookUrl: branding?.facebookUrl ?? null,
-      instagramUrl: branding?.instagramUrl ?? null,
-      isBannerSlider: branding?.isBannerSlider ?? false,
-      storeSettings: storeSettings ?? null,
-      onlineStoreConfig,
-    }, {
-      headers: {
-        "Cache-Control": "public, s-maxage=60, stale-while-revalidate=300",
+    return NextResponse.json(
+      {
+        businessName: branding?.businessName ?? null,
+        primaryColor: branding?.primaryColor ?? "#111827",
+        secondaryColor: branding?.secondaryColor ?? "#3b82f6",
+        themeIdentifier: branding?.themeIdentifier ?? "modern",
+        bannerData: bannerBase64,
+        bannerMime: branding?.bannerMime ?? null,
+        logoData: logoBase64,
+        logoMime: branding?.logoMime ?? null,
+        storefrontContent: branding?.storefrontContent ?? null,
+        footerText: branding?.footerText ?? null,
+        phone: branding?.phone ?? null,
+        address: branding?.address ?? null,
+        whatsappNumber: branding?.whatsappNumber ?? null,
+        whatsappMessage: branding?.whatsappMessage ?? null,
+        facebookUrl: branding?.facebookUrl ?? null,
+        instagramUrl: branding?.instagramUrl ?? null,
+        isBannerSlider: branding?.isBannerSlider ?? false,
+        storeSettings: storeSettings ?? null,
+        onlineStoreConfig,
       },
-    });
+      {
+        headers: {
+          "Cache-Control": "public, s-maxage=60, stale-while-revalidate=300",
+        },
+      },
+    );
   } catch (error) {
     console.error("Error al obtener config de storefront:", error);
     return NextResponse.json(
       { error: "Error al obtener configuración del storefront" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

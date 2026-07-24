@@ -14,6 +14,7 @@ El objetivo es eliminar estos bottlenecks para lograr navegación inmediata y pe
 ## Alcance
 
 ### Dentro del Alcance
+
 - Fix de `useBroadcastChannel`: agregar dependencias vacías `[]` al `useEffect`
 - Fix del provider WebSocket: eliminar `pathname` de las dependencias del `useEffect` de conexión
 - Fix de `useNotifications` duplicado: eliminar instancia redundante en el panel
@@ -25,6 +26,7 @@ El objetivo es eliminar estos bottlenecks para lograr navegación inmediata y pe
 - Optimización de AnimatedList: memoización y reducción de re-renders
 
 ### Fuera del Alcance
+
 - Migración a React Query / TanStack Query (cambio arquitectural mayor, queda para futuro)
 - Virtualización de listas largas (depende de métricas reales con datos de producción)
 - Migración de componentes cliente a server components (requiere análisis caso por caso)
@@ -34,6 +36,7 @@ El objetivo es eliminar estos bottlenecks para lograr navegación inmediata y pe
 ## Enfoque
 
 Se aplica en dos fases paralelas:
+
 - **Fase 1 — Quick Wins** (≤30 min total): fixes de una línea o triviales sin riesgo de regresión. Se aplican primero para mejora inmediata.
 - **Fase 2 — Fixes Estructurales** (~4h): refactoring del socket provider, paginación en POS, y optimización de AnimatedList.
 
@@ -41,27 +44,27 @@ El orden garantiza que si la Fase 2 genera problemas, la Fase 1 ya entregó valo
 
 ## Áreas Afectadas
 
-| Área | Impacto | Descripción |
-|------|---------|-------------|
-| `src/hooks/useBroadcastChannel.ts` | Modificado | Agregar `[]` a dependencias del useEffect |
-| `src/components/ui/sidebar-dock.tsx` | Modificado | Eliminar console.log, fix dependencias |
-| `src/lib/socket-provider.tsx` (o similar) | Modificado | Desacoplar reconexión del pathname |
-| `src/components/notifications/` | Modificado | Eliminar useNotifications redundante |
-| `src/app/api/productos/route.ts` | Modificado | Agregar paginación (limit/offset o cursor) |
-| `src/app/pos/` (componente lista) | Modificado | Consumir paginación en el cliente |
-| `src/lib/prisma.ts` | Modificado | Fix singleton pattern para dev |
-| `src/app/dashboard/` | Modificado | dynamic() para @dnd-kit |
-| `package.json` | Modificado | Eliminar dependencia `cobe` |
-| `src/components/ui/animated-list.tsx` | Modificado | Memoización y reducción de re-renders |
+| Área                                      | Impacto    | Descripción                                |
+| ----------------------------------------- | ---------- | ------------------------------------------ |
+| `src/hooks/useBroadcastChannel.ts`        | Modificado | Agregar `[]` a dependencias del useEffect  |
+| `src/components/ui/sidebar-dock.tsx`      | Modificado | Eliminar console.log, fix dependencias     |
+| `src/lib/socket-provider.tsx` (o similar) | Modificado | Desacoplar reconexión del pathname         |
+| `src/components/notifications/`           | Modificado | Eliminar useNotifications redundante       |
+| `src/app/api/productos/route.ts`          | Modificado | Agregar paginación (limit/offset o cursor) |
+| `src/app/pos/` (componente lista)         | Modificado | Consumir paginación en el cliente          |
+| `src/lib/prisma.ts`                       | Modificado | Fix singleton pattern para dev             |
+| `src/app/dashboard/`                      | Modificado | dynamic() para @dnd-kit                    |
+| `package.json`                            | Modificado | Eliminar dependencia `cobe`                |
+| `src/components/ui/animated-list.tsx`     | Modificado | Memoización y reducción de re-renders      |
 
 ## Riesgos
 
-| Riesgo | Probabilidad | Mitigación |
-|--------|--------------|------------|
-| Fix del socket rompe reconexión automática | Media | Test manual de cambio de sucursal + reconexión tras desconexión |
-| Paginación en POS rompe búsqueda/filtros existentes | Media | Implementar con feature flag o endpoint separado |
-| Eliminar useNotifications duplicado rompe UI del panel | Baja | Verificar visualmente antes de commit |
-| `dynamic()` para dnd-kit causa flash de contenido | Baja | Agregar `loading` skeleton inline |
+| Riesgo                                                 | Probabilidad | Mitigación                                                      |
+| ------------------------------------------------------ | ------------ | --------------------------------------------------------------- |
+| Fix del socket rompe reconexión automática             | Media        | Test manual de cambio de sucursal + reconexión tras desconexión |
+| Paginación en POS rompe búsqueda/filtros existentes    | Media        | Implementar con feature flag o endpoint separado                |
+| Eliminar useNotifications duplicado rompe UI del panel | Baja         | Verificar visualmente antes de commit                           |
+| `dynamic()` para dnd-kit causa flash de contenido      | Baja         | Agregar `loading` skeleton inline                               |
 
 ## Plan de Reversión (Rollback)
 

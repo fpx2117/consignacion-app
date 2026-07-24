@@ -39,13 +39,20 @@ export async function GET(req: NextRequest) {
     const anio = Number.parseInt(anioRaw ?? String(current.year), 10);
 
     if (!Number.isFinite(mes) || mes < 0 || mes > 11) {
-      return NextResponse.json({ error: "Mes inválido (debe ser 0..11)" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Mes inválido (debe ser 0..11)" },
+        { status: 400 },
+      );
     }
     if (!Number.isFinite(anio) || anio < 2000 || anio > 2100) {
       return NextResponse.json({ error: "Año inválido" }, { status: 400 });
     }
 
-    const { start: fechaInicio, end: fechaFin } = monthRangeAR(anio, mes, timezone.tz);
+    const { start: fechaInicio, end: fechaFin } = monthRangeAR(
+      anio,
+      mes,
+      timezone.tz,
+    );
 
     const movimientos = await prisma.movimientoStock.findMany({
       where: {
@@ -61,6 +68,9 @@ export async function GET(req: NextRequest) {
     return NextResponse.json(movimientos);
   } catch (error) {
     console.error("HISTORIAL INVENTARIO API ERROR:", error);
-    return NextResponse.json({ error: "Error al obtener historial" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Error al obtener historial" },
+      { status: 500 },
+    );
   }
 }

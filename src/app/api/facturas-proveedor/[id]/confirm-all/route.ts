@@ -21,24 +21,38 @@ export async function POST(
   const auth = await requireAuth();
   if (!auth.ok) return auth.res;
   if (!requireRole(auth.user, ["ADMIN"])) {
-    return NextResponse.json({ error: "No tienes permisos (Admin requerido)" }, { status: 403 });
+    return NextResponse.json(
+      { error: "No tienes permisos (Admin requerido)" },
+      { status: 403 },
+    );
   }
 
   const { id } = await params;
   const facturaId = Number(id);
   if (!Number.isInteger(facturaId)) {
-    return NextResponse.json({ error: "Factura no encontrada" }, { status: 404 });
+    return NextResponse.json(
+      { error: "Factura no encontrada" },
+      { status: 404 },
+    );
   }
 
   const factura = await prisma.facturaProveedor.findUnique({
     where: { id: facturaId },
     include: {
-      items: { where: { estado: EstadoItemFactura.COINCIDENCIA_SEGURA, productoId: { not: null } } },
+      items: {
+        where: {
+          estado: EstadoItemFactura.COINCIDENCIA_SEGURA,
+          productoId: { not: null },
+        },
+      },
     },
   });
 
   if (!factura || !canAccessSucursalResource(auth, factura.sucursalId)) {
-    return NextResponse.json({ error: "Factura no encontrada" }, { status: 404 });
+    return NextResponse.json(
+      { error: "Factura no encontrada" },
+      { status: 404 },
+    );
   }
 
   if (factura.items.length === 0) {
@@ -55,7 +69,8 @@ export async function POST(
           productoId: item.productoId!,
           sucursalId: factura.sucursalId,
           cantidad: item.cantidad,
-          observaciones: "Carga por OCR de factura de proveedor (confirmación masiva)",
+          observaciones:
+            "Carga por OCR de factura de proveedor (confirmación masiva)",
         });
 
         await registrarCostoYAlias(tx, {
@@ -64,7 +79,8 @@ export async function POST(
           facturaItemId: item.id,
           codigoProveedor: item.codigoProveedor,
           descripcionNormalizada: item.descripcionNormalizada,
-          precioUnitario: item.precioUnitario !== null ? Number(item.precioUnitario) : null,
+          precioUnitario:
+            item.precioUnitario !== null ? Number(item.precioUnitario) : null,
           moneda: factura.moneda,
         });
 
@@ -75,12 +91,20 @@ export async function POST(
       });
       confirmados++;
     } catch (error) {
-      console.error("[FACTURA_PROVEEDOR_CONFIRM_ALL_ITEM_ERROR]", { itemId: item.id, error });
-      errores.push({ itemId: item.id, error: error instanceof Error ? error.message : "Error desconocido" });
+      console.error("[FACTURA_PROVEEDOR_CONFIRM_ALL_ITEM_ERROR]", {
+        itemId: item.id,
+        error,
+      });
+      errores.push({
+        itemId: item.id,
+        error: error instanceof Error ? error.message : "Error desconocido",
+      });
     }
   }
 
-  await prisma.$transaction((tx) => actualizarEstadoFacturaSiCompleta(tx, facturaId));
+  await prisma.$transaction((tx) =>
+    actualizarEstadoFacturaSiCompleta(tx, facturaId),
+  );
 
   // Post-commit: purga el binario si la factura quedó completa.
   await purgarArchivoFacturaSiFinalizada(facturaId);

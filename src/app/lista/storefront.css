@@ -3,15 +3,15 @@
   --storefront-font-body: "Inter", sans-serif;
 
   /* Online Store CSS Variables — defaults (sobrescribibles via page.tsx) */
-  --store-primary: #007AFF;
+  --store-primary: #007aff;
   --store-primary-rgb: 0, 122, 255;
-  --store-secondary: #EAF3FF;
-  --store-background: #FFFFFF;
-  --store-surface: #FFFFFF;
+  --store-secondary: #eaf3ff;
+  --store-background: #ffffff;
+  --store-surface: #ffffff;
   --store-surface-rgb: 255, 255, 255;
-  --store-text: #0F172A;
-  --store-muted: #8A8F98;
-  --store-whatsapp: #25D366;
+  --store-text: #0f172a;
+  --store-muted: #8a8f98;
+  --store-whatsapp: #25d366;
   --store-whatsapp-rgb: 37, 211, 102;
 }
 
@@ -88,7 +88,7 @@
 /* Scrollbar fina y con el color de la tienda, para listas largas (ej. sidebar de categorías) */
 .scrollbar-themed {
   scrollbar-width: thin;
-  scrollbar-color: var(--store-primary, #007AFF) transparent;
+  scrollbar-color: var(--store-primary, #007aff) transparent;
 }
 .scrollbar-themed::-webkit-scrollbar {
   width: 6px;
@@ -98,29 +98,37 @@
   background: transparent;
 }
 .scrollbar-themed::-webkit-scrollbar-thumb {
-  background-color: color-mix(in srgb, var(--store-primary, #007AFF) 35%, transparent);
+  background-color: color-mix(
+    in srgb,
+    var(--store-primary, #007aff) 35%,
+    transparent
+  );
   border-radius: 999px;
 }
 .scrollbar-themed::-webkit-scrollbar-thumb:hover {
-  background-color: color-mix(in srgb, var(--store-primary, #007AFF) 55%, transparent);
+  background-color: color-mix(
+    in srgb,
+    var(--store-primary, #007aff) 55%,
+    transparent
+  );
 }
 
 /* ── Sidebar de categorías: highlight activo ── */
 .sidebar-item-active-bg {
-  background-color: var(--store-primary, #007AFF);
+  background-color: var(--store-primary, #007aff);
   color: #fff;
 }
 
 /* Sobrescribir --store-* con colores del tema custom si existen */
 [data-store-config="true"] {
-  --store-primary: var(--store-primary-override, #007AFF);
+  --store-primary: var(--store-primary-override, #007aff);
   --store-primary-rgb: var(--store-primary-rgb-override, 0, 122, 255);
-  --store-secondary: var(--store-secondary-override, #EAF3FF);
-  --store-background: #FFFFFF;
-  --store-surface: var(--store-surface-override, #FFFFFF);
+  --store-secondary: var(--store-secondary-override, #eaf3ff);
+  --store-background: #ffffff;
+  --store-surface: var(--store-surface-override, #ffffff);
   --store-surface-rgb: var(--store-surface-rgb-override, 255, 255, 255);
-  --store-text: var(--store-text-override, #0F172A);
-  --store-muted: var(--store-muted-override, #8A8F98);
-  --store-whatsapp: var(--store-whatsapp-override, #25D366);
+  --store-text: var(--store-text-override, #0f172a);
+  --store-muted: var(--store-muted-override, #8a8f98);
+  --store-whatsapp: var(--store-whatsapp-override, #25d366);
   --store-whatsapp-rgb: var(--store-whatsapp-rgb-override, 37, 211, 102);
 }

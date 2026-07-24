@@ -2,7 +2,10 @@ import { NextResponse } from "next/server";
 import { revalidateTag } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireAuth, requireRole } from "@/lib/auth/require-auth";
-import { storeThemeConfigSchema, onlineStoreSettingsSchema } from "@/lib/validators/settings";
+import {
+  storeThemeConfigSchema,
+  onlineStoreSettingsSchema,
+} from "@/lib/validators/settings";
 
 export async function GET(req: Request) {
   try {
@@ -15,7 +18,10 @@ export async function GET(req: Request) {
       sucursalId = Number(sucursalIdParam);
     } else {
       // Intentar leer de auth si existe, para compatibilidad con el panel admin
-      const auth = await requireAuth().catch(() => ({ ok: false, activeSucursalId: 1 }));
+      const auth = await requireAuth().catch(() => ({
+        ok: false,
+        activeSucursalId: 1,
+      }));
       if (auth && auth.ok && auth.activeSucursalId) {
         sucursalId = auth.activeSucursalId;
       }
@@ -37,8 +43,12 @@ export async function GET(req: Request) {
     }
 
     // Mergear datos existentes con defaults para tolerar datos viejos incompletos
-    const parsed = onlineStoreSettingsSchema.safeParse(settings.onlineStoreConfig ?? {});
-    const onlineStoreConfig = parsed.success ? parsed.data : onlineStoreSettingsSchema.parse({});
+    const parsed = onlineStoreSettingsSchema.safeParse(
+      settings.onlineStoreConfig ?? {},
+    );
+    const onlineStoreConfig = parsed.success
+      ? parsed.data
+      : onlineStoreSettingsSchema.parse({});
 
     return NextResponse.json({
       data: {
@@ -51,7 +61,7 @@ export async function GET(req: Request) {
     console.error("Error al obtener settings:", error);
     return NextResponse.json(
       { error: "Error al obtener la configuración" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -70,7 +80,7 @@ export async function PATCH(req: Request) {
     if (!themeConfig && !onlineStoreConfig) {
       return NextResponse.json(
         { error: "Faltan datos de configuración" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -81,7 +91,8 @@ export async function PATCH(req: Request) {
     }
 
     if (onlineStoreConfig) {
-      updateData.onlineStoreConfig = onlineStoreSettingsSchema.parse(onlineStoreConfig);
+      updateData.onlineStoreConfig =
+        onlineStoreSettingsSchema.parse(onlineStoreConfig);
     }
 
     const updatedSettings = await prisma.storeSettings.upsert({
@@ -90,7 +101,9 @@ export async function PATCH(req: Request) {
       create: {
         sucursalId: auth.activeSucursalId,
         themeConfig: storeThemeConfigSchema.parse(themeConfig || {}),
-        onlineStoreConfig: onlineStoreConfig ? onlineStoreSettingsSchema.parse(onlineStoreConfig) : undefined,
+        onlineStoreConfig: onlineStoreConfig
+          ? onlineStoreSettingsSchema.parse(onlineStoreConfig)
+          : undefined,
       },
     });
 
@@ -105,7 +118,7 @@ export async function PATCH(req: Request) {
     console.error("Error actualizando settings:", error);
     return NextResponse.json(
       { error: "Error al actualizar la configuración" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

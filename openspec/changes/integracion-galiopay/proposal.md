@@ -7,6 +7,7 @@ Incorporar una API de pagos operativa para el sistema de consignacion que permit
 ## Alcance
 
 ### Dentro del alcance
+
 - Definir una capa de proveedor de pagos en backend para unificar operaciones: crear link, consultar estado, normalizar estados y registrar eventos.
 - Integrar GalioPay como primer proveedor usando credenciales de servidor (`Client ID` + `API Key`) sin exponer secretos al frontend.
 - Extender el flujo de checkout publico existente para soportar `paymentProvider` configurable y crear links de pago con proveedor seleccionado.
@@ -15,6 +16,7 @@ Incorporar una API de pagos operativa para el sistema de consignacion que permit
 - Definir persistencia minima para trazabilidad operativa (IDs externos, estado remoto, errores y timestamps de sincronizacion).
 
 ### Fuera del alcance
+
 - Migrar o reemplazar completamente Mercado Pago y PayPal existentes en esta primera iteracion.
 - Implementar billeteras, cuotas avanzadas, antifraude o conciliacion contable avanzada.
 - Crear una UI nueva completa de administracion de pagos; solo ajustes puntuales necesarios para operar el flujo.
@@ -33,27 +35,27 @@ Se propone un enfoque por abstraccion de proveedor en servidor:
 
 ## Areas afectadas
 
-| Area | Impacto | Descripcion |
-|------|---------|-------------|
-| `prisma/schema.prisma` | Modificado | Extensiones en `CheckoutIntent` y enum `CheckoutIntentProvider` para soportar `GALIOPAY` y metadata operativa de proveedor. |
-| `prisma/migrations/` | Nuevo | Migracion para cambios de schema vinculados a provider multi-pasarela. |
-| `src/lib/paymentConfig.ts` | Modificado | Alta de configuracion validada para GalioPay (`clientId`, `apiKey`, endpoints y/o webhook secret). |
-| `src/lib/` (nuevo modulo `payments/`) | Nuevo | Contrato proveedor-agnostico + adapter GalioPay + mapeo de estados/errores. |
-| `src/app/api/public/checkout/route.ts` | Modificado | Creacion de checkout link via adapter segun proveedor seleccionado/configurado. |
-| `src/app/api/public/checkout/status/route.ts` | Modificado | Consulta/normalizacion de estado de pago compatible con multiples proveedores. |
-| `src/app/api/webhooks/` (nuevo `galiopay/route.ts`) | Nuevo | Recepcion y procesamiento de eventos de GalioPay con validacion e idempotencia. |
-| `src/lib/apiService.ts` | Modificado | Ajustes de endpoints/tipos para mantener contrato cliente con estado de checkout. |
-| `src/app/api/settings/general/route.ts` | Modificado | Politica segura para guardar/enmascarar credenciales operativas de tienda/proveedor. |
+| Area                                                | Impacto    | Descripcion                                                                                                                 |
+| --------------------------------------------------- | ---------- | --------------------------------------------------------------------------------------------------------------------------- |
+| `prisma/schema.prisma`                              | Modificado | Extensiones en `CheckoutIntent` y enum `CheckoutIntentProvider` para soportar `GALIOPAY` y metadata operativa de proveedor. |
+| `prisma/migrations/`                                | Nuevo      | Migracion para cambios de schema vinculados a provider multi-pasarela.                                                      |
+| `src/lib/paymentConfig.ts`                          | Modificado | Alta de configuracion validada para GalioPay (`clientId`, `apiKey`, endpoints y/o webhook secret).                          |
+| `src/lib/` (nuevo modulo `payments/`)               | Nuevo      | Contrato proveedor-agnostico + adapter GalioPay + mapeo de estados/errores.                                                 |
+| `src/app/api/public/checkout/route.ts`              | Modificado | Creacion de checkout link via adapter segun proveedor seleccionado/configurado.                                             |
+| `src/app/api/public/checkout/status/route.ts`       | Modificado | Consulta/normalizacion de estado de pago compatible con multiples proveedores.                                              |
+| `src/app/api/webhooks/` (nuevo `galiopay/route.ts`) | Nuevo      | Recepcion y procesamiento de eventos de GalioPay con validacion e idempotencia.                                             |
+| `src/lib/apiService.ts`                             | Modificado | Ajustes de endpoints/tipos para mantener contrato cliente con estado de checkout.                                           |
+| `src/app/api/settings/general/route.ts`             | Modificado | Politica segura para guardar/enmascarar credenciales operativas de tienda/proveedor.                                        |
 
 ## Riesgos
 
-| Riesgo | Probabilidad | Mitigacion |
-|--------|--------------|------------|
-| Doble impacto de webhook o reintentos del proveedor | Media | Idempotencia por `externalReference` + `paymentId` y transacciones serializables en actualizacion de estado. |
-| Desalineacion de estados entre proveedor y dominio interno | Media | Tabla/mapeo explicito de estados y fallback controlado a `PENDING` con trazabilidad de causa. |
-| Exposicion accidental de secretos en logs o respuestas | Baja | Sanitizar logs, enmascarar credenciales en APIs de configuracion y validar que solo backend use `API Key`. |
-| Acoplamiento accidental a GalioPay pese al objetivo multi-proveedor | Media | Definir contrato abstracto previo y exigir que rutas consuman interfaz comun, no SDK directo. |
-| Impacto en flujo publico existente de checkout | Media | Mantener compatibilidad retro, tests de regresion sobre flujo Mercado Pago actual y rollout gradual por feature flag. |
+| Riesgo                                                              | Probabilidad | Mitigacion                                                                                                            |
+| ------------------------------------------------------------------- | ------------ | --------------------------------------------------------------------------------------------------------------------- |
+| Doble impacto de webhook o reintentos del proveedor                 | Media        | Idempotencia por `externalReference` + `paymentId` y transacciones serializables en actualizacion de estado.          |
+| Desalineacion de estados entre proveedor y dominio interno          | Media        | Tabla/mapeo explicito de estados y fallback controlado a `PENDING` con trazabilidad de causa.                         |
+| Exposicion accidental de secretos en logs o respuestas              | Baja         | Sanitizar logs, enmascarar credenciales en APIs de configuracion y validar que solo backend use `API Key`.            |
+| Acoplamiento accidental a GalioPay pese al objetivo multi-proveedor | Media        | Definir contrato abstracto previo y exigir que rutas consuman interfaz comun, no SDK directo.                         |
+| Impacto en flujo publico existente de checkout                      | Media        | Mantener compatibilidad retro, tests de regresion sobre flujo Mercado Pago actual y rollout gradual por feature flag. |
 
 ## Plan de Reversion (Rollback)
 

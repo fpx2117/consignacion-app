@@ -28,7 +28,10 @@ import { SidebarDropdownGroup } from "@/components/sidebar/sidebar-dropdown-grou
 import { SidebarIconLink } from "@/components/sidebar/sidebar-icon-link";
 import type { SidebarNavItem } from "@/components/sidebar/types";
 
-import { useNotifications, clearNotificationsCache } from "@/hooks/useNotifications";
+import {
+  useNotifications,
+  clearNotificationsCache,
+} from "@/hooks/useNotifications";
 import { useBroadcastChannel } from "@/hooks/useBroadcastChannel";
 import { useSucursalStore } from "@/store/useSucursalStore";
 import { apiService } from "@/lib/apiService";
@@ -56,7 +59,12 @@ import {
 // Datos del usuario pasados desde el Server Component layout (evita el fetch duplicado)
 export interface SidebarUserData {
   rol: "ADMIN" | "EMPLEADO";
-  sucursalesPermitidas: { id: number; nombre: string; esPrincipal: boolean; activa: boolean }[];
+  sucursalesPermitidas: {
+    id: number;
+    nombre: string;
+    esPrincipal: boolean;
+    activa: boolean;
+  }[];
   allowConsignaciones: boolean;
   activeSucursalId: number;
   planLimits: PlanLimits | null;
@@ -70,7 +78,11 @@ const NAV_BUSINESS: SidebarNavItem[] = [
   { label: "Clientes", href: "/clientes", icon: Users },
   { label: "Proveedores", href: "/proveedores", icon: Truck },
   { label: "Productos", href: "/productos", icon: Package },
-  { label: "Pedidos Esperados", href: "/pedidos-esperados", icon: ClipboardList },
+  {
+    label: "Pedidos Esperados",
+    href: "/pedidos-esperados",
+    icon: ClipboardList,
+  },
   { label: "Consignaciones", href: "/consignaciones", icon: Handshake },
   { label: "Gastos", href: "/gastos", icon: Wallet },
 ];
@@ -115,7 +127,10 @@ function NotificationButton({
       </SheetTrigger>
       <SheetContent side="right" className="p-0" showCloseButton={false}>
         <SheetTitle className="sr-only">Notificaciones</SheetTitle>
-        <NotificationsAnimatedPanel notificationsState={notificationsState} open={open} />
+        <NotificationsAnimatedPanel
+          notificationsState={notificationsState}
+          open={open}
+        />
       </SheetContent>
     </Sheet>
   );
@@ -156,7 +171,9 @@ export function SidebarDock({ initialUserData }: SidebarDockProps = {}) {
   const activeSucursalId = useSucursalStore((s) => s.activeSucursalId);
   const hydrate = useSucursalStore((s) => s.hydrate);
   const pedidosVencidosCount = useSucursalStore((s) => s.pedidosVencidosCount);
-  const setPedidosVencidosCount = useSucursalStore((s) => s.setPedidosVencidosCount);
+  const setPedidosVencidosCount = useSucursalStore(
+    (s) => s.setPedidosVencidosCount,
+  );
 
   useBroadcastChannel({
     "sucursal-changed": () => {
@@ -178,8 +195,9 @@ export function SidebarDock({ initialUserData }: SidebarDockProps = {}) {
   const isGlobalView = activeSucursalId === 0;
 
   const isActive = React.useCallback(
-    (href: string) => (href === "/dashboard" ? pathname === href : pathname.startsWith(href)),
-    [pathname]
+    (href: string) =>
+      href === "/dashboard" ? pathname === href : pathname.startsWith(href),
+    [pathname],
   );
 
   const handleLogout = React.useCallback(async () => {
@@ -198,7 +216,7 @@ export function SidebarDock({ initialUserData }: SidebarDockProps = {}) {
       router.push(href);
       setMobileMenuOpen(false);
     },
-    [router]
+    [router],
   );
 
   const filteredBusiness = React.useMemo(() => {
@@ -211,7 +229,11 @@ export function SidebarDock({ initialUserData }: SidebarDockProps = {}) {
   const operationsItems = React.useMemo(() => {
     const items: SidebarNavItem[] = [];
     if (usarControlDeCaja && !isGlobalView) {
-      items.push({ label: "Historial", href: "/caja/historial", icon: History });
+      items.push({
+        label: "Historial",
+        href: "/caja/historial",
+        icon: History,
+      });
     }
     return items;
   }, [isGlobalView, usarControlDeCaja]);
@@ -219,7 +241,11 @@ export function SidebarDock({ initialUserData }: SidebarDockProps = {}) {
   const mobileMenuItems = React.useMemo(() => {
     const items: SidebarNavItem[] = [...filteredBusiness];
     if (usarControlDeCaja && !isGlobalView) {
-      items.push({ label: "Historial de Caja", href: "/caja/historial", icon: History });
+      items.push({
+        label: "Historial de Caja",
+        href: "/caja/historial",
+        icon: History,
+      });
     }
     items.push(...NAV_ADMIN);
     return items;
@@ -239,7 +265,10 @@ export function SidebarDock({ initialUserData }: SidebarDockProps = {}) {
   // Refrescar notificaciones cuando cambia la sucursal activa (mismo tab)
   const prevSucursalIdRef = React.useRef<number | null>(null);
   React.useEffect(() => {
-    if (prevSucursalIdRef.current !== null && prevSucursalIdRef.current !== activeSucursalId) {
+    if (
+      prevSucursalIdRef.current !== null &&
+      prevSucursalIdRef.current !== activeSucursalId
+    ) {
       clearNotificationsCache();
       notificationsState.refresh();
     }
@@ -261,9 +290,10 @@ export function SidebarDock({ initialUserData }: SidebarDockProps = {}) {
 
       try {
         const res = await fetch("/api/pedidos-esperados?estado=VENCIDO", {
-          headers: Number.isFinite(activeSucursalId) && activeSucursalId >= 0
-            ? { "x-sucursal-id": String(activeSucursalId) }
-            : undefined,
+          headers:
+            Number.isFinite(activeSucursalId) && activeSucursalId >= 0
+              ? { "x-sucursal-id": String(activeSucursalId) }
+              : undefined,
           cache: "no-store",
         });
 
@@ -276,11 +306,12 @@ export function SidebarDock({ initialUserData }: SidebarDockProps = {}) {
         const count = vencidos.length;
         pedidosCache.set(activeSucursalId, { count, ts: Date.now() });
         setPedidosVencidosCount(count);
-      } catch {
-      }
+      } catch {}
     };
 
-    const cachedConfig = localStorage.getItem(`config-caja-${activeSucursalId}`);
+    const cachedConfig = localStorage.getItem(
+      `config-caja-${activeSucursalId}`,
+    );
     if (cachedConfig !== null) {
       setUsarControlDeCaja(cachedConfig === "true");
     }
@@ -298,8 +329,7 @@ export function SidebarDock({ initialUserData }: SidebarDockProps = {}) {
         configCache = { value, ts: Date.now() };
         setUsarControlDeCaja(value);
         localStorage.setItem(`config-caja-${activeSucursalId}`, String(value));
-      } catch {
-      }
+      } catch {}
     };
 
     const handleConfigChange = (event: Event) => {
@@ -313,24 +343,54 @@ export function SidebarDock({ initialUserData }: SidebarDockProps = {}) {
     loadPedidosVencidos();
     loadConfig();
 
-    window.addEventListener("config-updated", handleConfigChange as EventListener);
-    return () => window.removeEventListener("config-updated", handleConfigChange as EventListener);
+    window.addEventListener(
+      "config-updated",
+      handleConfigChange as EventListener,
+    );
+    return () =>
+      window.removeEventListener(
+        "config-updated",
+        handleConfigChange as EventListener,
+      );
   }, [activeSucursalId, setPedidosVencidosCount]);
 
   return (
     <aside className="fixed bottom-0 left-0 z-50 w-full border-t border-border/60 bg-background/75 backdrop-blur-2xl md:top-0 md:h-screen md:w-[88px] md:border-r md:border-t-0">
       <div className="md:hidden flex justify-center py-2 pb-[max(env(safe-area-inset-bottom),0.5rem)]">
         <div className="relative overflow-hidden rounded-2xl p-[1px]">
-          <Dock orientation="horizontal" className="border border-border/70 bg-card/70 backdrop-blur-xl gap-2 px-3">
-            {isEmpleado
-              ? (!isGlobalView ? <SidebarIconLink item={QUICK_SALE} active={isActive(QUICK_SALE.href)} isMobile tooltipSide="top" /> : null)
-              : MOBILE_PRIMARY.filter((item) => !(isGlobalView && item.href === QUICK_SALE.href)).map((item) => (
-                   <SidebarIconLink key={item.href} item={item} active={isActive(item.href)} isMobile tooltipSide="top" />
-                 ))}
+          <Dock
+            orientation="horizontal"
+            className="border border-border/70 bg-card/70 backdrop-blur-xl gap-2 px-3"
+          >
+            {isEmpleado ? (
+              !isGlobalView ? (
+                <SidebarIconLink
+                  item={QUICK_SALE}
+                  active={isActive(QUICK_SALE.href)}
+                  isMobile
+                  tooltipSide="top"
+                />
+              ) : null
+            ) : (
+              MOBILE_PRIMARY.filter(
+                (item) => !(isGlobalView && item.href === QUICK_SALE.href),
+              ).map((item) => (
+                <SidebarIconLink
+                  key={item.href}
+                  item={item}
+                  active={isActive(item.href)}
+                  isMobile
+                  tooltipSide="top"
+                />
+              ))
+            )}
 
             {!isEmpleado && (
               <>
-                <Separator orientation="vertical" className="h-5 mx-1 opacity-50" />
+                <Separator
+                  orientation="vertical"
+                  className="h-5 mx-1 opacity-50"
+                />
                 <DockIcon>
                   <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
                     <SheetTrigger asChild>
@@ -342,7 +402,10 @@ export function SidebarDock({ initialUserData }: SidebarDockProps = {}) {
                       </button>
                     </SheetTrigger>
 
-                    <SheetContent side="bottom" className="rounded-t-[2.5rem] border-t p-6 pb-12">
+                    <SheetContent
+                      side="bottom"
+                      className="rounded-t-[2.5rem] border-t p-6 pb-12"
+                    >
                       <SheetHeader className="mb-6">
                         <SheetTitle className="text-left text-xl font-semibold tracking-tight">
                           Menu Principal
@@ -354,7 +417,9 @@ export function SidebarDock({ initialUserData }: SidebarDockProps = {}) {
                           const Icon = item.icon;
                           const active = isActive(item.href);
                           const isPedidos = item.href === "/pedidos-esperados";
-                          const badgeCount = isPedidos ? pedidosVencidosCount : 0;
+                          const badgeCount = isPedidos
+                            ? pedidosVencidosCount
+                            : 0;
 
                           return (
                             <button
@@ -362,7 +427,9 @@ export function SidebarDock({ initialUserData }: SidebarDockProps = {}) {
                               onClick={() => handleNavigate(item.href)}
                               className="flex flex-col items-center gap-2 rounded-3xl bg-muted/35 p-3 transition-all active:scale-95"
                             >
-                              <div className={`relative flex h-11 w-11 items-center justify-center rounded-2xl ${active ? "bg-primary text-primary-foreground" : "bg-background text-foreground"}`}>
+                              <div
+                                className={`relative flex h-11 w-11 items-center justify-center rounded-2xl ${active ? "bg-primary text-primary-foreground" : "bg-background text-foreground"}`}
+                              >
                                 <Icon className="h-5 w-5" />
                                 {badgeCount > 0 && (
                                   <span className="absolute -top-1 -right-1 min-w-[16px] h-4 px-[3px] rounded-full bg-destructive text-[9px] font-black text-destructive-foreground flex items-center justify-center leading-none">
@@ -388,7 +455,9 @@ export function SidebarDock({ initialUserData }: SidebarDockProps = {}) {
                         <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-destructive/10">
                           <LogOut className="h-5 w-5" />
                         </div>
-                        <span className="text-sm font-semibold">{loggingOut ? "Cerrando..." : "Cerrar Sesion"}</span>
+                        <span className="text-sm font-semibold">
+                          {loggingOut ? "Cerrando..." : "Cerrar Sesion"}
+                        </span>
                       </button>
                     </SheetContent>
                   </Sheet>
@@ -397,7 +466,12 @@ export function SidebarDock({ initialUserData }: SidebarDockProps = {}) {
             )}
 
             <Separator orientation="vertical" className="h-5 mx-1 opacity-50" />
-            <DockIcon><NotificationButton isMobile notificationsState={notificationsState} /></DockIcon>
+            <DockIcon>
+              <NotificationButton
+                isMobile
+                notificationsState={notificationsState}
+              />
+            </DockIcon>
 
             <DockIcon>
               <button
@@ -409,13 +483,20 @@ export function SidebarDock({ initialUserData }: SidebarDockProps = {}) {
                 disabled={!themeMounted}
                 className="h-9 w-9 flex items-center justify-center rounded-full text-muted-foreground hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
               >
-                {isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+                {isDark ? (
+                  <Sun className="h-4 w-4" />
+                ) : (
+                  <Moon className="h-4 w-4" />
+                )}
               </button>
             </DockIcon>
 
             {isEmpleado && (
               <>
-                <Separator orientation="vertical" className="h-5 mx-1 opacity-50" />
+                <Separator
+                  orientation="vertical"
+                  className="h-5 mx-1 opacity-50"
+                />
                 <DockIcon>
                   <TooltipProvider delayDuration={0}>
                     <Tooltip>
@@ -428,31 +509,54 @@ export function SidebarDock({ initialUserData }: SidebarDockProps = {}) {
                           <LogOut className="h-4 w-4" />
                         </button>
                       </TooltipTrigger>
-                      <TooltipContent side="top">{loggingOut ? "Cerrando..." : "Cerrar Sesion"}</TooltipContent>
+                      <TooltipContent side="top">
+                        {loggingOut ? "Cerrando..." : "Cerrar Sesion"}
+                      </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
                 </DockIcon>
               </>
             )}
           </Dock>
-          <BorderBeam size={50} duration={10} colorFrom="var(--primary)" colorTo="var(--ui-fx-cyan)" />
+          <BorderBeam
+            size={50}
+            duration={10}
+            colorFrom="var(--primary)"
+            colorTo="var(--ui-fx-cyan)"
+          />
         </div>
       </div>
 
       <div className="hidden h-full w-full md:flex md:flex-col md:items-center md:py-6">
-        <Link href="/dashboard" className="mb-8 transition-transform active:scale-95" aria-label="Ir al dashboard">
+        <Link
+          href="/dashboard"
+          className="mb-8 transition-transform active:scale-95"
+          aria-label="Ir al dashboard"
+        >
           <BrandLogo size="md" />
         </Link>
 
         <div className="flex w-full flex-1 flex-col items-center justify-center">
           <div className="relative overflow-hidden rounded-3xl p-[1px]">
-            <Dock orientation="vertical" className="border border-border/70 bg-card/75 shadow-xl backdrop-blur-xl md:flex-col gap-1.5 p-2">
+            <Dock
+              orientation="vertical"
+              className="border border-border/70 bg-card/75 shadow-xl backdrop-blur-xl md:flex-col gap-1.5 p-2"
+            >
               {isEmpleado ? (
-                !isGlobalView ? <SidebarIconLink item={QUICK_SALE} active={isActive(QUICK_SALE.href)} /> : null
+                !isGlobalView ? (
+                  <SidebarIconLink
+                    item={QUICK_SALE}
+                    active={isActive(QUICK_SALE.href)}
+                  />
+                ) : null
               ) : (
                 <>
                   {NAV_CORE.map((item) => (
-                    <SidebarIconLink key={item.href} item={item} active={isActive(item.href)} />
+                    <SidebarIconLink
+                      key={item.href}
+                      item={item}
+                      active={isActive(item.href)}
+                    />
                   ))}
 
                   <Separator className="w-8 mx-auto opacity-50" />
@@ -463,10 +567,19 @@ export function SidebarDock({ initialUserData }: SidebarDockProps = {}) {
                     items={filteredBusiness}
                     isActive={isActive}
                     onNavigate={handleNavigate}
-                    getBadgeCount={(item) => (item.href === "/pedidos-esperados" ? pedidosVencidosCount : 0)}
+                    getBadgeCount={(item) =>
+                      item.href === "/pedidos-esperados"
+                        ? pedidosVencidosCount
+                        : 0
+                    }
                   />
 
-                  {!isGlobalView ? <SidebarIconLink item={QUICK_SALE} active={isActive(QUICK_SALE.href)} /> : null}
+                  {!isGlobalView ? (
+                    <SidebarIconLink
+                      item={QUICK_SALE}
+                      active={isActive(QUICK_SALE.href)}
+                    />
+                  ) : null}
 
                   {operationsItems.length > 0 && (
                     <SidebarDropdownGroup
@@ -481,13 +594,19 @@ export function SidebarDock({ initialUserData }: SidebarDockProps = {}) {
                   <Separator className="w-8 mx-auto opacity-50" />
 
                   {NAV_ADMIN.map((item) => (
-                    <SidebarIconLink key={item.href} item={item} active={isActive(item.href)} />
+                    <SidebarIconLink
+                      key={item.href}
+                      item={item}
+                      active={isActive(item.href)}
+                    />
                   ))}
                 </>
               )}
 
               <Separator className="w-8 mx-auto opacity-50" />
-              <DockIcon><NotificationButton notificationsState={notificationsState} /></DockIcon>
+              <DockIcon>
+                <NotificationButton notificationsState={notificationsState} />
+              </DockIcon>
 
               <DockIcon>
                 <button
@@ -499,12 +618,21 @@ export function SidebarDock({ initialUserData }: SidebarDockProps = {}) {
                   disabled={!themeMounted}
                   className="h-10 w-10 flex items-center justify-center rounded-full text-muted-foreground hover:bg-muted transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                 >
-                  {isDark ? <Sun className="size-5" /> : <Moon className="size-5" />}
+                  {isDark ? (
+                    <Sun className="size-5" />
+                  ) : (
+                    <Moon className="size-5" />
+                  )}
                 </button>
               </DockIcon>
             </Dock>
 
-            <BorderBeam size={80} duration={15} colorFrom="var(--primary)" colorTo="var(--ui-fx-cyan)" />
+            <BorderBeam
+              size={80}
+              duration={15}
+              colorFrom="var(--primary)"
+              colorTo="var(--ui-fx-cyan)"
+            />
           </div>
         </div>
 
@@ -520,11 +648,15 @@ export function SidebarDock({ initialUserData }: SidebarDockProps = {}) {
                 <LogOut className="size-5" />
               </button>
             </TooltipTrigger>
-            <TooltipContent side="right">{loggingOut ? "Cerrando..." : "Cerrar Sesion"}</TooltipContent>
+            <TooltipContent side="right">
+              {loggingOut ? "Cerrando..." : "Cerrar Sesion"}
+            </TooltipContent>
           </Tooltip>
         </TooltipProvider>
 
-        <div className="mb-4 text-[10px] font-semibold tracking-wide text-muted-foreground/30">v1.2</div>
+        <div className="mb-4 text-[10px] font-semibold tracking-wide text-muted-foreground/30">
+          v1.2
+        </div>
       </div>
     </aside>
   );

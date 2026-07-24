@@ -12,7 +12,8 @@ export async function GET(req: Request) {
   const minutes = Number(searchParams.get("minutes") || "60");
   const urlPrefix = searchParams.get("url") || undefined;
 
-  const windowMinutes = Number.isFinite(minutes) && minutes > 0 ? Math.min(minutes, 24 * 60) : 60;
+  const windowMinutes =
+    Number.isFinite(minutes) && minutes > 0 ? Math.min(minutes, 24 * 60) : 60;
   const summary = performanceVitalsStore.summary(windowMinutes, urlPrefix);
 
   return NextResponse.json(
@@ -34,17 +35,25 @@ export async function POST(req: Request) {
       value: Number(body?.value || 0),
       rating: String(body?.rating || "unknown"),
       delta: Number(body?.delta || 0),
-      navigationType: body?.navigationType ? String(body.navigationType) : undefined,
+      navigationType: body?.navigationType
+        ? String(body.navigationType)
+        : undefined,
       url: String(body?.url || "unknown"),
       ts: Number(body?.ts || Date.now()),
     };
 
     if (!["CLS", "FCP", "INP", "LCP", "TTFB"].includes(sample.name)) {
-      return NextResponse.json({ ok: false, error: "invalid_metric" }, { status: 400, headers: noStoreHeaders() });
+      return NextResponse.json(
+        { ok: false, error: "invalid_metric" },
+        { status: 400, headers: noStoreHeaders() },
+      );
     }
 
     if (!Number.isFinite(sample.value) || sample.value < 0) {
-      return NextResponse.json({ ok: false, error: "invalid_value" }, { status: 400, headers: noStoreHeaders() });
+      return NextResponse.json(
+        { ok: false, error: "invalid_value" },
+        { status: 400, headers: noStoreHeaders() },
+      );
     }
 
     performanceVitalsStore.add(sample);
@@ -59,8 +68,14 @@ export async function POST(req: Request) {
       });
     }
 
-    return NextResponse.json({ ok: true }, { status: 202, headers: noStoreHeaders() });
+    return NextResponse.json(
+      { ok: true },
+      { status: 202, headers: noStoreHeaders() },
+    );
   } catch {
-    return NextResponse.json({ ok: false }, { status: 400, headers: noStoreHeaders() });
+    return NextResponse.json(
+      { ok: false },
+      { status: 400, headers: noStoreHeaders() },
+    );
   }
 }

@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import type { Page } from "puppeteer-core";
 import { getSharedReportBrowser } from "@/lib/chromium/resolve-executable-path";
-import { withChromiumSlot, ChromiumBusyError } from "@/lib/chromium/chromium-semaphore";
+import {
+  withChromiumSlot,
+  ChromiumBusyError,
+} from "@/lib/chromium/chromium-semaphore";
 import { verifyPdfToken } from "@/lib/security/pdf-token";
 import { prisma } from "@/lib/prisma";
 import { hashCode } from "@/lib/sharing/share-links";
@@ -23,13 +26,20 @@ function getPublicOrigin(req: NextRequest): string {
     return `${proto}://${host}`;
   }
 
-  const envBase = process.env.NEXT_PUBLIC_APP_URL?.trim() || "http://localhost:3000";
-  if (envBase.startsWith("http://") || envBase.startsWith("https://")) return envBase.replace(/\/$/, "");
+  const envBase =
+    process.env.NEXT_PUBLIC_APP_URL?.trim() || "http://localhost:3000";
+  if (envBase.startsWith("http://") || envBase.startsWith("https://"))
+    return envBase.replace(/\/$/, "");
   return `https://${envBase.replace(/\/$/, "")}`;
 }
 
-function redirectStatus(req: NextRequest, state: "invalid" | "expired" | "limit") {
-  return NextResponse.redirect(new URL(`/x/status?state=${state}`, getPublicOrigin(req)));
+function redirectStatus(
+  req: NextRequest,
+  state: "invalid" | "expired" | "limit",
+) {
+  return NextResponse.redirect(
+    new URL(`/x/status?state=${state}`, getPublicOrigin(req)),
+  );
 }
 
 function safeFilename(input: string) {
@@ -50,7 +60,7 @@ async function resolveRemitoTimezone(consignacion: { sucursalId: number }) {
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
   let page: Page | null = null;
 
@@ -71,8 +81,10 @@ export async function GET(
       const link = await prisma.shareLink.findUnique({ where: { codeHash } });
 
       if (!link) return redirectStatus(request, "invalid");
-      if (link.type !== "REMITO" || link.targetId !== id) return redirectStatus(request, "invalid");
-      if (new Date() > link.expiresAt) return redirectStatus(request, "expired");
+      if (link.type !== "REMITO" || link.targetId !== id)
+        return redirectStatus(request, "invalid");
+      if (new Date() > link.expiresAt)
+        return redirectStatus(request, "expired");
       if (link.views >= link.maxViews) return redirectStatus(request, "limit");
       // ✅ NO incrementar views acá (ya se hace en /x)
     } else {
@@ -86,7 +98,8 @@ export async function GET(
       include: { cliente: true, detalles: { include: { producto: true } } },
     });
 
-    if (!consignacion) return NextResponse.json({ error: "No encontrada" }, { status: 404 });
+    if (!consignacion)
+      return NextResponse.json({ error: "No encontrada" }, { status: 404 });
 
     const timezone = await resolveRemitoTimezone(consignacion);
 
@@ -96,10 +109,16 @@ export async function GET(
     const pdfUint8Array = await withChromiumSlot(async () => {
       const browser = await getSharedReportBrowser();
       page = await browser.newPage();
-      await page.setContent(await buildConsignacionHtml({ ...consignacion, zonaHoraria: timezone.tz }, branding), {
-        waitUntil: "domcontentloaded",
-        timeout: 30000,
-      });
+      await page.setContent(
+        await buildConsignacionHtml(
+          { ...consignacion, zonaHoraria: timezone.tz },
+          branding,
+        ),
+        {
+          waitUntil: "domcontentloaded",
+          timeout: 30000,
+        },
+      );
 
       const bytes = await page.pdf({
         format: "A4",
@@ -111,8 +130,12 @@ export async function GET(
       return bytes;
     });
 
-    const clienteNombre = safeFilename(consignacion.cliente?.nombre || "Cliente");
-    const folioFormateado = String(consignacion.numeroFolio ?? consignacion.id).padStart(4, "0");
+    const clienteNombre = safeFilename(
+      consignacion.cliente?.nombre || "Cliente",
+    );
+    const folioFormateado = String(
+      consignacion.numeroFolio ?? consignacion.id,
+    ).padStart(4, "0");
     const fileName = `Remito-${clienteNombre || "Cliente"}-${folioFormateado}.pdf`;
 
     return new NextResponse(Buffer.from(pdfUint8Array), {
@@ -125,13 +148,19 @@ export async function GET(
     });
   } catch (error) {
     if (error instanceof ChromiumBusyError) {
-      return NextResponse.json({ error: "Servidor ocupado generando otros reportes, reintentá en unos segundos." }, { status: 503 });
+      return NextResponse.json(
+        {
+          error:
+            "Servidor ocupado generando otros reportes, reintentá en unos segundos.",
+        },
+        { status: 503 },
+      );
     }
     console.error("PDF REMITO ERROR:", error);
     return NextResponse.json({ error: "Error generando PDF" }, { status: 500 });
   } finally {
     try {
       await (page as Page | null)?.close();
-    } catch { }
+    } catch {}
   }
 }

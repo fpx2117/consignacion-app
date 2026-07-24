@@ -9,12 +9,16 @@ import { Button } from "@/components/ui/button";
 type Params = Promise<{ id: string }>;
 type SearchParams = Promise<{ [key: string]: string | string[] | undefined }>;
 
-export default function TicketLoadingPage(props: { params: Params, searchParams: SearchParams }) {
+export default function TicketLoadingPage(props: {
+  params: Params;
+  searchParams: SearchParams;
+}) {
   const { id } = use(props.params);
   const searchParams = use(props.searchParams);
 
   const rawMode = searchParams.mode;
-  const mode: "view" | "whatsapp" = rawMode === "whatsapp" ? "whatsapp" : "view";
+  const mode: "view" | "whatsapp" =
+    rawMode === "whatsapp" ? "whatsapp" : "view";
   const phone = searchParams.phone as string | undefined;
   const name = searchParams.name as string | undefined;
 
@@ -48,15 +52,16 @@ export default function TicketLoadingPage(props: { params: Params, searchParams:
           const config = await apiService.getConfiguracionGeneral();
 
           // Usar 'mensajeWhatsappVenta' específicamente
-          const template = config?.mensajeWhatsappVenta ||
+          const template =
+            config?.mensajeWhatsappVenta ||
             `*AllData POS - Ticket*\n\n` +
-            `Hola {name}.\n` +
-            `📄 Ticket digital: {url}\n\n` +
-            `¡Gracias por tu compra!`;
+              `Hola {name}.\n` +
+              `📄 Ticket digital: {url}\n\n` +
+              `¡Gracias por tu compra!`;
 
           // Reemplazo de variables
           const message = template
-            .replace(/{name}/g, name || 'Cliente')
+            .replace(/{name}/g, name || "Cliente")
             .replace(/{url}/g, pdfUrl);
 
           // Limpiamos el teléfono
@@ -65,10 +70,12 @@ export default function TicketLoadingPage(props: { params: Params, searchParams:
 
           window.location.replace(waUrl);
         }
-
       } catch (err) {
         if (mounted) {
-          const message = err instanceof Error ? err.message : "No se pudo procesar la solicitud.";
+          const message =
+            err instanceof Error
+              ? err.message
+              : "No se pudo procesar la solicitud.";
           setError(message);
         }
       }
@@ -78,7 +85,9 @@ export default function TicketLoadingPage(props: { params: Params, searchParams:
       processAction();
     }
 
-    return () => { mounted = false; };
+    return () => {
+      mounted = false;
+    };
   }, [id, mode, phone, name]);
 
   if (!error) {
@@ -89,9 +98,13 @@ export default function TicketLoadingPage(props: { params: Params, searchParams:
         </div>
         <div className="text-center space-y-1">
           <h1 className="text-lg font-bold text-foreground dark:text-foreground">
-            {mode === 'whatsapp' ? 'Abriendo WhatsApp...' : 'Generando Ticket...'}
+            {mode === "whatsapp"
+              ? "Abriendo WhatsApp..."
+              : "Generando Ticket..."}
           </h1>
-          <p className="text-sm text-muted-foreground">Por favor esperá un momento.</p>
+          <p className="text-sm text-muted-foreground">
+            Por favor esperá un momento.
+          </p>
         </div>
       </div>
     );
@@ -102,9 +115,17 @@ export default function TicketLoadingPage(props: { params: Params, searchParams:
       <div className="p-4 rounded-full bg-[color:var(--status-danger)] text-[color:var(--status-danger)] mb-2">
         <AlertCircle className="h-8 w-8" />
       </div>
-      <h1 className="text-xl font-bold text-[color:var(--status-danger)] dark:text-[color:var(--status-danger)]">Ocurrió un error</h1>
-      <p className="text-sm text-[color:var(--status-danger)]/80 max-w-xs mx-auto">{error}</p>
-      <Button onClick={() => window.close()} variant="outline" className="mt-4 border-[color:var(--status-danger)] hover:bg-[color:var(--status-danger)] text-[color:var(--status-danger)]">
+      <h1 className="text-xl font-bold text-[color:var(--status-danger)] dark:text-[color:var(--status-danger)]">
+        Ocurrió un error
+      </h1>
+      <p className="text-sm text-[color:var(--status-danger)]/80 max-w-xs mx-auto">
+        {error}
+      </p>
+      <Button
+        onClick={() => window.close()}
+        variant="outline"
+        className="mt-4 border-[color:var(--status-danger)] hover:bg-[color:var(--status-danger)] text-[color:var(--status-danger)]"
+      >
         Cerrar ventana
       </Button>
     </div>

@@ -4,7 +4,10 @@ import React from "react";
 import { cn } from "@/lib/utils";
 import { AnimatedList } from "@/components/ui/animated-list";
 import { useNotifications } from "@/hooks/useNotifications";
-import { NOTIFICATION_TYPE, NOTIFICATION_CONFIG } from "@/lib/notificaciones/types";
+import {
+  NOTIFICATION_TYPE,
+  NOTIFICATION_CONFIG,
+} from "@/lib/notificaciones/types";
 import { Button } from "@/components/ui/button";
 import { SheetClose } from "@/components/ui/sheet";
 import { motion, AnimatePresence } from "motion/react";
@@ -42,25 +45,29 @@ const SEVERITY_STYLES = {
     card: "border-[color:var(--status-warning)]/40 dark:border-[color:var(--status-warning)]/40",
     bar: "bg-[color:var(--status-warning)]",
     icon: "bg-[color:var(--status-warning)]/15 text-[color:var(--status-warning)] dark:text-[color:var(--status-warning)] ring-[color:var(--status-warning)]/20",
-    badge: "bg-[color:var(--status-warning)]/10 text-[color:var(--status-warning)] dark:text-[color:var(--status-warning)]",
+    badge:
+      "bg-[color:var(--status-warning)]/10 text-[color:var(--status-warning)] dark:text-[color:var(--status-warning)]",
   },
   error: {
     card: "border-[color:var(--status-danger)]/40 dark:border-[color:var(--status-danger)]/40",
     bar: "bg-[color:var(--status-danger)]",
     icon: "bg-[color:var(--status-danger)]/15 text-[color:var(--status-danger)] dark:text-[color:var(--status-danger)] ring-[color:var(--status-danger)]/20",
-    badge: "bg-[color:var(--status-danger)]/10 text-[color:var(--status-danger)] dark:text-[color:var(--status-danger)]",
+    badge:
+      "bg-[color:var(--status-danger)]/10 text-[color:var(--status-danger)] dark:text-[color:var(--status-danger)]",
   },
   success: {
     card: "border-[color:var(--status-success-strong)]/40 dark:border-[color:var(--status-success-strong)]/40",
     bar: "bg-[color:var(--status-success-strong)]",
     icon: "bg-[color:var(--status-success-strong)]/15 text-[color:var(--status-success-strong)] dark:text-[color:var(--status-success-strong)] ring-[color:var(--status-success-strong)]/20",
-    badge: "bg-[color:var(--status-success-strong)]/10 text-[color:var(--status-success-strong)] dark:text-[color:var(--status-success-strong)]",
+    badge:
+      "bg-[color:var(--status-success-strong)]/10 text-[color:var(--status-success-strong)] dark:text-[color:var(--status-success-strong)]",
   },
   info: {
     card: "border-[color:var(--theme-ocean-primary)]/40 dark:border-[color:var(--theme-ocean-primary)]/40",
     bar: "bg-[color:var(--theme-ocean-primary)]",
     icon: "bg-[color:var(--theme-ocean-primary)]/15 text-[color:var(--theme-ocean-primary)] dark:text-[color:var(--theme-ocean-primary)] ring-[color:var(--theme-ocean-primary)]/20",
-    badge: "bg-[color:var(--theme-ocean-primary)]/10 text-[color:var(--theme-ocean-primary)] dark:text-[color:var(--theme-ocean-primary)]",
+    badge:
+      "bg-[color:var(--theme-ocean-primary)]/10 text-[color:var(--theme-ocean-primary)] dark:text-[color:var(--theme-ocean-primary)]",
   },
 } as const;
 
@@ -81,15 +88,22 @@ function NotificationItem({
   ventaId?: number;
   consignacionId?: number;
 }) {
-  const config = NOTIFICATION_CONFIG[type as NOTIFICATION_TYPE] || NOTIFICATION_CONFIG[NOTIFICATION_TYPE.SYSTEM];
+  const config =
+    NOTIFICATION_CONFIG[type as NOTIFICATION_TYPE] ||
+    NOTIFICATION_CONFIG[NOTIFICATION_TYPE.SYSTEM];
   const Icon = ICON_MAP[type] || Info;
   const severity = config.severity || "info";
   const styles = SEVERITY_STYLES[severity];
 
   const timeString = React.useMemo(() => {
     try {
-      return formatDistanceToNow(new Date(createdAt), { addSuffix: true, locale: es });
-    } catch { return "Reciente"; }
+      return formatDistanceToNow(new Date(createdAt), {
+        addSuffix: true,
+        locale: es,
+      });
+    } catch {
+      return "Reciente";
+    }
   }, [createdAt]);
 
   return (
@@ -99,25 +113,27 @@ function NotificationItem({
         "hover:-translate-y-0.5 hover:shadow-lg hover:shadow-black/5 dark:hover:shadow-black/20",
         read
           ? "opacity-60 bg-muted/30 border-transparent"
-          : cn("bg-card shadow-sm", styles.card)
+          : cn("bg-card shadow-sm", styles.card),
       )}
     >
       {/* Left accent bar */}
       {!read && (
-        <div className={cn(
-          "absolute left-0 top-0 h-full w-[3px] rounded-l-xl",
-          styles.bar,
-        )} />
+        <div
+          className={cn(
+            "absolute left-0 top-0 h-full w-[3px] rounded-l-xl",
+            styles.bar,
+          )}
+        />
       )}
 
       {/* Icon */}
-      <div className={cn(
-        "flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ring-1 ring-inset transition-all duration-300",
-        read
-          ? "bg-muted/60 text-muted-foreground ring-border"
-          : styles.icon,
-        "group-hover:scale-105"
-      )}>
+      <div
+        className={cn(
+          "flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ring-1 ring-inset transition-all duration-300",
+          read ? "bg-muted/60 text-muted-foreground ring-border" : styles.icon,
+          "group-hover:scale-105",
+        )}
+      >
         <Icon className="h-4 w-4" />
       </div>
 
@@ -125,26 +141,32 @@ function NotificationItem({
       <div className="flex flex-1 flex-col gap-1.5 overflow-hidden min-w-0">
         <div className="flex items-start justify-between gap-2">
           <div className="flex items-center gap-2 min-w-0">
-            <span className={cn(
-              "text-sm font-semibold leading-tight truncate",
-              read ? "text-muted-foreground" : "text-foreground"
-            )}>
+            <span
+              className={cn(
+                "text-sm font-semibold leading-tight truncate",
+                read ? "text-muted-foreground" : "text-foreground",
+              )}
+            >
               {title}
             </span>
             {!read && (
-              <span className={cn(
-                "shrink-0 inline-flex items-center rounded-full px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide",
-                styles.badge
-              )}>
+              <span
+                className={cn(
+                  "shrink-0 inline-flex items-center rounded-full px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide",
+                  styles.badge,
+                )}
+              >
                 {config.label}
               </span>
             )}
           </div>
         </div>
-        <p className={cn(
-          "line-clamp-2 text-xs leading-relaxed",
-          read ? "text-muted-foreground/60" : "text-muted-foreground"
-        )}>
+        <p
+          className={cn(
+            "line-clamp-2 text-xs leading-relaxed",
+            read ? "text-muted-foreground/60" : "text-muted-foreground",
+          )}
+        >
           {description}
         </p>
         <span className="flex items-center gap-1 text-[10px] text-muted-foreground/50 font-medium">
@@ -159,7 +181,9 @@ function NotificationItem({
               variant="secondary"
               size="sm"
               className="h-7 text-[10px] px-3 font-semibold rounded-md bg-[color:var(--status-success-strong)]/10 text-[color:var(--status-success-strong)] hover:bg-[color:var(--status-success-strong)]/20 dark:text-[color:var(--status-success-strong)] dark:hover:bg-[color:var(--status-success-strong)]/30 transition-colors"
-              onClick={() => window.open(`/ticket-loading/${ventaId}`, '_blank')}
+              onClick={() =>
+                window.open(`/ticket-loading/${ventaId}`, "_blank")
+              }
             >
               Ver Ticket
             </Button>
@@ -172,7 +196,12 @@ function NotificationItem({
               variant="secondary"
               size="sm"
               className="h-7 text-[10px] px-3 font-semibold rounded-md bg-[color:var(--primary)]/10 text-[color:var(--primary)] hover:bg-[color:var(--primary)]/20 dark:text-[color:var(--primary)] dark:hover:bg-[color:var(--primary)]/30 transition-colors"
-              onClick={() => window.open(`/dashboard/consignaciones/${consignacionId}`, '_blank')}
+              onClick={() =>
+                window.open(
+                  `/dashboard/consignaciones/${consignacionId}`,
+                  "_blank",
+                )
+              }
             >
               Ver Consignación
             </Button>
@@ -223,7 +252,7 @@ function FilterTabs({
           "relative h-full rounded-md px-3 transition-all duration-200",
           showAll
             ? "bg-background text-foreground shadow-sm"
-            : "text-muted-foreground hover:text-foreground"
+            : "text-muted-foreground hover:text-foreground",
         )}
       >
         Todas
@@ -234,7 +263,7 @@ function FilterTabs({
           "relative flex h-full items-center gap-1.5 rounded-md px-3 transition-all duration-200",
           !showAll
             ? "bg-background text-foreground shadow-sm"
-            : "text-muted-foreground hover:text-foreground"
+            : "text-muted-foreground hover:text-foreground",
         )}
       >
         No leídas
@@ -259,7 +288,8 @@ export function NotificationsAnimatedPanel({
   open?: boolean;
 }) {
   // ✅ Sin instancia interna — el estado proviene del padre (SidebarDock)
-  const { notifications, markAllAsRead, unreadCount, loading } = notificationsState;
+  const { notifications, markAllAsRead, unreadCount, loading } =
+    notificationsState;
 
   const [showRead, setShowRead] = React.useState(false);
 
@@ -272,17 +302,21 @@ export function NotificationsAnimatedPanel({
   const filteredNotifications = React.useMemo(() => {
     let list = [...notifications];
     if (!showRead) {
-      list = list.filter(n => !n.read);
+      list = list.filter((n) => !n.read);
     }
     return list.sort((a, b) => {
-      if (a.read === b.read) return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+      if (a.read === b.read)
+        return (
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        );
       return a.read ? 1 : -1;
     });
   }, [notifications, showRead]);
 
   return (
-    <div className={cn("flex h-full w-full flex-col overflow-hidden", className)}>
-
+    <div
+      className={cn("flex h-full w-full flex-col overflow-hidden", className)}
+    >
       {/* ── Header ── */}
       <div className="relative shrink-0 border-b bg-gradient-to-b from-card to-background px-5 pb-4 pt-5">
         {/* Top row */}
@@ -305,7 +339,9 @@ export function NotificationsAnimatedPanel({
               </AnimatePresence>
             </div>
             <div>
-              <h2 className="text-base font-bold text-foreground leading-none">Notificaciones</h2>
+              <h2 className="text-base font-bold text-foreground leading-none">
+                Notificaciones
+              </h2>
               <p className="text-[11px] text-muted-foreground mt-1">
                 {unreadCount > 0
                   ? `${unreadCount} pendiente${unreadCount > 1 ? "s" : ""}`

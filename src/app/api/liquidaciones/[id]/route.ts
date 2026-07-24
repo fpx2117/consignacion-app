@@ -6,8 +6,14 @@ import { TipoMovimientoStock, MotivoMovimientoStock } from "@prisma/client";
 
 // ✅ Imports Centralizados de Config y Notificaciones
 import { obtenerConfiguracionGlobal } from "@/lib/config";
-import { evaluateStockAlert, processNotificationQueue } from "@/lib/notificaciones/stock-alerts";
-import { buildSucursalWhere, isGlobalSucursalView } from "@/lib/security/sucursalScope";
+import {
+  evaluateStockAlert,
+  processNotificationQueue,
+} from "@/lib/notificaciones/stock-alerts";
+import {
+  buildSucursalWhere,
+  isGlobalSucursalView,
+} from "@/lib/security/sucursalScope";
 
 type RouteParams = {
   params: Promise<{ id: string }>;
@@ -47,7 +53,8 @@ export async function GET(_: Request, { params }: RouteParams) {
     },
   });
 
-  if (!liq) return NextResponse.json({ error: "No encontrada" }, { status: 404 });
+  if (!liq)
+    return NextResponse.json({ error: "No encontrada" }, { status: 404 });
 
   return NextResponse.json({ data: liq });
 }
@@ -60,7 +67,13 @@ export async function PUT(req: Request, { params }: RouteParams) {
   const auth = await requireAuth();
   if (!auth.ok) return auth.res;
   if (isGlobalSucursalView(auth)) {
-    return NextResponse.json({ error: "Vista global en modo solo lectura. Selecciona una sucursal para editar liquidaciones." }, { status: 409 });
+    return NextResponse.json(
+      {
+        error:
+          "Vista global en modo solo lectura. Selecciona una sucursal para editar liquidaciones.",
+      },
+      { status: 409 },
+    );
   }
 
   const { id: rawId } = await params;
@@ -76,7 +89,7 @@ export async function PUT(req: Request, { params }: RouteParams) {
   if (!parsed.success) {
     return NextResponse.json(
       { error: "Validación fallida", details: parsed.error.flatten() },
-      { status: 400 }
+      { status: 400 },
     );
   }
 
@@ -117,7 +130,9 @@ export async function PUT(req: Request, { params }: RouteParams) {
 
       // --- 1) REVERTIR ITEMS ANTERIORES ---
       for (const item of liqExistente.items) {
-        const det = liqExistente.consignacion.detalles.find((d) => d.id === item.consignacionDetalleId);
+        const det = liqExistente.consignacion.detalles.find(
+          (d) => d.id === item.consignacionDetalleId,
+        );
         if (!det) continue;
 
         await tx.consignacionDetalle.update({
@@ -128,23 +143,39 @@ export async function PUT(req: Request, { params }: RouteParams) {
           },
         });
 
-        const productoAntes = await tx.producto.findUnique({ where: { id: det.productoId } });
-        if (!productoAntes) throw new Error(`PRODUCTO_NO_ENCONTRADO:${det.productoId}`);
+        const productoAntes = await tx.producto.findUnique({
+          where: { id: det.productoId },
+        });
+        if (!productoAntes)
+          throw new Error(`PRODUCTO_NO_ENCONTRADO:${det.productoId}`);
 
         const productoDespues = await tx.producto.update({
           where: { id: det.productoId },
           data: {
-            stockConsignadoUnits: { increment: item.unitsVendidas + item.unitsDevueltas },
-            ...(item.unitsDevueltas > 0 ? { stockDisponibleUnits: { decrement: item.unitsDevueltas } } : {}),
+            stockConsignadoUnits: {
+              increment: item.unitsVendidas + item.unitsDevueltas,
+            },
+            ...(item.unitsDevueltas > 0
+              ? { stockDisponibleUnits: { decrement: item.unitsDevueltas } }
+              : {}),
           },
         });
 
         // Sincronizar StockSucursal (reverso)
         await tx.stockSucursal.update({
-          where: { productoId_sucursalId: { productoId: det.productoId, sucursalId: liqExistente.consignacion.sucursalId } },
+          where: {
+            productoId_sucursalId: {
+              productoId: det.productoId,
+              sucursalId: liqExistente.consignacion.sucursalId,
+            },
+          },
           data: {
-            stockConsignadoUnits: { increment: item.unitsVendidas + item.unitsDevueltas },
-            ...(item.unitsDevueltas > 0 ? { stockDisponibleUnits: { decrement: item.unitsDevueltas } } : {}),
+            stockConsignadoUnits: {
+              increment: item.unitsVendidas + item.unitsDevueltas,
+            },
+            ...(item.unitsDevueltas > 0
+              ? { stockDisponibleUnits: { decrement: item.unitsDevueltas } }
+              : {}),
           },
         });
 
@@ -158,8 +189,8 @@ export async function PUT(req: Request, { params }: RouteParams) {
               cantidad: item.unitsDevueltas,
               stockPrevio: productoAntes.stockDisponibleUnits,
               stockPosterior: productoDespues.stockDisponibleUnits,
-              observaciones: `Reverso Devolución Liq #${liquidacionId} (Consignación #${consignacionId})`
-            }
+              observaciones: `Reverso Devolución Liq #${liquidacionId} (Consignación #${consignacionId})`,
+            },
           });
         }
 
@@ -173,8 +204,8 @@ export async function PUT(req: Request, { params }: RouteParams) {
               cantidad: item.unitsVendidas,
               stockPrevio: productoAntes.stockDisponibleUnits,
               stockPosterior: productoDespues.stockDisponibleUnits, // No cambia el disponible, pero documentamos
-              observaciones: `Reverso Venta Liq #${liquidacionId} (Consignación #${consignacionId})`
-            }
+              observaciones: `Reverso Venta Liq #${liquidacionId} (Consignación #${consignacionId})`,
+            },
           });
         }
       }
@@ -192,9 +223,14 @@ export async function PUT(req: Request, { params }: RouteParams) {
       await tx.liquidacionItem.deleteMany({ where: { liquidacionId } });
 
       // --- 2) PREPARAR Y APLICAR NUEVOS DATOS ---
-      const detallesMap = new Map(liqExistente.consignacion.detalles.map((d) => [d.id, d]));
+      const detallesMap = new Map(
+        liqExistente.consignacion.detalles.map((d) => [d.id, d]),
+      );
       let nuevoTotalVenta = 0;
-      const soldByProduct = new Map<number, { units: number; precioUnitario: number }>();
+      const soldByProduct = new Map<
+        number,
+        { units: number; precioUnitario: number }
+      >();
 
       for (const it of parsed.data.items) {
         const det = detallesMap.get(it.consignacionDetalleId);
@@ -203,10 +239,16 @@ export async function PUT(req: Request, { params }: RouteParams) {
         const vendidas = it.unitsVendidas ?? 0;
         const devueltas = it.unitsDevueltas ?? 0;
 
-        const freshDet = await tx.consignacionDetalle.findUniqueOrThrow({ where: { id: det.id } });
-        const pendiente = freshDet.unitsEntregadas - freshDet.unitsVendidasAcum - freshDet.unitsDevueltasAcum;
+        const freshDet = await tx.consignacionDetalle.findUniqueOrThrow({
+          where: { id: det.id },
+        });
+        const pendiente =
+          freshDet.unitsEntregadas -
+          freshDet.unitsVendidasAcum -
+          freshDet.unitsDevueltasAcum;
 
-        if (vendidas + devueltas > pendiente) throw new Error(`EXCEDE_PENDIENTE:${det.id}`);
+        if (vendidas + devueltas > pendiente)
+          throw new Error(`EXCEDE_PENDIENTE:${det.id}`);
 
         const precioUnit = Number(det.producto.precioVenta);
 
@@ -228,24 +270,36 @@ export async function PUT(req: Request, { params }: RouteParams) {
           },
         });
 
-        const productoAntes = await tx.producto.findUnique({ where: { id: det.productoId } });
-        if (!productoAntes) throw new Error(`PRODUCTO_NO_ENCONTRADO:${det.productoId}`);
+        const productoAntes = await tx.producto.findUnique({
+          where: { id: det.productoId },
+        });
+        if (!productoAntes)
+          throw new Error(`PRODUCTO_NO_ENCONTRADO:${det.productoId}`);
 
         // Aplicar nuevo stock
         const productoDespues = await tx.producto.update({
           where: { id: det.productoId },
           data: {
             stockConsignadoUnits: { decrement: vendidas + devueltas },
-            ...(devueltas > 0 ? { stockDisponibleUnits: { increment: devueltas } } : {}),
+            ...(devueltas > 0
+              ? { stockDisponibleUnits: { increment: devueltas } }
+              : {}),
           },
         });
 
         // Sincronizar StockSucursal
         await tx.stockSucursal.update({
-          where: { productoId_sucursalId: { productoId: det.productoId, sucursalId: liqExistente.consignacion.sucursalId } },
+          where: {
+            productoId_sucursalId: {
+              productoId: det.productoId,
+              sucursalId: liqExistente.consignacion.sucursalId,
+            },
+          },
           data: {
             stockConsignadoUnits: { decrement: vendidas + devueltas },
-            ...(devueltas > 0 ? { stockDisponibleUnits: { increment: devueltas } } : {}),
+            ...(devueltas > 0
+              ? { stockDisponibleUnits: { increment: devueltas } }
+              : {}),
           },
         });
 
@@ -259,8 +313,8 @@ export async function PUT(req: Request, { params }: RouteParams) {
               cantidad: devueltas,
               stockPrevio: productoAntes.stockDisponibleUnits,
               stockPosterior: productoDespues.stockDisponibleUnits,
-              observaciones: `Devolución Corregida Liq #${liquidacionId}`
-            }
+              observaciones: `Devolución Corregida Liq #${liquidacionId}`,
+            },
           });
         }
 
@@ -274,8 +328,8 @@ export async function PUT(req: Request, { params }: RouteParams) {
               cantidad: vendidas,
               stockPrevio: productoAntes.stockDisponibleUnits,
               stockPosterior: productoDespues.stockDisponibleUnits,
-              observaciones: `Venta Corregida Liq #${liquidacionId}`
-            }
+              observaciones: `Venta Corregida Liq #${liquidacionId}`,
+            },
           });
         }
 
@@ -291,7 +345,8 @@ export async function PUT(req: Request, { params }: RouteParams) {
           consignacionDetalleId: it.consignacionDetalleId,
           unitsVendidas: it.unitsVendidas ?? 0,
           unitsDevueltas: it.unitsDevueltas ?? 0,
-          precioUnitario: detallesMap.get(it.consignacionDetalleId)!.producto.precioVenta,
+          precioUnitario: detallesMap.get(it.consignacionDetalleId)!.producto
+            .precioVenta,
         })),
       });
 
@@ -305,12 +360,14 @@ export async function PUT(req: Request, { params }: RouteParams) {
             sucursalId: liqExistente.consignacion.sucursalId,
             tipo: "LIQUIDACION",
             detalles: {
-              create: Array.from(soldByProduct.entries()).map(([productoId, info]) => ({
-                productoId,
-                units: info.units,
-                precioUnitario: info.precioUnitario,
-                subtotal: info.units * info.precioUnitario,
-              })),
+              create: Array.from(soldByProduct.entries()).map(
+                ([productoId, info]) => ({
+                  productoId,
+                  units: info.units,
+                  precioUnitario: info.precioUnitario,
+                  subtotal: info.units * info.precioUnitario,
+                }),
+              ),
             },
           },
           include: { detalles: true },
@@ -323,8 +380,13 @@ export async function PUT(req: Request, { params }: RouteParams) {
       }
 
       // 5) Recalcular cierre
-      const detallesFinales = await tx.consignacionDetalle.findMany({ where: { consignacionId } });
-      const quedaPendiente = detallesFinales.some((d) => d.unitsEntregadas - d.unitsVendidasAcum - d.unitsDevueltasAcum > 0);
+      const detallesFinales = await tx.consignacionDetalle.findMany({
+        where: { consignacionId },
+      });
+      const quedaPendiente = detallesFinales.some(
+        (d) =>
+          d.unitsEntregadas - d.unitsVendidasAcum - d.unitsDevueltasAcum > 0,
+      );
 
       if (!quedaPendiente) {
         await tx.consignacion.update({
@@ -340,7 +402,10 @@ export async function PUT(req: Request, { params }: RouteParams) {
           items: { include: { detalle: { include: { producto: true } } } },
           venta: { include: { detalles: true } },
           consignacion: {
-            include: { cliente: true, detalles: { include: { producto: true } } },
+            include: {
+              cliente: true,
+              detalles: { include: { producto: true } },
+            },
           },
         },
       });
@@ -350,16 +415,23 @@ export async function PUT(req: Request, { params }: RouteParams) {
     await processNotificationQueue(notificationsQueue, auth.activeSucursalId);
 
     return NextResponse.json({ data: result }, { status: 200 });
-
   } catch (error) {
     const msg = error instanceof Error ? error.message : "";
-    if (msg === "LIQUIDACION_NO_ENCONTRADA") return NextResponse.json({ error: "No encontrada" }, { status: 404 });
-    if (msg === "DETALLE_NO_PERTENECE") return NextResponse.json({ error: "Detalle inválido" }, { status: 400 });
+    if (msg === "LIQUIDACION_NO_ENCONTRADA")
+      return NextResponse.json({ error: "No encontrada" }, { status: 404 });
+    if (msg === "DETALLE_NO_PERTENECE")
+      return NextResponse.json({ error: "Detalle inválido" }, { status: 400 });
     if (msg.startsWith("PRODUCTO_NO_ENCONTRADO:")) {
-      return NextResponse.json({ error: "Producto asociado no encontrado" }, { status: 409 });
+      return NextResponse.json(
+        { error: "Producto asociado no encontrado" },
+        { status: 409 },
+      );
     }
     if (msg.startsWith("EXCEDE_PENDIENTE:")) {
-      return NextResponse.json({ error: "Excede el pendiente", detalleId: Number(msg.split(":")[1]) }, { status: 409 });
+      return NextResponse.json(
+        { error: "Excede el pendiente", detalleId: Number(msg.split(":")[1]) },
+        { status: 409 },
+      );
     }
     console.error(error);
     return NextResponse.json({ error: "Error inesperado" }, { status: 500 });

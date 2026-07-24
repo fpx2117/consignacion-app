@@ -6,7 +6,10 @@ import { prisma } from "@/lib/prisma";
 import { EstadoItemFactura } from "@prisma/client";
 import { requireAuth, requireRole } from "@/lib/auth/require-auth";
 import { cargarItemFacturaAccesible } from "@/lib/ocr/cargar-item-factura";
-import { actualizarEstadoFacturaSiCompleta, purgarArchivoFacturaSiFinalizada } from "@/lib/ocr/aplicar-confirmacion";
+import {
+  actualizarEstadoFacturaSiCompleta,
+  purgarArchivoFacturaSiFinalizada,
+} from "@/lib/ocr/aplicar-confirmacion";
 
 export async function POST(
   _req: NextRequest,
@@ -15,18 +18,27 @@ export async function POST(
   const auth = await requireAuth();
   if (!auth.ok) return auth.res;
   if (!requireRole(auth.user, ["ADMIN"])) {
-    return NextResponse.json({ error: "No tienes permisos (Admin requerido)" }, { status: 403 });
+    return NextResponse.json(
+      { error: "No tienes permisos (Admin requerido)" },
+      { status: 403 },
+    );
   }
 
   const { id } = await params;
   const itemId = Number(id);
   if (!Number.isInteger(itemId)) {
-    return NextResponse.json({ error: "Item de factura no encontrado" }, { status: 404 });
+    return NextResponse.json(
+      { error: "Item de factura no encontrado" },
+      { status: 404 },
+    );
   }
 
   const cargado = await cargarItemFacturaAccesible(auth, itemId);
   if (!cargado.ok) {
-    return NextResponse.json({ error: cargado.error }, { status: cargado.status });
+    return NextResponse.json(
+      { error: cargado.error },
+      { status: cargado.status },
+    );
   }
   const { item } = cargado;
 

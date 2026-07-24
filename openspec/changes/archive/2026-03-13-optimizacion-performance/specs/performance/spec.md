@@ -405,17 +405,17 @@ haga data fetching directo y pase los datos como props a los Client Components n
 
 ## Resumen de Cobertura
 
-| REQ | Nombre | Nivel | Escenarios Happy Path | Escenarios Edge Case |
-|-----|--------|-------|-----------------------|----------------------|
-| REQ-PERF-01 | Loading States | DEBE | ✅ | ✅ |
-| REQ-PERF-02 | Auth Cache | DEBE | ✅ | ✅ |
-| REQ-PERF-03 | SubscriptionGuard Spinner | NO DEBE | ✅ | ✅ |
-| REQ-PERF-04 | API Cache | DEBERÍA | ✅ | ✅ |
-| REQ-PERF-05 | Dashboard KPIs Cache | DEBE | ✅ | ✅ |
-| REQ-PERF-06 | Animaciones Unificadas | DEBE | ✅ | ✅ |
-| REQ-PERF-07 | Imágenes con next/image | DEBE | ✅ | ✅ |
-| REQ-PERF-08 | Code Splitting | DEBE | ✅ | ✅ |
-| REQ-PERF-09 | CSS Variables Sin Dup. | NO DEBE | ✅ | ✅ |
-| REQ-PERF-10 | Server Components | DEBERÍA | ✅ | ✅ |
+| REQ         | Nombre                    | Nivel   | Escenarios Happy Path | Escenarios Edge Case |
+| ----------- | ------------------------- | ------- | --------------------- | -------------------- |
+| REQ-PERF-01 | Loading States            | DEBE    | ✅                    | ✅                   |
+| REQ-PERF-02 | Auth Cache                | DEBE    | ✅                    | ✅                   |
+| REQ-PERF-03 | SubscriptionGuard Spinner | NO DEBE | ✅                    | ✅                   |
+| REQ-PERF-04 | API Cache                 | DEBERÍA | ✅                    | ✅                   |
+| REQ-PERF-05 | Dashboard KPIs Cache      | DEBE    | ✅                    | ✅                   |
+| REQ-PERF-06 | Animaciones Unificadas    | DEBE    | ✅                    | ✅                   |
+| REQ-PERF-07 | Imágenes con next/image   | DEBE    | ✅                    | ✅                   |
+| REQ-PERF-08 | Code Splitting            | DEBE    | ✅                    | ✅                   |
+| REQ-PERF-09 | CSS Variables Sin Dup.    | NO DEBE | ✅                    | ✅                   |
+| REQ-PERF-10 | Server Components         | DEBERÍA | ✅                    | ✅                   |
 
 **Total**: 10 requisitos · 27 escenarios · 100% con cobertura happy path + edge case

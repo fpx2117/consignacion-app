@@ -4,10 +4,17 @@ import type {
   PublicCheckoutCustomerData,
   PublicCheckoutShippingData,
 } from "@/lib/types";
-import { getCatalogCartLineSubtotal, getCatalogCartSubtotal, getCatalogCartUnitPrice } from "@/lib/storefront/catalog-cart-pricing";
+import {
+  getCatalogCartLineSubtotal,
+  getCatalogCartSubtotal,
+  getCatalogCartUnitPrice,
+} from "@/lib/storefront/catalog-cart-pricing";
 
 type CatalogWhatsappContext = {
-  config: Pick<PublicCatalogConfig, "businessName" | "whatsappNumber" | "porcentajeAumentoConsignacion">;
+  config: Pick<
+    PublicCatalogConfig,
+    "businessName" | "whatsappNumber" | "porcentajeAumentoConsignacion"
+  >;
   cart: CatalogCartItem[];
   clienteData: PublicCheckoutCustomerData;
   envioData: PublicCheckoutShippingData;
@@ -30,14 +37,22 @@ export function normalizeWhatsAppNumber(value?: string | null) {
   return String(value).replace(/\D/g, "");
 }
 
-export function buildWhatsAppUrl(phone: string | null | undefined, message: string) {
+export function buildWhatsAppUrl(
+  phone: string | null | undefined,
+  message: string,
+) {
   const normalizedPhone = normalizeWhatsAppNumber(phone);
   if (!normalizedPhone) return null;
   return `https://wa.me/${normalizedPhone}?text=${encodeURIComponent(message)}`;
 }
 
-export function buildCatalogProductInquiryUrl(phone: string | null | undefined, template: string | null | undefined, productName: string) {
-  const messageTemplate = template?.trim() || "Hola, estoy buscando {nombre_producto}";
+export function buildCatalogProductInquiryUrl(
+  phone: string | null | undefined,
+  template: string | null | undefined,
+  productName: string,
+) {
+  const messageTemplate =
+    template?.trim() || "Hola, estoy buscando {nombre_producto}";
   const message = messageTemplate.replaceAll("{nombre_producto}", productName);
   return buildWhatsAppUrl(phone, message);
 }
@@ -87,7 +102,10 @@ export function buildCatalogCartWhatsappMessage({
 
   lines.push(`Entrega: ${resolveDeliveryLabel(envioData)}`);
 
-  if (envioData.metodoEnvio === "UBER_FLASH" || envioData.metodoEnvio === "ENCOMIENDA") {
+  if (
+    envioData.metodoEnvio === "UBER_FLASH" ||
+    envioData.metodoEnvio === "ENCOMIENDA"
+  ) {
     if (clienteData.direccion?.trim()) {
       lines.push(`Direccion: ${clienteData.direccion.trim()}`);
     }
@@ -100,10 +118,19 @@ export function buildCatalogCartWhatsappMessage({
     if (clienteData.provincia?.trim()) {
       lines.push(`Provincia: ${clienteData.provincia.trim()}`);
     }
-    lines.push("", "Aclaracion: El costo del envio se cobra aparte del producto. Espero indicaciones por WhatsApp para coordinar el despacho.");
+    lines.push(
+      "",
+      "Aclaracion: El costo del envio se cobra aparte del producto. Espero indicaciones por WhatsApp para coordinar el despacho.",
+    );
   }
 
-  lines.push("", "Productos:", itemsText, "", `Total estimado: ${formatMoney(total)}`);
+  lines.push(
+    "",
+    "Productos:",
+    itemsText,
+    "",
+    `Total estimado: ${formatMoney(total)}`,
+  );
 
   if (tiendaUrl) {
     lines.push("", `Tienda: ${tiendaUrl}`);

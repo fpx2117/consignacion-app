@@ -31,7 +31,10 @@ test("handleGetHistorialYears usa la timezone resuelta para agrupar anios", asyn
       zonaHorariaUsuario: "Europe/Madrid",
       zonaHorariaSucursal: "America/Santiago",
     }),
-    buildSucursalWhere: () => ({ sucursalId: { in: [4] } } as unknown as ReturnType<HistorialDeps["buildSucursalWhere"]>),
+    buildSucursalWhere: () =>
+      ({ sucursalId: { in: [4] } }) as unknown as ReturnType<
+        HistorialDeps["buildSucursalWhere"]
+      >,
     findMovimientos: async () => [
       { createdAt: new Date("2025-12-31T23:30:00.000Z") },
       { createdAt: new Date("2024-06-01T12:00:00.000Z") },
@@ -55,7 +58,10 @@ test("handleGetHistorialYears cae al anio actual efectivo cuando no hay movimien
       zonaHorariaUsuario: null,
       zonaHorariaSucursal: "America/Bogota",
     }),
-    buildSucursalWhere: () => ({ sucursalId: { in: [4] } } as unknown as ReturnType<HistorialDeps["buildSucursalWhere"]>),
+    buildSucursalWhere: () =>
+      ({ sucursalId: { in: [4] } }) as unknown as ReturnType<
+        HistorialDeps["buildSucursalWhere"]
+      >,
     findMovimientos: async () => [],
     nowAR: () => new Date("2026-01-01T04:30:00.000Z"),
   } as unknown as HistorialDeps);

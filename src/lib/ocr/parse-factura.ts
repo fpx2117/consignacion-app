@@ -40,7 +40,8 @@ const PALABRAS_EXCLUIDAS = [
 // Número con separador de miles (.) y/o decimales (,) al estilo AR, o formato simple con punto decimal.
 // El grupo de miles requiere al menos una repetición (`+`) para no comerse de a 3 dígitos
 // los números planos sin separador (ej. "1200,00"), que deben caer en la segunda alternativa.
-const NUMERO_REGEX = /(\d{1,3}(?:[.,]\d{3})+(?:[.,]\d{1,2})?|\d+(?:[.,]\d{1,2})?)/g;
+const NUMERO_REGEX =
+  /(\d{1,3}(?:[.,]\d{3})+(?:[.,]\d{1,2})?|\d+(?:[.,]\d{1,2})?)/g;
 
 function esLineaExcluida(lineaLower: string): boolean {
   return PALABRAS_EXCLUIDAS.some((palabra) => lineaLower.includes(palabra));
@@ -84,18 +85,27 @@ export function parseFacturaTexto(texto: string): FacturaLineaDetectada[] {
 
     // El nombre es el texto previo a la primera coincidencia numérica.
     const primerNumeroIdx = linea.search(NUMERO_REGEX);
-    const nombreDetectado = linea.slice(0, primerNumeroIdx).replace(/[-–—:.]+$/, "").trim();
+    const nombreDetectado = linea
+      .slice(0, primerNumeroIdx)
+      .replace(/[-–—:.]+$/, "")
+      .trim();
 
     if (nombreDetectado.length < 2) continue;
 
     // Heurística: último número = precio, penúltimo (si existe y es entero chico) = cantidad.
-    const valores = numeros.map(normalizarNumero).filter((n): n is number => n !== null);
+    const valores = numeros
+      .map(normalizarNumero)
+      .filter((n): n is number => n !== null);
     if (valores.length === 0) continue;
 
-    const precioDetectado = valores.length > 0 ? valores[valores.length - 1] : null;
+    const precioDetectado =
+      valores.length > 0 ? valores[valores.length - 1] : null;
     const posibleCantidad = valores.length > 1 ? valores[0] : null;
     const cantidadDetectada =
-      posibleCantidad !== null && Number.isInteger(posibleCantidad) && posibleCantidad > 0 && posibleCantidad < 10000
+      posibleCantidad !== null &&
+      Number.isInteger(posibleCantidad) &&
+      posibleCantidad > 0 &&
+      posibleCantidad < 10000
         ? posibleCantidad
         : null;
 

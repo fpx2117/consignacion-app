@@ -33,27 +33,35 @@ export async function buscarCandidatosGlobales(params: {
   const timeoutMs = Number(process.env.CATALOGO_API_TIMEOUT_MS) || 2000;
 
   try {
-    const res = await fetch(`${baseUrl.replace(/\/$/, "")}/catalogo/ocr-candidatos`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${process.env.CATALOGO_API_KEY}`,
+    const res = await fetch(
+      `${baseUrl.replace(/\/$/, "")}/catalogo/ocr-candidatos`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${process.env.CATALOGO_API_KEY}`,
+        },
+        body: JSON.stringify(params),
+        signal: AbortSignal.timeout(timeoutMs),
       },
-      body: JSON.stringify(params),
-      signal: AbortSignal.timeout(timeoutMs),
-    });
+    );
 
     if (!res.ok) {
       throw new Error(`catalogo-global-api respondió ${res.status}`);
     }
 
     const data = (await res.json()) as { candidatos?: unknown };
-    return Array.isArray(data.candidatos) ? (data.candidatos as CandidatoGlobal[]) : [];
+    return Array.isArray(data.candidatos)
+      ? (data.candidatos as CandidatoGlobal[])
+      : [];
   } catch (error) {
-    console.warn("[catalogo-global-client] no disponible, continuando sin candidatos globales", {
-      rubro: params.rubro,
-      error: error instanceof Error ? error.message : error,
-    });
+    console.warn(
+      "[catalogo-global-client] no disponible, continuando sin candidatos globales",
+      {
+        rubro: params.rubro,
+        error: error instanceof Error ? error.message : error,
+      },
+    );
     return [];
   }
 }

@@ -2,7 +2,12 @@
 // Reporte de Ventas Directas (POS) - diseño premium con Tailwind
 import { reportThemeCss } from "@/lib/reports/report-theme";
 import { getReportHeadAssets } from "@/lib/reports/tailwind-inline";
-import { escapeHtml, escapeAttr, brandInitials, formatNumberAR } from "@/lib/reports/template-helpers";
+import {
+  escapeHtml,
+  escapeAttr,
+  brandInitials,
+  formatNumberAR,
+} from "@/lib/reports/template-helpers";
 import type { BrandingDTO } from "@/lib/reports/types";
 
 // ─────────────────────────────────────────────
@@ -11,7 +16,12 @@ import type { BrandingDTO } from "@/lib/reports/types";
 export type VentaPosRow = {
   fecha: Date;
   numeroVenta: number;
-  items: { nombre: string; units: number; precioUnitario: number; subtotal: number }[];
+  items: {
+    nombre: string;
+    units: number;
+    precioUnitario: number;
+    subtotal: number;
+  }[];
   total: number;
   metodoPago: string;
   clienteNombre: string | null;
@@ -26,11 +36,16 @@ export type PosReportData = {
   // Resumen
   totalVentas: number;
   cantidadVentas: number;
-  totalGanancia: number;      // Ganancia Bruta = Σ(subtotal - costo×U) - Desc.Global
-  gananciaNeta?: number;     // Ganancia Neta = Bruta - Roturas (sin gastos operativos)
-  utilidadNeta?: number;      // Utilidad Neta = Bruta - Gastos - Roturas (resultado final)
-  perdidaRotura?: number;     // Pérdida por roturas en ventas anuladas
-  roturasDetalle?: { nombre: string; units: number; costoUnitario: number; perdida: number }[]; // Detalle de items rotos
+  totalGanancia: number; // Ganancia Bruta = Σ(subtotal - costo×U) - Desc.Global
+  gananciaNeta?: number; // Ganancia Neta = Bruta - Roturas (sin gastos operativos)
+  utilidadNeta?: number; // Utilidad Neta = Bruta - Gastos - Roturas (resultado final)
+  perdidaRotura?: number; // Pérdida por roturas en ventas anuladas
+  roturasDetalle?: {
+    nombre: string;
+    units: number;
+    costoUnitario: number;
+    perdida: number;
+  }[]; // Detalle de items rotos
   ingresosCaja: number;
   ticketPromedio: number;
   gastosTotal: number;
@@ -39,11 +54,22 @@ export type PosReportData = {
   // Desglose por método de pago
   pagosPorMetodo: { metodo: string; total: number; cantidad: number }[];
   // Top productos
-  topProductos: { nombre: string; units: number; total: number; ganancia: number }[];
+  topProductos: {
+    nombre: string;
+    units: number;
+    total: number;
+    ganancia: number;
+  }[];
   // Detalle ventas (últimas 50)
   ventas: VentaPosRow[];
   // Tendencia diaria
-  tendencia: { date: string; ventasTotal: number; cantidad: number; ganancia: number; unitsVendidas: number }[];
+  tendencia: {
+    date: string;
+    ventasTotal: number;
+    cantidad: number;
+    ganancia: number;
+    unitsVendidas: number;
+  }[];
 };
 
 // ─────────────────────────────────────────────
@@ -51,7 +77,11 @@ export type PosReportData = {
 // ─────────────────────────────────────────────
 // fmt usa maximumFractionDigits:0 para montos enteros en este reporte
 const fmt = (n: number) =>
-  new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS", maximumFractionDigits: 0 }).format(n);
+  new Intl.NumberFormat("es-AR", {
+    style: "currency",
+    currency: "ARS",
+    maximumFractionDigits: 0,
+  }).format(n);
 
 const METODO_LABEL: Record<string, string> = {
   EFECTIVO: "Efectivo",
@@ -92,23 +122,29 @@ function getMetodoPagoIcon(metodo: string): string {
 // ─────────────────────────────────────────────
 // TEMPLATE
 // ─────────────────────────────────────────────
-export function buildPosReportHtml(data: PosReportData, branding: BrandingDTO): string {
+export function buildPosReportHtml(
+  data: PosReportData,
+  branding: BrandingDTO,
+): string {
   const brandName = branding.businessName || "Comercio";
   const badge = brandInitials(brandName);
   const metaLine = [branding.address, branding.phone]
     .filter((v): v is string => typeof v === "string" && v.trim().length > 0)
-    .map(escapeHtml).join(" · ");
+    .map(escapeHtml)
+    .join(" · ");
   const footerText = branding.footerText ? escapeHtml(branding.footerText) : "";
 
   // Color primario del branding (con fallback sky-700 ≈ #0369A1)
   const primaryColor = branding.primaryColor ?? "#0369A1";
 
-  const rentabilidad = data.totalVentas > 0
-    ? Math.round((data.totalGanancia / data.totalVentas) * 100)
-    : 0;
+  const rentabilidad =
+    data.totalVentas > 0
+      ? Math.round((data.totalGanancia / data.totalVentas) * 100)
+      : 0;
 
   // Usar los valores calculados en el route (ya incluyen roturas)
-  const utilidadNeta = data.utilidadNeta ?? (data.totalGanancia - data.gastosTotal);
+  const utilidadNeta =
+    data.utilidadNeta ?? data.totalGanancia - data.gastosTotal;
   const gananciaNeta = data.gananciaNeta ?? data.totalGanancia;
   const perdidaRotura = data.perdidaRotura ?? 0;
 
@@ -119,8 +155,11 @@ export function buildPosReportHtml(data: PosReportData, branding: BrandingDTO): 
     : null;
 
   // ─ Por método de pago (chips horizontales compactos con ícono SVG)
-  const metodosHtml = data.pagosPorMetodo.length > 0
-    ? `<div class="flex flex-wrap gap-3">${data.pagosPorMetodo.map(m => `
+  const metodosHtml =
+    data.pagosPorMetodo.length > 0
+      ? `<div class="flex flex-wrap gap-3">${data.pagosPorMetodo
+          .map(
+            (m) => `
       <div class="flex items-center gap-2 bg-white border border-slate-200 rounded-xl px-4 py-2.5 shadow-sm">
         <span style="color:#64748b">${getMetodoPagoIcon(m.metodo)}</span>
         <div>
@@ -128,12 +167,18 @@ export function buildPosReportHtml(data: PosReportData, branding: BrandingDTO): 
           <span class="text-sm font-black text-slate-900 money">${fmt(m.total)}</span>
         </div>
         <span class="text-[10px] font-bold text-slate-400 border-l border-slate-100 pl-2 ml-1">${formatNumberAR(m.cantidad)}<br/>ops.</span>
-      </div>`).join("")}</div>`
-    : `<p class="text-xs text-slate-400">Sin datos</p>`;
+      </div>`,
+          )
+          .join("")}</div>`
+      : `<p class="text-xs text-slate-400">Sin datos</p>`;
 
   // ─ Top productos
-  const topHtml = data.topProductos.length > 0
-    ? data.topProductos.slice(0, 5).map((p, i) => `
+  const topHtml =
+    data.topProductos.length > 0
+      ? data.topProductos
+          .slice(0, 5)
+          .map(
+            (p, i) => `
       <tr class="group">
         <td class="py-3 pl-4 bg-slate-50 rounded-l-xl border-y border-l border-slate-100">
           <span class="text-[10px] font-black text-slate-300 w-5 inline-block">${i + 1}</span>
@@ -148,30 +193,35 @@ export function buildPosReportHtml(data: PosReportData, branding: BrandingDTO): 
         <td class="py-3 pr-4 bg-slate-50 rounded-r-xl border-y border-r border-slate-100 text-right">
           <span class="text-xs font-black text-emerald-600 money">${fmt(p.ganancia)}</span>
         </td>
-      </tr>`).join("")
-    : `<tr><td colspan="4" class="py-4 text-center text-xs text-slate-400">Sin ventas en el período</td></tr>`;
+      </tr>`,
+          )
+          .join("")
+      : `<tr><td colspan="4" class="py-4 text-center text-xs text-slate-400">Sin ventas en el período</td></tr>`;
 
   // ─ Tendencia con indicador visual (▲ ganancia positiva, ▼ negativa)
-  const tendHtml = data.tendencia.length > 0
-    ? data.tendencia.map(t => {
-      const isPositive = t.ganancia > 0;
-      const indicator = isPositive
-        ? `<span style="color:#059669;font-size:10px;font-weight:900">▲</span>`
-        : `<span style="color:#E11D48;font-size:10px;font-weight:900">▼</span>`;
-      return `
+  const tendHtml =
+    data.tendencia.length > 0
+      ? data.tendencia
+          .map((t) => {
+            const isPositive = t.ganancia > 0;
+            const indicator = isPositive
+              ? `<span style="color:#059669;font-size:10px;font-weight:900">▲</span>`
+              : `<span style="color:#E11D48;font-size:10px;font-weight:900">▼</span>`;
+            return `
       <tr>
         <td class="py-2 pl-4 bg-slate-50 rounded-l-xl border-y border-l border-slate-100 text-[10px] font-bold text-slate-500">${escapeHtml(t.date)}</td>
         <td class="py-2 bg-slate-50 border-y border-slate-100 text-center text-[10px] font-bold text-slate-600">${formatNumberAR(t.cantidad)}</td>
         <td class="py-2 bg-slate-50 border-y border-slate-100 text-center text-[10px] font-bold text-slate-600 money">${formatNumberAR(t.unitsVendidas)} u.</td>
         <td class="py-2 bg-slate-50 border-y border-slate-100 text-right text-[10px] font-black text-slate-900 money">${fmt(t.ventasTotal)}</td>
         <td class="py-2 pr-4 bg-slate-50 rounded-r-xl border-y border-r border-slate-100 text-right text-[10px] font-black money">
-          <span style="display:inline-flex;align-items:center;gap:3px;color:${isPositive ? '#059669' : '#E11D48'}">
+          <span style="display:inline-flex;align-items:center;gap:3px;color:${isPositive ? "#059669" : "#E11D48"}">
             ${indicator}${fmt(t.ganancia)}
           </span>
         </td>
       </tr>`;
-    }).join("")
-    : `<tr><td colspan="5" class="py-4 text-center text-xs text-slate-400">Sin datos de tendencia para período histórico.</td></tr>`;
+          })
+          .join("")
+      : `<tr><td colspan="5" class="py-4 text-center text-xs text-slate-400">Sin datos de tendencia para período histórico.</td></tr>`;
 
   return `<!DOCTYPE html>
 <html>
@@ -193,10 +243,11 @@ export function buildPosReportHtml(data: PosReportData, branding: BrandingDTO): 
   <!-- HEADER -->
   <div class="flex justify-between items-start border-b-2 border-slate-100 pb-8 mb-8">
     <div class="flex items-center gap-4">
-      ${branding.logoBase64
-      ? `<img src="${escapeAttr(branding.logoBase64)}" class="w-14 h-14 rounded-2xl object-contain bg-white border border-slate-100 shadow-lg" />`
-      : `<div class="w-14 h-14 text-white flex items-center justify-center rounded-2xl font-black text-2xl shadow-lg" style="background-color:${primaryColor}">${escapeHtml(badge)}</div>`
-    }
+      ${
+        branding.logoBase64
+          ? `<img src="${escapeAttr(branding.logoBase64)}" class="w-14 h-14 rounded-2xl object-contain bg-white border border-slate-100 shadow-lg" />`
+          : `<div class="w-14 h-14 text-white flex items-center justify-center rounded-2xl font-black text-2xl shadow-lg" style="background-color:${primaryColor}">${escapeHtml(badge)}</div>`
+      }
       <div>
         <h1 class="text-2xl font-black tracking-tight text-slate-900">${escapeHtml(brandName)}</h1>
         <p class="text-xs font-bold text-slate-400 uppercase tracking-[0.2em]">Reporte de Ventas · POS</p>
@@ -242,7 +293,7 @@ export function buildPosReportHtml(data: PosReportData, branding: BrandingDTO): 
       <div style="height:3px;background:${primaryColor}"></div>
       <div class="p-5">
         <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Utilidad Neta</p>
-        <p class="text-2xl font-black money leading-tight" style="color:${utilidadNeta >= 0 ? '#059669' : '#e11d48'}">${fmt(utilidadNeta)}</p>
+        <p class="text-2xl font-black money leading-tight" style="color:${utilidadNeta >= 0 ? "#059669" : "#e11d48"}">${fmt(utilidadNeta)}</p>
         <p class="text-[10px] text-slate-400 mt-1">Bruta − Gastos − Roturas</p>
         ${gastosSubtitle ? `<p class="text-[9px] text-slate-400 mt-0.5">${escapeHtml(gastosSubtitle)}</p>` : ""}
       </div>
@@ -327,7 +378,9 @@ export function buildPosReportHtml(data: PosReportData, branding: BrandingDTO): 
   </div>
 
   <!-- PÉRDIDA POR ROTURAS — rojo, solo si hay roturas -->
-  ${(data.roturasDetalle && data.roturasDetalle.length > 0) ? `
+  ${
+    data.roturasDetalle && data.roturasDetalle.length > 0
+      ? `
   <div class="mb-6 no-break" style="break-inside:avoid;page-break-inside:avoid">
     <h3 class="text-[10px] font-black uppercase tracking-widest mb-3 pl-1" style="color:#e11d48;break-after:avoid;page-break-after:avoid">Pérdida por Roturas</h3>
     <div class="bg-white rounded-2xl border-2 overflow-hidden" style="border-color:#fecdd3">
@@ -341,13 +394,17 @@ export function buildPosReportHtml(data: PosReportData, branding: BrandingDTO): 
           </tr>
         </thead>
         <tbody>
-          ${data.roturasDetalle.map(r => `
+          ${data.roturasDetalle
+            .map(
+              (r) => `
           <tr class="border-t border-slate-100">
             <td class="py-2.5 pl-4 text-[11px] font-bold text-slate-700">${escapeHtml(r.nombre)}</td>
             <td class="py-2.5 text-center text-[11px] text-slate-600">${r.units} u.</td>
             <td class="py-2.5 text-right pr-4 text-[11px] text-slate-600">${fmt(r.costoUnitario)}</td>
             <td class="py-2.5 text-right pr-4 text-[11px] font-black" style="color:#e11d48">${fmt(r.perdida)}</td>
-          </tr>`).join("")}
+          </tr>`,
+            )
+            .join("")}
         </tbody>
         <tfoot>
           <tr class="border-t-2 font-bold" style="border-color:#fecdd3;background:#fef2f2">
@@ -358,7 +415,9 @@ export function buildPosReportHtml(data: PosReportData, branding: BrandingDTO): 
       </table>
     </div>
   </div>
-  ` : ""}
+  `
+      : ""
+  }
 
   <!-- TENDENCIA -->
   <div class="mb-8">

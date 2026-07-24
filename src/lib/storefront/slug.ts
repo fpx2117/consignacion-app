@@ -45,7 +45,9 @@ export function slugify(input: string): string {
 
 export type SlugValidationError = "empty" | "invalid-format" | "reserved";
 
-export function validateSlug(rawSlug: string): { ok: true; slug: string } | { ok: false; error: SlugValidationError } {
+export function validateSlug(
+  rawSlug: string,
+): { ok: true; slug: string } | { ok: false; error: SlugValidationError } {
   const slug = slugify(rawSlug);
   if (!slug) return { ok: false, error: "empty" };
   if (!isValidSlugFormat(slug)) return { ok: false, error: "invalid-format" };

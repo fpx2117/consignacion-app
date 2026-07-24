@@ -42,7 +42,8 @@ const SETTINGS_MODULES: SettingsModule[] = [
   {
     id: "general",
     title: "General",
-    description: "Zona horaria, mantenimiento de datos y parámetros del sistema.",
+    description:
+      "Zona horaria, mantenimiento de datos y parámetros del sistema.",
     href: "/settings/general",
     icon: SlidersHorizontal,
     color: "text-primary",
@@ -53,7 +54,8 @@ const SETTINGS_MODULES: SettingsModule[] = [
   {
     id: "tienda",
     title: "Tu Tienda Online",
-    description: "Personalizá tu catálogo público: colores, banners, temas y redes sociales.",
+    description:
+      "Personalizá tu catálogo público: colores, banners, temas y redes sociales.",
     href: "/settings/tienda",
     icon: Zap,
     color: "text-[color:var(--status-warning)]",
@@ -64,7 +66,8 @@ const SETTINGS_MODULES: SettingsModule[] = [
   {
     id: "branding",
     title: "Branding y Reportes",
-    description: "Personalizá el logo, colores y el diseño de los tickets de venta.",
+    description:
+      "Personalizá el logo, colores y el diseño de los tickets de venta.",
     href: "/settings/branding",
     icon: Palette,
     color: "text-[color:var(--theme-ocean-primary)]",
@@ -75,7 +78,8 @@ const SETTINGS_MODULES: SettingsModule[] = [
   {
     id: "whatsapp",
     title: "Mensajería (WhatsApp)",
-    description: "Configurá el número y el mensaje predeterminado para pedidos por WhatsApp en tu tienda.",
+    description:
+      "Configurá el número y el mensaje predeterminado para pedidos por WhatsApp en tu tienda.",
     href: "/settings/whatsapp",
     icon: MessageCircle,
     color: "text-[color:var(--status-success-strong)]",
@@ -86,7 +90,8 @@ const SETTINGS_MODULES: SettingsModule[] = [
   {
     id: "branches",
     title: "Sucursales y Depósitos",
-    description: "Administrá los puntos de venta, ubicaciones y rangos de entrega.",
+    description:
+      "Administrá los puntos de venta, ubicaciones y rangos de entrega.",
     href: "/settings/branches",
     icon: Store,
     color: "text-[color:var(--status-success-strong)]",
@@ -98,7 +103,8 @@ const SETTINGS_MODULES: SettingsModule[] = [
   {
     id: "pos",
     title: "Punto de Venta",
-    description: "Configurá el comportamiento de la caja, cobros y stock en tiempo real.",
+    description:
+      "Configurá el comportamiento de la caja, cobros y stock en tiempo real.",
     href: "/settings/pos",
     icon: MonitorSmartphone,
     color: "text-[color:var(--status-warning)]",
@@ -109,7 +115,8 @@ const SETTINGS_MODULES: SettingsModule[] = [
   {
     id: "security",
     title: "Seguridad y Alertas",
-    description: "Administrá accesos, revisá auditorías y configurá alertas de stock o ventas.",
+    description:
+      "Administrá accesos, revisá auditorías y configurá alertas de stock o ventas.",
     href: "/settings/security",
     icon: ShieldCheck,
     color: "text-muted-foreground",
@@ -120,7 +127,8 @@ const SETTINGS_MODULES: SettingsModule[] = [
   {
     id: "plan",
     title: "Plan y Facturación",
-    description: "Gestioná tu suscripción, revisá vencimientos y actualizá tus medios de pago.",
+    description:
+      "Gestioná tu suscripción, revisá vencimientos y actualizá tus medios de pago.",
     href: "/settings/subscriptions",
     icon: CreditCard,
     color: "text-[color:var(--status-warning)]",
@@ -148,7 +156,8 @@ export default function SettingsPage() {
           Configuración
         </h1>
         <p className="text-sm text-muted-foreground max-w-2xl">
-          Administrá los parámetros generales de la plataforma. Seleccioná un módulo para ajustar sus preferencias.
+          Administrá los parámetros generales de la plataforma. Seleccioná un
+          módulo para ajustar sus preferencias.
         </p>
       </header>
 
@@ -156,7 +165,8 @@ export default function SettingsPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
         {SETTINGS_MODULES.map((module) => {
           const Icon = module.icon;
-          const isLocked = module.id === "branches" && !allowSucursales && !loading;
+          const isLocked =
+            module.id === "branches" && !allowSucursales && !loading;
           const isSoon = module.soon || isLocked;
 
           const CardContent = (
@@ -166,7 +176,7 @@ export default function SettingsPage() {
                 isSoon
                   ? "opacity-60 bg-card/20 cursor-default"
                   : "hover:shadow-2xl hover:bg-card/60 hover:-translate-y-1 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background cursor-pointer",
-                !isSoon && module.borderColor
+                !isSoon && module.borderColor,
               )}
             >
               {isSoon && (
@@ -180,7 +190,7 @@ export default function SettingsPage() {
                 <div
                   className={cn(
                     "absolute -right-10 -top-10 h-32 w-32 rounded-full blur-3xl opacity-0 group-hover:opacity-20 transition-opacity duration-500",
-                    module.bg
+                    module.bg,
                   )}
                 />
               )}
@@ -190,7 +200,9 @@ export default function SettingsPage() {
                   <div
                     className={cn(
                       "h-12 w-12 rounded-2xl flex items-center justify-center border border-border/50 transition-colors",
-                      isSoon ? "bg-muted text-muted-foreground grayscale" : cn(module.bg, module.color)
+                      isSoon
+                        ? "bg-muted text-muted-foreground grayscale"
+                        : cn(module.bg, module.color),
                     )}
                   >
                     <Icon className="h-6 w-6 stroke-[1.5px]" />
@@ -204,10 +216,14 @@ export default function SettingsPage() {
                 </div>
 
                 <div className="space-y-1.5 flex-1">
-                  <h2 className={cn(
-                    "text-lg font-bold tracking-tight transition-colors",
-                    isSoon ? "text-muted-foreground" : "text-foreground group-hover:text-primary"
-                  )}>
+                  <h2
+                    className={cn(
+                      "text-lg font-bold tracking-tight transition-colors",
+                      isSoon
+                        ? "text-muted-foreground"
+                        : "text-foreground group-hover:text-primary",
+                    )}
+                  >
                     {module.title}
                   </h2>
                   <p className="text-sm text-muted-foreground/80 leading-relaxed">
@@ -227,7 +243,11 @@ export default function SettingsPage() {
           }
 
           return (
-            <Link key={module.href} href={module.href} className="block group outline-none">
+            <Link
+              key={module.href}
+              href={module.href}
+              className="block group outline-none"
+            >
               {CardContent}
             </Link>
           );

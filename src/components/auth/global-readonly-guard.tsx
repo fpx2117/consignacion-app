@@ -4,7 +4,8 @@ import * as React from "react";
 import { toast } from "sonner";
 import { useSucursalStore } from "@/store/useSucursalStore";
 
-const BLOCKED_ACTION_LABELS = /(nuevo|nueva|crear|guardar|editar|eliminar|borrar|desactivar|activar|anular|cobrar|confirmar|postergar|registrar|agregar|aplicar|quitar|actualizar|abrir caja|cerrar caja|extender turno|delete|create|edit|save|update)/i;
+const BLOCKED_ACTION_LABELS =
+  /(nuevo|nueva|crear|guardar|editar|eliminar|borrar|desactivar|activar|anular|cobrar|confirmar|postergar|registrar|agregar|aplicar|quitar|actualizar|abrir caja|cerrar caja|extender turno|delete|create|edit|save|update)/i;
 
 function getActionLabel(el: Element | null): string {
   if (!el) return "";
@@ -25,7 +26,9 @@ export function GlobalReadonlyGuard() {
     if (!isGlobalView) return;
 
     const showBlockedToast = () => {
-      toast.warning("Vista global: solo lectura. Selecciona una sucursal para operar.");
+      toast.warning(
+        "Vista global: solo lectura. Selecciona una sucursal para operar.",
+      );
     };
 
     const onClickCapture = (event: MouseEvent) => {
@@ -37,7 +40,8 @@ export function GlobalReadonlyGuard() {
 
       const actionLabel = getActionLabel(actionable);
       const explicitBypass = actionable.hasAttribute("data-readonly-allow");
-      const shouldBlock = !explicitBypass && BLOCKED_ACTION_LABELS.test(actionLabel);
+      const shouldBlock =
+        !explicitBypass && BLOCKED_ACTION_LABELS.test(actionLabel);
 
       if (!shouldBlock) return;
 

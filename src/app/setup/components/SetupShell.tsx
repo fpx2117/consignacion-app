@@ -33,10 +33,11 @@ export function SetupShell({
   const isOptional = config && !config.required;
 
   // Calcular progreso basado en steps navegables
-  const navigableIndex = NAVIGABLE_STEPS.findIndex(s => s.id === currentStep);
-  const progressPercentage = navigableIndex >= 0
-    ? Math.min(((navigableIndex + 1) / TOTAL_NAVIGABLE) * 100, 100)
-    : 0;
+  const navigableIndex = NAVIGABLE_STEPS.findIndex((s) => s.id === currentStep);
+  const progressPercentage =
+    navigableIndex >= 0
+      ? Math.min(((navigableIndex + 1) / TOTAL_NAVIGABLE) * 100, 100)
+      : 0;
 
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col items-center justify-center relative overflow-hidden font-sans">
@@ -69,27 +70,37 @@ export function SetupShell({
                   <div
                     className={cn(
                       "flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all duration-300",
-                      isCurrent && "bg-[color:var(--primary)]/20 text-[color:var(--primary)] border border-[color:var(--primary)]/30 scale-105",
+                      isCurrent &&
+                        "bg-[color:var(--primary)]/20 text-[color:var(--primary)] border border-[color:var(--primary)]/30 scale-105",
                       isPast && "bg-card/5 text-foreground/40",
-                      !isCurrent && !isPast && "bg-card/[0.02] text-foreground/20",
-                      isSkippable && !isCurrent && !isPast && "border border-dashed border-border/40"
+                      !isCurrent &&
+                        !isPast &&
+                        "bg-card/[0.02] text-foreground/20",
+                      isSkippable &&
+                        !isCurrent &&
+                        !isPast &&
+                        "border border-dashed border-border/40",
                     )}
                   >
-                    <span className={cn(
-                      "h-1.5 w-1.5 rounded-full",
-                      isCurrent && "bg-[color:var(--primary)]",
-                      isPast && "bg-card/30",
-                      !isCurrent && !isPast && "bg-card/10"
-                    )} />
+                    <span
+                      className={cn(
+                        "h-1.5 w-1.5 rounded-full",
+                        isCurrent && "bg-[color:var(--primary)]",
+                        isPast && "bg-card/30",
+                        !isCurrent && !isPast && "bg-card/10",
+                      )}
+                    />
                     <span className="hidden sm:inline">{step.label}</span>
                   </div>
 
                   {/* Connector line */}
                   {i < NAVIGABLE_STEPS.length - 1 && (
-                    <div className={cn(
-                      "h-px w-4 transition-colors duration-300",
-                      isPast ? "bg-card/20" : "bg-card/5"
-                    )} />
+                    <div
+                      className={cn(
+                        "h-px w-4 transition-colors duration-300",
+                        isPast ? "bg-card/20" : "bg-card/5",
+                      )}
+                    />
                   )}
                 </div>
               );
@@ -118,7 +129,9 @@ export function SetupShell({
               className="h-12 px-4 rounded-full text-muted-foreground hover:text-foreground hover:bg-card/5 transition-all"
             >
               <ArrowLeft className="w-4 h-4 mr-2" />
-              <span className="text-xs font-bold uppercase tracking-widest hidden sm:inline">Atrás</span>
+              <span className="text-xs font-bold uppercase tracking-widest hidden sm:inline">
+                Atrás
+              </span>
             </Button>
           </div>
 
@@ -130,7 +143,9 @@ export function SetupShell({
                 onClick={onSkip}
                 className="h-12 px-4 rounded-full text-muted-foreground/60 hover:text-muted-foreground hover:bg-card/5 transition-all"
               >
-                <span className="text-xs font-bold uppercase tracking-widest">Omitir</span>
+                <span className="text-xs font-bold uppercase tracking-widest">
+                  Omitir
+                </span>
                 <SkipForward className="w-4 h-4 ml-2" />
               </Button>
             )}
@@ -143,10 +158,12 @@ export function SetupShell({
                   "h-12 px-6 rounded-full bg-foreground text-background shadow-[0_4px_20px_-5px_var(--tw-shadow-color)] shadow-foreground/30 transition-all",
                   canGoNext
                     ? "hover:bg-foreground/90 hover:-translate-y-1"
-                    : "opacity-40 cursor-not-allowed"
+                    : "opacity-40 cursor-not-allowed",
                 )}
               >
-                <span className="text-xs font-bold uppercase tracking-widest">Siguiente</span>
+                <span className="text-xs font-bold uppercase tracking-widest">
+                  Siguiente
+                </span>
                 <ArrowRight className="w-4 h-4 ml-2" />
               </Button>
             )}

@@ -22,15 +22,14 @@ import { STEPS } from "./constants";
 import { DEFAULT_FORM_DATA } from "./constants";
 import { SUBSCRIPTION_PLANS } from "@/constants/subscriptions";
 
-import type {
-  SetupStep,
-  SetupFormData,
-  InitializePayload,
-} from "./types";
+import type { SetupStep, SetupFormData, InitializePayload } from "./types";
 import type { SubscriptionPlan } from "@/constants/subscriptions";
 
 const ENABLED_SETUP_PLAN_IDS = [2, 3] as const;
-const isEnabledSetupPlan = (planId: number) => ENABLED_SETUP_PLAN_IDS.includes(planId as (typeof ENABLED_SETUP_PLAN_IDS)[number]);
+const isEnabledSetupPlan = (planId: number) =>
+  ENABLED_SETUP_PLAN_IDS.includes(
+    planId as (typeof ENABLED_SETUP_PLAN_IDS)[number],
+  );
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -76,7 +75,9 @@ export default function SetupPage() {
   const [stepIndex, setStepIndex] = useState(0);
   const [isProcessing, setIsProcessing] = useState(false);
   const [form, setForm] = useState<SetupFormData>({ ...DEFAULT_FORM_DATA });
-  const [selectedPlan, setSelectedPlan] = useState<SubscriptionPlan | null>(null);
+  const [selectedPlan, setSelectedPlan] = useState<SubscriptionPlan | null>(
+    null,
+  );
 
   const currentStep = STEPS[stepIndex]?.id ?? "welcome";
 
@@ -86,10 +87,13 @@ export default function SetupPage() {
     if (!saved) return;
     try {
       const data = JSON.parse(saved);
-      setForm(prev => ({
+      setForm((prev) => ({
         ...prev,
         businessName: data.businessName ?? prev.businessName,
-        rubroNegocio: data.rubroNegocio !== undefined ? data.rubroNegocio : prev.rubroNegocio,
+        rubroNegocio:
+          data.rubroNegocio !== undefined
+            ? data.rubroNegocio
+            : prev.rubroNegocio,
         branding: { ...prev.branding, ...data.branding },
         adminData: { ...prev.adminData, ...data.adminData },
         branch: { ...prev.branch, ...data.branch },
@@ -101,7 +105,7 @@ export default function SetupPage() {
       }));
       if (data.selectedPlanId) {
         const plan = SUBSCRIPTION_PLANS.find(
-          (p) => p.id === data.selectedPlanId && isEnabledSetupPlan(p.id)
+          (p) => p.id === data.selectedPlanId && isEnabledSetupPlan(p.id),
         );
         if (plan) setSelectedPlan(plan);
       }
@@ -115,18 +119,15 @@ export default function SetupPage() {
     const safe = toSafeData(form);
     sessionStorage.setItem(
       "setup_data_v2",
-      JSON.stringify({ ...safe, stepIndex })
+      JSON.stringify({ ...safe, stepIndex }),
     );
   }, [form, stepIndex]);
 
   // ─── Navigation ─────────────────────────────────────────────────────────
-  const goToStep = useCallback(
-    (step: SetupStep) => {
-      const idx = STEPS.findIndex(s => s.id === step);
-      if (idx >= 0) setStepIndex(idx);
-    },
-    []
-  );
+  const goToStep = useCallback((step: SetupStep) => {
+    const idx = STEPS.findIndex((s) => s.id === step);
+    if (idx >= 0) setStepIndex(idx);
+  }, []);
 
   const handleNext = useCallback(() => {
     const step = STEPS[stepIndex]?.id;
@@ -139,7 +140,11 @@ export default function SetupPage() {
     }
 
     if (step === "admin") {
-      if (!form.adminData.nombre || !form.adminData.email || !form.adminData.password) {
+      if (
+        !form.adminData.nombre ||
+        !form.adminData.email ||
+        !form.adminData.password
+      ) {
         toast.error("Todos los datos del administrador son requeridos");
         return;
       }
@@ -171,122 +176,135 @@ export default function SetupPage() {
       }
     }
 
-    setStepIndex(prev => Math.min(prev + 1, STEPS.length - 1));
+    setStepIndex((prev) => Math.min(prev + 1, STEPS.length - 1));
   }, [stepIndex, form, selectedPlan]);
 
   const handleBack = useCallback(() => {
-    setStepIndex(prev => Math.max(prev - 1, 0));
+    setStepIndex((prev) => Math.max(prev - 1, 0));
   }, []);
 
   const handleSkip = useCallback(() => {
-    setStepIndex(prev => Math.min(prev + 1, STEPS.length - 1));
+    setStepIndex((prev) => Math.min(prev + 1, STEPS.length - 1));
   }, []);
 
   // ─── Plan selection ────────────────────────────────────────────────────
   const handlePlanSelected = useCallback(
     (plan: SubscriptionPlan) => {
       setSelectedPlan(plan);
-      setForm(prev => ({ ...prev, selectedPlanId: plan.id }));
+      setForm((prev) => ({ ...prev, selectedPlanId: plan.id }));
       goToStep("payment");
     },
-    [goToStep]
+    [goToStep],
   );
 
   // ─── Form updaters ────────────────────────────────────────────────────
-  const updateForm = useCallback(<K extends keyof SetupFormData>(key: K, value: SetupFormData[K]) => {
-    setForm(prev => ({ ...prev, [key]: value }));
-  }, []);
+  const updateForm = useCallback(
+    <K extends keyof SetupFormData>(key: K, value: SetupFormData[K]) => {
+      setForm((prev) => ({ ...prev, [key]: value }));
+    },
+    [],
+  );
 
   // ─── Payment + Initialize ──────────────────────────────────────────────
-  const handlePaymentSuccess = useCallback(async (promoCode?: string, paymentId?: string) => {
-    console.log("🚀 handlePaymentSuccess llamado - promoCode:", promoCode, "paymentId:", paymentId);
-    
-    if (!selectedPlan && !promoCode) {
-      console.warn("⚠️ No hay selectedPlan ni promoCode");
-      return;
-    }
-
-    goToStep("loading");
-    setIsProcessing(true);
-
-    try {
-      let logoPayload: { logoData?: string; logoMime?: string } = {};
-      if (form.branding.logoFile) {
-        const { data, mime } = await fileToBase64(form.branding.logoFile);
-        logoPayload = { logoData: data, logoMime: mime };
-      }
-
-      const payload: InitializePayload = {
-        admin: {
-          nombre: form.adminData.nombre,
-          email: form.adminData.email,
-          password: form.adminData.password,
-        },
-        planId: selectedPlan?.id ?? 2,
-        businessName: form.businessName,
-        rubroNegocio: form.rubroNegocio,
-        staff: form.staff.filter(s => s.nombre && s.email),
+  const handlePaymentSuccess = useCallback(
+    async (promoCode?: string, paymentId?: string) => {
+      console.log(
+        "🚀 handlePaymentSuccess llamado - promoCode:",
         promoCode,
+        "paymentId:",
         paymentId,
-        branding: {
-          phone: form.branding.phone || undefined,
-          address: form.branding.address || undefined,
-          primaryColor: form.branding.primaryColor,
-          ...logoPayload,
-        },
-        branch: {
-          nombre: form.branch.nombre,
-          terminalNombre: form.branch.terminalNombre,
-        },
-        posConfig: form.posConfig,
-        catalog: form.catalog.mostrarListaPrecios
-          ? {
-              mostrarListaPrecios: form.catalog.mostrarListaPrecios,
-              whatsappNumber: form.catalog.whatsappNumber || undefined,
-            }
-          : undefined,
-        notifications: {
-          minStockGlobal: form.notifications.minStockGlobal,
-          diasAnticipacionVencimiento: form.notifications.diasAnticipacionVencimiento,
-          notificarStockBajo: form.notifications.notificarStockBajo,
-          notificarVencimientos: form.notifications.notificarVencimientos,
-          notificarVentas: form.notifications.notificarVentas,
-          notificarLiquidaciones: form.notifications.notificarLiquidaciones,
-          notificarConsignacionesActivas: form.notifications.notificarConsignacionesActivas,
-          diasAvisoConsignacion: form.notifications.diasAvisoConsignacion,
-        },
-      };
+      );
 
-      const response = await fetch("/api/setup/initialize", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-
-      console.log("📡 API Response status:", response.status);
-
-      if (response.ok) {
-        console.log("✅ Setup inicializado correctamente");
-        console.log("📝 Response:", await response.clone().json());
-        sessionStorage.removeItem("setup_data_v2");
-        goToStep("success");
-        setTimeout(() => {
-          console.log("🔄 Redirigiendo a /dashboard...");
-          router.push("/dashboard");
-        }, 4000);
-      } else {
-        const error = await response.json();
-        console.error("❌ API Error:", error);
-        toast.error(error.message || "Error al inicializar el sistema");
-        goToStep("payment");
+      if (!selectedPlan && !promoCode) {
+        console.warn("⚠️ No hay selectedPlan ni promoCode");
+        return;
       }
-    } catch {
-      toast.error("Ocurrió un error en el servidor");
-      goToStep("payment");
-    } finally {
-      setIsProcessing(false);
-    }
-  }, [form, goToStep, router, selectedPlan]);
+
+      goToStep("loading");
+      setIsProcessing(true);
+
+      try {
+        let logoPayload: { logoData?: string; logoMime?: string } = {};
+        if (form.branding.logoFile) {
+          const { data, mime } = await fileToBase64(form.branding.logoFile);
+          logoPayload = { logoData: data, logoMime: mime };
+        }
+
+        const payload: InitializePayload = {
+          admin: {
+            nombre: form.adminData.nombre,
+            email: form.adminData.email,
+            password: form.adminData.password,
+          },
+          planId: selectedPlan?.id ?? 2,
+          businessName: form.businessName,
+          rubroNegocio: form.rubroNegocio,
+          staff: form.staff.filter((s) => s.nombre && s.email),
+          promoCode,
+          paymentId,
+          branding: {
+            phone: form.branding.phone || undefined,
+            address: form.branding.address || undefined,
+            primaryColor: form.branding.primaryColor,
+            ...logoPayload,
+          },
+          branch: {
+            nombre: form.branch.nombre,
+            terminalNombre: form.branch.terminalNombre,
+          },
+          posConfig: form.posConfig,
+          catalog: form.catalog.mostrarListaPrecios
+            ? {
+                mostrarListaPrecios: form.catalog.mostrarListaPrecios,
+                whatsappNumber: form.catalog.whatsappNumber || undefined,
+              }
+            : undefined,
+          notifications: {
+            minStockGlobal: form.notifications.minStockGlobal,
+            diasAnticipacionVencimiento:
+              form.notifications.diasAnticipacionVencimiento,
+            notificarStockBajo: form.notifications.notificarStockBajo,
+            notificarVencimientos: form.notifications.notificarVencimientos,
+            notificarVentas: form.notifications.notificarVentas,
+            notificarLiquidaciones: form.notifications.notificarLiquidaciones,
+            notificarConsignacionesActivas:
+              form.notifications.notificarConsignacionesActivas,
+            diasAvisoConsignacion: form.notifications.diasAvisoConsignacion,
+          },
+        };
+
+        const response = await fetch("/api/setup/initialize", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+
+        console.log("📡 API Response status:", response.status);
+
+        if (response.ok) {
+          console.log("✅ Setup inicializado correctamente");
+          console.log("📝 Response:", await response.clone().json());
+          sessionStorage.removeItem("setup_data_v2");
+          goToStep("success");
+          setTimeout(() => {
+            console.log("🔄 Redirigiendo a /dashboard...");
+            router.push("/dashboard");
+          }, 4000);
+        } else {
+          const error = await response.json();
+          console.error("❌ API Error:", error);
+          toast.error(error.message || "Error al inicializar el sistema");
+          goToStep("payment");
+        }
+      } catch {
+        toast.error("Ocurrió un error en el servidor");
+        goToStep("payment");
+      } finally {
+        setIsProcessing(false);
+      }
+    },
+    [form, goToStep, router, selectedPlan],
+  );
 
   // ─── Payment redirect handler ──────────────────────────────────────────
   useEffect(() => {
@@ -308,7 +326,13 @@ export default function SetupPage() {
   }, [goToStep, handlePaymentSuccess, searchParams]);
 
   // ─── Render ─────────────────────────────────────────────────────────────
-  const stepsWithOwnNext: SetupStep[] = ["welcome", "subscription", "payment", "loading", "success"];
+  const stepsWithOwnNext: SetupStep[] = [
+    "welcome",
+    "subscription",
+    "payment",
+    "loading",
+    "success",
+  ];
   const showNextButton = !stepsWithOwnNext.includes(currentStep);
 
   return (
@@ -400,13 +424,9 @@ export default function SetupPage() {
         />
       )}
 
-      {currentStep === "loading" && (
-        <LoadingStep key="loading" />
-      )}
+      {currentStep === "loading" && <LoadingStep key="loading" />}
 
-      {currentStep === "success" && (
-        <SuccessStep key="success" />
-      )}
+      {currentStep === "success" && <SuccessStep key="success" />}
     </SetupShell>
   );
 }

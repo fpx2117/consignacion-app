@@ -43,32 +43,32 @@ La deteccion automatica del huso horario del navegador (`Intl.DateTimeFormat().r
 
 ## Areas afectadas
 
-| Area | Impacto | Descripcion |
-|------|---------|-------------|
-| `prisma/schema.prisma` | Modificado | Nuevo campo `zonaHoraria String @default("America/Argentina/Buenos_Aires")` en modelo `Configuracion`. |
-| `prisma/migrations/` | Nuevo | Migracion forward-compatible con `ALTER TABLE` y valor por defecto para filas existentes. |
-| `src/lib/utils-date.ts` | Modificado | Todas las funciones `*AR()` aceptan `tz?: string` para reemplazar el hardcode. Nuevo helper `getConfiguredTz(sucursalId)` que lee la DB. |
-| `src/app/api/settings/general/route.ts` | Modificado | Incluir `zonaHoraria` en `GET` y `PUT` con validacion de IANA string. |
-| `src/lib/apiService.ts` | Modificado | Exponer `zonaHoraria` en el contrato del cliente para que el frontend pueda leerla. |
-| `src/hooks/useTimezone.ts` | Nuevo | Hook React que retorna la zona horaria activa de la sucursal y funciones de formateo locale-aware. |
-| `src/app/(system-guard)/(protected)/settings/general/page.tsx` | Modificado | Agregar sección "Zona Horaria" con selector, sugerencia automatica y preview de hora actual. |
-| `src/components/timezone-selector.tsx` | Nuevo | Combobox con busqueda sobre lista curada de timezones IANA, muestra offset y hora actual como preview. |
-| `src/lib/timezone-list.ts` | Nuevo | Lista curada y tipada de zonas horarias Latinoamerica + internacionales mas usadas con label, offset y region. |
-| `src/lib/kpi-logic.ts` | Modificado | `getDashboardKpis`, `getDashboardTendencia` y `getDashboardTopProductos` consumen `zonaHoraria` desde config de sucursal. |
-| `src/lib/reports/template-helpers.ts` | Modificado | `formatDateAR()` usa `tz` dinamico pasado como parametro en vez de hardcode. |
-| `src/lib/reports/base/*.ts` | Modificado | Templates de tickets, remitos e inventario reciben `zonaHoraria` del payload y la pasan a `formatDateAR`. |
-| `src/app/api/settings/pos/cajas/turno/route.ts` | Modificado | `validarHorarioLaboral` lee `zonaHoraria` de config para comparar horas en TZ correcto. |
-| `src/app/api/historial/route.ts` | Modificado | `monthRangeAR` recibe `tz` de la config de la sucursal del request. |
+| Area                                                           | Impacto    | Descripcion                                                                                                                              |
+| -------------------------------------------------------------- | ---------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| `prisma/schema.prisma`                                         | Modificado | Nuevo campo `zonaHoraria String @default("America/Argentina/Buenos_Aires")` en modelo `Configuracion`.                                   |
+| `prisma/migrations/`                                           | Nuevo      | Migracion forward-compatible con `ALTER TABLE` y valor por defecto para filas existentes.                                                |
+| `src/lib/utils-date.ts`                                        | Modificado | Todas las funciones `*AR()` aceptan `tz?: string` para reemplazar el hardcode. Nuevo helper `getConfiguredTz(sucursalId)` que lee la DB. |
+| `src/app/api/settings/general/route.ts`                        | Modificado | Incluir `zonaHoraria` en `GET` y `PUT` con validacion de IANA string.                                                                    |
+| `src/lib/apiService.ts`                                        | Modificado | Exponer `zonaHoraria` en el contrato del cliente para que el frontend pueda leerla.                                                      |
+| `src/hooks/useTimezone.ts`                                     | Nuevo      | Hook React que retorna la zona horaria activa de la sucursal y funciones de formateo locale-aware.                                       |
+| `src/app/(system-guard)/(protected)/settings/general/page.tsx` | Modificado | Agregar sección "Zona Horaria" con selector, sugerencia automatica y preview de hora actual.                                             |
+| `src/components/timezone-selector.tsx`                         | Nuevo      | Combobox con busqueda sobre lista curada de timezones IANA, muestra offset y hora actual como preview.                                   |
+| `src/lib/timezone-list.ts`                                     | Nuevo      | Lista curada y tipada de zonas horarias Latinoamerica + internacionales mas usadas con label, offset y region.                           |
+| `src/lib/kpi-logic.ts`                                         | Modificado | `getDashboardKpis`, `getDashboardTendencia` y `getDashboardTopProductos` consumen `zonaHoraria` desde config de sucursal.                |
+| `src/lib/reports/template-helpers.ts`                          | Modificado | `formatDateAR()` usa `tz` dinamico pasado como parametro en vez de hardcode.                                                             |
+| `src/lib/reports/base/*.ts`                                    | Modificado | Templates de tickets, remitos e inventario reciben `zonaHoraria` del payload y la pasan a `formatDateAR`.                                |
+| `src/app/api/settings/pos/cajas/turno/route.ts`                | Modificado | `validarHorarioLaboral` lee `zonaHoraria` de config para comparar horas en TZ correcto.                                                  |
+| `src/app/api/historial/route.ts`                               | Modificado | `monthRangeAR` recibe `tz` de la config de la sucursal del request.                                                                      |
 
 ## Riesgos
 
-| Riesgo | Probabilidad | Mitigacion |
-|--------|--------------|------------|
-| Quiebre de instalaciones existentes sin `zonaHoraria` configurada | Baja | Campo con default `"America/Argentina/Buenos_Aires"` en schema y fallback en codigo. |
-| IANA timezone string invalido ingresado por el usuario | Baja | Validacion contra lista curada en el selector UI + validacion en API con `Intl.DateTimeFormat` como guard. |
-| Inconsistencia entre TZ del servidor (`.env TZ=...`) y TZ configurada en DB | Media | Documentar que la config DB es la fuente de verdad para logica de negocio; el `TZ` del servidor queda como fallback para bootstrap. |
-| Desfase en reportes generados si la zona horaria cambia entre una venta y la generacion del reporte | Baja | Los reportes siempre usan la `zonaHoraria` actual de la configuracion; se recomienda no cambiarla en produccion sin aviso. |
-| Performance: query extra a `Configuracion` en cada request para leer `zonaHoraria` | Baja | Cache en `getConfiguredTz()` con `unstable_cache` de Next.js (TTL 60s, tag `config`). |
+| Riesgo                                                                                              | Probabilidad | Mitigacion                                                                                                                          |
+| --------------------------------------------------------------------------------------------------- | ------------ | ----------------------------------------------------------------------------------------------------------------------------------- |
+| Quiebre de instalaciones existentes sin `zonaHoraria` configurada                                   | Baja         | Campo con default `"America/Argentina/Buenos_Aires"` en schema y fallback en codigo.                                                |
+| IANA timezone string invalido ingresado por el usuario                                              | Baja         | Validacion contra lista curada en el selector UI + validacion en API con `Intl.DateTimeFormat` como guard.                          |
+| Inconsistencia entre TZ del servidor (`.env TZ=...`) y TZ configurada en DB                         | Media        | Documentar que la config DB es la fuente de verdad para logica de negocio; el `TZ` del servidor queda como fallback para bootstrap. |
+| Desfase en reportes generados si la zona horaria cambia entre una venta y la generacion del reporte | Baja         | Los reportes siempre usan la `zonaHoraria` actual de la configuracion; se recomienda no cambiarla en produccion sin aviso.          |
+| Performance: query extra a `Configuracion` en cada request para leer `zonaHoraria`                  | Baja         | Cache en `getConfiguredTz()` con `unstable_cache` de Next.js (TTL 60s, tag `config`).                                               |
 
 ## Plan de Reversion (Rollback)
 

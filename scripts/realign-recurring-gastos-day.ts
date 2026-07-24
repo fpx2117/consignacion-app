@@ -16,8 +16,14 @@ function parseArgs(args: string[]) {
   const apply = args.includes("--apply");
   const dayOfMonth = dayArg ? Number(dayArg.split("=")[1]) : null;
 
-  if (!target) throw new Error("Debes indicar un motivo o recurrenciaId objetivo.");
-  if (!dayOfMonth || Number.isNaN(dayOfMonth) || dayOfMonth < 1 || dayOfMonth > 31) {
+  if (!target)
+    throw new Error("Debes indicar un motivo o recurrenciaId objetivo.");
+  if (
+    !dayOfMonth ||
+    Number.isNaN(dayOfMonth) ||
+    dayOfMonth < 1 ||
+    dayOfMonth > 31
+  ) {
     throw new Error("Debes indicar un día válido con --day=27.");
   }
 

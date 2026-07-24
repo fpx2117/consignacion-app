@@ -814,7 +814,7 @@ export function ProductoWizardDialog({
                         )
                       }
                       className="pl-9 h-10 bg-muted/30"
-                      placeholder="0.00"
+                      placeholder="0,00"
                       inputMode="decimal"
                     />
                   </div>
@@ -834,7 +834,7 @@ export function ProductoWizardDialog({
                         )
                       }
                       className="pl-9 h-10 bg-primary/5 border-primary/20 font-bold text-primary"
-                      placeholder="0.00"
+                      placeholder="0,00"
                       inputMode="decimal"
                     />
                   </div>
@@ -863,7 +863,7 @@ export function ProductoWizardDialog({
                     <span
                       className={`text-sm font-black ${esGananciaNegativa ? "text-destructive" : "text-[color:var(--status-success-strong)]"}`}
                     >
-                      ${gananciaUnitaria.toLocaleString()} (
+                      ${gananciaUnitaria.toLocaleString("es-AR")} (
                       {margenPorcentaje.toFixed(1)}%)
                     </span>
                   </div>

@@ -31,15 +31,15 @@ Mejorar la calidad visual de todos los reportes PDF del sistema POS (tickets, re
 
 4. **Información adicional por reporte**
 
-   | Reporte | Información a agregar |
-   |---------|---------------------|
+   | Reporte         | Información a agregar                              |
+   | --------------- | -------------------------------------------------- |
    | Ticket de Venta | Código QR de verificación, datos completos cliente |
-   | POS | Desglose por método de pago, ticket promedio |
-   | Consignaciones | Estado detallado, tasa de rotación por cliente |
-   | Dashboard | KPIs con badges visuales de estado |
-   | Gasto | Código de barras, detalles de categoría |
-   | Remito | Logo más grande, tabla mejorada |
-   | Inventario | Stock mínimo destacado, alertas visuales |
+   | POS             | Desglose por método de pago, ticket promedio       |
+   | Consignaciones  | Estado detallado, tasa de rotación por cliente     |
+   | Dashboard       | KPIs con badges visuales de estado                 |
+   | Gasto           | Código de barras, detalles de categoría            |
+   | Remito          | Logo más grande, tabla mejorada                    |
+   | Inventario      | Stock mínimo destacado, alertas visuales           |
 
 ### Fuera del alcance
 
@@ -57,6 +57,7 @@ El enfoque es de **mejora visual incremental** manteniendo la estructura existen
 3. **Tercero**: Testing visual y ajustes menores
 
 Se utiliza el estilo "Trust & Authority" apropiado para documentos empresariales:
+
 - Colores conservadores (navy, blues)
 - Tipografía legible y profesional
 - Espaciado generoso
@@ -64,24 +65,24 @@ Se utiliza el estilo "Trust & Authority" apropiado para documentos empresariales
 
 ## Areas afectadas
 
-| Area | Impacto | Descripcion |
-|------|---------|-------------|
-| `src/lib/reports/tailwind-inline.ts` | Modificado | Agregar Google Fonts (Poppins + Open Sans), mejorar CSS base |
-| `src/lib/reports/base/venta-report-template.ts` | Modificado | Ajustar padding, fuentes, agregar código QR |
-| `src/lib/reports/base/pos-report-template.ts` | Modificado | Agregar desglose métodos de pago |
-| `src/lib/reports/base/consignacion-report-template.ts` | Modificado | Mejorar visualización de estados |
-| `src/lib/reports/base/dashboard-report-template.ts` | Modificado | Agregar badges visuales a KPIs |
-| `src/lib/reports/base/gasto-report-template.ts` | Modificado | Agregar código de barras |
-| `src/lib/reports/base/remito-template.ts` | Modificado | Mejorar layout y logo |
-| `src/lib/reports/base/inventory-report-template.ts` | Modificado | Agregar alertas de stock |
+| Area                                                   | Impacto    | Descripcion                                                  |
+| ------------------------------------------------------ | ---------- | ------------------------------------------------------------ |
+| `src/lib/reports/tailwind-inline.ts`                   | Modificado | Agregar Google Fonts (Poppins + Open Sans), mejorar CSS base |
+| `src/lib/reports/base/venta-report-template.ts`        | Modificado | Ajustar padding, fuentes, agregar código QR                  |
+| `src/lib/reports/base/pos-report-template.ts`          | Modificado | Agregar desglose métodos de pago                             |
+| `src/lib/reports/base/consignacion-report-template.ts` | Modificado | Mejorar visualización de estados                             |
+| `src/lib/reports/base/dashboard-report-template.ts`    | Modificado | Agregar badges visuales a KPIs                               |
+| `src/lib/reports/base/gasto-report-template.ts`        | Modificado | Agregar código de barras                                     |
+| `src/lib/reports/base/remito-template.ts`              | Modificado | Mejorar layout y logo                                        |
+| `src/lib/reports/base/inventory-report-template.ts`    | Modificado | Agregar alertas de stock                                     |
 
 ## Risks
 
-| Riesgo | Probabilidad | Impacto | Mitigacion |
-|--------|--------------|---------|-------------|
-| Google Fonts no carga en Railway (sin internet) | Baja | Alto | Usar fuentes del sistema como fallback |
-| Templates se rompen al cambiar CSS | Media | Alto | Testing en dev antes de push |
-| Tamaño de PDFs aumenta por fuentes | Baja | Bajo | Fuentes se cachean en Puppeteer |
+| Riesgo                                          | Probabilidad | Impacto | Mitigacion                             |
+| ----------------------------------------------- | ------------ | ------- | -------------------------------------- |
+| Google Fonts no carga en Railway (sin internet) | Baja         | Alto    | Usar fuentes del sistema como fallback |
+| Templates se rompen al cambiar CSS              | Media        | Alto    | Testing en dev antes de push           |
+| Tamaño de PDFs aumenta por fuentes              | Baja         | Bajo    | Fuentes se cachean en Puppeteer        |
 
 ## Success Criteria
 

@@ -62,7 +62,12 @@ export type InvoiceAiSuccessResult = {
   status: "success";
   ocrText: string;
   supplier: { name: string | null; taxId: string | null };
-  invoice: { number: string | null; date: string | null; currency: string | null; total: number | null };
+  invoice: {
+    number: string | null;
+    date: string | null;
+    currency: string | null;
+    total: number | null;
+  };
   items: InvoiceAiItem[];
   warnings: string[];
   globalConfidence: number;
@@ -90,7 +95,8 @@ export async function procesarFacturaConIA(input: {
    * para el prompt, ver invoice-extraction.config.ts. */
   rubroNegocio?: string | null;
 }): Promise<InvoiceAiResult> {
-  const { texto, confianzaOcr, imagenParaVision } = await extraerTextoFactura(input);
+  const { texto, confianzaOcr, imagenParaVision } =
+    await extraerTextoFactura(input);
 
   // Siempre que haya imagen disponible (foto o PDF escaneado), se manda junto
   // al texto — no solo cuando la confianza del documento completo es baja.
@@ -99,7 +105,10 @@ export async function procesarFacturaConIA(input: {
   if (!texto.trim() && !necesitaVision) {
     // Caso residual: PDF con texto nativo que igual vino vacío — no hubo
     // rasterización (imagenParaVision es null acá), no hay imagen que ofrecer.
-    return { status: "error", message: "No se pudo extraer texto legible del archivo." };
+    return {
+      status: "error",
+      message: "No se pudo extraer texto legible del archivo.",
+    };
   }
 
   const textoTruncado = truncateOcrText(texto);
@@ -118,13 +127,23 @@ export async function procesarFacturaConIA(input: {
     systemPrompt,
     userPrompt,
     jsonSchema: { name: "factura_extraida", schema },
-    images: necesitaVision ? [{ mimeType: "image/png", base64: imagenParaVision!.toString("base64") }] : undefined,
+    images: necesitaVision
+      ? [
+          {
+            mimeType: "image/png",
+            base64: imagenParaVision!.toString("base64"),
+          },
+        ]
+      : undefined,
   });
 
   const parsed = parseJsonContent(respuesta.content);
   const validacion = validateExtractedInvoice(parsed);
   if (!validacion.valid) {
-    return { status: "error", message: `Respuesta de IA con formato inválido: ${validacion.errors.join("; ")}` };
+    return {
+      status: "error",
+      message: `Respuesta de IA con formato inválido: ${validacion.errors.join("; ")}`,
+    };
   }
 
   const datos = normalizarExtraccion(parsed as Record<string, unknown>, texto);
@@ -142,7 +161,10 @@ export async function procesarFacturaConIA(input: {
       ? { ...item, confidence: Math.min(item.confidence, tope) }
       : item;
   });
-  const datosConConfidenceAjustada = { ...datos, items: itemsConConfidenceAjustada };
+  const datosConConfidenceAjustada = {
+    ...datos,
+    items: itemsConConfidenceAjustada,
+  };
 
   // La confianza final es el mínimo entre "qué tan bien se leyó el archivo"
   // (Tesseract/pdf-parse, 0-100) y "qué tan segura está la IA de haber
@@ -155,7 +177,10 @@ export async function procesarFacturaConIA(input: {
   // penalizaría injustamente una extracción que sí rescató bien.
   const globalConfidence = necesitaVision
     ? calculateInvoiceConfidence(datosConConfidenceAjustada)
-    : Math.min(calculateInvoiceConfidence(datosConConfidenceAjustada), confianzaOcr / 100);
+    : Math.min(
+        calculateInvoiceConfidence(datosConConfidenceAjustada),
+        confianzaOcr / 100,
+      );
 
   return {
     status: "success",
@@ -169,9 +194,12 @@ export async function procesarFacturaConIA(input: {
       unitCost: item.unitCost,
       lineTotal: item.lineTotal,
       confidence: item.confidence,
-      atributosExtra: item.extraAttributes.length > 0
-        ? Object.fromEntries(item.extraAttributes.map((a) => [a.key, a.value]))
-        : null,
+      atributosExtra:
+        item.extraAttributes.length > 0
+          ? Object.fromEntries(
+              item.extraAttributes.map((a) => [a.key, a.value]),
+            )
+          : null,
       advertencias: consistencia.itemsConAdvertencia.get(index) ?? [],
     })),
     warnings: [...datos.warnings, ...consistencia.advertenciasFactura],
@@ -182,7 +210,10 @@ export async function procesarFacturaConIA(input: {
   };
 }
 
-function normalizarExtraccion(data: Record<string, unknown>, ocrTextRaw: string): ExtractedInvoiceData & { ocrTextRaw: string } {
+function normalizarExtraccion(
+  data: Record<string, unknown>,
+  ocrTextRaw: string,
+): ExtractedInvoiceData & { ocrTextRaw: string } {
   const supplier = (data.supplier as Record<string, unknown> | undefined) ?? {};
   const invoice = (data.invoice as Record<string, unknown> | undefined) ?? {};
   const rawItems = Array.isArray(data.items) ? data.items : [];
@@ -190,16 +221,35 @@ function normalizarExtraccion(data: Record<string, unknown>, ocrTextRaw: string)
   const items: ExtractedInvoiceItem[] = rawItems
     .map((raw): ExtractedInvoiceItem => {
       const item = raw as Record<string, unknown>;
-      const rawExtraAttributes = Array.isArray(item.extraAttributes) ? item.extraAttributes : [];
+      const rawExtraAttributes = Array.isArray(item.extraAttributes)
+        ? item.extraAttributes
+        : [];
       return {
-        rawDescription: typeof item.rawDescription === "string" ? item.rawDescription : "",
-        supplierCode: typeof item.supplierCode === "string" ? item.supplierCode : null,
-        quantity: typeof item.quantity === "number" && Number.isFinite(item.quantity) ? item.quantity : 1,
-        unitCost: typeof item.unitCost === "number" && Number.isFinite(item.unitCost) ? item.unitCost : null,
-        lineTotal: typeof item.lineTotal === "number" && Number.isFinite(item.lineTotal) ? item.lineTotal : null,
-        confidence: typeof item.confidence === "number" && Number.isFinite(item.confidence) ? item.confidence : null,
+        rawDescription:
+          typeof item.rawDescription === "string" ? item.rawDescription : "",
+        supplierCode:
+          typeof item.supplierCode === "string" ? item.supplierCode : null,
+        quantity:
+          typeof item.quantity === "number" && Number.isFinite(item.quantity)
+            ? item.quantity
+            : 1,
+        unitCost:
+          typeof item.unitCost === "number" && Number.isFinite(item.unitCost)
+            ? item.unitCost
+            : null,
+        lineTotal:
+          typeof item.lineTotal === "number" && Number.isFinite(item.lineTotal)
+            ? item.lineTotal
+            : null,
+        confidence:
+          typeof item.confidence === "number" &&
+          Number.isFinite(item.confidence)
+            ? item.confidence
+            : null,
         extraAttributes: rawExtraAttributes
-          .filter((a): a is Record<string, unknown> => !!a && typeof a === "object")
+          .filter(
+            (a): a is Record<string, unknown> => !!a && typeof a === "object",
+          )
           .map((a) => ({
             key: typeof a.key === "string" ? a.key : "",
             value: typeof a.value === "string" ? a.value : "",
@@ -212,16 +262,27 @@ function normalizarExtraccion(data: Record<string, unknown>, ocrTextRaw: string)
   return {
     ocrTextRaw,
     supplier: {
-      name: typeof supplier.name === "string" && supplier.name.trim() ? supplier.name.trim() : null,
-      taxId: typeof supplier.taxId === "string" && supplier.taxId.trim() ? supplier.taxId.trim() : null,
+      name:
+        typeof supplier.name === "string" && supplier.name.trim()
+          ? supplier.name.trim()
+          : null,
+      taxId:
+        typeof supplier.taxId === "string" && supplier.taxId.trim()
+          ? supplier.taxId.trim()
+          : null,
     },
     invoice: {
       number: typeof invoice.number === "string" ? invoice.number : null,
       date: typeof invoice.date === "string" ? invoice.date : null,
       currency: typeof invoice.currency === "string" ? invoice.currency : null,
-      total: typeof invoice.total === "number" && Number.isFinite(invoice.total) ? invoice.total : null,
+      total:
+        typeof invoice.total === "number" && Number.isFinite(invoice.total)
+          ? invoice.total
+          : null,
     },
     items,
-    warnings: Array.isArray(data.warnings) ? data.warnings.filter((w): w is string => typeof w === "string") : [],
+    warnings: Array.isArray(data.warnings)
+      ? data.warnings.filter((w): w is string => typeof w === "string")
+      : [],
   };
 }

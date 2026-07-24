@@ -18,8 +18,16 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
-  RefreshCw, LayoutDashboard, CalendarDays, Filter,
-  Download, FileText, Loader2, ChevronDown, ShoppingCart, Handshake,
+  RefreshCw,
+  LayoutDashboard,
+  CalendarDays,
+  Filter,
+  Download,
+  FileText,
+  Loader2,
+  ChevronDown,
+  ShoppingCart,
+  Handshake,
 } from "lucide-react";
 import { DashboardPeriod, DashboardFilter } from "@/lib/types";
 import { apiService } from "@/lib/apiService";
@@ -67,7 +75,10 @@ export function DashboardHeader({
     setGreeting(getGreetingByHour());
   }, []);
 
-  const handleDownload = async (type: ReportType, targetPeriod: DashboardPeriod) => {
+  const handleDownload = async (
+    type: ReportType,
+    targetPeriod: DashboardPeriod,
+  ) => {
     const key: DownloadKey = `${type}-${targetPeriod}`;
     if (downloading) return;
     setDownloading(key);
@@ -75,9 +86,10 @@ export function DashboardHeader({
     // la consideren parte del gesto del usuario (evita el bloqueo de popups).
     const newWindow = window.open("", "_blank");
     try {
-      const url = type === "pos"
-        ? await apiService.getPosReporteUrl(targetPeriod)
-        : await apiService.getConsigReporteUrl(targetPeriod);
+      const url =
+        type === "pos"
+          ? await apiService.getPosReporteUrl(targetPeriod)
+          : await apiService.getConsigReporteUrl(targetPeriod);
       if (newWindow) {
         newWindow.location.href = url;
       } else {
@@ -90,7 +102,8 @@ export function DashboardHeader({
     }
   };
 
-  const isDownloading = (type: ReportType, p: DashboardPeriod) => downloading === `${type}-${p}`;
+  const isDownloading = (type: ReportType, p: DashboardPeriod) =>
+    downloading === `${type}-${p}`;
 
   return (
     <div className="relative flex flex-col gap-8 pb-4 sm:flex-row sm:items-end sm:justify-between">
@@ -129,7 +142,10 @@ export function DashboardHeader({
           <div className="absolute left-3 top-1/2 -translate-y-1/2 z-10 pointer-events-none text-muted-foreground/50 group-hover:text-primary transition-colors">
             <Filter className="h-3.5 w-3.5" />
           </div>
-          <Select value={filter} onValueChange={(v) => setFilter(v as DashboardFilter)}>
+          <Select
+            value={filter}
+            onValueChange={(v) => setFilter(v as DashboardFilter)}
+          >
             <SelectTrigger className="h-10 w-full pl-9 bg-transparent border-none hover:bg-muted/45 transition-all rounded-xl focus:ring-0">
               <SelectValue placeholder="Filtrar por..." />
             </SelectTrigger>
@@ -148,7 +164,10 @@ export function DashboardHeader({
           <div className="absolute left-3 top-1/2 -translate-y-1/2 z-10 pointer-events-none text-muted-foreground/50 group-hover:text-primary transition-colors">
             <CalendarDays className="h-3.5 w-3.5" />
           </div>
-          <Select value={period} onValueChange={(v) => setPeriod(v as DashboardPeriod)}>
+          <Select
+            value={period}
+            onValueChange={(v) => setPeriod(v as DashboardPeriod)}
+          >
             <SelectTrigger className="h-10 w-full pl-9 bg-transparent border-none hover:bg-muted/45 transition-all rounded-xl focus:ring-0">
               <SelectValue placeholder="Período" />
             </SelectTrigger>
@@ -174,7 +193,7 @@ export function DashboardHeader({
                 disabled={!!downloading}
                 className={cn(
                   "flex-1 sm:flex-none h-10 px-3 rounded-xl hover:bg-primary/10 hover:text-primary transition-all gap-1.5 bg-foreground/5 dark:bg-card/5 sm:bg-transparent",
-                  downloading && "opacity-80"
+                  downloading && "opacity-80",
                 )}
               >
                 {downloading ? (
@@ -196,24 +215,31 @@ export function DashboardHeader({
               <DropdownMenuLabel className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-[color:var(--theme-ocean-primary)] px-3 py-2">
                 <ShoppingCart className="h-3 w-3" /> Ventas · POS
               </DropdownMenuLabel>
-              {(["today", "week", "month", "all"] as DashboardPeriod[]).map((p) => (
-                <DropdownMenuItem
-                  key={`pos-${p}`}
-                  onClick={() => handleDownload("pos", p)}
-                  disabled={!!downloading}
-                  className={cn(
-                    "flex items-center gap-2.5 rounded-lg mx-1 cursor-pointer transition-colors",
-                    p === period && "bg-[color:var(--theme-ocean-primary)] dark:bg-[color:var(--theme-ocean-primary)]/30 text-[color:var(--theme-ocean-primary)] font-semibold"
-                  )}
-                >
-                  <FileText className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                  <span className="text-sm">{PERIOD_LABELS[p]}</span>
-                  {isDownloading("pos", p) && <Loader2 className="h-3 w-3 animate-spin ml-auto" />}
-                  {p === period && !isDownloading("pos", p) && (
-                    <span className="ml-auto text-[9px] font-bold uppercase tracking-wide text-[color:var(--theme-ocean-primary)] opacity-70">Actual</span>
-                  )}
-                </DropdownMenuItem>
-              ))}
+              {(["today", "week", "month", "all"] as DashboardPeriod[]).map(
+                (p) => (
+                  <DropdownMenuItem
+                    key={`pos-${p}`}
+                    onClick={() => handleDownload("pos", p)}
+                    disabled={!!downloading}
+                    className={cn(
+                      "flex items-center gap-2.5 rounded-lg mx-1 cursor-pointer transition-colors",
+                      p === period &&
+                        "bg-[color:var(--theme-ocean-primary)] dark:bg-[color:var(--theme-ocean-primary)]/30 text-[color:var(--theme-ocean-primary)] font-semibold",
+                    )}
+                  >
+                    <FileText className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                    <span className="text-sm">{PERIOD_LABELS[p]}</span>
+                    {isDownloading("pos", p) && (
+                      <Loader2 className="h-3 w-3 animate-spin ml-auto" />
+                    )}
+                    {p === period && !isDownloading("pos", p) && (
+                      <span className="ml-auto text-[9px] font-bold uppercase tracking-wide text-[color:var(--theme-ocean-primary)] opacity-70">
+                        Actual
+                      </span>
+                    )}
+                  </DropdownMenuItem>
+                ),
+              )}
 
               <DropdownMenuSeparator className="my-1" />
 
@@ -221,24 +247,31 @@ export function DashboardHeader({
               <DropdownMenuLabel className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-[color:var(--primary)] px-3 py-2">
                 <Handshake className="h-3 w-3" /> Consignaciones
               </DropdownMenuLabel>
-              {(["today", "week", "month", "all"] as DashboardPeriod[]).map((p) => (
-                <DropdownMenuItem
-                  key={`consig-${p}`}
-                  onClick={() => handleDownload("consignacion", p)}
-                  disabled={!!downloading}
-                  className={cn(
-                    "flex items-center gap-2.5 rounded-lg mx-1 cursor-pointer transition-colors",
-                    p === period && "bg-[color:var(--primary)] dark:bg-[color:var(--primary)]/30 text-[color:var(--primary)] font-semibold"
-                  )}
-                >
-                  <FileText className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                  <span className="text-sm">{PERIOD_LABELS[p]}</span>
-                  {isDownloading("consignacion", p) && <Loader2 className="h-3 w-3 animate-spin ml-auto" />}
-                  {p === period && !isDownloading("consignacion", p) && (
-                    <span className="ml-auto text-[9px] font-bold uppercase tracking-wide text-[color:var(--primary)] opacity-70">Actual</span>
-                  )}
-                </DropdownMenuItem>
-              ))}
+              {(["today", "week", "month", "all"] as DashboardPeriod[]).map(
+                (p) => (
+                  <DropdownMenuItem
+                    key={`consig-${p}`}
+                    onClick={() => handleDownload("consignacion", p)}
+                    disabled={!!downloading}
+                    className={cn(
+                      "flex items-center gap-2.5 rounded-lg mx-1 cursor-pointer transition-colors",
+                      p === period &&
+                        "bg-[color:var(--primary)] dark:bg-[color:var(--primary)]/30 text-[color:var(--primary)] font-semibold",
+                    )}
+                  >
+                    <FileText className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                    <span className="text-sm">{PERIOD_LABELS[p]}</span>
+                    {isDownloading("consignacion", p) && (
+                      <Loader2 className="h-3 w-3 animate-spin ml-auto" />
+                    )}
+                    {p === period && !isDownloading("consignacion", p) && (
+                      <span className="ml-auto text-[9px] font-bold uppercase tracking-wide text-[color:var(--primary)] opacity-70">
+                        Actual
+                      </span>
+                    )}
+                  </DropdownMenuItem>
+                ),
+              )}
             </DropdownMenuContent>
           </DropdownMenu>
 
@@ -252,10 +285,12 @@ export function DashboardHeader({
             disabled={loading}
             className={cn(
               "flex-1 sm:flex-none h-10 px-4 rounded-xl hover:bg-primary/10 hover:text-primary transition-all gap-2 bg-foreground/5 dark:bg-card/5 sm:bg-transparent",
-              loading && "opacity-80"
+              loading && "opacity-80",
             )}
           >
-            <RefreshCw className={cn("h-4 w-4 shrink-0", loading ? "animate-spin" : "")} />
+            <RefreshCw
+              className={cn("h-4 w-4 shrink-0", loading ? "animate-spin" : "")}
+            />
             <span className="text-xs font-semibold sm:hidden">Actualizar</span>
           </Button>
         </div>

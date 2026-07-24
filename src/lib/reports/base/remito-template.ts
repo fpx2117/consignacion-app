@@ -1,60 +1,77 @@
 // src/lib/reports/base/remito-template.ts
 import { reportThemeCss } from "@/lib/reports/report-theme";
 import { getReportHeadAssets } from "@/lib/reports/tailwind-inline";
-import { escapeHtml, escapeAttr, brandInitials, formatDateAR, resolveReportTimezone } from "@/lib/reports/template-helpers";
+import {
+  escapeHtml,
+  escapeAttr,
+  brandInitials,
+  formatDateAR,
+  resolveReportTimezone,
+} from "@/lib/reports/template-helpers";
 import type { BrandingDTO } from "@/lib/reports/types";
 import { generateQRHtml } from "@/lib/reports/qr-helper";
 
 // fmt usa maximumFractionDigits:0 para montos enteros en este reporte
 const fmt = (n: number) =>
-    new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS", maximumFractionDigits: 0 }).format(Number(n) || 0);
+  new Intl.NumberFormat("es-AR", {
+    style: "currency",
+    currency: "ARS",
+    maximumFractionDigits: 0,
+  }).format(Number(n) || 0);
 
 interface DetalleConsignacion {
-    producto?: { nombre?: string; precioVenta?: number };
-    unitsEntregadas?: number;
-    precioUnitario?: number;
-    descuento?: number;
+  producto?: { nombre?: string; precioVenta?: number };
+  unitsEntregadas?: number;
+  precioUnitario?: number;
+  descuento?: number;
 }
 
 function asDetalles(arr: unknown[]): DetalleConsignacion[] {
-    return arr as DetalleConsignacion[];
+  return arr as DetalleConsignacion[];
 }
 
 type ConsignacionInput = {
-    zonaHoraria: string;
-    detalles?: unknown[];
-    numeroFolio?: number;
-    id?: number;
-    fecha?: Date | string;
-    estado?: string;
-    cliente?: { nombre?: string | null; telefono?: string | null } | null;
+  zonaHoraria: string;
+  detalles?: unknown[];
+  numeroFolio?: number;
+  id?: number;
+  fecha?: Date | string;
+  estado?: string;
+  cliente?: { nombre?: string | null; telefono?: string | null } | null;
 };
 
-export async function buildConsignacionHtml(consignacion: ConsignacionInput, branding: BrandingDTO): Promise<string> {
-    const tz = resolveReportTimezone(consignacion.zonaHoraria);
-    const brandName = branding.businessName || "Comercio";
-    const badge = brandInitials(brandName);
-    const metaLine = [branding.address, branding.phone]
-        .filter((v): v is string => typeof v === "string" && v.trim().length > 0)
-        .map(escapeHtml).join(" · ");
-    const footerText = branding.footerText ? escapeHtml(branding.footerText) : "";
+export async function buildConsignacionHtml(
+  consignacion: ConsignacionInput,
+  branding: BrandingDTO,
+): Promise<string> {
+  const tz = resolveReportTimezone(consignacion.zonaHoraria);
+  const brandName = branding.businessName || "Comercio";
+  const badge = brandInitials(brandName);
+  const metaLine = [branding.address, branding.phone]
+    .filter((v): v is string => typeof v === "string" && v.trim().length > 0)
+    .map(escapeHtml)
+    .join(" · ");
+  const footerText = branding.footerText ? escapeHtml(branding.footerText) : "";
 
-    // Cálculos
-    let totalConsignado = 0;
-    let totalDescuentos = 0;
-    let subtotalSinDescuentos = 0;
-    const itemsHtml = asDetalles(consignacion.detalles || []).map((d: DetalleConsignacion) => {
-        const units = Number(d.unitsEntregadas || 0);
-        const unitPrice = Number(d.precioUnitario || d.producto?.precioVenta || 0);
-        const subtotalBruto = units * unitPrice;
-        const discountItem = Number(d.descuento || 0);
-        const subtotalFinal = subtotalBruto - discountItem;
+  // Cálculos
+  let totalConsignado = 0;
+  let totalDescuentos = 0;
+  let subtotalSinDescuentos = 0;
+  const itemsHtml = asDetalles(consignacion.detalles || [])
+    .map((d: DetalleConsignacion) => {
+      const units = Number(d.unitsEntregadas || 0);
+      const unitPrice = Number(
+        d.precioUnitario || d.producto?.precioVenta || 0,
+      );
+      const subtotalBruto = units * unitPrice;
+      const discountItem = Number(d.descuento || 0);
+      const subtotalFinal = subtotalBruto - discountItem;
 
-        subtotalSinDescuentos += subtotalBruto;
-        totalDescuentos += discountItem;
-        totalConsignado += subtotalFinal;
+      subtotalSinDescuentos += subtotalBruto;
+      totalDescuentos += discountItem;
+      totalConsignado += subtotalFinal;
 
-        return `
+      return `
       <tr style="border-spacing:0 0.4rem;">
         <td class="py-3 pl-4 border-b border-slate-100">
           <div class="font-bold text-slate-800 text-sm">${escapeHtml(d.producto?.nombre ?? "")}</div>
@@ -71,14 +88,27 @@ export async function buildConsignacionHtml(consignacion: ConsignacionInput, bra
         </td>
       </tr>
     `;
-    }).join("");
+    })
+    .join("");
 
-    const qrHtml = await generateQRHtml(`Remito-${consignacion.numeroFolio ?? consignacion.id}`, { size: 70, label: `Folio #${consignacion.numeroFolio ?? consignacion.id}` });
+  const qrHtml = await generateQRHtml(
+    `Remito-${consignacion.numeroFolio ?? consignacion.id}`,
+    {
+      size: 70,
+      label: `Folio #${consignacion.numeroFolio ?? consignacion.id}`,
+    },
+  );
 
-    const ticketNumber = String(consignacion.numeroFolio || consignacion.id).padStart(4, "0");
-    const dateFormatted = formatDateAR(consignacion.fecha ?? new Date(), true, tz);
+  const ticketNumber = String(
+    consignacion.numeroFolio || consignacion.id,
+  ).padStart(4, "0");
+  const dateFormatted = formatDateAR(
+    consignacion.fecha ?? new Date(),
+    true,
+    tz,
+  );
 
-    return `<!DOCTYPE html>
+  return `<!DOCTYPE html>
 <html>
 <head>
   <meta charset="utf-8" />
@@ -116,8 +146,8 @@ export async function buildConsignacionHtml(consignacion: ConsignacionInput, bra
     </div>
     <div class="text-right">
       <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Estado</p>
-      <div class="inline-flex items-center px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider border ${consignacion.estado === 'ABIERTA' ? 'bg-emerald-100 text-emerald-700 border-emerald-200' : 'bg-slate-100 text-slate-600 border-slate-200'}">
-        ${consignacion.estado || 'ABIERTA'}
+      <div class="inline-flex items-center px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider border ${consignacion.estado === "ABIERTA" ? "bg-emerald-100 text-emerald-700 border-emerald-200" : "bg-slate-100 text-slate-600 border-slate-200"}">
+        ${consignacion.estado || "ABIERTA"}
       </div>
     </div>
   </div>
@@ -144,12 +174,16 @@ export async function buildConsignacionHtml(consignacion: ConsignacionInput, bra
         <span class="text-xs font-bold text-slate-500">Subtotal</span>
         <span class="text-sm font-black text-slate-700 money">${fmt(subtotalSinDescuentos)}</span>
       </div>
-      ${totalDescuentos > 0 ? `
+      ${
+        totalDescuentos > 0
+          ? `
       <div class="flex justify-between items-center mb-4">
         <span class="text-xs font-bold text-indigo-500">Descuentos</span>
         <span class="text-sm font-black text-indigo-600 money">- ${fmt(totalDescuentos)}</span>
       </div>
-      ` : ""}
+      `
+          : ""
+      }
       <div class="border-t-2 border-slate-200 pt-3 flex justify-between items-center">
         <span class="text-[10px] font-black uppercase tracking-widest text-slate-400">Total Consignado</span>
         <span class="text-2xl font-black text-emerald-600 money">${fmt(totalConsignado)}</span>
@@ -158,11 +192,15 @@ export async function buildConsignacionHtml(consignacion: ConsignacionInput, bra
   </div>
 
   <!-- QR FOLIO -->
-  ${qrHtml ? `
+  ${
+    qrHtml
+      ? `
   <div style="display:flex; justify-content:center; margin:16px 0 8px; padding:10px 0; border-top:1px solid #f1f5f9;">
     ${qrHtml}
   </div>
-  ` : ""}
+  `
+      : ""
+  }
 
   <!-- FOOTER -->
   <div class="mt-12 pt-6 border-t border-slate-100 flex justify-between items-end">
@@ -171,7 +209,7 @@ export async function buildConsignacionHtml(consignacion: ConsignacionInput, bra
       ${footerText ? `<p class="text-[10px] font-semibold text-slate-400 mt-1">${footerText}</p>` : ""}
     </div>
     <div class="text-right">
-      <p class="text-[10px] font-black text-slate-300 uppercase tracking-widest">${escapeHtml(branding.footerText ?? branding.businessName ?? 'Sistema POS')}</p>
+      <p class="text-[10px] font-black text-slate-300 uppercase tracking-widest">${escapeHtml(branding.footerText ?? branding.businessName ?? "Sistema POS")}</p>
     </div>
   </div>
 

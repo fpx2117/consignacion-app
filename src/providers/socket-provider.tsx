@@ -16,7 +16,14 @@ const SocketContext = createContext<SocketContextType>({
 
 export const useSocket = () => useContext(SocketContext);
 
-const DISABLED_ROUTES = ["/setup", "/login", "/forgot-password", "/reset-password", "/lista", "/x/"];
+const DISABLED_ROUTES = [
+  "/setup",
+  "/login",
+  "/forgot-password",
+  "/reset-password",
+  "/lista",
+  "/x/",
+];
 
 function isPublicRoute(path: string | null): boolean {
   if (!path) return false;
@@ -92,7 +99,10 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
         if (!cancelled) {
           setSocket(null);
           setIsConnected(false);
-          console.error("⚠️ CLIENTE: No se pudo validar sesión para socket", error);
+          console.error(
+            "⚠️ CLIENTE: No se pudo validar sesión para socket",
+            error,
+          );
         }
       }
     };

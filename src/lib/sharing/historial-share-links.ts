@@ -25,12 +25,15 @@ export function getHistorialDefaultYear(): number {
   return new Date().getFullYear();
 }
 
-export function parseHistorialPeriod(id: string, requestUrl: string): HistorialPeriod {
+export function parseHistorialPeriod(
+  id: string,
+  requestUrl: string,
+): HistorialPeriod {
   const searchParams = new URL(requestUrl).searchParams;
   const mes = Number.parseInt(id, 10);
   const anio = Number.parseInt(
     searchParams.get("anio") ?? String(getHistorialDefaultYear()),
-    10
+    10,
   );
 
   return { anio, mes };
@@ -48,12 +51,16 @@ export function isValidHistorialPeriod(period: HistorialPeriod): boolean {
 }
 
 export function encodeHistorialShareTarget(
-  period: HistorialPeriod & { sucursalId: number }
+  period: HistorialPeriod & { sucursalId: number },
 ): number {
-  return period.sucursalId * HISTORIAL_TARGET_FACTOR + period.anio * 100 + period.mes;
+  return (
+    period.sucursalId * HISTORIAL_TARGET_FACTOR + period.anio * 100 + period.mes
+  );
 }
 
-export function decodeHistorialShareTarget(targetId: number): HistorialShareTarget | null {
+export function decodeHistorialShareTarget(
+  targetId: number,
+): HistorialShareTarget | null {
   if (!Number.isInteger(targetId) || targetId < 0) {
     return null;
   }
@@ -62,7 +69,9 @@ export function decodeHistorialShareTarget(targetId: number): HistorialShareTarg
   const periodTarget = isLegacy ? targetId : targetId % HISTORIAL_TARGET_FACTOR;
   const anio = Math.floor(periodTarget / 100);
   const mes = periodTarget % 100;
-  const sucursalId = isLegacy ? null : Math.floor(targetId / HISTORIAL_TARGET_FACTOR);
+  const sucursalId = isLegacy
+    ? null
+    : Math.floor(targetId / HISTORIAL_TARGET_FACTOR);
 
   const decoded = { anio, mes, sucursalId, isLegacy };
   return isValidHistorialPeriod(decoded) ? decoded : null;

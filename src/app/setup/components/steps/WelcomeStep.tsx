@@ -9,9 +9,21 @@ interface WelcomeStepProps {
 }
 
 const FEATURES = [
-  { icon: Zap, label: "Punto de Venta", desc: "Cobros rápidos y control de caja" },
-  { icon: BarChart3, label: "Gestión Completa", desc: "Stock, consignaciones y reportes" },
-  { icon: Shield, label: "Seguro y Confiable", desc: "Datos protegidos en la nube" },
+  {
+    icon: Zap,
+    label: "Punto de Venta",
+    desc: "Cobros rápidos y control de caja",
+  },
+  {
+    icon: BarChart3,
+    label: "Gestión Completa",
+    desc: "Stock, consignaciones y reportes",
+  },
+  {
+    icon: Shield,
+    label: "Seguro y Confiable",
+    desc: "Datos protegidos en la nube",
+  },
 ];
 
 export function WelcomeStep({ onNext }: WelcomeStepProps) {
@@ -47,7 +59,8 @@ export function WelcomeStep({ onNext }: WelcomeStepProps) {
           transition={{ delay: 0.5 }}
           className="text-muted-foreground text-lg md:text-xl font-medium"
         >
-          Configurá tu negocio en unos simples pasos. Todo lo que necesitás para arrancar, en un solo lugar.
+          Configurá tu negocio en unos simples pasos. Todo lo que necesitás para
+          arrancar, en un solo lugar.
         </motion.p>
       </div>
 

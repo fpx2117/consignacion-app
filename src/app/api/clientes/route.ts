@@ -2,7 +2,10 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/auth/require-auth";
 import { createClienteSchema } from "@/lib/validators/cliente";
-import { buildSucursalWhere, isGlobalSucursalView } from "@/lib/security/sucursalScope";
+import {
+  buildSucursalWhere,
+  isGlobalSucursalView,
+} from "@/lib/security/sucursalScope";
 
 export async function GET() {
   const auth = await requireAuth();
@@ -27,7 +30,13 @@ export async function POST(req: Request) {
   const auth = await requireAuth();
   if (!auth.ok) return auth.res;
   if (isGlobalSucursalView(auth)) {
-    return NextResponse.json({ error: "Vista global en modo solo lectura. Selecciona una sucursal para crear clientes." }, { status: 409 });
+    return NextResponse.json(
+      {
+        error:
+          "Vista global en modo solo lectura. Selecciona una sucursal para crear clientes.",
+      },
+      { status: 409 },
+    );
   }
 
   const body = await req.json().catch(() => null);
@@ -36,7 +45,7 @@ export async function POST(req: Request) {
   if (!parsed.success) {
     return NextResponse.json(
       { error: "Validación fallida", details: parsed.error.flatten() },
-      { status: 400 }
+      { status: 400 },
     );
   }
 

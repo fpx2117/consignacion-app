@@ -34,7 +34,9 @@ export function OrderSummary({
       <div className="flex justify-between items-center">
         <span className="text-sm text-[var(--store-muted,#8A8F98)]">
           {template.subtotalLabel}
-          <span className="ml-1 text-xs">({totalItems} {totalItems === 1 ? "producto" : "productos"})</span>
+          <span className="ml-1 text-xs">
+            ({totalItems} {totalItems === 1 ? "producto" : "productos"})
+          </span>
         </span>
         <span className="text-sm font-semibold text-[var(--store-text,#0F172A)]">
           {fmt(subtotal)}

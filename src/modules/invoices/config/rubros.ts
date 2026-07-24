@@ -405,7 +405,10 @@ export function isRubroNegocioSlug(rubro: string | null | undefined): boolean {
 /**
  * Opciones listas para usar en un selector.
  */
-export function getRubrosNegocioOptions(): Array<{ value: string; label: string }> {
+export function getRubrosNegocioOptions(): Array<{
+  value: string;
+  label: string;
+}> {
   return RUBROS_NEGOCIO.map((rubro) => ({
     value: rubro.slug,
     label: rubro.label,

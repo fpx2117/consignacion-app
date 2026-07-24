@@ -9,6 +9,7 @@ El objetivo es que la rentabilidad refleje el precio final con descuento cuando 
 ## Alcance
 
 ### Dentro del Alcance
+
 - Corregir el cálculo de rentabilidad en el diálogo de **creación** de producto (`create-producto-dialog.tsx`) para que use el precio con descuento como base cuando corresponda.
 - Corregir el cálculo de rentabilidad en el diálogo de **edición** de producto (`edit-producto-dialog.tsx`) para que use el precio con descuento como base cuando corresponda.
 - Ajustar la validación de `esGananciaNegativa` (que deshabilita el botón de guardar) para que también considere el precio con descuento.
@@ -16,6 +17,7 @@ El objetivo es que la rentabilidad refleje el precio final con descuento cuando 
 - Mantener el preview de precio final existente (ya funciona correctamente, como complemento visual).
 
 ### Fuera del Alcance
+
 - NO se modifica la lógica de KPIs del dashboard (`kpi-logic.ts`) — esa usa datos reales de ventas, no proyecciones.
 - NO se modifica la lógica de rentabilidad en el reporte de inventario PDF — es un margen potencial basado en precio de lista.
 - NO se modifica el cálculo de rentabilidad en la tabla de productos (`productos-view.tsx`) — es un vistazo rápido sin contexto de descuento.
@@ -24,6 +26,7 @@ El objetivo es que la rentabilidad refleje el precio final con descuento cuando 
 ## Enfoque
 
 En ambos diálogos, la lógica actual es:
+
 ```typescript
 const pv = toNumber(precioVenta) || 0;
 const pc = toNumber(precioCosto) || 0;
@@ -32,6 +35,7 @@ const margenPorcentaje = pv > 0 ? (gananciaUnitaria / pv) * 100 : 0;
 ```
 
 Se DEBE modificar para que, cuando el descuento esté activo y tenga un valor válido:
+
 1. Calcular `precioEfectivo` = precio con descuento aplicado (misma fórmula del preview ya existente).
 2. Calcular `gananciaUnitaria` = `precioEfectivo - pc`.
 3. Calcular `margenPorcentaje` = `(gananciaUnitaria / precioEfectivo) * 100`.
@@ -41,22 +45,23 @@ Se DEBE reutilizar la misma lógica de cálculo de precio final que ya existe en
 
 ## Áreas Afectadas
 
-| Área | Impacto | Descripción |
-|------|---------|-------------|
+| Área                                                            | Impacto    | Descripción                                                                        |
+| --------------------------------------------------------------- | ---------- | ---------------------------------------------------------------------------------- |
 | `src/app/(...)/productos/components/create-producto-dialog.tsx` | Modificado | Ajustar cálculo de rentabilidad (líneas 142-146) y validación `esGananciaNegativa` |
-| `src/app/(...)/productos/components/edit-producto-dialog.tsx` | Modificado | Ajustar cálculo de rentabilidad (líneas 167-171) y validación `esGananciaNegativa` |
+| `src/app/(...)/productos/components/edit-producto-dialog.tsx`   | Modificado | Ajustar cálculo de rentabilidad (líneas 167-171) y validación `esGananciaNegativa` |
 
 ## Riesgos
 
-| Riesgo | Probabilidad | Mitigación |
-|--------|--------------|------------|
-| El precio con descuento caiga por debajo del costo → ganancia negativa no detectada correctamente | Baja | La validación `esGananciaNegativa` se ajusta para usar el precio efectivo, bloqueando el guardado si la ganancia es negativa |
-| Comportamiento inconsistente entre create y edit | Baja | Se aplica exactamente la misma lógica en ambos componentes |
-| Confusión del usuario al ver rentabilidad más baja | Media | Se agrega una etiqueta visual "con descuento" para dejar claro que la rentabilidad refleja el precio descontado |
+| Riesgo                                                                                            | Probabilidad | Mitigación                                                                                                                   |
+| ------------------------------------------------------------------------------------------------- | ------------ | ---------------------------------------------------------------------------------------------------------------------------- |
+| El precio con descuento caiga por debajo del costo → ganancia negativa no detectada correctamente | Baja         | La validación `esGananciaNegativa` se ajusta para usar el precio efectivo, bloqueando el guardado si la ganancia es negativa |
+| Comportamiento inconsistente entre create y edit                                                  | Baja         | Se aplica exactamente la misma lógica en ambos componentes                                                                   |
+| Confusión del usuario al ver rentabilidad más baja                                                | Media        | Se agrega una etiqueta visual "con descuento" para dejar claro que la rentabilidad refleja el precio descontado              |
 
 ## Plan de Reversión (Rollback)
 
 Si el cambio causa confusión o problemas:
+
 1. Revertir el commit (`git revert`).
 2. Los archivos modificados son solo 2 componentes cliente; ningún cambio en API, BD ni modelos.
 3. Tiempo estimado de rollback: < 2 minutos.

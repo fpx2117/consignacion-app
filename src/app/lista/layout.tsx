@@ -4,6 +4,10 @@ export const metadata: Metadata = {
   title: "Catálogo online",
 };
 
-export default function ListaLayout({ children }: { children: React.ReactNode }) {
+export default function ListaLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return <>{children}</>;
 }

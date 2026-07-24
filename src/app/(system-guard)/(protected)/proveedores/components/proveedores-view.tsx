@@ -80,7 +80,9 @@ export function ProveedoresView() {
 
   const toggleStatus = async (proveedor: Proveedor) => {
     try {
-      await apiService.updateProveedor(proveedor.id, { activo: !proveedor.activo });
+      await apiService.updateProveedor(proveedor.id, {
+        activo: !proveedor.activo,
+      });
       load();
     } catch (error) {
       console.error(error);
@@ -112,21 +114,30 @@ export function ProveedoresView() {
       transition={{ duration: 0.2 }}
     >
       <Card className="group h-full rounded-[2rem] border-border/50 bg-card hover:bg-muted/30 hover:shadow-xl transition-all duration-300 overflow-hidden relative">
-        <div className={`absolute top-0 left-0 w-full h-1 ${p.activo ? "bg-[color:var(--status-success-strong)]" : "bg-[color:var(--status-warning)]"} opacity-50`} />
+        <div
+          className={`absolute top-0 left-0 w-full h-1 ${p.activo ? "bg-[color:var(--status-success-strong)]" : "bg-[color:var(--status-warning)]"} opacity-50`}
+        />
 
         <CardContent className="p-6 flex flex-col h-full gap-4">
           {/* Header */}
           <div className="flex justify-between items-start">
             <div className="flex items-center gap-3">
               <Avatar className="h-14 w-14 border-2 border-background shadow-md">
-                <AvatarFallback className={`font-black text-lg ${p.activo ? 'bg-[color:var(--status-success-strong)] text-[color:var(--status-success-strong)]' : 'bg-[color:var(--status-warning)] text-[color:var(--status-warning)]'}`}>
+                <AvatarFallback
+                  className={`font-black text-lg ${p.activo ? "bg-[color:var(--status-success-strong)] text-[color:var(--status-success-strong)]" : "bg-[color:var(--status-warning)] text-[color:var(--status-warning)]"}`}
+                >
                   {getInitials(p.nombre)}
                 </AvatarFallback>
               </Avatar>
               <div>
-                <h3 className="font-bold text-lg leading-tight line-clamp-1">{p.nombre}</h3>
+                <h3 className="font-bold text-lg leading-tight line-clamp-1">
+                  {p.nombre}
+                </h3>
                 <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
-                  <Badge variant="outline" className={`h-5 border-0 px-1.5 ${p.activo ? "bg-[color:var(--status-success-strong)]/10 text-[color:var(--status-success-strong)]" : "bg-[color:var(--status-warning)]/10 text-[color:var(--status-warning)]"}`}>
+                  <Badge
+                    variant="outline"
+                    className={`h-5 border-0 px-1.5 ${p.activo ? "bg-[color:var(--status-success-strong)]/10 text-[color:var(--status-success-strong)]" : "bg-[color:var(--status-warning)]/10 text-[color:var(--status-warning)]"}`}
+                  >
                     {p.activo ? "Activo" : "Inactivo"}
                   </Badge>
                 </p>
@@ -134,7 +145,11 @@ export function ProveedoresView() {
             </div>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-8 w-8 -mr-2 rounded-full">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 -mr-2 rounded-full"
+                >
                   <MoreHorizontal className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
@@ -146,8 +161,15 @@ export function ProveedoresView() {
                     <Eye className="mr-2 h-4 w-4" /> Ver Facturas
                   </DropdownMenuItem>
                 </Link>
-                <DropdownMenuItem onClick={() => toggleStatus(p)} className="cursor-pointer">
-                  {p.activo ? <UserX className="mr-2 h-4 w-4" /> : <CheckCircle2 className="mr-2 h-4 w-4" />}
+                <DropdownMenuItem
+                  onClick={() => toggleStatus(p)}
+                  className="cursor-pointer"
+                >
+                  {p.activo ? (
+                    <UserX className="mr-2 h-4 w-4" />
+                  ) : (
+                    <CheckCircle2 className="mr-2 h-4 w-4" />
+                  )}
                   {p.activo ? "Desactivar" : "Activar"}
                 </DropdownMenuItem>
               </DropdownMenuContent>
@@ -159,7 +181,9 @@ export function ProveedoresView() {
             <div className="grid grid-cols-1 gap-2 text-sm">
               <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/40 text-muted-foreground">
                 <Hash className="h-4 w-4 shrink-0" />
-                <span className="truncate font-mono">{p.cuit || "Sin CUIT"}</span>
+                <span className="truncate font-mono">
+                  {p.cuit || "Sin CUIT"}
+                </span>
               </div>
               <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/40 text-muted-foreground">
                 <Coins className="h-4 w-4 shrink-0" />
@@ -171,16 +195,27 @@ export function ProveedoresView() {
           {/* Footer Actions */}
           <div className="flex items-center gap-2 pt-2 mt-auto border-t border-border/40">
             <Link href={`/proveedores/${p.id}`} className="flex-1">
-              <Button variant="default" className="w-full rounded-xl bg-primary/10 text-primary hover:bg-primary hover:text-primary-foreground font-bold shadow-none">
+              <Button
+                variant="default"
+                className="w-full rounded-xl bg-primary/10 text-primary hover:bg-primary hover:text-primary-foreground font-bold shadow-none"
+              >
                 Ver Facturas
               </Button>
             </Link>
 
-            <EditProveedorDialog proveedor={p} onUpdated={load} trigger={
-              <Button variant="ghost" size="icon" className="rounded-xl text-muted-foreground bg-muted hover:bg-foreground hover:text-background">
-                <Pencil className="h-4 w-4" />
-              </Button>
-            } />
+            <EditProveedorDialog
+              proveedor={p}
+              onUpdated={load}
+              trigger={
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="rounded-xl text-muted-foreground bg-muted hover:bg-foreground hover:text-background"
+                >
+                  <Pencil className="h-4 w-4" />
+                </Button>
+              }
+            />
           </div>
         </CardContent>
       </Card>
@@ -214,10 +249,16 @@ export function ProveedoresView() {
 
       <Tabs defaultValue="proveedores" className="w-full">
         <TabsList className="h-11 rounded-2xl bg-muted/50 p-1">
-          <TabsTrigger value="proveedores" className="rounded-xl px-5 gap-2 data-[state=active]:shadow-sm">
+          <TabsTrigger
+            value="proveedores"
+            className="rounded-xl px-5 gap-2 data-[state=active]:shadow-sm"
+          >
             <Truck className="h-4 w-4" /> Proveedores
           </TabsTrigger>
-          <TabsTrigger value="facturas" className="rounded-xl px-5 gap-2 data-[state=active]:shadow-sm">
+          <TabsTrigger
+            value="facturas"
+            className="rounded-xl px-5 gap-2 data-[state=active]:shadow-sm"
+          >
             <FileText className="h-4 w-4" /> Facturas
           </TabsTrigger>
         </TabsList>
@@ -247,9 +288,15 @@ export function ProveedoresView() {
                   animate={{ opacity: 1, y: 0 }}
                   className="flex flex-col items-center justify-center py-20 text-center space-y-4 opacity-50"
                 >
-                  <div className="bg-muted/50 p-6 rounded-full"><Truck className="h-12 w-12 text-muted-foreground" /></div>
-                  <h3 className="text-xl font-bold">No se encontraron proveedores</h3>
-                  <p className="text-sm">Crea tu primer proveedor o ajusta los filtros.</p>
+                  <div className="bg-muted/50 p-6 rounded-full">
+                    <Truck className="h-12 w-12 text-muted-foreground" />
+                  </div>
+                  <h3 className="text-xl font-bold">
+                    No se encontraron proveedores
+                  </h3>
+                  <p className="text-sm">
+                    Crea tu primer proveedor o ajusta los filtros.
+                  </p>
                 </motion.div>
               ) : (
                 <>
@@ -330,10 +377,11 @@ export function ProveedoresView() {
                               <TableCell>
                                 <Badge
                                   variant="outline"
-                                  className={`h-6 px-2.5 rounded-md font-bold text-[10px] border-0 transition-all ${p.activo
-                                    ? "bg-[color:var(--status-success-strong)]/10 text-[color:var(--status-success-strong)] group-hover:bg-[color:var(--status-success-strong)]/20"
-                                    : "bg-[color:var(--status-warning)]/10 text-[color:var(--status-warning)] group-hover:bg-[color:var(--status-warning)]/20"
-                                    }`}
+                                  className={`h-6 px-2.5 rounded-md font-bold text-[10px] border-0 transition-all ${
+                                    p.activo
+                                      ? "bg-[color:var(--status-success-strong)]/10 text-[color:var(--status-success-strong)] group-hover:bg-[color:var(--status-success-strong)]/20"
+                                      : "bg-[color:var(--status-warning)]/10 text-[color:var(--status-warning)] group-hover:bg-[color:var(--status-warning)]/20"
+                                  }`}
                                 >
                                   {p.activo ? "ACTIVO" : "INACTIVO"}
                                 </Badge>
@@ -372,7 +420,11 @@ export function ProveedoresView() {
                                       toggleStatus(p);
                                     }}
                                   >
-                                    {p.activo ? <UserX className="h-4 w-4" /> : <CheckCircle2 className="h-4 w-4" />}
+                                    {p.activo ? (
+                                      <UserX className="h-4 w-4" />
+                                    ) : (
+                                      <CheckCircle2 className="h-4 w-4" />
+                                    )}
                                   </Button>
                                 </div>
                               </TableCell>

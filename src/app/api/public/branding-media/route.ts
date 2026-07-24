@@ -38,7 +38,10 @@ export async function GET(req: Request) {
   });
 
   if (!branding) {
-    return NextResponse.json({ error: "Branding no encontrado" }, { status: 404 });
+    return NextResponse.json(
+      { error: "Branding no encontrado" },
+      { status: 404 },
+    );
   }
 
   let body: Buffer | null = null;
@@ -72,7 +75,8 @@ export async function GET(req: Request) {
     status: 200,
     headers: {
       "Content-Type": contentType,
-      "Cache-Control": "public, max-age=3600, s-maxage=86400, stale-while-revalidate=604800",
+      "Cache-Control":
+        "public, max-age=3600, s-maxage=86400, stale-while-revalidate=604800",
       "Content-Length": String(body.byteLength),
     },
   });

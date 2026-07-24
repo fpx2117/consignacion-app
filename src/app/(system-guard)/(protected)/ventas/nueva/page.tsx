@@ -2,7 +2,17 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { BadgePercent, Banknote, Barcode, Coins, CreditCard, Loader2, Lock, QrCode, UserCircle2 } from "lucide-react";
+import {
+  BadgePercent,
+  Banknote,
+  Barcode,
+  Coins,
+  CreditCard,
+  Loader2,
+  Lock,
+  QrCode,
+  UserCircle2,
+} from "lucide-react";
 import { toast } from "sonner";
 
 import { ErrorDialog } from "@/components/feedback/error-dialog";
@@ -10,11 +20,22 @@ import { ShiftEndAlert } from "@/components/shift/shift-end-alert";
 import { SuccessDialog } from "@/components/feedback/success-dialog";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 // Note: Button/Input/Minus/Plus still used in the descuento dialog below
 import { apiService } from "@/lib/apiService";
-import type { Cliente, CreateVentaDirectaInput, DescuentoNivel, MetodoPago } from "@/lib/types";
+import type {
+  Cliente,
+  CreateVentaDirectaInput,
+  DescuentoNivel,
+  MetodoPago,
+} from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { useSucursalStore } from "@/store/useSucursalStore";
 
@@ -41,7 +62,8 @@ export default function NuevaVentaPage() {
 
   const [productos, setProductos] = React.useState<ProductoConStock[]>([]);
   const [clientes, setClientes] = React.useState<Cliente[]>([]);
-  const [porcentajeInteresTarjeta, setPorcentajeInteresTarjeta] = React.useState(0);
+  const [porcentajeInteresTarjeta, setPorcentajeInteresTarjeta] =
+    React.useState(0);
 
   // Estado de paginación de productos
   const [productosPage, setProductosPage] = React.useState(1);
@@ -49,7 +71,9 @@ export default function NuevaVentaPage() {
   const [productosLoading, setProductosLoading] = React.useState(false);
   const [searchQuery, setSearchQuery] = React.useState("");
 
-  const [selectedClienteId, setSelectedClienteId] = React.useState<number | "">("");
+  const [selectedClienteId, setSelectedClienteId] = React.useState<number | "">(
+    "",
+  );
   const [metodoPago, setMetodoPago] = React.useState<MetodoPago>("EFECTIVO");
 
   const [openClienteModal, setOpenClienteModal] = React.useState(false);
@@ -61,11 +85,19 @@ export default function NuevaVentaPage() {
   const [error, setError] = React.useState<string | null>(null);
 
   const [showSuccessDialog, setShowSuccessDialog] = React.useState(false);
-  const [createdVentaId, setCreatedVentaId] = React.useState<number | null>(null);
-  const [errorDialog, setErrorDialog] = React.useState({ open: false, title: "", description: "" });
+  const [createdVentaId, setCreatedVentaId] = React.useState<number | null>(
+    null,
+  );
+  const [errorDialog, setErrorDialog] = React.useState({
+    open: false,
+    title: "",
+    description: "",
+  });
 
   const [openDescuento, setOpenDescuento] = React.useState(false);
-  const [descuentoTipo, setDescuentoTipo] = React.useState<"MONTO" | "PORCENTAJE">("MONTO");
+  const [descuentoTipo, setDescuentoTipo] = React.useState<
+    "MONTO" | "PORCENTAJE"
+  >("MONTO");
   const [descuentoValor, setDescuentoValor] = React.useState<string>("");
   const [descuentoAplicado, setDescuentoAplicado] = React.useState<{
     tipo: "MONTO" | "PORCENTAJE";
@@ -75,12 +107,12 @@ export default function NuevaVentaPage() {
   const [usaCajaEstricta, setUsaCajaEstricta] = React.useState(true);
   const [cajaAbierta, setCajaAbierta] = React.useState<boolean | null>(null);
   const [verificandoCaja, setVerificandoCaja] = React.useState(true);
-  const [horarioFin, setHorarioFin] = React.useState<string | undefined>(undefined);
+  const [horarioFin, setHorarioFin] = React.useState<string | undefined>(
+    undefined,
+  );
 
   const barcodeBuffer = React.useRef("");
   const lastKeyTime = React.useRef(0);
-
-
 
   const fetchProductosPaginados = React.useCallback(
     async (page: number, search: string) => {
@@ -88,7 +120,9 @@ export default function NuevaVentaPage() {
       try {
         // Aseguramos que el hook de sucursal esté hidratado antes de buscar
         if (!activeSucursalId) {
-          console.warn("activeSucursalId no está definido, usando sucursal por defecto 1");
+          console.warn(
+            "activeSucursalId no está definido, usando sucursal por defecto 1",
+          );
         }
         const res = await apiService.getProductosPaginados({
           page,
@@ -96,7 +130,9 @@ export default function NuevaVentaPage() {
           search: search || undefined,
           scope: "branch-stock",
         });
-        const activos = (res.data ?? []).filter((p) => p.activo !== false) as ProductoConStock[];
+        const activos = (res.data ?? []).filter(
+          (p) => p.activo !== false,
+        ) as ProductoConStock[];
         setProductos(activos);
         setProductosTotalPages(res.totalPages ?? 1);
         setProductosPage(res.page ?? 1);
@@ -107,7 +143,7 @@ export default function NuevaVentaPage() {
         setProductosLoading(false);
       }
     },
-    [activeSucursalId]
+    [activeSucursalId],
   );
 
   const fetchData = React.useCallback(async () => {
@@ -151,7 +187,8 @@ export default function NuevaVentaPage() {
       setError(null);
 
       const stockDisponible = product.stockDisponibleUnits ?? 9999;
-      const currentInCart = cart.find((item) => item.producto.id === product.id)?.quantity ?? 0;
+      const currentInCart =
+        cart.find((item) => item.producto.id === product.id)?.quantity ?? 0;
 
       if (stockDisponible <= 0) {
         setErrorDialog({
@@ -175,7 +212,9 @@ export default function NuevaVentaPage() {
         const exists = previous.find((item) => item.producto.id === product.id);
         if (exists) {
           return previous.map((item) =>
-            item.producto.id === product.id ? { ...item, quantity: item.quantity + quantityToAdd } : item,
+            item.producto.id === product.id
+              ? { ...item, quantity: item.quantity + quantityToAdd }
+              : item,
           );
         }
         return [...previous, { producto: product, quantity: quantityToAdd }];
@@ -191,7 +230,9 @@ export default function NuevaVentaPage() {
 
       if (buscandoBarcode) return;
 
-      const product = productos.find((producto) => producto.codigoBarra?.trim() === normalizedCode);
+      const product = productos.find(
+        (producto) => producto.codigoBarra?.trim() === normalizedCode,
+      );
       if (product) {
         addToCart(product, 1);
         toast.success(`Escaneado: ${product.nombre}`);
@@ -201,14 +242,20 @@ export default function NuevaVentaPage() {
       setBuscandoBarcode(true);
 
       try {
-        const productoBackend = await apiService.getProductoPorBarcode(normalizedCode);
+        const productoBackend =
+          await apiService.getProductoPorBarcode(normalizedCode);
         const productoRemoto = productoBackend as ProductoConStock;
 
         setProductos((previous) => {
-          const existingIndex = previous.findIndex((item) => item.id === productoRemoto.id);
+          const existingIndex = previous.findIndex(
+            (item) => item.id === productoRemoto.id,
+          );
           if (existingIndex >= 0) {
             const updated = [...previous];
-            updated[existingIndex] = { ...updated[existingIndex], ...productoRemoto };
+            updated[existingIndex] = {
+              ...updated[existingIndex],
+              ...productoRemoto,
+            };
             return updated;
           }
           return [productoRemoto, ...previous];
@@ -226,7 +273,9 @@ export default function NuevaVentaPage() {
             : "No se pudo buscar el producto en este momento.";
 
         const notFound = /no encontrado/i.test(message);
-        toast.error(notFound ? `Producto no encontrado: ${normalizedCode}` : message);
+        toast.error(
+          notFound ? `Producto no encontrado: ${normalizedCode}` : message,
+        );
       } finally {
         setBuscandoBarcode(false);
       }
@@ -235,7 +284,9 @@ export default function NuevaVentaPage() {
   );
 
   const removeItem = (productId: number) => {
-    setCart((previous) => previous.filter((item) => item.producto.id !== productId));
+    setCart((previous) =>
+      previous.filter((item) => item.producto.id !== productId),
+    );
   };
 
   const handleCobrar = async () => {
@@ -246,7 +297,8 @@ export default function NuevaVentaPage() {
 
     setLoading(true);
     try {
-      const finalClienteId = selectedClienteId === "" ? null : Number(selectedClienteId);
+      const finalClienteId =
+        selectedClienteId === "" ? null : Number(selectedClienteId);
       const payload: CreateVentaDirectaInput = {
         clienteId: finalClienteId,
         items: cart.map((item) => {
@@ -254,15 +306,18 @@ export default function NuevaVentaPage() {
           let discountForItem = 0;
 
           if (item.producto.descuentoEfectivo) {
-            discountForItem = item.producto.descuentoEfectivo.montoDescuento * item.quantity;
+            discountForItem =
+              item.producto.descuentoEfectivo.montoDescuento * item.quantity;
           } else {
             const subcategoryId = item.producto.subcategoriaId;
             if (subcategoryId) {
               const totalSubQty = subcategoryQtyMap.get(subcategoryId) ?? 0;
-              const subDescuentos = item.producto.subcategoria?.descuentos as DescuentoNivel[] | null | undefined;
+              const subDescuentos = item.producto.subcategoria?.descuentos as
+                DescuentoNivel[] | null | undefined;
               const best = getBestDiscount(subDescuentos, totalSubQty);
               if (best) {
-                discountForItem = precio * item.quantity * (best.porcentaje / 100);
+                discountForItem =
+                  precio * item.quantity * (best.porcentaje / 100);
               }
             }
           }
@@ -354,7 +409,16 @@ export default function NuevaVentaPage() {
   React.useEffect(() => {
     if (usaCajaEstricta && !cajaAbierta) return;
 
-    const POS_FKEYS = new Set(["F1", "F2", "F3", "F4", "F5", "F6", "F7", "Delete"]);
+    const POS_FKEYS = new Set([
+      "F1",
+      "F2",
+      "F3",
+      "F4",
+      "F5",
+      "F6",
+      "F7",
+      "Delete",
+    ]);
 
     const handleFunctionKeys = (e: KeyboardEvent) => {
       if (!POS_FKEYS.has(e.key)) return;
@@ -387,7 +451,12 @@ export default function NuevaVentaPage() {
           if (!isTyping) setOpenDescuento(true);
           break;
         case "F6":
-          if (!isTyping && cart.length > 0 && !loading && activeSucursalId !== 0) {
+          if (
+            !isTyping &&
+            cart.length > 0 &&
+            !loading &&
+            activeSucursalId !== 0
+          ) {
             handleCobrar();
           }
           break;
@@ -403,27 +472,32 @@ export default function NuevaVentaPage() {
 
     // capture:true → se ejecuta en la fase de captura, antes que cualquier handler del DOM
     window.addEventListener("keydown", handleFunctionKeys, { capture: true });
-    return () => window.removeEventListener("keydown", handleFunctionKeys, { capture: true });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    return () =>
+      window.removeEventListener("keydown", handleFunctionKeys, {
+        capture: true,
+      });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cajaAbierta, usaCajaEstricta, cart.length, loading, activeSucursalId]);
 
-
-
-  const updateQuantity = React.useCallback((productId: number, delta: number) => {
-    setCart((previous) =>
-      previous
-        .map((item) => {
-          if (item.producto.id !== productId) return item;
-          const newQty = item.quantity + delta;
-          // Si llega a 0 o menos, lo eliminamos
-          if (newQty <= 0) return null;
-          // No superar el stock disponible
-          const maxStock = item.producto.stockDisponibleUnits ?? 9999;
-          return { ...item, quantity: Math.min(newQty, maxStock) };
-        })
-        .filter(Boolean) as CartItem[]
-    );
-  }, []);
+  const updateQuantity = React.useCallback(
+    (productId: number, delta: number) => {
+      setCart(
+        (previous) =>
+          previous
+            .map((item) => {
+              if (item.producto.id !== productId) return item;
+              const newQty = item.quantity + delta;
+              // Si llega a 0 o menos, lo eliminamos
+              if (newQty <= 0) return null;
+              // No superar el stock disponible
+              const maxStock = item.producto.stockDisponibleUnits ?? 9999;
+              return { ...item, quantity: Math.min(newQty, maxStock) };
+            })
+            .filter(Boolean) as CartItem[],
+      );
+    },
+    [],
+  );
 
   const setQuantity = React.useCallback((productId: number, qty: number) => {
     setCart((previous) =>
@@ -431,12 +505,17 @@ export default function NuevaVentaPage() {
         if (item.producto.id !== productId) return item;
         const maxStock = item.producto.stockDisponibleUnits ?? 9999;
         return { ...item, quantity: Math.min(Math.max(1, qty), maxStock) };
-      })
+      }),
     );
   }, []);
 
   const totalSinInteres = React.useMemo(
-    () => cart.reduce((accumulator, current) => accumulator + Number(current.producto.precioVenta) * current.quantity, 0),
+    () =>
+      cart.reduce(
+        (accumulator, current) =>
+          accumulator + Number(current.producto.precioVenta) * current.quantity,
+        0,
+      ),
     [cart],
   );
 
@@ -465,8 +544,11 @@ export default function NuevaVentaPage() {
       }
 
       const subcategoryId = item.producto.subcategoriaId;
-      const totalSubQty = subcategoryId ? (subcategoryQtyMap.get(subcategoryId) ?? 0) : 0;
-      const descuentos = item.producto.subcategoria?.descuentos as DescuentoNivel[] | null | undefined;
+      const totalSubQty = subcategoryId
+        ? (subcategoryQtyMap.get(subcategoryId) ?? 0)
+        : 0;
+      const descuentos = item.producto.subcategoria?.descuentos as
+        DescuentoNivel[] | null | undefined;
       const best = getBestDiscount(descuentos, totalSubQty);
       const next = getNextDiscount(descuentos, totalSubQty);
 
@@ -488,7 +570,10 @@ export default function NuevaVentaPage() {
 
         // Descuento de catálogo del producto (porcentaje o monto fijo)
         if (item.producto.descuentoEfectivo) {
-          return accumulator + item.producto.descuentoEfectivo.montoDescuento * item.quantity;
+          return (
+            accumulator +
+            item.producto.descuentoEfectivo.montoDescuento * item.quantity
+          );
         }
 
         // Descuento por tiers de subcategoría
@@ -496,7 +581,8 @@ export default function NuevaVentaPage() {
         if (!subcategoryId) return accumulator;
 
         const totalSubQty = subcategoryQtyMap.get(subcategoryId) ?? 0;
-        const subDescuentos = item.producto.subcategoria?.descuentos as DescuentoNivel[] | null | undefined;
+        const subDescuentos = item.producto.subcategoria?.descuentos as
+          DescuentoNivel[] | null | undefined;
         const best = getBestDiscount(subDescuentos, totalSubQty);
 
         if (!best) return accumulator;
@@ -521,7 +607,10 @@ export default function NuevaVentaPage() {
   }, [descuentoAplicado, subtotalNetoItems]);
 
   const montoInteres =
-    metodoPago === "TARJETA" ? (subtotalNetoItems - montoDescuentoGlobal) * (porcentajeInteresTarjeta / 100) : 0;
+    metodoPago === "TARJETA"
+      ? (subtotalNetoItems - montoDescuentoGlobal) *
+        (porcentajeInteresTarjeta / 100)
+      : 0;
 
   const totalAmount = subtotalNetoItems - montoDescuentoGlobal + montoInteres;
 
@@ -534,11 +623,16 @@ export default function NuevaVentaPage() {
     const hasComma = cleaned.includes(",");
     const [integerRaw, decimalRaw = ""] = cleaned.split(",");
     const integerNormalized = integerRaw.replace(/^0+(?=\d)/, "") || "0";
-    const integerFormatted = integerNormalized.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+    const integerFormatted = integerNormalized.replace(
+      /\B(?=(\d{3})+(?!\d))/g,
+      ".",
+    );
     const decimalLimited = decimalRaw.replace(/,/g, "").slice(0, 2);
 
     if (hasComma) {
-      return decimalLimited.length > 0 ? `${integerFormatted},${decimalLimited}` : `${integerFormatted},`;
+      return decimalLimited.length > 0
+        ? `${integerFormatted},${decimalLimited}`
+        : `${integerFormatted},`;
     }
 
     return integerFormatted;
@@ -550,11 +644,19 @@ export default function NuevaVentaPage() {
     if (firstComma === -1) {
       return cleaned;
     }
-    return cleaned.slice(0, firstComma + 1) + cleaned.slice(firstComma + 1).replace(/,/g, "");
+    return (
+      cleaned.slice(0, firstComma + 1) +
+      cleaned.slice(firstComma + 1).replace(/,/g, "")
+    );
   }, []);
 
   const parseMontoArs = React.useCallback((value: string) => {
-    const cleaned = value.trim().replace(/\$/g, "").replace(/\s+/g, "").replace(/\./g, "").replace(",", ".");
+    const cleaned = value
+      .trim()
+      .replace(/\$/g, "")
+      .replace(/\s+/g, "")
+      .replace(/\./g, "")
+      .replace(",", ".");
     const parsed = Number(cleaned);
     return Number.isFinite(parsed) ? parsed : Number.NaN;
   }, []);
@@ -576,8 +678,16 @@ export default function NuevaVentaPage() {
     }
 
     const parsed = parsePorcentaje(descuentoValor);
-    return Number.isFinite(parsed) && parsed > 0 ? subtotalNetoItems * (parsed / 100) : 0;
-  }, [descuentoTipo, descuentoValor, parseMontoArs, parsePorcentaje, subtotalNetoItems]);
+    return Number.isFinite(parsed) && parsed > 0
+      ? subtotalNetoItems * (parsed / 100)
+      : 0;
+  }, [
+    descuentoTipo,
+    descuentoValor,
+    parseMontoArs,
+    parsePorcentaje,
+    subtotalNetoItems,
+  ]);
 
   const handleReset = () => {
     setCart([]);
@@ -602,7 +712,9 @@ export default function NuevaVentaPage() {
       return;
     }
 
-    const cliente = clientes.find((item) => item.id === Number(selectedClienteId));
+    const cliente = clientes.find(
+      (item) => item.id === Number(selectedClienteId),
+    );
     const phone = cliente?.telefono ?? "";
     const name = cliente?.nombre ?? "Cliente";
 
@@ -611,7 +723,10 @@ export default function NuevaVentaPage() {
   };
 
   const clientesFiltrados = React.useMemo(
-    () => clientes.filter((cliente) => !cliente.nombre.toLowerCase().includes("consumidor final")),
+    () =>
+      clientes.filter(
+        (cliente) => !cliente.nombre.toLowerCase().includes("consumidor final"),
+      ),
     [clientes],
   );
 
@@ -627,9 +742,18 @@ export default function NuevaVentaPage() {
 
   if (verificandoCaja) {
     return (
-      <div className="h-[100dvh] flex flex-col items-center justify-center bg-background" role="status" aria-live="polite">
-        <Loader2 className="h-10 w-10 animate-spin text-primary mb-4" aria-hidden="true" />
-        <p className="text-muted-foreground font-medium">Sincronizando sesion...</p>
+      <div
+        className="h-[100dvh] flex flex-col items-center justify-center bg-background"
+        role="status"
+        aria-live="polite"
+      >
+        <Loader2
+          className="h-10 w-10 animate-spin text-primary mb-4"
+          aria-hidden="true"
+        />
+        <p className="text-muted-foreground font-medium">
+          Sincronizando sesion...
+        </p>
       </div>
     );
   }
@@ -638,14 +762,25 @@ export default function NuevaVentaPage() {
     return (
       <main className="h-[100dvh] flex flex-col items-center justify-center bg-background px-4 text-center">
         <div className="h-24 w-24 bg-muted/50 rounded-full flex items-center justify-center mb-6 border shadow-sm">
-          <Lock className="h-10 w-10 text-muted-foreground" aria-hidden="true" />
+          <Lock
+            className="h-10 w-10 text-muted-foreground"
+            aria-hidden="true"
+          />
         </div>
-        <h1 className="text-2xl font-black text-foreground tracking-tight mb-2">Caja Cerrada</h1>
+        <h1 className="text-2xl font-black text-foreground tracking-tight mb-2">
+          Caja Cerrada
+        </h1>
         <p className="text-muted-foreground max-w-sm mb-8 text-sm leading-relaxed">
-          Para comenzar a vender, primero debes abrir tu turno de caja y declarar el fondo inicial.
+          Para comenzar a vender, primero debes abrir tu turno de caja y
+          declarar el fondo inicial.
         </p>
         <div className="flex gap-3 w-full max-w-xs">
-          <Button type="button" variant="outline" className="flex-1 h-12 rounded-xl" onClick={() => router.back()}>
+          <Button
+            type="button"
+            variant="outline"
+            className="flex-1 h-12 rounded-xl"
+            onClick={() => router.back()}
+          >
             Volver
           </Button>
           <Button
@@ -670,17 +805,27 @@ export default function NuevaVentaPage() {
       />
 
       {activeSucursalId === 0 && (
-        <Alert variant="destructive" className="mx-4 mt-2 rounded-xl border-dashed bg-[color:var(--status-danger)]/10 text-[color:var(--status-danger)]">
+        <Alert
+          variant="destructive"
+          className="mx-4 mt-2 rounded-xl border-dashed bg-[color:var(--status-danger)]/10 text-[color:var(--status-danger)]"
+        >
           <AlertDescription className="flex items-center gap-2 font-bold text-center justify-center">
             <Lock className="h-4 w-4" aria-hidden="true" />
-            Ventas deshabilitadas en &quot;Vista General&quot;. Selecciona una sucursal especifica arriba.
+            Ventas deshabilitadas en &quot;Vista General&quot;. Selecciona una
+            sucursal especifica arriba.
           </AlertDescription>
         </Alert>
       )}
 
       <main className="flex-1 flex overflow-hidden" aria-label="Flujo de venta">
-        <section className="flex-1 flex flex-col min-h-0 relative bg-background" aria-label="Carga de ticket">
-          <section className="shrink-0 p-3 space-y-3 bg-card/30 border-b z-10 shadow-sm" aria-label="Controles de venta">
+        <section
+          className="flex-1 flex flex-col min-h-0 relative bg-background"
+          aria-label="Carga de ticket"
+        >
+          <section
+            className="shrink-0 p-3 space-y-3 bg-card/30 border-b z-10 shadow-sm"
+            aria-label="Controles de venta"
+          >
             {error && (
               <Alert variant="destructive" className="py-2 rounded-xl">
                 <AlertDescription>{error}</AlertDescription>
@@ -688,7 +833,6 @@ export default function NuevaVentaPage() {
             )}
 
             <div className="flex gap-2">
-
               {/* Botón cliente — tamaño fijo compacto en todos los breakpoints */}
               <button
                 type="button"
@@ -697,7 +841,7 @@ export default function NuevaVentaPage() {
                   "flex items-center gap-1.5 h-10 px-2.5 rounded-xl border font-bold transition-all shrink-0 max-w-[110px]",
                   isClienteRegistrado
                     ? "bg-primary/10 border-primary/40 text-primary hover:bg-primary/15"
-                    : "bg-muted/20 border-border/50 text-muted-foreground hover:bg-muted/40 hover:text-foreground"
+                    : "bg-muted/20 border-border/50 text-muted-foreground hover:bg-muted/40 hover:text-foreground",
                 )}
                 aria-label="Seleccionar cliente (F7)"
               >
@@ -715,12 +859,20 @@ export default function NuevaVentaPage() {
                 aria-label="Buscar producto (F1)"
               >
                 {buscandoBarcode ? (
-                  <Loader2 className="h-4 w-4 text-primary animate-spin shrink-0" aria-hidden="true" />
+                  <Loader2
+                    className="h-4 w-4 text-primary animate-spin shrink-0"
+                    aria-hidden="true"
+                  />
                 ) : (
-                  <Barcode className="h-4 w-4 text-primary animate-pulse shrink-0" aria-hidden="true" />
+                  <Barcode
+                    className="h-4 w-4 text-primary animate-pulse shrink-0"
+                    aria-hidden="true"
+                  />
                 )}
                 <span className="flex-1 text-left truncate text-[11px] sm:text-sm">
-                  {buscandoBarcode ? "Buscando producto..." : "Escanear o buscar..."}
+                  {buscandoBarcode
+                    ? "Buscando producto..."
+                    : "Escanear o buscar..."}
                 </span>
                 <span className="hidden md:inline-flex items-center justify-center h-5 px-1.5 rounded border border-border bg-muted text-[9px] font-black font-mono text-muted-foreground shrink-0">
                   F1
@@ -740,12 +892,22 @@ export default function NuevaVentaPage() {
             </div>
 
             <p className="text-[11px] text-muted-foreground px-1">
-              Podés usar scanner físico tipo teclado o abrir la cámara para buscar y agregar un producto por código de barras.
+              Podés usar scanner físico tipo teclado o abrir la cámara para
+              buscar y agregar un producto por código de barras.
             </p>
           </section>
 
-          <section className="flex-1 overflow-y-auto p-3 bg-muted/5" aria-label="Listado de carrito">
-            <CartList cart={cart} getDiscountInfo={getDiscountMeta} onRemoveItem={removeItem} onUpdateQuantity={updateQuantity} onSetQuantity={setQuantity} />
+          <section
+            className="flex-1 overflow-y-auto p-3 bg-muted/5"
+            aria-label="Listado de carrito"
+          >
+            <CartList
+              cart={cart}
+              getDiscountInfo={getDiscountMeta}
+              onRemoveItem={removeItem}
+              onUpdateQuantity={updateQuantity}
+              onSetQuantity={setQuantity}
+            />
           </section>
         </section>
 
@@ -785,7 +947,10 @@ export default function NuevaVentaPage() {
       </div>
 
       {usaCajaEstricta && cajaAbierta && (
-        <ShiftEndAlert horaFin={horarioFin} onExtender={(nuevaHora) => setHorarioFin(nuevaHora)} />
+        <ShiftEndAlert
+          horaFin={horarioFin}
+          onExtender={(nuevaHora) => setHorarioFin(nuevaHora)}
+        />
       )}
 
       <SuccessDialog
@@ -797,7 +962,10 @@ export default function NuevaVentaPage() {
         title="Venta Exitosa"
         description={
           <span className="text-center block text-muted-foreground mt-2 font-medium">
-            Total: <span className="text-primary font-black text-xl ml-1">{formatCurrency(totalAmount)}</span>
+            Total:{" "}
+            <span className="text-primary font-black text-xl ml-1">
+              {formatCurrency(totalAmount)}
+            </span>
           </span>
         }
         confirmText="Nueva Venta"
@@ -806,7 +974,9 @@ export default function NuevaVentaPage() {
 
       <ErrorDialog
         open={errorDialog.open}
-        onOpenChange={(isOpen) => setErrorDialog((previous) => ({ ...previous, open: isOpen }))}
+        onOpenChange={(isOpen) =>
+          setErrorDialog((previous) => ({ ...previous, open: isOpen }))
+        }
         title={errorDialog.title}
         description={errorDialog.description}
       />
@@ -846,10 +1016,17 @@ export default function NuevaVentaPage() {
         <DialogContent className="sm:max-w-xs md:max-w-sm rounded-2xl border-border/60 bg-background">
           <DialogHeader className="space-y-3">
             <div className="inline-flex w-fit items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-3 py-1">
-              <BadgePercent className="h-3.5 w-3.5 text-primary" aria-hidden="true" />
-              <span className="text-[11px] font-semibold uppercase tracking-wide text-primary">Promocion</span>
+              <BadgePercent
+                className="h-3.5 w-3.5 text-primary"
+                aria-hidden="true"
+              />
+              <span className="text-[11px] font-semibold uppercase tracking-wide text-primary">
+                Promocion
+              </span>
             </div>
-            <DialogTitle className="text-xl font-black tracking-tight">Descuento General</DialogTitle>
+            <DialogTitle className="text-xl font-black tracking-tight">
+              Descuento General
+            </DialogTitle>
           </DialogHeader>
 
           <div className="space-y-4 py-2">
@@ -859,7 +1036,8 @@ export default function NuevaVentaPage() {
                 variant={descuentoTipo === "MONTO" ? "default" : "outline"}
                 className={cn(
                   "h-10 rounded-lg",
-                  descuentoTipo === "MONTO" && "bg-primary hover:bg-primary/90 text-primary-foreground border-primary",
+                  descuentoTipo === "MONTO" &&
+                    "bg-primary hover:bg-primary/90 text-primary-foreground border-primary",
                 )}
                 onClick={() => {
                   setDescuentoTipo("MONTO");
@@ -873,11 +1051,14 @@ export default function NuevaVentaPage() {
                 variant={descuentoTipo === "PORCENTAJE" ? "default" : "outline"}
                 className={cn(
                   "h-10 rounded-lg",
-                  descuentoTipo === "PORCENTAJE" && "bg-primary hover:bg-primary/90 text-primary-foreground",
+                  descuentoTipo === "PORCENTAJE" &&
+                    "bg-primary hover:bg-primary/90 text-primary-foreground",
                 )}
                 onClick={() => {
                   setDescuentoTipo("PORCENTAJE");
-                  setDescuentoValor((previous) => sanitizePorcentajeInput(previous));
+                  setDescuentoValor((previous) =>
+                    sanitizePorcentajeInput(previous),
+                  );
                 }}
               >
                 Porcentaje (%)
@@ -893,20 +1074,28 @@ export default function NuevaVentaPage() {
                 onChange={(event) => {
                   const nextValue = event.target.value;
                   setDescuentoValor(
-                    descuentoTipo === "MONTO" ? formatMontoInput(nextValue) : sanitizePorcentajeInput(nextValue),
+                    descuentoTipo === "MONTO"
+                      ? formatMontoInput(nextValue)
+                      : sanitizePorcentajeInput(nextValue),
                   );
                 }}
                 className="text-lg font-bold text-center h-12 border-border/70 bg-background/80 focus-visible:ring-primary"
                 aria-label="Valor del descuento"
               />
               {descuentoTipo === "PORCENTAJE" && (
-                <p className="text-xs text-muted-foreground text-center">Usa coma para decimales: ej. 10,5</p>
+                <p className="text-xs text-muted-foreground text-center">
+                  Usa coma para decimales: ej. 10,5
+                </p>
               )}
             </div>
 
             <div className="rounded-xl border border-primary/30 bg-primary/10 px-3 py-2 text-sm flex items-center justify-between">
-              <span className="font-semibold text-primary">Descuento estimado</span>
-              <span className="font-black text-primary">- {formatCurrency(descuentoPreview)}</span>
+              <span className="font-semibold text-primary">
+                Descuento estimado
+              </span>
+              <span className="font-black text-primary">
+                - {formatCurrency(descuentoPreview)}
+              </span>
             </div>
 
             {descuentoAplicado && (
@@ -930,7 +1119,10 @@ export default function NuevaVentaPage() {
               type="button"
               className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-bold h-11 rounded-xl"
               onClick={() => {
-                const value = descuentoTipo === "MONTO" ? parseMontoArs(descuentoValor) : parsePorcentaje(descuentoValor);
+                const value =
+                  descuentoTipo === "MONTO"
+                    ? parseMontoArs(descuentoValor)
+                    : parsePorcentaje(descuentoValor);
                 if (!Number.isNaN(value) && value > 0) {
                   setDescuentoAplicado({ tipo: descuentoTipo, valor: value });
                 } else {

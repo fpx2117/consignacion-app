@@ -6,13 +6,19 @@ import { isGlobalSucursalView } from "@/lib/security/sucursalScope";
 
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
   // Auth: Requiere usuario autenticado
   const auth = await requireAuth();
   if (!auth.ok) return auth.res;
   if (isGlobalSucursalView(auth)) {
-    return NextResponse.json({ error: "Vista global en modo solo lectura. Selecciona una sucursal para editar subcategorías." }, { status: 409 });
+    return NextResponse.json(
+      {
+        error:
+          "Vista global en modo solo lectura. Selecciona una sucursal para editar subcategorías.",
+      },
+      { status: 409 },
+    );
   }
 
   try {
@@ -24,7 +30,7 @@ export async function PATCH(
     if (!nombre) {
       return NextResponse.json(
         { error: "El nombre es obligatorio" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -32,7 +38,7 @@ export async function PATCH(
       where: { id },
       data: {
         nombre: nombre?.trim(),
-        ...(descuentos !== undefined && { descuentos })
+        ...(descuentos !== undefined && { descuentos }),
       },
     });
 
@@ -43,20 +49,26 @@ export async function PATCH(
   } catch {
     return NextResponse.json(
       { error: "Error al actualizar la subcategoría" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
 
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
   // Auth: Requiere usuario autenticado
   const auth = await requireAuth();
   if (!auth.ok) return auth.res;
   if (isGlobalSucursalView(auth)) {
-    return NextResponse.json({ error: "Vista global en modo solo lectura. Selecciona una sucursal para eliminar subcategorías." }, { status: 409 });
+    return NextResponse.json(
+      {
+        error:
+          "Vista global en modo solo lectura. Selecciona una sucursal para eliminar subcategorías.",
+      },
+      { status: 409 },
+    );
   }
 
   try {
@@ -75,7 +87,7 @@ export async function DELETE(
     console.error("Delete subcategory error:", err);
     return NextResponse.json(
       { error: "Error al eliminar la subcategoría" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

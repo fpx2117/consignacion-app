@@ -12,7 +12,10 @@ export async function GET() {
   const auth = await requireAuth();
   if (!auth.ok) return auth.res;
   if (!requireRole(auth.user, ["ADMIN"])) {
-    return NextResponse.json({ ok: false, error: "No autorizado" }, { status: 403 });
+    return NextResponse.json(
+      { ok: false, error: "No autorizado" },
+      { status: 403 },
+    );
   }
 
   try {
@@ -32,7 +35,10 @@ export async function GET() {
 
     return NextResponse.json({ ok: true, data: usuarios });
   } catch {
-    return NextResponse.json({ ok: false, error: "Error al obtener usuarios" }, { status: 500 });
+    return NextResponse.json(
+      { ok: false, error: "Error al obtener usuarios" },
+      { status: 500 },
+    );
   }
 }
 
@@ -42,7 +48,10 @@ export async function POST(req: Request) {
   const auth = await requireAuth();
   if (!auth.ok) return auth.res;
   if (!requireRole(auth.user, ["ADMIN"])) {
-    return NextResponse.json({ ok: false, error: "No autorizado" }, { status: 403 });
+    return NextResponse.json(
+      { ok: false, error: "No autorizado" },
+      { status: 403 },
+    );
   }
 
   try {
@@ -50,7 +59,10 @@ export async function POST(req: Request) {
     const { nombre, email, password, rol, sucursalId, zonaHoraria } = body;
 
     if (!nombre || !email || !password || !rol) {
-      return NextResponse.json({ ok: false, error: "Faltan campos obligatorios" }, { status: 400 });
+      return NextResponse.json(
+        { ok: false, error: "Faltan campos obligatorios" },
+        { status: 400 },
+      );
     }
 
     const normalizedEmail = String(email).trim().toLowerCase();
@@ -58,18 +70,29 @@ export async function POST(req: Request) {
     // Validate password strength server-side
     const pwCheck = validatePasswordStrength(password);
     if (!pwCheck.valid) {
-      return NextResponse.json({ ok: false, error: pwCheck.errors.join(". ") }, { status: 400 });
+      return NextResponse.json(
+        { ok: false, error: pwCheck.errors.join(". ") },
+        { status: 400 },
+      );
     }
 
     // Guard: Verificar límite de usuarios del plan
     const userCheck = await checkUserLimit();
     if (!userCheck.allowed) {
-      return NextResponse.json({ ok: false, error: userCheck.message, limitReached: true }, { status: 403 });
+      return NextResponse.json(
+        { ok: false, error: userCheck.message, limitReached: true },
+        { status: 403 },
+      );
     }
 
-    const existe = await prisma.usuario.findUnique({ where: { email: normalizedEmail } });
+    const existe = await prisma.usuario.findUnique({
+      where: { email: normalizedEmail },
+    });
     if (existe) {
-      return NextResponse.json({ ok: false, error: "Ya existe un usuario con este correo" }, { status: 400 });
+      return NextResponse.json(
+        { ok: false, error: "Ya existe un usuario con este correo" },
+        { status: 400 },
+      );
     }
 
     const salt = await bcrypt.genSalt(10);
@@ -83,14 +106,26 @@ export async function POST(req: Request) {
         rol,
         sucursalId: sucursalId ? Number(sucursalId) : 1,
         zonaHoraria: typeof zonaHoraria === "string" ? zonaHoraria : null,
-        activo: true
+        activo: true,
       },
-      select: { id: true, nombre: true, email: true, rol: true, sucursalId: true, zonaHoraria: true, activo: true, createdAt: true },
+      select: {
+        id: true,
+        nombre: true,
+        email: true,
+        rol: true,
+        sucursalId: true,
+        zonaHoraria: true,
+        activo: true,
+        createdAt: true,
+      },
     });
 
     return NextResponse.json({ ok: true, data: nuevoUsuario });
   } catch {
-    return NextResponse.json({ ok: false, error: "Error al crear usuario" }, { status: 500 });
+    return NextResponse.json(
+      { ok: false, error: "Error al crear usuario" },
+      { status: 500 },
+    );
   }
 }
 
@@ -100,7 +135,10 @@ export async function PUT(req: Request) {
   const auth = await requireAuth();
   if (!auth.ok) return auth.res;
   if (!requireRole(auth.user, ["ADMIN"])) {
-    return NextResponse.json({ ok: false, error: "No autorizado" }, { status: 403 });
+    return NextResponse.json(
+      { ok: false, error: "No autorizado" },
+      { status: 403 },
+    );
   }
 
   try {
@@ -108,15 +146,23 @@ export async function PUT(req: Request) {
     const { id, nombre, email, password, rol, sucursalId, zonaHoraria } = body;
 
     if (!id || !nombre || !email || !rol) {
-      return NextResponse.json({ ok: false, error: "Faltan campos obligatorios" }, { status: 400 });
+      return NextResponse.json(
+        { ok: false, error: "Faltan campos obligatorios" },
+        { status: 400 },
+      );
     }
 
     const normalizedEmail = String(email).trim().toLowerCase();
     const numericId = Number(id);
 
-    const existe = await prisma.usuario.findUnique({ where: { email: normalizedEmail } });
+    const existe = await prisma.usuario.findUnique({
+      where: { email: normalizedEmail },
+    });
     if (existe && existe.id !== numericId) {
-      return NextResponse.json({ ok: false, error: "El correo ya está en uso por otro usuario" }, { status: 400 });
+      return NextResponse.json(
+        { ok: false, error: "El correo ya está en uso por otro usuario" },
+        { status: 400 },
+      );
     }
 
     const dataToUpdate: Prisma.UsuarioUncheckedUpdateInput = {
@@ -131,7 +177,10 @@ export async function PUT(req: Request) {
       // Validate password strength server-side
       const pwCheck = validatePasswordStrength(password);
       if (!pwCheck.valid) {
-        return NextResponse.json({ ok: false, error: pwCheck.errors.join(". ") }, { status: 400 });
+        return NextResponse.json(
+          { ok: false, error: pwCheck.errors.join(". ") },
+          { status: 400 },
+        );
       }
       const salt = await bcrypt.genSalt(10);
       dataToUpdate.hash = await bcrypt.hash(password, salt);
@@ -140,12 +189,24 @@ export async function PUT(req: Request) {
     const usuarioActualizado = await prisma.usuario.update({
       where: { id: numericId },
       data: dataToUpdate,
-      select: { id: true, nombre: true, email: true, rol: true, sucursalId: true, zonaHoraria: true, activo: true, createdAt: true },
+      select: {
+        id: true,
+        nombre: true,
+        email: true,
+        rol: true,
+        sucursalId: true,
+        zonaHoraria: true,
+        activo: true,
+        createdAt: true,
+      },
     });
 
     return NextResponse.json({ ok: true, data: usuarioActualizado });
   } catch {
-    return NextResponse.json({ ok: false, error: "Error al actualizar usuario" }, { status: 500 });
+    return NextResponse.json(
+      { ok: false, error: "Error al actualizar usuario" },
+      { status: 500 },
+    );
   }
 }
 
@@ -155,7 +216,10 @@ export async function DELETE(req: Request) {
   const auth = await requireAuth();
   if (!auth.ok) return auth.res;
   if (!requireRole(auth.user, ["ADMIN"])) {
-    return NextResponse.json({ ok: false, error: "No autorizado" }, { status: 403 });
+    return NextResponse.json(
+      { ok: false, error: "No autorizado" },
+      { status: 403 },
+    );
   }
 
   try {
@@ -163,7 +227,10 @@ export async function DELETE(req: Request) {
     const id = searchParams.get("id");
 
     if (!id) {
-      return NextResponse.json({ ok: false, error: "Falta el ID del usuario" }, { status: 400 });
+      return NextResponse.json(
+        { ok: false, error: "Falta el ID del usuario" },
+        { status: 400 },
+      );
     }
 
     await prisma.usuario.delete({
@@ -172,6 +239,9 @@ export async function DELETE(req: Request) {
 
     return NextResponse.json({ ok: true, message: "Usuario eliminado" });
   } catch {
-    return NextResponse.json({ ok: false, error: "Error al eliminar usuario" }, { status: 500 });
+    return NextResponse.json(
+      { ok: false, error: "Error al eliminar usuario" },
+      { status: 500 },
+    );
   }
 }

@@ -41,18 +41,18 @@ const PRODUCT_IMAGE_ALLOWED_TYPES = [
     extensions: ["webp"],
     mimeTypes: ["image/webp"],
     sniff: (buffer: Buffer) =>
-      buffer.length >= 12
-      && buffer.subarray(0, 4).equals(WEBP_RIFF_SIGNATURE)
-      && buffer.subarray(8, 12).equals(WEBP_SIGNATURE),
+      buffer.length >= 12 &&
+      buffer.subarray(0, 4).equals(WEBP_RIFF_SIGNATURE) &&
+      buffer.subarray(8, 12).equals(WEBP_SIGNATURE),
   },
   {
     canonicalExtension: "gif",
     extensions: ["gif"],
     mimeTypes: ["image/gif"],
     sniff: (buffer: Buffer) =>
-      buffer.length >= 6
-      && (buffer.subarray(0, 6).equals(GIF87A_SIGNATURE)
-        || buffer.subarray(0, 6).equals(GIF89A_SIGNATURE)),
+      buffer.length >= 6 &&
+      (buffer.subarray(0, 6).equals(GIF87A_SIGNATURE) ||
+        buffer.subarray(0, 6).equals(GIF89A_SIGNATURE)),
   },
 ] satisfies readonly AllowedUploadType[];
 
@@ -94,13 +94,18 @@ const SERVABLE_EXTENSIONS = new Set(
 // accesible sin autenticación para quien adivine el nombre de archivo.
 export function getFacturaProveedorStorageDir(): string {
   if (process.env.UPLOAD_DIR) {
-    return path.join(path.resolve(process.env.UPLOAD_DIR), "facturas-proveedor");
+    return path.join(
+      path.resolve(process.env.UPLOAD_DIR),
+      "facturas-proveedor",
+    );
   }
   return path.join(process.cwd(), "storage", "facturas-proveedor");
 }
 
-const OPAQUE_UPLOAD_FILENAME_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\.(jpg|png|webp|gif)$/i;
-const LEGACY_API_UPLOAD_FILENAME_REGEX = /^\d{13}-[a-z0-9][a-z0-9._-]{0,180}\.(jpg|jpeg|png|webp|gif)$/i;
+const OPAQUE_UPLOAD_FILENAME_REGEX =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\.(jpg|png|webp|gif)$/i;
+const LEGACY_API_UPLOAD_FILENAME_REGEX =
+  /^\d{13}-[a-z0-9][a-z0-9._-]{0,180}\.(jpg|jpeg|png|webp|gif)$/i;
 
 export type UploadValidationSuccess = {
   ok: true;
@@ -114,7 +119,8 @@ export type UploadValidationFailure = {
   status: 400 | 413 | 415;
 };
 
-export type UploadValidationResult = UploadValidationSuccess | UploadValidationFailure;
+export type UploadValidationResult =
+  UploadValidationSuccess | UploadValidationFailure;
 
 export type ServableUploadResource = {
   ok: true;
@@ -177,13 +183,19 @@ export function getUploadUrl(filename: string): string {
   return `/api/files/${filename}`;
 }
 
-export function resolveServableUploadResource(segments: string[]): ServableUploadResource | RejectedUploadResource {
+export function resolveServableUploadResource(
+  segments: string[],
+): ServableUploadResource | RejectedUploadResource {
   if (segments.length !== 1) {
     return { ok: false };
   }
 
   const candidate = segments[0]?.trim();
-  if (!candidate || (!isOpaqueUploadFilename(candidate) && !isLegacyApiUploadFilename(candidate))) {
+  if (
+    !candidate ||
+    (!isOpaqueUploadFilename(candidate) &&
+      !isLegacyApiUploadFilename(candidate))
+  ) {
     return { ok: false };
   }
 
@@ -239,7 +251,9 @@ export function validateUploadCandidate(input: {
     };
   }
 
-  const allowedType = policy.allowedTypes.find((entry) => entry.extensions.includes(extension));
+  const allowedType = policy.allowedTypes.find((entry) =>
+    entry.extensions.includes(extension),
+  );
   if (!allowedType) {
     return {
       ok: false,
@@ -249,7 +263,10 @@ export function validateUploadCandidate(input: {
   }
 
   const normalizedMimeType = declaredMimeType.trim().toLowerCase();
-  if (!normalizedMimeType || !allowedType.mimeTypes.includes(normalizedMimeType)) {
+  if (
+    !normalizedMimeType ||
+    !allowedType.mimeTypes.includes(normalizedMimeType)
+  ) {
     return {
       ok: false,
       error: "El MIME declarado no coincide con una politica permitida",
@@ -279,17 +296,28 @@ export function resolveStoredUploadPathFromUrl(url: string): string | null {
 
   if (url.startsWith("/api/files/")) {
     const filename = url.slice("/api/files/".length);
-    if (!isOpaqueUploadFilename(filename) && !isLegacyApiUploadFilename(filename)) {
+    if (
+      !isOpaqueUploadFilename(filename) &&
+      !isLegacyApiUploadFilename(filename)
+    ) {
       return null;
     }
 
     const candidates = resolveUploadFilesystemCandidates(filename);
-    return candidates.find((candidate) => existsSync(candidate)) ?? candidates[0] ?? null;
+    return (
+      candidates.find((candidate) => existsSync(candidate)) ??
+      candidates[0] ??
+      null
+    );
   }
 
   if (url.startsWith("/uploads/")) {
     const filename = url.slice("/uploads/".length);
-    if (!/^[a-z0-9][a-z0-9._-]*$/i.test(filename) || filename.includes("/") || filename.includes("\\")) {
+    if (
+      !/^[a-z0-9][a-z0-9._-]*$/i.test(filename) ||
+      filename.includes("/") ||
+      filename.includes("\\")
+    ) {
       return null;
     }
 
@@ -300,7 +328,10 @@ export function resolveStoredUploadPathFromUrl(url: string): string | null {
 }
 
 function getNormalizedExtension(originalFilename: string): string | null {
-  const rawExtension = path.extname(originalFilename).replace(/^\./, "").toLowerCase();
+  const rawExtension = path
+    .extname(originalFilename)
+    .replace(/^\./, "")
+    .toLowerCase();
   return rawExtension || null;
 }
 

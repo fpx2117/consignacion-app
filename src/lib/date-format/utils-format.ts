@@ -38,24 +38,35 @@ export function formatDateWithOptions(
   return formatWithTimezone(date, options, tz, emptyValue);
 }
 
-export function formatDate(date: string | Date | null | undefined, tz = TECHNICAL_FALLBACK_TZ) {
-  return formatDateWithOptions(date, {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-  }, tz);
+export function formatDate(
+  date: string | Date | null | undefined,
+  tz = TECHNICAL_FALLBACK_TZ,
+) {
+  return formatDateWithOptions(
+    date,
+    {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+    },
+    tz,
+  );
 }
 
 export function formatDateTime(
   date: string | Date | null | undefined,
   tz = TECHNICAL_FALLBACK_TZ,
 ) {
-  return formatDateWithOptions(date, {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-  }, tz);
+  return formatDateWithOptions(
+    date,
+    {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    },
+    tz,
+  );
 }

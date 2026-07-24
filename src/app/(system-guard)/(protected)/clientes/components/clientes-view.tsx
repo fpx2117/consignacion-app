@@ -126,21 +126,30 @@ export function ClientesView() {
       transition={{ duration: 0.2 }}
     >
       <Card className="group h-full rounded-[2rem] border-border/50 bg-card hover:bg-muted/30 hover:shadow-xl transition-all duration-300 overflow-hidden relative">
-        <div className={`absolute top-0 left-0 w-full h-1 ${c.activo ? "bg-[color:var(--status-success-strong)]" : "bg-[color:var(--status-warning)]"} opacity-50`} />
+        <div
+          className={`absolute top-0 left-0 w-full h-1 ${c.activo ? "bg-[color:var(--status-success-strong)]" : "bg-[color:var(--status-warning)]"} opacity-50`}
+        />
 
         <CardContent className="p-6 flex flex-col h-full gap-4">
           {/* Header */}
           <div className="flex justify-between items-start">
             <div className="flex items-center gap-3">
               <Avatar className="h-14 w-14 border-2 border-background shadow-md">
-                <AvatarFallback className={`font-black text-lg ${c.activo ? 'bg-[color:var(--status-success-strong)] text-[color:var(--status-success-strong)]' : 'bg-[color:var(--status-warning)] text-[color:var(--status-warning)]'}`}>
+                <AvatarFallback
+                  className={`font-black text-lg ${c.activo ? "bg-[color:var(--status-success-strong)] text-[color:var(--status-success-strong)]" : "bg-[color:var(--status-warning)] text-[color:var(--status-warning)]"}`}
+                >
                   {getInitials(c.nombre)}
                 </AvatarFallback>
               </Avatar>
               <div>
-                <h3 className="font-bold text-lg leading-tight line-clamp-1">{c.nombre}</h3>
+                <h3 className="font-bold text-lg leading-tight line-clamp-1">
+                  {c.nombre}
+                </h3>
                 <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
-                  <Badge variant="outline" className={`h-5 border-0 px-1.5 ${c.activo ? "bg-[color:var(--status-success-strong)]/10 text-[color:var(--status-success-strong)]" : "bg-[color:var(--status-warning)]/10 text-[color:var(--status-warning)]"}`}>
+                  <Badge
+                    variant="outline"
+                    className={`h-5 border-0 px-1.5 ${c.activo ? "bg-[color:var(--status-success-strong)]/10 text-[color:var(--status-success-strong)]" : "bg-[color:var(--status-warning)]/10 text-[color:var(--status-warning)]"}`}
+                  >
                     {c.activo ? "Activo" : "Inactivo"}
                   </Badge>
                 </p>
@@ -148,7 +157,11 @@ export function ClientesView() {
             </div>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-8 w-8 -mr-2 rounded-full">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 -mr-2 rounded-full"
+                >
                   <MoreHorizontal className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
@@ -160,8 +173,15 @@ export function ClientesView() {
                     <Eye className="mr-2 h-4 w-4" /> Ver Detalles
                   </DropdownMenuItem>
                 </Link>
-                <DropdownMenuItem onClick={() => toggleStatus(c)} className="cursor-pointer">
-                  {c.activo ? <UserX className="mr-2 h-4 w-4" /> : <CheckCircle2 className="mr-2 h-4 w-4" />}
+                <DropdownMenuItem
+                  onClick={() => toggleStatus(c)}
+                  className="cursor-pointer"
+                >
+                  {c.activo ? (
+                    <UserX className="mr-2 h-4 w-4" />
+                  ) : (
+                    <CheckCircle2 className="mr-2 h-4 w-4" />
+                  )}
                   {c.activo ? "Desactivar" : "Activar"}
                 </DropdownMenuItem>
               </DropdownMenuContent>
@@ -177,7 +197,9 @@ export function ClientesView() {
               </div>
               <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/40 text-muted-foreground">
                 <Phone className="h-4 w-4 shrink-0" />
-                <span className="truncate font-mono">{c.telefono || "Sin teléfono"}</span>
+                <span className="truncate font-mono">
+                  {c.telefono || "Sin teléfono"}
+                </span>
               </div>
             </div>
           </div>
@@ -185,24 +207,43 @@ export function ClientesView() {
           {/* Footer Actions */}
           <div className="flex items-center gap-2 pt-2 mt-auto border-t border-border/40">
             <Link href={`/clientes/${c.id}`} className="flex-1">
-              <Button variant="default" className="w-full rounded-xl bg-primary/10 text-primary hover:bg-primary hover:text-primary-foreground font-bold shadow-none">
+              <Button
+                variant="default"
+                className="w-full rounded-xl bg-primary/10 text-primary hover:bg-primary hover:text-primary-foreground font-bold shadow-none"
+              >
                 Ver Perfil
               </Button>
             </Link>
 
             <div className="flex gap-1">
               {c.telefono && (
-                <Button variant="ghost" size="icon" asChild className="rounded-xl text-[color:var(--status-success-strong)] bg-[color:var(--status-success-strong)]/10 hover:bg-[color:var(--status-success-strong)] hover:text-[color:var(--ui-fx-white)]">
-                  <a href={`https://wa.me/${c.telefono.replace(/\D/g, '')}`} target="_blank">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  asChild
+                  className="rounded-xl text-[color:var(--status-success-strong)] bg-[color:var(--status-success-strong)]/10 hover:bg-[color:var(--status-success-strong)] hover:text-[color:var(--ui-fx-white)]"
+                >
+                  <a
+                    href={`https://wa.me/${c.telefono.replace(/\D/g, "")}`}
+                    target="_blank"
+                  >
                     <MessageCircle className="h-4 w-4" />
                   </a>
                 </Button>
               )}
-              <EditClienteDialog cliente={c} onUpdated={load} trigger={
-                <Button variant="ghost" size="icon" className="rounded-xl text-muted-foreground bg-muted hover:bg-foreground hover:text-background">
-                  <Pencil className="h-4 w-4" />
-                </Button>
-              } />
+              <EditClienteDialog
+                cliente={c}
+                onUpdated={load}
+                trigger={
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="rounded-xl text-muted-foreground bg-muted hover:bg-foreground hover:text-background"
+                  >
+                    <Pencil className="h-4 w-4" />
+                  </Button>
+                }
+              />
             </div>
           </div>
         </CardContent>
@@ -258,9 +299,13 @@ export function ClientesView() {
               animate={{ opacity: 1, y: 0 }}
               className="flex flex-col items-center justify-center py-20 text-center space-y-4 opacity-50"
             >
-              <div className="bg-muted/50 p-6 rounded-full"><UserX className="h-12 w-12 text-muted-foreground" /></div>
+              <div className="bg-muted/50 p-6 rounded-full">
+                <UserX className="h-12 w-12 text-muted-foreground" />
+              </div>
               <h3 className="text-xl font-bold">No se encontraron clientes</h3>
-              <p className="text-sm">Prueba ajustando los filtros de búsqueda.</p>
+              <p className="text-sm">
+                Prueba ajustando los filtros de búsqueda.
+              </p>
             </motion.div>
           ) : (
             <>
@@ -338,7 +383,7 @@ export function ClientesView() {
                                 <a
                                   href={`https://wa.me/${c.telefono.replace(
                                     /\D/g,
-                                    ""
+                                    "",
                                   )}`}
                                   target="_blank"
                                   className="text-[color:var(--status-success-strong)] hover:scale-110 transition-transform opacity-0 group-hover:opacity-100"
@@ -355,10 +400,11 @@ export function ClientesView() {
                           <TableCell>
                             <Badge
                               variant="outline"
-                              className={`h-6 px-2.5 rounded-md font-bold text-[10px] border-0 transition-all ${c.activo
-                                ? "bg-[color:var(--status-success-strong)]/10 text-[color:var(--status-success-strong)] group-hover:bg-[color:var(--status-success-strong)]/20"
-                                : "bg-[color:var(--status-warning)]/10 text-[color:var(--status-warning)] group-hover:bg-[color:var(--status-warning)]/20"
-                                }`}
+                              className={`h-6 px-2.5 rounded-md font-bold text-[10px] border-0 transition-all ${
+                                c.activo
+                                  ? "bg-[color:var(--status-success-strong)]/10 text-[color:var(--status-success-strong)] group-hover:bg-[color:var(--status-success-strong)]/20"
+                                  : "bg-[color:var(--status-warning)]/10 text-[color:var(--status-warning)] group-hover:bg-[color:var(--status-warning)]/20"
+                              }`}
                             >
                               {c.activo ? "ACTIVO" : "INACTIVO"}
                             </Badge>
@@ -397,7 +443,11 @@ export function ClientesView() {
                                   toggleStatus(c);
                                 }}
                               >
-                                {c.activo ? <UserX className="h-4 w-4" /> : <CheckCircle2 className="h-4 w-4" />}
+                                {c.activo ? (
+                                  <UserX className="h-4 w-4" />
+                                ) : (
+                                  <CheckCircle2 className="h-4 w-4" />
+                                )}
                               </Button>
                             </div>
                           </TableCell>

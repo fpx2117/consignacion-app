@@ -10,7 +10,9 @@ import {
 } from "@/lib/security/auth-security-monitor";
 import type { AuthRateLimitDecision } from "@/lib/security/auth-rate-limit";
 
-function buildAllowedDecision(endpoint: AuthRateLimitDecision["endpoint"]): AuthRateLimitDecision {
+function buildAllowedDecision(
+  endpoint: AuthRateLimitDecision["endpoint"],
+): AuthRateLimitDecision {
   return {
     allowed: true,
     endpoint,
@@ -22,7 +24,9 @@ function buildAllowedDecision(endpoint: AuthRateLimitDecision["endpoint"]): Auth
   };
 }
 
-function buildBlockedDecision(endpoint: AuthRateLimitDecision["endpoint"]): AuthRateLimitDecision {
+function buildBlockedDecision(
+  endpoint: AuthRateLimitDecision["endpoint"],
+): AuthRateLimitDecision {
   return {
     allowed: false,
     endpoint,
@@ -48,30 +52,33 @@ function buildBlockedDecision(endpoint: AuthRateLimitDecision["endpoint"]): Auth
 test("handlePostLogin devuelve 429 seguro cuando el rate limit bloquea el intento", async () => {
   let lookedUpUser = false;
 
-  const response = await handlePostLogin(new Request("http://localhost/api/auth/login", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email: "ana@example.com", password: "secreto" }),
-  }), {
-    findUserByEmail: async () => {
-      lookedUpUser = true;
-      return null;
-    },
-    comparePassword: async () => false,
-    signUserJwt: async () => "jwt",
-    setAuthCookie: async () => undefined,
-    setActiveSucursalCookie: async () => undefined,
-    getRateLimitDecision: () => buildBlockedDecision("login"),
-    getClientData: async () => ({
-      ip: "203.0.113.5",
-      userAgent: "test",
-      browser: "Chrome",
-      os: "Linux",
-      device: "Desktop",
+  const response = await handlePostLogin(
+    new Request("http://localhost/api/auth/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email: "ana@example.com", password: "secreto" }),
     }),
-    createUserSession: async () => undefined,
-    recordAuditLog: async () => undefined,
-  });
+    {
+      findUserByEmail: async () => {
+        lookedUpUser = true;
+        return null;
+      },
+      comparePassword: async () => false,
+      signUserJwt: async () => "jwt",
+      setAuthCookie: async () => undefined,
+      setActiveSucursalCookie: async () => undefined,
+      getRateLimitDecision: () => buildBlockedDecision("login"),
+      getClientData: async () => ({
+        ip: "203.0.113.5",
+        userAgent: "test",
+        browser: "Chrome",
+        os: "Linux",
+        device: "Desktop",
+      }),
+      createUserSession: async () => undefined,
+      recordAuditLog: async () => undefined,
+    },
+  );
 
   assert.equal(response.status, 429);
   assert.equal(lookedUpUser, false);
@@ -80,55 +87,61 @@ test("handlePostLogin devuelve 429 seguro cuando el rate limit bloquea el intent
 });
 
 test("handlePostLogin expone intentos restantes cuando las credenciales son invalidas", async () => {
-  const response = await handlePostLogin(new Request("http://localhost/api/auth/login", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email: "ana@example.com", password: "incorrecta" }),
-  }), {
-    findUserByEmail: async () => ({
-      id: 7,
-      email: "ana@example.com",
-      hash: "hash",
-      rol: "ADMIN",
-      nombre: "Ana",
-      sucursalId: 1,
-      activo: true,
+  const response = await handlePostLogin(
+    new Request("http://localhost/api/auth/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        email: "ana@example.com",
+        password: "incorrecta",
+      }),
     }),
-    comparePassword: async () => false,
-    signUserJwt: async () => "jwt",
-    setAuthCookie: async () => undefined,
-    setActiveSucursalCookie: async () => undefined,
-    getRateLimitDecision: () => ({
-      ...buildAllowedDecision("login"),
-      matchedRules: [
-        {
-          name: "identity",
-          limit: 10,
-          remaining: 6,
-          resetAt: 1_700_000_000_000,
-          retryAfterSeconds: 900,
-          count: 4,
-          blockedCount: 0,
-          keyFingerprint: "abc123",
+    {
+      findUserByEmail: async () => ({
+        id: 7,
+        email: "ana@example.com",
+        hash: "hash",
+        rol: "ADMIN",
+        nombre: "Ana",
+        sucursalId: 1,
+        activo: true,
+      }),
+      comparePassword: async () => false,
+      signUserJwt: async () => "jwt",
+      setAuthCookie: async () => undefined,
+      setActiveSucursalCookie: async () => undefined,
+      getRateLimitDecision: () => ({
+        ...buildAllowedDecision("login"),
+        matchedRules: [
+          {
+            name: "identity",
+            limit: 10,
+            remaining: 6,
+            resetAt: 1_700_000_000_000,
+            retryAfterSeconds: 900,
+            count: 4,
+            blockedCount: 0,
+            keyFingerprint: "abc123",
+          },
+        ],
+        headers: {
+          "Retry-After": "900",
+          "X-RateLimit-Limit": "10",
+          "X-RateLimit-Remaining": "6",
+          "X-RateLimit-Reset": "1700000000000",
         },
-      ],
-      headers: {
-        "Retry-After": "900",
-        "X-RateLimit-Limit": "10",
-        "X-RateLimit-Remaining": "6",
-        "X-RateLimit-Reset": "1700000000000",
-      },
-    }),
-    getClientData: async () => ({
-      ip: "203.0.113.5",
-      userAgent: "test",
-      browser: "Chrome",
-      os: "Linux",
-      device: "Desktop",
-    }),
-    createUserSession: async () => undefined,
-    recordAuditLog: async () => undefined,
-  });
+      }),
+      getClientData: async () => ({
+        ip: "203.0.113.5",
+        userAgent: "test",
+        browser: "Chrome",
+        os: "Linux",
+        device: "Desktop",
+      }),
+      createUserSession: async () => undefined,
+      recordAuditLog: async () => undefined,
+    },
+  );
 
   assert.equal(response.status, 401);
   assert.equal(response.headers.get("X-Auth-Remaining-Attempts"), "6");
@@ -138,19 +151,22 @@ test("handlePostLogin expone intentos restantes cuando las credenciales son inva
 test("handlePostForgotPassword mantiene respuesta anti-enumeracion para cuenta inexistente", async () => {
   let tokenRotated = false;
 
-  const response = await handlePostForgotPassword(new Request("http://localhost/api/auth/forgot-password", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email: "nadie@example.com" }),
-  }), {
-    findUserByEmail: async () => null,
-    replaceResetToken: async () => {
-      tokenRotated = true;
+  const response = await handlePostForgotPassword(
+    new Request("http://localhost/api/auth/forgot-password", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email: "nadie@example.com" }),
+    }),
+    {
+      findUserByEmail: async () => null,
+      replaceResetToken: async () => {
+        tokenRotated = true;
+      },
+      sendResetEmail: async () => undefined,
+      getRateLimitDecision: () => buildAllowedDecision("forgot-password"),
+      recordAuditLog: async () => undefined,
     },
-    sendResetEmail: async () => undefined,
-    getRateLimitDecision: () => buildAllowedDecision("forgot-password"),
-    recordAuditLog: async () => undefined,
-  });
+  );
 
   assert.equal(response.status, 200);
   assert.equal(tokenRotated, false);
@@ -187,6 +203,12 @@ test("handlePostResetPassword usa mensaje uniforme para token invalido o usuario
 
   assert.equal(invalidTokenResponse.status, 400);
   assert.equal(missingUserResponse.status, 400);
-  assert.equal((await invalidTokenResponse.json()).message, RESET_PASSWORD_INVALID_MESSAGE);
-  assert.equal((await missingUserResponse.json()).message, RESET_PASSWORD_INVALID_MESSAGE);
+  assert.equal(
+    (await invalidTokenResponse.json()).message,
+    RESET_PASSWORD_INVALID_MESSAGE,
+  );
+  assert.equal(
+    (await missingUserResponse.json()).message,
+    RESET_PASSWORD_INVALID_MESSAGE,
+  );
 });

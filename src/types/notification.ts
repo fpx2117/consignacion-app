@@ -7,20 +7,14 @@
  * Estos son los valores reales guardados en PostgreSQL
  * según el enum NotificationType en Prisma.
  */
-export type DbNotificationType =
-  | "LOW_STOCK"
-  | "OUT_OF_STOCK"
-  | "SYSTEM";
+export type DbNotificationType = "LOW_STOCK" | "OUT_OF_STOCK" | "SYSTEM";
 
 /* ---------- Tipos UI (Frontend / Socket) ---------- */
 /**
  * Estos son los valores que usa tu frontend visualmente
  * y los que llegan por Socket.IO.
  */
-export type AppNotificationType =
-  | "low_stock"
-  | "out_of_stock"
-  | "system";
+export type AppNotificationType = "low_stock" | "out_of_stock" | "system";
 
 /* =========================================================
    MODELO COMPLETO DESDE DB (Prisma)
@@ -67,9 +61,7 @@ export interface AppNotification {
  * Convierte una notificación guardada en DB
  * a formato frontend/socket.
  */
-export function mapDbNotificationToApp(
-  n: DbNotification
-): AppNotification {
+export function mapDbNotificationToApp(n: DbNotification): AppNotification {
   const typeMap: Record<DbNotificationType, AppNotificationType> = {
     LOW_STOCK: "low_stock",
     OUT_OF_STOCK: "out_of_stock",
@@ -91,7 +83,7 @@ export function mapDbNotificationToApp(
  * en formato DB para guardarla.
  */
 export function mapAppNotificationToDb(
-  n: AppNotification
+  n: AppNotification,
 ): Partial<DbNotification> {
   const typeMap: Record<AppNotificationType, DbNotificationType> = {
     low_stock: "LOW_STOCK",

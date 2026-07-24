@@ -10,12 +10,12 @@
 
 ## Resumen de Fases
 
-| Fase | Descripción | Tareas | Estimado |
-|------|-------------|--------|----------|
-| Fase 1 | Quick Wins (riesgo cero) | 5 tareas | ≤ 30 min |
-| Fase 2 | Fixes Estructurales | 6 tareas | ~3–4 horas |
-| Fase 3 | Verificación Manual | 7 tareas | ~45 min |
-| **Total** | | **18 tareas** | **~5 horas** |
+| Fase      | Descripción              | Tareas        | Estimado     |
+| --------- | ------------------------ | ------------- | ------------ |
+| Fase 1    | Quick Wins (riesgo cero) | 5 tareas      | ≤ 30 min     |
+| Fase 2    | Fixes Estructurales      | 6 tareas      | ~3–4 horas   |
+| Fase 3    | Verificación Manual      | 7 tareas      | ~45 min      |
+| **Total** |                          | **18 tareas** | **~5 horas** |
 
 ---
 
@@ -42,6 +42,7 @@
 
   **Cambio exacto (FIX-07):**
   Eliminar estas 5 líneas (identificadas en `design.md` líneas 570-575):
+
   ```
   console.log(`⏭️ CLIENTE: Ruta pública detectada (${pathname}), socket omitido`);
   console.log("🔌 Intentando conectar Socket.IO (same-origin) a:", currentOrigin);
@@ -49,6 +50,7 @@
   console.log("🔴 CLIENTE: Socket Desconectado. Razón:", reason);
   console.log("🛑 Limpiando instancia de socket...");
   ```
+
   **Conservar** los dos `console.error` que registran errores reales de autenticación.
 
   > **Nota:** Si el FIX-02 (tarea 2.1) se aplica primero, este cambio se vuelve innecesario porque el archivo se reescribe completo. Verificar antes de aplicar.
@@ -63,19 +65,23 @@
 
   **Cambio exacto (FIX-06):**
   En las líneas 41-47 del archivo, reemplazar:
+
   ```typescript
   // ANTES (incorrecto):
   if (process.env.NODE_ENV !== "development") {
     globalForPrisma.prisma = prisma;
   }
   ```
+
   Por:
+
   ```typescript
   // DESPUÉS (correcto):
   if (process.env.NODE_ENV === "development") {
     globalForPrisma.prisma = prisma;
   }
   ```
+
   **Un solo carácter cambia:** `!==` → `===`
 
   **Referencia:** `design.md` Sección 2 — FIX-06 (patrón completo en líneas 548-557)
@@ -97,6 +103,7 @@
 - [x] **1.5** `package.json` — Desinstalar la dependencia `cobe`
 
   **Comando:**
+
   ```bash
   npm uninstall cobe
   ```
@@ -243,14 +250,18 @@
 
   **Cambio (FIX-04, parte API):**
   Localizar la línea ~54 donde se parsea el parámetro `limit`. Agregar validación explícita antes del clamping:
+
   ```typescript
   if (limitParam && parseInt(limitParam, 10) > 200) {
     return NextResponse.json(
       { error: "El parámetro 'limit' no puede superar 200." },
-      { status: 400 }
+      { status: 400 },
     );
   }
-  const limit = Math.min(200, Math.max(1, parseInt(limitParam || "30", 10) || 30));
+  const limit = Math.min(
+    200,
+    Math.max(1, parseInt(limitParam || "30", 10) || 30),
+  );
   ```
 
   **Referencia:** `design.md` Sección 2 — FIX-04 (validación API en líneas 415-427); `spec.md` REQ-08, Escenario 4.D
@@ -362,12 +373,12 @@ La tarea 2.6 (validación API) es independiente y puede ir primero. Las tareas 2
 
 ### Archivos que NO cambian en este change
 
-| Archivo | Razón |
-|---------|-------|
-| `src/lib/apiService.ts` | `getProductosPaginados` ya existe (líneas 385-400) |
-| `src/components/sidebar-dock.tsx` | Ya pasa `notificationsState` correctamente |
-| `src/lib/broadcast-channel.ts` | Ya retorna cleanup correcto; no requiere cambios |
-| Schema Prisma / migraciones | Fuera de alcance explícito |
+| Archivo                           | Razón                                              |
+| --------------------------------- | -------------------------------------------------- |
+| `src/lib/apiService.ts`           | `getProductosPaginados` ya existe (líneas 385-400) |
+| `src/components/sidebar-dock.tsx` | Ya pasa `notificationsState` correctamente         |
+| `src/lib/broadcast-channel.ts`    | Ya retorna cleanup correcto; no requiere cambios   |
+| Schema Prisma / migraciones       | Fuera de alcance explícito                         |
 
 ---
 

@@ -15,8 +15,11 @@ import { formatDateSafe, nowAR } from "@/lib/date-format/utils-date";
  *                     Si es undefined, chequea TODAS las sucursales.
  * @returns cantidad de pedidos actualizados
  */
-export async function checkAndUpdateVencidos(sucursalId?: number): Promise<{ count: number; ids: number[] }> {
-  const resolvedTimezone = sucursalId !== undefined ? await resolveTimezone({ sucursalId }) : null;
+export async function checkAndUpdateVencidos(
+  sucursalId?: number,
+): Promise<{ count: number; ids: number[] }> {
+  const resolvedTimezone =
+    sucursalId !== undefined ? await resolveTimezone({ sucursalId }) : null;
   const now = nowAR(resolvedTimezone?.tz);
 
   const pedidosAVencer = await prisma.pedidoEsperado.findMany({
@@ -53,7 +56,9 @@ export async function checkAndUpdateVencidos(sucursalId?: number): Promise<{ cou
       let pedidoTz = timezonesBySucursal.get(pedido.sucursalId);
 
       if (!pedidoTz) {
-        const timezone = await resolveTimezone({ sucursalId: pedido.sucursalId });
+        const timezone = await resolveTimezone({
+          sucursalId: pedido.sucursalId,
+        });
         pedidoTz = timezone.tz;
         timezonesBySucursal.set(pedido.sucursalId, pedidoTz);
       }
@@ -85,7 +90,7 @@ export async function checkAndUpdateVencidos(sucursalId?: number): Promise<{ cou
           read: false,
         },
       });
-    })
+    }),
   );
 
   return { count: ids.length, ids };

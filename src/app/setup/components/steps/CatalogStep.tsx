@@ -42,15 +42,21 @@ export function CatalogStep({ data, onChange }: CatalogStepProps) {
               <Eye className="h-5 w-5 text-[color:var(--status-warning)]" />
             </div>
             <div>
-              <h3 className="font-bold text-foreground">Habilitar Catálogo Público</h3>
+              <h3 className="font-bold text-foreground">
+                Habilitar Catálogo Público
+              </h3>
               <p className="text-sm text-muted-foreground mt-1">
-                Generá un link donde cualquier persona puede ver tus productos y precios.
+                Generá un link donde cualquier persona puede ver tus productos y
+                precios.
               </p>
               {data.mostrarListaPrecios && (
                 <div className="flex items-center gap-2 mt-2">
                   <div className="h-2 w-2 rounded-full bg-[color:var(--status-success-strong)] animate-pulse" />
                   <span className="text-xs font-medium text-[color:var(--status-success-strong)] flex items-center gap-1">
-                    Disponible en <code className="bg-[color:var(--status-success-strong)]/10 px-1.5 py-0.5 rounded text-[10px]">/lista</code>
+                    Disponible en{" "}
+                    <code className="bg-[color:var(--status-success-strong)]/10 px-1.5 py-0.5 rounded text-[10px]">
+                      /lista
+                    </code>
                     <ExternalLink className="h-3 w-3" />
                   </span>
                 </div>
@@ -59,7 +65,9 @@ export function CatalogStep({ data, onChange }: CatalogStepProps) {
           </div>
           <Switch
             checked={data.mostrarListaPrecios}
-            onCheckedChange={(checked) => onChange({ ...data, mostrarListaPrecios: checked })}
+            onCheckedChange={(checked) =>
+              onChange({ ...data, mostrarListaPrecios: checked })
+            }
             className="data-[state=checked]:bg-[color:var(--status-warning)] shrink-0"
           />
         </div>
@@ -75,9 +83,12 @@ export function CatalogStep({ data, onChange }: CatalogStepProps) {
                 </div>
                 <div className="flex-1 space-y-3">
                   <div>
-                    <h3 className="font-bold text-foreground">Número de WhatsApp</h3>
+                    <h3 className="font-bold text-foreground">
+                      Número de WhatsApp
+                    </h3>
                     <p className="text-sm text-muted-foreground mt-1">
-                      Los clientes podrán enviarte un mensaje directamente desde el catálogo.
+                      Los clientes podrán enviarte un mensaje directamente desde
+                      el catálogo.
                     </p>
                   </div>
                   <div className="space-y-2">
@@ -86,12 +97,15 @@ export function CatalogStep({ data, onChange }: CatalogStepProps) {
                     </Label>
                     <Input
                       value={data.whatsappNumber}
-                      onChange={(e) => onChange({ ...data, whatsappNumber: e.target.value })}
+                      onChange={(e) =>
+                        onChange({ ...data, whatsappNumber: e.target.value })
+                      }
                       placeholder="Ej: 5493515551234"
                       className="h-12 rounded-xl bg-background/50 border-border/50 focus:border-[color:var(--status-success-strong)] focus:ring-4 focus:ring-[color:var(--status-success-strong)]/10"
                     />
                     <p className="text-[10px] text-muted-foreground/60 pl-2">
-                      Formato: código país + código área + número, sin espacios ni guiones.
+                      Formato: código país + código área + número, sin espacios
+                      ni guiones.
                     </p>
                   </div>
                 </div>
@@ -105,8 +119,9 @@ export function CatalogStep({ data, onChange }: CatalogStepProps) {
       <div className="mt-6 p-4 rounded-2xl bg-[color:var(--status-warning)]/5 border border-[color:var(--status-warning)]/10 flex items-start gap-3">
         <Globe className="h-4 w-4 text-[color:var(--status-warning)] shrink-0 mt-0.5" />
         <p className="text-xs text-[color:var(--status-warning)]/70 leading-relaxed">
-          El catálogo es <strong>solo lectura</strong> — tus clientes ven productos y precios pero no pueden comprar.
-          Si en el futuro querés habilitar ventas online, podés hacerlo desde Configuración.
+          El catálogo es <strong>solo lectura</strong> — tus clientes ven
+          productos y precios pero no pueden comprar. Si en el futuro querés
+          habilitar ventas online, podés hacerlo desde Configuración.
         </p>
       </div>
     </StepWrapper>

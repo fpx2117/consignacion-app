@@ -21,13 +21,19 @@ export async function POST(req: Request, { params }: RouteParams) {
   const auth = await requireAuth();
   if (!auth.ok) return auth.res;
   if (isGlobalSucursalView(auth)) {
-    return NextResponse.json({ error: "Vista global en modo solo lectura. Selecciona una sucursal para postergar pedidos." }, { status: 409 });
+    return NextResponse.json(
+      {
+        error:
+          "Vista global en modo solo lectura. Selecciona una sucursal para postergar pedidos.",
+      },
+      { status: 409 },
+    );
   }
 
   if (!requireRole(auth.user, ["ADMIN"])) {
     return NextResponse.json(
       { error: "No tienes permisos (Admin requerido)" },
-      { status: 403 }
+      { status: 403 },
     );
   }
 
@@ -45,8 +51,11 @@ export async function POST(req: Request, { params }: RouteParams) {
 
     if (!parsed.success) {
       return NextResponse.json(
-        { error: "Validación fallida", details: parsed.error.flatten().fieldErrors },
-        { status: 400 }
+        {
+          error: "Validación fallida",
+          details: parsed.error.flatten().fieldErrors,
+        },
+        { status: 400 },
       );
     }
 
@@ -57,18 +66,27 @@ export async function POST(req: Request, { params }: RouteParams) {
     if (nuevaFechaDate <= new Date()) {
       return NextResponse.json(
         { error: "La nueva fecha debe ser posterior a la fecha actual" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
     // Obtener el pedido
     const pedido = await prisma.pedidoEsperado.findUnique({
       where: { id },
-      select: { id: true, sucursalId: true, estado: true, fechaEsperada: true, observaciones: true },
+      select: {
+        id: true,
+        sucursalId: true,
+        estado: true,
+        fechaEsperada: true,
+        observaciones: true,
+      },
     });
 
     if (!pedido) {
-      return NextResponse.json({ error: "Pedido no encontrado" }, { status: 404 });
+      return NextResponse.json(
+        { error: "Pedido no encontrado" },
+        { status: 404 },
+      );
     }
 
     // Verificar pertenencia a la sucursal activa
@@ -77,10 +95,13 @@ export async function POST(req: Request, { params }: RouteParams) {
     }
 
     // Verificar que el pedido NO está CONFIRMADO o CANCELADO
-    if (pedido.estado === EstadoPedidoEsperado.CONFIRMADO || pedido.estado === EstadoPedidoEsperado.CANCELADO) {
+    if (
+      pedido.estado === EstadoPedidoEsperado.CONFIRMADO ||
+      pedido.estado === EstadoPedidoEsperado.CANCELADO
+    ) {
       return NextResponse.json(
         { error: `No se puede postergar un pedido en estado ${pedido.estado}` },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -115,7 +136,7 @@ export async function POST(req: Request, { params }: RouteParams) {
     console.error("Error al postergar pedido:", error);
     return NextResponse.json(
       { error: "Error interno al postergar pedido" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

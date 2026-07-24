@@ -22,6 +22,7 @@ Estas metricas se integran al pipeline existente:
 **Resultado**: SI, es factible con bajo riesgo.
 
 Motivos:
+
 - Existe endpoint publico estable donde registrar la visita sin cambiar UX.
 - El dashboard ya centraliza calculos en `src/lib/kpi-logic.ts`, por lo que agregar una nueva dimension es directo.
 - El reporte PDF de dashboard ya recibe `DashboardReportData` tipado y renderiza bloques KPI; se puede extender con un bloque adicional sin romper layout actual.
@@ -33,6 +34,7 @@ Motivos:
 **Eleccion**: contar visita dentro de `src/app/api/public/lista-precios/route.ts`.
 
 **Alternativas consideradas**:
+
 - Endpoint dedicado llamado desde frontend (`/api/public/catalog-visits`).
 - Tracking externo (GA4).
 
@@ -43,6 +45,7 @@ Motivos:
 **Eleccion**: generar `visitorHash` (ip + user-agent normalizado + sucursal + bucket temporal) y guardar un solo evento por bucket.
 
 **Alternativas consideradas**:
+
 - Contar cada request sin dedupe.
 - Dedupe diaria estricta.
 
@@ -53,6 +56,7 @@ Motivos:
 **Eleccion**: exponer solo `visitas` y `visitantesUnicos` en esta fase.
 
 **Alternativas consideradas**:
+
 - Calcular conversion a venta/cobro en esta etapa.
 
 **Justificacion**: el canal publico hoy se usa como catalogo y no como checkout activo; mostrar conversion podria inducir interpretaciones incorrectas.
@@ -62,6 +66,7 @@ Motivos:
 **Eleccion**: mostrar `Visitas Catalogo` como tarjeta operativa, no financiera.
 
 **Alternativas consideradas**:
+
 - Colocarlo en `Rentabilidad`.
 - Colocarlo en un modulo separado.
 
@@ -72,6 +77,7 @@ Motivos:
 **Eleccion**: agregar bloque debajo de `Rentabilidad` en `dashboard-report-template`.
 
 **Alternativas consideradas**:
+
 - Insertar dentro de `Stock`.
 - Mezclarlo en la fila actual de rentabilidad.
 
@@ -101,18 +107,18 @@ Reporte PDF
 
 ## Cambios en archivos
 
-| Archivo | Accion | Descripcion |
-|---------|--------|-------------|
-| `prisma/schema.prisma` | Modificar | Nuevo modelo `CatalogVisit` y relacion en `Sucursal`. |
-| `prisma/migrations/*_catalog_visits/migration.sql` | Crear | Migracion no destructiva para tabla e indices. |
-| `src/lib/analytics/catalog-visit.ts` | Crear | Utilidades: fingerprint, bucket, registro deduplicado. |
-| `src/app/api/public/lista-precios/route.ts` | Modificar | Invocar registro de visita sin bloquear respuesta principal. |
-| `src/lib/kpi-logic.ts` | Modificar | Consultas de visitas por periodo y visitantes unicos. |
-| `src/app/api/dashboard/kpi/route.ts` | Modificar | Exponer bloque `catalogo` en payload. |
-| `src/lib/types.ts` | Modificar | Definir tipo `DashboardKpis.catalogo`. |
-| `src/app/(system-guard)/(protected)/dashboard/page.tsx` | Modificar | Agregar tarjeta `Visitas Catalogo` en `operativeKpis`. |
-| `src/app/ver/dashboard/[period]/pdf/route.ts` | Modificar | Incluir metricas de visitas en `DashboardReportData`. |
-| `src/lib/reports/base/dashboard-report-template.ts` | Modificar | Render de subseccion `Canal Digital` y KPI de OKR. |
+| Archivo                                                 | Accion    | Descripcion                                                  |
+| ------------------------------------------------------- | --------- | ------------------------------------------------------------ |
+| `prisma/schema.prisma`                                  | Modificar | Nuevo modelo `CatalogVisit` y relacion en `Sucursal`.        |
+| `prisma/migrations/*_catalog_visits/migration.sql`      | Crear     | Migracion no destructiva para tabla e indices.               |
+| `src/lib/analytics/catalog-visit.ts`                    | Crear     | Utilidades: fingerprint, bucket, registro deduplicado.       |
+| `src/app/api/public/lista-precios/route.ts`             | Modificar | Invocar registro de visita sin bloquear respuesta principal. |
+| `src/lib/kpi-logic.ts`                                  | Modificar | Consultas de visitas por periodo y visitantes unicos.        |
+| `src/app/api/dashboard/kpi/route.ts`                    | Modificar | Exponer bloque `catalogo` en payload.                        |
+| `src/lib/types.ts`                                      | Modificar | Definir tipo `DashboardKpis.catalogo`.                       |
+| `src/app/(system-guard)/(protected)/dashboard/page.tsx` | Modificar | Agregar tarjeta `Visitas Catalogo` en `operativeKpis`.       |
+| `src/app/ver/dashboard/[period]/pdf/route.ts`           | Modificar | Incluir metricas de visitas en `DashboardReportData`.        |
+| `src/lib/reports/base/dashboard-report-template.ts`     | Modificar | Render de subseccion `Canal Digital` y KPI de OKR.           |
 
 ## Interfaces / contratos
 
@@ -143,12 +149,12 @@ type DashboardKpis = {
 
 ## Estrategia de pruebas
 
-| Capa | Que probar | Enfoque |
-|------|------------|---------|
-| API publica | `lista-precios` registra visita deduplicada por bucket | Integracion con DB de test, doble request misma ventana = 1 registro |
-| KPI logic | Conteo por periodo `today/week/month/all` | Unit/integracion de `getDashboardKpis` |
-| Dashboard UI | Render de tarjeta `Visitas Catalogo` y valor correcto | Testing Library con mock de API |
-| PDF | Seccion `Canal Digital` visible con metricas y sin overflow | Test snapshot HTML + smoke de ruta PDF |
+| Capa         | Que probar                                                  | Enfoque                                                              |
+| ------------ | ----------------------------------------------------------- | -------------------------------------------------------------------- |
+| API publica  | `lista-precios` registra visita deduplicada por bucket      | Integracion con DB de test, doble request misma ventana = 1 registro |
+| KPI logic    | Conteo por periodo `today/week/month/all`                   | Unit/integracion de `getDashboardKpis`                               |
+| Dashboard UI | Render de tarjeta `Visitas Catalogo` y valor correcto       | Testing Library con mock de API                                      |
+| PDF          | Seccion `Canal Digital` visible con metricas y sin overflow | Test snapshot HTML + smoke de ruta PDF                               |
 
 ## Migracion y despliegue
 

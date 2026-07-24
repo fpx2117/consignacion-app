@@ -8,7 +8,9 @@ import { createHmac, timingSafeEqual } from "crypto";
 
 const _SECRET = process.env.OCR_CALLBACK_SECRET;
 if (!_SECRET) {
-  throw new Error("FATAL: La variable de entorno OCR_CALLBACK_SECRET es obligatoria.");
+  throw new Error(
+    "FATAL: La variable de entorno OCR_CALLBACK_SECRET es obligatoria.",
+  );
 }
 const SECRET: string = _SECRET;
 
@@ -25,7 +27,10 @@ export function generateFacturaArchivoToken(facturaId: number): string {
   return `${expiresAt}.${signature}`;
 }
 
-export function verifyFacturaArchivoToken(facturaId: number, tokenString: string | null | undefined): boolean {
+export function verifyFacturaArchivoToken(
+  facturaId: number,
+  tokenString: string | null | undefined,
+): boolean {
   if (!tokenString || !tokenString.includes(".")) return false;
 
   const [expiresAtStr, signature] = tokenString.split(".");

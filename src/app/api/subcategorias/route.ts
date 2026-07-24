@@ -17,7 +17,7 @@ export async function GET(req: NextRequest) {
     if (!categoriaId) {
       return NextResponse.json(
         { error: "categoriaId es obligatorio" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -29,7 +29,7 @@ export async function GET(req: NextRequest) {
   } catch {
     return NextResponse.json(
       { error: "Error al obtener subcategorías" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -40,7 +40,13 @@ export async function POST(req: NextRequest) {
   const auth = await requireAuth();
   if (!auth.ok) return auth.res;
   if (isGlobalSucursalView(auth)) {
-    return NextResponse.json({ error: "Vista global en modo solo lectura. Selecciona una sucursal para crear subcategorías." }, { status: 409 });
+    return NextResponse.json(
+      {
+        error:
+          "Vista global en modo solo lectura. Selecciona una sucursal para crear subcategorías.",
+      },
+      { status: 409 },
+    );
   }
 
   try {
@@ -50,7 +56,7 @@ export async function POST(req: NextRequest) {
     if (!nombre || !categoriaId) {
       return NextResponse.json(
         { error: "Nombre y categoriaId son obligatorios" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -68,8 +74,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(nuevaSubcategoria);
   } catch {
     return NextResponse.json(
-      { error: "Error al crear la subcategoría. Quizás ya existe en esta categoría." },
-      { status: 500 }
+      {
+        error:
+          "Error al crear la subcategoría. Quizás ya existe en esta categoría.",
+      },
+      { status: 500 },
     );
   }
 }

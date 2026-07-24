@@ -11,18 +11,18 @@ Puntos verificados en el código, relevantes para este cambio:
 - `InvoiceAiItem` (`invoice-ai-parser.ts:45-55`) y la persistencia en `process/route.ts:122-137` no tienen ningún campo para advertencias a nivel de línea — el único array de `warnings` que existe hoy (`InvoiceAiSuccessResult.warnings`, `invoice-ai-parser.ts:63`) es a nivel factura completa, generado por el modelo, y tampoco se persiste hoy en ninguna columna de `FacturaProveedor` (se devuelve en la respuesta HTTP de `process/route.ts:182` pero se pierde — no hay columna `warnings` en el modelo `FacturaProveedor`).
 - `validateExtractedInvoice()` (`invoice-extraction.config.ts:690-867`, ~180 líneas) es la única validación que corre antes de confiar en el JSON del modelo — valida forma/tipos a mano, sin usar la dependencia `zod` que el proyecto ya tiene instalada (`package.json`, `^4.3.6`) y usa en otros validators (`src/lib/validators/producto.ts`).
 - `FacturaProveedorItem` (`prisma/schema.prisma:795-821`) ya tiene el patrón de columna `Json?` para datos flexibles por línea (`atributosExtra`, agregado en el cambio `rubro-contexto-ocr`) — el campo nuevo de esta propuesta (`advertencias`) sigue el mismo patrón de columna aditiva ya validado en producción.
-- `factura-proveedor-dialog.tsx` (`badgeEstado()`, líneas 49-68) ya tiene un sistema de badges por estado de matching (`COINCIDENCIA_SEGURA`, `REQUIERE_REVISION`, etc.) — es una señal *distinta* a la que agrega esta propuesta: `matchScore` mide "¿este texto se parece a un producto de mi catálogo?", mientras que la validación aritmética mide "¿estos tres números de esta misma línea son consistentes entre sí?". Son ortogonales; un item puede tener `COINCIDENCIA_SEGURA` de producto y aun así tener un precio mal leído.
+- `factura-proveedor-dialog.tsx` (`badgeEstado()`, líneas 49-68) ya tiene un sistema de badges por estado de matching (`COINCIDENCIA_SEGURA`, `REQUIERE_REVISION`, etc.) — es una señal _distinta_ a la que agrega esta propuesta: `matchScore` mide "¿este texto se parece a un producto de mi catálogo?", mientras que la validación aritmética mide "¿estos tres números de esta misma línea son consistentes entre sí?". Son ortogonales; un item puede tener `COINCIDENCIA_SEGURA` de producto y aun así tener un precio mal leído.
 
 ## Caso de prueba de referencia (factura #46)
 
 Datos reales usados para calibrar la tolerancia y como fixture de test:
 
-| Línea | Cantidad real | Precio unit. real | Total real | Extraído por IA | Debería disparar |
-|---|---|---|---|---|---|
-| MANAOS COLA 6x2,25 | 3 | 8300 | 24900 | qty=1, unitCost=8300, lineTotal=8300 | `unitCost*quantity` (8300) coincide con `lineTotal` (8300) → **no dispara por línea** (el error es de `quantity`, no de consistencia interna de esa línea — ver "Limitación conocida" más abajo) |
-| BALDO BORGOÑA | 1 | 13900 | 13900 | qty=1, unitCost=28500, lineTotal=28500 | `unitCost*quantity` (28500) coincide con `lineTotal` (28500) → **no dispara por línea tampoco** (mismo motivo) |
-| COCA-COLA | 1 | 28500 | 28500 | qty=2, unitCost=28500, lineTotal=57000 | `unitCost*quantity` = 57000 = `lineTotal` → **no dispara por línea** |
-| — (factura completa) | — | — | 180700 | suma de `lineTotal` = 210700 | **sí dispara** — desfasaje de $30.000 contra `invoice.total` |
+| Línea                | Cantidad real | Precio unit. real | Total real | Extraído por IA                        | Debería disparar                                                                                                                                                                                 |
+| -------------------- | ------------- | ----------------- | ---------- | -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| MANAOS COLA 6x2,25   | 3             | 8300              | 24900      | qty=1, unitCost=8300, lineTotal=8300   | `unitCost*quantity` (8300) coincide con `lineTotal` (8300) → **no dispara por línea** (el error es de `quantity`, no de consistencia interna de esa línea — ver "Limitación conocida" más abajo) |
+| BALDO BORGOÑA        | 1             | 13900             | 13900      | qty=1, unitCost=28500, lineTotal=28500 | `unitCost*quantity` (28500) coincide con `lineTotal` (28500) → **no dispara por línea tampoco** (mismo motivo)                                                                                   |
+| COCA-COLA            | 1             | 28500             | 28500      | qty=2, unitCost=28500, lineTotal=57000 | `unitCost*quantity` = 57000 = `lineTotal` → **no dispara por línea**                                                                                                                             |
+| — (factura completa) | —             | —                 | 180700     | suma de `lineTotal` = 210700           | **sí dispara** — desfasaje de $30.000 contra `invoice.total`                                                                                                                                     |
 
 Esto es un hallazgo importante para el diseño, no solo un detalle: **la mayoría de los errores de esta factura de prueba son internamente consistentes por línea** (el modelo multiplicó bien `unitCost * quantity = lineTotal` en cada una) — el error real es que agarró el precio/cantidad de la fila vecina. La validación por línea (`unitCost*quantity` vs `lineTotal`) por sí sola **no habría detectado 3 de los 4 errores** de este caso concreto. Lo que sí lo detecta es la validación a **nivel factura** (suma de líneas vs `invoice.total`), que es la que efectivamente disparó en la prueba real. Se documenta esto explícitamente para no sobrevender el punto 1a del alcance: es una red de seguridad genérica (útil para otros patrones de error, ej. una IA que sí calcula mal una multiplicación), pero en este caso puntual la señal fuerte es la de cabecera.
 
@@ -59,10 +59,14 @@ export function validarConsistenciaFactura(
     if (item.unitCost == null || item.lineTotal == null) return; // no hay suficiente dato para comparar
     const esperado = item.unitCost * item.quantity;
     const diferencia = Math.abs(esperado - item.lineTotal);
-    const tolerancia = Math.max(esperado, item.lineTotal) * TOLERANCIA_CONSISTENCIA_ARITMETICA;
+    const tolerancia =
+      Math.max(esperado, item.lineTotal) * TOLERANCIA_CONSISTENCIA_ARITMETICA;
     if (diferencia > tolerancia) {
-      agregar(itemsConAdvertencia, index,
-        `Cantidad × precio unitario (${esperado}) no coincide con el total de línea (${item.lineTotal})`);
+      agregar(
+        itemsConAdvertencia,
+        index,
+        `Cantidad × precio unitario (${esperado}) no coincide con el total de línea (${item.lineTotal})`,
+      );
       confidenceMaximaPorItem.set(index, CONFIDENCE_MAXIMA_SI_INCONSISTENTE);
     }
   });
@@ -70,21 +74,28 @@ export function validarConsistenciaFactura(
   // 2. A nivel factura: suma de líneas vs invoice.total
   if (datos.invoice.total != null) {
     const sumaLineas = datos.items.reduce((acc, item) => {
-      const valor = item.lineTotal ?? (item.unitCost != null ? item.unitCost * item.quantity : 0);
+      const valor =
+        item.lineTotal ??
+        (item.unitCost != null ? item.unitCost * item.quantity : 0);
       return acc + valor;
     }, 0);
     const diferencia = Math.abs(sumaLineas - datos.invoice.total);
-    const tolerancia = Math.max(sumaLineas, datos.invoice.total) * TOLERANCIA_CONSISTENCIA_ARITMETICA;
+    const tolerancia =
+      Math.max(sumaLineas, datos.invoice.total) *
+      TOLERANCIA_CONSISTENCIA_ARITMETICA;
     if (diferencia > tolerancia) {
       advertenciasFactura.push(
-        `La suma de los items ($${sumaLineas.toLocaleString("es-AR")}) no coincide con el total detectado ($${datos.invoice.total.toLocaleString("es-AR")})`
+        `La suma de los items ($${sumaLineas.toLocaleString("es-AR")}) no coincide con el total detectado ($${datos.invoice.total.toLocaleString("es-AR")})`,
       );
       // Propagación cabecera -> líneas: no se puede saber cuál línea es la culpable,
       // así que se capa la confidence de TODAS las líneas que no tengan ya un tope
       // más estricto puesto por el chequeo #1.
       datos.items.forEach((_, index) => {
         if (!confidenceMaximaPorItem.has(index)) {
-          confidenceMaximaPorItem.set(index, CONFIDENCE_MAXIMA_SI_INCONSISTENTE);
+          confidenceMaximaPorItem.set(
+            index,
+            CONFIDENCE_MAXIMA_SI_INCONSISTENTE,
+          );
         }
       });
     }
@@ -220,12 +231,16 @@ export const extractedInvoiceSchema = z.object({
   warnings: z.array(z.string()),
 });
 
-export function validateExtractedInvoice(data: unknown): InvoiceValidationResult {
+export function validateExtractedInvoice(
+  data: unknown,
+): InvoiceValidationResult {
   const resultado = extractedInvoiceSchema.safeParse(data);
   if (resultado.success) return { valid: true, errors: [] };
   return {
     valid: false,
-    errors: resultado.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`),
+    errors: resultado.error.issues.map(
+      (i) => `${i.path.join(".")}: ${i.message}`,
+    ),
   };
 }
 ```
@@ -245,7 +260,7 @@ ALTER TABLE "FacturaProveedorItem" ADD COLUMN "advertencias" TEXT[] NOT NULL DEF
 
 ## UI: indicador por fila en `factura-proveedor-dialog.tsx`
 
-`FacturaProveedorItem` (tipo en `apiService.ts`) gana `advertencias: string[]`. En la tabla de items (líneas 654-886 del componente), junto al badge de `badgeEstado()` existente (que muestra el estado de *matching*), se agrega un ícono `AlertTriangle` (ya importado, se usa en el banner de la línea 650) cuando `item.advertencias.length > 0`, con un `Tooltip` (patrón ya usado en las acciones de cada fila, líneas 796-877) mostrando el texto de la advertencia. No reemplaza el badge de matching — son dos señales independientes que pueden coexistir en la misma fila (ej. `COINCIDENCIA_SEGURA` de producto + advertencia de monto inconsistente).
+`FacturaProveedorItem` (tipo en `apiService.ts`) gana `advertencias: string[]`. En la tabla de items (líneas 654-886 del componente), junto al badge de `badgeEstado()` existente (que muestra el estado de _matching_), se agrega un ícono `AlertTriangle` (ya importado, se usa en el banner de la línea 650) cuando `item.advertencias.length > 0`, con un `Tooltip` (patrón ya usado en las acciones de cada fila, líneas 796-877) mostrando el texto de la advertencia. No reemplaza el badge de matching — son dos señales independientes que pueden coexistir en la misma fila (ej. `COINCIDENCIA_SEGURA` de producto + advertencia de monto inconsistente).
 
 No se agrega ningún bloqueo: el usuario puede confirmar una línea con advertencia igual que hoy — la validación es informativa, coherente con que "nada actualiza stock hasta que el usuario aprueba" (regla ya vigente, sin cambios).
 
@@ -283,7 +298,7 @@ Usuario revisa en factura-proveedor-dialog.tsx
 
 ## Riesgos técnicos adicionales (no cubiertos en `proposal.md`)
 
-- **La limitación documentada en "Caso de prueba de referencia"**: si una IA comete un error donde `unitCost`, `quantity` y `lineTotal` son *mutuamente* consistentes pero los tres están mal (todos tomados de la fila vecina, como pasó acá), el chequeo #1 (por línea) no lo detecta — solo el chequeo #2 (suma vs total de factura) lo hace, y solo si el error no se cancela con otro error de signo contrario en otra línea de la misma factura. Es una limitación conocida y aceptada: no existe forma de detectar esto con certeza sin volver a mirar la imagen, que está fuera de alcance (ver "Fuera del Alcance" en `proposal.md`).
+- **La limitación documentada en "Caso de prueba de referencia"**: si una IA comete un error donde `unitCost`, `quantity` y `lineTotal` son _mutuamente_ consistentes pero los tres están mal (todos tomados de la fila vecina, como pasó acá), el chequeo #1 (por línea) no lo detecta — solo el chequeo #2 (suma vs total de factura) lo hace, y solo si el error no se cancela con otro error de signo contrario en otra línea de la misma factura. Es una limitación conocida y aceptada: no existe forma de detectar esto con certeza sin volver a mirar la imagen, que está fuera de alcance (ver "Fuera del Alcance" en `proposal.md`).
 - **Índices de array como identificador de línea** (`index` en `AdvertenciaLinea`): funciona porque `datos.items` y `resultado.items.map(...)` preservan el mismo orden desde `normalizarExtraccion()` hasta `process/route.ts` — no hay ningún `sort`/`filter` entre medio que lo rompa (verificado leyendo el flujo completo arriba). Si en el futuro se agrega un paso que reordene o filtre items entre `procesarFacturaConIA()` y la persistencia, este acoplamiento por índice se rompe silenciosamente — vale la pena un comentario en el código marcando esta dependencia.
 
 ## Roadmap de Implementación

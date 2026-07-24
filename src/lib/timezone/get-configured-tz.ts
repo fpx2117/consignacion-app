@@ -36,12 +36,18 @@ type BranchTimezoneRecord = {
 };
 
 export type TimezoneResolverDeps = {
-  getUserTimezoneRecord: (userId: number | null | undefined) => Promise<UserTimezoneRecord | null>;
-  getBranchTimezoneRecord: (sucursalId: number | null | undefined) => Promise<BranchTimezoneRecord | null>;
+  getUserTimezoneRecord: (
+    userId: number | null | undefined,
+  ) => Promise<UserTimezoneRecord | null>;
+  getBranchTimezoneRecord: (
+    sucursalId: number | null | undefined,
+  ) => Promise<BranchTimezoneRecord | null>;
   logFallbackTimezone?: (resolved: ResolvedTimezone) => void;
 };
 
-export function isValidTimezone(value: string | null | undefined): value is string {
+export function isValidTimezone(
+  value: string | null | undefined,
+): value is string {
   if (!value) return false;
 
   try {
@@ -52,7 +58,9 @@ export function isValidTimezone(value: string | null | undefined): value is stri
   }
 }
 
-async function getUserTimezoneRecord(userId: number | null | undefined): Promise<UserTimezoneRecord | null> {
+async function getUserTimezoneRecord(
+  userId: number | null | undefined,
+): Promise<UserTimezoneRecord | null> {
   if (!userId || !Number.isFinite(userId)) {
     return null;
   }
@@ -63,7 +71,9 @@ async function getUserTimezoneRecord(userId: number | null | undefined): Promise
   });
 }
 
-async function getBranchTimezoneRecord(sucursalId: number | null | undefined): Promise<BranchTimezoneRecord | null> {
+async function getBranchTimezoneRecord(
+  sucursalId: number | null | undefined,
+): Promise<BranchTimezoneRecord | null> {
   if (typeof sucursalId === "number" && sucursalId > 0) {
     const branch = await prisma.configuracion.findUnique({
       where: { sucursalId },
@@ -164,11 +174,15 @@ export async function resolveTimezoneWithDeps(
   return resolved;
 }
 
-export async function resolveTimezone(input: ResolveTimezoneInput): Promise<ResolvedTimezone> {
+export async function resolveTimezone(
+  input: ResolveTimezoneInput,
+): Promise<ResolvedTimezone> {
   return resolveTimezoneWithDeps(input);
 }
 
-export async function resolveTimezoneForAuth(auth: AuthTimezoneInput): Promise<ResolvedTimezone> {
+export async function resolveTimezoneForAuth(
+  auth: AuthTimezoneInput,
+): Promise<ResolvedTimezone> {
   const userId = Number(auth.user.sub);
 
   return resolveTimezone({

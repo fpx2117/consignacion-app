@@ -7,10 +7,10 @@ facturas según el camino que toman.
 
 ## 1. Dos caminos, dos costos distintos
 
-| Camino | Qué se manda al modelo | Modelo usado |
-|---|---|---|
-| PDF con texto nativo (factura electrónica) | Solo texto (ya 100% confiable, sin OCR) | `OPENROUTER_MODEL` |
-| Foto o PDF escaneado | Texto OCR local (Tesseract) **+ imagen original**, siempre juntos | `OPENROUTER_VISION_MODEL` |
+| Camino                                     | Qué se manda al modelo                                            | Modelo usado              |
+| ------------------------------------------ | ----------------------------------------------------------------- | ------------------------- |
+| PDF con texto nativo (factura electrónica) | Solo texto (ya 100% confiable, sin OCR)                           | `OPENROUTER_MODEL`        |
+| Foto o PDF escaneado                       | Texto OCR local (Tesseract) **+ imagen original**, siempre juntos | `OPENROUTER_VISION_MODEL` |
 
 Con vision-always (decisión confirmada: "mandar siempre texto+imagen para
 fotos"), **todo** documento que sea foto o escaneo paga el costo de imagen,
@@ -24,10 +24,10 @@ dato vale más que los centavos extra de mandar la imagen.
 Medido contra la misma factura real (15 ítems, mismo texto de Tesseract para
 ambos modelos, solo texto — sin imagen):
 
-| Modelo | Tiempo | Costo por factura |
-|---|---|---|
-| qwen3.6-35b-a3b | 58s | $0.00156 |
-| **openai/gpt-4o-mini** | 8.9s | **$0.00056** |
+| Modelo                 | Tiempo | Costo por factura |
+| ---------------------- | ------ | ----------------- |
+| qwen3.6-35b-a3b        | 58s    | $0.00156          |
+| **openai/gpt-4o-mini** | 8.9s   | **$0.00056**      |
 
 gpt-4o-mini fue 6.5x más rápido y 3x más barato con el mismo input — la
 lentitud que se venía reportando era del modelo, no del pipeline de OCR
@@ -43,10 +43,10 @@ ya fuerza la forma de la respuesta). Sin reasoning, mismo resultado en ~50s.
 
 Medido comparando el mismo documento con y sin imagen adjunta:
 
-| Camino | Costo por factura |
-|---|---|
-| Solo texto | $0.0006 – $0.0016 |
-| Texto + imagen (vision) | ~$0.0045 |
+| Camino                  | Costo por factura |
+| ----------------------- | ----------------- |
+| Solo texto              | $0.0006 – $0.0016 |
+| Texto + imagen (vision) | ~$0.0045          |
 
 Es decir, la imagen agrega entre 3x y 7x el costo de una llamada solo-texto,
 pero en términos absolutos sigue siendo centavos de dólar. Proyección hecha
@@ -58,12 +58,12 @@ por factura).
 Test contra una foto real de celular (RASASI/LATTAFA/MAISON ALHAMBRA, 17
 líneas), con vision-always activo:
 
-| Métrica | Valor |
-|---|---|
-| Tokens totales por llamada | ~30.400 – 30.500 |
-| Tokens de razonamiento | 0 (reasoning "none") |
-| Latencia total (OCR local + llamada a OpenRouter) | 23s – 40s* |
-| Modelo | openai/gpt-4o-mini |
+| Métrica                                           | Valor                |
+| ------------------------------------------------- | -------------------- |
+| Tokens totales por llamada                        | ~30.400 – 30.500     |
+| Tokens de razonamiento                            | 0 (reasoning "none") |
+| Latencia total (OCR local + llamada a OpenRouter) | 23s – 40s*           |
+| Modelo                                            | openai/gpt-4o-mini   |
 
 \* La variación de latencia salió del tamaño del archivo de imagen enviado
 (ver punto 5), no del texto — el conteo de tokens fue prácticamente
@@ -91,11 +91,11 @@ Usando los costos por factura medidos (punto 2 y 3), separando por tipo de
 documento predominante:
 
 | Facturas/mes | Todo texto ($0.0006–0.0016 c/u) | Todo vision ($0.0045 c/u) |
-|---|---|---|
-| 100 | $0.06 – $0.16 | $0.45 |
-| 400 | $0.24 – $0.64 | $1.80 |
-| 1.000 | $0.60 – $1.60 | $4.50 |
-| 5.000 | $3.00 – $8.00 | $22.50 |
+| ------------ | ------------------------------- | ------------------------- |
+| 100          | $0.06 – $0.16                   | $0.45                     |
+| 400          | $0.24 – $0.64                   | $1.80                     |
+| 1.000        | $0.60 – $1.60                   | $4.50                     |
+| 5.000        | $3.00 – $8.00                   | $22.50                    |
 
 En la práctica el gasto real queda entre ambas columnas, según qué proporción
 de facturas de proveedor lleguen como PDF con texto nativo (más barato) vs.

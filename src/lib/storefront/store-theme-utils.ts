@@ -67,7 +67,9 @@ export function getCardStyleClass(cardStyle: OnlineStoreCardStyle): string {
 // BUTTON STYLE
 // ============================================================
 
-export function getButtonStyleClass(buttonStyle: OnlineStoreButtonStyle): string {
+export function getButtonStyleClass(
+  buttonStyle: OnlineStoreButtonStyle,
+): string {
   const map: Record<OnlineStoreButtonStyle, string> = {
     rounded: "rounded-lg",
     pill: "rounded-full",
@@ -80,7 +82,9 @@ export function getButtonStyleClass(buttonStyle: OnlineStoreButtonStyle): string
 // PRODUCT LAYOUT
 // ============================================================
 
-export function getProductLayoutClass(layout: OnlineStoreProductLayout): string {
+export function getProductLayoutClass(
+  layout: OnlineStoreProductLayout,
+): string {
   const map: Record<OnlineStoreProductLayout, string> = {
     grid: "grid grid-cols-2 gap-3",
     horizontal: "flex overflow-x-auto gap-3 snap-x snap-mandatory",
@@ -89,7 +93,9 @@ export function getProductLayoutClass(layout: OnlineStoreProductLayout): string 
   return map[layout] || map.grid;
 }
 
-export function getProductCardWidthClass(layout: OnlineStoreProductLayout): string {
+export function getProductCardWidthClass(
+  layout: OnlineStoreProductLayout,
+): string {
   const map: Record<OnlineStoreProductLayout, string> = {
     grid: "w-full",
     horizontal: "min-w-[160px] max-w-[180px] snap-start",
@@ -102,7 +108,9 @@ export function getProductCardWidthClass(layout: OnlineStoreProductLayout): stri
 // DESKTOP LAYOUT
 // ============================================================
 
-export function getDesktopLayoutClass(layout: OnlineStoreDesktopLayout): string {
+export function getDesktopLayoutClass(
+  layout: OnlineStoreDesktopLayout,
+): string {
   const map: Record<OnlineStoreDesktopLayout, string> = {
     "mobile-centered": "max-w-[430px] mx-auto",
     "wide-ecommerce": "w-full max-w-7xl mx-auto",

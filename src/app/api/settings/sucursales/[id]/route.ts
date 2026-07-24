@@ -20,7 +20,10 @@ export async function PUT(req: Request, { params }: RouteContext) {
   if (!auth.ok) return auth.res;
 
   if (!requireRole(auth.user, ["ADMIN"])) {
-    return NextResponse.json({ error: "Permisos insuficientes" }, { status: 403 });
+    return NextResponse.json(
+      { error: "Permisos insuficientes" },
+      { status: 403 },
+    );
   }
 
   try {
@@ -31,15 +34,24 @@ export async function PUT(req: Request, { params }: RouteContext) {
       return NextResponse.json({ error: "ID invalido" }, { status: 400 });
     }
 
-    const { nombre, activa, incluidaEnDashboardGlobal } = (await req.json()) as UpdateSucursalBody;
-    const existing = await prisma.sucursal.findUnique({ where: { id: sucursalId } });
+    const { nombre, activa, incluidaEnDashboardGlobal } =
+      (await req.json()) as UpdateSucursalBody;
+    const existing = await prisma.sucursal.findUnique({
+      where: { id: sucursalId },
+    });
 
     if (!existing) {
-      return NextResponse.json({ error: "Sucursal no encontrada" }, { status: 404 });
+      return NextResponse.json(
+        { error: "Sucursal no encontrada" },
+        { status: 404 },
+      );
     }
 
     if (existing.esPrincipal && activa === false) {
-      return NextResponse.json({ error: "No se puede desactivar la Sede Principal." }, { status: 400 });
+      return NextResponse.json(
+        { error: "No se puede desactivar la Sede Principal." },
+        { status: 400 },
+      );
     }
 
     const updated = await prisma.sucursal.update({
@@ -47,14 +59,19 @@ export async function PUT(req: Request, { params }: RouteContext) {
       data: {
         ...(nombre !== undefined ? { nombre: nombre.trim() } : {}),
         ...(activa !== undefined ? { activa } : {}),
-        ...(incluidaEnDashboardGlobal !== undefined ? { incluidaEnDashboardGlobal } : {}),
+        ...(incluidaEnDashboardGlobal !== undefined
+          ? { incluidaEnDashboardGlobal }
+          : {}),
       },
     });
 
     return NextResponse.json({ data: updated });
   } catch (error) {
     console.error("Error al actualizar la sucursal:", error);
-    return NextResponse.json({ error: "Error al actualizar la sucursal" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Error al actualizar la sucursal" },
+      { status: 500 },
+    );
   }
 }
 
@@ -63,7 +80,10 @@ export async function DELETE(_req: Request, { params }: RouteContext) {
   if (!auth.ok) return auth.res;
 
   if (!requireRole(auth.user, ["ADMIN"])) {
-    return NextResponse.json({ error: "Permisos insuficientes" }, { status: 403 });
+    return NextResponse.json(
+      { error: "Permisos insuficientes" },
+      { status: 403 },
+    );
   }
 
   try {
@@ -89,11 +109,17 @@ export async function DELETE(_req: Request, { params }: RouteContext) {
     });
 
     if (!existing) {
-      return NextResponse.json({ error: "Sucursal no encontrada" }, { status: 404 });
+      return NextResponse.json(
+        { error: "Sucursal no encontrada" },
+        { status: 404 },
+      );
     }
 
     if (existing.esPrincipal) {
-      return NextResponse.json({ error: "La Sede Principal no puede ser eliminada." }, { status: 400 });
+      return NextResponse.json(
+        { error: "La Sede Principal no puede ser eliminada." },
+        { status: 400 },
+      );
     }
 
     const hasRelations =
@@ -108,7 +134,7 @@ export async function DELETE(_req: Request, { params }: RouteContext) {
           error:
             "No se puede eliminar la sucursal porque tiene datos asociados (usuarios, ventas o stock). Te recomendamos desactivarla en su lugar.",
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -118,8 +144,11 @@ export async function DELETE(_req: Request, { params }: RouteContext) {
   } catch (error) {
     console.error("Error al eliminar la sucursal:", error);
     return NextResponse.json(
-      { error: "Error al eliminar la sucursal. Verifique que no tenga datos vinculados." },
-      { status: 500 }
+      {
+        error:
+          "Error al eliminar la sucursal. Verifique que no tenga datos vinculados.",
+      },
+      { status: 500 },
     );
   }
 }

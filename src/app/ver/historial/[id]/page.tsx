@@ -8,8 +8,18 @@ import { ReportLoadingPage } from "@/components/reports/report-loading-page";
 import { useReportPdfNavigation } from "@/hooks/useReportPdfNavigation";
 
 const MONTH_LABELS = [
-  "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
-  "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre",
+  "Enero",
+  "Febrero",
+  "Marzo",
+  "Abril",
+  "Mayo",
+  "Junio",
+  "Julio",
+  "Agosto",
+  "Septiembre",
+  "Octubre",
+  "Noviembre",
+  "Diciembre",
 ];
 
 export default function HistorialLoadingPage({
@@ -24,7 +34,9 @@ export default function HistorialLoadingPage({
   const mes = Number.parseInt(id, 10);
   const mesLabel = MONTH_LABELS[mes] ?? `Mes ${id}`;
 
-  const pdfUrl = code ? `/ver/historial/${id}/pdf?anio=${anio}&code=${code}` : null;
+  const pdfUrl = code
+    ? `/ver/historial/${id}/pdf?anio=${anio}&code=${code}`
+    : null;
   const fetchError = useReportPdfNavigation(pdfUrl);
 
   return (
@@ -33,7 +45,9 @@ export default function HistorialLoadingPage({
       subtitle={`${mesLabel} · Período ${anio}`}
       Icon={FileText}
       errorTitle="Error de Auditoría"
-      errorMessage={fetchError ?? (code ? null : "Acceso no autorizado o enlace inválido.")}
+      errorMessage={
+        fetchError ?? (code ? null : "Acceso no autorizado o enlace inválido.")
+      }
     />
   );
 }

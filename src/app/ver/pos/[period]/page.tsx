@@ -25,7 +25,9 @@ export default function PosReporteLoadingPage({
   const sucursalId = searchParams.get("sucursalId") || "1";
   const label = PERIOD_LABELS[period] ?? period;
 
-  const pdfUrl = code ? `/ver/pos/${period}/pdf?code=${code}&sucursalId=${sucursalId}` : null;
+  const pdfUrl = code
+    ? `/ver/pos/${period}/pdf?code=${code}&sucursalId=${sucursalId}`
+    : null;
   const fetchError = useReportPdfNavigation(pdfUrl);
 
   return (
@@ -33,7 +35,9 @@ export default function PosReporteLoadingPage({
       title="Generando Reporte POS"
       subtitle={`Ventas Directas · ${label}`}
       Icon={ShoppingCart}
-      errorMessage={fetchError ?? (code ? null : "Acceso no autorizado o enlace inválido.")}
+      errorMessage={
+        fetchError ?? (code ? null : "Acceso no autorizado o enlace inválido.")
+      }
     />
   );
 }

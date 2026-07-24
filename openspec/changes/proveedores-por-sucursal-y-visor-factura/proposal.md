@@ -29,14 +29,14 @@ Dos correcciones sobre el módulo de Proveedores/Facturas:
 
 ### Parte 3 — ¿Tiene sentido la pestaña "Facturas" (vista global de todas las facturas)?
 
-**Pregunta del usuario**: si cada proveedor va a tener sus propias facturas (visibles desde `/proveedores/[id]`), ¿para qué sirve la pestaña "Facturas" de `proveedores-view.tsx`, que muestra *todas* las facturas subidas con un filtro de proveedor? ¿No es redundante?
+**Pregunta del usuario**: si cada proveedor va a tener sus propias facturas (visibles desde `/proveedores/[id]`), ¿para qué sirve la pestaña "Facturas" de `proveedores-view.tsx`, que muestra _todas_ las facturas subidas con un filtro de proveedor? ¿No es redundante?
 
 **Investigación — no es pura redundancia, cumple dos roles que el detalle de proveedor no puede cumplir:**
 
 1. **`FacturaProveedor.proveedorId` es opcional (`Int?`).** Cuando la IA no detecta el proveedor con certeza durante el OCR, la factura queda con `proveedorId: null` (ver `process/route.ts:94-99`, sólo asigna si hay match exacto por nombre). Esa factura **nunca aparecería** en `/proveedores/[id]` de ningún proveedor, porque `FacturasList` con `proveedorId` fijo filtra estrictamente por ese campo (`facturas-list.tsx:81-85`). La pestaña global (ya scopeada por sucursal vía `buildSucursalWhere` en `GET /api/facturas-proveedor`) es hoy el único lugar donde esas facturas "huérfanas" son visibles y accesibles.
 2. **Filtro cruzado por estado, sin importar el proveedor** (ej. "mostrame todas las que quedaron en `ERROR` o `REQUIERE_REVISION` esta semana") — el detalle de proveedor obliga a repetir esa búsqueda proveedor por proveedor.
 
-**Hallazgo más importante, encontrado al rastrear qué se puede *hacer* desde esa pestaña**: `FacturaProveedorDialog` (el diálogo de subida en `/productos`) hace `upload → process → revisión/confirmación de ítems` como una sola sesión síncrona — **no acepta un `facturaId` existente para reabrir una factura**. Y tanto la pestaña global como el detalle de proveedor sólo ofrecen, sobre cada factura, un ícono "Ver" que abre `FacturaDetalleDialog` (**de solo lectura**, sin ninguna acción de confirmar/matchear productos) y un ícono "Cancelar".
+**Hallazgo más importante, encontrado al rastrear qué se puede _hacer_ desde esa pestaña**: `FacturaProveedorDialog` (el diálogo de subida en `/productos`) hace `upload → process → revisión/confirmación de ítems` como una sola sesión síncrona — **no acepta un `facturaId` existente para reabrir una factura**. Y tanto la pestaña global como el detalle de proveedor sólo ofrecen, sobre cada factura, un ícono "Ver" que abre `FacturaDetalleDialog` (**de solo lectura**, sin ninguna acción de confirmar/matchear productos) y un ícono "Cancelar".
 
 **Consecuencia concreta**: si un usuario cierra el diálogo de subida antes de terminar la revisión, o la factura queda en `REQUIERE_REVISION`/`ERROR`/`PENDIENTE` (ej. se subió pero nunca se llamó a `process`), **hoy no hay ninguna forma de retomarla desde ningún punto de la UI** — la única acción posible es cancelarla y perder el trabajo (incluida la imagen, que se borra al cancelar). Esto es independiente de si la pestaña "Facturas" existe o no: es un gap del flujo de revisión, no de la organización de las pestañas.
 
@@ -98,27 +98,27 @@ Barriendo el resto del flujo (edición de ítems, confirmación, cancelación, c
 
 ## Áreas Afectadas
 
-| Área | Impacto | Descripción |
-|---|---|---|
-| `prisma/schema.prisma` | Modificado | `Proveedor.sucursalId Int? @default(1)` + relación a `Sucursal` + `@@index([sucursalId])` |
-| `prisma/migrations/` | Nuevo | Migración aditiva (1 columna nullable con default) |
-| `src/app/api/proveedores/route.ts` | Modificado | `GET` filtra por sucursal activa (o global); `POST` persiste `sucursalId`, bloqueado en vista global |
-| `src/app/api/proveedores/[id]/route.ts` | Modificado | `PATCH`/`DELETE` verifican pertenencia a la sucursal activa antes de modificar |
-| `src/app/api/facturas-proveedor/[id]/process/route.ts` | Modificado | Match automático de proveedor por nombre (línea ~96) agrega filtro `sucursalId` |
-| `src/lib/validators/proveedor.ts` | Sin cambios de schema | `sucursalId` no se recibe del cliente, se resuelve server-side desde `auth.activeSucursalId` (mismo patrón que `facturas-proveedor/upload`) |
-| `src/lib/apiService.ts` | Modificado | Tipo `Proveedor` agrega `sucursalId` |
-| `src/app/api/facturas-proveedor/[id]/archivo-sesion/route.ts` (o variante en el mismo archivo) | Nuevo/Modificado | Sirve el archivo gateado por `requireAuth` + pertenencia de sucursal, para consumo desde la UI |
-| `src/app/(...)/proveedores/components/factura-detalle-dialog.tsx` | Modificado | Renderiza `<img>`/PDF cuando `!archivoEliminado`, en vez de no mostrar nada |
-| `src/app/(...)/proveedores/components/facturas-list.tsx` | Revisar | Confirmar si también debería ofrecer acceso rápido al visor desde la lista, no solo desde el detalle |
+| Área                                                                                           | Impacto               | Descripción                                                                                                                                 |
+| ---------------------------------------------------------------------------------------------- | --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| `prisma/schema.prisma`                                                                         | Modificado            | `Proveedor.sucursalId Int? @default(1)` + relación a `Sucursal` + `@@index([sucursalId])`                                                   |
+| `prisma/migrations/`                                                                           | Nuevo                 | Migración aditiva (1 columna nullable con default)                                                                                          |
+| `src/app/api/proveedores/route.ts`                                                             | Modificado            | `GET` filtra por sucursal activa (o global); `POST` persiste `sucursalId`, bloqueado en vista global                                        |
+| `src/app/api/proveedores/[id]/route.ts`                                                        | Modificado            | `PATCH`/`DELETE` verifican pertenencia a la sucursal activa antes de modificar                                                              |
+| `src/app/api/facturas-proveedor/[id]/process/route.ts`                                         | Modificado            | Match automático de proveedor por nombre (línea ~96) agrega filtro `sucursalId`                                                             |
+| `src/lib/validators/proveedor.ts`                                                              | Sin cambios de schema | `sucursalId` no se recibe del cliente, se resuelve server-side desde `auth.activeSucursalId` (mismo patrón que `facturas-proveedor/upload`) |
+| `src/lib/apiService.ts`                                                                        | Modificado            | Tipo `Proveedor` agrega `sucursalId`                                                                                                        |
+| `src/app/api/facturas-proveedor/[id]/archivo-sesion/route.ts` (o variante en el mismo archivo) | Nuevo/Modificado      | Sirve el archivo gateado por `requireAuth` + pertenencia de sucursal, para consumo desde la UI                                              |
+| `src/app/(...)/proveedores/components/factura-detalle-dialog.tsx`                              | Modificado            | Renderiza `<img>`/PDF cuando `!archivoEliminado`, en vez de no mostrar nada                                                                 |
+| `src/app/(...)/proveedores/components/facturas-list.tsx`                                       | Revisar               | Confirmar si también debería ofrecer acceso rápido al visor desde la lista, no solo desde el detalle                                        |
 
 ## Riesgos
 
-| Riesgo | Probabilidad | Mitigación |
-|---|---|---|
-| Negocios con una sola sucursal no notan cambio funcional, pero negocios multi-sucursal existentes de golpe "pierden" proveedores que antes veían compartidos | Media | Documentar explícitamente en el rollout; todos los proveedores existentes migran a `sucursalId = 1` (la principal), no desaparecen — quedan visibles solo desde esa sucursal hasta que se reasignen o se creen de nuevo en las demás |
-| Facturas históricas con `proveedorId` ya asignado a un proveedor que ahora "pertenece" a otra sucursal (dato inconsistente pre-existente) | Baja | No se toca `FacturaProveedor.proveedorId` retroactivamente — el vínculo ya creado se respeta tal cual, el scoping nuevo solo aplica hacia adelante (alta, listado, match automático) |
-| Exponer el archivo original vía endpoint de sesión sin migrar el token HMAC podría duplicar lógica de lectura de archivo | Baja | Reusar la misma función de lectura (`getFacturaProveedorStorageDir` + validación de nombre opaco) que ya usa `archivo/route.ts`, solo cambia la capa de auth |
-| Vista global (multi-sucursal) de Proveedores deja de tener sentido si cada sucursal es una isla — ¿debería seguir permitiendo ver "todos" en modo lectura? | Media | Se resuelve con el mismo patrón ya usado en el resto del código (`isGlobalSucursalView` = ve todo en modo solo lectura, no puede crear/editar) — no es un caso nuevo a diseñar |
+| Riesgo                                                                                                                                                       | Probabilidad | Mitigación                                                                                                                                                                                                                           |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Negocios con una sola sucursal no notan cambio funcional, pero negocios multi-sucursal existentes de golpe "pierden" proveedores que antes veían compartidos | Media        | Documentar explícitamente en el rollout; todos los proveedores existentes migran a `sucursalId = 1` (la principal), no desaparecen — quedan visibles solo desde esa sucursal hasta que se reasignen o se creen de nuevo en las demás |
+| Facturas históricas con `proveedorId` ya asignado a un proveedor que ahora "pertenece" a otra sucursal (dato inconsistente pre-existente)                    | Baja         | No se toca `FacturaProveedor.proveedorId` retroactivamente — el vínculo ya creado se respeta tal cual, el scoping nuevo solo aplica hacia adelante (alta, listado, match automático)                                                 |
+| Exponer el archivo original vía endpoint de sesión sin migrar el token HMAC podría duplicar lógica de lectura de archivo                                     | Baja         | Reusar la misma función de lectura (`getFacturaProveedorStorageDir` + validación de nombre opaco) que ya usa `archivo/route.ts`, solo cambia la capa de auth                                                                         |
+| Vista global (multi-sucursal) de Proveedores deja de tener sentido si cada sucursal es una isla — ¿debería seguir permitiendo ver "todos" en modo lectura?   | Media        | Se resuelve con el mismo patrón ya usado en el resto del código (`isGlobalSucursalView` = ve todo en modo solo lectura, no puede crear/editar) — no es un caso nuevo a diseñar                                                       |
 
 ## Plan de Reversión (Rollback)
 

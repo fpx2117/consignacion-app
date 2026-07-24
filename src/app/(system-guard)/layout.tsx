@@ -11,17 +11,17 @@ const getUserCountCached = unstable_cache(
 );
 
 export default async function SystemGuardLayout({
-    children,
+  children,
 }: {
-    children: React.ReactNode;
+  children: React.ReactNode;
 }) {
-    // Check if the system is initialized (at least one user exists)
-    const userCount = await getUserCountCached();
+  // Check if the system is initialized (at least one user exists)
+  const userCount = await getUserCountCached();
 
-    if (userCount === 0) {
-        // System not initialized, redirect to setup
-        redirect("/setup");
-    }
+  if (userCount === 0) {
+    // System not initialized, redirect to setup
+    redirect("/setup");
+  }
 
-    return <>{children}</>;
+  return <>{children}</>;
 }

@@ -135,23 +135,23 @@ Estas son algunas de las mejoras nuevas que ya conviene reflejar en la documenta
 
 ## Stack tecnológico
 
-| Capa | Tecnología |
-|---|---|
-| Framework | Next.js 16 (App Router) |
-| UI | React 19, Tailwind CSS 4, shadcn/ui, Radix UI |
-| ORM / DB | Prisma 7 + PostgreSQL (`@prisma/adapter-pg`) |
-| Servidor | Node.js HTTP custom + `tsx` (`server.ts`) |
-| Tiempo real | Socket.io 4 |
-| Validación | Zod + React Hook Form |
-| Auth | JWT (`jose`), bcryptjs, sesiones en DB |
-| Estado global | Zustand |
-| Reportes | Puppeteer |
-| SaaS payments | MercadoPago + PayPal |
-| Envíos | Andreani |
-| Email | Resend |
-| IA/OCR | OpenRouter + Tesseract + validación custom |
-| Charts | Recharts |
-| Lenguaje | TypeScript 5 |
+| Capa          | Tecnología                                    |
+| ------------- | --------------------------------------------- |
+| Framework     | Next.js 16 (App Router)                       |
+| UI            | React 19, Tailwind CSS 4, shadcn/ui, Radix UI |
+| ORM / DB      | Prisma 7 + PostgreSQL (`@prisma/adapter-pg`)  |
+| Servidor      | Node.js HTTP custom + `tsx` (`server.ts`)     |
+| Tiempo real   | Socket.io 4                                   |
+| Validación    | Zod + React Hook Form                         |
+| Auth          | JWT (`jose`), bcryptjs, sesiones en DB        |
+| Estado global | Zustand                                       |
+| Reportes      | Puppeteer                                     |
+| SaaS payments | MercadoPago + PayPal                          |
+| Envíos        | Andreani                                      |
+| Email         | Resend                                        |
+| IA/OCR        | OpenRouter + Tesseract + validación custom    |
+| Charts        | Recharts                                      |
+| Lenguaje      | TypeScript 5                                  |
 
 ---
 
@@ -202,40 +202,40 @@ consignacion-app/
 
 ### Variables mínimas requeridas
 
-| Variable | Descripción |
-|---|---|
-| `DATABASE_URL` | Conexión PostgreSQL |
-| `JWT_SECRET` | Firma de tokens |
-| `JWT_COOKIE_NAME` | Cookie de sesión |
-| `CRON_SECRET` | Protección de cron endpoints |
-| `PDF_SECRET` | Firma de links PDF |
-| `SHARE_LINK_SECRET` | Seguridad de share links |
-| `NEXT_PUBLIC_APP_URL` | URL pública de la app |
+| Variable               | Descripción                        |
+| ---------------------- | ---------------------------------- |
+| `DATABASE_URL`         | Conexión PostgreSQL                |
+| `JWT_SECRET`           | Firma de tokens                    |
+| `JWT_COOKIE_NAME`      | Cookie de sesión                   |
+| `CRON_SECRET`          | Protección de cron endpoints       |
+| `PDF_SECRET`           | Firma de links PDF                 |
+| `SHARE_LINK_SECRET`    | Seguridad de share links           |
+| `NEXT_PUBLIC_APP_URL`  | URL pública de la app              |
 | `NEXT_PUBLIC_BASE_URL` | Base URL usada por socket/reportes |
-| `SOCKET_DISPATCH_URL` | Endpoint interno de despacho |
+| `SOCKET_DISPATCH_URL`  | Endpoint interno de despacho       |
 
 ### Pagos SaaS
 
-| Variable | Descripción |
-|---|---|
-| `MP_ACCESS_TOKEN` | Access token del SaaS en Mercado Pago |
-| `MP_PUBLIC_KEY` | Public key Mercado Pago |
-| `MP_WEBHOOK_SECRET` | Validación de webhooks MP |
-| `PAYPAL_CLIENT_ID` | Client ID PayPal |
-| `PAYPAL_SECRET` | Secret PayPal |
-| `PAYPAL_WEBHOOK_ID` | Webhook ID PayPal |
-| `PAYPAL_API_URL` | Sandbox o live |
+| Variable            | Descripción                           |
+| ------------------- | ------------------------------------- |
+| `MP_ACCESS_TOKEN`   | Access token del SaaS en Mercado Pago |
+| `MP_PUBLIC_KEY`     | Public key Mercado Pago               |
+| `MP_WEBHOOK_SECRET` | Validación de webhooks MP             |
+| `PAYPAL_CLIENT_ID`  | Client ID PayPal                      |
+| `PAYPAL_SECRET`     | Secret PayPal                         |
+| `PAYPAL_WEBHOOK_ID` | Webhook ID PayPal                     |
+| `PAYPAL_API_URL`    | Sandbox o live                        |
 
 ### Integraciones opcionales
 
-| Variable | Descripción |
-|---|---|
-| `RESEND_API_KEY` | Envío de emails |
-| `DEFAULT_TRIAL_DAYS` | Días de prueba |
-| `CATALOGO_API_URL` | URL del servicio `catalogo-global-api` |
-| `CATALOGO_API_KEY` | API key del catálogo global |
-| `CATALOGO_API_TIMEOUT_MS` | Timeout de matching global |
-| `UPLOAD_DIR` | Directorio persistente para uploads |
+| Variable                  | Descripción                            |
+| ------------------------- | -------------------------------------- |
+| `RESEND_API_KEY`          | Envío de emails                        |
+| `DEFAULT_TRIAL_DAYS`      | Días de prueba                         |
+| `CATALOGO_API_URL`        | URL del servicio `catalogo-global-api` |
+| `CATALOGO_API_KEY`        | API key del catálogo global            |
+| `CATALOGO_API_TIMEOUT_MS` | Timeout de matching global             |
+| `UPLOAD_DIR`              | Directorio persistente para uploads    |
 
 > Las credenciales de Mercado Pago de cada tienda pública se administran desde settings y no desde variables globales del deployment.
 

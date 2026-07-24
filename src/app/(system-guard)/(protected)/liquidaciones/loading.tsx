@@ -10,7 +10,10 @@ export default function LiquidacionesLoading() {
       {/* Stats */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
         {Array.from({ length: 3 }).map((_, i) => (
-          <div key={i} className="rounded-lg border bg-card px-4 py-3 flex flex-col gap-1">
+          <div
+            key={i}
+            className="rounded-lg border bg-card px-4 py-3 flex flex-col gap-1"
+          >
             <div className="h-3 w-24 rounded bg-muted" />
             <div className="h-6 w-28 rounded bg-muted" />
           </div>

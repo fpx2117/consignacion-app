@@ -13,7 +13,7 @@ export const createPedidoSchema = z.object({
       z.object({
         productoId: z.number().int().positive(),
         cantidadEsperada: z.number().int().min(1),
-      })
+      }),
     )
     .min(1, "El pedido debe tener al menos un item"),
 });
@@ -24,7 +24,7 @@ export const confirmarPedidoSchema = z.object({
       z.object({
         itemId: z.number().int().positive(),
         cantidadRecibida: z.number().int().min(0),
-      })
+      }),
     )
     .min(1),
 });

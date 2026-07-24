@@ -47,8 +47,14 @@ function cleanString(value: unknown, fallback: string) {
   return typeof value === "string" ? value : fallback;
 }
 
-function normalizeSection(value: unknown, fallback: StorefrontSectionContent): StorefrontSectionContent {
-  const source = value && typeof value === "object" ? (value as Record<string, unknown>) : {};
+function normalizeSection(
+  value: unknown,
+  fallback: StorefrontSectionContent,
+): StorefrontSectionContent {
+  const source =
+    value && typeof value === "object"
+      ? (value as Record<string, unknown>)
+      : {};
 
   return {
     eyebrow: cleanString(source.eyebrow, fallback.eyebrow),
@@ -57,8 +63,14 @@ function normalizeSection(value: unknown, fallback: StorefrontSectionContent): S
   };
 }
 
-function normalizeStat(value: unknown, fallback: StorefrontStatContent): StorefrontStatContent {
-  const source = value && typeof value === "object" ? (value as Record<string, unknown>) : {};
+function normalizeStat(
+  value: unknown,
+  fallback: StorefrontStatContent,
+): StorefrontStatContent {
+  const source =
+    value && typeof value === "object"
+      ? (value as Record<string, unknown>)
+      : {};
 
   return {
     label: cleanString(source.label, fallback.label),
@@ -66,11 +78,14 @@ function normalizeStat(value: unknown, fallback: StorefrontStatContent): Storefr
   };
 }
 
-export function createDefaultStorefrontContent(context: StorefrontContext = {}): StorefrontContent {
+export function createDefaultStorefrontContent(
+  context: StorefrontContext = {},
+): StorefrontContent {
   const storeName = context.storeName?.trim() || "tu tienda";
 
   return {
-    announcementText: "Envíos a todo el país · Atención personalizada · Nuevos ingresos cada semana",
+    announcementText:
+      "Envíos a todo el país · Atención personalizada · Nuevos ingresos cada semana",
     heroBadge: "Tienda online",
     heroTitle: `Bienvenido a ${storeName}`,
     heroDescription:
@@ -124,7 +139,10 @@ export function normalizeStorefrontContent(
   context: StorefrontContext = {},
 ): StorefrontContent {
   const fallback = createDefaultStorefrontContent(context);
-  const source = value && typeof value === "object" ? (value as Record<string, unknown>) : {};
+  const source =
+    value && typeof value === "object"
+      ? (value as Record<string, unknown>)
+      : {};
 
   const featuredCategoryIds = Array.isArray(source.featuredCategoryIds)
     ? source.featuredCategoryIds
@@ -133,31 +151,54 @@ export function normalizeStorefrontContent(
         .slice(0, 8)
     : fallback.featuredCategoryIds;
 
-  const footerSource = source.footer && typeof source.footer === "object"
-    ? (source.footer as Record<string, unknown>)
-    : {};
-  const statsSource = source.stats && typeof source.stats === "object"
-    ? (source.stats as Record<string, unknown>)
-    : {};
+  const footerSource =
+    source.footer && typeof source.footer === "object"
+      ? (source.footer as Record<string, unknown>)
+      : {};
+  const statsSource =
+    source.stats && typeof source.stats === "object"
+      ? (source.stats as Record<string, unknown>)
+      : {};
 
   return {
-    announcementText: cleanString(source.announcementText, fallback.announcementText),
+    announcementText: cleanString(
+      source.announcementText,
+      fallback.announcementText,
+    ),
     heroBadge: cleanString(source.heroBadge, fallback.heroBadge),
     heroTitle: cleanString(source.heroTitle, fallback.heroTitle),
-    heroDescription: cleanString(source.heroDescription, fallback.heroDescription),
-    heroPrimaryCtaLabel: cleanString(source.heroPrimaryCtaLabel, fallback.heroPrimaryCtaLabel),
-    heroSecondaryCtaLabel: cleanString(source.heroSecondaryCtaLabel, fallback.heroSecondaryCtaLabel),
+    heroDescription: cleanString(
+      source.heroDescription,
+      fallback.heroDescription,
+    ),
+    heroPrimaryCtaLabel: cleanString(
+      source.heroPrimaryCtaLabel,
+      fallback.heroPrimaryCtaLabel,
+    ),
+    heroSecondaryCtaLabel: cleanString(
+      source.heroSecondaryCtaLabel,
+      fallback.heroSecondaryCtaLabel,
+    ),
     categories: normalizeSection(source.categories, fallback.categories),
     highlights: normalizeSection(source.highlights, fallback.highlights),
-    featuredProducts: normalizeSection(source.featuredProducts, fallback.featuredProducts),
+    featuredProducts: normalizeSection(
+      source.featuredProducts,
+      fallback.featuredProducts,
+    ),
     catalog: normalizeSection(source.catalog, fallback.catalog),
     footer: {
       title: cleanString(footerSource.title, fallback.footer.title),
-      description: cleanString(footerSource.description, fallback.footer.description),
+      description: cleanString(
+        footerSource.description,
+        fallback.footer.description,
+      ),
     },
     stats: {
       products: normalizeStat(statsSource.products, fallback.stats.products),
-      categories: normalizeStat(statsSource.categories, fallback.stats.categories),
+      categories: normalizeStat(
+        statsSource.categories,
+        fallback.stats.categories,
+      ),
       channel: normalizeStat(statsSource.channel, fallback.stats.channel),
     },
     featuredCategoryIds,

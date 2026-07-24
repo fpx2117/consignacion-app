@@ -1,9 +1,18 @@
 import { z } from "zod";
 
 export const storeThemeConfigSchema = z.object({
-  primaryColor: z.string().regex(/^#([0-9A-F]{3}){1,2}$/i, "Color primario inválido").default("#111827"),
-  secondaryColor: z.string().regex(/^#([0-9A-F]{3}){1,2}$/i, "Color secundario inválido").default("#3b82f6"),
-  backgroundColor: z.string().regex(/^#([0-9A-F]{3}){1,2}$/i, "Color de fondo inválido").default("#ffffff"),
+  primaryColor: z
+    .string()
+    .regex(/^#([0-9A-F]{3}){1,2}$/i, "Color primario inválido")
+    .default("#111827"),
+  secondaryColor: z
+    .string()
+    .regex(/^#([0-9A-F]{3}){1,2}$/i, "Color secundario inválido")
+    .default("#3b82f6"),
+  backgroundColor: z
+    .string()
+    .regex(/^#([0-9A-F]{3}){1,2}$/i, "Color de fondo inválido")
+    .default("#ffffff"),
   headingFont: z.string().default("Inter"),
   bodyFont: z.string().default("Inter"),
 });
@@ -14,7 +23,9 @@ export type StoreThemeConfig = z.infer<typeof storeThemeConfigSchema>;
 // ONLINE STORE SETTINGS SCHEMA
 // ============================================================
 
-const hexColor = z.string().regex(/^#([0-9A-F]{3}){1,2}$/i, "Color hexadecimal inválido");
+const hexColor = z
+  .string()
+  .regex(/^#([0-9A-F]{3}){1,2}$/i, "Color hexadecimal inválido");
 
 export const onlineStoreThemeSchema = z.object({
   primaryColor: hexColor.default("#007AFF"),
@@ -42,11 +53,17 @@ export const onlineStoreCatalogSchema = z.object({
   maxProductsPerSection: z.number().int().min(1).max(50).default(6),
   addButtonPosition: z.enum(["floating", "below"]).default("floating"),
   featuredProductIds: z.array(z.number().int()).default([]),
-  featuredSections: z.array(z.object({
-    title: z.string().default("Destacados"),
-    productIds: z.array(z.number().int()).default([]),
-    displayMode: z.enum(["slider-auto", "slider-static", "grid"]).default("slider-static"),
-  })).default([]),
+  featuredSections: z
+    .array(
+      z.object({
+        title: z.string().default("Destacados"),
+        productIds: z.array(z.number().int()).default([]),
+        displayMode: z
+          .enum(["slider-auto", "slider-static", "grid"])
+          .default("slider-static"),
+      }),
+    )
+    .default([]),
 });
 
 export const onlineStorePromoItemSchema = z.object({
@@ -74,14 +91,18 @@ export const onlineStoreCartMessageSchema = z.object({
 });
 
 export const onlineStoreCartSchema = z.object({
-  displayMode: z.enum(["bottom-sheet", "modal", "drawer"]).default("bottom-sheet"),
+  displayMode: z
+    .enum(["bottom-sheet", "modal", "drawer"])
+    .default("bottom-sheet"),
   showWhatsappPreview: z.boolean().default(true),
   whatsappButtonText: z.string().default("Enviar pedido por WhatsApp"),
   messageTemplate: onlineStoreCartMessageSchema,
 });
 
 export const onlineStoreResponsiveSchema = z.object({
-  desktopLayout: z.enum(["mobile-centered", "wide-ecommerce", "with-cart-sidebar"]).default("mobile-centered"),
+  desktopLayout: z
+    .enum(["mobile-centered", "wide-ecommerce", "with-cart-sidebar"])
+    .default("mobile-centered"),
 });
 
 export const onlineStoreSettingsSchema = z.object({
@@ -98,4 +119,6 @@ export const onlineStoreSettingsSchema = z.object({
   responsive: onlineStoreResponsiveSchema,
 });
 
-export type OnlineStoreSettingsValidated = z.infer<typeof onlineStoreSettingsSchema>;
+export type OnlineStoreSettingsValidated = z.infer<
+  typeof onlineStoreSettingsSchema
+>;

@@ -15,11 +15,16 @@ function contexto(overrides: Partial<ContextoMatching> = {}): ContextoMatching {
 
 test("capa 1: alias por código de proveedor exacto gana sobre cualquier otra señal", () => {
   const ctx = contexto({
-    productos: [{ id: 99, nombre: "Producto que no debería matchear por nombre" }],
+    productos: [
+      { id: 99, nombre: "Producto que no debería matchear por nombre" },
+    ],
     aliasPorCodigo: new Map([["1234-5", 152]]),
   });
 
-  const resultado = matchearItem({ textoOriginal: "cualquier cosa", codigoProveedor: "1234-5" }, ctx);
+  const resultado = matchearItem(
+    { textoOriginal: "cualquier cosa", codigoProveedor: "1234-5" },
+    ctx,
+  );
 
   assert.equal(resultado.productoId, 152);
   assert.equal(resultado.motivo, "codigo_proveedor");
@@ -32,7 +37,10 @@ test("capa 2: alias por texto normalizado exacto", () => {
     aliasPorTexto: new Map([["mt lattara mayar pim edp", 152]]),
   });
 
-  const resultado = matchearItem({ textoOriginal: "MT LATTARA MAYAR (PIM) EDP", codigoProveedor: null }, ctx);
+  const resultado = matchearItem(
+    { textoOriginal: "MT LATTARA MAYAR (PIM) EDP", codigoProveedor: null },
+    ctx,
+  );
 
   assert.equal(resultado.productoId, 152);
   assert.equal(resultado.motivo, "alias");
@@ -44,7 +52,10 @@ test("capa 3: nombre exacto normalizado contra el catálogo", () => {
     productosPorNombreNormalizado: new Map([["mayar pink edp 100ml", 7]]),
   });
 
-  const resultado = matchearItem({ textoOriginal: "Mayar Pink EDP 100ML", codigoProveedor: null }, ctx);
+  const resultado = matchearItem(
+    { textoOriginal: "Mayar Pink EDP 100ML", codigoProveedor: null },
+    ctx,
+  );
 
   assert.equal(resultado.productoId, 7);
   assert.equal(resultado.motivo, "nombre_exacto");
@@ -56,11 +67,17 @@ test("capa 4: fuzzy clasifica como REQUIERE_REVISION un parecido moderado (caso 
     productos: [{ id: 7, nombre: "LATTAFA - MAYAR PINK EDP 100ML" }],
   });
 
-  const resultado = matchearItem({ textoOriginal: "MT LATTAFA MAYAR (PIM) EDP", codigoProveedor: null }, ctx);
+  const resultado = matchearItem(
+    { textoOriginal: "MT LATTAFA MAYAR (PIM) EDP", codigoProveedor: null },
+    ctx,
+  );
 
   assert.equal(resultado.productoId, 7);
   assert.equal(resultado.motivo, "fuzzy");
-  assert.ok(resultado.score !== null && resultado.score > 0.5, "el score debería reflejar un parecido real");
+  assert.ok(
+    resultado.score !== null && resultado.score > 0.5,
+    "el score debería reflejar un parecido real",
+  );
 });
 
 test("fuzzy: sin ningún producto parecido, no asocia y marca SIN_COINCIDENCIA", () => {
@@ -68,7 +85,10 @@ test("fuzzy: sin ningún producto parecido, no asocia y marca SIN_COINCIDENCIA",
     productos: [{ id: 1, nombre: "Algo completamente distinto zzz" }],
   });
 
-  const resultado = matchearItem({ textoOriginal: "Otro producto sin relación qqq", codigoProveedor: null }, ctx);
+  const resultado = matchearItem(
+    { textoOriginal: "Otro producto sin relación qqq", codigoProveedor: null },
+    ctx,
+  );
 
   assert.equal(resultado.estado, EstadoItemFactura.SIN_COINCIDENCIA);
 });
@@ -81,14 +101,20 @@ test("ambigüedad: dos productos casi idénticos fuerzan revisión aunque el sco
     ],
   });
 
-  const resultado = matchearItem({ textoOriginal: "Lattafa Mayar Pink EDP", codigoProveedor: null }, ctx);
+  const resultado = matchearItem(
+    { textoOriginal: "Lattafa Mayar Pink EDP", codigoProveedor: null },
+    ctx,
+  );
 
   assert.equal(resultado.motivo, "fuzzy");
   assert.equal(resultado.estado, EstadoItemFactura.REQUIERE_REVISION);
 });
 
 test("catálogo vacío no rompe y devuelve SIN_COINCIDENCIA", () => {
-  const resultado = matchearItem({ textoOriginal: "Cualquier producto", codigoProveedor: null }, contexto());
+  const resultado = matchearItem(
+    { textoOriginal: "Cualquier producto", codigoProveedor: null },
+    contexto(),
+  );
   assert.equal(resultado.productoId, null);
   assert.equal(resultado.estado, EstadoItemFactura.SIN_COINCIDENCIA);
 });

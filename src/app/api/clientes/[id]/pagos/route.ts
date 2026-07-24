@@ -13,7 +13,13 @@ export async function POST(req: Request, { params }: RouteContext) {
   const auth = await requireAuth();
   if (!auth.ok) return auth.res;
   if (isGlobalSucursalView(auth)) {
-    return NextResponse.json({ error: "Vista global en modo solo lectura. Selecciona una sucursal para registrar pagos." }, { status: 409 });
+    return NextResponse.json(
+      {
+        error:
+          "Vista global en modo solo lectura. Selecciona una sucursal para registrar pagos.",
+      },
+      { status: 409 },
+    );
   }
 
   // Resolvemos los params de forma asíncrona
@@ -30,40 +36,45 @@ export async function POST(req: Request, { params }: RouteContext) {
   if (!parsed.success) {
     return NextResponse.json(
       { error: "Validación fallida", details: parsed.error.flatten() },
-      { status: 400 }
+      { status: 400 },
     );
   }
 
-  const result = await prisma.$transaction(async (tx) => {
-    const cliente = await tx.cliente.findFirst({
-      where: { id: clienteId, sucursalId: auth.activeSucursalId },
-    });
-    if (!cliente) throw new Error("CLIENTE_NO_EXISTE");
+  const result = await prisma
+    .$transaction(async (tx) => {
+      const cliente = await tx.cliente.findFirst({
+        where: { id: clienteId, sucursalId: auth.activeSucursalId },
+      });
+      if (!cliente) throw new Error("CLIENTE_NO_EXISTE");
 
-    const pago = await tx.pago.create({
-      data: {
-        clienteId,
-        sucursalId: auth.activeSucursalId, // <--- NUEVO
-        tipo: "DEUDA",                     // <--- NUEVO
-        monto: parsed.data.monto,
-        metodo: parsed.data.metodo,
-      },
-    });
+      const pago = await tx.pago.create({
+        data: {
+          clienteId,
+          sucursalId: auth.activeSucursalId, // <--- NUEVO
+          tipo: "DEUDA", // <--- NUEVO
+          monto: parsed.data.monto,
+          metodo: parsed.data.metodo,
+        },
+      });
 
-    const updated = await tx.cliente.update({
-      where: { id: clienteId },
-      data: { saldoCuenta: { decrement: parsed.data.monto } },
-      select: { id: true, saldoCuenta: true },
-    });
+      const updated = await tx.cliente.update({
+        where: { id: clienteId },
+        data: { saldoCuenta: { decrement: parsed.data.monto } },
+        select: { id: true, saldoCuenta: true },
+      });
 
-    return { pago, saldo: updated.saldoCuenta };
-  }).catch((e) => {
-    if (String(e?.message) === "CLIENTE_NO_EXISTE") return null;
-    throw e;
-  });
+      return { pago, saldo: updated.saldoCuenta };
+    })
+    .catch((e) => {
+      if (String(e?.message) === "CLIENTE_NO_EXISTE") return null;
+      throw e;
+    });
 
   if (!result) {
-    return NextResponse.json({ error: "Cliente no encontrado" }, { status: 404 });
+    return NextResponse.json(
+      { error: "Cliente no encontrado" },
+      { status: 404 },
+    );
   }
 
   return NextResponse.json({ data: result }, { status: 201 });

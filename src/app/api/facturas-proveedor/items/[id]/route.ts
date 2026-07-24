@@ -16,13 +16,19 @@ export async function PATCH(
   const auth = await requireAuth();
   if (!auth.ok) return auth.res;
   if (!requireRole(auth.user, ["ADMIN"])) {
-    return NextResponse.json({ error: "No tienes permisos (Admin requerido)" }, { status: 403 });
+    return NextResponse.json(
+      { error: "No tienes permisos (Admin requerido)" },
+      { status: 403 },
+    );
   }
 
   const { id } = await params;
   const itemId = Number(id);
   if (!Number.isInteger(itemId)) {
-    return NextResponse.json({ error: "Item de factura no encontrado" }, { status: 404 });
+    return NextResponse.json(
+      { error: "Item de factura no encontrado" },
+      { status: 404 },
+    );
   }
 
   const body = await req.json().catch(() => null);
@@ -36,19 +42,31 @@ export async function PATCH(
 
   const cargado = await cargarItemFacturaAccesible(auth, itemId);
   if (!cargado.ok) {
-    return NextResponse.json({ error: cargado.error }, { status: cargado.status });
+    return NextResponse.json(
+      { error: cargado.error },
+      { status: cargado.status },
+    );
   }
   const { item } = cargado;
 
-  const { textoOriginal, codigoProveedor, cantidad, precioUnitario, totalLinea } = parsed.data;
+  const {
+    textoOriginal,
+    codigoProveedor,
+    cantidad,
+    precioUnitario,
+    totalLinea,
+  } = parsed.data;
 
   // Si se edita cantidad o precio y no se manda un total de línea explícito,
   // se recalcula para que quede consistente con lo que el usuario corrigió.
   const cantidadFinal = cantidad ?? item.cantidad;
-  const precioFinal = precioUnitario !== undefined && precioUnitario !== null
-    ? precioUnitario
-    : Number(item.precioUnitario ?? 0);
-  const recalcularTotal = (cantidad !== undefined || precioUnitario !== undefined) && totalLinea === undefined;
+  const precioFinal =
+    precioUnitario !== undefined && precioUnitario !== null
+      ? precioUnitario
+      : Number(item.precioUnitario ?? 0);
+  const recalcularTotal =
+    (cantidad !== undefined || precioUnitario !== undefined) &&
+    totalLinea === undefined;
 
   const itemActualizado = await prisma.facturaProveedorItem.update({
     where: { id: item.id },

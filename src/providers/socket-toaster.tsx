@@ -5,7 +5,10 @@ import { useSocket } from "@/providers/socket-provider";
 import { usePathname } from "next/navigation";
 import { toast } from "sonner";
 import { BellRing } from "lucide-react";
-import { NOTIFICATION_TYPE, NOTIFICATION_CONFIG } from "@/lib/notificaciones/types";
+import {
+  NOTIFICATION_TYPE,
+  NOTIFICATION_CONFIG,
+} from "@/lib/notificaciones/types";
 
 interface SocketNotificationPayload {
   type: NOTIFICATION_TYPE;
@@ -43,7 +46,9 @@ export const SocketToaster = () => {
 
       // Determinar configuración visual
       const type = data.type;
-      const config = NOTIFICATION_CONFIG[type] ?? NOTIFICATION_CONFIG[NOTIFICATION_TYPE.SYSTEM];
+      const config =
+        NOTIFICATION_CONFIG[type] ??
+        NOTIFICATION_CONFIG[NOTIFICATION_TYPE.SYSTEM];
 
       // Icono: ShoppingBag sólo para NEW_ORDER (ya filtrado arriba — siempre BellRing aquí)
       const Icon = BellRing;
@@ -60,10 +65,17 @@ export const SocketToaster = () => {
         icon: <Icon className="h-4 w-4" />,
         description: data.message,
         duration: 5000,
-        action: data.data?.ventaId != null ? {
-          label: "Ver Ticket",
-          onClick: () => window.open(`/ticket-loading/${data.data!.ventaId}`, "_blank"),
-        } : undefined,
+        action:
+          data.data?.ventaId != null
+            ? {
+                label: "Ver Ticket",
+                onClick: () =>
+                  window.open(
+                    `/ticket-loading/${data.data!.ventaId}`,
+                    "_blank",
+                  ),
+              }
+            : undefined,
       });
     });
 

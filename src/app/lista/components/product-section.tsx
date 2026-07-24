@@ -2,7 +2,11 @@
 
 import * as React from "react";
 import { ChevronRight } from "lucide-react";
-import type { PublicCatalogConfig, PublicCatalogProduct, CatalogCartItem } from "@/lib/types";
+import type {
+  PublicCatalogConfig,
+  PublicCatalogProduct,
+  CatalogCartItem,
+} from "@/lib/types";
 import { ProductCard } from "./product-card";
 
 type ProductSectionProps = {
@@ -78,8 +82,12 @@ export function ProductSection({
     <section className={className}>
       <div className="flex items-center justify-between px-4 mb-3">
         <div className="flex items-baseline gap-2">
-          <h3 className="text-lg font-bold text-[var(--store-text,#0F172A)]">{title}</h3>
-          <span className="text-sm text-[var(--store-muted,#8A8F98)]">{count}</span>
+          <h3 className="text-lg font-bold text-[var(--store-text,#0F172A)]">
+            {title}
+          </h3>
+          <span className="text-sm text-[var(--store-muted,#8A8F98)]">
+            {count}
+          </span>
         </div>
         {showViewAll && onViewAll && (
           <button

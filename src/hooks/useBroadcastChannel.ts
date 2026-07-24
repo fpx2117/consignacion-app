@@ -8,7 +8,7 @@ import {
 
 type MessageHandler = {
   [K in BroadcastMessage["type"]]?: (
-    message: Extract<BroadcastMessage, { type: K }>
+    message: Extract<BroadcastMessage, { type: K }>,
   ) => void;
 };
 
@@ -37,8 +37,7 @@ export function useBroadcastChannel(handlers: MessageHandler): void {
 
     const unsubscribe = subscribeAppMessages((message) => {
       const handler = handlersRef.current[message.type] as
-        | ((msg: BroadcastMessage) => void)
-        | undefined;
+        ((msg: BroadcastMessage) => void) | undefined;
       if (handler) {
         handler(message);
       }

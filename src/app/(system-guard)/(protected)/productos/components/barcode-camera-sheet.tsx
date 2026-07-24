@@ -30,14 +30,27 @@ declare global {
 }
 
 const PREFERRED_FORMATS = [
-  "ean_13", "ean_8", "upc_a", "upc_e",
-  "code_128", "code_39", "itf", "codabar",
+  "ean_13",
+  "ean_8",
+  "upc_a",
+  "upc_e",
+  "code_128",
+  "code_39",
+  "itf",
+  "codabar",
 ];
 
 // ── Obtener stream de cámara trasera con fallbacks ───────────────────────────
 async function getCamera(): Promise<MediaStream> {
   const constraints: MediaStreamConstraints[] = [
-    { audio: false, video: { facingMode: { exact: "environment" }, width: { ideal: 1280 }, height: { ideal: 720 } } },
+    {
+      audio: false,
+      video: {
+        facingMode: { exact: "environment" },
+        width: { ideal: 1280 },
+        height: { ideal: 720 },
+      },
+    },
     { audio: false, video: { facingMode: "environment" } },
     { audio: false, video: true },
   ];
@@ -76,11 +89,14 @@ async function createUnifiedDetector(): Promise<UnifiedDetector | null> {
         detect: async (video) => {
           const results = await detector.detect(video);
           const match = results.find(
-            (r) => typeof r.rawValue === "string" && r.rawValue.trim().length > 0
+            (r) =>
+              typeof r.rawValue === "string" && r.rawValue.trim().length > 0,
           );
           return match?.rawValue?.trim() ?? null;
         },
-        stop: () => { /* nativo no necesita cleanup */ },
+        stop: () => {
+          /* nativo no necesita cleanup */
+        },
       };
     } catch {
       // Falló la creación del detector nativo, caer a ZXing
@@ -92,8 +108,12 @@ async function createUnifiedDetector(): Promise<UnifiedDetector | null> {
   // desde un canvas — más confiable que decodeOnceFromVideoElement que
   // intenta controlar el video internamente y choca con autoPlay.
   try {
-    const { MultiFormatReader, BinaryBitmap, HybridBinarizer, HTMLCanvasElementLuminanceSource } =
-      await import("@zxing/library");
+    const {
+      MultiFormatReader,
+      BinaryBitmap,
+      HybridBinarizer,
+      HTMLCanvasElementLuminanceSource,
+    } = await import("@zxing/library");
 
     const zxingReader = new MultiFormatReader();
     const canvas = document.createElement("canvas");
@@ -101,7 +121,8 @@ async function createUnifiedDetector(): Promise<UnifiedDetector | null> {
 
     return {
       detect: async (video) => {
-        if (!ctx || video.videoWidth === 0 || video.videoHeight === 0) return null;
+        if (!ctx || video.videoWidth === 0 || video.videoHeight === 0)
+          return null;
         try {
           // Capturar frame actual del video en canvas
           canvas.width = video.videoWidth;
@@ -110,7 +131,9 @@ async function createUnifiedDetector(): Promise<UnifiedDetector | null> {
 
           // Decodificar desde el canvas con ZXing
           const luminanceSource = new HTMLCanvasElementLuminanceSource(canvas);
-          const binaryBitmap = new BinaryBitmap(new HybridBinarizer(luminanceSource));
+          const binaryBitmap = new BinaryBitmap(
+            new HybridBinarizer(luminanceSource),
+          );
           const result = zxingReader.decode(binaryBitmap);
           return result?.getText?.() ?? null;
         } catch {
@@ -118,7 +141,9 @@ async function createUnifiedDetector(): Promise<UnifiedDetector | null> {
           return null;
         }
       },
-      stop: () => { /* MultiFormatReader no requiere cleanup */ },
+      stop: () => {
+        /* MultiFormatReader no requiere cleanup */
+      },
     };
   } catch {
     return null;
@@ -145,12 +170,17 @@ export function BarcodeCameraSheet({
   const startedRef = React.useRef(false);
   const scanningRef = React.useRef(false);
 
-  const [phase, setPhase] = React.useState<"idle" | "starting" | "ready" | "error">("idle");
+  const [phase, setPhase] = React.useState<
+    "idle" | "starting" | "ready" | "error"
+  >("idle");
   const [errorMsg, setErrorMsg] = React.useState<string | null>(null);
   const [debugLog, setDebugLog] = React.useState<string[]>([]);
 
   const log = React.useCallback((msg: string) => {
-    setDebugLog((prev) => [...prev.slice(-6), `${new Date().toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}: ${msg}`]);
+    setDebugLog((prev) => [
+      ...prev.slice(-6),
+      `${new Date().toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}: ${msg}`,
+    ]);
   }, []);
 
   // ── Detener todo ────────────────────────────────────────────────────────────
@@ -202,19 +232,23 @@ export function BarcodeCameraSheet({
 
       frameRef.current = requestAnimationFrame(() => void tick());
     },
-    [onDetected, onOpenChange, stopAll, log]
+    [onDetected, onOpenChange, stopAll, log],
   );
 
   // ── Cuando el video puede reproducir: iniciar detección ────────────────────
   const handleCanPlay = React.useCallback(() => {
     const v = videoRef.current;
     const detector = detectorRef.current;
-    log(`onCanPlay — detector:${detector ? "OK" : "null"} scanning:${scanningRef.current}`);
+    log(
+      `onCanPlay — detector:${detector ? "OK" : "null"} scanning:${scanningRef.current}`,
+    );
     if (!v || !detector || scanningRef.current) return;
 
     // Asegurar reproducción (autoPlay puede no haber arrancado aún)
     if (v.paused) {
-      v.play().catch(() => { /* AbortError si autoPlay ya corrió */ });
+      v.play().catch(() => {
+        /* AbortError si autoPlay ya corrió */
+      });
     }
 
     setPhase("ready");
@@ -252,7 +286,10 @@ export function BarcodeCameraSheet({
       let detector: UnifiedDetector | null;
 
       try {
-        [stream, detector] = await Promise.all([getCamera(), createUnifiedDetector()]);
+        [stream, detector] = await Promise.all([
+          getCamera(),
+          createUnifiedDetector(),
+        ]);
         log(`init: stream OK, detector:${detector ? "OK" : "null"}`);
       } catch (err) {
         if (cancelled) return;
@@ -261,8 +298,8 @@ export function BarcodeCameraSheet({
             ? err.name === "NotAllowedError"
               ? "Permiso de cámara denegado. Habilitalo desde Configuración del navegador."
               : err.name === "NotFoundError"
-              ? "No se encontró ninguna cámara en este dispositivo."
-              : "No se pudo acceder a la cámara."
+                ? "No se encontró ninguna cámara en este dispositivo."
+                : "No se pudo acceder a la cámara."
             : "No se pudo acceder a la cámara.";
         log(`ERROR cámara: ${msg}`);
         setErrorMsg(msg);
@@ -279,7 +316,8 @@ export function BarcodeCameraSheet({
 
       if (!detector) {
         stream.getTracks().forEach((t) => t.stop());
-        const msg = "Este navegador no soporta escaneo de códigos. Usá el scanner físico o ingresá el código manualmente.";
+        const msg =
+          "Este navegador no soporta escaneo de códigos. Usá el scanner físico o ingresá el código manualmente.";
         log(`ERROR: ${msg}`);
         setErrorMsg(msg);
         setPhase("error");
@@ -294,7 +332,8 @@ export function BarcodeCameraSheet({
       if (!v) {
         stream.getTracks().forEach((t) => t.stop());
         detector.stop();
-        const msg = "Error interno al inicializar la cámara. Cerrá y volvé a intentar.";
+        const msg =
+          "Error interno al inicializar la cámara. Cerrá y volvé a intentar.";
         log(`ERROR: videoRef null`);
         setErrorMsg(msg);
         setPhase("error");
@@ -330,7 +369,8 @@ export function BarcodeCameraSheet({
             <SheetTitle>Escanear codigo de barras</SheetTitle>
           </div>
           <SheetDescription>
-            Alineá el código dentro del marco. Si tenés scanner físico, también podés usarlo directo sobre el campo.
+            Alineá el código dentro del marco. Si tenés scanner físico, también
+            podés usarlo directo sobre el campo.
           </SheetDescription>
         </SheetHeader>
 
@@ -382,7 +422,10 @@ export function BarcodeCameraSheet({
             <div className="rounded-2xl border border-border/60 bg-muted/20 px-4 py-3 text-sm text-muted-foreground">
               <div className="flex items-start gap-2">
                 <Barcode className="mt-0.5 h-4 w-4 shrink-0" />
-                <p>El escaneo se completa apenas el navegador detecta un código válido.</p>
+                <p>
+                  El escaneo se completa apenas el navegador detecta un código
+                  válido.
+                </p>
               </div>
             </div>
           )}
@@ -390,7 +433,9 @@ export function BarcodeCameraSheet({
           {/* DEBUG TEMPORAL — borrar después */}
           {debugLog.length > 0 && (
             <div className="rounded-xl border border-yellow-400/40 bg-yellow-50/80 px-3 py-2 font-mono text-[10px] text-yellow-900 dark:bg-yellow-900/20 dark:text-yellow-200">
-              {debugLog.map((line, i) => <div key={i}>{line}</div>)}
+              {debugLog.map((line, i) => (
+                <div key={i}>{line}</div>
+              ))}
             </div>
           )}
 

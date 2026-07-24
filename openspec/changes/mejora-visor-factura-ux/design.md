@@ -52,7 +52,9 @@ Reemplazar el apilado actual (imagen arriba del todo, tabla abajo, ambos dentro 
 ```tsx
 <div className="flex-1 min-h-0 overflow-hidden lg:flex">
   {/* Columna imagen — sólo si hay algo que mostrar */}
-  {(factura?.archivoEliminado || factura?.archivoMime?.startsWith("image/") || factura?.archivoMime === "application/pdf") && (
+  {(factura?.archivoEliminado ||
+    factura?.archivoMime?.startsWith("image/") ||
+    factura?.archivoMime === "application/pdf") && (
     <div className="lg:w-[340px] lg:shrink-0 lg:border-r lg:border-border/50 p-6 lg:overflow-y-auto">
       {/* ...bloque de imagen/PDF/eliminada, con altura lg:max-h-none lg:h-full en vez de max-h-72... */}
     </div>

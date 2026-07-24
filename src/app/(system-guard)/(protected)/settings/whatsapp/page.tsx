@@ -3,7 +3,16 @@
 import * as React from "react";
 import { createPortal } from "react-dom";
 import { toast } from "sonner";
-import { Eye, Loader2, Package, ShoppingCart, Sparkles, List, Store, X } from "lucide-react";
+import {
+  Eye,
+  Loader2,
+  Package,
+  ShoppingCart,
+  Sparkles,
+  List,
+  Store,
+  X,
+} from "lucide-react";
 
 import { apiService } from "@/lib/apiService";
 import { cn } from "@/lib/utils";
@@ -46,16 +55,36 @@ const SMART_VARIABLES = [
   { label: "Fecha", value: "{date}" },
 ];
 
-const TAB_ITEMS: Array<{ id: TabId; label: string; shortLabel: string; icon: React.ComponentType<{ className?: string }> }> = [
-  { id: "consignacion", label: "Consignacion", shortLabel: "Consig.", icon: Package },
+const TAB_ITEMS: Array<{
+  id: TabId;
+  label: string;
+  shortLabel: string;
+  icon: React.ComponentType<{ className?: string }>;
+}> = [
+  {
+    id: "consignacion",
+    label: "Consignacion",
+    shortLabel: "Consig.",
+    icon: Package,
+  },
   { id: "venta", label: "Venta POS", shortLabel: "Venta", icon: ShoppingCart },
   { id: "tienda", label: "Tienda Online", shortLabel: "Tienda", icon: Store },
-  { id: "listaProductos", label: "Lista Productos", shortLabel: "Lista", icon: List },
+  {
+    id: "listaProductos",
+    label: "Lista Productos",
+    shortLabel: "Lista",
+    icon: List,
+  },
 ];
 
 function SkeletonBlock({ className }: { className?: string }) {
   return (
-    <div className={cn("rounded-xl bg-muted/60 relative overflow-hidden", className)}>
+    <div
+      className={cn(
+        "rounded-xl bg-muted/60 relative overflow-hidden",
+        className,
+      )}
+    >
       <div className="absolute inset-0 -translate-x-full animate-[shimmer_2s_infinite] bg-gradient-to-r from-transparent via-white/20 to-transparent" />
     </div>
   );
@@ -74,7 +103,8 @@ export default function WhatsAppSettingsPage() {
   const [templateConsignacion, setTemplateConsignacion] = React.useState("");
   const [templateVenta, setTemplateVenta] = React.useState("");
   const [templateTienda, setTemplateTienda] = React.useState("");
-  const [templateListaProductos, setTemplateListaProductos] = React.useState("");
+  const [templateListaProductos, setTemplateListaProductos] =
+    React.useState("");
   const [whatsappNumber, setWhatsappNumber] = React.useState("");
   const [businessName, setBusinessName] = React.useState("Tu Negocio");
 
@@ -166,25 +196,40 @@ export default function WhatsAppSettingsPage() {
     }
   }, [templateConsignacion, templateVenta, templateTienda, whatsappNumber]);
 
-  const generateMagicMessage = React.useCallback((type: Exclude<TabId, "listaProductos">) => {
-    const templates = MAGIC_TEMPLATES[type];
-    const randomTemplate = templates[Math.floor(Math.random() * templates.length)];
+  const generateMagicMessage = React.useCallback(
+    (type: Exclude<TabId, "listaProductos">) => {
+      const templates = MAGIC_TEMPLATES[type];
+      const randomTemplate =
+        templates[Math.floor(Math.random() * templates.length)];
 
-    if (type === "consignacion") updateTemplateConsignacion(randomTemplate);
-    if (type === "venta") updateTemplateVenta(randomTemplate);
-    if (type === "tienda") updateTemplateTienda(randomTemplate);
+      if (type === "consignacion") updateTemplateConsignacion(randomTemplate);
+      if (type === "venta") updateTemplateVenta(randomTemplate);
+      if (type === "tienda") updateTemplateTienda(randomTemplate);
 
-    toast.success("Mensaje sugerido aplicado", {
-      icon: <Sparkles className="h-4 w-4 text-[color:var(--status-warning)]" />,
-    });
-  }, [updateTemplateConsignacion, updateTemplateTienda, updateTemplateVenta]);
+      toast.success("Mensaje sugerido aplicado", {
+        icon: (
+          <Sparkles className="h-4 w-4 text-[color:var(--status-warning)]" />
+        ),
+      });
+    },
+    [updateTemplateConsignacion, updateTemplateTienda, updateTemplateVenta],
+  );
 
   const getPreviewText = React.useCallback(() => {
     let raw = "";
-    if (activeTab === "consignacion") raw = templateConsignacion || "*Remito*\n\nHola {name}.\nRemito: {url}";
-    if (activeTab === "venta") raw = templateVenta || "*Ticket*\n\nHola {name}, gracias por tu compra.\nTicket: {url}";
-    if (activeTab === "tienda") raw = templateTienda || "Hola. Vi el producto *{nombre_producto}* y me gustaria pedirlo.";
-    if (activeTab === "listaProductos") raw = templateListaProductos || "Genera la lista para ver la vista previa.";
+    if (activeTab === "consignacion")
+      raw = templateConsignacion || "*Remito*\n\nHola {name}.\nRemito: {url}";
+    if (activeTab === "venta")
+      raw =
+        templateVenta ||
+        "*Ticket*\n\nHola {name}, gracias por tu compra.\nTicket: {url}";
+    if (activeTab === "tienda")
+      raw =
+        templateTienda ||
+        "Hola. Vi el producto *{nombre_producto}* y me gustaria pedirlo.";
+    if (activeTab === "listaProductos")
+      raw =
+        templateListaProductos || "Genera la lista para ver la vista previa.";
 
     return raw
       .replace(/{name}/g, "Juan Perez")
@@ -194,7 +239,13 @@ export default function WhatsAppSettingsPage() {
       .replace(/{productos}/g, "1 - Producto X\n2 - Producto Y")
       .replace(/{date}/g, new Date().toLocaleDateString("es-AR"))
       .replace(/{nombre_producto}/g, "Producto de ejemplo");
-  }, [activeTab, templateConsignacion, templateListaProductos, templateTienda, templateVenta]);
+  }, [
+    activeTab,
+    templateConsignacion,
+    templateListaProductos,
+    templateTienda,
+    templateVenta,
+  ]);
 
   if (loading) {
     return (
@@ -223,18 +274,39 @@ export default function WhatsAppSettingsPage() {
       <Card className="rounded-2xl border-border/60 bg-card/70 p-3 sm:p-4">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div>
-            <p className="text-sm font-semibold">Experiencia de mensajes por canal</p>
+            <p className="text-sm font-semibold">
+              Experiencia de mensajes por canal
+            </p>
             <p className="text-xs text-muted-foreground mt-0.5">
-              Personaliza consignacion, ventas y tienda online. Todo optimizado para celular, tablet y desktop.
+              Personaliza consignacion, ventas y tienda online. Todo optimizado
+              para celular, tablet y desktop.
             </p>
           </div>
           <div className="flex items-center gap-2">
-            {isDirty && <span className="text-xs font-semibold text-[color:var(--status-warning)]">Cambios sin guardar</span>}
-            <Button variant="outline" size="sm" className="h-8 rounded-lg lg:hidden" onClick={() => setPreviewOpen(true)}>
+            {isDirty && (
+              <span className="text-xs font-semibold text-[color:var(--status-warning)]">
+                Cambios sin guardar
+              </span>
+            )}
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 rounded-lg lg:hidden"
+              onClick={() => setPreviewOpen(true)}
+            >
               <Eye className="h-3.5 w-3.5 mr-1.5" /> Preview
             </Button>
-            <Button size="sm" className="h-8 rounded-lg" onClick={() => void handleSave()} disabled={saving || !isDirty}>
-              {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Guardar"}
+            <Button
+              size="sm"
+              className="h-8 rounded-lg"
+              onClick={() => void handleSave()}
+              disabled={saving || !isDirty}
+            >
+              {saving ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                "Guardar"
+              )}
             </Button>
           </div>
         </div>
@@ -295,7 +367,9 @@ export default function WhatsAppSettingsPage() {
               placeholder="Ej: Hola, vi el producto {nombre_producto}..."
               value={templateTienda}
               onChange={updateTemplateTienda}
-              variables={[{ label: "Nombre Producto", value: "{nombre_producto}" }]}
+              variables={[
+                { label: "Nombre Producto", value: "{nombre_producto}" },
+              ]}
               onMagicMessage={() => generateMagicMessage("tienda")}
               showWhatsappNumber
               whatsappNumber={whatsappNumber}
@@ -312,26 +386,41 @@ export default function WhatsAppSettingsPage() {
         </section>
 
         <aside className="hidden xl:flex xl:col-span-5 xl:sticky xl:top-6 justify-center">
-          <WhatsAppPreview text={getPreviewText()} businessName={businessName} />
+          <WhatsAppPreview
+            text={getPreviewText()}
+            businessName={businessName}
+          />
         </aside>
       </div>
 
-      {portalReady && previewOpen && createPortal(
-        <div className="fixed inset-0 z-[2147483000] bg-black/58 backdrop-blur-[2px]">
-          <div className="h-full flex flex-col">
-            <div className="border-b border-border/60 px-3 py-2.5 flex items-center justify-between">
-              <p className="text-sm font-semibold">Vista previa de WhatsApp</p>
-              <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg" onClick={() => setPreviewOpen(false)}>
-                <X className="h-4 w-4" />
-              </Button>
+      {portalReady &&
+        previewOpen &&
+        createPortal(
+          <div className="fixed inset-0 z-[2147483000] bg-black/58 backdrop-blur-[2px]">
+            <div className="h-full flex flex-col">
+              <div className="border-b border-border/60 px-3 py-2.5 flex items-center justify-between">
+                <p className="text-sm font-semibold">
+                  Vista previa de WhatsApp
+                </p>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 rounded-lg"
+                  onClick={() => setPreviewOpen(false)}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+              <div className="flex-1 flex items-center justify-center p-4 bg-gradient-to-br from-zinc-100 via-zinc-50 to-zinc-100 dark:from-zinc-900 dark:via-zinc-900/70 dark:to-zinc-950">
+                <WhatsAppPreview
+                  text={getPreviewText()}
+                  businessName={businessName}
+                />
+              </div>
             </div>
-            <div className="flex-1 flex items-center justify-center p-4 bg-gradient-to-br from-zinc-100 via-zinc-50 to-zinc-100 dark:from-zinc-900 dark:via-zinc-900/70 dark:to-zinc-950">
-              <WhatsAppPreview text={getPreviewText()} businessName={businessName} />
-            </div>
-          </div>
-        </div>,
-        document.body,
-      )}
+          </div>,
+          document.body,
+        )}
     </div>
   );
 }

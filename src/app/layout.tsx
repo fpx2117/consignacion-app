@@ -56,7 +56,8 @@ export default function RootLayout({
             expand={false}
             visibleToasts={3}
             toastOptions={{
-              className: "!text-sm !font-medium !rounded-xl !shadow-lg !border !border-gray-100",
+              className:
+                "!text-sm !font-medium !rounded-xl !shadow-lg !border !border-gray-100",
               duration: 4000,
             }}
           />

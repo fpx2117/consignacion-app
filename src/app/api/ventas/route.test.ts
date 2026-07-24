@@ -35,10 +35,14 @@ test("handlePostVenta usa la timezone resuelta para fechar venta y pago", async 
       }),
       headers: { "Content-Type": "application/json" },
     }),
-    ({
+    {
       requireAuth: async () => okAuth,
       isGlobalSucursalView: () => false,
-      obtenerConfiguracionGlobal: async () => ({ usarControlDeCaja: true, notificarVentas: false, porcentajeInteresTarjeta: 0 }),
+      obtenerConfiguracionGlobal: async () => ({
+        usarControlDeCaja: true,
+        notificarVentas: false,
+        porcentajeInteresTarjeta: 0,
+      }),
       resolveTimezoneForAuth: async () => ({
         tz: "America/Bogota",
         source: "user",
@@ -71,7 +75,11 @@ test("handlePostVenta usa la timezone resuelta para fechar venta y pago", async 
             },
             producto: {
               updateMany: async () => ({ count: 1 }),
-              findUnique: async () => ({ id: 11, nombre: "Mate", stockDisponibleUnits: 6 }),
+              findUnique: async () => ({
+                id: 11,
+                nombre: "Mate",
+                stockDisponibleUnits: 6,
+              }),
             },
             movimientoStock: {
               create: async () => undefined,
@@ -105,11 +113,17 @@ test("handlePostVenta usa la timezone resuelta para fechar venta y pago", async 
       evaluateStockAlert: () => null,
       processNotificationQueue: async () => undefined,
       sendNotification: async () => undefined,
-    } as unknown as VentaDeps),
+    } as unknown as VentaDeps,
   );
 
   assert.equal(response.status, 200);
   assert.deepEqual(nowCalls, ["America/Bogota", "America/Bogota"]);
-  assert.deepEqual(createdVentas.map((item) => item.fecha.toISOString()), ["2026-02-01T01:00:00.000Z"]);
-  assert.deepEqual(createdPagos.map((item) => item.fecha.toISOString()), ["2026-02-01T02:00:00.000Z"]);
+  assert.deepEqual(
+    createdVentas.map((item) => item.fecha.toISOString()),
+    ["2026-02-01T01:00:00.000Z"],
+  );
+  assert.deepEqual(
+    createdPagos.map((item) => item.fecha.toISOString()),
+    ["2026-02-01T02:00:00.000Z"],
+  );
 });

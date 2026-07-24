@@ -116,7 +116,10 @@ function parseEnvFile(filePath) {
     }
 
     const key = line.slice(0, separator).trim();
-    const value = line.slice(separator + 1).trim().replace(/^['"]|['"]$/g, "");
+    const value = line
+      .slice(separator + 1)
+      .trim()
+      .replace(/^['"]|['"]$/g, "");
     entries.set(key, value);
   }
 
@@ -134,7 +137,11 @@ function isSafePlaceholder(key, value) {
   }
 
   if (key === "PAYPAL_API_URL") {
-    return normalized.includes("sandbox") || normalized.includes("paypal.com") || normalized.includes("change-me");
+    return (
+      normalized.includes("sandbox") ||
+      normalized.includes("paypal.com") ||
+      normalized.includes("change-me")
+    );
   }
 
   if (!sensitiveKeys.has(key)) {
@@ -183,19 +190,29 @@ for (const key of requiredExampleKeys) {
   }
 }
 
-for (const [fileLabel, entries] of [[".env", envEntries], [".env.example", envExampleEntries]]) {
+for (const [fileLabel, entries] of [
+  [".env", envEntries],
+  [".env.example", envExampleEntries],
+]) {
   for (const [key, value] of entries) {
     if (!sensitiveKeys.has(key)) {
       continue;
     }
 
     if (!isSafePlaceholder(key, value)) {
-      problems.push(`${fileLabel} contiene un valor sensible no permitido para ${key}.`);
+      problems.push(
+        `${fileLabel} contiene un valor sensible no permitido para ${key}.`,
+      );
       continue;
     }
 
-    if (hasDangerousShape(value) && !placeholderMarkers.some((marker) => value.toLowerCase().includes(marker))) {
-      problems.push(`${fileLabel} contiene un valor con forma de secreto real para ${key}.`);
+    if (
+      hasDangerousShape(value) &&
+      !placeholderMarkers.some((marker) => value.toLowerCase().includes(marker))
+    ) {
+      problems.push(
+        `${fileLabel} contiene un valor con forma de secreto real para ${key}.`,
+      );
     }
   }
 }

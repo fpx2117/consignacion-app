@@ -37,28 +37,28 @@ La estrategia se divide en cinco frentes coordinados:
 
 ## Areas afectadas
 
-| Area | Impacto | Descripcion |
-|------|---------|-------------|
-| `src/lib/auth/require-auth.ts` | Modificado | Eliminar confianza en `x-sucursal-id` como override de contexto y validar pertenencia real de sucursal. |
-| `src/app/api/auth/login/route.ts` | Modificado | Incorporar rate limiting y respuesta compatible con politicas anti-abuso. |
-| `src/app/api/auth/forgot-password/route.ts` | Modificado | Agregar throttling, controles anti-enumeracion reforzados y auditoria. |
-| `src/app/api/auth/reset-password/route.ts` | Modificado | Agregar rate limiting, invalidacion y controles de consumo de token. |
-| `src/app/api/upload/route.ts` | Modificado | Restringir tipos de archivo, tamanos, nombre generado y validacion de contenido. |
-| `src/app/api/files/[...path]/route.ts` | Modificado | Endurecer serving, control de acceso segun tipo de archivo y headers defensivos. |
-| `.env` | Modificado | Retirar secretos reales del repo y dejar solo placeholders/no productivos. |
-| `.env.example` | Nuevo o modificado | Plantilla segura para desarrollo y onboarding sin valores sensibles. |
-| `package.json` / lockfile | Modificado | Actualizar dependencias afectadas por advisories confirmados. |
-| `docs/` o runbooks operativos | Modificado | Politica de secretos, rotacion, response playbook y proceso de upgrades de seguridad. |
+| Area                                        | Impacto            | Descripcion                                                                                             |
+| ------------------------------------------- | ------------------ | ------------------------------------------------------------------------------------------------------- |
+| `src/lib/auth/require-auth.ts`              | Modificado         | Eliminar confianza en `x-sucursal-id` como override de contexto y validar pertenencia real de sucursal. |
+| `src/app/api/auth/login/route.ts`           | Modificado         | Incorporar rate limiting y respuesta compatible con politicas anti-abuso.                               |
+| `src/app/api/auth/forgot-password/route.ts` | Modificado         | Agregar throttling, controles anti-enumeracion reforzados y auditoria.                                  |
+| `src/app/api/auth/reset-password/route.ts`  | Modificado         | Agregar rate limiting, invalidacion y controles de consumo de token.                                    |
+| `src/app/api/upload/route.ts`               | Modificado         | Restringir tipos de archivo, tamanos, nombre generado y validacion de contenido.                        |
+| `src/app/api/files/[...path]/route.ts`      | Modificado         | Endurecer serving, control de acceso segun tipo de archivo y headers defensivos.                        |
+| `.env`                                      | Modificado         | Retirar secretos reales del repo y dejar solo placeholders/no productivos.                              |
+| `.env.example`                              | Nuevo o modificado | Plantilla segura para desarrollo y onboarding sin valores sensibles.                                    |
+| `package.json` / lockfile                   | Modificado         | Actualizar dependencias afectadas por advisories confirmados.                                           |
+| `docs/` o runbooks operativos               | Modificado         | Politica de secretos, rotacion, response playbook y proceso de upgrades de seguridad.                   |
 
 ## Riesgos
 
-| Riesgo | Probabilidad | Mitigacion |
-|--------|--------------|------------|
-| Regresion en acceso multi-sucursal para administradores | Media | Tests de autorizacion por rol, sucursal activa y vista global antes del deploy. |
-| Bloqueo de usuarios legitimos por rate limiting agresivo | Media | Umbrales por endpoint, ventanas cortas, backoff progresivo y observabilidad inicial. |
-| Archivos existentes dejan de servirse por nuevas reglas | Media | Inventario de extensiones actuales y modo de compatibilidad temporal para legado conocido. |
-| Rotacion de secretos rompe integraciones externas | Alta | Rotacion por etapas, doble validez temporal donde aplique y checklist por proveedor. |
-| Upgrade de dependencias introduce cambios incompatibles | Media | Lote incremental, changelog review, typecheck/build/tests y plan de rollback por paquete. |
+| Riesgo                                                   | Probabilidad | Mitigacion                                                                                 |
+| -------------------------------------------------------- | ------------ | ------------------------------------------------------------------------------------------ |
+| Regresion en acceso multi-sucursal para administradores  | Media        | Tests de autorizacion por rol, sucursal activa y vista global antes del deploy.            |
+| Bloqueo de usuarios legitimos por rate limiting agresivo | Media        | Umbrales por endpoint, ventanas cortas, backoff progresivo y observabilidad inicial.       |
+| Archivos existentes dejan de servirse por nuevas reglas  | Media        | Inventario de extensiones actuales y modo de compatibilidad temporal para legado conocido. |
+| Rotacion de secretos rompe integraciones externas        | Alta         | Rotacion por etapas, doble validez temporal donde aplique y checklist por proveedor.       |
+| Upgrade de dependencias introduce cambios incompatibles  | Media        | Lote incremental, changelog review, typecheck/build/tests y plan de rollback por paquete.  |
 
 ## Plan de rollback
 

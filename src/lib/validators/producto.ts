@@ -1,7 +1,10 @@
 import { z } from "zod";
 
 const descuentoFields = {
-  tipoDescuento: z.enum(["porcentaje", "monto"]).optional().default("porcentaje"),
+  tipoDescuento: z
+    .enum(["porcentaje", "monto"])
+    .optional()
+    .default("porcentaje"),
   descuentoPorcentaje: z.number().min(1).max(99).nullable().optional(),
   descuentoMonto: z.number().min(0.01).nullable().optional(),
   descuentoActivo: z.boolean().optional().default(false),
@@ -9,7 +12,10 @@ const descuentoFields = {
   descuentoHasta: z.string().datetime({ offset: true }).nullable().optional(),
 };
 
-const fechasRefine = (data: { descuentoDesde?: string | null; descuentoHasta?: string | null }) => {
+const fechasRefine = (data: {
+  descuentoDesde?: string | null;
+  descuentoHasta?: string | null;
+}) => {
   if (data.descuentoDesde && data.descuentoHasta) {
     return new Date(data.descuentoHasta) > new Date(data.descuentoDesde);
   }
@@ -38,10 +44,13 @@ const createProductoBaseSchema = z.object({
   ...descuentoFields,
 });
 
-export const createProductoSchema = createProductoBaseSchema.refine(fechasRefine, {
-  message: "La fecha de fin debe ser posterior a la fecha de inicio",
-  path: ["descuentoHasta"],
-});
+export const createProductoSchema = createProductoBaseSchema.refine(
+  fechasRefine,
+  {
+    message: "La fecha de fin debe ser posterior a la fecha de inicio",
+    path: ["descuentoHasta"],
+  },
+);
 
 // Corregimos el UpdateProductoInput para que acepte NULL explícitamente
 export const updateProductoSchema = createProductoBaseSchema

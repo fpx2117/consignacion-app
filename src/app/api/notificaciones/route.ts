@@ -1,10 +1,12 @@
-
 //src/app/api/notificaciones/route.ts
 import { NextResponse } from "next/server";
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/auth/require-auth"; // 🔒 Seguridad
-import { buildSucursalWhere, isGlobalSucursalView } from "@/lib/security/sucursalScope";
+import {
+  buildSucursalWhere,
+  isGlobalSucursalView,
+} from "@/lib/security/sucursalScope";
 
 // --- GET: Obtener lista y contador ---
 export async function GET(req: Request) {
@@ -17,7 +19,9 @@ export async function GET(req: Request) {
     const { searchParams } = new URL(req.url);
     const onlyUnread = searchParams.get("onlyUnread") === "true";
     const rawLimit = Number(searchParams.get("limit") || 50);
-    const limit = Number.isFinite(rawLimit) ? Math.min(Math.max(rawLimit, 1), 200) : 50;
+    const limit = Number.isFinite(rawLimit)
+      ? Math.min(Math.max(rawLimit, 1), 200)
+      : 50;
 
     const baseWhere: Prisma.NotificationWhereInput = {
       ...sucursalWhere,
@@ -30,26 +34,25 @@ export async function GET(req: Request) {
       take: limit,
       include: {
         producto: {
-          select: { id: true, nombre: true }
-        }
-      }
+          select: { id: true, nombre: true },
+        },
+      },
     });
 
     // 3. Contador de no leídas solo de esta sucursal
     const unreadCount = await prisma.notification.count({
-      where: { ...sucursalWhere, read: false }
+      where: { ...sucursalWhere, read: false },
     });
 
     return NextResponse.json({
       data: notifications,
-      unreadCount
+      unreadCount,
     });
-
   } catch (error) {
     console.error("Error fetching notifications:", error);
     return NextResponse.json(
       { error: "Error interno al obtener notificaciones" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -60,7 +63,13 @@ export async function PATCH(req: Request) {
     const auth = await requireAuth();
     if (!auth.ok) return auth.res;
     if (isGlobalSucursalView(auth)) {
-      return NextResponse.json({ error: "Vista global en modo solo lectura. Selecciona una sucursal para actualizar notificaciones." }, { status: 409 });
+      return NextResponse.json(
+        {
+          error:
+            "Vista global en modo solo lectura. Selecciona una sucursal para actualizar notificaciones.",
+        },
+        { status: 409 },
+      );
     }
 
     const sucursalId = auth.activeSucursalId;
@@ -73,8 +82,8 @@ export async function PATCH(req: Request) {
         where: { sucursalId, read: false },
         data: {
           read: true,
-          readAt: new Date()
-        }
+          readAt: new Date(),
+        },
       });
       return NextResponse.json({ success: true, message: "Todas leídas" });
     }
@@ -93,14 +102,13 @@ export async function PATCH(req: Request) {
         where: { id: { in: normalizedIds }, sucursalId },
         data: {
           read: true,
-          readAt: new Date()
-        }
+          readAt: new Date(),
+        },
       });
       return NextResponse.json({ success: true, message: "Actualizadas" });
     }
 
     return NextResponse.json({ error: "Faltan parámetros" }, { status: 400 });
-
   } catch (error) {
     console.error("Error updating notifications:", error);
     return NextResponse.json({ error: "Error interno" }, { status: 500 });

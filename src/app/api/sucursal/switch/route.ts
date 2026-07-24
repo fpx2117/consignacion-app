@@ -11,7 +11,7 @@ export async function POST(req: Request) {
   if (auth.user.rol !== "ADMIN") {
     return NextResponse.json(
       { error: "Solo administradores pueden cambiar de sucursal" },
-      { status: 403 }
+      { status: 403 },
     );
   }
 
@@ -19,10 +19,7 @@ export async function POST(req: Request) {
   const sucursalId = Number(body?.sucursalId);
 
   if (!Number.isFinite(sucursalId) || sucursalId < 0) {
-    return NextResponse.json(
-      { error: "sucursalId inválido" },
-      { status: 400 }
-    );
+    return NextResponse.json({ error: "sucursalId inválido" }, { status: 400 });
   }
 
   // Vista global (id=0) — solo ADMIN
@@ -39,7 +36,7 @@ export async function POST(req: Request) {
   if (!canAccessSucursalId(auth, sucursalId)) {
     return NextResponse.json(
       { error: "Sucursal no autorizada" },
-      { status: 403 }
+      { status: 403 },
     );
   }
 
@@ -52,7 +49,7 @@ export async function POST(req: Request) {
   if (!sucursal) {
     return NextResponse.json(
       { error: "Sucursal no encontrada o inactiva" },
-      { status: 404 }
+      { status: 404 },
     );
   }
 

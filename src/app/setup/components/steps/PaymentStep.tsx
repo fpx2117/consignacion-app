@@ -1,7 +1,14 @@
 "use client";
 
 import { motion } from "motion/react";
-import { CreditCard, CheckCircle2, Loader2, Tag, ExternalLink, Zap } from "lucide-react";
+import {
+  CreditCard,
+  CheckCircle2,
+  Loader2,
+  Tag,
+  ExternalLink,
+  Zap,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -18,7 +25,11 @@ interface PaymentStepProps {
   loading: boolean;
 }
 
-export function PaymentStep({ plan, onPaymentSuccess, loading }: PaymentStepProps) {
+export function PaymentStep({
+  plan,
+  onPaymentSuccess,
+  loading,
+}: PaymentStepProps) {
   const [promoCode, setPromoCode] = useState("");
   const [isValidatingPromo, setIsValidatingPromo] = useState(false);
   const [promoApplied, setPromoApplied] = useState<{
@@ -32,7 +43,8 @@ export function PaymentStep({ plan, onPaymentSuccess, loading }: PaymentStepProp
 
   // Calcular precio dinámico basado en dólar cripto (ignorar precio de DB)
   const calculatedPrice = Math.round(plan.precioUSD * (rate || 1200));
-  const finalPrice = promoApplied?.discountPercentage === 100 ? 0 : calculatedPrice;
+  const finalPrice =
+    promoApplied?.discountPercentage === 100 ? 0 : calculatedPrice;
 
   const handleApplyPromo = async () => {
     if (!promoCode) return;
@@ -96,7 +108,9 @@ export function PaymentStep({ plan, onPaymentSuccess, loading }: PaymentStepProp
       if (res.ok && data.initPoint) {
         window.location.href = data.initPoint;
       } else {
-        toast.error(data.error || "Error al iniciar suscripción de Mercado Pago");
+        toast.error(
+          data.error || "Error al iniciar suscripción de Mercado Pago",
+        );
         setIsRedirecting(false);
       }
     } catch {
@@ -116,7 +130,9 @@ export function PaymentStep({ plan, onPaymentSuccess, loading }: PaymentStepProp
       >
         <div className="text-center space-y-2">
           <h2 className="text-3xl font-black tracking-tight text-foreground">
-            {promoApplied?.valid ? "Licencia Activada" : "Resumen de Activación"}
+            {promoApplied?.valid
+              ? "Licencia Activada"
+              : "Resumen de Activación"}
           </h2>
           <p className="text-muted-foreground font-medium">
             {promoApplied?.valid
@@ -144,11 +160,19 @@ export function PaymentStep({ plan, onPaymentSuccess, loading }: PaymentStepProp
               </div>
             </div>
             <div className="text-right">
-              <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-1">Costo</p>
-              <p className={`text-2xl font-black ${promoApplied?.valid ? "text-[color:var(--status-success-strong)]" : "text-foreground"}`}>
-                {promoApplied?.valid ? "Bonificado" : isLoadingDolar ? (
+              <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-1">
+                Costo
+              </p>
+              <p
+                className={`text-2xl font-black ${promoApplied?.valid ? "text-[color:var(--status-success-strong)]" : "text-foreground"}`}
+              >
+                {promoApplied?.valid ? (
+                  "Bonificado"
+                ) : isLoadingDolar ? (
                   <span className="inline-block w-20 h-6 bg-muted/50 rounded animate-pulse" />
-                ) : `$${calculatedPrice.toLocaleString()}`}
+                ) : (
+                  `$${calculatedPrice.toLocaleString()}`
+                )}
               </p>
             </div>
           </div>
@@ -166,7 +190,12 @@ export function PaymentStep({ plan, onPaymentSuccess, loading }: PaymentStepProp
                 onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
                 placeholder="TU-CODIGO-AQUI"
                 className="h-12 rounded-xl bg-background/50 border-border/50 focus:border-[color:var(--primary)]/50 uppercase font-bold tracking-widest"
-                disabled={promoApplied?.valid || isValidatingPromo || loading || isRedirecting}
+                disabled={
+                  promoApplied?.valid ||
+                  isValidatingPromo ||
+                  loading ||
+                  isRedirecting
+                }
               />
               <Button
                 variant={promoApplied?.valid ? "outline" : "default"}
@@ -175,8 +204,14 @@ export function PaymentStep({ plan, onPaymentSuccess, loading }: PaymentStepProp
                     ? "bg-[color:var(--primary)] hover:bg-[color:var(--primary)] text-[color:var(--ui-fx-white)]"
                     : "border-[color:var(--status-success-strong)] text-[color:var(--status-success-strong)] bg-[color:var(--status-success-strong)]/10 hover:bg-[color:var(--status-success-strong)]/20"
                 }`}
-                onClick={promoApplied?.valid ? () => setPromoApplied(null) : handleApplyPromo}
-                disabled={!promoCode || isValidatingPromo || loading || isRedirecting}
+                onClick={
+                  promoApplied?.valid
+                    ? () => setPromoApplied(null)
+                    : handleApplyPromo
+                }
+                disabled={
+                  !promoCode || isValidatingPromo || loading || isRedirecting
+                }
               >
                 {isValidatingPromo ? (
                   <Loader2 className="w-5 h-5 animate-spin" />
@@ -188,7 +223,9 @@ export function PaymentStep({ plan, onPaymentSuccess, loading }: PaymentStepProp
               </Button>
             </div>
             {promoApplied?.valid === false && (
-              <p className="text-xs font-bold text-destructive">Código inválido o ya utilizado.</p>
+              <p className="text-xs font-bold text-destructive">
+                Código inválido o ya utilizado.
+              </p>
             )}
           </div>
 
@@ -196,7 +233,9 @@ export function PaymentStep({ plan, onPaymentSuccess, loading }: PaymentStepProp
 
           {/* Total */}
           <div className="flex items-center justify-between mb-8 relative z-10">
-            <span className="text-lg font-black uppercase tracking-widest">A pagar hoy</span>
+            <span className="text-lg font-black uppercase tracking-widest">
+              A pagar hoy
+            </span>
             <span className="text-4xl font-black text-[color:var(--primary)]">
               {isLoadingDolar ? (
                 <span className="inline-block w-32 h-10 bg-muted/50 rounded animate-pulse" />

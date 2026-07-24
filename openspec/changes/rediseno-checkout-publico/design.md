@@ -16,6 +16,7 @@ Con este enfoque, la base solo registra venta efectiva cuando el pago fue aproba
 **Eleccion**: agregar un modelo `CheckoutIntent` para persistir estado del checkout publico antes del pago.
 
 **Alternativas consideradas**:
+
 - Seguir creando `Venta` en estado pendiente.
 - No persistir nada y confiar solo en `external_reference`.
 
@@ -26,6 +27,7 @@ Con este enfoque, la base solo registra venta efectiva cuando el pago fue aproba
 **Eleccion**: mover creacion de `Venta`, `VentaDetalle`, `Pago` y `Envio` al webhook cuando MP confirme `approved`.
 
 **Alternativas consideradas**:
+
 - Crear `Venta` al inicio y luego actualizar estado.
 - Confirmar por return URL en frontend.
 
@@ -36,6 +38,7 @@ Con este enfoque, la base solo registra venta efectiva cuando el pago fue aproba
 **Eleccion**: registrar `mpPaymentId` unico y estados terminales en `CheckoutIntent` para procesar cada pago una sola vez.
 
 **Alternativas consideradas**:
+
 - Solo lock en memoria.
 - Reintentos sin llave unica.
 
@@ -46,6 +49,7 @@ Con este enfoque, la base solo registra venta efectiva cuando el pago fue aproba
 **Eleccion**: no reservar stock en la creacion de intencion; validar y descontar atomico al aprobar pago.
 
 **Alternativas consideradas**:
+
 - Reserva de stock con TTL.
 
 **Justificacion**: minimiza complejidad y evita bloqueos largos; se documenta manejo de excepcion por falta de stock post-pago.
@@ -76,25 +80,20 @@ Mercado Pago
 
 ## Cambios en Archivos
 
-| Archivo | Accion | Descripcion |
-|---------|--------|-------------|
-| `prisma/schema.prisma` | Modificar | Agregar modelo `CheckoutIntent` y enums de estado/proveedor. Indices unicos para idempotencia (`externalReference`, `mpPaymentId`). |
-| `src/app/api/public/checkout/route.ts` | Modificar | Dejar de crear `Venta`. Crear `CheckoutIntent`, persistir snapshot de carrito/envio y generar preference con referencia estable. |
-| `src/app/api/webhooks/mercadopago/route.ts` | Modificar | Agregar rama para checkout publico: verificar evento, resolver intencion, aplicar idempotencia y crear venta atomicamente. |
-| `src/lib/mercadopago.ts` (opcional) | Crear/Modificar | Encapsular consulta de detalle de pago y parseo de `external_reference`. |
-| `src/app/api/public/checkout/status/route.ts` | Crear | Endpoint para polling de estado de checkout por token publico del intento (sin exponer IDs internos). |
+| Archivo                                       | Accion          | Descripcion                                                                                                                         |
+| --------------------------------------------- | --------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| `prisma/schema.prisma`                        | Modificar       | Agregar modelo `CheckoutIntent` y enums de estado/proveedor. Indices unicos para idempotencia (`externalReference`, `mpPaymentId`). |
+| `src/app/api/public/checkout/route.ts`        | Modificar       | Dejar de crear `Venta`. Crear `CheckoutIntent`, persistir snapshot de carrito/envio y generar preference con referencia estable.    |
+| `src/app/api/webhooks/mercadopago/route.ts`   | Modificar       | Agregar rama para checkout publico: verificar evento, resolver intencion, aplicar idempotencia y crear venta atomicamente.          |
+| `src/lib/mercadopago.ts` (opcional)           | Crear/Modificar | Encapsular consulta de detalle de pago y parseo de `external_reference`.                                                            |
+| `src/app/api/public/checkout/status/route.ts` | Crear           | Endpoint para polling de estado de checkout por token publico del intento (sin exponer IDs internos).                               |
 
 ## Interfaces / Contratos
 
 ```ts
 // Nuevo contrato persistido
 type CheckoutIntentStatus =
-  | "INITIATED"
-  | "PENDING"
-  | "PAID"
-  | "FAILED"
-  | "EXPIRED"
-  | "CANCELLED";
+  "INITIATED" | "PENDING" | "PAID" | "FAILED" | "EXPIRED" | "CANCELLED";
 
 interface CheckoutIntentPayload {
   sucursalId: number;
@@ -154,13 +153,13 @@ interface CheckoutIntentPayload {
 
 ## Estrategia de Pruebas
 
-| Capa | Que Probar | Enfoque |
-|------|------------|---------|
-| Unitaria | Parseo y validacion de `external_reference`; transiciones de `CheckoutIntent` | Tests puros de funciones de dominio (idempotencia y maquina de estados) |
-| Integracion | `POST /public/checkout` no crea `Venta`; webhook `approved` crea `Venta` una sola vez | Tests API con DB de test y mocks de MP |
-| Integracion | Reintento de webhook con mismo `mpPaymentId` | Verificar deduplicacion por unique + respuesta idempotente |
-| Integracion | Pago aprobado con stock insuficiente | Intent `FAILED`, sin `Venta`, motivo registrado |
-| E2E | Compra completa desde tienda publica hasta estado final | Flujo browser + simulacion de webhook |
+| Capa        | Que Probar                                                                            | Enfoque                                                                 |
+| ----------- | ------------------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
+| Unitaria    | Parseo y validacion de `external_reference`; transiciones de `CheckoutIntent`         | Tests puros de funciones de dominio (idempotencia y maquina de estados) |
+| Integracion | `POST /public/checkout` no crea `Venta`; webhook `approved` crea `Venta` una sola vez | Tests API con DB de test y mocks de MP                                  |
+| Integracion | Reintento de webhook con mismo `mpPaymentId`                                          | Verificar deduplicacion por unique + respuesta idempotente              |
+| Integracion | Pago aprobado con stock insuficiente                                                  | Intent `FAILED`, sin `Venta`, motivo registrado                         |
+| E2E         | Compra completa desde tienda publica hasta estado final                               | Flujo browser + simulacion de webhook                                   |
 
 ## Migracion / Despliegue
 

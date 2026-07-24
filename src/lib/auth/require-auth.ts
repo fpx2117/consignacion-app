@@ -22,30 +22,40 @@ const validateSession = cache(async (token: string) => {
   });
 });
 
-const getAllowedSucursalIdsForUser = cache(async (userId: number, rol: "ADMIN" | "EMPLEADO", fallbackSucursalId: number | null) => {
-  const { prisma } = await import("@/lib/prisma");
+const getAllowedSucursalIdsForUser = cache(
+  async (
+    userId: number,
+    rol: "ADMIN" | "EMPLEADO",
+    fallbackSucursalId: number | null,
+  ) => {
+    const { prisma } = await import("@/lib/prisma");
 
-  if (rol === "ADMIN") {
-    const sucursales = await prisma.sucursal.findMany({
-      where: { activa: true },
+    if (rol === "ADMIN") {
+      const sucursales = await prisma.sucursal.findMany({
+        where: { activa: true },
+        select: { id: true },
+        orderBy: { id: "asc" },
+      });
+
+      return sucursales.map((sucursal) => sucursal.id);
+    }
+
+    if (
+      typeof fallbackSucursalId !== "number" ||
+      !Number.isInteger(fallbackSucursalId) ||
+      fallbackSucursalId <= 0
+    ) {
+      return [];
+    }
+
+    const sucursal = await prisma.sucursal.findFirst({
+      where: { id: fallbackSucursalId, activa: true },
       select: { id: true },
-      orderBy: { id: "asc" },
     });
 
-    return sucursales.map((sucursal) => sucursal.id);
-  }
-
-  if (typeof fallbackSucursalId !== "number" || !Number.isInteger(fallbackSucursalId) || fallbackSucursalId <= 0) {
-    return [];
-  }
-
-  const sucursal = await prisma.sucursal.findFirst({
-    where: { id: fallbackSucursalId, activa: true },
-    select: { id: true },
-  });
-
-  return sucursal ? [sucursal.id] : [];
-});
+    return sucursal ? [sucursal.id] : [];
+  },
+);
 
 export async function requireAuth() {
   const token = await getAuthTokenFromCookies();
@@ -53,10 +63,7 @@ export async function requireAuth() {
   if (!token) {
     return {
       ok: false as const,
-      res: NextResponse.json(
-        { error: "No autorizado" },
-        { status: 401 }
-      ),
+      res: NextResponse.json({ error: "No autorizado" }, { status: 401 }),
     };
   }
 
@@ -69,7 +76,7 @@ export async function requireAuth() {
     if (!session || !session.isActive || session.expiresAt < new Date()) {
       const response = NextResponse.json(
         { error: "Sesión inválida o revocada" },
-        { status: 401 }
+        { status: 401 },
       );
 
       // ✅ Limpiamos la cookie inmediatamente para que no queden bloqueados
@@ -131,10 +138,7 @@ export async function requireAuth() {
   } catch {
     return {
       ok: false as const,
-      res: NextResponse.json(
-        { error: "Token inválido" },
-        { status: 401 }
-      ),
+      res: NextResponse.json({ error: "Token inválido" }, { status: 401 }),
     };
   }
 }
@@ -145,7 +149,7 @@ export async function requireAuth() {
 
 export function requireRole(
   user: { rol: string },
-  roles: Array<"ADMIN" | "EMPLEADO">
+  roles: Array<"ADMIN" | "EMPLEADO">,
 ) {
   return roles.includes(user.rol as "ADMIN" | "EMPLEADO");
 }

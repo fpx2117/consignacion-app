@@ -12,7 +12,10 @@ export async function POST(req: NextRequest) {
   const auth = await requireAuth();
   if (!auth.ok) return auth.res;
   if (!requireRole(auth.user, ["ADMIN"])) {
-    return NextResponse.json({ ok: false, error: "No autorizado" }, { status: 403 });
+    return NextResponse.json(
+      { ok: false, error: "No autorizado" },
+      { status: 403 },
+    );
   }
 
   try {
@@ -20,13 +23,16 @@ export async function POST(req: NextRequest) {
     const file = form.get("file");
 
     if (!(file instanceof File)) {
-      return NextResponse.json({ ok: false, error: "Falta archivo (field: file)" }, { status: 400 });
+      return NextResponse.json(
+        { ok: false, error: "Falta archivo (field: file)" },
+        { status: 400 },
+      );
     }
 
     if (!ALLOWED.has(file.type)) {
       return NextResponse.json(
         { ok: false, error: "Formato invalido. Usa PNG/JPG/WEBP." },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -34,8 +40,11 @@ export async function POST(req: NextRequest) {
 
     if (bytes.byteLength > MAX_BYTES) {
       return NextResponse.json(
-        { ok: false, error: `Imagen muy pesada. Max ${Math.floor(MAX_BYTES / 1024)}KB.` },
-        { status: 400 }
+        {
+          ok: false,
+          error: `Imagen muy pesada. Max ${Math.floor(MAX_BYTES / 1024)}KB.`,
+        },
+        { status: 400 },
       );
     }
 
@@ -62,6 +71,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true, brandingId: updated.id });
   } catch (error) {
     console.error("UPLOAD BRANDING LOGO ERROR:", error);
-    return NextResponse.json({ ok: false, error: "Error subiendo logo" }, { status: 500 });
+    return NextResponse.json(
+      { ok: false, error: "Error subiendo logo" },
+      { status: 500 },
+    );
   }
 }

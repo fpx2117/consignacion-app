@@ -46,7 +46,11 @@ export function CategoryTabs({
       const el = activeRef.current;
       const containerRect = container.getBoundingClientRect();
       const elRect = el.getBoundingClientRect();
-      const scrollLeft = el.offsetLeft - container.offsetLeft - containerRect.width / 2 + elRect.width / 2;
+      const scrollLeft =
+        el.offsetLeft -
+        container.offsetLeft -
+        containerRect.width / 2 +
+        elRect.width / 2;
       container.scrollTo({ left: scrollLeft, behavior: "smooth" });
     }
   }, [selectedCategory]);
@@ -64,7 +68,10 @@ export function CategoryTabs({
 
   const allTabs = [
     { id: null as null, nombre: "Todas" },
-    ...filteredCategories.map((c) => ({ id: c.id as number | null, nombre: c.nombre })),
+    ...filteredCategories.map((c) => ({
+      id: c.id as number | null,
+      nombre: c.nombre,
+    })),
   ];
 
   return (
@@ -84,9 +91,10 @@ export function CategoryTabs({
               className={`
                 relative flex-shrink-0 px-4 py-3.5 text-sm whitespace-nowrap
                 transition-colors duration-200 font-medium
-                ${isActive
-                  ? "text-[var(--store-text,#0F172A)] font-bold"
-                  : "text-[var(--store-muted,#8A8F98)] hover:text-[var(--store-text,#0F172A)]"
+                ${
+                  isActive
+                    ? "text-[var(--store-text,#0F172A)] font-bold"
+                    : "text-[var(--store-muted,#8A8F98)] hover:text-[var(--store-text,#0F172A)]"
                 }
               `}
             >

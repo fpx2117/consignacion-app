@@ -17,9 +17,10 @@ export default function LoginPage() {
 
       {/* Wrapper */}
       <div className="w-full max-w-md">
-        
         {/* 👇 Envolvemos el LoginForm en Suspense para evitar el error de prerenderizado */}
-        <Suspense fallback={<div className="text-center">Cargando formulario...</div>}>
+        <Suspense
+          fallback={<div className="text-center">Cargando formulario...</div>}
+        >
           <LoginForm />
         </Suspense>
 

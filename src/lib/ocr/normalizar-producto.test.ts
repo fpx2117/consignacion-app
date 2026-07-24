@@ -1,9 +1,15 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { normalizarProducto, normalizarTexto } from "@/lib/ocr/normalizar-producto";
+import {
+  normalizarProducto,
+  normalizarTexto,
+} from "@/lib/ocr/normalizar-producto";
 
 test("normalizarTexto colapsa mayúsculas, acentos y símbolos", () => {
-  assert.equal(normalizarTexto("Perfúme Único! (Nuevo)"), "perfume unico nuevo");
+  assert.equal(
+    normalizarTexto("Perfúme Único! (Nuevo)"),
+    "perfume unico nuevo",
+  );
 });
 
 test("normalizarTexto unifica variantes de unidades", () => {

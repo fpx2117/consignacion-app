@@ -73,7 +73,9 @@ function getTodayStr(tz: string) {
 // Lightbox para imagen ampliada
 function ImageVisor({ src, onClose }: { src: string; onClose: () => void }) {
   React.useEffect(() => {
-    const handler = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
   }, [onClose]);
@@ -101,21 +103,34 @@ function ImageVisor({ src, onClose }: { src: string; onClose: () => void }) {
   );
 }
 
-export function CrearPedidoDialog({ open, onOpenChange, onSuccess }: CrearPedidoDialogProps) {
+export function CrearPedidoDialog({
+  open,
+  onOpenChange,
+  onSuccess,
+}: CrearPedidoDialogProps) {
   const { tz } = useTimezone();
   const activeSucursalId = useSucursalStore((s) => s.activeSucursalId);
   const sucursalHeaders = React.useMemo<Record<string, string>>(
-    () => activeSucursalId ? { "x-sucursal-id": String(activeSucursalId) } : {} as Record<string, string>,
-    [activeSucursalId]
+    () =>
+      activeSucursalId
+        ? { "x-sucursal-id": String(activeSucursalId) }
+        : ({} as Record<string, string>),
+    [activeSucursalId],
   );
 
   const [productos, setProductos] = React.useState<ProductoBasico[]>([]);
   const [categorias, setCategorias] = React.useState<CategoriaBasica[]>([]);
   const [loadingProductos, setLoadingProductos] = React.useState(false);
   const [busqueda, setBusqueda] = React.useState("");
-  const [categoriaFiltro, setCategoriaFiltro] = React.useState<number | null>(null);
-  const [subcategoriaFiltro, setSubcategoriaFiltro] = React.useState<number | null>(null);
-  const [itemsSeleccionados, setItemsSeleccionados] = React.useState<ItemSeleccionado[]>([]);
+  const [categoriaFiltro, setCategoriaFiltro] = React.useState<number | null>(
+    null,
+  );
+  const [subcategoriaFiltro, setSubcategoriaFiltro] = React.useState<
+    number | null
+  >(null);
+  const [itemsSeleccionados, setItemsSeleccionados] = React.useState<
+    ItemSeleccionado[]
+  >([]);
   const [fechaEsperada, setFechaEsperada] = React.useState("");
   const [observaciones, setObservaciones] = React.useState("");
   const [saving, setSaving] = React.useState(false);
@@ -143,33 +158,54 @@ export function CrearPedidoDialog({ open, onOpenChange, onSuccess }: CrearPedido
       apiService.getCategorias(),
     ])
       .then(([data, cats]) => {
-        const raw = Array.isArray(data) ? data : Array.isArray(data?.data) ? data.data : [];
+        const raw = Array.isArray(data)
+          ? data
+          : Array.isArray(data?.data)
+            ? data.data
+            : [];
         setProductos(
           raw
             .filter((p: { activo?: boolean }) => p.activo !== false)
-            .map((p: {
-              id: number; nombre: string; sku?: string | null; codigoBarra?: string | null;
-              stockDisponibleUnits: number; imagenUrl?: string | null;
-              categoria?: { id: number; nombre: string } | null;
-              subcategoria?: { id: number; nombre: string } | null;
-            }) => ({
-              id: p.id,
-              nombre: p.nombre,
-              sku: p.sku,
-              codigoBarra: p.codigoBarra,
-              stockDisponibleUnits: p.stockDisponibleUnits,
-              imagenUrl: p.imagenUrl,
-              categoriaId: p.categoria?.id ?? null,
-              categoriaNombre: p.categoria?.nombre ?? null,
-              subcategoriaId: p.subcategoria?.id ?? null,
-              subcategoriaNombre: p.subcategoria?.nombre ?? null,
-            }))
+            .map(
+              (p: {
+                id: number;
+                nombre: string;
+                sku?: string | null;
+                codigoBarra?: string | null;
+                stockDisponibleUnits: number;
+                imagenUrl?: string | null;
+                categoria?: { id: number; nombre: string } | null;
+                subcategoria?: { id: number; nombre: string } | null;
+              }) => ({
+                id: p.id,
+                nombre: p.nombre,
+                sku: p.sku,
+                codigoBarra: p.codigoBarra,
+                stockDisponibleUnits: p.stockDisponibleUnits,
+                imagenUrl: p.imagenUrl,
+                categoriaId: p.categoria?.id ?? null,
+                categoriaNombre: p.categoria?.nombre ?? null,
+                subcategoriaId: p.subcategoria?.id ?? null,
+                subcategoriaNombre: p.subcategoria?.nombre ?? null,
+              }),
+            ),
         );
-        setCategorias(Array.isArray(cats) ? cats.map((c: { id: unknown; nombre: string }) => ({ id: Number(c.id), nombre: c.nombre })) : []);
+        setCategorias(
+          Array.isArray(cats)
+            ? cats.map((c: { id: unknown; nombre: string }) => ({
+                id: Number(c.id),
+                nombre: c.nombre,
+              }))
+            : [],
+        );
       })
       .catch((err: unknown) => {
         setProductos([]);
-        toast.error(err instanceof Error ? err.message : "No se pudieron cargar los productos");
+        toast.error(
+          err instanceof Error
+            ? err.message
+            : "No se pudieron cargar los productos",
+        );
       })
       .finally(() => setLoadingProductos(false));
   }, [open, activeSucursalId, sucursalHeaders]);
@@ -184,21 +220,28 @@ export function CrearPedidoDialog({ open, onOpenChange, onSuccess }: CrearPedido
     if (!categoriaFiltro) return [];
     const map = new Map<number, string>();
     for (const p of productos) {
-      if (p.categoriaId === categoriaFiltro && p.subcategoriaId && p.subcategoriaNombre) {
+      if (
+        p.categoriaId === categoriaFiltro &&
+        p.subcategoriaId &&
+        p.subcategoriaNombre
+      ) {
         map.set(p.subcategoriaId, p.subcategoriaNombre);
       }
     }
     return [...map.entries()].map(([id, nombre]) => ({ id, nombre }));
   }, [productos, categoriaFiltro]);
 
-  const hayFiltroActivo = busqueda.trim().length > 0 || categoriaFiltro !== null;
+  const hayFiltroActivo =
+    busqueda.trim().length > 0 || categoriaFiltro !== null;
 
   const productosFiltrados = React.useMemo(() => {
     if (!hayFiltroActivo) return [];
     const term = busqueda.toLowerCase().trim();
     return productos.filter((p) => {
-      const matchCategoria = categoriaFiltro === null || p.categoriaId === categoriaFiltro;
-      const matchSubcategoria = subcategoriaFiltro === null || p.subcategoriaId === subcategoriaFiltro;
+      const matchCategoria =
+        categoriaFiltro === null || p.categoriaId === categoriaFiltro;
+      const matchSubcategoria =
+        subcategoriaFiltro === null || p.subcategoriaId === subcategoriaFiltro;
       const matchBusqueda =
         !term ||
         p.nombre.toLowerCase().includes(term) ||
@@ -206,49 +249,86 @@ export function CrearPedidoDialog({ open, onOpenChange, onSuccess }: CrearPedido
         (p.codigoBarra && p.codigoBarra.toLowerCase().includes(term));
       return matchCategoria && matchSubcategoria && matchBusqueda;
     });
-  }, [productos, busqueda, categoriaFiltro, subcategoriaFiltro, hayFiltroActivo]);
+  }, [
+    productos,
+    busqueda,
+    categoriaFiltro,
+    subcategoriaFiltro,
+    hayFiltroActivo,
+  ]);
 
-  const yaSeleccionado = (id: number) => itemsSeleccionados.some((i) => i.productoId === id);
+  const yaSeleccionado = (id: number) =>
+    itemsSeleccionados.some((i) => i.productoId === id);
 
   function agregarProducto(p: ProductoBasico) {
     if (yaSeleccionado(p.id)) return;
     setItemsSeleccionados((prev) => [
       ...prev,
-      { productoId: p.id, nombre: p.nombre, sku: p.sku ?? p.codigoBarra, cantidadEsperada: 1, imagenUrl: p.imagenUrl },
+      {
+        productoId: p.id,
+        nombre: p.nombre,
+        sku: p.sku ?? p.codigoBarra,
+        cantidadEsperada: 1,
+        imagenUrl: p.imagenUrl,
+      },
     ]);
     setBusqueda("");
   }
 
   function quitarProducto(productoId: number) {
-    setItemsSeleccionados((prev) => prev.filter((i) => i.productoId !== productoId));
+    setItemsSeleccionados((prev) =>
+      prev.filter((i) => i.productoId !== productoId),
+    );
   }
 
   function setCantidad(productoId: number, cantidad: number) {
     setItemsSeleccionados((prev) =>
-      prev.map((i) => (i.productoId === productoId ? { ...i, cantidadEsperada: Math.max(1, cantidad) } : i))
+      prev.map((i) =>
+        i.productoId === productoId
+          ? { ...i, cantidadEsperada: Math.max(1, cantidad) }
+          : i,
+      ),
     );
   }
 
   function recargarProductos() {
-    const url = activeSucursalId ? `/api/productos?sucursalId=${activeSucursalId}` : "/api/productos";
+    const url = activeSucursalId
+      ? `/api/productos?sucursalId=${activeSucursalId}`
+      : "/api/productos";
     fetch(url, { headers: sucursalHeaders })
       .then((r) => r.json())
       .then((data) => {
-        const raw = Array.isArray(data) ? data : Array.isArray(data?.data) ? data.data : [];
+        const raw = Array.isArray(data)
+          ? data
+          : Array.isArray(data?.data)
+            ? data.data
+            : [];
         setProductos(
           raw
             .filter((p: { activo?: boolean }) => p.activo !== false)
-            .map((p: {
-              id: number; nombre: string; sku?: string | null; codigoBarra?: string | null;
-              stockDisponibleUnits: number; imagenUrl?: string | null;
-              categoria?: { id: number; nombre: string } | null;
-              subcategoria?: { id: number; nombre: string } | null;
-            }) => ({
-              id: p.id, nombre: p.nombre, sku: p.sku, codigoBarra: p.codigoBarra,
-              stockDisponibleUnits: p.stockDisponibleUnits, imagenUrl: p.imagenUrl,
-              categoriaId: p.categoria?.id ?? null, categoriaNombre: p.categoria?.nombre ?? null,
-              subcategoriaId: p.subcategoria?.id ?? null, subcategoriaNombre: p.subcategoria?.nombre ?? null,
-            }))
+            .map(
+              (p: {
+                id: number;
+                nombre: string;
+                sku?: string | null;
+                codigoBarra?: string | null;
+                stockDisponibleUnits: number;
+                imagenUrl?: string | null;
+                categoria?: { id: number; nombre: string } | null;
+                subcategoria?: { id: number; nombre: string } | null;
+              }) => ({
+                id: p.id,
+                nombre: p.nombre,
+                sku: p.sku,
+                codigoBarra: p.codigoBarra,
+                stockDisponibleUnits: p.stockDisponibleUnits,
+                imagenUrl: p.imagenUrl,
+                categoriaId: p.categoria?.id ?? null,
+                categoriaNombre: p.categoria?.nombre ?? null,
+                subcategoriaId: p.subcategoria?.id ?? null,
+                subcategoriaNombre: p.subcategoria?.nombre ?? null,
+              }),
+            ),
         );
       })
       .catch(() => {});
@@ -258,7 +338,13 @@ export function CrearPedidoDialog({ open, onOpenChange, onSuccess }: CrearPedido
     if (yaSeleccionado(p.id)) return;
     setItemsSeleccionados((prev) => [
       ...prev,
-      { productoId: p.id, nombre: p.nombre, sku: p.sku ?? p.codigoBarra, cantidadEsperada: 1, imagenUrl: null },
+      {
+        productoId: p.id,
+        nombre: p.nombre,
+        sku: p.sku ?? p.codigoBarra,
+        cantidadEsperada: 1,
+        imagenUrl: null,
+      },
     ]);
     setBusqueda("");
     recargarProductos();
@@ -301,7 +387,9 @@ export function CrearPedidoDialog({ open, onOpenChange, onSuccess }: CrearPedido
       onOpenChange(false);
       onSuccess();
     } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : "Error al crear el pedido");
+      toast.error(
+        err instanceof Error ? err.message : "Error al crear el pedido",
+      );
     } finally {
       setSaving(false);
     }
@@ -309,7 +397,9 @@ export function CrearPedidoDialog({ open, onOpenChange, onSuccess }: CrearPedido
 
   return (
     <>
-      {visorImagen && <ImageVisor src={visorImagen} onClose={() => setVisorImagen(null)} />}
+      {visorImagen && (
+        <ImageVisor src={visorImagen} onClose={() => setVisorImagen(null)} />
+      )}
 
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="sm:max-w-[660px] p-0 overflow-hidden border-none shadow-2xl bg-background">
@@ -320,7 +410,9 @@ export function CrearPedidoDialog({ open, onOpenChange, onSuccess }: CrearPedido
                 <ClipboardList className="h-5 w-5" />
               </div>
               <div>
-                <DialogTitle className="text-xl font-bold italic tracking-tight">Nuevo Pedido Esperado</DialogTitle>
+                <DialogTitle className="text-xl font-bold italic tracking-tight">
+                  Nuevo Pedido Esperado
+                </DialogTitle>
                 <DialogDescription className="text-muted-foreground text-xs mt-0.5">
                   Programá la llegada de productos al stock
                 </DialogDescription>
@@ -328,8 +420,10 @@ export function CrearPedidoDialog({ open, onOpenChange, onSuccess }: CrearPedido
             </div>
           </DialogHeader>
 
-          <form onSubmit={handleSubmit} className="p-6 space-y-5 max-h-[80vh] overflow-y-auto">
-
+          <form
+            onSubmit={handleSubmit}
+            className="p-6 space-y-5 max-h-[80vh] overflow-y-auto"
+          >
             {/* BUSCADOR DE PRODUCTOS */}
             <div className="space-y-3">
               <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
@@ -350,7 +444,11 @@ export function CrearPedidoDialog({ open, onOpenChange, onSuccess }: CrearPedido
                       <FilterPill
                         key={cat.id}
                         active={categoriaFiltro === cat.id}
-                        onClick={() => setCategoriaFiltro(categoriaFiltro === cat.id ? null : cat.id)}
+                        onClick={() =>
+                          setCategoriaFiltro(
+                            categoriaFiltro === cat.id ? null : cat.id,
+                          )
+                        }
                       >
                         {cat.nombre}
                       </FilterPill>
@@ -372,7 +470,11 @@ export function CrearPedidoDialog({ open, onOpenChange, onSuccess }: CrearPedido
                         <FilterPill
                           key={sub.id}
                           active={subcategoriaFiltro === sub.id}
-                          onClick={() => setSubcategoriaFiltro(subcategoriaFiltro === sub.id ? null : sub.id)}
+                          onClick={() =>
+                            setSubcategoriaFiltro(
+                              subcategoriaFiltro === sub.id ? null : sub.id,
+                            )
+                          }
                           variant="sub"
                         >
                           <ChevronRight className="h-2.5 w-2.5 opacity-60" />
@@ -396,14 +498,16 @@ export function CrearPedidoDialog({ open, onOpenChange, onSuccess }: CrearPedido
                 />
                 {loadingProductos ? (
                   <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />
-                ) : busqueda && (
-                  <button
-                    type="button"
-                    onClick={() => setBusqueda("")}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                  >
-                    <X className="h-4 w-4" />
-                  </button>
+                ) : (
+                  busqueda && (
+                    <button
+                      type="button"
+                      onClick={() => setBusqueda("")}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  )
                 )}
               </div>
 
@@ -421,9 +525,14 @@ export function CrearPedidoDialog({ open, onOpenChange, onSuccess }: CrearPedido
                       <CreateProductoDialog
                         onProductoCreado={handleProductoCreado}
                         trigger={
-                          <button type="button" className="flex items-center gap-2 mx-auto text-xs font-bold text-primary hover:underline">
+                          <button
+                            type="button"
+                            className="flex items-center gap-2 mx-auto text-xs font-bold text-primary hover:underline"
+                          >
                             <Plus className="h-3.5 w-3.5" />
-                            {busqueda ? `Crear "${busqueda}" como nuevo producto` : "Crear nuevo producto"}
+                            {busqueda
+                              ? `Crear "${busqueda}" como nuevo producto`
+                              : "Crear nuevo producto"}
                           </button>
                         }
                       />
@@ -437,7 +546,7 @@ export function CrearPedidoDialog({ open, onOpenChange, onSuccess }: CrearPedido
                           className={cn(
                             "flex items-center gap-3 px-3 py-2.5 border-b border-border/30 last:border-0 transition-colors",
                             idx % 2 === 0 ? "bg-background" : "bg-muted/20",
-                            selected ? "opacity-50" : "hover:bg-primary/5"
+                            selected ? "opacity-50" : "hover:bg-primary/5",
                           )}
                         >
                           {/* Imagen con lightbox */}
@@ -449,13 +558,19 @@ export function CrearPedidoDialog({ open, onOpenChange, onSuccess }: CrearPedido
                             }}
                             className={cn(
                               "h-11 w-11 rounded-xl bg-muted/60 flex items-center justify-center shrink-0 overflow-hidden border border-border/40",
-                              p.imagenUrl ? "cursor-zoom-in hover:ring-2 hover:ring-primary/40 transition-all group" : "cursor-default"
+                              p.imagenUrl
+                                ? "cursor-zoom-in hover:ring-2 hover:ring-primary/40 transition-all group"
+                                : "cursor-default",
                             )}
                           >
                             {p.imagenUrl ? (
                               <div className="relative h-11 w-11">
                                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                                <img src={p.imagenUrl} alt={p.nombre} className="h-11 w-11 object-cover" />
+                                <img
+                                  src={p.imagenUrl}
+                                  alt={p.nombre}
+                                  className="h-11 w-11 object-cover"
+                                />
                                 <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-center justify-center">
                                   <ZoomIn className="h-4 w-4 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
                                 </div>
@@ -467,7 +582,9 @@ export function CrearPedidoDialog({ open, onOpenChange, onSuccess }: CrearPedido
 
                           {/* Nombre + categorías */}
                           <div className="flex-1 min-w-0">
-                            <p className="font-semibold text-foreground text-sm leading-tight">{p.nombre}</p>
+                            <p className="font-semibold text-foreground text-sm leading-tight">
+                              {p.nombre}
+                            </p>
                             <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
                               {p.categoriaNombre && (
                                 <span className="text-[10px] font-bold text-primary/70 bg-primary/8 px-1.5 py-0.5 rounded-full border border-primary/15">
@@ -480,19 +597,23 @@ export function CrearPedidoDialog({ open, onOpenChange, onSuccess }: CrearPedido
                                 </span>
                               )}
                               {p.sku && (
-                                <span className="text-[10px] font-mono text-muted-foreground/60">{p.sku}</span>
+                                <span className="text-[10px] font-mono text-muted-foreground/60">
+                                  {p.sku}
+                                </span>
                               )}
                             </div>
                           </div>
 
                           {/* Stock + botón */}
                           <div className="flex items-center gap-2 shrink-0">
-                            <span className={cn(
-                              "text-[10px] font-bold px-1.5 py-0.5 rounded-full",
-                              p.stockDisponibleUnits === 0
-                                ? "text-destructive bg-destructive/10"
-                                : "text-muted-foreground bg-muted/60"
-                            )}>
+                            <span
+                              className={cn(
+                                "text-[10px] font-bold px-1.5 py-0.5 rounded-full",
+                                p.stockDisponibleUnits === 0
+                                  ? "text-destructive bg-destructive/10"
+                                  : "text-muted-foreground bg-muted/60",
+                              )}
+                            >
                               Stock {p.stockDisponibleUnits}
                             </span>
                             {selected ? (
@@ -521,7 +642,10 @@ export function CrearPedidoDialog({ open, onOpenChange, onSuccess }: CrearPedido
             <CreateProductoDialog
               onProductoCreado={handleProductoCreado}
               trigger={
-                <button type="button" className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground hover:text-primary transition-colors group">
+                <button
+                  type="button"
+                  className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground hover:text-primary transition-colors group"
+                >
                   <div className="h-5 w-5 rounded-full border border-dashed border-muted-foreground/40 group-hover:border-primary/60 flex items-center justify-center transition-colors">
                     <Plus className="h-3 w-3" />
                   </div>
@@ -550,16 +674,24 @@ export function CrearPedidoDialog({ open, onOpenChange, onSuccess }: CrearPedido
                       {/* Imagen con lightbox */}
                       <button
                         type="button"
-                        onClick={() => { if (item.imagenUrl) setVisorImagen(item.imagenUrl); }}
+                        onClick={() => {
+                          if (item.imagenUrl) setVisorImagen(item.imagenUrl);
+                        }}
                         className={cn(
                           "h-10 w-10 rounded-lg bg-muted/60 flex items-center justify-center shrink-0 overflow-hidden border border-border/30",
-                          item.imagenUrl ? "cursor-zoom-in hover:ring-2 hover:ring-primary/40 transition-all group relative" : "cursor-default"
+                          item.imagenUrl
+                            ? "cursor-zoom-in hover:ring-2 hover:ring-primary/40 transition-all group relative"
+                            : "cursor-default",
                         )}
                       >
                         {item.imagenUrl ? (
                           <div className="relative h-10 w-10">
                             {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img src={item.imagenUrl} alt={item.nombre} className="h-10 w-10 object-cover" />
+                            <img
+                              src={item.imagenUrl}
+                              alt={item.nombre}
+                              className="h-10 w-10 object-cover"
+                            />
                             <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-center justify-center">
                               <ZoomIn className="h-3.5 w-3.5 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
                             </div>
@@ -570,9 +702,13 @@ export function CrearPedidoDialog({ open, onOpenChange, onSuccess }: CrearPedido
                       </button>
 
                       <div className="flex-1 min-w-0">
-                        <p className="font-semibold text-sm text-foreground leading-tight">{item.nombre}</p>
+                        <p className="font-semibold text-sm text-foreground leading-tight">
+                          {item.nombre}
+                        </p>
                         {item.sku && (
-                          <p className="text-[10px] font-mono text-muted-foreground/70">{item.sku}</p>
+                          <p className="text-[10px] font-mono text-muted-foreground/70">
+                            {item.sku}
+                          </p>
                         )}
                       </div>
 
@@ -584,7 +720,9 @@ export function CrearPedidoDialog({ open, onOpenChange, onSuccess }: CrearPedido
                           type="number"
                           min={1}
                           value={item.cantidadEsperada}
-                          onChange={(e) => setCantidad(item.productoId, Number(e.target.value))}
+                          onChange={(e) =>
+                            setCantidad(item.productoId, Number(e.target.value))
+                          }
                           className="w-20 h-8 text-center font-bold rounded-lg bg-muted/30 border-transparent text-sm"
                         />
                         <Button
@@ -619,7 +757,9 @@ export function CrearPedidoDialog({ open, onOpenChange, onSuccess }: CrearPedido
                 />
               </div>
               {fechaEsperada && fechaEsperada < getTodayStr(tz) && (
-                <p className="text-xs text-destructive font-bold">La fecha debe ser hoy o en el futuro</p>
+                <p className="text-xs text-destructive font-bold">
+                  La fecha debe ser hoy o en el futuro
+                </p>
               )}
             </div>
 
@@ -627,7 +767,9 @@ export function CrearPedidoDialog({ open, onOpenChange, onSuccess }: CrearPedido
             <div className="space-y-2">
               <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
                 Observaciones{" "}
-                <span className="normal-case font-normal text-muted-foreground/60">(opcional)</span>
+                <span className="normal-case font-normal text-muted-foreground/60">
+                  (opcional)
+                </span>
               </Label>
               <Textarea
                 placeholder="Ej: Pedido urgente, llamar al proveedor antes..."
@@ -636,7 +778,9 @@ export function CrearPedidoDialog({ open, onOpenChange, onSuccess }: CrearPedido
                 maxLength={500}
                 className="resize-none rounded-xl bg-muted/30 border-transparent min-h-[80px] text-sm focus:bg-background"
               />
-              <p className="text-[10px] text-muted-foreground text-right">{observaciones.length}/500</p>
+              <p className="text-[10px] text-muted-foreground text-right">
+                {observaciones.length}/500
+              </p>
             </div>
 
             <DialogFooter className="pt-2 gap-3 flex-col sm:flex-row">
@@ -696,7 +840,7 @@ function FilterPill({
           ? "bg-primary text-primary-foreground shadow-sm shadow-primary/30"
           : variant === "main"
             ? "bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground"
-            : "bg-muted/40 text-muted-foreground hover:bg-muted/70"
+            : "bg-muted/40 text-muted-foreground hover:bg-muted/70",
       )}
     >
       {children}

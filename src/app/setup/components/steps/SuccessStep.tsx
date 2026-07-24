@@ -28,7 +28,9 @@ export function SuccessStep() {
         </div>
       </div>
 
-      <h2 className="text-4xl md:text-5xl font-black tracking-tight">¡Todo Listo!</h2>
+      <h2 className="text-4xl md:text-5xl font-black tracking-tight">
+        ¡Todo Listo!
+      </h2>
       <p className="text-muted-foreground text-xl">
         Tu ecosistema empresarial ha sido configurado con éxito.
       </p>

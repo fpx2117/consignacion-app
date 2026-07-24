@@ -22,7 +22,10 @@ function getCheckoutReturnStatus(value: string | undefined) {
   return null;
 }
 
-export default async function TiendaPorSlugPage({ params, searchParams }: SlugPageProps) {
+export default async function TiendaPorSlugPage({
+  params,
+  searchParams,
+}: SlugPageProps) {
   const { slug } = await params;
 
   if (!isValidSlugFormat(slug)) {

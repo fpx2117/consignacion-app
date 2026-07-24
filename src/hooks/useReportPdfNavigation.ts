@@ -34,7 +34,11 @@ export function useReportPdfNavigation(pdfUrl: string | null): string | null {
         window.location.replace(URL.createObjectURL(blob));
       } catch (e) {
         if (!cancelled) {
-          setError(e instanceof Error ? e.message : "No se pudo generar el reporte. Intentá nuevamente.");
+          setError(
+            e instanceof Error
+              ? e.message
+              : "No se pudo generar el reporte. Intentá nuevamente.",
+          );
         }
       }
     })();

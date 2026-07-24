@@ -92,20 +92,23 @@ export async function handleGetMe(deps: AuthMeRouteDeps = defaultDeps) {
       sucursalesPermitidas = await deps.findEmployeeBranches(empSucursalId);
     }
 
-    return NextResponse.json({
-      data: {
-        ...user,
-        zonaHorariaSucursal: timezone.zonaHorariaSucursal,
-        zonaHorariaResuelta: timezone.tz,
-        timezoneSource: timezone.source,
-        sucursalesPermitidas,
+    return NextResponse.json(
+      {
+        data: {
+          ...user,
+          zonaHorariaSucursal: timezone.zonaHorariaSucursal,
+          zonaHorariaResuelta: timezone.tz,
+          timezoneSource: timezone.source,
+          sucursalesPermitidas,
+        },
       },
-    }, {
-      status: 200,
-      headers: {
-        "Cache-Control": "private, max-age=30, stale-while-revalidate=90",
+      {
+        status: 200,
+        headers: {
+          "Cache-Control": "private, max-age=30, stale-while-revalidate=90",
+        },
       },
-    });
+    );
   } catch {
     return NextResponse.json({ error: "Token inválido" }, { status: 401 });
   }

@@ -42,11 +42,13 @@ export function AtributosExtraEditor({
   datalistId = "atributos-extra-sugerencias",
 }: AtributosExtraEditorProps) {
   const [filas, setFilas] = React.useState<Fila[]>(() =>
-    Object.entries(value ?? {}).map(([clave, valor]) => ({ clave, valor }))
+    Object.entries(value ?? {}).map(([clave, valor]) => ({ clave, valor })),
   );
 
   const actualizarFila = (index: number, cambios: Partial<Fila>) => {
-    const nuevas = filas.map((f, i) => (i === index ? { ...f, ...cambios } : f));
+    const nuevas = filas.map((f, i) =>
+      i === index ? { ...f, ...cambios } : f,
+    );
     setFilas(nuevas);
     onChange(filasAObjeto(nuevas));
   };
@@ -99,7 +101,14 @@ export function AtributosExtraEditor({
           ))}
         </datalist>
       )}
-      <Button type="button" variant="outline" size="sm" onClick={agregarFila} disabled={disabled} className="gap-1.5">
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        onClick={agregarFila}
+        disabled={disabled}
+        className="gap-1.5"
+      >
         <Plus className="h-3.5 w-3.5" /> Agregar atributo
       </Button>
     </div>

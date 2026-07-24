@@ -21,6 +21,7 @@ La solucion busca una postura de **default deny**, con validaciones explicitas, 
 **Eleccion**: eliminar `x-sucursal-id` como mecanismo de override directo en `require-auth.ts`. El contexto de sucursal activa debe derivarse de la sesion/cookie controlada por el servidor y luego validarse contra las sucursales autorizadas para el usuario.
 
 **Alternativas consideradas**:
+
 - Mantener el header pero validarlo solo para admins.
 - Firmar el header desde cliente.
 - Permitir header solo en rutas internas especificas.
@@ -34,6 +35,7 @@ La solucion busca una postura de **default deny**, con validaciones explicitas, 
 **Eleccion**: retirar secretos reales de `.env`, introducir `.env.example` seguro y documentar una politica obligatoria de rotacion inmediata para DB, JWT, links firmados, pagos y correo.
 
 **Alternativas consideradas**:
+
 - Solo agregar `.gitignore` y dejar el archivo actual fuera de futuros commits.
 - Renombrar variables sin rotar valores.
 
@@ -46,6 +48,7 @@ La solucion busca una postura de **default deny**, con validaciones explicitas, 
 **Eleccion**: aceptar solo tipos de archivo explicitamente permitidos por caso de uso, validar extension + MIME declarado + firma binaria cuando aplique, imponer limite de tamano, generar nombres opacos y servir desde un handler controlado con headers defensivos.
 
 **Alternativas consideradas**:
+
 - Confiar solo en la extension o `file.type` del browser.
 - Mantener `public/uploads` para desarrollo sin endurecimiento adicional.
 - Restringir solo el frontend y dejar el backend igual.
@@ -59,6 +62,7 @@ La solucion busca una postura de **default deny**, con validaciones explicitas, 
 **Eleccion**: aplicar rate limiting a `login`, `forgot-password` y `reset-password` con claves por IP + identidad normalizada + ventana temporal. Las respuestas deben seguir siendo uniformes para no facilitar enumeracion.
 
 **Alternativas consideradas**:
+
 - Rate limiting global para toda la API.
 - CAPTCHA obligatorio inmediato.
 - Solo logging sin bloqueo.
@@ -72,6 +76,7 @@ La solucion busca una postura de **default deny**, con validaciones explicitas, 
 **Eleccion**: clasificar advisories por criticidad, actualizar primero dependencias expuestas a internet o en paths de auth/upload/parsing y exigir evidencia de cierre posterior al upgrade.
 
 **Alternativas consideradas**:
+
 - Actualizacion masiva de todo el arbol en un solo lote.
 - Ignorar advisories transitorios hasta una futura migracion grande.
 
@@ -146,19 +151,19 @@ Request a login / forgot-password / reset-password
 
 ## Cambios en archivos
 
-| Archivo | Accion | Descripcion |
-|---------|--------|-------------|
-| `src/lib/auth/require-auth.ts` | Modificar | Quitar prioridad de `x-sucursal-id`, validar sucursal efectiva contra permisos reales y formalizar contrato de auth endurecido. |
-| `src/lib/sucursalScope.ts` y helpers relacionados | Modificar | Centralizar validacion de sucursal permitida para evitar desalineaciones entre rutas. |
-| `src/app/api/auth/login/route.ts` | Modificar | Integrar rate limiting, auditoria de intentos y respuestas seguras. |
-| `src/app/api/auth/forgot-password/route.ts` | Modificar | Aplicar throttling, controles anti-flood y politicas de token/reintento. |
-| `src/app/api/auth/reset-password/route.ts` | Modificar | Aplicar throttling, controles sobre token y cierre de sesiones si corresponde. |
-| `src/app/api/upload/route.ts` | Modificar | Validar archivos con allowlist fuerte, tamano maximo y nombres opacos. |
-| `src/app/api/files/[...path]/route.ts` | Modificar | Restringir tipos servidos y emitir headers defensivos. |
-| `.env` | Modificar | Sustituir secretos reales por placeholders seguros o valores no productivos. |
-| `.env.example` | Crear o modificar | Documentar todas las variables requeridas sin exponer credenciales reales. |
-| `package.json` / lockfile | Modificar | Remediar dependencias con advisories priorizados y fijar versiones seguras. |
-| `docs/security/*` o documento operativo equivalente | Crear o modificar | Politica de secretos, rotacion, limites y remediacion de dependencias. |
+| Archivo                                             | Accion            | Descripcion                                                                                                                     |
+| --------------------------------------------------- | ----------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| `src/lib/auth/require-auth.ts`                      | Modificar         | Quitar prioridad de `x-sucursal-id`, validar sucursal efectiva contra permisos reales y formalizar contrato de auth endurecido. |
+| `src/lib/sucursalScope.ts` y helpers relacionados   | Modificar         | Centralizar validacion de sucursal permitida para evitar desalineaciones entre rutas.                                           |
+| `src/app/api/auth/login/route.ts`                   | Modificar         | Integrar rate limiting, auditoria de intentos y respuestas seguras.                                                             |
+| `src/app/api/auth/forgot-password/route.ts`         | Modificar         | Aplicar throttling, controles anti-flood y politicas de token/reintento.                                                        |
+| `src/app/api/auth/reset-password/route.ts`          | Modificar         | Aplicar throttling, controles sobre token y cierre de sesiones si corresponde.                                                  |
+| `src/app/api/upload/route.ts`                       | Modificar         | Validar archivos con allowlist fuerte, tamano maximo y nombres opacos.                                                          |
+| `src/app/api/files/[...path]/route.ts`              | Modificar         | Restringir tipos servidos y emitir headers defensivos.                                                                          |
+| `.env`                                              | Modificar         | Sustituir secretos reales por placeholders seguros o valores no productivos.                                                    |
+| `.env.example`                                      | Crear o modificar | Documentar todas las variables requeridas sin exponer credenciales reales.                                                      |
+| `package.json` / lockfile                           | Modificar         | Remediar dependencias con advisories priorizados y fijar versiones seguras.                                                     |
+| `docs/security/*` o documento operativo equivalente | Crear o modificar | Politica de secretos, rotacion, limites y remediacion de dependencias.                                                          |
 
 ## Contratos y reglas operativas
 
@@ -197,14 +202,14 @@ type AuthContext = {
 
 ## Estrategia de validacion
 
-| Capa | Que validar | Enfoque |
-|------|------------|---------|
-| Unitaria | `require-auth.ts` no acepta cambio de sucursal solo por header | Tests con combinaciones de rol, cookie, header y sucursales permitidas |
-| Unitaria | Validador de uploads | Casos de extension falsa, MIME falso, magic number invalido y tamano excedido |
-| Integracion | `forgot-password` y `reset-password` con rate limiting | Ventanas, reintentos y respuestas uniformes |
-| Integracion | `api/files` | Bloqueo de tipos/rutas no permitidos y headers correctos |
-| Operativa | Rotacion de secretos | Checklist por proveedor, deploy y verificacion de integraciones |
-| Seguridad | Dependencias | `npm audit`/SCA despues del upgrade y evidencia de advisories cerrados |
+| Capa        | Que validar                                                    | Enfoque                                                                       |
+| ----------- | -------------------------------------------------------------- | ----------------------------------------------------------------------------- |
+| Unitaria    | `require-auth.ts` no acepta cambio de sucursal solo por header | Tests con combinaciones de rol, cookie, header y sucursales permitidas        |
+| Unitaria    | Validador de uploads                                           | Casos de extension falsa, MIME falso, magic number invalido y tamano excedido |
+| Integracion | `forgot-password` y `reset-password` con rate limiting         | Ventanas, reintentos y respuestas uniformes                                   |
+| Integracion | `api/files`                                                    | Bloqueo de tipos/rutas no permitidos y headers correctos                      |
+| Operativa   | Rotacion de secretos                                           | Checklist por proveedor, deploy y verificacion de integraciones               |
+| Seguridad   | Dependencias                                                   | `npm audit`/SCA despues del upgrade y evidencia de advisories cerrados        |
 
 ## Migracion y despliegue
 
@@ -216,13 +221,13 @@ type AuthContext = {
 
 ## Riesgos y mitigaciones
 
-| Riesgo | Impacto | Mitigacion |
-|-------|---------|------------|
-| Endpoints existentes dependen implicitamente del header de sucursal | Alto | Introducir helper central de contexto validado y testear rutas criticas multi-sucursal. |
-| Rotacion de secretos de pago/correo genera downtime | Alto | Secuencia por proveedor, ventana coordinada y verificacion inmediata post-rotacion. |
-| Archivos SVG/PDF u otros formatos legitimos quedan bloqueados | Medio | Allowlist explicita por caso de uso y compatibilidad transitoria solo para formatos aprobados. |
-| Rate limiting afecta oficinas con IP compartida | Medio | Combinar IP con identidad/endpoint y parametrizar thresholds por entorno. |
-| Un advisory no puede actualizarse sin cambio mayor | Medio | Documentar mitigacion temporal y bloquear paths explotables hasta upgrade completo. |
+| Riesgo                                                              | Impacto | Mitigacion                                                                                     |
+| ------------------------------------------------------------------- | ------- | ---------------------------------------------------------------------------------------------- |
+| Endpoints existentes dependen implicitamente del header de sucursal | Alto    | Introducir helper central de contexto validado y testear rutas criticas multi-sucursal.        |
+| Rotacion de secretos de pago/correo genera downtime                 | Alto    | Secuencia por proveedor, ventana coordinada y verificacion inmediata post-rotacion.            |
+| Archivos SVG/PDF u otros formatos legitimos quedan bloqueados       | Medio   | Allowlist explicita por caso de uso y compatibilidad transitoria solo para formatos aprobados. |
+| Rate limiting afecta oficinas con IP compartida                     | Medio   | Combinar IP con identidad/endpoint y parametrizar thresholds por entorno.                      |
+| Un advisory no puede actualizarse sin cambio mayor                  | Medio   | Documentar mitigacion temporal y bloquear paths explotables hasta upgrade completo.            |
 
 ## Preguntas abiertas
 

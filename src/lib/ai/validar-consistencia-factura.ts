@@ -30,7 +30,11 @@ function difiereMasQueTolerancia(a: number, b: number): boolean {
   return diferencia / base > TOLERANCIA_CONSISTENCIA_ARITMETICA;
 }
 
-function agregarAdvertencia(mapa: Map<number, string[]>, index: number, mensaje: string) {
+function agregarAdvertencia(
+  mapa: Map<number, string[]>,
+  index: number,
+  mensaje: string,
+) {
   const actual = mapa.get(index) ?? [];
   actual.push(mensaje);
   mapa.set(index, actual);
@@ -87,7 +91,10 @@ export function validarConsistenciaFactura(
       // chequeo de cabecera, aunque su confidence haya bajado igual.
       datos.items.forEach((_, index) => {
         if (!confidenceMaximaPorItem.has(index)) {
-          confidenceMaximaPorItem.set(index, CONFIDENCE_MAXIMA_SI_INCONSISTENTE);
+          confidenceMaximaPorItem.set(
+            index,
+            CONFIDENCE_MAXIMA_SI_INCONSISTENTE,
+          );
         }
         if (!itemsConAdvertencia.has(index)) {
           agregarAdvertencia(

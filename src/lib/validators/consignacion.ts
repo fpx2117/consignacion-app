@@ -9,11 +9,13 @@ export const consignacionItemSchema = z.object({
 export const createConsignacionSchema = z.object({
   clienteId: z.number(),
   porcentajeAumento: z.number().min(0).default(0).optional(),
-  items: z.array(z.object({
-    productoId: z.number(),
-    unitsEntregadas: z.number().min(1),
-    descuento: z.number().optional(),
-  })),
+  items: z.array(
+    z.object({
+      productoId: z.number(),
+      unitsEntregadas: z.number().min(1),
+      descuento: z.number().optional(),
+    }),
+  ),
 });
 
 export const liquidacionItemSchema = z.object({

@@ -54,6 +54,9 @@ export function scoresFuzzy(
   productos: { id: number; nombre: string }[],
 ): ProductoMatch[] {
   return productos
-    .map((producto) => ({ productoId: producto.id, score: coeficienteDice(nombre, producto.nombre) }))
+    .map((producto) => ({
+      productoId: producto.id,
+      score: coeficienteDice(nombre, producto.nombre),
+    }))
     .sort((a, b) => b.score - a.score);
 }

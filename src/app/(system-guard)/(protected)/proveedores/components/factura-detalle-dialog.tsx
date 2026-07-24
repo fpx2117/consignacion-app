@@ -1,7 +1,10 @@
 "use client";
 
 import * as React from "react";
-import type { EstadoFacturaProveedor, FacturaProveedor } from "@/lib/apiService";
+import type {
+  EstadoFacturaProveedor,
+  FacturaProveedor,
+} from "@/lib/apiService";
 import { apiService, API_ROUTES } from "@/lib/apiService";
 
 import {
@@ -22,8 +25,20 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
-import { FileText, ImageOff, Hash, Calendar, Coins, X, ZoomIn } from "lucide-react";
-import { estadoFacturaBadge, formatMoneda, formatFecha } from "./factura-helpers";
+import {
+  FileText,
+  ImageOff,
+  Hash,
+  Calendar,
+  Coins,
+  X,
+  ZoomIn,
+} from "lucide-react";
+import {
+  estadoFacturaBadge,
+  formatMoneda,
+  formatFecha,
+} from "./factura-helpers";
 
 // Bloque compartido por los dos casos donde no hay imagen para mostrar:
 // eliminada (purgada al confirmar/cancelar) o error de carga (404/403/red).
@@ -51,7 +66,9 @@ function mensajeArchivoEliminado(estado: EstadoFacturaProveedor): string {
 // directo a la URL de la API.
 function ImageVisor({ src, onClose }: { src: string; onClose: () => void }) {
   React.useEffect(() => {
-    const handler = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
   }, [onClose]);
@@ -115,7 +132,9 @@ export function FacturaDetalleDialog({
   }, [open, facturaId]);
 
   const proveedorNombre =
-    factura?.proveedor?.nombre ?? factura?.proveedorNombreDetectado ?? "Proveedor sin asignar";
+    factura?.proveedor?.nombre ??
+    factura?.proveedorNombreDetectado ??
+    "Proveedor sin asignar";
   const moneda = factura?.moneda ?? "ARS";
   const items = factura?.items ?? [];
 
@@ -140,14 +159,16 @@ export function FacturaDetalleDialog({
               {proveedorNombre}
             </DialogTitle>
             <DialogDescription className="text-sm font-medium text-muted-foreground/80">
-              Detalle reconstruido de la factura a partir de los datos guardados.
+              Detalle reconstruido de la factura a partir de los datos
+              guardados.
             </DialogDescription>
           </DialogHeader>
 
           {/* Metadatos */}
           <div className="relative z-10 mt-4 flex flex-wrap gap-3 text-xs">
             <span className="inline-flex items-center gap-1.5 rounded-lg bg-background/60 px-2.5 py-1.5 font-medium text-muted-foreground">
-              <Hash className="h-3.5 w-3.5" /> {factura?.numeroFactura || "Sin N°"}
+              <Hash className="h-3.5 w-3.5" />{" "}
+              {factura?.numeroFactura || "Sin N°"}
             </span>
             <span className="inline-flex items-center gap-1.5 rounded-lg bg-background/60 px-2.5 py-1.5 font-medium text-muted-foreground">
               <Calendar className="h-3.5 w-3.5" /> {formatFecha(factura?.fecha)}
@@ -166,40 +187,45 @@ export function FacturaDetalleDialog({
         {/* Body */}
         <div className="flex-1 min-h-0 lg:flex">
           {/* Columna imagen — sólo si hay algo que mostrar en ese espacio */}
-          {factura && (factura.archivoEliminado || factura.archivoMime?.startsWith("image/") || factura.archivoMime === "application/pdf") && (
-            <div className="p-6 lg:w-[340px] lg:shrink-0 lg:border-r lg:border-border/50 lg:overflow-y-auto">
-              {factura.archivoEliminado ? (
-                <ImagenNoDisponibleMensaje texto={mensajeArchivoEliminado(factura.estado)} />
-              ) : imagenConError ? (
-                <ImagenNoDisponibleMensaje texto="No se pudo cargar la imagen original." />
-              ) : factura.archivoMime?.startsWith("image/") ? (
-                <button
-                  type="button"
-                  onClick={() => setVisorAbierto(true)}
-                  className="group relative block w-full rounded-2xl border border-border/50 overflow-hidden bg-muted/20 lg:h-full"
-                >
-                  <img
-                    src={API_ROUTES.FACTURAS_PROVEEDOR.ARCHIVO(factura.id)}
-                    alt="Factura original"
-                    className="w-full max-h-72 lg:max-h-none lg:h-full object-contain cursor-zoom-in"
-                    onError={() => setImagenConError(true)}
+          {factura &&
+            (factura.archivoEliminado ||
+              factura.archivoMime?.startsWith("image/") ||
+              factura.archivoMime === "application/pdf") && (
+              <div className="p-6 lg:w-[340px] lg:shrink-0 lg:border-r lg:border-border/50 lg:overflow-y-auto">
+                {factura.archivoEliminado ? (
+                  <ImagenNoDisponibleMensaje
+                    texto={mensajeArchivoEliminado(factura.estado)}
                   />
-                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-center justify-center">
-                    <ZoomIn className="h-6 w-6 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
-                  </div>
-                </button>
-              ) : factura.archivoMime === "application/pdf" ? (
-                <a
-                  href={API_ROUTES.FACTURAS_PROVEEDOR.ARCHIVO(factura.id)}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="flex items-center justify-center gap-2 p-6 text-sm font-medium text-primary hover:underline rounded-2xl border border-border/50 bg-muted/20 lg:h-full"
-                >
-                  <FileText className="h-4 w-4" /> Abrir PDF original
-                </a>
-              ) : null}
-            </div>
-          )}
+                ) : imagenConError ? (
+                  <ImagenNoDisponibleMensaje texto="No se pudo cargar la imagen original." />
+                ) : factura.archivoMime?.startsWith("image/") ? (
+                  <button
+                    type="button"
+                    onClick={() => setVisorAbierto(true)}
+                    className="group relative block w-full rounded-2xl border border-border/50 overflow-hidden bg-muted/20 lg:h-full"
+                  >
+                    <img
+                      src={API_ROUTES.FACTURAS_PROVEEDOR.ARCHIVO(factura.id)}
+                      alt="Factura original"
+                      className="w-full max-h-72 lg:max-h-none lg:h-full object-contain cursor-zoom-in"
+                      onError={() => setImagenConError(true)}
+                    />
+                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-center justify-center">
+                      <ZoomIn className="h-6 w-6 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                    </div>
+                  </button>
+                ) : factura.archivoMime === "application/pdf" ? (
+                  <a
+                    href={API_ROUTES.FACTURAS_PROVEEDOR.ARCHIVO(factura.id)}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="flex items-center justify-center gap-2 p-6 text-sm font-medium text-primary hover:underline rounded-2xl border border-border/50 bg-muted/20 lg:h-full"
+                  >
+                    <FileText className="h-4 w-4" /> Abrir PDF original
+                  </a>
+                ) : null}
+              </div>
+            )}
 
           {/* Columna tabla de ítems */}
           <div className="flex-1 min-h-0 overflow-y-auto p-6">
@@ -212,7 +238,9 @@ export function FacturaDetalleDialog({
             ) : items.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-12 text-center opacity-50 gap-2">
                 <FileText className="h-10 w-10 text-muted-foreground" />
-                <p className="text-sm font-medium">Esta factura no tiene ítems cargados.</p>
+                <p className="text-sm font-medium">
+                  Esta factura no tiene ítems cargados.
+                </p>
               </div>
             ) : (
               <div className="rounded-2xl border border-border bg-card overflow-hidden">
@@ -242,8 +270,11 @@ export function FacturaDetalleDialog({
                           className={`border-border hover:bg-muted/30 transition-all ${anulado ? "opacity-50" : ""}`}
                         >
                           <TableCell className="pl-4 py-3">
-                            <div className={`font-medium text-sm ${anulado ? "line-through" : ""}`}>
-                              {item.descripcionNormalizada || item.textoOriginal}
+                            <div
+                              className={`font-medium text-sm ${anulado ? "line-through" : ""}`}
+                            >
+                              {item.descripcionNormalizada ||
+                                item.textoOriginal}
                             </div>
                             <div className="flex items-center gap-2 mt-0.5">
                               {item.codigoProveedor && (
@@ -252,7 +283,10 @@ export function FacturaDetalleDialog({
                                 </span>
                               )}
                               {item.producto && (
-                                <Badge variant="outline" className="h-4 border-0 px-1.5 text-[10px] bg-primary/10 text-primary">
+                                <Badge
+                                  variant="outline"
+                                  className="h-4 border-0 px-1.5 text-[10px] bg-primary/10 text-primary"
+                                >
                                   {item.producto.nombre}
                                 </Badge>
                               )}
@@ -262,10 +296,14 @@ export function FacturaDetalleDialog({
                             {item.cantidad}
                           </TableCell>
                           <TableCell className="text-right font-mono text-sm text-muted-foreground">
-                            {item.precioUnitario != null ? formatMoneda(item.precioUnitario, moneda) : "—"}
+                            {item.precioUnitario != null
+                              ? formatMoneda(item.precioUnitario, moneda)
+                              : "—"}
                           </TableCell>
                           <TableCell className="text-right font-mono text-sm pr-4 font-semibold">
-                            {item.totalLinea != null ? formatMoneda(item.totalLinea, moneda) : "—"}
+                            {item.totalLinea != null
+                              ? formatMoneda(item.totalLinea, moneda)
+                              : "—"}
                           </TableCell>
                         </TableRow>
                       );

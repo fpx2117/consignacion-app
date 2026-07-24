@@ -62,42 +62,42 @@ Transformar la capa visual del storefront público (`/lista`) en una interfaz mo
 
 ## Áreas Afectadas
 
-| Área | Impacto | Descripción |
-|------|---------|-------------|
-| `src/lib/types.ts` | Modificado | Agregar `OnlineStoreSettings` y subtipos |
-| `prisma/schema.prisma` | Modificado | Extender `StoreSettings` con campo `onlineStoreConfig` |
-| `src/app/api/settings/route.ts` | Modificado | Devolver/guardar `onlineStoreConfig` |
-| `src/lib/validators/settings.ts` | Modificado | Agregar schema Zod para `OnlineStoreSettings` |
-| `src/lib/store-theme-utils.ts` | Nuevo | Helpers visuales: radius, shadow, card, button, layout |
-| `src/hooks/useOnlineStoreSettings.ts` | Nuevo | Hook para consumir config con defaults |
-| `src/hooks/useCart.ts` | Nuevo | Hook de carrito extraído de catalog-client |
-| `src/app/lista/page.tsx` | Modificado | Inyectar nuevas CSS variables |
-| `src/app/lista/storefront.css` | Modificado | Variables `--store-*` adicionales |
-| `src/app/lista/catalog-client.tsx` | Modificado | Integrar hooks, nuevos componentes |
-| `src/app/lista/components/search-bar.tsx` | Nuevo | Buscador independiente |
-| `src/app/lista/components/category-tabs.tsx` | Nuevo | Tabs horizontales de categorías |
-| `src/app/lista/components/promo-carousel.tsx` | Nuevo | Cards de promociones visuales |
-| `src/app/lista/components/product-section.tsx` | Nuevo | Sección de productos por categoría |
-| `src/app/lista/components/whatsapp-preview.tsx` | Nuevo | Preview visual del mensaje WhatsApp |
-| `src/app/lista/components/order-item.tsx` | Nuevo | Item individual en carrito |
-| `src/app/lista/components/order-summary.tsx` | Nuevo | Resumen de totales en carrito |
-| `src/app/lista/components/product-card.tsx` | Modificado | Rediseño visual con settings |
-| `src/app/lista/components/cart-drawer.tsx` | Modificado | Adaptar a bottom sheet real |
-| `src/app/lista/components/store-header.tsx` | Modificado | Nuevo layout con banner+logo+info |
-| `src/app/lista/components/store-banner.tsx` | Modificado | Overlay suave, blur |
-| `src/app/(system-guard)/(protected)/settings/tienda/page.tsx` | Modificado | Nueva pestaña "Online Store" |
-| `src/app/(system-guard)/(protected)/settings/tienda/components/` | Modificado | Componentes de config visual |
-| `src/app/api/public/storefront-config/route.ts` | Modificado | Incluir onlineStoreConfig en respuesta |
+| Área                                                             | Impacto    | Descripción                                            |
+| ---------------------------------------------------------------- | ---------- | ------------------------------------------------------ |
+| `src/lib/types.ts`                                               | Modificado | Agregar `OnlineStoreSettings` y subtipos               |
+| `prisma/schema.prisma`                                           | Modificado | Extender `StoreSettings` con campo `onlineStoreConfig` |
+| `src/app/api/settings/route.ts`                                  | Modificado | Devolver/guardar `onlineStoreConfig`                   |
+| `src/lib/validators/settings.ts`                                 | Modificado | Agregar schema Zod para `OnlineStoreSettings`          |
+| `src/lib/store-theme-utils.ts`                                   | Nuevo      | Helpers visuales: radius, shadow, card, button, layout |
+| `src/hooks/useOnlineStoreSettings.ts`                            | Nuevo      | Hook para consumir config con defaults                 |
+| `src/hooks/useCart.ts`                                           | Nuevo      | Hook de carrito extraído de catalog-client             |
+| `src/app/lista/page.tsx`                                         | Modificado | Inyectar nuevas CSS variables                          |
+| `src/app/lista/storefront.css`                                   | Modificado | Variables `--store-*` adicionales                      |
+| `src/app/lista/catalog-client.tsx`                               | Modificado | Integrar hooks, nuevos componentes                     |
+| `src/app/lista/components/search-bar.tsx`                        | Nuevo      | Buscador independiente                                 |
+| `src/app/lista/components/category-tabs.tsx`                     | Nuevo      | Tabs horizontales de categorías                        |
+| `src/app/lista/components/promo-carousel.tsx`                    | Nuevo      | Cards de promociones visuales                          |
+| `src/app/lista/components/product-section.tsx`                   | Nuevo      | Sección de productos por categoría                     |
+| `src/app/lista/components/whatsapp-preview.tsx`                  | Nuevo      | Preview visual del mensaje WhatsApp                    |
+| `src/app/lista/components/order-item.tsx`                        | Nuevo      | Item individual en carrito                             |
+| `src/app/lista/components/order-summary.tsx`                     | Nuevo      | Resumen de totales en carrito                          |
+| `src/app/lista/components/product-card.tsx`                      | Modificado | Rediseño visual con settings                           |
+| `src/app/lista/components/cart-drawer.tsx`                       | Modificado | Adaptar a bottom sheet real                            |
+| `src/app/lista/components/store-header.tsx`                      | Modificado | Nuevo layout con banner+logo+info                      |
+| `src/app/lista/components/store-banner.tsx`                      | Modificado | Overlay suave, blur                                    |
+| `src/app/(system-guard)/(protected)/settings/tienda/page.tsx`    | Modificado | Nueva pestaña "Online Store"                           |
+| `src/app/(system-guard)/(protected)/settings/tienda/components/` | Modificado | Componentes de config visual                           |
+| `src/app/api/public/storefront-config/route.ts`                  | Modificado | Incluir onlineStoreConfig en respuesta                 |
 
 ## Riesgos
 
-| Riesgo | Probabilidad | Mitigación |
-|--------|--------------|------------|
-| Romper funcionalidad existente del carrito | Media | No tocar lógica de `catalog-cart-pricing.ts` ni `catalog-whatsapp.ts`. Solo cambiar presentación |
-| CSS variables no se compilan en Tailwind v4 | Media | Usar `style={{ '--var': value }}` inline + `var(--var)` en clases. Si no funciona, usar clases auxiliares con `@apply` |
-| Migración Prisma falla por campo nuevo | Baja | Agregar campo opcional (`Json?`) con default. Sin migración destructiva |
-| Regresiones visuales en temas existentes | Media | Preservar los 8 temas actuales. El nuevo sistema de settings es una capa adicional, no un reemplazo |
-| Conflictos de merge con cambios previos no commiteados | Baja | Revisar `git status` antes de empezar |
+| Riesgo                                                 | Probabilidad | Mitigación                                                                                                             |
+| ------------------------------------------------------ | ------------ | ---------------------------------------------------------------------------------------------------------------------- |
+| Romper funcionalidad existente del carrito             | Media        | No tocar lógica de `catalog-cart-pricing.ts` ni `catalog-whatsapp.ts`. Solo cambiar presentación                       |
+| CSS variables no se compilan en Tailwind v4            | Media        | Usar `style={{ '--var': value }}` inline + `var(--var)` en clases. Si no funciona, usar clases auxiliares con `@apply` |
+| Migración Prisma falla por campo nuevo                 | Baja         | Agregar campo opcional (`Json?`) con default. Sin migración destructiva                                                |
+| Regresiones visuales en temas existentes               | Media        | Preservar los 8 temas actuales. El nuevo sistema de settings es una capa adicional, no un reemplazo                    |
+| Conflictos de merge con cambios previos no commiteados | Baja         | Revisar `git status` antes de empezar                                                                                  |
 
 ## Plan de Reversión (Rollback)
 

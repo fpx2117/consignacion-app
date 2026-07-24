@@ -1,5 +1,9 @@
 import { NextResponse } from "next/server";
-import { clearAuthCookie, getAuthTokenFromCookies, verifyUserJwt } from "@/lib/auth/core";
+import {
+  clearAuthCookie,
+  getAuthTokenFromCookies,
+  verifyUserJwt,
+} from "@/lib/auth/core";
 import { prisma } from "@/lib/prisma";
 import { recordAuditLog } from "@/lib/security/audit";
 
@@ -19,9 +23,9 @@ export async function POST() {
         where: {
           userId,
           token: sessionToken,
-          isActive: true
+          isActive: true,
         },
-        data: { isActive: false }
+        data: { isActive: false },
       });
 
       // Auditoría

@@ -1,7 +1,10 @@
 import * as React from "react";
 import type {
-  DashboardPeriod, DashboardKpis, DashboardConsignacionesResponse,
-  DashboardTopProductos, DashboardTendencia
+  DashboardPeriod,
+  DashboardKpis,
+  DashboardConsignacionesResponse,
+  DashboardTopProductos,
+  DashboardTendencia,
 } from "@/lib/types";
 import { useSucursalStore } from "@/store/useSucursalStore";
 import {
@@ -37,7 +40,10 @@ export function useDashboard(period: DashboardPeriod) {
 
       let trData: DashboardTendencia | null = null;
       if (period !== "all") {
-        trData = await fetchDashboardTendencia(period as Exclude<DashboardPeriod, "all">, activeSucursalId);
+        trData = await fetchDashboardTendencia(
+          period as Exclude<DashboardPeriod, "all">,
+          activeSucursalId,
+        );
       }
 
       setData({ kpis: k, consig: c, top: t, trend: trData });
@@ -59,7 +65,10 @@ export function useDashboard(period: DashboardPeriod) {
 
       let trData: DashboardTendencia | null = null;
       if (period !== "all") {
-        trData = await fetchDashboardTendencia(period as Exclude<DashboardPeriod, "all">, activeSucursalId);
+        trData = await fetchDashboardTendencia(
+          period as Exclude<DashboardPeriod, "all">,
+          activeSucursalId,
+        );
       }
 
       setData({ kpis: k, consig: c, top: t, trend: trData });

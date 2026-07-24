@@ -11,7 +11,11 @@ import * as React from "react";
 import { Columns3 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 
 interface ColumnasProductoPickerProps {
   candidatas: string[];
@@ -37,7 +41,12 @@ export function ColumnasProductoPicker({
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <Button variant="outline" size="sm" className="h-9 rounded-lg text-xs font-semibold gap-1.5" disabled={disabled}>
+        <Button
+          variant="outline"
+          size="sm"
+          className="h-9 rounded-lg text-xs font-semibold gap-1.5"
+          disabled={disabled}
+        >
           <Columns3 className="h-3.5 w-3.5" />
           Columnas
           {seleccionadas.length > 0 && (
@@ -48,7 +57,9 @@ export function ColumnasProductoPicker({
         </Button>
       </PopoverTrigger>
       <PopoverContent align="end" className="w-64 p-3">
-        <p className="text-xs font-bold uppercase text-muted-foreground mb-2">Mostrar como columna</p>
+        <p className="text-xs font-bold uppercase text-muted-foreground mb-2">
+          Mostrar como columna
+        </p>
         {candidatas.length === 0 ? (
           <p className="text-xs text-muted-foreground/70 py-2 leading-relaxed">
             Todavía no hay atributos cargados en tu catálogo. Agregalos desde
@@ -57,7 +68,10 @@ export function ColumnasProductoPicker({
         ) : (
           <div className="space-y-2 max-h-64 overflow-y-auto">
             {candidatas.map((clave) => (
-              <label key={clave} className="flex items-center gap-2 text-sm cursor-pointer select-none">
+              <label
+                key={clave}
+                className="flex items-center gap-2 text-sm cursor-pointer select-none"
+              >
                 <Checkbox
                   checked={seleccionadas.includes(clave)}
                   onCheckedChange={() => toggle(clave)}

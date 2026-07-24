@@ -33,8 +33,12 @@ export function AdminStep({ data, onChange }: AdminStepProps) {
         >
           <UserCog className="w-8 h-8 text-[color:var(--primary)]" />
         </motion.div>
-        <h2 className="text-3xl font-black tracking-tight">Tu Perfil de Administrador</h2>
-        <p className="text-muted-foreground text-lg">La llave maestra para controlar todo el ecosistema.</p>
+        <h2 className="text-3xl font-black tracking-tight">
+          Tu Perfil de Administrador
+        </h2>
+        <p className="text-muted-foreground text-lg">
+          La llave maestra para controlar todo el ecosistema.
+        </p>
       </div>
 
       {/* Form */}
@@ -43,7 +47,8 @@ export function AdminStep({ data, onChange }: AdminStepProps) {
 
         <div className="space-y-2">
           <Label className="text-xs font-bold uppercase tracking-widest text-foreground/80 pl-2">
-            Tu Nombre <span className="text-[color:var(--status-danger)]">*</span>
+            Tu Nombre{" "}
+            <span className="text-[color:var(--status-danger)]">*</span>
           </Label>
           <Input
             autoFocus
@@ -56,7 +61,8 @@ export function AdminStep({ data, onChange }: AdminStepProps) {
 
         <div className="space-y-2">
           <Label className="text-xs font-bold uppercase tracking-widest text-foreground/80 pl-2">
-            Email Corporativo <span className="text-[color:var(--status-danger)]">*</span>
+            Email Corporativo{" "}
+            <span className="text-[color:var(--status-danger)]">*</span>
           </Label>
           <Input
             type="email"
@@ -70,13 +76,16 @@ export function AdminStep({ data, onChange }: AdminStepProps) {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label className="text-xs font-bold uppercase tracking-widest text-foreground/80 pl-2">
-              Contraseña <span className="text-[color:var(--status-danger)]">*</span>
+              Contraseña{" "}
+              <span className="text-[color:var(--status-danger)]">*</span>
             </Label>
             <div className="relative">
               <Input
                 type={showPassword ? "text" : "password"}
                 value={data.password}
-                onChange={(e) => onChange({ ...data, password: e.target.value })}
+                onChange={(e) =>
+                  onChange({ ...data, password: e.target.value })
+                }
                 placeholder="Mínimo 6 caracteres"
                 className="h-14 rounded-2xl bg-background/50 border-border/50 focus:border-[color:var(--primary)] focus:ring-4 focus:ring-[color:var(--primary)]/10 pr-12"
               />
@@ -85,18 +94,25 @@ export function AdminStep({ data, onChange }: AdminStepProps) {
                 onClick={() => setShowPassword(!showPassword)}
                 className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
               >
-                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                {showPassword ? (
+                  <EyeOff className="h-4 w-4" />
+                ) : (
+                  <Eye className="h-4 w-4" />
+                )}
               </button>
             </div>
           </div>
           <div className="space-y-2">
             <Label className="text-xs font-bold uppercase tracking-widest text-foreground/80 pl-2">
-              Confirmar <span className="text-[color:var(--status-danger)]">*</span>
+              Confirmar{" "}
+              <span className="text-[color:var(--status-danger)]">*</span>
             </Label>
             <Input
               type={showPassword ? "text" : "password"}
               value={data.confirmPassword}
-              onChange={(e) => onChange({ ...data, confirmPassword: e.target.value })}
+              onChange={(e) =>
+                onChange({ ...data, confirmPassword: e.target.value })
+              }
               placeholder="Repetí la contraseña"
               className="h-14 rounded-2xl bg-background/50 border-border/50 focus:border-[color:var(--primary)] focus:ring-4 focus:ring-[color:var(--primary)]/10"
             />
@@ -131,7 +147,9 @@ export function AdminStep({ data, onChange }: AdminStepProps) {
 
         {/* Mismatch warning */}
         {data.confirmPassword && data.password !== data.confirmPassword && (
-          <p className="text-xs text-[color:var(--status-danger)] font-medium pl-2">Las contraseñas no coinciden</p>
+          <p className="text-xs text-[color:var(--status-danger)] font-medium pl-2">
+            Las contraseñas no coinciden
+          </p>
         )}
       </div>
     </StepWrapper>

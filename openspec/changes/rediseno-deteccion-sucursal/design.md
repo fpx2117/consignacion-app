@@ -5,6 +5,7 @@
 Rediseno completo del flujo de deteccion de sucursal activa y validacion de planes/suscripciones. La estrategia central es **eliminar la triple fuente de verdad** (localStorage persist, cookie, header) y reemplazarla con una **fuente unica: la cookie `active_sucursal_id`**, validada server-side en cada request. Los datos del plan se pasan como props desde el RSC layout, eliminando el cache stale module-level. La sincronizacion cross-tab se logra con BroadcastChannel API.
 
 **Bugs que resuelve este rediseno:**
+
 - Bug #1: Triple fuente de verdad (cookie vs localStorage vs header)
 - Bug #2: Rehydration mismatch por Zustand persist
 - Bug #3: Race conditions entre cookie write y primer fetch
@@ -20,6 +21,7 @@ Rediseno completo del flujo de deteccion de sucursal activa y validacion de plan
 **Eleccion**: Cookie `active_sucursal_id` (no httpOnly, SameSite=Lax) como single source of truth. El server lee la cookie directamente. El client lee la cookie y la propaga via Zustand store SIN persist.
 
 **Alternativas consideradas**:
+
 - **Header-only**: No persiste entre navegaciones, requiere que el client lo envie siempre.
 - **Server-side session**: Agrega complejidad y estado server-side que no necesitamos.
 - **HttpOnly cookie**: Impide que JS la lea para UI (dropdown de sucursal).
@@ -33,6 +35,7 @@ Rediseno completo del flujo de deteccion de sucursal activa y validacion de plan
 **Eleccion**: Remover `persist` middleware del `useSucursalStore`. El store se hidrata UNICAMENTE desde server props en el layout SSR via `useEffect`.
 
 **Alternativas consideradas**:
+
 - **Mantener persist con versioning**: Sigue teniendo el problema de rehydration mismatch.
 - **sessionStorage**: Menor duracion pero mismo problema fundamental.
 
@@ -45,6 +48,7 @@ Rediseno completo del flujo de deteccion de sucursal activa y validacion de plan
 **Eleccion**: Los datos del plan activo (limits, features) se pasan como props desde el RSC layout a los client components. Un nuevo endpoint `/api/subscriptions/invalidate` usa BroadcastChannel + custom event para forzar re-validacion cross-tab.
 
 **Alternativas consideradas**:
+
 - **Mantener cache module-level**: Causa el bug de datos stale por 5 minutos.
 - **React Context con polling**: Genera requests innecesarios y complejidad.
 
@@ -57,6 +61,7 @@ Rediseno completo del flujo de deteccion de sucursal activa y validacion de plan
 **Eleccion**: Nuevo endpoint `POST /api/sucursal/switch` que valida permisos + setea la cookie server-side + retorna datos actualizados. El client llama este endpoint y luego hace `router.refresh()`.
 
 **Alternativas consideradas**:
+
 - **Seguir con `document.cookie` directo**: No valida permisos, genera race conditions.
 
 **Justificacion**: El server valida que el usuario tiene permisos sobre esa sucursal antes de setear la cookie. Elimina race conditions entre cookie write y primer fetch. El `router.refresh()` garantiza que el layout RSC re-ejecute con la nueva cookie.
@@ -68,6 +73,7 @@ Rediseno completo del flujo de deteccion de sucursal activa y validacion de plan
 **Eleccion**: `usarControlDeCaja` y otras configs se guardan en localStorage con key `config-{sucursalId}` en vez de key generica.
 
 **Alternativas consideradas**:
+
 - **No cachear**: Requiere fetch en cada render.
 - **Cache global (sin scope)**: Es el Bug #5 actual.
 
@@ -80,6 +86,7 @@ Rediseno completo del flujo de deteccion de sucursal activa y validacion de plan
 **Eleccion**: BroadcastChannel API para notificar cambios de sucursal y plan entre pestanas. Fallback a `storage` event para navegadores que no soporten BroadcastChannel.
 
 **Alternativas consideradas**:
+
 - **SharedWorker**: Mas complejo, requiere archivo worker separado.
 - **Polling**: Ineficiente, genera requests innecesarios.
 
@@ -165,22 +172,22 @@ Rediseno completo del flujo de deteccion de sucursal activa y validacion de plan
 
 ## Cambios en Archivos
 
-| Archivo | Accion | Descripcion |
-|---------|--------|-------------|
-| `src/store/useSucursalStore.ts` | Modificar | Remover `persist` middleware. Agregar `planLimits` al state. Agregar metodo `hydrate()` para server props. Agregar BroadcastChannel listener. |
-| `src/lib/auth/require-auth.ts` | Modificar | Simplificar: ADMIN lee solo cookie. EMPLEADO siempre JWT. Eliminar lectura de header `x-sucursal-id`. Validar que sucursal existe en DB. |
-| `src/lib/apiService.ts` | Modificar | Mantener header `x-sucursal-id` para API calls (leido del store), pero remover `__sid` query param y logica de cache condicional. |
-| `src/components/SubscriptionGuard.tsx` | Modificar | Eliminar cache module-level. Recibir `planLimits` como prop desde layout. Agregar BroadcastChannel listener para invalidacion. |
-| `src/components/top-bar.tsx` | Modificar | Cambio de sucursal via `POST /api/sucursal/switch` + `router.refresh()` en vez de `setActiveSucursalId()` directo. |
-| `src/components/sidebar-dock.tsx` | Modificar | Hidratar store con `planLimits` ademas de `sucursalesPermitidas`. Remover localStorage de `usarControlDeCaja` (usar config scoped). |
-| `src/components/global-readonly-guard.tsx` | Sin cambios | Sigue funcionando igual leyendo del store. |
-| `src/app/(system-guard)/(protected)/layout.tsx` | Modificar | Pasar `planLimits` como prop a SubscriptionGuard. Agregar `activeSucursalId` a las props. |
-| `src/app/api/auth/login/route.ts` | Modificar | Setear cookie `active_sucursal_id` al login con el `sucursalId` del usuario. |
-| `src/app/api/sucursal/switch/route.ts` | **Crear** | Nuevo endpoint: valida permisos, setea cookie server-side, retorna confirmacion. |
-| `src/lib/broadcast-channel.ts` | **Crear** | Utilidad para BroadcastChannel con fallback a storage event. Mensajes: `sucursal-changed`, `plan-changed`, `logout`. |
-| `src/hooks/useBroadcastChannel.ts` | **Crear** | Hook React para escuchar mensajes del BroadcastChannel y ejecutar callbacks. |
-| `src/lib/subscriptions/require-subscription.ts` | Modificar | Sin cambios funcionales, pero agregar memoizacion con `React.cache` para evitar queries duplicadas en el mismo request. |
-| `src/app/api/subscriptions/current/route.ts` | Modificar | Agregar `planLimits` al response para que el layout pueda pasarlos como prop. |
+| Archivo                                         | Accion      | Descripcion                                                                                                                                   |
+| ----------------------------------------------- | ----------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| `src/store/useSucursalStore.ts`                 | Modificar   | Remover `persist` middleware. Agregar `planLimits` al state. Agregar metodo `hydrate()` para server props. Agregar BroadcastChannel listener. |
+| `src/lib/auth/require-auth.ts`                  | Modificar   | Simplificar: ADMIN lee solo cookie. EMPLEADO siempre JWT. Eliminar lectura de header `x-sucursal-id`. Validar que sucursal existe en DB.      |
+| `src/lib/apiService.ts`                         | Modificar   | Mantener header `x-sucursal-id` para API calls (leido del store), pero remover `__sid` query param y logica de cache condicional.             |
+| `src/components/SubscriptionGuard.tsx`          | Modificar   | Eliminar cache module-level. Recibir `planLimits` como prop desde layout. Agregar BroadcastChannel listener para invalidacion.                |
+| `src/components/top-bar.tsx`                    | Modificar   | Cambio de sucursal via `POST /api/sucursal/switch` + `router.refresh()` en vez de `setActiveSucursalId()` directo.                            |
+| `src/components/sidebar-dock.tsx`               | Modificar   | Hidratar store con `planLimits` ademas de `sucursalesPermitidas`. Remover localStorage de `usarControlDeCaja` (usar config scoped).           |
+| `src/components/global-readonly-guard.tsx`      | Sin cambios | Sigue funcionando igual leyendo del store.                                                                                                    |
+| `src/app/(system-guard)/(protected)/layout.tsx` | Modificar   | Pasar `planLimits` como prop a SubscriptionGuard. Agregar `activeSucursalId` a las props.                                                     |
+| `src/app/api/auth/login/route.ts`               | Modificar   | Setear cookie `active_sucursal_id` al login con el `sucursalId` del usuario.                                                                  |
+| `src/app/api/sucursal/switch/route.ts`          | **Crear**   | Nuevo endpoint: valida permisos, setea cookie server-side, retorna confirmacion.                                                              |
+| `src/lib/broadcast-channel.ts`                  | **Crear**   | Utilidad para BroadcastChannel con fallback a storage event. Mensajes: `sucursal-changed`, `plan-changed`, `logout`.                          |
+| `src/hooks/useBroadcastChannel.ts`              | **Crear**   | Hook React para escuchar mensajes del BroadcastChannel y ejecutar callbacks.                                                                  |
+| `src/lib/subscriptions/require-subscription.ts` | Modificar   | Sin cambios funcionales, pero agregar memoizacion con `React.cache` para evitar queries duplicadas en el mismo request.                       |
+| `src/app/api/subscriptions/current/route.ts`    | Modificar   | Agregar `planLimits` al response para que el layout pueda pasarlos como prop.                                                                 |
 
 ## Interfaces / Contratos
 
@@ -230,9 +237,9 @@ interface SucursalState {
 
 ```ts
 type BroadcastMessage =
-  | { type: 'sucursal-changed'; sucursalId: number }
-  | { type: 'plan-changed' }
-  | { type: 'session-revoked' };
+  | { type: "sucursal-changed"; sucursalId: number }
+  | { type: "plan-changed" }
+  | { type: "session-revoked" };
 ```
 
 ### Layout Props (ampliadas)
@@ -241,22 +248,22 @@ type BroadcastMessage =
 interface SidebarUserData {
   rol: "ADMIN" | "EMPLEADO";
   sucursalesPermitidas: Sucursal[];
-  activeSucursalId: number;   // NUEVO: validado por server
+  activeSucursalId: number; // NUEVO: validado por server
   planLimits: PlanLimits | null; // NUEVO: limits del plan activo
 }
 ```
 
 ## Estrategia de Pruebas
 
-| Capa | Que Probar | Enfoque |
-|------|------------|---------|
-| Unitaria | `require-auth.ts` -- resolucion de sucursal desde cookie | Vitest + mock de `cookies()` |
-| Unitaria | `useSucursalStore.ts` -- hydrate, switchSucursal | Vitest + `act()` |
-| Unitaria | BroadcastChannel utility -- send/receive/fallback | Vitest con mock |
-| Integracion | `POST /api/sucursal/switch` -- validacion + set-cookie | Vitest con supertest |
-| Integracion | Cambio de plan -> invalidacion cross-tab | Cypress/Playwright |
-| E2E | Login -> cambiar sucursal -> verificar datos | Playwright |
-| E2E | Upgrade plan -> features habilitadas inmediato | Playwright |
+| Capa        | Que Probar                                               | Enfoque                      |
+| ----------- | -------------------------------------------------------- | ---------------------------- |
+| Unitaria    | `require-auth.ts` -- resolucion de sucursal desde cookie | Vitest + mock de `cookies()` |
+| Unitaria    | `useSucursalStore.ts` -- hydrate, switchSucursal         | Vitest + `act()`             |
+| Unitaria    | BroadcastChannel utility -- send/receive/fallback        | Vitest con mock              |
+| Integracion | `POST /api/sucursal/switch` -- validacion + set-cookie   | Vitest con supertest         |
+| Integracion | Cambio de plan -> invalidacion cross-tab                 | Cypress/Playwright           |
+| E2E         | Login -> cambiar sucursal -> verificar datos             | Playwright                   |
+| E2E         | Upgrade plan -> features habilitadas inmediato           | Playwright                   |
 
 ## Migracion / Despliegue
 
@@ -268,8 +275,8 @@ interface SidebarUserData {
 
 ```ts
 // En la inicializacion del nuevo store (sin persist)
-if (typeof window !== 'undefined') {
-  localStorage.removeItem('sucursal-storage');
+if (typeof window !== "undefined") {
+  localStorage.removeItem("sucursal-storage");
 }
 ```
 

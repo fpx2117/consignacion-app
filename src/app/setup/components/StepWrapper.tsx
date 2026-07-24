@@ -19,7 +19,11 @@ const maxWidthMap = {
   full: "max-w-5xl",
 };
 
-export function StepWrapper({ children, className, maxWidth = "xl" }: StepWrapperProps) {
+export function StepWrapper({
+  children,
+  className,
+  maxWidth = "xl",
+}: StepWrapperProps) {
   return (
     <motion.div
       initial={{ opacity: 0, y: 24, filter: "blur(6px)" }}

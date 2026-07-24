@@ -12,7 +12,10 @@ export async function GET() {
   if (!auth.ok) return auth.res;
 
   if (!requireRole(auth.user, ["ADMIN"])) {
-    return NextResponse.json({ error: "Permisos insuficientes" }, { status: 403 });
+    return NextResponse.json(
+      { error: "Permisos insuficientes" },
+      { status: 403 },
+    );
   }
 
   const sucursales = await prisma.sucursal.findMany({
@@ -27,7 +30,10 @@ export async function POST(req: Request) {
   if (!auth.ok) return auth.res;
 
   if (!requireRole(auth.user, ["ADMIN"])) {
-    return NextResponse.json({ error: "Permisos insuficientes" }, { status: 403 });
+    return NextResponse.json(
+      { error: "Permisos insuficientes" },
+      { status: 403 },
+    );
   }
 
   try {
@@ -35,7 +41,10 @@ export async function POST(req: Request) {
     const nombreNormalizado = nombre?.trim();
 
     if (!nombreNormalizado) {
-      return NextResponse.json({ error: "Nombre obligatorio" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Nombre obligatorio" },
+        { status: 400 },
+      );
     }
 
     const nueva = await prisma.sucursal.create({
@@ -48,6 +57,9 @@ export async function POST(req: Request) {
     return NextResponse.json({ data: nueva }, { status: 201 });
   } catch (error) {
     console.error("Error al crear la sucursal:", error);
-    return NextResponse.json({ error: "Error al crear la sucursal" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Error al crear la sucursal" },
+      { status: 500 },
+    );
   }
 }

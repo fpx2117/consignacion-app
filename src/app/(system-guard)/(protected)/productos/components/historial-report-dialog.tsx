@@ -1,29 +1,41 @@
-import React from 'react';
-import { Calendar, History, Loader2, X } from 'lucide-react'; 
-import { toast } from 'sonner';
-import { apiService } from '@/lib/apiService'; 
-import { 
-  Dialog, 
-  DialogTrigger, 
-  DialogContent, 
-  DialogTitle, 
+import React from "react";
+import { Calendar, History, Loader2, X } from "lucide-react";
+import { toast } from "sonner";
+import { apiService } from "@/lib/apiService";
+import {
+  Dialog,
+  DialogTrigger,
+  DialogContent,
+  DialogTitle,
   DialogDescription,
   DialogFooter,
-  DialogClose 
-} from '@/components/ui/dialog'; 
-import { Button } from '@/components/ui/button';
-import { cn } from '@/lib/utils';
+  DialogClose,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 export function HistoryReportDialog() {
   const [isPreparing, setIsPreparing] = React.useState(false);
   const [selectedMes, setSelectedMes] = React.useState(new Date().getMonth());
-  const [selectedAnio, setSelectedAnio] = React.useState(new Date().getFullYear());
+  const [selectedAnio, setSelectedAnio] = React.useState(
+    new Date().getFullYear(),
+  );
   const [availableYears, setAvailableYears] = React.useState<number[]>([]);
   const [isLoadingYears, setIsLoadingYears] = React.useState(true);
 
   const MESES = [
-    "Ene", "Feb", "Mar", "Abr", "May", "Jun",
-    "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"
+    "Ene",
+    "Feb",
+    "Mar",
+    "Abr",
+    "May",
+    "Jun",
+    "Jul",
+    "Ago",
+    "Sep",
+    "Oct",
+    "Nov",
+    "Dic",
   ];
 
   React.useEffect(() => {
@@ -35,9 +47,11 @@ export function HistoryReportDialog() {
         if (mounted) {
           const sortedYears = years.sort((a, b) => b - a);
           setAvailableYears(sortedYears);
-          setSelectedAnio((current) => (
-            sortedYears.length > 0 && !sortedYears.includes(current) ? sortedYears[0] : current
-          ));
+          setSelectedAnio((current) =>
+            sortedYears.length > 0 && !sortedYears.includes(current)
+              ? sortedYears[0]
+              : current,
+          );
         }
       } catch (error) {
         console.error("Error cargando años", error);
@@ -47,14 +61,19 @@ export function HistoryReportDialog() {
       }
     };
     fetchYears();
-    return () => { mounted = false; };
+    return () => {
+      mounted = false;
+    };
   }, []);
 
   const handleGenerate = async () => {
     setIsPreparing(true);
     try {
-      const shareUrl = await apiService.getHistorialPdfUrl(selectedMes, selectedAnio);
-      window.open(shareUrl, '_blank');
+      const shareUrl = await apiService.getHistorialPdfUrl(
+        selectedMes,
+        selectedAnio,
+      );
+      window.open(shareUrl, "_blank");
       toast.success("Enlace de auditoría generado");
     } catch (error) {
       console.error(error);
@@ -67,28 +86,29 @@ export function HistoryReportDialog() {
   return (
     <Dialog>
       <DialogTrigger asChild>
-        <Button 
-          variant="outline" 
+        <Button
+          variant="outline"
           size="lg"
           className="h-12 rounded-2xl px-5 border-dashed border-[color:var(--primary)]/30 hover:border-[color:var(--primary)] hover:bg-[color:var(--primary)]/5 text-muted-foreground hover:text-[color:var(--primary)] dark:hover:bg-[color:var(--primary)]/10 transition-all gap-2"
         >
           <History className="h-4 w-4" />
-          <span className="hidden sm:inline font-bold text-xs uppercase tracking-tight">Auditoría</span>
+          <span className="hidden sm:inline font-bold text-xs uppercase tracking-tight">
+            Auditoría
+          </span>
         </Button>
       </DialogTrigger>
-      
+
       {/* 1. `[&>button]:hidden`: Oculta cualquier botón que sea hijo DIRECTO (la X por defecto).
-      */}
+       */}
       <DialogContent className="rounded-[2.5rem] p-0 overflow-hidden max-w-[420px] border-none shadow-2xl dark:bg-background bg-card gap-0 [&>button]:hidden">
-        
         {/* 2. Envolvemos nuestra X en un div absoluto. 
               Al estar dentro de un div, ya no es hijo directo del DialogContent, 
               por lo que NO se oculta con la regla de arriba.
         */}
         <div className="absolute right-5 top-5 z-50">
           <DialogClose className="rounded-full bg-card/10 p-2 hover:bg-card/20 text-[color:var(--ui-fx-white)] transition-colors focus:outline-none focus:ring-2 focus:ring-white/50 cursor-pointer flex items-center justify-center">
-             <X className="h-4 w-4" />
-             <span className="sr-only">Cerrar</span>
+            <X className="h-4 w-4" />
+            <span className="sr-only">Cerrar</span>
           </DialogClose>
         </div>
 
@@ -111,48 +131,55 @@ export function HistoryReportDialog() {
             </DialogDescription>
           </div>
         </div>
-        
+
         <div className="p-8 space-y-8 dark:bg-background">
           {/* Selector de Año */}
           <div className="space-y-3">
             <div className="flex justify-between items-end">
-                <span className="text-[10px] font-black uppercase text-[color:var(--primary)] ml-1 tracking-[0.2em]">Año</span>
-                {isLoadingYears && (
-                    <span className="text-[9px] text-muted-foreground/80 animate-pulse font-medium">Cargando...</span>
-                )}
+              <span className="text-[10px] font-black uppercase text-[color:var(--primary)] ml-1 tracking-[0.2em]">
+                Año
+              </span>
+              {isLoadingYears && (
+                <span className="text-[9px] text-muted-foreground/80 animate-pulse font-medium">
+                  Cargando...
+                </span>
+              )}
             </div>
             <div className="flex gap-2 flex-wrap">
-              {isLoadingYears ? (
-                 [1, 2].map((_, i) => (
-                    <div key={i} className="h-9 w-16 bg-muted/55 dark:bg-muted/50 rounded-xl animate-pulse" />
-                 ))
-              ) : (
-                  availableYears.map(year => (
+              {isLoadingYears
+                ? [1, 2].map((_, i) => (
+                    <div
+                      key={i}
+                      className="h-9 w-16 bg-muted/55 dark:bg-muted/50 rounded-xl animate-pulse"
+                    />
+                  ))
+                : availableYears.map((year) => (
                     <button
                       key={year}
                       onClick={() => setSelectedAnio(year)}
                       className={cn(
                         "px-4 py-2 rounded-xl text-xs font-black transition-all border",
-                        selectedAnio === year 
-                          ? "bg-[color:var(--primary)] border-[color:var(--primary)] text-[color:var(--ui-fx-white)] shadow-lg shadow-indigo-500/20" 
-                          : "bg-muted/40 dark:bg-card border-border dark:border-border text-muted-foreground/80 hover:border-[color:var(--primary)] hover:text-[color:var(--primary)]"
+                        selectedAnio === year
+                          ? "bg-[color:var(--primary)] border-[color:var(--primary)] text-[color:var(--ui-fx-white)] shadow-lg shadow-indigo-500/20"
+                          : "bg-muted/40 dark:bg-card border-border dark:border-border text-muted-foreground/80 hover:border-[color:var(--primary)] hover:text-[color:var(--primary)]",
                       )}
                     >
                       {year}
                     </button>
-                  ))
-              )}
+                  ))}
             </div>
           </div>
 
           {/* Grid de Meses */}
           <div className="space-y-3">
-            <span className="text-[10px] font-black uppercase text-[color:var(--primary)] ml-1 tracking-[0.2em]">Mes</span>
+            <span className="text-[10px] font-black uppercase text-[color:var(--primary)] ml-1 tracking-[0.2em]">
+              Mes
+            </span>
             <div className="grid grid-cols-4 gap-2">
               {MESES.map((name, index) => {
                 const isSelected = selectedMes === index;
                 const isFuture = new Date(selectedAnio, index) > new Date();
-                
+
                 return (
                   <button
                     key={name}
@@ -160,10 +187,11 @@ export function HistoryReportDialog() {
                     onClick={() => setSelectedMes(index)}
                     className={cn(
                       "py-3 rounded-xl text-[10px] font-black uppercase transition-all border",
-                      isFuture ? "opacity-20 cursor-not-allowed bg-muted/55 dark:bg-muted text-muted-foreground border-transparent" :
-                      isSelected 
-                        ? "bg-[color:var(--primary)] dark:bg-[color:var(--primary)]/40 border-[color:var(--primary)] dark:border-[color:var(--primary)] text-[color:var(--primary)] dark:text-[color:var(--primary)] scale-105 shadow-sm" 
-                        : "bg-card dark:bg-card border-border/70 dark:border-border text-muted-foreground hover:bg-[color:var(--primary)] dark:hover:bg-[color:var(--primary)]/20"
+                      isFuture
+                        ? "opacity-20 cursor-not-allowed bg-muted/55 dark:bg-muted text-muted-foreground border-transparent"
+                        : isSelected
+                          ? "bg-[color:var(--primary)] dark:bg-[color:var(--primary)]/40 border-[color:var(--primary)] dark:border-[color:var(--primary)] text-[color:var(--primary)] dark:text-[color:var(--primary)] scale-105 shadow-sm"
+                          : "bg-card dark:bg-card border-border/70 dark:border-border text-muted-foreground hover:bg-[color:var(--primary)] dark:hover:bg-[color:var(--primary)]/20",
                     )}
                   >
                     {name}
@@ -177,14 +205,17 @@ export function HistoryReportDialog() {
         {/* Footer */}
         <DialogFooter className="p-8 bg-muted/35 dark:bg-card/50 border-t border-border/70 dark:border-border flex-col sm:flex-row gap-3">
           <DialogClose asChild>
-            <Button variant="ghost" className="rounded-xl font-black text-[10px] uppercase tracking-widest text-muted-foreground hover:bg-muted/60 dark:hover:bg-muted transition-colors h-12">
+            <Button
+              variant="ghost"
+              className="rounded-xl font-black text-[10px] uppercase tracking-widest text-muted-foreground hover:bg-muted/60 dark:hover:bg-muted transition-colors h-12"
+            >
               Cerrar
             </Button>
           </DialogClose>
-          
-          <Button 
+
+          <Button
             onClick={(e) => {
-              e.preventDefault(); 
+              e.preventDefault();
               handleGenerate();
             }}
             disabled={isPreparing}
@@ -200,7 +231,6 @@ export function HistoryReportDialog() {
             )}
           </Button>
         </DialogFooter>
-
       </DialogContent>
     </Dialog>
   );

@@ -7,6 +7,7 @@ Mejorar la mantenibilidad del repositorio Next.js/TypeScript separando responsab
 ## Alcance
 
 ### Dentro del alcance
+
 - Definir una arquitectura objetivo de carpetas para runtime y soporte (codigo, Prisma, scripts y artefactos operativos).
 - Reorganizar modulos de `src/lib` por dominios y capas transversales.
 - Corregir naming inconsistente de carpetas/modulos con estrategia de compatibilidad.
@@ -15,6 +16,7 @@ Mejorar la mantenibilidad del repositorio Next.js/TypeScript separando responsab
 - Incluir validaciones automatizadas para detectar imports rotos y regresiones estructurales.
 
 ### Fuera del alcance
+
 - Cambios de logica de negocio.
 - Refactors funcionales de endpoints o componentes UI.
 - Cambios de modelo de datos productivo (migraciones Prisma funcionales).
@@ -26,25 +28,25 @@ Aplicar migracion incremental en fases con doble compatibilidad temporal: primer
 
 ## Areas afectadas
 
-| Area | Impacto | Descripcion |
-|------|---------|-------------|
-| `src/lib/**` | Modificado | Reubicacion por dominios y capa shared/core. |
-| `src/types/**` | Modificado | Consolidacion de contratos tipados por dominio. |
-| `src/app/**` | Referencial | Ajuste de imports sin mover rutas publicas/protegidas. |
-| `tsconfig.json` | Modificado | Aliases de compatibilidad y rutas objetivo. |
-| `eslint.config.mjs` o `eslint.json` | Modificado | Reglas para prevenir nuevos imports legacy. |
-| `prisma/**` | Modificado | Aislar archivos historicos/copia fuera del source of truth. |
-| raiz del repo | Modificado | Reubicar artefactos temporales a carpeta dedicada. |
-| `docs/**` | Modificado | Documentar estructura final y reglas de ubicacion. |
+| Area                                | Impacto     | Descripcion                                                 |
+| ----------------------------------- | ----------- | ----------------------------------------------------------- |
+| `src/lib/**`                        | Modificado  | Reubicacion por dominios y capa shared/core.                |
+| `src/types/**`                      | Modificado  | Consolidacion de contratos tipados por dominio.             |
+| `src/app/**`                        | Referencial | Ajuste de imports sin mover rutas publicas/protegidas.      |
+| `tsconfig.json`                     | Modificado  | Aliases de compatibilidad y rutas objetivo.                 |
+| `eslint.config.mjs` o `eslint.json` | Modificado  | Reglas para prevenir nuevos imports legacy.                 |
+| `prisma/**`                         | Modificado  | Aislar archivos historicos/copia fuera del source of truth. |
+| raiz del repo                       | Modificado  | Reubicar artefactos temporales a carpeta dedicada.          |
+| `docs/**`                           | Modificado  | Documentar estructura final y reglas de ubicacion.          |
 
 ## Riesgos
 
-| Riesgo | Probabilidad | Mitigacion |
-|--------|--------------|------------|
-| Imports rotos por movimiento masivo | Alta | Fases con re-exports + aliases + `tsc --noEmit` y build en cada fase. |
-| Ruptura de resolucion en App Router | Media | No mover `src/app` ni convenciones de `route.ts`, solo actualizar imports internos. |
-| Confusion con Prisma en CI/CD | Media | Mantener `prisma/schema.prisma` y `prisma/seed.ts` como rutas canonicas durante toda la migracion. |
-| Drift entre naming viejo y nuevo | Alta | Regla de lint `no-restricted-imports` para bloquear nuevas referencias legacy. |
+| Riesgo                              | Probabilidad | Mitigacion                                                                                         |
+| ----------------------------------- | ------------ | -------------------------------------------------------------------------------------------------- |
+| Imports rotos por movimiento masivo | Alta         | Fases con re-exports + aliases + `tsc --noEmit` y build en cada fase.                              |
+| Ruptura de resolucion en App Router | Media        | No mover `src/app` ni convenciones de `route.ts`, solo actualizar imports internos.                |
+| Confusion con Prisma en CI/CD       | Media        | Mantener `prisma/schema.prisma` y `prisma/seed.ts` como rutas canonicas durante toda la migracion. |
+| Drift entre naming viejo y nuevo    | Alta         | Regla de lint `no-restricted-imports` para bloquear nuevas referencias legacy.                     |
 
 ## Plan de rollback
 

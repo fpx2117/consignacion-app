@@ -14,14 +14,17 @@ async function main() {
   try {
     const result = await prisma.$executeRawUnsafe(
       `DELETE FROM "_prisma_migrations" WHERE "migration_name" = $1`,
-      FAILED_MIGRATION
+      FAILED_MIGRATION,
     );
     console.log(
-      `✅ clear-failed-migration: ${result > 0 ? "limpiado registro fallido" : "nada que limpiar (OK)"}`
+      `✅ clear-failed-migration: ${result > 0 ? "limpiado registro fallido" : "nada que limpiar (OK)"}`,
     );
   } catch (error) {
     // Si la tabla no existe (primer deploy) no es un error
-    console.log("⚠️  clear-failed-migration: error no bloqueante:", error.message);
+    console.log(
+      "⚠️  clear-failed-migration: error no bloqueante:",
+      error.message,
+    );
   } finally {
     await prisma.$disconnect();
   }

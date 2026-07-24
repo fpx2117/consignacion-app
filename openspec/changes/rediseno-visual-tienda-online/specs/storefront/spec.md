@@ -41,6 +41,7 @@ El sistema DEBE exponer un tipo `OnlineStoreSettings` que unifique toda la confi
 El sistema DEBE inyectar CSS variables dinámicas en el wrapper principal del storefront para colores configurables. NO DEBE usar clases Tailwind arbitrarias del tipo `bg-[#XXXXXX]` para colores que vienen de la base de datos.
 
 Las variables requeridas son:
+
 - `--store-primary`
 - `--store-secondary`
 - `--store-background`
@@ -68,6 +69,7 @@ Las variables requeridas son:
 ### Requisito: Header de Tienda Configurable
 
 El storefront DEBE mostrar un header con los siguientes elementos configurables:
+
 - Banner/imagen de fondo del comercio (opcional, con overlay suave o blur)
 - Logo/avatar del comercio (opcional)
 - Nombre público de la tienda
@@ -97,6 +99,7 @@ Todo el contenido DEBE venir desde `OnlineStoreSettings` o del modelo `Branding`
 ### Requisito: Buscador de Productos
 
 El storefront DEBE mostrar una barra de búsqueda con:
+
 - Fondo gris claro, bordes muy redondeados
 - Icono de lupa a la izquierda
 - Placeholder configurable (default: "Buscar productos")
@@ -241,6 +244,7 @@ Los productos DEBEN poder agruparse por categoría en secciones con: título en 
 ### Requisito: Carrito como Bottom Sheet
 
 En mobile, el carrito DEBE renderizarse como un bottom sheet con:
+
 - Overlay semi-transparente
 - Borde superior redondeado
 - Barra indicadora horizontal para deslizar
@@ -334,6 +338,7 @@ La configuración DEBE guardarse mediante el sistema de API existente (`/api/set
 ### Requisito: No Romper Funcionalidad Existente
 
 La implementación NO DEBE modificar la lógica de:
+
 - Carrito (agregar, quitar, cantidades)
 - Búsqueda de productos
 - Filtrado por categorías
@@ -363,6 +368,7 @@ La implementación NO DEBE modificar la lógica de:
 En mobile, el storefront DEBE verse como una app nativa (header compacto, buscador grande, productos fáciles de tocar, bottom sheet para carrito).
 
 En desktop, el layout DEBE ser configurable:
+
 - `mobile-centered`: contenido centrado con ancho máximo tipo app
 - `wide-ecommerce`: layout ancho tipo tienda online tradicional
 - `with-cart-sidebar`: catálogo a la izquierda, carrito lateral a la derecha

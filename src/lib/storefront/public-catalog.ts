@@ -7,7 +7,10 @@ import type { PublicCatalogData, OnlineStoreSettings } from "@/lib/types";
 import { calcularDescuentoEfectivo } from "@/lib/storefront/descuento-utils";
 import { getTiendaGlobalConfig } from "@/lib/storefront/tienda-global";
 
-function readOptionalString(record: Record<string, unknown> | null | undefined, key: string) {
+function readOptionalString(
+  record: Record<string, unknown> | null | undefined,
+  key: string,
+) {
   const value = record?.[key];
   return typeof value === "string" && value.trim().length > 0 ? value : null;
 }
@@ -22,7 +25,9 @@ export class PublicCatalogError extends Error {
   }
 }
 
-export async function getPublicCatalogDataRaw(sucursalId: number | null): Promise<PublicCatalogData> {
+export async function getPublicCatalogDataRaw(
+  sucursalId: number | null,
+): Promise<PublicCatalogData> {
   const { modoUnificado } = await getTiendaGlobalConfig();
 
   let resolvedId: number;
@@ -67,12 +72,18 @@ export async function getPublicCatalogDataRaw(sucursalId: number | null): Promis
   }
 
   if (!modoUnificado && !config.mostrarEnTiendaOnline) {
-    throw new PublicCatalogError("Esta sucursal no tiene la tienda online habilitada", 403);
+    throw new PublicCatalogError(
+      "Esta sucursal no tiene la tienda online habilitada",
+      403,
+    );
   }
 
   const where: Prisma.ProductoWhereInput = { activo: true };
   if (modoUnificado) {
-    where.sucursal = { activa: true, configuracion: { mostrarEnTiendaOnline: true } };
+    where.sucursal = {
+      activa: true,
+      configuracion: { mostrarEnTiendaOnline: true },
+    };
   } else {
     where.sucursalId = config.sucursalId;
   }
@@ -119,7 +130,8 @@ export async function getPublicCatalogDataRaw(sucursalId: number | null): Promis
     }),
   ]);
 
-  const brandingExtra = config.sucursal.branding as Record<string, unknown> | null | undefined;
+  const brandingExtra = config.sucursal.branding as
+    Record<string, unknown> | null | undefined;
 
   const ahora = new Date();
 
@@ -129,26 +141,34 @@ export async function getPublicCatalogDataRaw(sucursalId: number | null): Promis
   const hasMpCredentials = Boolean(
     config.mpAccessTokenTienda?.trim() && config.mpPublicKeyTienda?.trim(),
   );
-  const hasWhatsappNumber = Boolean(config.sucursal.branding?.whatsappNumber?.trim());
-  const tiendaPaymentMode: "mercadopago" | "whatsapp" | null = !config.convertirTienda
-    ? null
-    : config.tiendaMetodoPago === "mercadopago" && hasMpCredentials
-      ? "mercadopago"
-      : config.tiendaMetodoPago === "whatsapp" && hasWhatsappNumber
-        ? "whatsapp"
-        : null;
+  const hasWhatsappNumber = Boolean(
+    config.sucursal.branding?.whatsappNumber?.trim(),
+  );
+  const tiendaPaymentMode: "mercadopago" | "whatsapp" | null =
+    !config.convertirTienda
+      ? null
+      : config.tiendaMetodoPago === "mercadopago" && hasMpCredentials
+        ? "mercadopago"
+        : config.tiendaMetodoPago === "whatsapp" && hasWhatsappNumber
+          ? "whatsapp"
+          : null;
 
   const productosConDescuento = productos.map((p) => ({
     ...p,
-    descuentoEfectivo: calcularDescuentoEfectivo({
-      descuentoActivo: p.descuentoActivo,
-      tipoDescuento: p.tipoDescuento,
-      descuentoPorcentaje: p.descuentoPorcentaje ? Number(p.descuentoPorcentaje) : null,
-      descuentoMonto: p.descuentoMonto ? Number(p.descuentoMonto) : null,
-      descuentoDesde: p.descuentoDesde,
-      descuentoHasta: p.descuentoHasta,
-      precioVenta: Number(p.precioVenta),
-    }, ahora),
+    descuentoEfectivo: calcularDescuentoEfectivo(
+      {
+        descuentoActivo: p.descuentoActivo,
+        tipoDescuento: p.tipoDescuento,
+        descuentoPorcentaje: p.descuentoPorcentaje
+          ? Number(p.descuentoPorcentaje)
+          : null,
+        descuentoMonto: p.descuentoMonto ? Number(p.descuentoMonto) : null,
+        descuentoDesde: p.descuentoDesde,
+        descuentoHasta: p.descuentoHasta,
+        precioVenta: Number(p.precioVenta),
+      },
+      ahora,
+    ),
   }));
 
   const payload: PublicCatalogData = {
@@ -156,9 +176,13 @@ export async function getPublicCatalogDataRaw(sucursalId: number | null): Promis
     categorias,
     config: {
       sucursalId: config.sucursalId,
-      businessName: config.sucursal.branding?.businessName || config.sucursal.nombre,
-      primaryColor: config.sucursal.branding?.primaryColor || "var(--theme-modern-primary)",
-      secondaryColor: config.sucursal.branding?.secondaryColor || "var(--theme-ocean-primary)",
+      businessName:
+        config.sucursal.branding?.businessName || config.sucursal.nombre,
+      primaryColor:
+        config.sucursal.branding?.primaryColor || "var(--theme-modern-primary)",
+      secondaryColor:
+        config.sucursal.branding?.secondaryColor ||
+        "var(--theme-ocean-primary)",
       logoMime: config.sucursal.branding?.logoMime,
       logoData: null,
       logoUrl: config.sucursal.branding?.logoData
@@ -171,8 +195,8 @@ export async function getPublicCatalogDataRaw(sucursalId: number | null): Promis
         : null,
       isBannerSlider: config.sucursal.branding?.isBannerSlider || false,
       banners: config.sucursal.branding?.banners
-          ? config.sucursal.branding.banners.map((b) => ({
-              id: b.id,
+        ? config.sucursal.branding.banners.map((b) => ({
+            id: b.id,
             bannerData: null,
             bannerMime: b.bannerMime,
             orden: b.orden,
@@ -199,10 +223,16 @@ export async function getPublicCatalogDataRaw(sucursalId: number | null): Promis
       porcentajeInteresTarjeta: config.porcentajeInteresTarjeta,
       mpPublicKeyTienda: config.mpPublicKeyTienda,
       tiendaPaymentMode,
-      storefrontContent: normalizeStorefrontContent(brandingExtra?.storefrontContent, {
-        storeName: config.sucursal.branding?.businessName || config.sucursal.nombre,
-      }),
-      onlineStoreConfig: (storeSettings?.onlineStoreConfig as unknown as OnlineStoreSettings | undefined) ?? null,
+      storefrontContent: normalizeStorefrontContent(
+        brandingExtra?.storefrontContent,
+        {
+          storeName:
+            config.sucursal.branding?.businessName || config.sucursal.nombre,
+        },
+      ),
+      onlineStoreConfig:
+        (storeSettings?.onlineStoreConfig as unknown as
+          OnlineStoreSettings | undefined) ?? null,
     },
   };
 
@@ -218,7 +248,10 @@ export const getPublicCatalogDataCached = unstable_cache(
   },
 );
 
-export async function trackPublicCatalogVisit(sucursalId: number, requestHeaders: Headers) {
+export async function trackPublicCatalogVisit(
+  sucursalId: number,
+  requestHeaders: Headers,
+) {
   await registerCatalogVisit({
     sucursalId,
     headers: requestHeaders,

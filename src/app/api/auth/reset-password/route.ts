@@ -1,7 +1,10 @@
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
 import { NextResponse } from "next/server";
-import { getAuthRateLimitDecision, getRequestIp } from "@/lib/security/auth-rate-limit";
+import {
+  getAuthRateLimitDecision,
+  getRequestIp,
+} from "@/lib/security/auth-rate-limit";
 import {
   buildAuthThrottledResponse,
   reportAuthRateLimitEvent,
@@ -19,11 +22,20 @@ type ResetPasswordUser = {
 };
 
 type ResetPasswordRouteDeps = {
-  findTokenRecord: (tokenHash: string) => Promise<ResetPasswordTokenRecord | null>;
+  findTokenRecord: (
+    tokenHash: string,
+  ) => Promise<ResetPasswordTokenRecord | null>;
   findUserByEmail: (email: string) => Promise<ResetPasswordUser | null>;
-  updatePasswordAndDeleteToken: (input: { userId: number; hash: string; tokenHash: string }) => Promise<void>;
+  updatePasswordAndDeleteToken: (input: {
+    userId: number;
+    hash: string;
+    tokenHash: string;
+  }) => Promise<void>;
   hashPassword: (password: string) => Promise<string>;
-  getRateLimitDecision: (req: Request, token: string | null) => ReturnType<typeof getAuthRateLimitDecision>;
+  getRateLimitDecision: (
+    req: Request,
+    token: string | null,
+  ) => ReturnType<typeof getAuthRateLimitDecision>;
   recordAuditLog: (input: {
     userId?: number;
     action: string;
@@ -65,20 +77,27 @@ const defaultDeps: ResetPasswordRouteDeps = {
     ]);
   },
   hashPassword: async (password) => bcrypt.hash(password, 10),
-  getRateLimitDecision: (req, token) => getAuthRateLimitDecision({
-    endpoint: "reset-password",
-    ip: getRequestIp(req),
-    token,
-  }),
+  getRateLimitDecision: (req, token) =>
+    getAuthRateLimitDecision({
+      endpoint: "reset-password",
+      ip: getRequestIp(req),
+      token,
+    }),
   recordAuditLog: async (input) => {
     const { recordAuditLog } = await import("@/lib/security/audit");
     await recordAuditLog(input);
   },
 };
 
-export async function handlePostResetPassword(req: Request, deps: ResetPasswordRouteDeps = defaultDeps) {
+export async function handlePostResetPassword(
+  req: Request,
+  deps: ResetPasswordRouteDeps = defaultDeps,
+) {
   try {
-    const body = await req.json().catch(() => null) as { token?: string; password?: string } | null;
+    const body = (await req.json().catch(() => null)) as {
+      token?: string;
+      password?: string;
+    } | null;
     const token = String(body?.token || "").trim() || null;
     const password = String(body?.password || "");
 

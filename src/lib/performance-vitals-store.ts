@@ -33,7 +33,10 @@ const MAX_SAMPLES = 5000;
 
 function percentile(values: number[], p: number) {
   if (values.length === 0) return 0;
-  const index = Math.min(values.length - 1, Math.max(0, Math.ceil((p / 100) * values.length) - 1));
+  const index = Math.min(
+    values.length - 1,
+    Math.max(0, Math.ceil((p / 100) * values.length) - 1),
+  );
   return values[index];
 }
 
@@ -56,7 +59,9 @@ class PerformanceVitalsStore {
 
   summary(lastMinutes = 60, urlPrefix?: string) {
     const cutoff = Date.now() - lastMinutes * 60_000;
-    const filtered = this.samples.filter((s) => s.ts >= cutoff && (!urlPrefix || s.url.startsWith(urlPrefix)));
+    const filtered = this.samples.filter(
+      (s) => s.ts >= cutoff && (!urlPrefix || s.url.startsWith(urlPrefix)),
+    );
 
     const grouped = new Map<string, WebVitalSample[]>();
 
@@ -120,4 +125,5 @@ const globalStore = globalThis as unknown as {
 };
 
 export const performanceVitalsStore =
-  globalStore.__performanceVitalsStore ?? (globalStore.__performanceVitalsStore = new PerformanceVitalsStore());
+  globalStore.__performanceVitalsStore ??
+  (globalStore.__performanceVitalsStore = new PerformanceVitalsStore());

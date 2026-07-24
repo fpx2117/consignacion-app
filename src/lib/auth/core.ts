@@ -3,7 +3,9 @@ import { cookies } from "next/headers";
 
 const JWT_SECRET = process.env.JWT_SECRET;
 if (!JWT_SECRET) {
-  throw new Error("FATAL: La variable de entorno JWT_SECRET es obligatoria. El servidor no puede iniciar sin ella.");
+  throw new Error(
+    "FATAL: La variable de entorno JWT_SECRET es obligatoria. El servidor no puede iniciar sin ella.",
+  );
 }
 const secret = new TextEncoder().encode(JWT_SECRET);
 const cookieName = process.env.JWT_COOKIE_NAME || "access_token";
@@ -61,7 +63,10 @@ export async function setAuthCookie(token: string, remember = true) {
 const SESSION_DURATION_S = 60 * 60 * 24 * 7; // 7 días en segundos
 const SESSION_RENEW_THRESHOLD_S = 60 * 60 * 24 * 2; // renovar si quedan menos de 2 días
 
-export async function maybeRenewAuthCookie(token: string, exp: number): Promise<void> {
+export async function maybeRenewAuthCookie(
+  token: string,
+  exp: number,
+): Promise<void> {
   const nowS = Math.floor(Date.now() / 1000);
   const remainingS = exp - nowS;
 

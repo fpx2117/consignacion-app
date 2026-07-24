@@ -1,8 +1,8 @@
-
 //src/lib/share-links.ts
 import crypto from "crypto";
 
-const ALPHABET = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"; // base62
+const ALPHABET =
+  "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"; // base62
 
 function getKey() {
   const secret = process.env.SHARE_LINK_SECRET;
@@ -29,7 +29,10 @@ export function encryptCode(code: string) {
   const iv = crypto.randomBytes(12);
   const cipher = crypto.createCipheriv("aes-256-gcm", key, iv);
 
-  const ciphertext = Buffer.concat([cipher.update(code, "utf8"), cipher.final()]);
+  const ciphertext = Buffer.concat([
+    cipher.update(code, "utf8"),
+    cipher.final(),
+  ]);
   const tag = cipher.getAuthTag();
 
   return Buffer.concat([iv, tag, ciphertext]).toString("base64url");

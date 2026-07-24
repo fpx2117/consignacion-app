@@ -98,10 +98,11 @@ export function ClienteFilters({
             variant="ghost"
             size="icon"
             onClick={() => setViewMode("grid")}
-            className={`h-9 w-9 rounded-lg transition-all ${viewMode === "grid"
+            className={`h-9 w-9 rounded-lg transition-all ${
+              viewMode === "grid"
                 ? "bg-background text-primary shadow-sm scale-110"
                 : "text-muted-foreground hover:text-foreground hover:bg-transparent"
-              }`}
+            }`}
           >
             <LayoutGrid className="h-4 w-4" />
           </Button>
@@ -109,10 +110,11 @@ export function ClienteFilters({
             variant="ghost"
             size="icon"
             onClick={() => setViewMode("list")}
-            className={`h-9 w-9 rounded-lg transition-all ${viewMode === "list"
+            className={`h-9 w-9 rounded-lg transition-all ${
+              viewMode === "list"
                 ? "bg-background text-primary shadow-sm scale-110"
                 : "text-muted-foreground hover:text-foreground hover:bg-transparent"
-              }`}
+            }`}
           >
             <List className="h-4 w-4" />
           </Button>

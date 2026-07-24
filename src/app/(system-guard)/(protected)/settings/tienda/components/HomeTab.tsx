@@ -5,7 +5,10 @@ import { LayoutTemplate, ShoppingBag } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { normalizeStorefrontContent, type StorefrontContent } from "@/lib/storefront/storefront-content";
+import {
+  normalizeStorefrontContent,
+  type StorefrontContent,
+} from "@/lib/storefront/storefront-content";
 import type { Categoria } from "@/lib/types";
 import type { BrandingPreviewSettings } from "./types";
 
@@ -33,16 +36,24 @@ function SectionCard({
           <Icon className="h-4 w-4 text-muted-foreground" />
           <h3 className="text-sm font-semibold tracking-tight">{title}</h3>
         </div>
-        <p className="ml-[26px] mt-0.5 text-xs text-muted-foreground">{description}</p>
+        <p className="ml-[26px] mt-0.5 text-xs text-muted-foreground">
+          {description}
+        </p>
       </div>
       <div className="space-y-5 p-4 sm:p-6">{children}</div>
     </section>
   );
 }
 
-export function HomeTab({ branding, setBranding, categoriesPreview: _categoriesPreview }: HomeTabProps) {
+export function HomeTab({
+  branding,
+  setBranding,
+  categoriesPreview: _categoriesPreview,
+}: HomeTabProps) {
   const storefrontContent = React.useMemo<StorefrontContent>(() => {
-    return normalizeStorefrontContent(branding.storefrontContent, { storeName: branding.businessName });
+    return normalizeStorefrontContent(branding.storefrontContent, {
+      storeName: branding.businessName,
+    });
   }, [branding.businessName, branding.storefrontContent]);
 
   const updateStorefront = React.useCallback(
@@ -54,7 +65,6 @@ export function HomeTab({ branding, setBranding, categoriesPreview: _categoriesP
 
   return (
     <div className="space-y-8">
-
       {/* ═══════════════════════════════════════════
             HERO Y TEXTOS PRINCIPALES
       ═══════════════════════════════════════════ */}
@@ -65,10 +75,17 @@ export function HomeTab({ branding, setBranding, categoriesPreview: _categoriesP
       >
         <div className="grid gap-4 md:grid-cols-2">
           <div className="space-y-2">
-            <Label className="text-xs text-muted-foreground">Franja de anuncio</Label>
+            <Label className="text-xs text-muted-foreground">
+              Franja de anuncio
+            </Label>
             <Input
               value={storefrontContent.announcementText}
-              onChange={(event) => updateStorefront({ ...storefrontContent, announcementText: event.target.value })}
+              onChange={(event) =>
+                updateStorefront({
+                  ...storefrontContent,
+                  announcementText: event.target.value,
+                })
+              }
               placeholder="Envíos a todo el país · Atención personalizada"
               className="h-10 rounded-lg border-border/60"
             />
@@ -77,7 +94,12 @@ export function HomeTab({ branding, setBranding, categoriesPreview: _categoriesP
             <Label className="text-xs text-muted-foreground">Badge</Label>
             <Input
               value={storefrontContent.heroBadge}
-              onChange={(event) => updateStorefront({ ...storefrontContent, heroBadge: event.target.value })}
+              onChange={(event) =>
+                updateStorefront({
+                  ...storefrontContent,
+                  heroBadge: event.target.value,
+                })
+              }
               placeholder="Tienda online"
               className="h-10 rounded-lg border-border/60"
             />
@@ -85,10 +107,17 @@ export function HomeTab({ branding, setBranding, categoriesPreview: _categoriesP
         </div>
 
         <div className="space-y-2">
-          <Label className="text-xs text-muted-foreground">Título del banner</Label>
+          <Label className="text-xs text-muted-foreground">
+            Título del banner
+          </Label>
           <Input
             value={storefrontContent.heroTitle}
-            onChange={(event) => updateStorefront({ ...storefrontContent, heroTitle: event.target.value })}
+            onChange={(event) =>
+              updateStorefront({
+                ...storefrontContent,
+                heroTitle: event.target.value,
+              })
+            }
             placeholder="Bienvenido a tu tienda"
             className="h-10 rounded-lg border-border/60"
           />
@@ -98,7 +127,12 @@ export function HomeTab({ branding, setBranding, categoriesPreview: _categoriesP
           <Label className="text-xs text-muted-foreground">Descripción</Label>
           <Textarea
             value={storefrontContent.heroDescription}
-            onChange={(event) => updateStorefront({ ...storefrontContent, heroDescription: event.target.value })}
+            onChange={(event) =>
+              updateStorefront({
+                ...storefrontContent,
+                heroDescription: event.target.value,
+              })
+            }
             placeholder="Breve descripción de tu comercio"
             className="min-h-24 rounded-lg border-border/60"
           />
@@ -115,22 +149,38 @@ export function HomeTab({ branding, setBranding, categoriesPreview: _categoriesP
       >
         <div className="grid gap-4 md:grid-cols-2">
           <div className="space-y-2">
-            <Label className="text-xs text-muted-foreground">Título del footer</Label>
+            <Label className="text-xs text-muted-foreground">
+              Título del footer
+            </Label>
             <Input
               value={storefrontContent.footer.title}
               onChange={(event) =>
-                updateStorefront({ ...storefrontContent, footer: { ...storefrontContent.footer, title: event.target.value } })
+                updateStorefront({
+                  ...storefrontContent,
+                  footer: {
+                    ...storefrontContent.footer,
+                    title: event.target.value,
+                  },
+                })
               }
               placeholder="Nombre de tu marca"
               className="h-10 rounded-lg border-border/60"
             />
           </div>
           <div className="space-y-2">
-            <Label className="text-xs text-muted-foreground">Descripción del footer</Label>
+            <Label className="text-xs text-muted-foreground">
+              Descripción del footer
+            </Label>
             <Textarea
               value={storefrontContent.footer.description}
               onChange={(event) =>
-                updateStorefront({ ...storefrontContent, footer: { ...storefrontContent.footer, description: event.target.value } })
+                updateStorefront({
+                  ...storefrontContent,
+                  footer: {
+                    ...storefrontContent.footer,
+                    description: event.target.value,
+                  },
+                })
               }
               placeholder="Productos seleccionados con los mejores precios."
               className="min-h-24 rounded-lg border-border/60"
@@ -138,7 +188,6 @@ export function HomeTab({ branding, setBranding, categoriesPreview: _categoriesP
           </div>
         </div>
       </SectionCard>
-
     </div>
   );
 }

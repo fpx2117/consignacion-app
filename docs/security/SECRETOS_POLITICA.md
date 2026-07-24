@@ -18,30 +18,30 @@ Aplica a secretos de base de datos, JWT, cookies, links firmados, cron, sockets,
 
 ## Origen por ambiente
 
-| Ambiente | Origen permitido | Regla |
-|----------|------------------|-------|
-| Local | `.env` local no compartido o gestor local del desarrollador | Solo placeholders o credenciales locales no productivas. |
-| CI | Variables protegidas del proveedor CI | Nunca copiar secretos en fixtures o artefactos generados. |
-| Staging | Secret store / variables del entorno | Valores independientes de produccion. |
-| Produccion | Secret store / variables del entorno | El repo no es autoridad para secretos productivos. |
+| Ambiente   | Origen permitido                                            | Regla                                                     |
+| ---------- | ----------------------------------------------------------- | --------------------------------------------------------- |
+| Local      | `.env` local no compartido o gestor local del desarrollador | Solo placeholders o credenciales locales no productivas.  |
+| CI         | Variables protegidas del proveedor CI                       | Nunca copiar secretos en fixtures o artefactos generados. |
+| Staging    | Secret store / variables del entorno                        | Valores independientes de produccion.                     |
+| Produccion | Secret store / variables del entorno                        | El repo no es autoridad para secretos productivos.        |
 
 ## Responsables
 
-| Rol | Responsabilidad |
-|-----|-----------------|
-| Responsable tecnico del cambio | Coordinar saneamiento del repo y seguimiento de pendientes. |
-| Owner de plataforma / deploy | Actualizar secretos en cada ambiente y ejecutar rollback seguro. |
-| Owner del proveedor externo | Rotar claves en Mercado Pago, PayPal, Resend u otros paneles. |
-| QA / operacion | Verificar integraciones luego de cada rotacion y guardar evidencia. |
+| Rol                            | Responsabilidad                                                     |
+| ------------------------------ | ------------------------------------------------------------------- |
+| Responsable tecnico del cambio | Coordinar saneamiento del repo y seguimiento de pendientes.         |
+| Owner de plataforma / deploy   | Actualizar secretos en cada ambiente y ejecutar rollback seguro.    |
+| Owner del proveedor externo    | Rotar claves en Mercado Pago, PayPal, Resend u otros paneles.       |
+| QA / operacion                 | Verificar integraciones luego de cada rotacion y guardar evidencia. |
 
 ## Frecuencia minima de rotacion
 
-| Tipo de secreto | Frecuencia minima | Disparadores adicionales |
-|-----------------|-------------------|--------------------------|
-| DB, JWT, cookies, links firmados, cron, socket, PDF | Cada 90 dias | Exposicion, fuga sospechada, cambio de personal, incidente de acceso. |
-| Pago y webhooks (Mercado Pago, PayPal) | Cada 90 dias o segun el proveedor, lo que sea mas estricto | Exposicion, fallo de webhook, cambio de cuenta, auditoria. |
-| Email transaccional (Resend u otro) | Cada 90 dias | Exposicion, abuso de envios, rebotes anomalos. |
-| Credenciales iniciales / seed | Inmediata luego del bootstrap | Nunca reutilizar valores compartidos. |
+| Tipo de secreto                                     | Frecuencia minima                                          | Disparadores adicionales                                              |
+| --------------------------------------------------- | ---------------------------------------------------------- | --------------------------------------------------------------------- |
+| DB, JWT, cookies, links firmados, cron, socket, PDF | Cada 90 dias                                               | Exposicion, fuga sospechada, cambio de personal, incidente de acceso. |
+| Pago y webhooks (Mercado Pago, PayPal)              | Cada 90 dias o segun el proveedor, lo que sea mas estricto | Exposicion, fallo de webhook, cambio de cuenta, auditoria.            |
+| Email transaccional (Resend u otro)                 | Cada 90 dias                                               | Exposicion, abuso de envios, rebotes anomalos.                        |
+| Credenciales iniciales / seed                       | Inmediata luego del bootstrap                              | Nunca reutilizar valores compartidos.                                 |
 
 ## Procedimiento ante exposicion
 

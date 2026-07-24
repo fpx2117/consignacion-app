@@ -1,9 +1,15 @@
 import { NextResponse } from "next/server";
-import { hashValue, type AuthRateLimitDecision } from "@/lib/security/auth-rate-limit";
+import {
+  hashValue,
+  type AuthRateLimitDecision,
+} from "@/lib/security/auth-rate-limit";
 
-export const AUTH_THROTTLED_MESSAGE = "Demasiadas solicitudes. Espera unos minutos antes de volver a intentarlo.";
-export const FORGOT_PASSWORD_SAFE_MESSAGE = "Si existe una cuenta con ese correo, recibiras un enlace de recuperacion.";
-export const RESET_PASSWORD_INVALID_MESSAGE = "El enlace es invalido o ya no se puede usar.";
+export const AUTH_THROTTLED_MESSAGE =
+  "Demasiadas solicitudes. Espera unos minutos antes de volver a intentarlo.";
+export const FORGOT_PASSWORD_SAFE_MESSAGE =
+  "Si existe una cuenta con ese correo, recibiras un enlace de recuperacion.";
+export const RESET_PASSWORD_INVALID_MESSAGE =
+  "El enlace es invalido o ya no se puede usar.";
 
 type AuthRateLimitEventInput = {
   decision: AuthRateLimitDecision;
@@ -31,7 +37,9 @@ export async function reportAuthRateLimitEvent({
     return;
   }
 
-  const rules = (decision.allowed ? decision.matchedRules : decision.blockedRules)
+  const rules = (
+    decision.allowed ? decision.matchedRules : decision.blockedRules
+  )
     .filter((rule) => !decision.allowed || rule.blockedCount > 0)
     .map((rule) => ({
       name: rule.name,
@@ -53,15 +61,22 @@ export async function reportAuthRateLimitEvent({
   if (recordAuditLogImpl) {
     await recordAuditLogImpl({
       userId,
-      action: decision.allowed ? "AUTH_RATE_LIMIT_WARNING" : "AUTH_RATE_LIMIT_BLOCK",
+      action: decision.allowed
+        ? "AUTH_RATE_LIMIT_WARNING"
+        : "AUTH_RATE_LIMIT_BLOCK",
       module: "AUTH",
       details,
       ipAddress: decision.ip,
     });
   }
 
-  if (!decision.allowed || rules.some((rule) => Number(rule.blockedCount) > 1)) {
-    console.warn(`[AUTH_RATE_LIMIT] endpoint=${decision.endpoint} ip=${decision.ip} outcome=${decision.allowed ? "warning" : "blocked"}`);
+  if (
+    !decision.allowed ||
+    rules.some((rule) => Number(rule.blockedCount) > 1)
+  ) {
+    console.warn(
+      `[AUTH_RATE_LIMIT] endpoint=${decision.endpoint} ip=${decision.ip} outcome=${decision.allowed ? "warning" : "blocked"}`,
+    );
   }
 }
 

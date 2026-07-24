@@ -20,16 +20,26 @@ async function fetchJson(url, options = {}) {
 }
 
 async function runApiSmoke() {
-  const catalog = await fetchJson(`${BASE_URL}/api/public/lista-precios?sucursalId=1`);
+  const catalog = await fetchJson(
+    `${BASE_URL}/api/public/lista-precios?sucursalId=1`,
+  );
   const data = catalog.data ?? catalog;
   const productos = data.productos ?? [];
   const config = data.config ?? {};
 
   assertTrue(productos.length > 0, "La API pública no devolvió productos");
-  assertTrue(Boolean(config.convertirTienda), "La tienda pública no tiene checkout habilitado");
+  assertTrue(
+    Boolean(config.convertirTienda),
+    "La tienda pública no tiene checkout habilitado",
+  );
 
-  const product = productos.find((item) => Number(item.stockDisponibleUnits || 0) > 0);
-  assertTrue(Boolean(product), "No hay productos con stock para probar checkout");
+  const product = productos.find(
+    (item) => Number(item.stockDisponibleUnits || 0) > 0,
+  );
+  assertTrue(
+    Boolean(product),
+    "No hay productos con stock para probar checkout",
+  );
 
   const checkout = await fetchJson(`${BASE_URL}/api/public/checkout`, {
     method: "POST",
@@ -49,13 +59,27 @@ async function runApiSmoke() {
     }),
   });
 
-  assertTrue(Boolean(checkout.init_point), "El checkout público no devolvió init_point");
-  assertTrue(Boolean(checkout.checkout_token), "El checkout público no devolvió checkout_token");
-  assertTrue(String(checkout.init_point).includes("mercadopago"), "El init_point no apunta a MercadoPago");
+  assertTrue(
+    Boolean(checkout.init_point),
+    "El checkout público no devolvió init_point",
+  );
+  assertTrue(
+    Boolean(checkout.checkout_token),
+    "El checkout público no devolvió checkout_token",
+  );
+  assertTrue(
+    String(checkout.init_point).includes("mercadopago"),
+    "El init_point no apunta a MercadoPago",
+  );
 
-  const statusResponse = await fetchJson(`${BASE_URL}/api/public/checkout/status?token=${checkout.checkout_token}`);
+  const statusResponse = await fetchJson(
+    `${BASE_URL}/api/public/checkout/status?token=${checkout.checkout_token}`,
+  );
   const statusData = statusResponse.data ?? statusResponse;
-  assertTrue(statusData.status === "PENDING", "El checkout recién creado debería quedar en PENDING");
+  assertTrue(
+    statusData.status === "PENDING",
+    "El checkout recién creado debería quedar en PENDING",
+  );
 
   return {
     productId: product.id,
@@ -85,18 +109,26 @@ async function runUiSmoke() {
   await page.goto(CATALOG_URL, { waitUntil: "networkidle2", timeout: 120000 });
   await page.screenshot({ path: "catalog-smoke-home.png", fullPage: true });
 
-  await page.waitForSelector('button[aria-label="Agregar al carrito"]', { timeout: 20000 });
+  await page.waitForSelector('button[aria-label="Agregar al carrito"]', {
+    timeout: 20000,
+  });
   await page.click('button[aria-label="Agregar al carrito"]');
 
   await page.click('button[aria-label="Abrir carrito"]');
   await page.waitForSelector("body", { timeout: 10000 });
   const bodyText = await page.evaluate(() => document.body.innerText);
-  assertTrue(bodyText.includes("vista previa del ticket"), "No apareció la vista previa del ticket en el carrito");
+  assertTrue(
+    bodyText.includes("vista previa del ticket"),
+    "No apareció la vista previa del ticket en el carrito",
+  );
   await page.screenshot({ path: "catalog-smoke-cart.png", fullPage: true });
 
   const continueButtons = await page.$$("button");
   for (const button of continueButtons) {
-    const text = await page.evaluate((element) => element.textContent || "", button);
+    const text = await page.evaluate(
+      (element) => element.textContent || "",
+      button,
+    );
     if (text.trim() === "Continuar") {
       await button.click();
       break;
@@ -109,19 +141,30 @@ async function runUiSmoke() {
 
   const secondContinueButtons = await page.$$("button");
   for (const button of secondContinueButtons) {
-    const text = await page.evaluate((element) => element.textContent || "", button);
+    const text = await page.evaluate(
+      (element) => element.textContent || "",
+      button,
+    );
     if (text.trim() === "Continuar") {
       await button.click();
       break;
     }
   }
 
-  const pickupCandidate = await page.$x("//p[contains(., 'Retiro por el local')]");
-  assertTrue(pickupCandidate.length > 0, "No apareció la opción 'Retiro por el local'");
+  const pickupCandidate = await page.$x(
+    "//p[contains(., 'Retiro por el local')]",
+  );
+  assertTrue(
+    pickupCandidate.length > 0,
+    "No apareció la opción 'Retiro por el local'",
+  );
   await pickupCandidate[0].click();
 
   const finalText = await page.evaluate(() => document.body.innerText);
-  assertTrue(finalText.includes("Ir al pago"), "No apareció el botón final de pago");
+  assertTrue(
+    finalText.includes("Ir al pago"),
+    "No apareció el botón final de pago",
+  );
 
   await browser.close();
   await fs.access("catalog-smoke-home.png");
@@ -139,6 +182,15 @@ try {
   const ui = await runUiSmoke();
   console.log(JSON.stringify({ ok: true, api, ui }, null, 2));
 } catch (error) {
-  console.error(JSON.stringify({ ok: false, error: error instanceof Error ? error.message : String(error) }, null, 2));
+  console.error(
+    JSON.stringify(
+      {
+        ok: false,
+        error: error instanceof Error ? error.message : String(error),
+      },
+      null,
+      2,
+    ),
+  );
   process.exit(1);
 }

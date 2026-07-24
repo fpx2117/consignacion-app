@@ -41,7 +41,7 @@ const eslintConfig = defineConfig([
       "@typescript-eslint/ban-ts-comment": [
         "error",
         {
-          "ts-nocheck": true,       // siempre bloqueado
+          "ts-nocheck": true, // siempre bloqueado
           "ts-ignore": "allow-with-description", // solo con descripción obligatoria
           "ts-expect-error": "allow-with-description",
           minimumDescriptionLength: 10,

@@ -22,7 +22,10 @@ export async function GET(
   const { id } = await params;
   const facturaId = Number(id);
   if (!Number.isInteger(facturaId)) {
-    return NextResponse.json({ error: "Factura no encontrada" }, { status: 404 });
+    return NextResponse.json(
+      { error: "Factura no encontrada" },
+      { status: 404 },
+    );
   }
 
   const factura = await prisma.facturaProveedor.findUnique({
@@ -34,7 +37,10 @@ export async function GET(
   });
 
   if (!factura || !canAccessSucursalResource(auth, factura.sucursalId)) {
-    return NextResponse.json({ error: "Factura no encontrada" }, { status: 404 });
+    return NextResponse.json(
+      { error: "Factura no encontrada" },
+      { status: 404 },
+    );
   }
 
   return NextResponse.json({ data: factura });
@@ -50,13 +56,19 @@ export async function PATCH(
   const auth = await requireAuth();
   if (!auth.ok) return auth.res;
   if (!requireRole(auth.user, ["ADMIN"])) {
-    return NextResponse.json({ error: "No tienes permisos (Admin requerido)" }, { status: 403 });
+    return NextResponse.json(
+      { error: "No tienes permisos (Admin requerido)" },
+      { status: 403 },
+    );
   }
 
   const { id } = await params;
   const facturaId = Number(id);
   if (!Number.isInteger(facturaId)) {
-    return NextResponse.json({ error: "Factura no encontrada" }, { status: 404 });
+    return NextResponse.json(
+      { error: "Factura no encontrada" },
+      { status: 404 },
+    );
   }
 
   const body = await req.json().catch(() => null);
@@ -68,24 +80,44 @@ export async function PATCH(
     );
   }
 
-  const factura = await prisma.facturaProveedor.findUnique({ where: { id: facturaId } });
+  const factura = await prisma.facturaProveedor.findUnique({
+    where: { id: facturaId },
+  });
   if (!factura || !canAccessSucursalResource(auth, factura.sucursalId)) {
-    return NextResponse.json({ error: "Factura no encontrada" }, { status: 404 });
+    return NextResponse.json(
+      { error: "Factura no encontrada" },
+      { status: 404 },
+    );
   }
 
   if (NO_EDITABLES.includes(factura.estado)) {
     return NextResponse.json(
-      { error: `La factura está en estado ${factura.estado} y no se puede editar.` },
+      {
+        error: `La factura está en estado ${factura.estado} y no se puede editar.`,
+      },
       { status: 409 },
     );
   }
 
-  const { proveedorId, fecha, proveedorNombreDetectado, proveedorCuitDetectado, numeroFactura, moneda, totalDetectado } = parsed.data;
+  const {
+    proveedorId,
+    fecha,
+    proveedorNombreDetectado,
+    proveedorCuitDetectado,
+    numeroFactura,
+    moneda,
+    totalDetectado,
+  } = parsed.data;
 
   if (proveedorId) {
-    const proveedorExiste = await prisma.proveedor.findUnique({ where: { id: proveedorId } });
+    const proveedorExiste = await prisma.proveedor.findUnique({
+      where: { id: proveedorId },
+    });
     if (!proveedorExiste) {
-      return NextResponse.json({ error: "Proveedor no encontrado" }, { status: 404 });
+      return NextResponse.json(
+        { error: "Proveedor no encontrado" },
+        { status: 404 },
+      );
     }
   }
 
@@ -93,14 +125,21 @@ export async function PATCH(
     where: { id: facturaId },
     data: {
       ...(proveedorId !== undefined ? { proveedorId } : {}),
-      ...(proveedorNombreDetectado !== undefined ? { proveedorNombreDetectado } : {}),
-      ...(proveedorCuitDetectado !== undefined ? { proveedorCuitDetectado } : {}),
+      ...(proveedorNombreDetectado !== undefined
+        ? { proveedorNombreDetectado }
+        : {}),
+      ...(proveedorCuitDetectado !== undefined
+        ? { proveedorCuitDetectado }
+        : {}),
       ...(numeroFactura !== undefined ? { numeroFactura } : {}),
       ...(moneda !== undefined ? { moneda } : {}),
       ...(totalDetectado !== undefined ? { totalDetectado } : {}),
       ...(fecha !== undefined ? { fecha: fecha ? new Date(fecha) : null } : {}),
     },
-    include: { proveedor: true, items: { include: { producto: true }, orderBy: { id: "asc" } } },
+    include: {
+      proveedor: true,
+      items: { include: { producto: true }, orderBy: { id: "asc" } },
+    },
   });
 
   return NextResponse.json({ data: facturaActualizada });

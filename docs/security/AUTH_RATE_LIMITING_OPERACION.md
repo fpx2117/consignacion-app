@@ -6,15 +6,15 @@ Documentar los thresholds iniciales de la Fase 4 y dejar una guia de tuning segu
 
 ## Thresholds iniciales
 
-| Endpoint | Regla | Default | Ventana |
-|----------|-------|---------|---------|
-| `login` | Por IP | `30` intentos | `15m` |
-| `login` | Por IP + identidad | `10` intentos | `15m` |
-| `forgot-password` | Por IP | `10` intentos | `15m` |
-| `forgot-password` | Por IP + identidad | `3` intentos | `30m` |
-| `reset-password` | Por IP | `10` intentos | `15m` |
-| `reset-password` | Por token | `5` intentos | `30m` |
-| `reset-password` | Por IP + token | `3` intentos | `30m` |
+| Endpoint          | Regla              | Default       | Ventana |
+| ----------------- | ------------------ | ------------- | ------- |
+| `login`           | Por IP             | `30` intentos | `15m`   |
+| `login`           | Por IP + identidad | `10` intentos | `15m`   |
+| `forgot-password` | Por IP             | `10` intentos | `15m`   |
+| `forgot-password` | Por IP + identidad | `3` intentos  | `30m`   |
+| `reset-password`  | Por IP             | `10` intentos | `15m`   |
+| `reset-password`  | Por token          | `5` intentos  | `30m`   |
+| `reset-password`  | Por IP + token     | `3` intentos  | `30m`   |
 
 ## Variables de entorno soportadas
 

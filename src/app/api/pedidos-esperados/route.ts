@@ -7,7 +7,10 @@ import { prisma } from "@/lib/prisma";
 import { requireAuth, requireRole } from "@/lib/auth/require-auth";
 import { createPedidoSchema } from "@/lib/validators/pedidos-esperados";
 import { checkAndUpdateVencidos } from "@/lib/dashboard/pedidos-esperados";
-import { buildSucursalWhere, isGlobalSucursalView } from "@/lib/security/sucursalScope";
+import {
+  buildSucursalWhere,
+  isGlobalSucursalView,
+} from "@/lib/security/sucursalScope";
 import { EstadoPedidoEsperado, Prisma } from "@prisma/client";
 
 export const dynamic = "force-dynamic";
@@ -39,20 +42,23 @@ export async function GET(req: NextRequest) {
         await checkAndUpdateVencidos(sucursalId);
       }
     } catch (lazyCheckError) {
-      console.error("Error en checkAndUpdateVencidos (continuando listado):", lazyCheckError);
+      console.error(
+        "Error en checkAndUpdateVencidos (continuando listado):",
+        lazyCheckError,
+      );
     }
 
     const fechaDesde = fechaDesdeRaw ? new Date(fechaDesdeRaw) : undefined;
     const fechaHasta = fechaHastaRaw ? new Date(fechaHastaRaw) : undefined;
 
-    const pedidos = await prisma.pedidoEsperado.findMany({
+    const pedidos = (await prisma.pedidoEsperado.findMany({
       where: {
         ...sucursalWhere,
         ...(estados.length === 1
           ? { estado: estados[0] as EstadoPedidoEsperado }
           : estados.length > 1
-          ? { estado: { in: estados as EstadoPedidoEsperado[] } }
-          : {}),
+            ? { estado: { in: estados as EstadoPedidoEsperado[] } }
+            : {}),
         ...(fechaDesde || fechaHasta
           ? {
               fechaEsperada: {
@@ -66,10 +72,16 @@ export async function GET(req: NextRequest) {
         items: true,
       },
       orderBy: { fechaEsperada: "asc" },
-    }) satisfies Prisma.PedidoEsperadoGetPayload<{ include: { items: true } }>[];
+    })) satisfies Prisma.PedidoEsperadoGetPayload<{
+      include: { items: true };
+    }>[];
 
     const productoIds = Array.from(
-      new Set(pedidos.flatMap((pedido) => pedido.items.map((item) => item.productoId)))
+      new Set(
+        pedidos.flatMap((pedido) =>
+          pedido.items.map((item) => item.productoId),
+        ),
+      ),
     );
 
     const productos = productoIds.length
@@ -103,7 +115,10 @@ export async function GET(req: NextRequest) {
             sku: producto?.sku ?? null,
             imagenUrl: producto?.imagenUrl ?? null,
             stockDisponibleUnits: isGlobal
-              ? (producto?.stockSucursals?.reduce((acc, s) => acc + (s.stockDisponibleUnits || 0), 0) ?? 0)
+              ? (producto?.stockSucursals?.reduce(
+                  (acc, s) => acc + (s.stockDisponibleUnits || 0),
+                  0,
+                ) ?? 0)
               : (producto?.stockSucursals?.[0]?.stockDisponibleUnits ?? 0),
           },
         };
@@ -114,16 +129,20 @@ export async function GET(req: NextRequest) {
   } catch (error) {
     console.error("Error al obtener pedidos esperados:", error);
 
-    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2021") {
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === "P2021"
+    ) {
       return NextResponse.json({
         data: [],
-        warning: "El modulo de pedidos esperados aun no esta inicializado en esta base de datos.",
+        warning:
+          "El modulo de pedidos esperados aun no esta inicializado en esta base de datos.",
       });
     }
 
     return NextResponse.json(
       { error: "Error interno al obtener pedidos" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -136,13 +155,19 @@ export async function POST(req: Request) {
   const auth = await requireAuth();
   if (!auth.ok) return auth.res;
   if (isGlobalSucursalView(auth)) {
-    return NextResponse.json({ error: "Vista global en modo solo lectura. Selecciona una sucursal para crear pedidos esperados." }, { status: 409 });
+    return NextResponse.json(
+      {
+        error:
+          "Vista global en modo solo lectura. Selecciona una sucursal para crear pedidos esperados.",
+      },
+      { status: 409 },
+    );
   }
 
   if (!requireRole(auth.user, ["ADMIN"])) {
     return NextResponse.json(
       { error: "No tienes permisos (Admin requerido)" },
-      { status: 403 }
+      { status: 403 },
     );
   }
 
@@ -155,8 +180,11 @@ export async function POST(req: Request) {
 
     if (!parsed.success) {
       return NextResponse.json(
-        { error: "Validación fallida", details: parsed.error.flatten().fieldErrors },
-        { status: 400 }
+        {
+          error: "Validación fallida",
+          details: parsed.error.flatten().fieldErrors,
+        },
+        { status: 400 },
       );
     }
 
@@ -178,10 +206,11 @@ export async function POST(req: Request) {
       const faltantes = productoIds.filter((id) => !encontrados.has(id));
       return NextResponse.json(
         {
-          error: "Algunos productos no existen o no están activos en esta sucursal",
+          error:
+            "Algunos productos no existen o no están activos en esta sucursal",
           productosFaltantes: faltantes,
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -219,16 +248,22 @@ export async function POST(req: Request) {
   } catch (error) {
     console.error("Error al crear pedido esperado:", error);
 
-    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2021") {
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === "P2021"
+    ) {
       return NextResponse.json(
-        { error: "El modulo de pedidos esperados aun no esta inicializado en esta base de datos" },
-        { status: 503 }
+        {
+          error:
+            "El modulo de pedidos esperados aun no esta inicializado en esta base de datos",
+        },
+        { status: 503 },
       );
     }
 
     return NextResponse.json(
       { error: "Error interno al crear pedido" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

@@ -3,11 +3,18 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/auth/require-auth";
 import { createLiquidacionBodySchema } from "@/lib/validators/liquidacion";
-import { TipoMovimientoStock, MotivoMovimientoStock, TipoVenta } from "@prisma/client";
+import {
+  TipoMovimientoStock,
+  MotivoMovimientoStock,
+  TipoVenta,
+} from "@prisma/client";
 
 // ✅ Imports Centralizados de Config y Notificaciones
 import { obtenerConfiguracionGlobal } from "@/lib/config";
-import { evaluateStockAlert, processNotificationQueue } from "@/lib/notificaciones/stock-alerts";
+import {
+  evaluateStockAlert,
+  processNotificationQueue,
+} from "@/lib/notificaciones/stock-alerts";
 import { sendNotification } from "@/lib/notificaciones/socket-trigger";
 import { isGlobalSucursalView } from "@/lib/security/sucursalScope";
 
@@ -21,7 +28,13 @@ export async function POST(req: Request, { params }: RouteParams) {
   const auth = await requireAuth();
   if (!auth.ok) return auth.res;
   if (isGlobalSucursalView(auth)) {
-    return NextResponse.json({ error: "Vista global en modo solo lectura. Selecciona una sucursal para crear liquidaciones." }, { status: 409 });
+    return NextResponse.json(
+      {
+        error:
+          "Vista global en modo solo lectura. Selecciona una sucursal para crear liquidaciones.",
+      },
+      { status: 409 },
+    );
   }
 
   // 1. 👇 EXTRACCIÓN SEGURA DEL ID (Evita errores de sesión o tipos) 👇
@@ -29,14 +42,20 @@ export async function POST(req: Request, { params }: RouteParams) {
   const usuarioId = Number(rawId);
 
   if (!rawId || isNaN(usuarioId)) {
-    return NextResponse.json({ error: "Usuario no identificado." }, { status: 401 });
+    return NextResponse.json(
+      { error: "Usuario no identificado." },
+      { status: 401 },
+    );
   }
 
   const { consignacionId: rawIdParam } = await params;
   const consignacionId = Number(rawIdParam);
 
   if (!Number.isFinite(consignacionId)) {
-    return NextResponse.json({ error: "consignacionId inválido" }, { status: 400 });
+    return NextResponse.json(
+      { error: "consignacionId inválido" },
+      { status: 400 },
+    );
   }
 
   const body = await req.json().catch(() => null);
@@ -45,7 +64,7 @@ export async function POST(req: Request, { params }: RouteParams) {
   if (!parsed.success) {
     return NextResponse.json(
       { error: "Datos inválidos", details: parsed.error.flatten() },
-      { status: 400 }
+      { status: 400 },
     );
   }
 
@@ -64,34 +83,40 @@ export async function POST(req: Request, { params }: RouteParams) {
         },
         include: {
           detalles: { include: { producto: true } },
-          cliente: true // Necesario para la notificación
+          cliente: true, // Necesario para la notificación
         },
       });
 
       if (!consignacion) throw new Error("CONSIGNACION_NO_ENCONTRADA");
-      if (consignacion.estado === "CERRADA") throw new Error("CONSIGNACION_CERRADA");
+      if (consignacion.estado === "CERRADA")
+        throw new Error("CONSIGNACION_CERRADA");
 
       const detallesMap = new Map(consignacion.detalles.map((d) => [d.id, d]));
       let totalVenta = 0;
-      const soldByProduct = new Map<number, { units: number; precioUnitario: number }>();
+      const soldByProduct = new Map<
+        number,
+        { units: number; precioUnitario: number }
+      >();
 
       const liquidacionItemsData: {
         consignacionDetalleId: number;
         unitsVendidas: number;
         unitsDevueltas: number;
-          precioUnitario: number;
+        precioUnitario: number;
       }[] = [];
 
       // 2) Procesar cada item enviado en la liquidación
       for (const item of items) {
         const det = detallesMap.get(item.consignacionDetalleId);
-        if (!det) throw new Error(`DETALLE_NO_PERTENECE:${item.consignacionDetalleId}`);
+        if (!det)
+          throw new Error(`DETALLE_NO_PERTENECE:${item.consignacionDetalleId}`);
 
         const vendidas = item.unitsVendidas ?? 0;
         const devueltas = item.unitsDevueltas ?? 0;
 
         // Validar que no se liquide más de lo pendiente
-        const pendiente = det.unitsEntregadas - det.unitsVendidasAcum - det.unitsDevueltasAcum;
+        const pendiente =
+          det.unitsEntregadas - det.unitsVendidasAcum - det.unitsDevueltasAcum;
         if (vendidas + devueltas > pendiente) {
           throw new Error(`EXCEDE_PENDIENTE:${det.id}`);
         }
@@ -106,24 +131,36 @@ export async function POST(req: Request, { params }: RouteParams) {
         });
 
         // Capturar estado previo para auditoría
-        const productoAntes = await tx.producto.findUnique({ where: { id: det.productoId } });
-        if (!productoAntes) throw new Error(`PRODUCTO_NO_ENCONTRADO:${det.productoId}`);
+        const productoAntes = await tx.producto.findUnique({
+          where: { id: det.productoId },
+        });
+        if (!productoAntes)
+          throw new Error(`PRODUCTO_NO_ENCONTRADO:${det.productoId}`);
 
         // Actualizar Stocks del producto
         const productoDespues = await tx.producto.update({
           where: { id: det.productoId },
           data: {
             stockConsignadoUnits: { decrement: vendidas + devueltas },
-            ...(devueltas > 0 ? { stockDisponibleUnits: { increment: devueltas } } : {}),
+            ...(devueltas > 0
+              ? { stockDisponibleUnits: { increment: devueltas } }
+              : {}),
           },
         });
 
         // Sincronizar StockSucursal
         await tx.stockSucursal.update({
-          where: { productoId_sucursalId: { productoId: det.productoId, sucursalId: consignacion.sucursalId } },
+          where: {
+            productoId_sucursalId: {
+              productoId: det.productoId,
+              sucursalId: consignacion.sucursalId,
+            },
+          },
           data: {
             stockConsignadoUnits: { decrement: vendidas + devueltas },
-            ...(devueltas > 0 ? { stockDisponibleUnits: { increment: devueltas } } : {}),
+            ...(devueltas > 0
+              ? { stockDisponibleUnits: { increment: devueltas } }
+              : {}),
           },
         });
 
@@ -138,8 +175,8 @@ export async function POST(req: Request, { params }: RouteParams) {
               cantidad: devueltas,
               stockPrevio: productoAntes.stockDisponibleUnits,
               stockPosterior: productoDespues.stockDisponibleUnits,
-              observaciones: `Devolución s/Consignación #${consignacionId}`
-            }
+              observaciones: `Devolución s/Consignación #${consignacionId}`,
+            },
           });
         }
 
@@ -152,12 +189,12 @@ export async function POST(req: Request, { params }: RouteParams) {
               tipo: TipoMovimientoStock.SALIDA,
               motivo: MotivoMovimientoStock.VENTA,
               cantidad: vendidas,
-              // Nota: Aquí el stock disponible no cambia, cambia el consignado, 
+              // Nota: Aquí el stock disponible no cambia, cambia el consignado,
               // pero registramos el disponible para consistencia de auditoría.
               stockPrevio: productoAntes.stockDisponibleUnits,
               stockPosterior: productoDespues.stockDisponibleUnits,
-              observaciones: `Venta Liquidada s/Consignación #${consignacionId}`
-            }
+              observaciones: `Venta Liquidada s/Consignación #${consignacionId}`,
+            },
           });
         }
 
@@ -165,7 +202,9 @@ export async function POST(req: Request, { params }: RouteParams) {
         const alerta = evaluateStockAlert(productoDespues, configGlobal);
         if (alerta) notificationsQueue.push(alerta);
 
-        const precioUnit = Number(det.precioUnitario ?? det.producto.precioVenta);
+        const precioUnit = Number(
+          det.precioUnitario ?? det.producto.precioVenta,
+        );
 
         liquidacionItemsData.push({
           consignacionDetalleId: det.id,
@@ -213,12 +252,14 @@ export async function POST(req: Request, { params }: RouteParams) {
             total: totalVenta,
             // sesionCajaId: null, (No se envía porque es opcional en el Schema)
             detalles: {
-              create: Array.from(soldByProduct.entries()).map(([prodId, info]) => ({
-                productoId: Number(prodId),
-                units: info.units,
-                precioUnitario: info.precioUnitario,
-                subtotal: info.units * info.precioUnitario,
-              })),
+              create: Array.from(soldByProduct.entries()).map(
+                ([prodId, info]) => ({
+                  productoId: Number(prodId),
+                  units: info.units,
+                  precioUnitario: info.precioUnitario,
+                  subtotal: info.units * info.precioUnitario,
+                }),
+              ),
             },
           },
         });
@@ -236,7 +277,8 @@ export async function POST(req: Request, { params }: RouteParams) {
       });
 
       const todoLiquidado = detallesActualizados.every(
-        (d) => d.unitsEntregadas - d.unitsVendidasAcum - d.unitsDevueltasAcum <= 0
+        (d) =>
+          d.unitsEntregadas - d.unitsVendidasAcum - d.unitsDevueltasAcum <= 0,
       );
 
       if (todoLiquidado) {
@@ -254,19 +296,22 @@ export async function POST(req: Request, { params }: RouteParams) {
 
     // ✅ Disparar notificación de Venta si corresponde
     if (result.venta && configGlobal.notificarVentas !== false) {
-      const clientName = result.consignacion.cliente?.nombre || "Consumidor Final";
+      const clientName =
+        result.consignacion.cliente?.nombre || "Consumidor Final";
       const clientId = result.consignacion.clienteId;
 
-      const dbNotif = await prisma.notification.create({
-        data: {
-          type: "NEW_ORDER",
-          title: "Venta Exitosa (Liquidación)",
-          description: `Venta #${result.venta.id} para [${clientId}] ${clientName} por $${result.venta.total} ARS`,
-          fingerprint: `SALE_${result.venta.id}`,
-          sucursalId: auth.activeSucursalId,
-          read: false,
-        }
-      }).catch(() => null);
+      const dbNotif = await prisma.notification
+        .create({
+          data: {
+            type: "NEW_ORDER",
+            title: "Venta Exitosa (Liquidación)",
+            description: `Venta #${result.venta.id} para [${clientId}] ${clientName} por $${result.venta.total} ARS`,
+            fingerprint: `SALE_${result.venta.id}`,
+            sucursalId: auth.activeSucursalId,
+            read: false,
+          },
+        })
+        .catch(() => null);
 
       sendNotification({
         id: dbNotif?.id,
@@ -275,22 +320,36 @@ export async function POST(req: Request, { params }: RouteParams) {
         message: `Venta #${result.venta.id} por $${result.venta.total}`,
         data: {
           ventaId: result.venta.id,
-          notificationId: dbNotif?.id
-        }
+          notificationId: dbNotif?.id,
+        },
       }).catch(() => null);
     }
 
     // Devolvemos solo la liquidación para no romper la respuesta esperada en el frontend
     return NextResponse.json({ data: result.liquidacion }, { status: 201 });
-
   } catch (error) {
     console.error("Error en liquidación:", error);
     const msg = error instanceof Error ? error.message : "";
 
-    if (msg === "CONSIGNACION_NO_ENCONTRADA") return NextResponse.json({ error: "Consignación no encontrada" }, { status: 404 });
-    if (msg === "CONSIGNACION_CERRADA") return NextResponse.json({ error: "La consignación ya está cerrada" }, { status: 409 });
-    if (msg.startsWith("EXCEDE_PENDIENTE:")) return NextResponse.json({ error: "Stock insuficiente en consignación" }, { status: 409 });
+    if (msg === "CONSIGNACION_NO_ENCONTRADA")
+      return NextResponse.json(
+        { error: "Consignación no encontrada" },
+        { status: 404 },
+      );
+    if (msg === "CONSIGNACION_CERRADA")
+      return NextResponse.json(
+        { error: "La consignación ya está cerrada" },
+        { status: 409 },
+      );
+    if (msg.startsWith("EXCEDE_PENDIENTE:"))
+      return NextResponse.json(
+        { error: "Stock insuficiente en consignación" },
+        { status: 409 },
+      );
 
-    return NextResponse.json({ error: "Error interno al procesar liquidación" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Error interno al procesar liquidación" },
+      { status: 500 },
+    );
   }
 }

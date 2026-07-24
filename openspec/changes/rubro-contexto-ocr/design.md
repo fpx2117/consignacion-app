@@ -5,11 +5,12 @@
 El pipeline hoy es: `upload/route.ts` (sube y crea `FacturaProveedor` en `PENDIENTE`, sin IA) → `[id]/process/route.ts` (dispara todo) → `extraerTextoFactura()` (`src/lib/ocr/extraer-texto-factura.ts`, pdf-parse o Tesseract, 100% local) → `procesarFacturaConIA()` (`src/lib/ai/invoice-ai-parser.ts:68`, arma prompt + schema desde `invoice-extraction.config.ts`, llama OpenRouter con `strict: true`) → `matching-engine.ts` (matchea contra catálogo por alias/nombre/fuzzy) → factura queda en `REQUIERE_REVISION` → usuario confirma/crea producto/ignora por item (`items/[id]/confirm`, `items/[id]/create-product`, `items/[id]/ignore`).
 
 Puntos ya verificados en el código:
+
 - El prompt es 100% estático, generado por `buildInvoiceExtractionPrompt()` (`invoice-extraction.config.ts:184`), sin parámetros — no hay ningún punto de inyección de contexto hoy.
 - El schema es `additionalProperties: false` en cada nivel (`invoice-extraction.config.ts:216-261`), con `strict: true` forzado en el cliente HTTP (`src/lib/ai/openrouter-client.ts:76`).
 - `FacturaProveedor.iaRespuestaCruda Json?` (`prisma/schema.prisma:764`) ya guarda el JSON crudo completo de la IA a nivel factura — pero es un blob de auditoría, no estructurado por item ni consumido por la UI de revisión. No sirve como reemplazo de un campo por-item: si la IA detectara "lote" en la línea 5 de 20 items, `iaRespuestaCruda` lo tiene en algún lugar del blob, pero no hay forma de mostrarlo junto a esa fila específica en la UI sin re-parsear todo el JSON crudo en el frontend.
 - `FacturaProveedorItem` (`prisma/schema.prisma:780`) y `Producto` (`prisma/schema.prisma:221`) no tienen ningún campo `Json?`/`metadata`/`rawData` — se confirma que no hay nada reutilizable ahí; `atributosExtra` es un campo genuinamente nuevo, no una duplicación.
-- El propio archivo de config ya tiene un TODO (`invoice-extraction.config.ts:307-310`) anticipando exactamente este caso: *"si en el futuro se necesita modelar [...] lote/vencimiento [...] primero hay que agregar esas columnas a FacturaProveedor/FacturaProveedorItem [...] después se extiende esta config y el prompt"*. Esta propuesta ejecuta ese TODO.
+- El propio archivo de config ya tiene un TODO (`invoice-extraction.config.ts:307-310`) anticipando exactamente este caso: _"si en el futuro se necesita modelar [...] lote/vencimiento [...] primero hay que agregar esas columnas a FacturaProveedor/FacturaProveedorItem [...] después se extiende esta config y el prompt"_. Esta propuesta ejecuta ese TODO.
 - `Configuracion` (`prisma/schema.prisma:9-42`) está keyed por `sucursalId Int @unique @default(1)` — una fila por sucursal, no una tabla de cuenta compartida. El endpoint `settings/general` ya opera así (`where: { sucursalId: auth.activeSucursalId }`).
 - El Setup wizard (`src/app/setup/**`) no tiene ningún campo de rubro/categoría de negocio hoy — se confirmó revisando los 12 steps (`WelcomeStep` a `SuccessStep`); `BusinessStep.tsx` solo pide nombre, teléfono, dirección, logo, color.
 - La identidad de negocio (nombre, logo, color) vive en `Branding` (`initialize/route.ts:335-354`), no en `Configuracion` — son dos modelos paralelos, ambos "uno por sucursal" en la práctica (`Branding.sucursalId`, `Configuracion.sucursalId`).
@@ -75,15 +76,23 @@ export interface ExtractedInvoiceItem {
         "type": "object",
         "properties": {
           "key": { "type": "string" },
-          "value": { "type": "string" }
+          "value": { "type": "string" },
         },
         "required": ["key", "value"],
-        "additionalProperties": false
-      }
-    }
+        "additionalProperties": false,
+      },
+    },
   },
-  "required": ["rawDescription", "supplierCode", "quantity", "unitCost", "lineTotal", "confidence", "extraAttributes"],
-  "additionalProperties": false
+  "required": [
+    "rawDescription",
+    "supplierCode",
+    "quantity",
+    "unitCost",
+    "lineTotal",
+    "confidence",
+    "extraAttributes",
+  ],
+  "additionalProperties": false,
 }
 ```
 
@@ -129,6 +138,7 @@ segui sin inventar: si no aparece, no la incluyas.
 ```
 
 Casos borde de esta misma lógica, sin ramas nuevas de código:
+
 - **Rubro con hint vacío** (`kiosco`, `libreria`) o **texto libre no reconocido** (usuario eligió "Otro" y escribió algo que no matchea ningún slug): el bloque se arma igual pero sin la cláusula "prestá especial atención a…" (se omite si `RUBRO_ATRIBUTOS_TIPICOS[rubro]` es `undefined` o `""`) — el negocio queda igual identificado como contexto, sin inventar atributos que no aplican.
 - **Rubro `null`/vacío**: no se agrega ningún bloque, prompt idéntico al actual.
 
@@ -146,7 +156,7 @@ Usuario dispara el procesamiento
           -> buildInvoiceExtractionPrompt(rubroNegocio)   [NUEVO: bloque de contexto condicional]
           -> buildExpectedOutputSchema()                  [NUEVO: + extraAttributes]
           -> callOpenRouterJson(...)  [sin cambios de contrato]
-          -> normalizarExtraccion(parsed) 
+          -> normalizarExtraccion(parsed)
               [NUEVO: mapea extraAttributes[] -> objeto plano {key: value}]
           <- InvoiceAiResult { ..., items: [{ ..., extraAttributes: {...} }] }
 
@@ -192,9 +202,9 @@ Agregar `atributosExtra: z.record(z.string()).nullish()` a `createProductoBaseSc
 ```typescript
 // Configuracion.rubroNegocio ya está disponible en el contexto de la página de Productos
 // (mismo lugar donde ya se consulta para otras cosas de configuración)
-const sugerencias = RUBRO_ATRIBUTOS_TIPICOS[rubroNegocio ?? ""]
-  ?.split(", ")
-  .filter(Boolean) ?? [];
+const sugerencias =
+  RUBRO_ATRIBUTOS_TIPICOS[rubroNegocio ?? ""]?.split(", ").filter(Boolean) ??
+  [];
 // ej. rubroNegocio = "farmacia" -> sugerencias = ["lote", "vencimiento", "stock mínimo por medicamento"]
 ```
 
@@ -238,7 +248,10 @@ model Configuracion {
 
 ```typescript
 type SortKey =
-  | "nombre" | "precioVenta" | "stockDisponibleUnits" | "categoria"
+  | "nombre"
+  | "precioVenta"
+  | "stockDisponibleUnits"
+  | "categoria"
   | `attr:${string}`; // NUEVO — ej. "attr:talle"
 ```
 
@@ -253,8 +266,10 @@ if (sortConfig.key.startsWith("attr:")) {
   aValue = (a.atributosExtra as Record<string, string> | null)?.[clave] ?? "";
   bValue = (b.atributosExtra as Record<string, string> | null)?.[clave] ?? "";
 } else {
-  aValue = a[sortConfig.key as keyof ProductoViewItem] as string | number | null | undefined;
-  bValue = b[sortConfig.key as keyof ProductoViewItem] as string | number | null | undefined;
+  aValue = a[sortConfig.key as keyof ProductoViewItem] as
+    string | number | null | undefined;
+  bValue = b[sortConfig.key as keyof ProductoViewItem] as
+    string | number | null | undefined;
 }
 ```
 
@@ -277,9 +292,9 @@ const clavesEnUso = React.useMemo(() => {
 }, [items]);
 
 // 2. Sugeridas por rubro (pueden no estar en uso todavía)
-const sugeridasPorRubro = RUBRO_ATRIBUTOS_TIPICOS[rubroNegocio ?? ""]
-  ?.split(", ")
-  .filter(Boolean) ?? [];
+const sugeridasPorRubro =
+  RUBRO_ATRIBUTOS_TIPICOS[rubroNegocio ?? ""]?.split(", ").filter(Boolean) ??
+  [];
 
 const candidatas = Array.from(new Set([...clavesEnUso, ...sugeridasPorRubro]));
 ```
@@ -349,8 +364,15 @@ Sin límite, un usuario podría pegar un párrafo largo como `rubroNegocio` — 
 
 ```typescript
 // settings/general/route.ts, mismo bloque de validación que ya existe para tiendaMetodoPago/zonaHoraria
-if (rubroNegocio !== undefined && rubroNegocio !== null && rubroNegocio.length > 60) {
-  return NextResponse.json({ error: "El rubro no puede superar los 60 caracteres" }, { status: 400 });
+if (
+  rubroNegocio !== undefined &&
+  rubroNegocio !== null &&
+  rubroNegocio.length > 60
+) {
+  return NextResponse.json(
+    { error: "El rubro no puede superar los 60 caracteres" },
+    { status: 400 },
+  );
 }
 ```
 
@@ -358,7 +380,7 @@ Y `maxLength={60}` en el input de texto libre tanto en `BusinessStep.tsx` (Setup
 
 ### Nota de seguridad: texto libre interpolado en el prompt
 
-`rubroNegocio` (cuando es texto libre de "Otro") se concatena directo en el system prompt que recibe OpenRouter (Decisión 1) — en términos generales esto es una superficie de "prompt injection". Acá el riesgo queda contenido por la arquitectura ya vigente: al ser single-tenant (cada cliente con su propia base de datos y sus propias credenciales de OpenRouter), un usuario que manipule su propio `rubroNegocio` con instrucciones adversariales solo podría afectar la extracción de *sus propias* facturas — no hay datos ni prompts de otros clientes en el mismo proceso o request. No se agrega sanitización adicional por este motivo; el tope de 60 caracteres de arriba ya limita bastante cuánto texto arbitrario cabe.
+`rubroNegocio` (cuando es texto libre de "Otro") se concatena directo en el system prompt que recibe OpenRouter (Decisión 1) — en términos generales esto es una superficie de "prompt injection". Acá el riesgo queda contenido por la arquitectura ya vigente: al ser single-tenant (cada cliente con su propia base de datos y sus propias credenciales de OpenRouter), un usuario que manipule su propio `rubroNegocio` con instrucciones adversariales solo podría afectar la extracción de _sus propias_ facturas — no hay datos ni prompts de otros clientes en el mismo proceso o request. No se agrega sanitización adicional por este motivo; el tope de 60 caracteres de arriba ya limita bastante cuánto texto arbitrario cabe.
 
 ## Compatibilidad hacia atrás
 
@@ -417,7 +439,7 @@ export async function callOpenRouterJson(input: {
     : input.userPrompt;
 
   const model = input.images?.length
-    ? (process.env.OPENROUTER_VISION_MODEL || "openai/gpt-4o-mini")
+    ? process.env.OPENROUTER_VISION_MODEL || "openai/gpt-4o-mini"
     : OPENROUTER_MODEL;
 
   // body.model = model; body.messages = [{role:"system",...}, {role:"user", content: userContent}]
@@ -429,20 +451,26 @@ export async function callOpenRouterJson(input: {
 **`procesarFacturaConIA()` — lógica de decisión**:
 
 ```typescript
-const { texto, confianzaOcr, imagenParaVision } = await extraerTextoFactura(input);
+const { texto, confianzaOcr, imagenParaVision } =
+  await extraerTextoFactura(input);
 
-const necesitaVision = imagenParaVision && (
-  !texto.trim() || confianzaOcr < OCR_VISION_FALLBACK_THRESHOLD
-);
+const necesitaVision =
+  imagenParaVision &&
+  (!texto.trim() || confianzaOcr < OCR_VISION_FALLBACK_THRESHOLD);
 
 if (!texto.trim() && !necesitaVision) {
   // caso residual: PDF con texto nativo que igual vino vacío — no hay imagen que ofrecer
-  return { status: "error", message: "No se pudo extraer texto legible del archivo." };
+  return {
+    status: "error",
+    message: "No se pudo extraer texto legible del archivo.",
+  };
 }
 
 const userPrompt = necesitaVision
   ? `Extraé los datos estructurados de esta factura. El texto que devolvió el OCR local ` +
-    (texto.trim() ? `tiene baja confianza (${confianzaOcr}%) y puede tener errores o partes faltantes` : `no pudo leer nada`) +
+    (texto.trim()
+      ? `tiene baja confianza (${confianzaOcr}%) y puede tener errores o partes faltantes`
+      : `no pudo leer nada`) +
     `. Se adjunta también la imagen original — usá el texto como referencia rápida y la imagen para completar o corregir lo que falte.\n\nTexto OCR:\n${texto || "(vacío)"}`
   : `Extraé los datos estructurados de esta factura de proveedor según las reglas indicadas:\n\n${textoTruncado}`;
 
@@ -450,7 +478,9 @@ const respuesta = await callOpenRouterJson({
   systemPrompt,
   userPrompt,
   jsonSchema: { name: "factura_extraida", schema },
-  images: necesitaVision ? [{ mimeType: "image/jpeg", base64: imagenParaVision!.toString("base64") }] : undefined,
+  images: necesitaVision
+    ? [{ mimeType: "image/jpeg", base64: imagenParaVision!.toString("base64") }]
+    : undefined,
 });
 ```
 
@@ -458,7 +488,7 @@ const respuesta = await callOpenRouterJson({
 
 **Trazabilidad — sin columna nueva**: `FacturaProveedor.iaModeloUsado` (`prisma/schema.prisma:763`, ya existe) va a quedar con el modelo de visión (ej. `openai/gpt-4o-mini`) en vez del modelo primario cuando se usó este camino — alcanza para auditar/filtrar sin agregar ninguna columna booleana tipo `usoVision`.
 
-**Cupo de suscripción (Decisión 8)**: `checkFacturaOcrLimit()` (`require-subscription.ts:88`) se llama antes de `procesarFacturaConIA()` en `process/route.ts`, sin depender de si terminó usando visión — la decisión de "cuánto cuesta" se toma después de que el cupo ya fue validado, así que no hace falta ningún cambio en esa función. Solo cambia lo que se loggea *después* de la llamada a OpenRouter.
+**Cupo de suscripción (Decisión 8)**: `checkFacturaOcrLimit()` (`require-subscription.ts:88`) se llama antes de `procesarFacturaConIA()` en `process/route.ts`, sin depender de si terminó usando visión — la decisión de "cuánto cuesta" se toma después de que el cupo ya fue validado, así que no hace falta ningún cambio en esa función. Solo cambia lo que se loggea _después_ de la llamada a OpenRouter.
 
 **Logging del uso de visión — extensión del log existente**:
 
@@ -467,7 +497,8 @@ const respuesta = await callOpenRouterJson({
 console.log("[OpenRouter]", {
   model: json.model || OPENROUTER_MODEL,
   elapsedMs: Date.now() - startedAt,
-  reasoningTokens: json.usage?.completion_tokens_details?.reasoning_tokens ?? null,
+  reasoningTokens:
+    json.usage?.completion_tokens_details?.reasoning_tokens ?? null,
   totalTokens: json.usage?.total_tokens ?? null,
   usedVision: Boolean(input.images?.length), // NUEVO
 });

@@ -45,7 +45,7 @@ export function SidebarIconLink({
                 isMobile ? "h-9 w-9" : "h-10 w-10",
                 active
                   ? "bg-primary text-primary-foreground shadow-lg scale-110"
-                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                  : "text-muted-foreground hover:bg-muted hover:text-foreground",
               )}
             >
               <Icon className={isMobile ? "h-4 w-4" : "size-5"} />

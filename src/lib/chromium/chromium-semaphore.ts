@@ -22,7 +22,11 @@ async function acquire(): Promise<void> {
     const timeout = setTimeout(() => {
       const idx = queue.indexOf(onTurn);
       if (idx >= 0) queue.splice(idx, 1);
-      reject(new ChromiumBusyError("Timeout esperando un slot de Chromium disponible"));
+      reject(
+        new ChromiumBusyError(
+          "Timeout esperando un slot de Chromium disponible",
+        ),
+      );
     }, ACQUIRE_TIMEOUT_MS);
 
     function onTurn() {

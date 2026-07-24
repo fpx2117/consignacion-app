@@ -13,7 +13,7 @@ Se probó el pipeline de OCR + IA (`extraerTextoFactura` → `procesarFacturaCon
 - **La suma de los `lineTotal` devueltos por la IA da $210.700, pero `invoice.total` (leído correctamente del renglón TOTAL) es $180.700** — una diferencia de $30.000 que es matemáticamente detectable sin volver a leer la imagen, y sin embargo el item quedó con `confidence: 1` en las 10 líneas y la factura no generó ningún warning.
 - Ningún item hizo match automático con el catálogo (`matchScore` 0.16–0.37, todos por debajo de `UMBRAL_REVISION = 0.70` en `matching-engine.ts:40`) — evidencia consistente con que el negocio de prueba no tenía catálogo cargado para esos productos, no un problema de esta propuesta.
 
-El pipeline ya le pide al modelo, por prompt, que se autoevalúe (`invoice-extraction.config.ts:530`: *"Si el total no coincide con la suma visible de items, agregá warning y no corrijas el total"*) y que reporte `confidence` por línea. En la práctica, con `gpt-4o-mini`, el modelo no está aplicando esa autoevaluación de forma confiable: devolvió `confidence: 1` y `warnings: []` en una extracción que un chequeo aritmético de una línea de código detecta al instante. Confiar únicamente en que el modelo se autoevalúe bien es la causa raíz — hoy no hay ninguna capa determinística que verifique lo que el modelo devuelve.
+El pipeline ya le pide al modelo, por prompt, que se autoevalúe (`invoice-extraction.config.ts:530`: _"Si el total no coincide con la suma visible de items, agregá warning y no corrijas el total"_) y que reporte `confidence` por línea. En la práctica, con `gpt-4o-mini`, el modelo no está aplicando esa autoevaluación de forma confiable: devolvió `confidence: 1` y `warnings: []` en una extracción que un chequeo aritmético de una línea de código detecta al instante. Confiar únicamente en que el modelo se autoevalúe bien es la causa raíz — hoy no hay ninguna capa determinística que verifique lo que el modelo devuelve.
 
 ## Alcance
 
@@ -31,7 +31,7 @@ El pipeline ya le pide al modelo, por prompt, que se autoevalúe (`invoice-extra
    - da mensajes de error más claros (`error.issues`) que la lista de strings armada a mano actual;
    - facilita agregar un campo nuevo al schema esperado sin tocar 5 bloques de `if` distintos.
 
-   **Importante — qué NO resuelve este punto**: Zod valida *forma y tipos* (¿es `unitCost` un `number`? ¿está `supplier.name` presente?), no *contenido correcto*. Un JSON con `unitCost: 28500` en la línea de Balbo Borgoña (cuando el papel dice 13900) pasa un schema de Zod sin ningún error, porque `28500` es un `number` válido — exactamente el error que se vio en la prueba. Por eso este punto es una capa de validación **estructural**, independiente y subordinada a la validación **aritmética** de los puntos 1-2 (que es la que ataca la causa real del bug). No se debe mezclar una cosa con la otra: Zod ordena la entrada/salida del parser, la validación aritmética mejora la confiabilidad real de los datos extraídos.
+   **Importante — qué NO resuelve este punto**: Zod valida _forma y tipos_ (¿es `unitCost` un `number`? ¿está `supplier.name` presente?), no _contenido correcto_. Un JSON con `unitCost: 28500` en la línea de Balbo Borgoña (cuando el papel dice 13900) pasa un schema de Zod sin ningún error, porque `28500` es un `number` válido — exactamente el error que se vio en la prueba. Por eso este punto es una capa de validación **estructural**, independiente y subordinada a la validación **aritmética** de los puntos 1-2 (que es la que ataca la causa real del bug). No se debe mezclar una cosa con la otra: Zod ordena la entrada/salida del parser, la validación aritmética mejora la confiabilidad real de los datos extraídos.
 
 ### Orden de implementación sugerido
 
@@ -47,8 +47,8 @@ El pipeline ya le pide al modelo, por prompt, que se autoevalúe (`invoice-extra
 ### Fuera del Alcance
 
 - **Reintento automático o segunda pasada de IA cuando la validación aritmética falla.** Se decidió no encadenar más llamados a OpenRouter por línea con inconsistencia — mismo criterio ya aplicado en `rubro-contexto-ocr` (Decisión 5: "no se encadenan más llamados, se reporta como advertencia/revisión manual"). Esta propuesta es consistente con esa decisión previa, no la reabre.
-- **Corregir automáticamente el valor sospechoso** (ej. recalcular `unitCost` desde `lineTotal / quantity` cuando no calzan). Explícitamente rechazado: el prompt ya prohíbe esto (`invoice-extraction.config.ts:507-508`, "No calcules unitCost desde lineTotal/quantity") porque no hay forma de saber, sin ver de nuevo la imagen, *cuál* de los tres valores es el que está mal — podría ser cualquiera de los tres. Auto-corregir arriesga reemplazar un dato leído mal por uno inventado con más confianza aparente.
-- **Cambiar de modelo o forzar visión siempre.** La imagen de prueba sí incluía fallback de visión (`necesitaVision: true`, es una foto) y el error ocurrió *con* la imagen disponible — el problema no es falta de visión, es que el modelo no aplicó su propia regla de autoconsistencia. Cambiar de modelo es una variable costosa de aislar sin datos de varias facturas; esta propuesta prioriza una mitigación determinística que funciona sin importar qué modelo esté configurado en `OPENROUTER_MODEL`/`OPENROUTER_VISION_MODEL`.
+- **Corregir automáticamente el valor sospechoso** (ej. recalcular `unitCost` desde `lineTotal / quantity` cuando no calzan). Explícitamente rechazado: el prompt ya prohíbe esto (`invoice-extraction.config.ts:507-508`, "No calcules unitCost desde lineTotal/quantity") porque no hay forma de saber, sin ver de nuevo la imagen, _cuál_ de los tres valores es el que está mal — podría ser cualquiera de los tres. Auto-corregir arriesga reemplazar un dato leído mal por uno inventado con más confianza aparente.
+- **Cambiar de modelo o forzar visión siempre.** La imagen de prueba sí incluía fallback de visión (`necesitaVision: true`, es una foto) y el error ocurrió _con_ la imagen disponible — el problema no es falta de visión, es que el modelo no aplicó su propia regla de autoconsistencia. Cambiar de modelo es una variable costosa de aislar sin datos de varias facturas; esta propuesta prioriza una mitigación determinística que funciona sin importar qué modelo esté configurado en `OPENROUTER_MODEL`/`OPENROUTER_VISION_MODEL`.
 - **Mejoras al motor de matching (`matching-engine.ts`) o a los umbrales de `UMBRAL_SEGURA`/`UMBRAL_PROBABLE`.** El resultado "SIN_COINCIDENCIA" en las 10 líneas de la prueba es esperable (catálogo de prueba sin esos productos cargados) y no es un síntoma del mismo problema — queda fuera de esta propuesta.
 - **Reprocesar automáticamente facturas ya cargadas con esta validación.** Solo aplica a facturas procesadas después del cambio; no hay backfill de `FacturaProveedor` existentes.
 - **Mejoras de preprocesamiento de imagen** (deskew, binarización adaptativa para papel de impresora matricial con pliegues/sombras como el de la prueba). Es una causa raíz plausible del error de alineación, pero requiere probar con un corpus de facturas real para no arriesgar una regresión silenciosa en el 90% de los casos que hoy funcionan bien — se deja como candidato a un cambio propio, posterior, una vez que el logging de este cambio (warnings persistidos) dé visibilidad de cuán seguido pasa esto en producción.
@@ -60,6 +60,7 @@ El pipeline ya le pide al modelo, por prompt, que se autoevalúe (`invoice-extra
 **Elección**: función pura en TypeScript que recibe `ExtractedInvoiceData` ya normalizado y devuelve advertencias + ajustes de confidence, sin volver a llamar a OpenRouter.
 
 **Alternativas consideradas**:
+
 - Reforzar solo el prompt (punto 2 del alcance) y esperar que alcance.
 - Pedirle al modelo que devuelva un campo booleano `sumaVerificada` por línea, confiando en que lo calcule bien.
 
@@ -70,6 +71,7 @@ El pipeline ya le pide al modelo, por prompt, que se autoevalúe (`invoice-extra
 **Elección**: los tres campos numéricos que devuelve la IA llegan intactos a la UI, incluso si no pasan la validación.
 
 **Alternativas consideradas**:
+
 - Poner el campo en `null` automáticamente si no pasa la validación, forzando al usuario a completarlo a mano.
 - Recalcular el valor más "sospechoso" de los tres.
 
@@ -80,32 +82,33 @@ El pipeline ya le pide al modelo, por prompt, que se autoevalúe (`invoice-extra
 **Elección**: constante `TOLERANCIA_CONSISTENCIA_ARITMETICA = 0.01` (1%) en el nuevo módulo, ajustable sin tocar lógica.
 
 **Alternativas consideradas**:
+
 - Igualdad exacta (`unitCost * quantity === lineTotal`).
 
 **Justificación**: facturas reales redondean (ej. IVA discriminado, centavos truncados) — exigir igualdad exacta generaría falsos positivos en líneas que sí están bien leídas, entrenando al usuario a ignorar la advertencia. Un margen chico filtra el ruido de redondeo sin dejar pasar errores de la magnitud vista en la prueba (diferencias de miles de pesos, muy por encima de cualquier redondeo real).
 
 ## Áreas Afectadas
 
-| Área | Impacto | Descripción |
-|---|---|---|
-| `src/lib/ai/validar-consistencia-factura.ts` | Nuevo | Validación determinística: por línea (`unitCost * quantity` vs `lineTotal`) y por factura (suma de líneas vs `invoice.total`); devuelve warnings + ajustes de confidence, no muta valores numéricos |
-| `src/lib/ai/invoice-ai-parser.ts` | Modificado | `procesarFacturaConIA()` llama a la validación después de `normalizarExtraccion()`, antes de devolver `InvoiceAiSuccessResult`; `InvoiceAiItem` gana `advertencias: string[]` |
-| `src/modules/invoices/config/invoice-extraction.config.ts` | Modificado | `buildInvoiceExtractionPrompt()` suma una regla explícita de autoconsistencia por línea (`unitCost * quantity ≈ lineTotal`) antes de responder |
-| `src/app/api/facturas-proveedor/[id]/process/route.ts` | Modificado | Persiste `advertencias` de cada item al crear el `FacturaProveedorItem` |
-| `prisma/schema.prisma` | Modificado | `FacturaProveedorItem.advertencias String[] @default([])` (o `Json?` si se prefiere estructura, a definir en `design.md`) |
-| `prisma/migrations/` | Nuevo | Migración aditiva, columna nullable/con default vacío |
-| `src/app/(...)/productos/components/factura-proveedor-dialog.tsx` | Modificado | Indicador visual por fila cuando `advertencias.length > 0`, con tooltip del motivo |
-| `src/lib/apiService.ts` | Modificado | Tipo `FacturaProveedorItem` incluye `advertencias: string[]` |
-| `src/modules/invoices/config/invoice-extraction.config.ts` | Modificado (mantenibilidad) | `validateExtractedInvoice()` se reemplaza por un schema `z.object(...)`; `InvoiceValidationResult` pasa a derivarse de `result.success`/`result.error.issues` de Zod en vez de un array de strings armado a mano |
+| Área                                                              | Impacto                     | Descripción                                                                                                                                                                                                      |
+| ----------------------------------------------------------------- | --------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `src/lib/ai/validar-consistencia-factura.ts`                      | Nuevo                       | Validación determinística: por línea (`unitCost * quantity` vs `lineTotal`) y por factura (suma de líneas vs `invoice.total`); devuelve warnings + ajustes de confidence, no muta valores numéricos              |
+| `src/lib/ai/invoice-ai-parser.ts`                                 | Modificado                  | `procesarFacturaConIA()` llama a la validación después de `normalizarExtraccion()`, antes de devolver `InvoiceAiSuccessResult`; `InvoiceAiItem` gana `advertencias: string[]`                                    |
+| `src/modules/invoices/config/invoice-extraction.config.ts`        | Modificado                  | `buildInvoiceExtractionPrompt()` suma una regla explícita de autoconsistencia por línea (`unitCost * quantity ≈ lineTotal`) antes de responder                                                                   |
+| `src/app/api/facturas-proveedor/[id]/process/route.ts`            | Modificado                  | Persiste `advertencias` de cada item al crear el `FacturaProveedorItem`                                                                                                                                          |
+| `prisma/schema.prisma`                                            | Modificado                  | `FacturaProveedorItem.advertencias String[] @default([])` (o `Json?` si se prefiere estructura, a definir en `design.md`)                                                                                        |
+| `prisma/migrations/`                                              | Nuevo                       | Migración aditiva, columna nullable/con default vacío                                                                                                                                                            |
+| `src/app/(...)/productos/components/factura-proveedor-dialog.tsx` | Modificado                  | Indicador visual por fila cuando `advertencias.length > 0`, con tooltip del motivo                                                                                                                               |
+| `src/lib/apiService.ts`                                           | Modificado                  | Tipo `FacturaProveedorItem` incluye `advertencias: string[]`                                                                                                                                                     |
+| `src/modules/invoices/config/invoice-extraction.config.ts`        | Modificado (mantenibilidad) | `validateExtractedInvoice()` se reemplaza por un schema `z.object(...)`; `InvoiceValidationResult` pasa a derivarse de `result.success`/`result.error.issues` de Zod en vez de un array de strings armado a mano |
 
 ## Riesgos
 
-| Riesgo | Probabilidad | Mitigación |
-|---|---|---|
-| Falsos positivos por redondeo bajan confidence de líneas que en realidad están bien leídas | Media | Tolerancia configurable (Decisión 3), calibrable con casos reales antes de bajar el default |
-| El refuerzo de prompt (punto 2) no reduce la tasa de error real del modelo | Media | Es complementario, no la mitigación principal — la validación determinística (punto 1) es la que garantiza la señal al usuario incluso si el prompt no mejora nada |
-| Agregar una columna nueva a `FacturaProveedorItem` requiere tocar varios puntos de escritura (`process/route.ts`, posibles otros que creen items) | Baja | Es aditiva con default `[]`, no rompe código existente que no la usa |
-| El usuario empieza a ignorar el indicador si aparece en casi todas las facturas (alerta fatigue) | Media | Tolerancia calibrada para que solo dispare ante desfasajes grandes (no de centavos); si en producción dispara demasiado seguido, es señal para revisar el umbral, no para quitar la validación |
+| Riesgo                                                                                                                                            | Probabilidad | Mitigación                                                                                                                                                                                     |
+| ------------------------------------------------------------------------------------------------------------------------------------------------- | ------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Falsos positivos por redondeo bajan confidence de líneas que en realidad están bien leídas                                                        | Media        | Tolerancia configurable (Decisión 3), calibrable con casos reales antes de bajar el default                                                                                                    |
+| El refuerzo de prompt (punto 2) no reduce la tasa de error real del modelo                                                                        | Media        | Es complementario, no la mitigación principal — la validación determinística (punto 1) es la que garantiza la señal al usuario incluso si el prompt no mejora nada                             |
+| Agregar una columna nueva a `FacturaProveedorItem` requiere tocar varios puntos de escritura (`process/route.ts`, posibles otros que creen items) | Baja         | Es aditiva con default `[]`, no rompe código existente que no la usa                                                                                                                           |
+| El usuario empieza a ignorar el indicador si aparece en casi todas las facturas (alerta fatigue)                                                  | Media        | Tolerancia calibrada para que solo dispare ante desfasajes grandes (no de centavos); si en producción dispara demasiado seguido, es señal para revisar el umbral, no para quitar la validación |
 
 ## Plan de Reversión (Rollback)
 

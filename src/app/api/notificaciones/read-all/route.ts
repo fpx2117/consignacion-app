@@ -8,7 +8,13 @@ export async function PATCH() {
     const auth = await requireAuth();
     if (!auth.ok) return auth.res;
     if (isGlobalSucursalView(auth)) {
-      return NextResponse.json({ error: "Vista global en modo solo lectura. Selecciona una sucursal para actualizar notificaciones." }, { status: 409 });
+      return NextResponse.json(
+        {
+          error:
+            "Vista global en modo solo lectura. Selecciona una sucursal para actualizar notificaciones.",
+        },
+        { status: 409 },
+      );
     }
 
     const sucursalId = auth.activeSucursalId;
@@ -28,14 +34,13 @@ export async function PATCH() {
     return NextResponse.json({
       success: true,
       count: result.count,
-      message: `Se marcaron ${result.count} notificaciones como leídas.`
+      message: `Se marcaron ${result.count} notificaciones como leídas.`,
     });
-
   } catch (error) {
     console.error("Error marking all as read:", error);
     return NextResponse.json(
       { error: "Error interno al marcar como leídas" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

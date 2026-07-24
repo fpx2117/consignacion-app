@@ -8,8 +8,7 @@ import {
 } from "@/lib/uploads/uploads";
 
 const PNG_BUFFER = Buffer.from([
-  0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
-  0x00, 0x00, 0x00, 0x0d,
+  0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00, 0x00, 0x0d,
 ]);
 
 test("validateUploadCandidate acepta PNG valido para product-image", () => {
@@ -46,7 +45,10 @@ test("validateUploadCandidate rechaza archivo disfrazado por firma invalida", ()
 });
 
 test("validateUploadCandidate rechaza payload no permitido por extension y MIME", () => {
-  const svgPayload = Buffer.from('<svg xmlns="http://www.w3.org/2000/svg"></svg>', "utf8");
+  const svgPayload = Buffer.from(
+    '<svg xmlns="http://www.w3.org/2000/svg"></svg>',
+    "utf8",
+  );
   const result = validateUploadCandidate({
     buffer: svgPayload,
     declaredMimeType: "image/svg+xml",
@@ -86,9 +88,15 @@ test("buildOpaqueUploadFilename desacopla el nombre publico del original", () =>
 });
 
 test("resolveServableUploadResource rechaza rutas ambiguas y traversal", () => {
-  assert.deepEqual(resolveServableUploadResource(["..", "secret.txt"]), { ok: false });
-  assert.deepEqual(resolveServableUploadResource(["nested/file.png"]), { ok: false });
-  assert.deepEqual(resolveServableUploadResource(["legacy-name.png"]), { ok: false });
+  assert.deepEqual(resolveServableUploadResource(["..", "secret.txt"]), {
+    ok: false,
+  });
+  assert.deepEqual(resolveServableUploadResource(["nested/file.png"]), {
+    ok: false,
+  });
+  assert.deepEqual(resolveServableUploadResource(["legacy-name.png"]), {
+    ok: false,
+  });
 });
 
 test("resolveServableUploadResource acepta nombres legacy emitidos historicamente por api/files", () => {
@@ -105,9 +113,12 @@ test("resolveServableUploadResource acepta nombres legacy emitidos historicament
 
 test("resolveStoredUploadPathFromUrl acepta nombres legacy servidos por api/files", () => {
   const result = resolveStoredUploadPathFromUrl(
-    "/api/files/1772837979983-e6c14d0f_3d7a_4f25_8712_a5468b554bc5.png"
+    "/api/files/1772837979983-e6c14d0f_3d7a_4f25_8712_a5468b554bc5.png",
   );
 
   assert.equal(typeof result, "string");
-  assert.match(result ?? "", /1772837979983-e6c14d0f_3d7a_4f25_8712_a5468b554bc5\.png$/);
+  assert.match(
+    result ?? "",
+    /1772837979983-e6c14d0f_3d7a_4f25_8712_a5468b554bc5\.png$/,
+  );
 });

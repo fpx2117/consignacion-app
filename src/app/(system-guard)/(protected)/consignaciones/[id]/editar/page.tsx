@@ -36,7 +36,11 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 
 import { SuccessDialog } from "@/components/feedback/success-dialog";
 import { ErrorDialog } from "@/components/feedback/error-dialog";
@@ -79,7 +83,6 @@ export default function EditarConsignacionPage() {
   const [openCombobox, setOpenCombobox] = React.useState(false);
   const [selectedProdId, setSelectedProdId] = React.useState<number | "">("");
 
-
   const [showSuccess, setShowSuccess] = React.useState(false);
   const [showHelp, setShowHelp] = React.useState(false);
   const [errorDialog, setErrorDialog] = React.useState({
@@ -103,32 +106,37 @@ export default function EditarConsignacionPage() {
       const _hasLiquidaciones = (consignacion.liquidaciones?.length ?? 0) > 0;
       setHasLiquidaciones(_hasLiquidaciones);
 
-      const mappedItems: EditableItem[] = (consignacion.detalles ?? []).map((d) => {
-        const realProd = productos.find((p) => p.id === d.productoId);
+      const mappedItems: EditableItem[] = (consignacion.detalles ?? []).map(
+        (d) => {
+          const realProd = productos.find((p) => p.id === d.productoId);
 
-        return {
-          productoId: d.productoId,
-          nombre: d.producto?.nombre || realProd?.nombre || "Producto",
-          precioVenta: Number(d.producto?.precioVenta ?? realProd?.precioVenta ?? 0),
+          return {
+            productoId: d.productoId,
+            nombre: d.producto?.nombre || realProd?.nombre || "Producto",
+            precioVenta: Number(
+              d.producto?.precioVenta ?? realProd?.precioVenta ?? 0,
+            ),
 
-          unitsEntregadas: Number(d.unitsEntregadas ?? 0),
-          unitsVendidas: Number(d.unitsVendidasAcum ?? 0),
-          unitsDevueltas: Number(d.unitsDevueltasAcum ?? 0),
+            unitsEntregadas: Number(d.unitsEntregadas ?? 0),
+            unitsVendidas: Number(d.unitsVendidasAcum ?? 0),
+            unitsDevueltas: Number(d.unitsDevueltasAcum ?? 0),
 
-          originalEntregadas: Number(d.unitsEntregadas ?? 0),
-          originalVendidas: Number(d.unitsVendidasAcum ?? 0),
-          originalDevueltas: Number(d.unitsDevueltasAcum ?? 0),
+            originalEntregadas: Number(d.unitsEntregadas ?? 0),
+            originalVendidas: Number(d.unitsVendidasAcum ?? 0),
+            originalDevueltas: Number(d.unitsDevueltasAcum ?? 0),
 
-          stockDisponible: Number(realProd?.stockDisponibleUnits ?? 0),
-        };
-      });
+            stockDisponible: Number(realProd?.stockDisponibleUnits ?? 0),
+          };
+        },
+      );
 
       setItems(mappedItems);
     } catch (e: unknown) {
       setErrorDialog({
         open: true,
         title: "Error",
-        description: e instanceof Error ? e.message : "No se pudo cargar la consignación.",
+        description:
+          e instanceof Error ? e.message : "No se pudo cargar la consignación.",
       });
     } finally {
       setLoading(false);
@@ -139,10 +147,16 @@ export default function EditarConsignacionPage() {
     if (id) loadData();
   }, [id, loadData]);
 
-  const handleUpdateItem = (prodId: number, field: keyof EditableItem, val: number) => {
+  const handleUpdateItem = (
+    prodId: number,
+    field: keyof EditableItem,
+    val: number,
+  ) => {
     if (val < 0) return;
     setItems((prev) =>
-      prev.map((item) => (item.productoId === prodId ? { ...item, [field]: val } : item))
+      prev.map((item) =>
+        item.productoId === prodId ? { ...item, [field]: val } : item,
+      ),
     );
   };
 
@@ -181,8 +195,12 @@ export default function EditarConsignacionPage() {
           unitsEntregadas: i.unitsEntregadas,
 
           // Si hay liquidaciones: no tocamos acumulados desde esta pantalla
-          unitsVendidasAcum: hasLiquidaciones ? i.originalVendidas : i.unitsVendidas,
-          unitsDevueltasAcum: hasLiquidaciones ? i.originalDevueltas : i.unitsDevueltas,
+          unitsVendidasAcum: hasLiquidaciones
+            ? i.originalVendidas
+            : i.unitsVendidas,
+          unitsDevueltasAcum: hasLiquidaciones
+            ? i.originalDevueltas
+            : i.unitsDevueltas,
         })),
       });
 
@@ -191,15 +209,25 @@ export default function EditarConsignacionPage() {
       setErrorDialog({
         open: true,
         title: "Error",
-        description: e instanceof Error ? e.message : "No se pudieron guardar los cambios.",
+        description:
+          e instanceof Error
+            ? e.message
+            : "No se pudieron guardar los cambios.",
       });
     } finally {
       setSaving(false);
     }
   };
 
-  const totalEntregadas = items.reduce((a, b) => a + (Number(b.unitsEntregadas) || 0), 0);
-  const totalValor = items.reduce((a, b) => a + (Number(b.unitsEntregadas) || 0) * (Number(b.precioVenta) || 0), 0);
+  const totalEntregadas = items.reduce(
+    (a, b) => a + (Number(b.unitsEntregadas) || 0),
+    0,
+  );
+  const totalValor = items.reduce(
+    (a, b) =>
+      a + (Number(b.unitsEntregadas) || 0) * (Number(b.precioVenta) || 0),
+    0,
+  );
 
   if (loading) {
     return (
@@ -215,7 +243,12 @@ export default function EditarConsignacionPage() {
       {/* HEADER */}
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div className="space-y-1">
-          <Button variant="ghost" size="sm" onClick={() => router.back()} className="-ml-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => router.back()}
+            className="-ml-2"
+          >
             <ArrowLeft className="h-4 w-4 mr-1" /> Volver
           </Button>
 
@@ -237,10 +270,13 @@ export default function EditarConsignacionPage() {
           <CardContent className="p-4 flex gap-4 items-start">
             <Info className="text-[color:var(--theme-ocean-primary)] h-5 w-5 mt-0.5" />
             <div className="text-sm">
-              <p className="font-bold text-[color:var(--theme-ocean-primary)]">Detección de Movimientos</p>
+              <p className="font-bold text-[color:var(--theme-ocean-primary)]">
+                Detección de Movimientos
+              </p>
               <p className="text-muted-foreground">
                 Esta consignación ya tiene liquidaciones. Solo puedes editar las{" "}
-                <strong>unidades entregadas</strong> (estructura). Las ventas se corrigen en la liquidación.
+                <strong>unidades entregadas</strong> (estructura). Las ventas se
+                corrigen en la liquidación.
               </p>
             </div>
           </CardContent>
@@ -251,12 +287,16 @@ export default function EditarConsignacionPage() {
         <div className="lg:col-span-8 space-y-6">
           <CardHeader className="px-0 pt-0 pb-2">
             <CardTitle className="text-lg font-bold flex items-center gap-2 text-foreground">
-              <Package className="h-5 w-5 text-[color:var(--primary)]" /> Detalle de Mercadería
+              <Package className="h-5 w-5 text-[color:var(--primary)]" />{" "}
+              Detalle de Mercadería
             </CardTitle>
           </CardHeader>
 
           {items.map((item) => (
-            <Card key={item.productoId} className="overflow-hidden transition-all hover:border-primary/30">
+            <Card
+              key={item.productoId}
+              className="overflow-hidden transition-all hover:border-primary/30"
+            >
               <CardContent className="p-5">
                 <div className="flex justify-between items-start mb-4">
                   <div>
@@ -271,7 +311,11 @@ export default function EditarConsignacionPage() {
                       variant="ghost"
                       size="icon"
                       className="text-muted-foreground hover:text-destructive"
-                      onClick={() => setItems((prev) => prev.filter((i) => i.productoId !== item.productoId))}
+                      onClick={() =>
+                        setItems((prev) =>
+                          prev.filter((i) => i.productoId !== item.productoId),
+                        )
+                      }
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>
@@ -286,7 +330,13 @@ export default function EditarConsignacionPage() {
                     <Input
                       type="number"
                       value={item.unitsEntregadas}
-                      onChange={(e) => handleUpdateItem(item.productoId, "unitsEntregadas", Number(e.target.value))}
+                      onChange={(e) =>
+                        handleUpdateItem(
+                          item.productoId,
+                          "unitsEntregadas",
+                          Number(e.target.value),
+                        )
+                      }
                       className="h-11 font-bold bg-[color:var(--theme-ocean-primary)]/5 border-[color:var(--theme-ocean-primary)]"
                     />
                   </div>
@@ -299,8 +349,19 @@ export default function EditarConsignacionPage() {
                       type="number"
                       disabled={hasLiquidaciones}
                       value={item.unitsVendidas}
-                      onChange={(e) => handleUpdateItem(item.productoId, "unitsVendidas", Number(e.target.value))}
-                      className={cn("h-11 font-bold", hasLiquidaciones ? "bg-muted" : "bg-[color:var(--status-success-strong)]/5 border-[color:var(--status-success-strong)]")}
+                      onChange={(e) =>
+                        handleUpdateItem(
+                          item.productoId,
+                          "unitsVendidas",
+                          Number(e.target.value),
+                        )
+                      }
+                      className={cn(
+                        "h-11 font-bold",
+                        hasLiquidaciones
+                          ? "bg-muted"
+                          : "bg-[color:var(--status-success-strong)]/5 border-[color:var(--status-success-strong)]",
+                      )}
                     />
                   </div>
 
@@ -312,8 +373,19 @@ export default function EditarConsignacionPage() {
                       type="number"
                       disabled={hasLiquidaciones}
                       value={item.unitsDevueltas}
-                      onChange={(e) => handleUpdateItem(item.productoId, "unitsDevueltas", Number(e.target.value))}
-                      className={cn("h-11 font-bold", hasLiquidaciones ? "bg-muted" : "bg-[color:var(--status-warning)]/5 border-[color:var(--status-warning)]")}
+                      onChange={(e) =>
+                        handleUpdateItem(
+                          item.productoId,
+                          "unitsDevueltas",
+                          Number(e.target.value),
+                        )
+                      }
+                      className={cn(
+                        "h-11 font-bold",
+                        hasLiquidaciones
+                          ? "bg-muted"
+                          : "bg-[color:var(--status-warning)]/5 border-[color:var(--status-warning)]",
+                      )}
                     />
                   </div>
                 </div>
@@ -325,13 +397,19 @@ export default function EditarConsignacionPage() {
             <Card className="border-dashed bg-muted/20">
               <CardContent className="p-6 flex flex-col sm:flex-row items-end gap-4">
                 <div className="flex-1 space-y-2 w-full">
-                  <Label className="text-xs font-bold uppercase">Añadir más productos</Label>
+                  <Label className="text-xs font-bold uppercase">
+                    Añadir más productos
+                  </Label>
 
                   <Popover open={openCombobox} onOpenChange={setOpenCombobox}>
                     <PopoverTrigger asChild>
-                      <Button variant="outline" className="w-full justify-between h-10">
+                      <Button
+                        variant="outline"
+                        className="w-full justify-between h-10"
+                      >
                         {selectedProdId
-                          ? allProducts.find((p) => p.id === selectedProdId)?.nombre
+                          ? allProducts.find((p) => p.id === selectedProdId)
+                              ?.nombre
                           : "Buscar..."}
                         <Search className="h-4 w-4 opacity-50" />
                       </Button>
@@ -421,13 +499,19 @@ export default function EditarConsignacionPage() {
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Valor Estimado</span>
-                  <span className="font-bold text-primary">{formatCurrency(totalValor)}</span>
+                  <span className="font-bold text-primary">
+                    {formatCurrency(totalValor)}
+                  </span>
                 </div>
               </div>
 
               <Separator />
 
-              <Button className="w-full h-12 font-bold" onClick={handleSubmit} disabled={saving}>
+              <Button
+                className="w-full h-12 font-bold"
+                onClick={handleSubmit}
+                disabled={saving}
+              >
                 {saving ? (
                   <Loader2 className="animate-spin h-5 w-5" />
                 ) : (
@@ -457,7 +541,11 @@ export default function EditarConsignacionPage() {
         description={errorDialog.description}
       />
 
-      <HelpDialog open={showHelp} onOpenChange={setShowHelp} title="Guía de Edición" />
+      <HelpDialog
+        open={showHelp}
+        onOpenChange={setShowHelp}
+        title="Guía de Edición"
+      />
     </div>
   );
 }

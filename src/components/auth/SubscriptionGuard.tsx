@@ -12,7 +12,10 @@ interface SubscriptionGuardProps {
   children: React.ReactNode;
 }
 
-export function SubscriptionGuard({ planLimits, children }: SubscriptionGuardProps) {
+export function SubscriptionGuard({
+  planLimits,
+  children,
+}: SubscriptionGuardProps) {
   const pathname = usePathname();
   const router = useRouter();
 

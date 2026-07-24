@@ -3,7 +3,11 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/auth/require-auth";
 import type { JwtPayloadUser } from "@/lib/auth/core";
-import { nowAR, getDayOfWeekAR, getTimeStringAR } from "@/lib/date-format/utils-date";
+import {
+  nowAR,
+  getDayOfWeekAR,
+  getTimeStringAR,
+} from "@/lib/date-format/utils-date";
 import { resolveTimezoneForAuth } from "@/lib/timezone/get-configured-tz";
 
 type TurnoRouteDeps = {
@@ -39,8 +43,7 @@ type CerrarTurnoBody = {
 };
 
 type ValidacionHorario =
-  | { permitido: false; error: string }
-  | { permitido: true; horaFin: string };
+  { permitido: false; error: string } | { permitido: true; horaFin: string };
 
 function sumarMinutos(horaStr: string, minutosASumar: number) {
   const [horas, minutos] = horaStr.split(":").map(Number);
@@ -57,7 +60,11 @@ function getUsuarioIdFuerte(userPayload: JwtPayloadUser) {
   return parsed;
 }
 
-async function validarHorarioLaboral(deps: TurnoRouteDeps, usuarioId: number, tz: string): Promise<ValidacionHorario> {
+async function validarHorarioLaboral(
+  deps: TurnoRouteDeps,
+  usuarioId: number,
+  tz: string,
+): Promise<ValidacionHorario> {
   const ahora = deps.nowAR(tz);
   const diaSemana = deps.getDayOfWeekAR(ahora, tz);
   const horaActual = deps.getTimeStringAR(ahora, tz);
@@ -71,11 +78,17 @@ async function validarHorarioLaboral(deps: TurnoRouteDeps, usuarioId: number, tz
   }
 
   if (horaActual < horario.horaInicio) {
-    return { permitido: false, error: `Tu turno inicia a las ${horario.horaInicio}.` };
+    return {
+      permitido: false,
+      error: `Tu turno inicia a las ${horario.horaInicio}.`,
+    };
   }
 
   if (horaActual > horario.horaFin) {
-    return { permitido: false, error: `Tu turno finalizo a las ${horario.horaFin}.` };
+    return {
+      permitido: false,
+      error: `Tu turno finalizo a las ${horario.horaFin}.`,
+    };
   }
 
   return { permitido: true, horaFin: horario.horaFin };
@@ -94,7 +107,11 @@ export async function handleGetTurno(deps: TurnoRouteDeps = defaultDeps) {
     const timezone = await deps.resolveTimezoneForAuth(auth);
 
     const sesionAbierta = await deps.prisma.sesionCaja.findFirst({
-      where: { usuarioId, estado: "ABIERTA", caja: { sucursalId: auth.activeSucursalId } },
+      where: {
+        usuarioId,
+        estado: "ABIERTA",
+        caja: { sucursalId: auth.activeSucursalId },
+      },
       include: {
         caja: true,
         ventas: { where: { tipo: "CASUAL" } },
@@ -105,7 +122,12 @@ export async function handleGetTurno(deps: TurnoRouteDeps = defaultDeps) {
 
     const ahora = deps.nowAR(timezone.tz);
     const horarioHoy = await deps.prisma.horarioLaboral.findUnique({
-      where: { usuarioId_diaSemana: { usuarioId, diaSemana: deps.getDayOfWeekAR(ahora, timezone.tz) } },
+      where: {
+        usuarioId_diaSemana: {
+          usuarioId,
+          diaSemana: deps.getDayOfWeekAR(ahora, timezone.tz),
+        },
+      },
     });
 
     let horaFinCalculada = horarioHoy?.horaFin;
@@ -135,7 +157,10 @@ export async function handleGetTurno(deps: TurnoRouteDeps = defaultDeps) {
     });
   } catch (error) {
     console.error("Error al obtener el turno activo:", error);
-    return NextResponse.json({ error: "Error al obtener el turno activo" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Error al obtener el turno activo" },
+      { status: 500 },
+    );
   }
 }
 
@@ -143,7 +168,10 @@ export async function POST(req: Request) {
   return handlePostTurno(req);
 }
 
-export async function handlePostTurno(req: Request, deps: TurnoRouteDeps = defaultDeps) {
+export async function handlePostTurno(
+  req: Request,
+  deps: TurnoRouteDeps = defaultDeps,
+) {
   const auth = await deps.requireAuth();
   if (!auth.ok) return auth.res;
 
@@ -152,27 +180,43 @@ export async function handlePostTurno(req: Request, deps: TurnoRouteDeps = defau
     const timezone = await deps.resolveTimezoneForAuth(auth);
     const { cajaId, montoInicial } = (await req.json()) as AbrirTurnoBody;
     const cajaIdNumerico = typeof cajaId === "number" ? cajaId : Number.NaN;
-    const montoInicialNumerico = typeof montoInicial === "number" ? montoInicial : Number.NaN;
+    const montoInicialNumerico =
+      typeof montoInicial === "number" ? montoInicial : Number.NaN;
 
-    if (!Number.isFinite(cajaIdNumerico) || !Number.isFinite(montoInicialNumerico)) {
+    if (
+      !Number.isFinite(cajaIdNumerico) ||
+      !Number.isFinite(montoInicialNumerico)
+    ) {
       return NextResponse.json({ error: "Payload invalido." }, { status: 400 });
     }
 
-    const verificacion = await validarHorarioLaboral(deps, usuarioId, timezone.tz);
+    const verificacion = await validarHorarioLaboral(
+      deps,
+      usuarioId,
+      timezone.tz,
+    );
     if (!verificacion.permitido) {
       return NextResponse.json({ error: verificacion.error }, { status: 403 });
     }
 
-    const cajaSelect = await deps.prisma.caja.findUnique({ where: { id: cajaIdNumerico } });
+    const cajaSelect = await deps.prisma.caja.findUnique({
+      where: { id: cajaIdNumerico },
+    });
     if (!cajaSelect || cajaSelect.sucursalId !== auth.activeSucursalId) {
-      return NextResponse.json({ error: "Caja no valida para esta sucursal." }, { status: 403 });
+      return NextResponse.json(
+        { error: "Caja no valida para esta sucursal." },
+        { status: 403 },
+      );
     }
 
     const activa = await deps.prisma.sesionCaja.findFirst({
       where: { usuarioId, estado: "ABIERTA" },
     });
     if (activa) {
-      return NextResponse.json({ error: "Ya tienes una sesion abierta." }, { status: 403 });
+      return NextResponse.json(
+        { error: "Ya tienes una sesion abierta." },
+        { status: 403 },
+      );
     }
 
     const nueva = await deps.prisma.sesionCaja.create({
@@ -187,7 +231,10 @@ export async function handlePostTurno(req: Request, deps: TurnoRouteDeps = defau
     return NextResponse.json({ data: nueva });
   } catch (error) {
     console.error("Error al abrir el turno de caja:", error);
-    return NextResponse.json({ error: "Error al abrir el turno de caja" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Error al abrir el turno de caja" },
+      { status: 500 },
+    );
   }
 }
 
@@ -195,7 +242,10 @@ export async function PATCH(req: Request) {
   return handlePatchTurno(req);
 }
 
-export async function handlePatchTurno(req: Request, deps: TurnoRouteDeps = defaultDeps) {
+export async function handlePatchTurno(
+  req: Request,
+  deps: TurnoRouteDeps = defaultDeps,
+) {
   const auth = await deps.requireAuth();
   if (!auth.ok) return auth.res;
 
@@ -206,18 +256,31 @@ export async function handlePatchTurno(req: Request, deps: TurnoRouteDeps = defa
     const minutosExtra = typeof minutos === "number" ? minutos : Number.NaN;
 
     if (!Number.isFinite(minutosExtra) || minutosExtra <= 0) {
-      return NextResponse.json({ error: "Minutos invalidos." }, { status: 400 });
+      return NextResponse.json(
+        { error: "Minutos invalidos." },
+        { status: 400 },
+      );
     }
 
     const sesion = await deps.prisma.sesionCaja.findFirst({
-      where: { usuarioId, estado: "ABIERTA", caja: { sucursalId: auth.activeSucursalId } },
+      where: {
+        usuarioId,
+        estado: "ABIERTA",
+        caja: { sucursalId: auth.activeSucursalId },
+      },
     });
 
     if (!sesion) {
-      return NextResponse.json({ error: "No hay sesion para extender." }, { status: 404 });
+      return NextResponse.json(
+        { error: "No hay sesion para extender." },
+        { status: 404 },
+      );
     }
 
-    const timeStamp = deps.getTimeStringAR(deps.nowAR(timezone.tz), timezone.tz);
+    const timeStamp = deps.getTimeStringAR(
+      deps.nowAR(timezone.tz),
+      timezone.tz,
+    );
     const tagExtension = `[EXTENSIÓN ${minutosExtra}MIN: ${timeStamp}]`;
 
     const actualizada = await deps.prisma.sesionCaja.update({
@@ -232,7 +295,10 @@ export async function handlePatchTurno(req: Request, deps: TurnoRouteDeps = defa
     return NextResponse.json({ data: actualizada });
   } catch (error) {
     console.error("Error al extender el turno:", error);
-    return NextResponse.json({ error: "Error al extender el turno" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Error al extender el turno" },
+      { status: 500 },
+    );
   }
 }
 
@@ -240,7 +306,10 @@ export async function PUT(req: Request) {
   return handlePutTurno(req);
 }
 
-export async function handlePutTurno(req: Request, deps: TurnoRouteDeps = defaultDeps) {
+export async function handlePutTurno(
+  req: Request,
+  deps: TurnoRouteDeps = defaultDeps,
+) {
   const auth = await deps.requireAuth();
   if (!auth.ok) return auth.res;
 
@@ -248,14 +317,22 @@ export async function handlePutTurno(req: Request, deps: TurnoRouteDeps = defaul
     const usuarioId = getUsuarioIdFuerte(auth.user);
     const timezone = await deps.resolveTimezoneForAuth(auth);
     const { montoReal, observaciones } = (await req.json()) as CerrarTurnoBody;
-    const montoRealNumerico = typeof montoReal === "number" ? montoReal : Number.NaN;
+    const montoRealNumerico =
+      typeof montoReal === "number" ? montoReal : Number.NaN;
 
     if (!Number.isFinite(montoRealNumerico)) {
-      return NextResponse.json({ error: "Monto real invalido." }, { status: 400 });
+      return NextResponse.json(
+        { error: "Monto real invalido." },
+        { status: 400 },
+      );
     }
 
     const sesion = await deps.prisma.sesionCaja.findFirst({
-      where: { usuarioId, estado: "ABIERTA", caja: { sucursalId: auth.activeSucursalId } },
+      where: {
+        usuarioId,
+        estado: "ABIERTA",
+        caja: { sucursalId: auth.activeSucursalId },
+      },
       include: {
         ventas: { where: { tipo: "CASUAL" } },
         pagos: true,
@@ -264,7 +341,10 @@ export async function handlePutTurno(req: Request, deps: TurnoRouteDeps = defaul
     });
 
     if (!sesion) {
-      return NextResponse.json({ error: "Caja no encontrada." }, { status: 404 });
+      return NextResponse.json(
+        { error: "Caja no encontrada." },
+        { status: 404 },
+      );
     }
 
     let esperado = Number(sesion.montoInicial);
@@ -281,21 +361,25 @@ export async function handlePutTurno(req: Request, deps: TurnoRouteDeps = defaul
       .filter((movimiento) => movimiento.tipo === "EGRESO")
       .reduce((total, movimiento) => total + Number(movimiento.monto), 0);
 
-    esperado = esperado + ventasEfectivo + cobranzasEfectivo + ingresos - egresos;
+    esperado =
+      esperado + ventasEfectivo + cobranzasEfectivo + ingresos - egresos;
     const diferencia = montoRealNumerico - esperado;
     const observacionesCierre = observaciones?.trim();
-    const observacionesFinales = [sesion.observaciones?.trim(), observacionesCierre ? `Cierre: ${observacionesCierre}` : null]
+    const observacionesFinales = [
+      sesion.observaciones?.trim(),
+      observacionesCierre ? `Cierre: ${observacionesCierre}` : null,
+    ]
       .filter(Boolean)
       .join(" | ");
 
     const cerrada = await deps.prisma.sesionCaja.update({
       where: { id: sesion.id },
-        data: {
-          estado: "CERRADA",
-          fechaCierre: deps.nowAR(timezone.tz),
-          montoFinalEsperado: esperado,
-          montoFinalReal: montoRealNumerico,
-          diferencia,
+      data: {
+        estado: "CERRADA",
+        fechaCierre: deps.nowAR(timezone.tz),
+        montoFinalEsperado: esperado,
+        montoFinalReal: montoRealNumerico,
+        diferencia,
         observaciones: observacionesFinales || null,
       },
     });
@@ -307,6 +391,9 @@ export async function handlePutTurno(req: Request, deps: TurnoRouteDeps = defaul
     });
   } catch (error) {
     console.error("Error al cerrar la caja:", error);
-    return NextResponse.json({ error: "Error al cerrar la caja" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Error al cerrar la caja" },
+      { status: 500 },
+    );
   }
 }

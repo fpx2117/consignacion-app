@@ -30,7 +30,6 @@ export type MetodoPago = "EFECTIVO" | "TRANSFERENCIA" | "TARJETA" | "OTRO";
 export type EstadoGasto = "PENDIENTE" | "PAGADO";
 export type FrecuenciaGasto = "UNICO" | "SEMANAL" | "MENSUAL" | "ANUAL";
 
-
 export type EstadoSesionCaja = "ABIERTA" | "CERRADA";
 export type TipoMovimientoCaja = "INGRESO" | "EGRESO";
 
@@ -197,7 +196,8 @@ export type OnlineStoreButtonStyle = "rounded" | "pill" | "soft-square";
 export type OnlineStoreProductLayout = "grid" | "horizontal" | "compact";
 export type OnlineStoreAddButtonPosition = "floating" | "below";
 export type OnlineStoreCartDisplayMode = "bottom-sheet" | "modal" | "drawer";
-export type OnlineStoreDesktopLayout = "mobile-centered" | "wide-ecommerce" | "with-cart-sidebar";
+export type OnlineStoreDesktopLayout =
+  "mobile-centered" | "wide-ecommerce" | "with-cart-sidebar";
 
 export type OnlineStoreThemeSettings = {
   primaryColor: string;
@@ -598,11 +598,7 @@ export type CatalogCartItem = PublicCatalogProduct & {
 };
 
 export type PublicCatalogSortBy =
-  | "relevance"
-  | "price_asc"
-  | "price_desc"
-  | "name_asc"
-  | "name_desc";
+  "relevance" | "price_asc" | "price_desc" | "name_asc" | "name_desc";
 
 export type PublicCheckoutCustomerData = {
   nombre: string;
@@ -616,7 +612,8 @@ export type PublicCheckoutCustomerData = {
   altura?: string | null;
 };
 
-export type PublicCheckoutShippingMethod = "RETIRO_LOCAL" | "UBER_FLASH" | "ENCOMIENDA";
+export type PublicCheckoutShippingMethod =
+  "RETIRO_LOCAL" | "UBER_FLASH" | "ENCOMIENDA";
 
 export type PublicCheckoutShippingData = {
   metodoEnvio: PublicCheckoutShippingMethod | null;
@@ -799,7 +796,6 @@ export type Gasto = {
   user?: { id: ID; nombre: string };
 };
 
-
 /* =========================
     INPUTS (API PAYLOADS)
 ========================= */
@@ -834,7 +830,7 @@ export type CreateClienteInput = {
 };
 
 export type UpdateClienteInput = Partial<CreateClienteInput> & {
-  activo?: boolean
+  activo?: boolean;
 };
 
 export type CreateProductoInput = {
@@ -904,7 +900,7 @@ export type CreateLiquidacionInput = {
 
 export type CreatePagoInput = {
   monto: Money;
-  metodo: MetodoPago
+  metodo: MetodoPago;
 };
 
 /* =========================
@@ -930,9 +926,6 @@ export type CrearLiquidacionResponse = {
   totalVenta: Money;
   consignacionCerrada: boolean;
 };
-
-
-
 
 /* =========================
    DASHBOARD
@@ -970,15 +963,15 @@ export type DashboardKpis = {
     ventas: {
       cantidad: number;
       total: number;
-      soloVenta?: number;   // Ventas directas POS (tipo CASUAL)
-      soloConsig?: number;  // Liquidaciones de consignación (tipo LIQUIDACION)
+      soloVenta?: number; // Ventas directas POS (tipo CASUAL)
+      soloConsig?: number; // Liquidaciones de consignación (tipo LIQUIDACION)
       unitsVendidas?: { total: number; soloPos: number; soloConsig: number };
     };
     pagos: {
       cantidad: number;
       total: number;
-      soloVenta?: number;  // Pagos de ventas directas (tipo VENTA)
-      soloDeuda?: number;  // Cobros de deudas de consignación (tipo DEUDA)
+      soloVenta?: number; // Pagos de ventas directas (tipo VENTA)
+      soloDeuda?: number; // Cobros de deudas de consignación (tipo DEUDA)
     };
     ganancia: {
       total: number;
@@ -1006,7 +999,6 @@ export type DashboardKpis = {
 
   proximosVencimientos: Gasto[];
 };
-
 
 /** /api/dashboard/consignaciones */
 
@@ -1067,7 +1059,7 @@ export type DashboardTendenciaPoint = {
 
   ventasCount: number;
   ventasTotal: number;
-  ventasPosTotal: number;    // Solo ventas directas POS
+  ventasPosTotal: number; // Solo ventas directas POS
   ventasConsigTotal: number; // Solo liquidaciones consignación
 
   pagosCount: number;
@@ -1080,4 +1072,3 @@ export type DashboardTendencia = {
   to: string; // ISO
   series: DashboardTendenciaPoint[];
 };
-

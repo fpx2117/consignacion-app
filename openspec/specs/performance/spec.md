@@ -10,36 +10,36 @@
 
 ## Convenciones de lenguaje (RFC 2119)
 
-| Keyword | Significado |
-|---------|-------------|
-| **DEBE** / **DEBEN** | Requisito obligatorio. El incumplimiento invalida la implementación. |
-| **DEBERÁ** | Requisito obligatorio con énfasis en temporalidad futura. |
-| **NO DEBE** / **NO DEBEN** | Prohibición absoluta. |
-| **DEBERÍA** | Recomendación fuerte. Se puede omitir con justificación documentada. |
-| **PODRÁ** | Comportamiento opcional permitido. |
+| Keyword                    | Significado                                                          |
+| -------------------------- | -------------------------------------------------------------------- |
+| **DEBE** / **DEBEN**       | Requisito obligatorio. El incumplimiento invalida la implementación. |
+| **DEBERÁ**                 | Requisito obligatorio con énfasis en temporalidad futura.            |
+| **NO DEBE** / **NO DEBEN** | Prohibición absoluta.                                                |
+| **DEBERÍA**                | Recomendación fuerte. Se puede omitir con justificación documentada. |
+| **PODRÁ**                  | Comportamiento opcional permitido.                                   |
 
 ---
 
 ## Tabla de Requisitos
 
-| ID | Dominio | Tipo | Prioridad |
-|----|---------|------|-----------|
-| REQ-01 | Broadcast Channel | Funcional | Alta |
-| REQ-02 | Broadcast Channel | Funcional | Alta |
-| REQ-03 | WebSocket Provider | Funcional | Alta |
-| REQ-04 | WebSocket Provider | Funcional | Alta |
-| REQ-05 | WebSocket Provider | Funcional | Alta |
-| REQ-06 | Notificaciones | Funcional | Media |
-| REQ-07 | Notificaciones | Funcional | Media |
-| REQ-08 | Catálogo POS | Funcional | Alta |
-| REQ-09 | Catálogo POS | Funcional | Alta |
-| REQ-10 | Catálogo POS | Funcional | Alta |
-| REQ-11 | Bundle y Dependencias | No Funcional | Media |
-| REQ-12 | Bundle y Dependencias | No Funcional | Media |
-| REQ-13 | Bundle y Dependencias | No Funcional | Media |
-| PERF-01 | Performance General | No Funcional | Alta |
-| PERF-02 | Performance General | No Funcional | Media |
-| PERF-03 | Performance General | No Funcional | Media |
+| ID      | Dominio               | Tipo         | Prioridad |
+| ------- | --------------------- | ------------ | --------- |
+| REQ-01  | Broadcast Channel     | Funcional    | Alta      |
+| REQ-02  | Broadcast Channel     | Funcional    | Alta      |
+| REQ-03  | WebSocket Provider    | Funcional    | Alta      |
+| REQ-04  | WebSocket Provider    | Funcional    | Alta      |
+| REQ-05  | WebSocket Provider    | Funcional    | Alta      |
+| REQ-06  | Notificaciones        | Funcional    | Media     |
+| REQ-07  | Notificaciones        | Funcional    | Media     |
+| REQ-08  | Catálogo POS          | Funcional    | Alta      |
+| REQ-09  | Catálogo POS          | Funcional    | Alta      |
+| REQ-10  | Catálogo POS          | Funcional    | Alta      |
+| REQ-11  | Bundle y Dependencias | No Funcional | Media     |
+| REQ-12  | Bundle y Dependencias | No Funcional | Media     |
+| REQ-13  | Bundle y Dependencias | No Funcional | Media     |
+| PERF-01 | Performance General   | No Funcional | Alta      |
+| PERF-02 | Performance General   | No Funcional | Media     |
+| PERF-03 | Performance General   | No Funcional | Media     |
 
 ---
 
@@ -113,6 +113,7 @@ El WebSocket DEBE mantener la conexión activa durante la navegación entre ruta
 ### REQ-04: Reconexión condicionada a cambios de identidad
 
 El WebSocket DEBE reconectarse (teardown + new connection) únicamente cuando cambien alguno de los siguientes valores:
+
 - El identificador del usuario autenticado (ej. `user.id` o `session.userId`).
 - El identificador de la sucursal activa (ej. `sucursalId`).
 
@@ -212,6 +213,7 @@ Entonces NO DEBE dispararse un nuevo fetch al endpoint de notificaciones
 ## 4. Dominio: Catálogo POS
 
 **Archivos afectados:**
+
 - `src/app/api/productos/route.ts`
 - `src/app/pos/` (componente de lista de productos)
 
@@ -220,6 +222,7 @@ Entonces NO DEBE dispararse un nuevo fetch al endpoint de notificaciones
 ### REQ-08: API de productos con soporte de paginación
 
 La API `GET /api/productos` DEBE soportar paginación mediante los parámetros de query:
+
 - `limit` (entero positivo): número máximo de registros a retornar.
 - `offset` (entero no negativo): número de registros a saltar desde el inicio. **O alternativamente:**
 - `cursor` (string opaco): identificador del último registro de la página anterior (cursor-based pagination).
@@ -290,6 +293,7 @@ Entonces DEBE retornar HTTP 400 Bad Request
 ## 5. Dominio: Bundle y Dependencias
 
 **Archivos afectados:**
+
 - `src/app/dashboard/` (componentes con @dnd-kit)
 - `package.json`
 - `src/components/ui/sidebar-dock.tsx`
@@ -316,6 +320,7 @@ NO DEBEN existir paquetes declarados en `dependencies` o `devDependencies` de `p
 ### REQ-13: Sin console.log en producción (componentes de navegación)
 
 NO DEBEN existir llamadas a `console.log` en los siguientes archivos en el código que se ejecuta en producción:
+
 - `src/components/ui/sidebar-dock.tsx`
 - `src/lib/socket-provider.tsx` (o el archivo que contiene el WebSocket provider)
 
@@ -364,6 +369,7 @@ La navegación entre rutas client-side DEBE completarse sin delay perceptible.
 - Se DEBERÁ medir con Chrome DevTools Performance tab en una sesión de incógnito, sin extensiones.
 
 **Método de verificación:**
+
 - Abrir DevTools > Performance > Record.
 - Hacer click en un item del Sidebar.
 - Verificar que no hay Long Tasks (bloques rojos) en el flame chart asociados al evento de click.
@@ -389,15 +395,15 @@ La lista de productos en POS DEBE mostrar los primeros resultados en menos de **
 
 ## Resumen de Cobertura
 
-| Dominio | Requisitos | Escenarios |
-|---------|-----------|------------|
-| 1. Broadcast Channel | REQ-01, REQ-02 | 1.A, 1.B, 1.C |
-| 2. WebSocket Provider | REQ-03, REQ-04, REQ-05 | 2.A, 2.B, 2.C |
-| 3. Notificaciones | REQ-06, REQ-07 | 3.A, 3.B, 3.C |
-| 4. Catálogo POS | REQ-08, REQ-09, REQ-10 | 4.A, 4.B, 4.C, 4.D |
-| 5. Bundle y Dependencias | REQ-11, REQ-12, REQ-13 | 5.A, 5.B, 5.C |
-| 6. Performance General | PERF-01, PERF-02, PERF-03 | — (métricas medibles) |
-| **TOTAL** | **16 requisitos** | **16 escenarios** |
+| Dominio                  | Requisitos                | Escenarios            |
+| ------------------------ | ------------------------- | --------------------- |
+| 1. Broadcast Channel     | REQ-01, REQ-02            | 1.A, 1.B, 1.C         |
+| 2. WebSocket Provider    | REQ-03, REQ-04, REQ-05    | 2.A, 2.B, 2.C         |
+| 3. Notificaciones        | REQ-06, REQ-07            | 3.A, 3.B, 3.C         |
+| 4. Catálogo POS          | REQ-08, REQ-09, REQ-10    | 4.A, 4.B, 4.C, 4.D    |
+| 5. Bundle y Dependencias | REQ-11, REQ-12, REQ-13    | 5.A, 5.B, 5.C         |
+| 6. Performance General   | PERF-01, PERF-02, PERF-03 | — (métricas medibles) |
+| **TOTAL**                | **16 requisitos**         | **16 escenarios**     |
 
 ---
 

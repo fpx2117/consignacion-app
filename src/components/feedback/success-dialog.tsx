@@ -35,11 +35,12 @@ export function SuccessDialog({
   description = "La operación se ha completado correctamente.",
   confirmText = "Descargar PDF",
   cancelText = "Cerrar",
-  onWhatsApp
+  onWhatsApp,
 }: SuccessDialogProps) {
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
-      <AlertDialogContent className="
+      <AlertDialogContent
+        className="
         fixed left-[50%] top-[50%] z-[9999] 
         translate-x-[-50%] translate-y-[-50%] 
         w-[90%] sm:max-w-[425px] 
@@ -48,8 +49,8 @@ export function SuccessDialog({
         bg-background/95 dark:bg-background/95 
         shadow-2xl backdrop-blur-xl rounded-2xl sm:rounded-3xl 
         overflow-hidden duration-200
-      ">
-
+      "
+      >
         {/* Header con gradiente adaptativo */}
         <div className="bg-gradient-to-b from-[color:var(--status-success-strong)]/5 to-transparent p-8 pb-6 flex flex-col items-center">
           <div className="flex h-20 w-20 items-center justify-center rounded-full bg-[color:var(--status-success-strong)]/50 dark:bg-[color:var(--status-success-strong)]/10 ring-8 ring-[color:var(--status-success-strong)]/5 mb-6 animate-in zoom-in-50 duration-300">

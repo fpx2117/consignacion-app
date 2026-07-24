@@ -14,21 +14,21 @@ La estrategia se divide en dos fases que se pueden aplicar de forma independient
 
 **Fase 1 — Quick Wins** (≤ 30 min): cambios de una línea o triviales con riesgo de regresión mínimo. Entregan valor inmediatamente y no bloquean la Fase 2.
 
-| # | Fix | Riesgo | Esfuerzo |
-|---|-----|--------|----------|
-| FIX-01 | `useBroadcastChannel` — agregar `[]` | Bajo | 1 línea |
-| FIX-07 | Eliminar `console.log` en socket-provider | Bajo | ~10 líneas |
-| FIX-08 | Eliminar dependencia `cobe` (reemplazar globe.tsx) | Bajo | 1 comando |
-| FIX-06 | Singleton Prisma — corregir patrón dev | Bajo | 3 líneas |
+| #      | Fix                                                | Riesgo | Esfuerzo   |
+| ------ | -------------------------------------------------- | ------ | ---------- |
+| FIX-01 | `useBroadcastChannel` — agregar `[]`               | Bajo   | 1 línea    |
+| FIX-07 | Eliminar `console.log` en socket-provider          | Bajo   | ~10 líneas |
+| FIX-08 | Eliminar dependencia `cobe` (reemplazar globe.tsx) | Bajo   | 1 comando  |
+| FIX-06 | Singleton Prisma — corregir patrón dev             | Bajo   | 3 líneas   |
 
 **Fase 2 — Fixes Estructurales** (~4h): refactoring con lógica de estado y cambios en la API.
 
-| # | Fix | Riesgo | Esfuerzo |
-|---|-----|--------|----------|
-| FIX-02 | SocketProvider — desacoplar de pathname | Medio | ~40 líneas |
-| FIX-03 | `useNotifications` duplicado en panel | Bajo | ~5 líneas |
-| FIX-04 | Paginación en POS (`ventas/nueva`) | Medio | ~80 líneas |
-| FIX-05 | Lazy loading dnd-kit en dashboard | Bajo | ~20 líneas |
+| #      | Fix                                     | Riesgo | Esfuerzo   |
+| ------ | --------------------------------------- | ------ | ---------- |
+| FIX-02 | SocketProvider — desacoplar de pathname | Medio  | ~40 líneas |
+| FIX-03 | `useNotifications` duplicado en panel   | Bajo   | ~5 líneas  |
+| FIX-04 | Paginación en POS (`ventas/nueva`)      | Medio  | ~80 líneas |
+| FIX-05 | Lazy loading dnd-kit en dashboard       | Bajo   | ~20 líneas |
 
 ---
 
@@ -50,8 +50,7 @@ export function useBroadcastChannel(handlers: MessageHandler): void {
 
     const unsubscribe = subscribeAppMessages((message) => {
       const handler = handlers[message.type] as
-        | ((msg: BroadcastMessage) => void)
-        | undefined;
+        ((msg: BroadcastMessage) => void) | undefined;
       if (handler) {
         handler(message);
       }
@@ -80,8 +79,7 @@ export function useBroadcastChannel(handlers: MessageHandler): void {
 
     const unsubscribe = subscribeAppMessages((message) => {
       const handler = handlersRef.current[message.type] as
-        | ((msg: BroadcastMessage) => void)
-        | undefined;
+        ((msg: BroadcastMessage) => void) | undefined;
       if (handler) {
         handler(message);
       }
@@ -351,6 +349,7 @@ const notificationsState = useNotifications({ limit: 50 });
 ### FIX-04: Paginación en API de Productos (POS / Ventas)
 
 **Archivos afectados:**
+
 - `src/app/(system-guard)/(protected)/ventas/nueva/page.tsx` (consumidor principal)
 - `src/lib/apiService.ts` (ya tiene `getProductosPaginados`)
 - `src/app/api/productos/route.ts` (ya soporta paginación)
@@ -393,7 +392,9 @@ const fetchProductosPaginados = React.useCallback(
         limit: 50,
         search: search || undefined,
       });
-      const activos = (res.data ?? []).filter((p) => p.activo !== false) as ProductoConStock[];
+      const activos = (res.data ?? []).filter(
+        (p) => p.activo !== false,
+      ) as ProductoConStock[];
       setProductos(activos);
       setProductosTotalPages(res.totalPages ?? 1);
       setProductosPage(res.page ?? 1);
@@ -403,7 +404,7 @@ const fetchProductosPaginados = React.useCallback(
       setProductosLoading(false);
     }
   },
-  []
+  [],
 );
 
 // Al cambiar búsqueda, reiniciar a página 1
@@ -416,12 +417,15 @@ React.useEffect(() => {
 
 ```typescript
 // src/app/api/productos/route.ts — línea 54-55 (verificar / mejorar)
-const limit = Math.min(200, Math.max(1, parseInt(limitParam || "30", 10) || 30));
+const limit = Math.min(
+  200,
+  Math.max(1, parseInt(limitParam || "30", 10) || 30),
+);
 // Agregar validación explícita para HTTP 400 si limit > 200:
 if (limitParam && parseInt(limitParam, 10) > 200) {
   return NextResponse.json(
     { error: "El parámetro 'limit' no puede superar 200." },
-    { status: 400 }
+    { status: 400 },
   );
 }
 ```
@@ -600,7 +604,7 @@ console.error("Error marcando como leídas:", error);
 **Archivo:** `src/components/ui/globe.tsx` — usa `cobe` (línea 4):
 
 ```typescript
-import createGlobe, { COBEOptions } from "cobe"
+import createGlobe, { COBEOptions } from "cobe";
 ```
 
 **El componente `globe.tsx` existe pero no está en uso activo en el proyecto** (no aparece importado en ningún page o component de la aplicación según el análisis del código). La propuesta indica eliminarlo.
@@ -608,6 +612,7 @@ import createGlobe, { COBEOptions } from "cobe"
 **Opciones:**
 
 1. **Opción A (recomendada):** Eliminar `globe.tsx` y la dependencia `cobe`:
+
    ```bash
    npm uninstall cobe
    # Eliminar src/components/ui/globe.tsx
@@ -616,6 +621,7 @@ import createGlobe, { COBEOptions } from "cobe"
 2. **Opción B:** Si `globe.tsx` se necesitará en el futuro, reemplazar `cobe` por una alternativa CSS/SVG sin dependencias.
 
 **Comando:**
+
 ```bash
 npm uninstall cobe
 ```
@@ -626,18 +632,18 @@ npm uninstall cobe
 
 ## Sección 3: Tabla de Archivos Afectados
 
-| Archivo | Acción | Descripción del Cambio |
-|---------|--------|------------------------|
-| `src/hooks/useBroadcastChannel.ts` | Modificar | Agregar `useRef` para handlers + `[]` en useEffect |
-| `src/providers/socket-provider.tsx` | Modificar | Separar efecto de conexión del pathname; eliminar console.log |
-| `src/components/notifications-panel.tsx` | Modificar | Eliminar instancia interna de `useNotifications`; hacer prop requerido |
-| `src/app/(system-guard)/(protected)/ventas/nueva/page.tsx` | Modificar | Reemplazar `getProductos()` por `getProductosPaginados()` con estado de paginación |
-| `src/app/api/productos/route.ts` | Modificar | Agregar validación explícita HTTP 400 cuando `limit > 200` |
-| `src/app/(system-guard)/(protected)/dashboard/page.tsx` | Modificar | Reemplazar imports estáticos de @dnd-kit por `dynamic()` |
-| `src/app/(system-guard)/(protected)/dashboard/components/kpi-sortable-grid.tsx` | Crear | Nuevo componente que encapsula todo el código @dnd-kit extraído de page.tsx |
-| `src/lib/prisma.ts` | Modificar | Invertir condición: guardar singleton en `globalThis` en desarrollo (no en producción) |
-| `src/components/ui/globe.tsx` | Eliminar | Componente no utilizado que importa `cobe` |
-| `package.json` | Modificar | Eliminar dependencia `cobe` |
+| Archivo                                                                         | Acción    | Descripción del Cambio                                                                 |
+| ------------------------------------------------------------------------------- | --------- | -------------------------------------------------------------------------------------- |
+| `src/hooks/useBroadcastChannel.ts`                                              | Modificar | Agregar `useRef` para handlers + `[]` en useEffect                                     |
+| `src/providers/socket-provider.tsx`                                             | Modificar | Separar efecto de conexión del pathname; eliminar console.log                          |
+| `src/components/notifications-panel.tsx`                                        | Modificar | Eliminar instancia interna de `useNotifications`; hacer prop requerido                 |
+| `src/app/(system-guard)/(protected)/ventas/nueva/page.tsx`                      | Modificar | Reemplazar `getProductos()` por `getProductosPaginados()` con estado de paginación     |
+| `src/app/api/productos/route.ts`                                                | Modificar | Agregar validación explícita HTTP 400 cuando `limit > 200`                             |
+| `src/app/(system-guard)/(protected)/dashboard/page.tsx`                         | Modificar | Reemplazar imports estáticos de @dnd-kit por `dynamic()`                               |
+| `src/app/(system-guard)/(protected)/dashboard/components/kpi-sortable-grid.tsx` | Crear     | Nuevo componente que encapsula todo el código @dnd-kit extraído de page.tsx            |
+| `src/lib/prisma.ts`                                                             | Modificar | Invertir condición: guardar singleton en `globalThis` en desarrollo (no en producción) |
+| `src/components/ui/globe.tsx`                                                   | Eliminar  | Componente no utilizado que importa `cobe`                                             |
+| `package.json`                                                                  | Modificar | Eliminar dependencia `cobe`                                                            |
 
 ---
 

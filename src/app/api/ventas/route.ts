@@ -12,10 +12,16 @@ import { z } from "zod";
 
 import { sendNotification } from "@/lib/notificaciones/socket-trigger";
 import { obtenerConfiguracionGlobal } from "@/lib/config";
-import { evaluateStockAlert, processNotificationQueue } from "@/lib/notificaciones/stock-alerts";
+import {
+  evaluateStockAlert,
+  processNotificationQueue,
+} from "@/lib/notificaciones/stock-alerts";
 import { nowAR } from "@/lib/date-format/utils-date";
 import { resolveTimezoneForAuth } from "@/lib/timezone/get-configured-tz";
-import { buildSucursalWhere, isGlobalSucursalView } from "@/lib/security/sucursalScope";
+import {
+  buildSucursalWhere,
+  isGlobalSucursalView,
+} from "@/lib/security/sucursalScope";
 import { calcularDescuentoEfectivo } from "@/lib/storefront/descuento-utils";
 
 const MAX_VENTA_RETRIES = 3;
@@ -29,7 +35,7 @@ const createVentaSchema = z.object({
         productoId: z.number().int().positive(),
         units: z.number().int().positive(),
         descuento: z.number().nonnegative().optional(),
-      })
+      }),
     )
     .min(1),
 });
@@ -106,11 +112,20 @@ export async function POST(req: Request) {
   return handlePostVenta(req);
 }
 
-export async function handlePostVenta(req: Request, deps: VentasRouteDeps = defaultDeps) {
+export async function handlePostVenta(
+  req: Request,
+  deps: VentasRouteDeps = defaultDeps,
+) {
   const auth = await deps.requireAuth();
   if (!auth.ok) return auth.res;
   if (deps.isGlobalSucursalView(auth)) {
-    return NextResponse.json({ error: "Vista global en modo solo lectura. Selecciona una sucursal para registrar ventas." }, { status: 409 });
+    return NextResponse.json(
+      {
+        error:
+          "Vista global en modo solo lectura. Selecciona una sucursal para registrar ventas.",
+      },
+      { status: 409 },
+    );
   }
 
   const rawId = auth.user.sub;
@@ -119,7 +134,7 @@ export async function handlePostVenta(req: Request, deps: VentasRouteDeps = defa
   if (!rawId || isNaN(usuarioId)) {
     return NextResponse.json(
       { error: "Identificación de usuario fallida. Reingresa al sistema." },
-      { status: 401 }
+      { status: 401 },
     );
   }
 
@@ -130,7 +145,7 @@ export async function handlePostVenta(req: Request, deps: VentasRouteDeps = defa
     if (!parsed.success) {
       return NextResponse.json(
         { error: "Validación fallida", details: parsed.error.flatten() },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -155,27 +170,37 @@ export async function handlePostVenta(req: Request, deps: VentasRouteDeps = defa
     // Si el sistema exige caja Y no hay caja abierta, bloqueamos.
     if (usaCaja && !sesionActiva) {
       return NextResponse.json(
-        { error: "Operación bloqueada: Debes abrir un turno de caja para realizar ventas casuales." },
-        { status: 403 }
+        {
+          error:
+            "Operación bloqueada: Debes abrir un turno de caja para realizar ventas casuales.",
+        },
+        { status: 403 },
       );
     }
 
     let notificationsQueue: NotificationQueueItem[] = [];
 
     // Lógica de Cliente - Filtrado por sucursal
-      let finalClienteId = clienteId;
-      if (!finalClienteId) {
+    let finalClienteId = clienteId;
+    if (!finalClienteId) {
       const consumidor = await deps.prisma.cliente.findFirst({
-        where: { nombre: "Consumidor Final", sucursalId: auth.activeSucursalId },
-      });
-      finalClienteId = consumidor ? consumidor.id : (await deps.prisma.cliente.create({
-        data: {
+        where: {
           nombre: "Consumidor Final",
-          direccion: "Venta Mostrador",
-          activo: true,
-          sucursalId: auth.activeSucursalId
+          sucursalId: auth.activeSucursalId,
         },
-      })).id;
+      });
+      finalClienteId = consumidor
+        ? consumidor.id
+        : (
+            await deps.prisma.cliente.create({
+              data: {
+                nombre: "Consumidor Final",
+                direccion: "Venta Mostrador",
+                activo: true,
+                sucursalId: auth.activeSucursalId,
+              },
+            })
+          ).id;
     }
 
     // ✅ 3. TRANSACCIÓN DE VENTA ADAPTADA (con reintento ante conflictos)
@@ -183,167 +208,202 @@ export async function handlePostVenta(req: Request, deps: VentasRouteDeps = defa
 
     for (let attempt = 1; attempt <= MAX_VENTA_RETRIES; attempt++) {
       try {
-        result = await deps.prisma.$transaction(async (tx) => {
-          let totalVenta = 0;
-          const txNotificationsQueue: NotificationQueueItem[] = [];
-          const detallesData = [];
-          const sucursalId = auth.activeSucursalId;
+        result = await deps.prisma.$transaction(
+          async (tx) => {
+            let totalVenta = 0;
+            const txNotificationsQueue: NotificationQueueItem[] = [];
+            const detallesData = [];
+            const sucursalId = auth.activeSucursalId;
 
-          for (const item of items) {
-            const stockSucursalInfo = await tx.stockSucursal.findUnique({
-              where: { productoId_sucursalId: { productoId: item.productoId, sucursalId } },
-              include: { producto: true }
-            });
-
-            if (!stockSucursalInfo) {
-              throw new Error(`El producto #${item.productoId} no está asignado a esta sucursal.`);
-            }
-
-            const affectedStockSucursal = await tx.stockSucursal.updateMany({
-              where: {
-                productoId: item.productoId,
-                sucursalId,
-                stockDisponibleUnits: { gte: item.units },
-              },
-              data: { stockDisponibleUnits: { decrement: item.units } },
-            });
-
-            if (affectedStockSucursal.count === 0) {
-              throw new Error(`Stock insuficiente para "${stockSucursalInfo.producto.nombre}".`);
-            }
-
-            const stockSucursalDespues = await tx.stockSucursal.findUnique({
-              where: { productoId_sucursalId: { productoId: item.productoId, sucursalId } },
-              select: { stockDisponibleUnits: true }
-            });
-
-            if (!stockSucursalDespues) {
-              throw new Error(`No se pudo confirmar stock para el producto #${item.productoId}.`);
-            }
-
-            // Sincronizar el campo legacy Producto.stockDisponibleUnits sumando todos los StockSucursal
-            const allStocksSucursal = await tx.stockSucursal.findMany({
-              where: { productoId: item.productoId },
-              select: { stockDisponibleUnits: true },
-            });
-            const nuevoStockGlobal = allStocksSucursal.reduce(
-              (acc, s) => acc + (s.stockDisponibleUnits ?? 0),
-              0
-            );
-
-            const productoDespues = await tx.producto.update({
-              where: { id: item.productoId },
-              data: { stockDisponibleUnits: nuevoStockGlobal },
-            });
-
-            if (!productoDespues) {
-              throw new Error(`Producto #${item.productoId} no encontrado.`);
-            }
-
-            const stockPosterior = stockSucursalDespues.stockDisponibleUnits;
-            const stockPrevio = stockPosterior + item.units;
-
-            await tx.movimientoStock.create({
-              data: {
-                productoId: item.productoId,
-                sucursalId,
-                tipo: TipoMovimientoStock.SALIDA,
-                motivo: MotivoMovimientoStock.VENTA,
-                cantidad: item.units,
-                stockPrevio,
-                stockPosterior,
-                observaciones: sesionActiva
-                  ? `Venta POS - Sesión #${sesionActiva.id}`
-                  : `Venta POS - Rápida (Sin Caja)`
-              }
-            });
-
-            const alerta = deps.evaluateStockAlert(productoDespues, configGlobal);
-            if (alerta) txNotificationsQueue.push(alerta);
-
-            const precioVenta = Number(stockSucursalInfo.precioVentaOverride ?? stockSucursalInfo.producto.precioVenta);
-
-            // Si no viene descuento manual del POS, aplicar el descuento de catálogo del producto
-            let descuento = Number(item.descuento || 0);
-            if (descuento === 0) {
-              const prod = stockSucursalInfo.producto;
-              const descuentoAuto = calcularDescuentoEfectivo({
-                descuentoActivo: prod.descuentoActivo,
-                tipoDescuento: prod.tipoDescuento,
-                descuentoPorcentaje: prod.descuentoPorcentaje ? Number(prod.descuentoPorcentaje) : null,
-                descuentoMonto: prod.descuentoMonto ? Number(prod.descuentoMonto) : null,
-                descuentoDesde: prod.descuentoDesde,
-                descuentoHasta: prod.descuentoHasta,
-                precioVenta,
+            for (const item of items) {
+              const stockSucursalInfo = await tx.stockSucursal.findUnique({
+                where: {
+                  productoId_sucursalId: {
+                    productoId: item.productoId,
+                    sucursalId,
+                  },
+                },
+                include: { producto: true },
               });
-              if (descuentoAuto) {
-                descuento = descuentoAuto.montoDescuento * item.units;
+
+              if (!stockSucursalInfo) {
+                throw new Error(
+                  `El producto #${item.productoId} no está asignado a esta sucursal.`,
+                );
               }
+
+              const affectedStockSucursal = await tx.stockSucursal.updateMany({
+                where: {
+                  productoId: item.productoId,
+                  sucursalId,
+                  stockDisponibleUnits: { gte: item.units },
+                },
+                data: { stockDisponibleUnits: { decrement: item.units } },
+              });
+
+              if (affectedStockSucursal.count === 0) {
+                throw new Error(
+                  `Stock insuficiente para "${stockSucursalInfo.producto.nombre}".`,
+                );
+              }
+
+              const stockSucursalDespues = await tx.stockSucursal.findUnique({
+                where: {
+                  productoId_sucursalId: {
+                    productoId: item.productoId,
+                    sucursalId,
+                  },
+                },
+                select: { stockDisponibleUnits: true },
+              });
+
+              if (!stockSucursalDespues) {
+                throw new Error(
+                  `No se pudo confirmar stock para el producto #${item.productoId}.`,
+                );
+              }
+
+              // Sincronizar el campo legacy Producto.stockDisponibleUnits sumando todos los StockSucursal
+              const allStocksSucursal = await tx.stockSucursal.findMany({
+                where: { productoId: item.productoId },
+                select: { stockDisponibleUnits: true },
+              });
+              const nuevoStockGlobal = allStocksSucursal.reduce(
+                (acc, s) => acc + (s.stockDisponibleUnits ?? 0),
+                0,
+              );
+
+              const productoDespues = await tx.producto.update({
+                where: { id: item.productoId },
+                data: { stockDisponibleUnits: nuevoStockGlobal },
+              });
+
+              if (!productoDespues) {
+                throw new Error(`Producto #${item.productoId} no encontrado.`);
+              }
+
+              const stockPosterior = stockSucursalDespues.stockDisponibleUnits;
+              const stockPrevio = stockPosterior + item.units;
+
+              await tx.movimientoStock.create({
+                data: {
+                  productoId: item.productoId,
+                  sucursalId,
+                  tipo: TipoMovimientoStock.SALIDA,
+                  motivo: MotivoMovimientoStock.VENTA,
+                  cantidad: item.units,
+                  stockPrevio,
+                  stockPosterior,
+                  observaciones: sesionActiva
+                    ? `Venta POS - Sesión #${sesionActiva.id}`
+                    : `Venta POS - Rápida (Sin Caja)`,
+                },
+              });
+
+              const alerta = deps.evaluateStockAlert(
+                productoDespues,
+                configGlobal,
+              );
+              if (alerta) txNotificationsQueue.push(alerta);
+
+              const precioVenta = Number(
+                stockSucursalInfo.precioVentaOverride ??
+                  stockSucursalInfo.producto.precioVenta,
+              );
+
+              // Si no viene descuento manual del POS, aplicar el descuento de catálogo del producto
+              let descuento = Number(item.descuento || 0);
+              if (descuento === 0) {
+                const prod = stockSucursalInfo.producto;
+                const descuentoAuto = calcularDescuentoEfectivo({
+                  descuentoActivo: prod.descuentoActivo,
+                  tipoDescuento: prod.tipoDescuento,
+                  descuentoPorcentaje: prod.descuentoPorcentaje
+                    ? Number(prod.descuentoPorcentaje)
+                    : null,
+                  descuentoMonto: prod.descuentoMonto
+                    ? Number(prod.descuentoMonto)
+                    : null,
+                  descuentoDesde: prod.descuentoDesde,
+                  descuentoHasta: prod.descuentoHasta,
+                  precioVenta,
+                });
+                if (descuentoAuto) {
+                  descuento = descuentoAuto.montoDescuento * item.units;
+                }
+              }
+
+              const subtotal = precioVenta * item.units - descuento;
+              totalVenta += subtotal;
+
+              detallesData.push({
+                productoId: item.productoId,
+                units: item.units,
+                precioUnitario: precioVenta,
+                descuento,
+                subtotal,
+              });
             }
 
-            const subtotal = (precioVenta * item.units) - descuento;
-            totalVenta += subtotal;
+            await tx.$executeRaw`SELECT pg_advisory_xact_lock(${BigInt(1000000 + auth.activeSucursalId)})`;
 
-            detallesData.push({
-              productoId: item.productoId,
-              units: item.units,
-              precioUnitario: precioVenta,
-              descuento,
-              subtotal,
+            const lastVenta = await tx.venta.findFirst({
+              where: { sucursalId: auth.activeSucursalId },
+              orderBy: { numeroVenta: "desc" },
+              select: { numeroVenta: true },
             });
-          }
+            const nextNumeroVenta = (lastVenta?.numeroVenta || 0) + 1;
 
-          await tx.$executeRaw`SELECT pg_advisory_xact_lock(${BigInt(1000000 + auth.activeSucursalId)})`;
+            const descGlobalFinal = Number(descuentoGlobal) || 0;
+            let montoInteres = 0;
+            const porcentajeInteres =
+              Number(configGlobal.porcentajeInteresTarjeta) || 0;
 
-          const lastVenta = await tx.venta.findFirst({
-            where: { sucursalId: auth.activeSucursalId },
-            orderBy: { numeroVenta: "desc" },
-            select: { numeroVenta: true },
-          });
-          const nextNumeroVenta = (lastVenta?.numeroVenta || 0) + 1;
+            if (metodoPago === "TARJETA" && porcentajeInteres > 0) {
+              montoInteres =
+                (totalVenta - descGlobalFinal) * (porcentajeInteres / 100);
+            }
 
-          const descGlobalFinal = Number(descuentoGlobal) || 0;
-          let montoInteres = 0;
-          const porcentajeInteres = Number(configGlobal.porcentajeInteresTarjeta) || 0;
+            const totalFinal = totalVenta - descGlobalFinal + montoInteres;
 
-          if (metodoPago === "TARJETA" && porcentajeInteres > 0) {
-            montoInteres = (totalVenta - descGlobalFinal) * (porcentajeInteres / 100);
-          }
-
-          const totalFinal = totalVenta - descGlobalFinal + montoInteres;
-
-          const nuevaVenta = await tx.venta.create({
-            data: {
-              tipo: TipoVenta.CASUAL,
-              clienteId: finalClienteId,
-              sucursalId: auth.activeSucursalId,
-              numeroVenta: nextNumeroVenta,
-              metodoPago: metodoPago ?? MetodoPago.EFECTIVO,
-              sesionCajaId: sesionActiva?.id || null,
+            const nuevaVenta = await tx.venta.create({
+              data: {
+                tipo: TipoVenta.CASUAL,
+                clienteId: finalClienteId,
+                sucursalId: auth.activeSucursalId,
+                numeroVenta: nextNumeroVenta,
+                metodoPago: metodoPago ?? MetodoPago.EFECTIVO,
+                sesionCajaId: sesionActiva?.id || null,
                 fecha: deps.nowAR(timezone.tz),
-              total: totalFinal,
-              descuentoGlobal: descGlobalFinal,
-              detalles: { create: detallesData },
-            },
-            include: { detalles: true, cliente: true },
-          });
+                total: totalFinal,
+                descuentoGlobal: descGlobalFinal,
+                detalles: { create: detallesData },
+              },
+              include: { detalles: true, cliente: true },
+            });
 
-          const nuevoPago = await tx.pago.create({
-            data: {
-              clienteId: finalClienteId,
-              sucursalId: auth.activeSucursalId,
-              tipo: "VENTA",
-              sesionCajaId: sesionActiva?.id || null,
+            const nuevoPago = await tx.pago.create({
+              data: {
+                clienteId: finalClienteId,
+                sucursalId: auth.activeSucursalId,
+                tipo: "VENTA",
+                sesionCajaId: sesionActiva?.id || null,
                 fecha: deps.nowAR(timezone.tz),
-              monto: totalFinal,
-              metodo: metodoPago ?? MetodoPago.EFECTIVO,
-            },
-          });
+                monto: totalFinal,
+                metodo: metodoPago ?? MetodoPago.EFECTIVO,
+              },
+            });
 
-          return { venta: nuevaVenta, pago: nuevoPago, notificationsQueue: txNotificationsQueue };
-        }, {
-          isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
-        });
+            return {
+              venta: nuevaVenta,
+              pago: nuevoPago,
+              notificationsQueue: txNotificationsQueue,
+            };
+          },
+          {
+            isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+          },
+        );
 
         notificationsQueue = result.notificationsQueue;
         break;
@@ -359,7 +419,10 @@ export async function handlePostVenta(req: Request, deps: VentasRouteDeps = defa
     }
 
     // Post-Procesamiento
-    await deps.processNotificationQueue(notificationsQueue, auth.activeSucursalId);
+    await deps.processNotificationQueue(
+      notificationsQueue,
+      auth.activeSucursalId,
+    );
 
     // Mensaje de notificación adaptado (Solo si la configuración lo permite)
     if (configGlobal.notificarVentas !== false) {
@@ -367,32 +430,35 @@ export async function handlePostVenta(req: Request, deps: VentasRouteDeps = defa
       const clientName = result.venta.cliente?.nombre || "Consumidor Final";
       const clientId = result.venta.clienteId;
 
-      const dbNotif = await deps.prisma.notification.create({
-        data: {
-          type: "NEW_ORDER",
-          title: "Venta Exitosa",
-          description: `Venta #${result.venta.id} para [${clientId}] ${clientName} por $${result.venta.total} ARS`,
-          fingerprint: `SALE_${result.venta.id}`,
-          sucursalId: auth.activeSucursalId,
-          read: false,
-        }
-      }).catch(() => null);
+      const dbNotif = await deps.prisma.notification
+        .create({
+          data: {
+            type: "NEW_ORDER",
+            title: "Venta Exitosa",
+            description: `Venta #${result.venta.id} para [${clientId}] ${clientName} por $${result.venta.total} ARS`,
+            fingerprint: `SALE_${result.venta.id}`,
+            sucursalId: auth.activeSucursalId,
+            read: false,
+          },
+        })
+        .catch(() => null);
 
       // 2. Emisión en tiempo real (Socket)
-      deps.sendNotification({
-        id: dbNotif?.id, // Pasamos el ID real para que useNotifications lo indexe bien
-        type: "NEW_ORDER",
-        title: "Venta Exitosa",
-        message: `Venta #${result.venta.id} por $${result.venta.total}`,
-        data: {
-          ventaId: result.venta.id,
-          notificationId: dbNotif?.id
-        }
-      }).catch(() => null);
+      deps
+        .sendNotification({
+          id: dbNotif?.id, // Pasamos el ID real para que useNotifications lo indexe bien
+          type: "NEW_ORDER",
+          title: "Venta Exitosa",
+          message: `Venta #${result.venta.id} por $${result.venta.total}`,
+          data: {
+            ventaId: result.venta.id,
+            notificationId: dbNotif?.id,
+          },
+        })
+        .catch(() => null);
     }
 
     return NextResponse.json({ data: result.venta, pago: result.pago });
-
   } catch (error) {
     console.error("Error POS:", error);
     const msg = getErrorMessage(error);
@@ -405,7 +471,7 @@ export async function handlePostVenta(req: Request, deps: VentasRouteDeps = defa
     }
     return NextResponse.json(
       { error: "Error al procesar la venta" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

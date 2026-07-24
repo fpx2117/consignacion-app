@@ -23,7 +23,9 @@ React.useEffect(() => {
     // Pequeño delay: Radix evalúa "interacción afuera" en el mismo tick en que
     // la página recupera el foco: hay que seguir bloqueando el cierre un
     // instante más allá de este evento, no exactamente en él.
-    window.setTimeout(() => { selectorArchivoAbiertoRef.current = false; }, 300);
+    window.setTimeout(() => {
+      selectorArchivoAbiertoRef.current = false;
+    }, 300);
   }
   window.addEventListener("focus", onWindowFocus);
   return () => window.removeEventListener("focus", onWindowFocus);
@@ -37,8 +39,13 @@ React.useEffect(() => {
   ref={fileInputRef}
   type="file"
   accept={ACCEPT_FACTURA}
-  onChange={(e) => { selectorArchivoAbiertoRef.current = false; handleFileInput(e); }}
-  onCancel={() => { selectorArchivoAbiertoRef.current = false; }}
+  onChange={(e) => {
+    selectorArchivoAbiertoRef.current = false;
+    handleFileInput(e);
+  }}
+  onCancel={() => {
+    selectorArchivoAbiertoRef.current = false;
+  }}
   disabled={trabajando}
   className="hidden"
 />

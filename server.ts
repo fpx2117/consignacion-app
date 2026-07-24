@@ -13,7 +13,8 @@ const dev = process.env.NODE_ENV !== "production";
 const port = Number(process.env.PORT) || 3000;
 
 // Secret para autenticar dispatch interno de notificaciones
-const SOCKET_DISPATCH_SECRET = process.env.SOCKET_DISPATCH_SECRET || process.env.CRON_SECRET;
+const SOCKET_DISPATCH_SECRET =
+  process.env.SOCKET_DISPATCH_SECRET || process.env.CRON_SECRET;
 
 // JWT secret para autenticar conexiones Socket.IO
 const JWT_SECRET_RAW = process.env.JWT_SECRET;
@@ -77,7 +78,10 @@ app.prepare().then(() => {
       if (pathname === "/api/socket/dispatch" && req.method === "POST") {
         // Verificar autenticación con shared secret
         const authHeader = req.headers["authorization"];
-        if (!SOCKET_DISPATCH_SECRET || authHeader !== `Bearer ${SOCKET_DISPATCH_SECRET}`) {
+        if (
+          !SOCKET_DISPATCH_SECRET ||
+          authHeader !== `Bearer ${SOCKET_DISPATCH_SECRET}`
+        ) {
           res.statusCode = 401;
           res.setHeader("Content-Type", "application/json");
           res.end(JSON.stringify({ error: "No autorizado" }));
@@ -97,14 +101,21 @@ app.prepare().then(() => {
           const { notification } = json;
 
           if (io && notification) {
-            console.log("⚡ [Server] Despachando notificación:", notification.type, notification.title);
+            console.log(
+              "⚡ [Server] Despachando notificación:",
+              notification.type,
+              notification.title,
+            );
             io.emit("new-notification", notification);
 
             res.statusCode = 200;
             res.setHeader("Content-Type", "application/json");
             res.end(JSON.stringify({ success: true, emitted: true }));
           } else {
-            console.warn("⚠️ [Server] Fallo en dispatch: io o notification ausente", { hasIo: !!io, hasNotif: !!notification });
+            console.warn(
+              "⚠️ [Server] Fallo en dispatch: io o notification ausente",
+              { hasIo: !!io, hasNotif: !!notification },
+            );
             throw new Error("IO no inicializado o faltan datos");
           }
         } catch (e: unknown) {
@@ -118,7 +129,6 @@ app.prepare().then(() => {
 
       // 4. Next.js maneja el resto de rutas
       await handle(req, res, parsedUrl);
-
     } catch (err) {
       console.error("❌ Error crítico en server:", err);
       res.statusCode = 500;
@@ -127,9 +137,12 @@ app.prepare().then(() => {
   });
 
   // 5. Configurar CORS de Socket.IO — no usar wildcard
-  const corsOrigin = process.env.NEXT_PUBLIC_BASE_URL || process.env.NEXT_PUBLIC_APP_URL;
+  const corsOrigin =
+    process.env.NEXT_PUBLIC_BASE_URL || process.env.NEXT_PUBLIC_APP_URL;
   if (!corsOrigin && !dev) {
-    console.error("⚠️ NEXT_PUBLIC_BASE_URL no está configurado. CORS de Socket.IO usará origen restrictivo.");
+    console.error(
+      "⚠️ NEXT_PUBLIC_BASE_URL no está configurado. CORS de Socket.IO usará origen restrictivo.",
+    );
   }
 
   const io = new Server(httpServer, {
@@ -138,7 +151,7 @@ app.prepare().then(() => {
     cors: {
       origin: corsOrigin || (dev ? "http://localhost:3000" : false),
       methods: ["GET", "POST"],
-      credentials: true
+      credentials: true,
     },
     transports: ["polling", "websocket"],
   });

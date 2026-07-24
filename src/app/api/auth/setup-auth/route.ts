@@ -7,23 +7,35 @@ export async function POST(req: Request) {
   const userCount = await prisma.usuario.count();
   if (userCount > 0) {
     return NextResponse.json(
-      { error: "El sistema ya fue inicializado. No se pueden crear usuarios por esta vía." },
-      { status: 403 }
+      {
+        error:
+          "El sistema ya fue inicializado. No se pueden crear usuarios por esta vía.",
+      },
+      { status: 403 },
     );
   }
 
   const body = await req.json().catch(() => null);
 
-  const email = String(body?.email || "").toLowerCase().trim();
+  const email = String(body?.email || "")
+    .toLowerCase()
+    .trim();
   const password = String(body?.password || "");
   const nombre = String(body?.nombre || "Admin");
 
   if (!email || !password) {
-    return NextResponse.json({ error: "Email y password requeridos" }, { status: 400 });
+    return NextResponse.json(
+      { error: "Email y password requeridos" },
+      { status: 400 },
+    );
   }
 
   const exists = await prisma.usuario.findUnique({ where: { email } });
-  if (exists) return NextResponse.json({ error: "Ya existe un usuario con ese email" }, { status: 409 });
+  if (exists)
+    return NextResponse.json(
+      { error: "Ya existe un usuario con ese email" },
+      { status: 409 },
+    );
 
   const hash = await bcrypt.hash(password, 10);
 

@@ -1,34 +1,49 @@
 import { reportThemeCss } from "@/lib/reports/report-theme";
 import { getReportHeadAssets } from "@/lib/reports/tailwind-inline";
-import { brandInitials, escapeAttr, escapeHtml, formatDateAR, formatMoneyARS, resolveReportTimezone } from "@/lib/reports/template-helpers";
+import {
+  brandInitials,
+  escapeAttr,
+  escapeHtml,
+  formatDateAR,
+  formatMoneyARS,
+  resolveReportTimezone,
+} from "@/lib/reports/template-helpers";
 import type { BrandingDTO } from "@/lib/reports/types";
 import { generateBarcodeHtml } from "@/lib/reports/barcode-helper";
 
 export interface GastoReportDTO {
-    id: number;
-    fecha: Date | string;
-    fechaVencimiento?: Date | string | null;
-    monto: number;
-    motivo: string;
-    estado: string;
-    categoria: string;
-    esRecurrente: boolean;
-    frecuencia: string;
-    zonaHoraria: string;
+  id: number;
+  fecha: Date | string;
+  fechaVencimiento?: Date | string | null;
+  monto: number;
+  motivo: string;
+  estado: string;
+  categoria: string;
+  esRecurrente: boolean;
+  frecuencia: string;
+  zonaHoraria: string;
 }
 
-export async function buildGastoHtml(data: GastoReportDTO, branding: BrandingDTO) {
-    const tz = resolveReportTimezone(data.zonaHoraria);
-    const colorPrincipal = "bg-rose-600";
-    const colorBorde = "border-rose-900";
-    const brandName = branding.businessName || "Consignación";
-    const brandBadge = brandInitials(brandName);
-    const footerText = branding.footerText ? escapeHtml(branding.footerText) : "";
-    const metaLine = [branding.address, branding.phone].filter((v) => typeof v === "string" && v.trim().length > 0);
+export async function buildGastoHtml(
+  data: GastoReportDTO,
+  branding: BrandingDTO,
+) {
+  const tz = resolveReportTimezone(data.zonaHoraria);
+  const colorPrincipal = "bg-rose-600";
+  const colorBorde = "border-rose-900";
+  const brandName = branding.businessName || "Consignación";
+  const brandBadge = brandInitials(brandName);
+  const footerText = branding.footerText ? escapeHtml(branding.footerText) : "";
+  const metaLine = [branding.address, branding.phone].filter(
+    (v) => typeof v === "string" && v.trim().length > 0,
+  );
 
-    const barcodeHtml = await generateBarcodeHtml(String(data.id), { height: 8, label: `GS-${data.id}` });
+  const barcodeHtml = await generateBarcodeHtml(String(data.id), {
+    height: 8,
+    label: `GS-${data.id}`,
+  });
 
-    return `
+  return `
     <!DOCTYPE html>
     <html>
       <head>
@@ -44,10 +59,11 @@ export async function buildGastoHtml(data: GastoReportDTO, branding: BrandingDTO
         
         <div class="flex justify-between items-start border-b-2 border-slate-100 pb-8 mb-8">
           <div class="flex items-center gap-4">
-            ${branding.logoBase64
-            ? `<img src="${escapeAttr(branding.logoBase64)}" class="w-14 h-14 rounded-2xl object-contain bg-white border border-slate-100 shadow-lg" />`
-            : `<div class="w-14 h-14 bg-slate-900 text-white flex items-center justify-center rounded-2xl font-black text-2xl shadow-lg">${escapeHtml(brandBadge)}</div>`
-        }
+            ${
+              branding.logoBase64
+                ? `<img src="${escapeAttr(branding.logoBase64)}" class="w-14 h-14 rounded-2xl object-contain bg-white border border-slate-100 shadow-lg" />`
+                : `<div class="w-14 h-14 bg-slate-900 text-white flex items-center justify-center rounded-2xl font-black text-2xl shadow-lg">${escapeHtml(brandBadge)}</div>`
+            }
             <div>
               <h1 class="text-2xl font-black tracking-tight text-slate-900">${escapeHtml(brandName)}</h1>
               <p class="text-xs font-bold text-slate-400 uppercase tracking-[0.2em]">Comprobante de Gasto</p>
@@ -78,12 +94,16 @@ export async function buildGastoHtml(data: GastoReportDTO, branding: BrandingDTO
                          <h4 class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Fecha Registro</h4>
                           <span class="text-xs font-bold text-slate-600">${formatDateAR(data.fecha, true, tz)}</span>
                       </div>
-                      ${data.fechaVencimiento ? `
+                      ${
+                        data.fechaVencimiento
+                          ? `
                       <div>
                          <h4 class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Vencimiento</h4>
                           <span class="text-xs font-bold text-orange-600">${formatDateAR(data.fechaVencimiento, true, tz)}</span>
                       </div>
-                      ` : ""}
+                      `
+                          : ""
+                      }
                    </div>
                 </div>
 
@@ -101,7 +121,9 @@ export async function buildGastoHtml(data: GastoReportDTO, branding: BrandingDTO
           </div>
         </div>
 
-        ${data.esRecurrente ? `
+        ${
+          data.esRecurrente
+            ? `
         <div class="bg-amber-50 border border-amber-100 rounded-3xl p-6 mb-10 flex items-center justify-between">
            <div class="flex items-center gap-4">
               <div class="w-10 h-10 bg-amber-200 rounded-xl flex items-center justify-center">
@@ -113,18 +135,24 @@ export async function buildGastoHtml(data: GastoReportDTO, branding: BrandingDTO
               </div>
            </div>
         </div>
-        ` : ""}
+        `
+            : ""
+        }
 
-        ${barcodeHtml ? `
+        ${
+          barcodeHtml
+            ? `
         <div style="text-align:center; margin:16px 0 8px; padding:12px 0; border-top:1px solid #f1f5f9; border-bottom:1px solid #f1f5f9;">
           ${barcodeHtml}
         </div>
-        ` : ""}
+        `
+            : ""
+        }
 
         <div class="mt-auto border-t border-slate-100 pt-6">
           <div class="flex justify-between items-end">
             <div>
-              <p class="text-xs font-bold text-slate-400">Comprobante generado por ${escapeHtml(branding.footerText ?? branding.businessName ?? 'Sistema POS')}</p>
+              <p class="text-xs font-bold text-slate-400">Comprobante generado por ${escapeHtml(branding.footerText ?? branding.businessName ?? "Sistema POS")}</p>
               ${footerText ? `<p class="text-[10px] font-semibold text-slate-400 mt-1">${footerText}</p>` : ``}
             </div>
             <div class="text-[9px] font-bold text-slate-300 uppercase tracking-widest">

@@ -37,37 +37,37 @@ Transformar el actual OCR de facturas — que hoy es un pipeline lineal frágil 
 
 Se adoptará un enfoque en 4 capas:
 
-| Capa | Tecnología | Propósito |
-|------|-----------|-----------|
-| **Extracción** | `parse-factura-v2.ts` + heurística mejorada | Extraer productos + proveedor del texto OCR |
-| **Matching** | `pg_trgm` (primario) + Dice (fallback) + cache de equivalencias | Encontrar el producto correcto en el catálogo |
-| **Aprendizaje** | Modelo `EquivalenciaOcr` + actualización post-confirmación | El sistema mejora con cada uso |
-| **Presentación** | UI mejorada en `OcrFacturaDialog` | El usuario ve confianza, alternativas, y corrige fácilmente |
+| Capa             | Tecnología                                                      | Propósito                                                   |
+| ---------------- | --------------------------------------------------------------- | ----------------------------------------------------------- |
+| **Extracción**   | `parse-factura-v2.ts` + heurística mejorada                     | Extraer productos + proveedor del texto OCR                 |
+| **Matching**     | `pg_trgm` (primario) + Dice (fallback) + cache de equivalencias | Encontrar el producto correcto en el catálogo               |
+| **Aprendizaje**  | Modelo `EquivalenciaOcr` + actualización post-confirmación      | El sistema mejora con cada uso                              |
+| **Presentación** | UI mejorada en `OcrFacturaDialog`                               | El usuario ve confianza, alternativas, y corrige fácilmente |
 
 ## Áreas Afectadas
 
-| Área | Impacto | Descripción |
-|------|---------|-------------|
-| `prisma/schema.prisma` | Modificado | Nuevo modelo `EquivalenciaOcr` + migración |
-| `src/lib/ocr/match-producto.ts` | Modificado | Nueva función `matchProductoV2` con pg_trgm + equivalencias |
-| `src/lib/ocr/parse-factura.ts` | Modificado | Nueva versión `parseFacturaTextoV2` que extrae proveedor |
-| `src/lib/ocr/ocr-engine.ts` | Sin cambios | No se toca |
-| `src/lib/ocr/tesseract-service.ts` | Sin cambios | No se toca |
-| `src/lib/ocr/match-producto.ts` | Creado | `match-producto-v2.ts` lógica principal |
-| `src/app/api/productos/ocr-factura/analizar/route.ts` | Modificado | Devolver alternativas, proveedor, equivalencias |
-| `src/app/api/productos/ocr-factura/confirmar/route.ts` | Modificado | Guardar equivalencias post-confirmación |
-| `src/app/(system-guard)/(protected)/productos/components/ocr-factura-dialog.tsx` | Modificado | UI con confianza visual, alternativas, indicador de aprendizaje |
-| `src/lib/apiService.ts` | Modificado | Nuevos tipos + métodos |
-| `src/lib/productos/queries.ts` | Creado (opcional) | Queries de matching centralizadas |
+| Área                                                                             | Impacto           | Descripción                                                     |
+| -------------------------------------------------------------------------------- | ----------------- | --------------------------------------------------------------- |
+| `prisma/schema.prisma`                                                           | Modificado        | Nuevo modelo `EquivalenciaOcr` + migración                      |
+| `src/lib/ocr/match-producto.ts`                                                  | Modificado        | Nueva función `matchProductoV2` con pg_trgm + equivalencias     |
+| `src/lib/ocr/parse-factura.ts`                                                   | Modificado        | Nueva versión `parseFacturaTextoV2` que extrae proveedor        |
+| `src/lib/ocr/ocr-engine.ts`                                                      | Sin cambios       | No se toca                                                      |
+| `src/lib/ocr/tesseract-service.ts`                                               | Sin cambios       | No se toca                                                      |
+| `src/lib/ocr/match-producto.ts`                                                  | Creado            | `match-producto-v2.ts` lógica principal                         |
+| `src/app/api/productos/ocr-factura/analizar/route.ts`                            | Modificado        | Devolver alternativas, proveedor, equivalencias                 |
+| `src/app/api/productos/ocr-factura/confirmar/route.ts`                           | Modificado        | Guardar equivalencias post-confirmación                         |
+| `src/app/(system-guard)/(protected)/productos/components/ocr-factura-dialog.tsx` | Modificado        | UI con confianza visual, alternativas, indicador de aprendizaje |
+| `src/lib/apiService.ts`                                                          | Modificado        | Nuevos tipos + métodos                                          |
+| `src/lib/productos/queries.ts`                                                   | Creado (opcional) | Queries de matching centralizadas                               |
 
 ## Riesgos
 
-| Riesgo | Probabilidad | Mitigación |
-|--------|--------------|------------|
-| `pg_trgm` no disponible en Railway/PostgreSQL | Baja | Incluir migración SQL para crear la extensión; fallback a Dice |
-| El parseo de proveedor del OCR falla seguido | Media | Hacerlo opcional — el sistema funciona sin proveedor, solo con texto |
-| Aprendizaje de equivalencias crea matches incorrectos | Media | Solo auto-match si equivalencia tiene `usoCount >= 3` y `confianza > 0.85` |
-| Migración de Prisma conflictúa con deploys en Railway | Baja | Usar `prisma migrate dev` + verificar compatibilidad con script deploy existente |
+| Riesgo                                                | Probabilidad | Mitigación                                                                       |
+| ----------------------------------------------------- | ------------ | -------------------------------------------------------------------------------- |
+| `pg_trgm` no disponible en Railway/PostgreSQL         | Baja         | Incluir migración SQL para crear la extensión; fallback a Dice                   |
+| El parseo de proveedor del OCR falla seguido          | Media        | Hacerlo opcional — el sistema funciona sin proveedor, solo con texto             |
+| Aprendizaje de equivalencias crea matches incorrectos | Media        | Solo auto-match si equivalencia tiene `usoCount >= 3` y `confianza > 0.85`       |
+| Migración de Prisma conflictúa con deploys en Railway | Baja         | Usar `prisma migrate dev` + verificar compatibilidad con script deploy existente |
 
 ## Plan de Reversión (Rollback)
 

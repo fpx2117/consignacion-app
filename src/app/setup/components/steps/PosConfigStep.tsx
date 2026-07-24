@@ -1,7 +1,13 @@
 "use client";
 
 import { motion } from "motion/react";
-import { MonitorSmartphone, Percent, CreditCard, ShieldCheck, Info } from "lucide-react";
+import {
+  MonitorSmartphone,
+  Percent,
+  CreditCard,
+  ShieldCheck,
+  Info,
+} from "lucide-react";
 import { Input } from "@/components/ui/input";
 
 import { Switch } from "@/components/ui/switch";
@@ -49,13 +55,16 @@ export function PosConfigStep({ data, onChange }: PosConfigStepProps) {
                 </span>
               </h3>
               <p className="text-sm text-muted-foreground mt-1">
-                Exige abrir un turno de caja antes de procesar ventas. Ideal para control de efectivo.
+                Exige abrir un turno de caja antes de procesar ventas. Ideal
+                para control de efectivo.
               </p>
             </div>
           </div>
           <Switch
             checked={data.usarControlDeCaja}
-            onCheckedChange={(checked) => onChange({ ...data, usarControlDeCaja: checked })}
+            onCheckedChange={(checked) =>
+              onChange({ ...data, usarControlDeCaja: checked })
+            }
             className="data-[state=checked]:bg-[color:var(--status-warning)] shrink-0"
           />
         </div>
@@ -69,16 +78,24 @@ export function PosConfigStep({ data, onChange }: PosConfigStepProps) {
               <Percent className="h-5 w-5 text-[color:var(--primary)]" />
             </div>
             <div>
-              <h3 className="font-bold text-foreground">Margen de Consignación</h3>
+              <h3 className="font-bold text-foreground">
+                Margen de Consignación
+              </h3>
               <p className="text-sm text-muted-foreground mt-1">
-                Porcentaje que se suma al precio del proveedor al crear una consignación.
+                Porcentaje que se suma al precio del proveedor al crear una
+                consignación.
               </p>
               {data.porcentajeAumentoConsignacion > 0 && (
                 <div className="flex items-center gap-1.5 mt-2 text-xs text-muted-foreground">
                   <Info className="h-3 w-3 text-[color:var(--primary)]" />
                   <span>
-                    Producto de $1.000 → <span className="font-bold text-[color:var(--status-success-strong)]">
-                      ${(1000 + 1000 * data.porcentajeAumentoConsignacion / 100).toLocaleString("es-AR")}
+                    Producto de $1.000 →{" "}
+                    <span className="font-bold text-[color:var(--status-success-strong)]">
+                      $
+                      {(
+                        1000 +
+                        (1000 * data.porcentajeAumentoConsignacion) / 100
+                      ).toLocaleString("es-AR")}
                     </span>
                   </span>
                 </div>
@@ -91,7 +108,10 @@ export function PosConfigStep({ data, onChange }: PosConfigStepProps) {
               min={0}
               value={data.porcentajeAumentoConsignacion}
               onChange={(e) =>
-                onChange({ ...data, porcentajeAumentoConsignacion: Number(e.target.value) || 0 })
+                onChange({
+                  ...data,
+                  porcentajeAumentoConsignacion: Number(e.target.value) || 0,
+                })
               }
               className="h-12 pr-8 text-center font-bold rounded-xl bg-background/50 border-border/50 focus:border-[color:var(--primary)]"
             />
@@ -116,8 +136,13 @@ export function PosConfigStep({ data, onChange }: PosConfigStepProps) {
                 <div className="flex items-center gap-1.5 mt-2 text-xs text-muted-foreground">
                   <Info className="h-3 w-3 text-[color:var(--theme-ocean-primary)]" />
                   <span>
-                    Venta de $1.000 → <span className="font-bold text-[color:var(--status-success-strong)]">
-                      ${(1000 + 1000 * data.porcentajeInteresTarjeta / 100).toLocaleString("es-AR")}
+                    Venta de $1.000 →{" "}
+                    <span className="font-bold text-[color:var(--status-success-strong)]">
+                      $
+                      {(
+                        1000 +
+                        (1000 * data.porcentajeInteresTarjeta) / 100
+                      ).toLocaleString("es-AR")}
                     </span>
                   </span>
                 </div>
@@ -130,7 +155,10 @@ export function PosConfigStep({ data, onChange }: PosConfigStepProps) {
               min={0}
               value={data.porcentajeInteresTarjeta}
               onChange={(e) =>
-                onChange({ ...data, porcentajeInteresTarjeta: Number(e.target.value) || 0 })
+                onChange({
+                  ...data,
+                  porcentajeInteresTarjeta: Number(e.target.value) || 0,
+                })
               }
               className="h-12 pr-8 text-center font-bold rounded-xl bg-background/50 border-border/50 focus:border-[color:var(--theme-ocean-primary)]"
             />

@@ -4,16 +4,16 @@
 
 ### Paleta de Colores
 
-| Rol | Color | Hex | Uso |
-|-----|-------|-----|-----|
-| Primary | Navy | #0F172A | Headers, bordes superiores, acentos |
-| Secondary | Slate | #334155 | Texto secundario, badges |
-| CTA | Sky Blue | #0369A1 | Botones, links, highlights |
-| Background | White | #FFFFFF | Fondo del documento |
-| Surface | Slate 50 | #F8FAFC | Fondos de secciones, tablas |
-| Success | Emerald | #059669 | Estados positivos, ganancias |
-| Warning | Amber | #D97706 | Estados de alerta |
-| Danger | Rose | #E11D48 | Estados negativos, gastos |
+| Rol        | Color    | Hex     | Uso                                 |
+| ---------- | -------- | ------- | ----------------------------------- |
+| Primary    | Navy     | #0F172A | Headers, bordes superiores, acentos |
+| Secondary  | Slate    | #334155 | Texto secundario, badges            |
+| CTA        | Sky Blue | #0369A1 | Botones, links, highlights          |
+| Background | White    | #FFFFFF | Fondo del documento                 |
+| Surface    | Slate 50 | #F8FAFC | Fondos de secciones, tablas         |
+| Success    | Emerald  | #059669 | Estados positivos, ganancias        |
+| Warning    | Amber    | #D97706 | Estados de alerta                   |
+| Danger     | Rose     | #E11D48 | Estados negativos, gastos           |
 
 ### Tipografía
 
@@ -34,19 +34,38 @@ Body Font: Open Sans
 
 ```css
 /* Google Fonts import */
-@import url('https://fonts.googleapis.com/css2?family=Open+Sans:wght@300;400;500;600;700&family=Poppins:wght@400;500;600;700&display=swap');
+@import url("https://fonts.googleapis.com/css2?family=Open+Sans:wght@300;400;500;600;700&family=Poppins:wght@400;500;600;700&display=swap");
 
 /* Font families */
-body { 
-  font-family: 'Open Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; 
+body {
+  font-family:
+    "Open Sans",
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
 }
-h1, h2, h3, h4, h5, h6 { 
-  font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; 
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family:
+    "Poppins",
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
 }
 
 /* Fallback fonts */
-.font-sans { font-family: 'Open Sans', sans-serif; }
-.font-heading { font-family: 'Poppins', sans-serif; }
+.font-sans {
+  font-family: "Open Sans", sans-serif;
+}
+.font-heading {
+  font-family: "Poppins", sans-serif;
+}
 ```
 
 ## Especificaciones por Template
@@ -54,6 +73,7 @@ h1, h2, h3, h4, h5, h6 {
 ### 1. Ticket de Venta (`venta-report-template.ts`)
 
 **Cambios:**
+
 - Padding: `p-12` → `p-8`
 - Header: Logo 56px (w-14 → w-12), texto proportionally reducido
 - Cajas de items: `min-h-` adaptativo
@@ -61,6 +81,7 @@ h1, h2, h3, h4, h5, h6 {
 - Información cliente más completa
 
 **Nueva estructura:**
+
 ```
 ┌─────────────────────────────────────────┐
 │ [LOGO] Nombre del negocio        Serie │
@@ -87,11 +108,13 @@ h1, h2, h3, h4, h5, h6 {
 ### 2. Reporte POS (`pos-report-template.ts`)
 
 **Cambios:**
+
 - Agregar sección de métodos de pago con chips visuales
 - Agregar ticket promedio
 - Mejorar tabla de tendencia
 
 **Nueva estructura:**
+
 ```
 ┌─────────────────────────────────────────┐
 │ Header con período y fecha              │
@@ -112,6 +135,7 @@ h1, h2, h3, h4, h5, h6 {
 ### 3. Reporte Consignaciones
 
 **Cambios:**
+
 - Agregar tasa de rotación por cliente
 - Estado más detallado (Abierta/Cerrada/Vencida)
 - Información de última liquidación
@@ -119,6 +143,7 @@ h1, h2, h3, h4, h5, h6 {
 ### 4. Reporte Dashboard
 
 **Cambios:**
+
 - Agregar badges visuales de estado a cada KPI
 - Colores según rendimiento (verde/amarillo/rojo)
 - Gráficos simples si es posible
@@ -126,6 +151,7 @@ h1, h2, h3, h4, h5, h6 {
 ### 5. Comprobante de Gasto
 
 **Cambios:**
+
 - Agregar código de barras (CODE128)
 - Expandir información de categoría
 - Mejorar diseño del monto total
@@ -133,6 +159,7 @@ h1, h2, h3, h4, h5, h6 {
 ### 6. Remito
 
 **Cambios:**
+
 - Logo más grande
 - Tabla de productos con mejor spacing
 - Información de cliente más visible
@@ -140,6 +167,7 @@ h1, h2, h3, h4, h5, h6 {
 ### 7. Inventario
 
 **Cambios:**
+
 - Destacar productos bajo stock mínimo
 - Alertas visuales (borde amarillo/rojo)
 - Mejor organización de columnas
@@ -147,6 +175,7 @@ h1, h2, h3, h4, h5, h6 {
 ## Componentes Reutilizables
 
 ### Función de código QR (nuevo)
+
 ```typescript
 // src/lib/reports/qr-helper.ts
 export function generateQRDataUrl(data: string): string {
@@ -156,6 +185,7 @@ export function generateQRDataUrl(data: string): string {
 ```
 
 ### Función de código de barras
+
 ```typescript
 // src/lib/reports/barcode-helper.ts
 export function generateBarcodeHTML(code: string): string {
@@ -167,6 +197,7 @@ export function generateBarcodeHTML(code: string): string {
 ## Validación Visual
 
 ### Checklist de rendering
+
 - [ ] Fuentes se cargan correctamente
 - [ ] No hay texto que exceda el container
 - [ ] Espaciado uniforme (8px, 16px, 24px)
@@ -176,6 +207,7 @@ export function generateBarcodeHTML(code: string): string {
 - [ ] Barras de código scaneables
 
 ### Testing endev
+
 1. Generar cada tipo de reporte
 2. Abrir en Chrome y verificar render
 3. Imprimir a PDF y verificar
@@ -183,12 +215,13 @@ export function generateBarcodeHTML(code: string): string {
 
 ## Dependencies Nuevas
 
-| Paquete | Versión | Uso |
-|---------|---------|-----|
-| qrcode | ^1.5.3 | Generar códigos QR |
+| Paquete   | Versión | Uso                       |
+| --------- | ------- | ------------------------- |
+| qrcode    | ^1.5.3  | Generar códigos QR        |
 | jsbarcode | ^3.11.6 | Generar códigos de barras |
 
 Instalar con:
+
 ```bash
 npm install qrcode jsbarcode @types/qrcode @types/jsbarcode
 ```

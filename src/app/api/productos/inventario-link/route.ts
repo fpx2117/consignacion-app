@@ -1,7 +1,12 @@
 //src/app/api/productos/inventario-link/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { decryptCode, encryptCode, generateShortCode, hashCode } from "@/lib/sharing/share-links";
+import {
+  decryptCode,
+  encryptCode,
+  generateShortCode,
+  hashCode,
+} from "@/lib/sharing/share-links";
 import { requireAuth } from "@/lib/auth/require-auth";
 
 export const dynamic = "force-dynamic";
@@ -15,7 +20,9 @@ export async function GET(req: NextRequest) {
   // Obtenemos sucursalId de la query si existe
   const { searchParams } = new URL(req.url);
   const sucursalIdParam = searchParams.get("sucursalId");
-  const targetId = sucursalIdParam ? Number(sucursalIdParam) : auth.activeSucursalId;
+  const targetId = sucursalIdParam
+    ? Number(sucursalIdParam)
+    : auth.activeSucursalId;
 
   if (!Number.isInteger(targetId) || targetId < 0) {
     return NextResponse.json({ error: "sucursalId inválido" }, { status: 400 });
@@ -73,7 +80,10 @@ export async function GET(req: NextRequest) {
     }
 
     if (!created) {
-      return NextResponse.json({ error: "No se pudo generar link de inventario" }, { status: 500 });
+      return NextResponse.json(
+        { error: "No se pudo generar link de inventario" },
+        { status: 500 },
+      );
     }
   }
 

@@ -54,7 +54,10 @@ export async function GET(_: Request, { params }: RouteParams) {
     });
 
     if (!pedido) {
-      return NextResponse.json({ error: "Pedido no encontrado" }, { status: 404 });
+      return NextResponse.json(
+        { error: "Pedido no encontrado" },
+        { status: 404 },
+      );
     }
 
     // Verificar que el pedido pertenece a la sucursal activa
@@ -72,7 +75,10 @@ export async function GET(_: Request, { params }: RouteParams) {
           nombre: item.producto.nombre,
           sku: item.producto.sku,
           stockDisponibleUnits: isGlobal
-            ? item.producto.stockSucursals.reduce((acc, s) => acc + (s.stockDisponibleUnits || 0), 0)
+            ? item.producto.stockSucursals.reduce(
+                (acc, s) => acc + (s.stockDisponibleUnits || 0),
+                0,
+              )
             : (item.producto.stockSucursals[0]?.stockDisponibleUnits ?? 0),
         },
       })),
@@ -94,13 +100,19 @@ export async function PATCH(req: Request, { params }: RouteParams) {
   const auth = await requireAuth();
   if (!auth.ok) return auth.res;
   if (isGlobalSucursalView(auth)) {
-    return NextResponse.json({ error: "Vista global en modo solo lectura. Selecciona una sucursal para editar pedidos esperados." }, { status: 409 });
+    return NextResponse.json(
+      {
+        error:
+          "Vista global en modo solo lectura. Selecciona una sucursal para editar pedidos esperados.",
+      },
+      { status: 409 },
+    );
   }
 
   if (!requireRole(auth.user, ["ADMIN"])) {
     return NextResponse.json(
       { error: "No tienes permisos (Admin requerido)" },
-      { status: 403 }
+      { status: 403 },
     );
   }
 
@@ -118,8 +130,11 @@ export async function PATCH(req: Request, { params }: RouteParams) {
 
     if (!parsed.success) {
       return NextResponse.json(
-        { error: "Validación fallida", details: parsed.error.flatten().fieldErrors },
-        { status: 400 }
+        {
+          error: "Validación fallida",
+          details: parsed.error.flatten().fieldErrors,
+        },
+        { status: 400 },
       );
     }
 
@@ -130,7 +145,10 @@ export async function PATCH(req: Request, { params }: RouteParams) {
     });
 
     if (!pedidoExistente) {
-      return NextResponse.json({ error: "Pedido no encontrado" }, { status: 404 });
+      return NextResponse.json(
+        { error: "Pedido no encontrado" },
+        { status: 404 },
+      );
     }
 
     if (pedidoExistente.sucursalId !== sucursalId) {
@@ -138,10 +156,13 @@ export async function PATCH(req: Request, { params }: RouteParams) {
     }
 
     // No permite cancelar un pedido ya CONFIRMADO
-    if (parsed.data.estado === EstadoPedidoEsperado.CANCELADO && pedidoExistente.estado === EstadoPedidoEsperado.CONFIRMADO) {
+    if (
+      parsed.data.estado === EstadoPedidoEsperado.CANCELADO &&
+      pedidoExistente.estado === EstadoPedidoEsperado.CONFIRMADO
+    ) {
       return NextResponse.json(
         { error: "No se puede cancelar un pedido ya confirmado" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -179,13 +200,19 @@ export async function DELETE(_: Request, { params }: RouteParams) {
   const auth = await requireAuth();
   if (!auth.ok) return auth.res;
   if (isGlobalSucursalView(auth)) {
-    return NextResponse.json({ error: "Vista global en modo solo lectura. Selecciona una sucursal para eliminar pedidos esperados." }, { status: 409 });
+    return NextResponse.json(
+      {
+        error:
+          "Vista global en modo solo lectura. Selecciona una sucursal para eliminar pedidos esperados.",
+      },
+      { status: 409 },
+    );
   }
 
   if (!requireRole(auth.user, ["ADMIN"])) {
     return NextResponse.json(
       { error: "No tienes permisos (Admin requerido)" },
-      { status: 403 }
+      { status: 403 },
     );
   }
 
@@ -204,7 +231,10 @@ export async function DELETE(_: Request, { params }: RouteParams) {
     });
 
     if (!pedido) {
-      return NextResponse.json({ error: "Pedido no encontrado" }, { status: 404 });
+      return NextResponse.json(
+        { error: "Pedido no encontrado" },
+        { status: 404 },
+      );
     }
 
     if (pedido.sucursalId !== sucursalId) {
@@ -214,7 +244,7 @@ export async function DELETE(_: Request, { params }: RouteParams) {
     if (pedido.estado !== "CANCELADO") {
       return NextResponse.json(
         { error: "Solo se pueden eliminar pedidos cancelados" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 

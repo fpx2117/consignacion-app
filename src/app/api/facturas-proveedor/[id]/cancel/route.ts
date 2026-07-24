@@ -16,18 +16,29 @@ export async function POST(
   const auth = await requireAuth();
   if (!auth.ok) return auth.res;
   if (!requireRole(auth.user, ["ADMIN"])) {
-    return NextResponse.json({ error: "No tienes permisos (Admin requerido)" }, { status: 403 });
+    return NextResponse.json(
+      { error: "No tienes permisos (Admin requerido)" },
+      { status: 403 },
+    );
   }
 
   const { id } = await params;
   const facturaId = Number(id);
   if (!Number.isInteger(facturaId)) {
-    return NextResponse.json({ error: "Factura no encontrada" }, { status: 404 });
+    return NextResponse.json(
+      { error: "Factura no encontrada" },
+      { status: 404 },
+    );
   }
 
-  const factura = await prisma.facturaProveedor.findUnique({ where: { id: facturaId } });
+  const factura = await prisma.facturaProveedor.findUnique({
+    where: { id: facturaId },
+  });
   if (!factura || !canAccessSucursalResource(auth, factura.sucursalId)) {
-    return NextResponse.json({ error: "Factura no encontrada" }, { status: 404 });
+    return NextResponse.json(
+      { error: "Factura no encontrada" },
+      { status: 404 },
+    );
   }
 
   if (factura.estado === EstadoFacturaProveedor.CANCELADA) {

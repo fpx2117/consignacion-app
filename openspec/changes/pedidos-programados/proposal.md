@@ -125,13 +125,13 @@ si no existe), visible en la campana de alertas del header.
 
 ## Riesgos y Mitigaciones
 
-| Riesgo | Mitigacion |
-|---|---|
-| El stock esperado no debe afectar el stock actual hasta la confirmacion | Los campos cantidadEsperada y cantidadRecibida viven solo en PedidoEsperadoItem; StockSucursal no se toca hasta confirmar. |
-| Confirmacion duplicada (doble clic o reenvio de formulario) | Transaccion Prisma atomica; verificar estado del pedido antes de procesar; idempotencia por pedidoId. |
-| Pedidos olvidados sin confirmar acumulan notificaciones | Agrupar notificaciones por pedido; no generar duplicados si ya existe una notificacion activa para ese pedido. |
-| Datos inconsistentes si la confirmacion falla a mitad | Toda la operacion de confirmacion (update items + insert MovimientoStock + update StockSucursal + update pedido) en una sola transaccion Prisma. |
-| Productos eliminados o desactivados referenciados en pedidos | Soft-delete en Producto; PedidoEsperadoItem conserva el productoId aunque el producto este inactivo; mostrar advertencia en UI. |
+| Riesgo                                                                  | Mitigacion                                                                                                                                       |
+| ----------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| El stock esperado no debe afectar el stock actual hasta la confirmacion | Los campos cantidadEsperada y cantidadRecibida viven solo en PedidoEsperadoItem; StockSucursal no se toca hasta confirmar.                       |
+| Confirmacion duplicada (doble clic o reenvio de formulario)             | Transaccion Prisma atomica; verificar estado del pedido antes de procesar; idempotencia por pedidoId.                                            |
+| Pedidos olvidados sin confirmar acumulan notificaciones                 | Agrupar notificaciones por pedido; no generar duplicados si ya existe una notificacion activa para ese pedido.                                   |
+| Datos inconsistentes si la confirmacion falla a mitad                   | Toda la operacion de confirmacion (update items + insert MovimientoStock + update StockSucursal + update pedido) en una sola transaccion Prisma. |
+| Productos eliminados o desactivados referenciados en pedidos            | Soft-delete en Producto; PedidoEsperadoItem conserva el productoId aunque el producto este inactivo; mostrar advertencia en UI.                  |
 
 ## Roadmap de Implementacion
 
@@ -198,4 +198,5 @@ si no existe), visible en la campana de alertas del header.
 - Toda la operacion de confirmacion es atomica: si falla alguna parte, ningun cambio persiste.
 
 ## Estado
+
 Feature candidata para planificacion y priorizacion en roadmap.

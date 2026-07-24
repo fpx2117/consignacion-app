@@ -6,13 +6,19 @@ import { isGlobalSucursalView } from "@/lib/security/sucursalScope";
 // PATCH: Actualizar nombre y/o color de una categoría
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
   // Auth: Requiere usuario autenticado
   const auth = await requireAuth();
   if (!auth.ok) return auth.res;
   if (isGlobalSucursalView(auth)) {
-    return NextResponse.json({ error: "Vista global en modo solo lectura. Selecciona una sucursal para editar categorías." }, { status: 409 });
+    return NextResponse.json(
+      {
+        error:
+          "Vista global en modo solo lectura. Selecciona una sucursal para editar categorías.",
+      },
+      { status: 409 },
+    );
   }
 
   try {
@@ -28,14 +34,19 @@ export async function PATCH(
     if (Object.keys(data).length === 0) {
       return NextResponse.json(
         { error: "No hay datos para actualizar" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
     // Verificar pertenencia a la sucursal activa
-    const existing = await prisma.categoria.findUnique({ where: { id: categoriaId } });
+    const existing = await prisma.categoria.findUnique({
+      where: { id: categoriaId },
+    });
     if (!existing || existing.sucursalId !== auth.activeSucursalId) {
-      return NextResponse.json({ error: "Categoría no encontrada" }, { status: 404 });
+      return NextResponse.json(
+        { error: "Categoría no encontrada" },
+        { status: 404 },
+      );
     }
 
     const updated = await prisma.categoria.update({
@@ -47,20 +58,26 @@ export async function PATCH(
   } catch {
     return NextResponse.json(
       { error: "Error al actualizar la categoría" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
 
 export async function DELETE(
   _req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
   // Auth: Requiere usuario autenticado
   const auth = await requireAuth();
   if (!auth.ok) return auth.res;
   if (isGlobalSucursalView(auth)) {
-    return NextResponse.json({ error: "Vista global en modo solo lectura. Selecciona una sucursal para eliminar categorías." }, { status: 409 });
+    return NextResponse.json(
+      {
+        error:
+          "Vista global en modo solo lectura. Selecciona una sucursal para eliminar categorías.",
+      },
+      { status: 409 },
+    );
   }
 
   try {
@@ -68,9 +85,14 @@ export async function DELETE(
     const categoriaId = Number(id);
 
     // Verificar pertenencia a la sucursal activa
-    const existing = await prisma.categoria.findUnique({ where: { id: categoriaId } });
+    const existing = await prisma.categoria.findUnique({
+      where: { id: categoriaId },
+    });
     if (!existing || existing.sucursalId !== auth.activeSucursalId) {
-      return NextResponse.json({ error: "Categoría no encontrada" }, { status: 404 });
+      return NextResponse.json(
+        { error: "Categoría no encontrada" },
+        { status: 404 },
+      );
     }
 
     // Desasociar productos antes de eliminar
@@ -87,7 +109,7 @@ export async function DELETE(
   } catch {
     return NextResponse.json(
       { error: "Error al eliminar la categoría" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

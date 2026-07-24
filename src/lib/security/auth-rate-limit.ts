@@ -1,6 +1,7 @@
 import { createHash } from "crypto";
 
-export type AuthRateLimitEndpoint = "login" | "forgot-password" | "reset-password";
+export type AuthRateLimitEndpoint =
+  "login" | "forgot-password" | "reset-password";
 
 type RateLimitRuleName = "ip" | "identity" | "token";
 
@@ -66,7 +67,10 @@ const globalRateLimitStore = (() => {
   };
 
   if (!globalScope.__consignacionAuthRateLimitStore__) {
-    globalScope.__consignacionAuthRateLimitStore__ = new Map<string, RateLimitBucket>();
+    globalScope.__consignacionAuthRateLimitStore__ = new Map<
+      string,
+      RateLimitBucket
+    >();
   }
 
   return globalScope.__consignacionAuthRateLimitStore__;
@@ -82,7 +86,9 @@ const defaultStore: RateLimitStore = {
   },
 };
 
-export function getAuthRateLimitDecision(input: AuthRateLimitInput): AuthRateLimitDecision {
+export function getAuthRateLimitDecision(
+  input: AuthRateLimitInput,
+): AuthRateLimitDecision {
   const now = input.now ?? Date.now();
   const ip = normalizeIp(input.ip);
   const identity = normalizeIdentity(input.identity);
@@ -127,10 +133,10 @@ export function getAuthRateLimitDecision(input: AuthRateLimitInput): AuthRateLim
   }
 
   const allowed = blockedRules.length === 0;
-  const shouldLogSuspiciousActivity = matchedRules.some((rule) => (
-    rule.blockedCount > 0
-    || rule.remaining <= NEAR_LIMIT_REMAINING_THRESHOLD
-  ));
+  const shouldLogSuspiciousActivity = matchedRules.some(
+    (rule) =>
+      rule.blockedCount > 0 || rule.remaining <= NEAR_LIMIT_REMAINING_THRESHOLD,
+  );
 
   return {
     allowed,
@@ -145,15 +151,17 @@ export function getAuthRateLimitDecision(input: AuthRateLimitInput): AuthRateLim
 
 export function getRequestIp(req: Pick<Request, "headers">): string {
   return normalizeIp(
-    req.headers.get("x-forwarded-for")?.split(",")[0]?.trim()
-      || req.headers.get("x-real-ip")
-      || req.headers.get("cf-connecting-ip")
-      || FALLBACK_IP,
+    req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+      req.headers.get("x-real-ip") ||
+      req.headers.get("cf-connecting-ip") ||
+      FALLBACK_IP,
   );
 }
 
 export function normalizeIdentity(value?: string | null): string | null {
-  const normalized = String(value ?? "").trim().toLowerCase();
+  const normalized = String(value ?? "")
+    .trim()
+    .toLowerCase();
   return normalized || null;
 }
 
@@ -178,13 +186,22 @@ function buildRules(
           name: "ip",
           value: ip,
           max: readEnvInt("AUTH_RATE_LIMIT_LOGIN_IP_MAX", DEFAULT_LOGIN_IP_MAX),
-          windowMs: readEnvInt("AUTH_RATE_LIMIT_LOGIN_IP_WINDOW_MS", DEFAULT_WINDOW_MINUTES * 60_000),
+          windowMs: readEnvInt(
+            "AUTH_RATE_LIMIT_LOGIN_IP_WINDOW_MS",
+            DEFAULT_WINDOW_MINUTES * 60_000,
+          ),
         },
         {
           name: "identity",
           value: identity ? `${ip}:${identity}` : null,
-          max: readEnvInt("AUTH_RATE_LIMIT_LOGIN_IDENTITY_MAX", DEFAULT_LOGIN_IDENTITY_MAX),
-          windowMs: readEnvInt("AUTH_RATE_LIMIT_LOGIN_IDENTITY_WINDOW_MS", DEFAULT_WINDOW_MINUTES * 60_000),
+          max: readEnvInt(
+            "AUTH_RATE_LIMIT_LOGIN_IDENTITY_MAX",
+            DEFAULT_LOGIN_IDENTITY_MAX,
+          ),
+          windowMs: readEnvInt(
+            "AUTH_RATE_LIMIT_LOGIN_IDENTITY_WINDOW_MS",
+            DEFAULT_WINDOW_MINUTES * 60_000,
+          ),
         },
       ];
     case "forgot-password":
@@ -193,13 +210,19 @@ function buildRules(
           name: "ip",
           value: ip,
           max: readEnvInt("AUTH_RATE_LIMIT_FORGOT_IP_MAX", 10),
-          windowMs: readEnvInt("AUTH_RATE_LIMIT_FORGOT_IP_WINDOW_MS", DEFAULT_WINDOW_MINUTES * 60_000),
+          windowMs: readEnvInt(
+            "AUTH_RATE_LIMIT_FORGOT_IP_WINDOW_MS",
+            DEFAULT_WINDOW_MINUTES * 60_000,
+          ),
         },
         {
           name: "identity",
           value: identity ? `${ip}:${identity}` : null,
           max: readEnvInt("AUTH_RATE_LIMIT_FORGOT_IDENTITY_MAX", 3),
-          windowMs: readEnvInt("AUTH_RATE_LIMIT_FORGOT_IDENTITY_WINDOW_MS", 30 * 60_000),
+          windowMs: readEnvInt(
+            "AUTH_RATE_LIMIT_FORGOT_IDENTITY_WINDOW_MS",
+            30 * 60_000,
+          ),
         },
       ];
     case "reset-password":
@@ -208,25 +231,39 @@ function buildRules(
           name: "ip",
           value: ip,
           max: readEnvInt("AUTH_RATE_LIMIT_RESET_IP_MAX", 10),
-          windowMs: readEnvInt("AUTH_RATE_LIMIT_RESET_IP_WINDOW_MS", DEFAULT_WINDOW_MINUTES * 60_000),
+          windowMs: readEnvInt(
+            "AUTH_RATE_LIMIT_RESET_IP_WINDOW_MS",
+            DEFAULT_WINDOW_MINUTES * 60_000,
+          ),
         },
         {
           name: "token",
           value: token,
           max: readEnvInt("AUTH_RATE_LIMIT_RESET_TOKEN_MAX", 5),
-          windowMs: readEnvInt("AUTH_RATE_LIMIT_RESET_TOKEN_WINDOW_MS", 30 * 60_000),
+          windowMs: readEnvInt(
+            "AUTH_RATE_LIMIT_RESET_TOKEN_WINDOW_MS",
+            30 * 60_000,
+          ),
         },
         {
           name: "identity",
           value: token ? `${ip}:${token}` : null,
           max: readEnvInt("AUTH_RATE_LIMIT_RESET_IP_TOKEN_MAX", 3),
-          windowMs: readEnvInt("AUTH_RATE_LIMIT_RESET_IP_TOKEN_WINDOW_MS", 30 * 60_000),
+          windowMs: readEnvInt(
+            "AUTH_RATE_LIMIT_RESET_IP_TOKEN_WINDOW_MS",
+            30 * 60_000,
+          ),
         },
       ];
   }
 }
 
-function getFreshBucket(store: RateLimitStore, key: string, windowMs: number, now: number): RateLimitBucket {
+function getFreshBucket(
+  store: RateLimitStore,
+  key: string,
+  windowMs: number,
+  now: number,
+): RateLimitBucket {
   const current = store.get(key);
   if (!current || current.resetAt <= now) {
     if (current) {
@@ -243,11 +280,17 @@ function getFreshBucket(store: RateLimitStore, key: string, windowMs: number, no
   return current;
 }
 
-function buildStoreKey(endpoint: AuthRateLimitEndpoint, rule: RateLimitRuleName, value: string) {
+function buildStoreKey(
+  endpoint: AuthRateLimitEndpoint,
+  rule: RateLimitRuleName,
+  value: string,
+) {
   return `auth-rate-limit:${endpoint}:${rule}:${value}`;
 }
 
-function buildRateLimitHeaders(rules: AuthRateLimitDecisionRule[]): HeadersInit {
+function buildRateLimitHeaders(
+  rules: AuthRateLimitDecisionRule[],
+): HeadersInit {
   if (rules.length === 0) {
     return {};
   }
@@ -261,7 +304,10 @@ function buildRateLimitHeaders(rules: AuthRateLimitDecisionRule[]): HeadersInit 
       return candidate;
     }
 
-    if (candidate.retryAfterSeconds === current.retryAfterSeconds && candidate.remaining < current.remaining) {
+    if (
+      candidate.retryAfterSeconds === current.retryAfterSeconds &&
+      candidate.remaining < current.remaining
+    ) {
       return candidate;
     }
 

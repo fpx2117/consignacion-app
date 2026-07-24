@@ -100,7 +100,11 @@ type StoreConfig = {
   whatsappButtonText: string;
   desktopLayout: "mobile-centered" | "wide-ecommerce" | "with-cart-sidebar";
   featuredProductIds: number[];
-  featuredSections: Array<{ title: string; productIds: number[]; displayMode: "slider-auto" | "slider-static" | "grid" }>;
+  featuredSections: Array<{
+    title: string;
+    productIds: number[];
+    displayMode: "slider-auto" | "slider-static" | "grid";
+  }>;
   [key: string]: unknown;
 };
 
@@ -142,43 +146,43 @@ const CATEGORIES: Array<{
   },
 ];
 
-  // ── Defaults con todos los campos OLS ──
-  const DEFAULT_BRANDING: BrandingSettings = {
-    businessName: "",
-    primaryColor: "#007AFF",
-    secondaryColor: "#EAF3FF",
-    footerText: "",
-    phone: "",
-    address: "",
-    instagramUrl: "",
-    tiktokUrl: "",
-    facebookUrl: "",
-    youtubeUrl: "",
-    whatsappNumber: "",
-    googleMapsUrl: "",
-    themeIdentifier: "modern",
-    logoData: null,
-    logoMime: null,
-    bannerData: null,
-    bannerMime: null,
-    typography: "Inter",
-    isBannerSlider: false,
-    banners: [],
-    storefrontContent: createDefaultStorefrontContent(),
-    openingHours: "",
-    addressText: "",
-    description: "",
-    mode: "light",
-    borderRadius: "2xl",
-    shadow: "soft",
-    cardStyle: "minimal",
-    buttonStyle: "pill",
-    backgroundColor: "#F5F6F8",
-    surfaceColor: "#FFFFFF",
-    textColor: "#0F172A",
-    mutedTextColor: "#8A8F98",
-    whatsappColor: "#25D366",
-  };
+// ── Defaults con todos los campos OLS ──
+const DEFAULT_BRANDING: BrandingSettings = {
+  businessName: "",
+  primaryColor: "#007AFF",
+  secondaryColor: "#EAF3FF",
+  footerText: "",
+  phone: "",
+  address: "",
+  instagramUrl: "",
+  tiktokUrl: "",
+  facebookUrl: "",
+  youtubeUrl: "",
+  whatsappNumber: "",
+  googleMapsUrl: "",
+  themeIdentifier: "modern",
+  logoData: null,
+  logoMime: null,
+  bannerData: null,
+  bannerMime: null,
+  typography: "Inter",
+  isBannerSlider: false,
+  banners: [],
+  storefrontContent: createDefaultStorefrontContent(),
+  openingHours: "",
+  addressText: "",
+  description: "",
+  mode: "light",
+  borderRadius: "2xl",
+  shadow: "soft",
+  cardStyle: "minimal",
+  buttonStyle: "pill",
+  backgroundColor: "#F5F6F8",
+  surfaceColor: "#FFFFFF",
+  textColor: "#0F172A",
+  mutedTextColor: "#8A8F98",
+  whatsappColor: "#25D366",
+};
 
 const DEFAULT_CONFIG: StoreConfig = {
   tiendaLayout: "grid",
@@ -203,13 +207,24 @@ const DEFAULT_CONFIG: StoreConfig = {
 
 function SkeletonBox({ className }: { className?: string }) {
   return (
-    <div className={cn("rounded-xl bg-muted/60 relative overflow-hidden", className)}>
+    <div
+      className={cn(
+        "rounded-xl bg-muted/60 relative overflow-hidden",
+        className,
+      )}
+    >
       <div className="absolute inset-0 -translate-x-full animate-[shimmer_2s_infinite] bg-gradient-to-r from-transparent via-white/25 to-transparent" />
     </div>
   );
 }
 
-const VALID_TABS: SettingCategory[] = ["branding", "home", "layout", "themes", "social"];
+const VALID_TABS: SettingCategory[] = [
+  "branding",
+  "home",
+  "layout",
+  "themes",
+  "social",
+];
 
 export default function TiendaSettingsPage() {
   const searchParams = useSearchParams();
@@ -217,17 +232,24 @@ export default function TiendaSettingsPage() {
   const [saving, setSaving] = React.useState(false);
   const [activeTab, setActiveTab] = React.useState<SettingCategory>(() => {
     const tabParam = searchParams.get("tab");
-    return VALID_TABS.includes(tabParam as SettingCategory) ? (tabParam as SettingCategory) : "branding";
+    return VALID_TABS.includes(tabParam as SettingCategory)
+      ? (tabParam as SettingCategory)
+      : "branding";
   });
-  const [previewMode, setPreviewMode] = React.useState<"mobile" | "desktop">("desktop");
+  const [previewMode, setPreviewMode] = React.useState<"mobile" | "desktop">(
+    "desktop",
+  );
   const [isPreviewOpen, setIsPreviewOpen] = React.useState(false);
   const [isDirty, setIsDirty] = React.useState(false);
   const [showSavedCheck, setShowSavedCheck] = React.useState(false);
   const [previewPortalReady, setPreviewPortalReady] = React.useState(false);
 
-  const [branding, setBranding] = React.useState<BrandingSettings>(DEFAULT_BRANDING);
+  const [branding, setBranding] =
+    React.useState<BrandingSettings>(DEFAULT_BRANDING);
   const [config, setConfig] = React.useState<StoreConfig>(DEFAULT_CONFIG);
-  const [categoriesPreview, setCategoriesPreview] = React.useState<Categoria[]>([]);
+  const [categoriesPreview, setCategoriesPreview] = React.useState<Categoria[]>(
+    [],
+  );
 
   const setBrandingWithDirty = React.useCallback(
     (value: React.SetStateAction<BrandingSettings>) => {
@@ -262,7 +284,9 @@ export default function TiendaSettingsPage() {
           const olsJson = await olsRes.json();
           savedOls = olsJson?.data?.onlineStoreConfig ?? null;
         }
-      } catch { /* si falla, usamos defaults */ }
+      } catch {
+        /* si falla, usamos defaults */
+      }
 
       // ── Poblar branding con datos de Branding + OLS ──
       if (brandingRes) {
@@ -272,24 +296,67 @@ export default function TiendaSettingsPage() {
         setBranding((prev) => ({
           ...prev,
           ...(brandingRes as Partial<BrandingSettings>),
-          storefrontContent: (b.storefrontContent as BrandingSettings["storefrontContent"]) ?? prev.storefrontContent,
+          storefrontContent:
+            (b.storefrontContent as BrandingSettings["storefrontContent"]) ??
+            prev.storefrontContent,
           // Sincronizar desde OLS si existe (prioridad sobre branding viejo)
-          businessName: (ols.storeName as string) || (b.businessName as string) || prev.businessName,
-          openingHours: (ols.openingHours as string) || (b.openingHours as string) || prev.openingHours || "",
-          addressText: (ols.addressText as string) || (b.addressText as string) || prev.addressText || "",
-          description: (ols.description as string) || (b.description as string) || prev.description || "",
-          primaryColor: (olsTheme.primaryColor as string) || (b.primaryColor as string) || prev.primaryColor || "#007AFF",
-          secondaryColor: (olsTheme.secondaryColor as string) || (b.secondaryColor as string) || prev.secondaryColor || "#EAF3FF",
-          backgroundColor: (olsTheme.backgroundColor as string) || prev.backgroundColor || "#F5F6F8",
-          surfaceColor: (olsTheme.surfaceColor as string) || prev.surfaceColor || "#FFFFFF",
-          textColor: (olsTheme.textColor as string) || prev.textColor || "#0F172A",
-          mutedTextColor: (olsTheme.mutedTextColor as string) || prev.mutedTextColor || "#8A8F98",
-          whatsappColor: (olsTheme.whatsappColor as string) || prev.whatsappColor || "#25D366",
+          businessName:
+            (ols.storeName as string) ||
+            (b.businessName as string) ||
+            prev.businessName,
+          openingHours:
+            (ols.openingHours as string) ||
+            (b.openingHours as string) ||
+            prev.openingHours ||
+            "",
+          addressText:
+            (ols.addressText as string) ||
+            (b.addressText as string) ||
+            prev.addressText ||
+            "",
+          description:
+            (ols.description as string) ||
+            (b.description as string) ||
+            prev.description ||
+            "",
+          primaryColor:
+            (olsTheme.primaryColor as string) ||
+            (b.primaryColor as string) ||
+            prev.primaryColor ||
+            "#007AFF",
+          secondaryColor:
+            (olsTheme.secondaryColor as string) ||
+            (b.secondaryColor as string) ||
+            prev.secondaryColor ||
+            "#EAF3FF",
+          backgroundColor:
+            (olsTheme.backgroundColor as string) ||
+            prev.backgroundColor ||
+            "#F5F6F8",
+          surfaceColor:
+            (olsTheme.surfaceColor as string) || prev.surfaceColor || "#FFFFFF",
+          textColor:
+            (olsTheme.textColor as string) || prev.textColor || "#0F172A",
+          mutedTextColor:
+            (olsTheme.mutedTextColor as string) ||
+            prev.mutedTextColor ||
+            "#8A8F98",
+          whatsappColor:
+            (olsTheme.whatsappColor as string) ||
+            prev.whatsappColor ||
+            "#25D366",
           mode: (olsTheme.mode as BrandingSettings["mode"]) || prev.mode,
-          borderRadius: (olsTheme.borderRadius as BrandingSettings["borderRadius"]) || prev.borderRadius,
-          shadow: (olsTheme.shadow as BrandingSettings["shadow"]) || prev.shadow,
-          cardStyle: (olsTheme.cardStyle as BrandingSettings["cardStyle"]) || prev.cardStyle,
-          buttonStyle: (olsTheme.buttonStyle as BrandingSettings["buttonStyle"]) || prev.buttonStyle,
+          borderRadius:
+            (olsTheme.borderRadius as BrandingSettings["borderRadius"]) ||
+            prev.borderRadius,
+          shadow:
+            (olsTheme.shadow as BrandingSettings["shadow"]) || prev.shadow,
+          cardStyle:
+            (olsTheme.cardStyle as BrandingSettings["cardStyle"]) ||
+            prev.cardStyle,
+          buttonStyle:
+            (olsTheme.buttonStyle as BrandingSettings["buttonStyle"]) ||
+            prev.buttonStyle,
         }));
       }
 
@@ -297,26 +364,81 @@ export default function TiendaSettingsPage() {
       if (configRes) {
         const olsCatalog = (savedOls?.catalog || {}) as Record<string, unknown>;
         const olsCart = (savedOls?.cart || {}) as Record<string, unknown>;
-        const olsResponsive = (savedOls?.responsive || {}) as Record<string, unknown>;
+        const olsResponsive = (savedOls?.responsive || {}) as Record<
+          string,
+          unknown
+        >;
         setConfig((prev) => ({
           ...prev,
           ...(configRes as Partial<StoreConfig>),
           // Sincronizar desde OLS (prioridad sobre config vieja)
-          showProductImages: (olsCatalog.showProductImages as boolean | undefined) ?? (configRes as Record<string, unknown>).showProductImages as boolean ?? prev.showProductImages,
-          showPrices: (olsCatalog.showPrices as boolean | undefined) ?? (configRes as Record<string, unknown>).showPrices as boolean ?? prev.showPrices,
-          showStock: (olsCatalog.showStock as boolean | undefined) ?? (configRes as Record<string, unknown>).showStock as boolean ?? prev.showStock,
-          showViewAll: (olsCatalog.showViewAll as boolean | undefined) ?? (configRes as Record<string, unknown>).showViewAll as boolean ?? prev.showViewAll,
-          productLayout: ((olsCatalog.productLayout as StoreConfig["productLayout"]) ?? (configRes as Record<string, unknown>).productLayout as StoreConfig["productLayout"] ?? prev.productLayout),
-          maxProductsPerSection: (olsCatalog.maxProductsPerSection as number | undefined) ?? (configRes as Record<string, unknown>).maxProductsPerSection as number ?? prev.maxProductsPerSection,
-          addButtonPosition: ((olsCatalog.addButtonPosition as StoreConfig["addButtonPosition"]) ?? (configRes as Record<string, unknown>).addButtonPosition as StoreConfig["addButtonPosition"] ?? prev.addButtonPosition),
-          featuredProductIds: (Array.isArray(olsCatalog.featuredProductIds) ? olsCatalog.featuredProductIds as number[] : (configRes as Record<string, unknown>).featuredProductIds as number[] ?? prev.featuredProductIds),
-          featuredSections: (Array.isArray(olsCatalog.featuredSections) ? olsCatalog.featuredSections as StoreConfig["featuredSections"] : (configRes as Record<string, unknown>).featuredSections as StoreConfig["featuredSections"] ?? prev.featuredSections),
-          cartDisplayMode: ((olsCart.displayMode as StoreConfig["cartDisplayMode"]) ?? (configRes as Record<string, unknown>).cartDisplayMode as StoreConfig["cartDisplayMode"] ?? prev.cartDisplayMode),
-          showWhatsappPreview: (olsCart.showWhatsappPreview as boolean | undefined) ?? (configRes as Record<string, unknown>).showWhatsappPreview as boolean ?? prev.showWhatsappPreview,
-          whatsappButtonText: (olsCart.whatsappButtonText as string | undefined) ?? (configRes as Record<string, unknown>).whatsappButtonText as string ?? prev.whatsappButtonText,
-          desktopLayout: ((olsResponsive.desktopLayout as StoreConfig["desktopLayout"]) ?? (configRes as Record<string, unknown>).desktopLayout as StoreConfig["desktopLayout"] ?? prev.desktopLayout),
+          showProductImages:
+            (olsCatalog.showProductImages as boolean | undefined) ??
+            ((configRes as Record<string, unknown>)
+              .showProductImages as boolean) ??
+            prev.showProductImages,
+          showPrices:
+            (olsCatalog.showPrices as boolean | undefined) ??
+            ((configRes as Record<string, unknown>).showPrices as boolean) ??
+            prev.showPrices,
+          showStock:
+            (olsCatalog.showStock as boolean | undefined) ??
+            ((configRes as Record<string, unknown>).showStock as boolean) ??
+            prev.showStock,
+          showViewAll:
+            (olsCatalog.showViewAll as boolean | undefined) ??
+            ((configRes as Record<string, unknown>).showViewAll as boolean) ??
+            prev.showViewAll,
+          productLayout:
+            (olsCatalog.productLayout as StoreConfig["productLayout"]) ??
+            ((configRes as Record<string, unknown>)
+              .productLayout as StoreConfig["productLayout"]) ??
+            prev.productLayout,
+          maxProductsPerSection:
+            (olsCatalog.maxProductsPerSection as number | undefined) ??
+            ((configRes as Record<string, unknown>)
+              .maxProductsPerSection as number) ??
+            prev.maxProductsPerSection,
+          addButtonPosition:
+            (olsCatalog.addButtonPosition as StoreConfig["addButtonPosition"]) ??
+            ((configRes as Record<string, unknown>)
+              .addButtonPosition as StoreConfig["addButtonPosition"]) ??
+            prev.addButtonPosition,
+          featuredProductIds: Array.isArray(olsCatalog.featuredProductIds)
+            ? (olsCatalog.featuredProductIds as number[])
+            : (((configRes as Record<string, unknown>)
+                .featuredProductIds as number[]) ?? prev.featuredProductIds),
+          featuredSections: Array.isArray(olsCatalog.featuredSections)
+            ? (olsCatalog.featuredSections as StoreConfig["featuredSections"])
+            : (((configRes as Record<string, unknown>)
+                .featuredSections as StoreConfig["featuredSections"]) ??
+              prev.featuredSections),
+          cartDisplayMode:
+            (olsCart.displayMode as StoreConfig["cartDisplayMode"]) ??
+            ((configRes as Record<string, unknown>)
+              .cartDisplayMode as StoreConfig["cartDisplayMode"]) ??
+            prev.cartDisplayMode,
+          showWhatsappPreview:
+            (olsCart.showWhatsappPreview as boolean | undefined) ??
+            ((configRes as Record<string, unknown>)
+              .showWhatsappPreview as boolean) ??
+            prev.showWhatsappPreview,
+          whatsappButtonText:
+            (olsCart.whatsappButtonText as string | undefined) ??
+            ((configRes as Record<string, unknown>)
+              .whatsappButtonText as string) ??
+            prev.whatsappButtonText,
+          desktopLayout:
+            (olsResponsive.desktopLayout as StoreConfig["desktopLayout"]) ??
+            ((configRes as Record<string, unknown>)
+              .desktopLayout as StoreConfig["desktopLayout"]) ??
+            prev.desktopLayout,
           // Sincronizar showCategories con mostrarCategoriasEnHeader
-          mostrarCategoriasEnHeader: (olsCatalog.showCategories as boolean) ?? (configRes as Record<string, unknown>).mostrarCategoriasEnHeader as boolean ?? prev.mostrarCategoriasEnHeader,
+          mostrarCategoriasEnHeader:
+            (olsCatalog.showCategories as boolean) ??
+            ((configRes as Record<string, unknown>)
+              .mostrarCategoriasEnHeader as boolean) ??
+            prev.mostrarCategoriasEnHeader,
         }));
       }
 
@@ -419,7 +541,9 @@ export default function TiendaSettingsPage() {
       delete cleanBranding.banners;
 
       await Promise.all([
-        apiService.actualizarBranding(cleanBranding as unknown as ApiBrandingSettings),
+        apiService.actualizarBranding(
+          cleanBranding as unknown as ApiBrandingSettings,
+        ),
         apiService.actualizarConfiguracionGeneral({
           tiendaLayout: config.tiendaLayout,
           mostrarCategoriasEnHeader: config.mostrarCategoriasEnHeader,
@@ -464,11 +588,19 @@ export default function TiendaSettingsPage() {
         if (!data) return;
 
         if (type === "logo") {
-          setBrandingWithDirty((prev) => ({ ...prev, logoData: data, logoMime: mime }));
+          setBrandingWithDirty((prev) => ({
+            ...prev,
+            logoData: data,
+            logoMime: mime,
+          }));
           return;
         }
 
-        setBrandingWithDirty((prev) => ({ ...prev, bannerData: data, bannerMime: mime }));
+        setBrandingWithDirty((prev) => ({
+          ...prev,
+          bannerData: data,
+          bannerMime: mime,
+        }));
       };
 
       reader.readAsDataURL(file);
@@ -476,11 +608,15 @@ export default function TiendaSettingsPage() {
     [setBrandingWithDirty],
   );
 
-  const activeCategory = CATEGORIES.find((category) => category.id === activeTab);
+  const activeCategory = CATEGORIES.find(
+    (category) => category.id === activeTab,
+  );
   const hasMercadoPagoCredentials =
     String(config.mpAccessTokenTienda ?? "").trim().length > 0 &&
     String(config.mpPublicKeyTienda ?? "").trim().length > 0;
-  const tiendaMetodoPagoActual = (config.tiendaMetodoPago as "whatsapp" | "mercadopago" | undefined) ?? "whatsapp";
+  const tiendaMetodoPagoActual =
+    (config.tiendaMetodoPago as "whatsapp" | "mercadopago" | undefined) ??
+    "whatsapp";
   const storeModeLabel = !config.convertirTienda
     ? "Carrito desactivado"
     : tiendaMetodoPagoActual === "mercadopago"
@@ -613,7 +749,9 @@ export default function TiendaSettingsPage() {
                 ) : (
                   <Save className="h-3.5 w-3.5" />
                 )}
-                <span className="hidden sm:inline">{saving ? "Guardando" : "Guardar"}</span>
+                <span className="hidden sm:inline">
+                  {saving ? "Guardando" : "Guardar"}
+                </span>
               </Button>
             </div>
           </div>
@@ -645,14 +783,20 @@ export default function TiendaSettingsPage() {
                       <div
                         className={cn(
                           "h-9 w-9 rounded-xl flex items-center justify-center",
-                          isActive ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground",
+                          isActive
+                            ? "bg-primary text-primary-foreground"
+                            : "bg-muted text-muted-foreground",
                         )}
                       >
                         <category.icon className="h-4 w-4" />
                       </div>
                       <div className="min-w-0">
-                        <p className="text-sm font-medium text-foreground truncate">{category.label}</p>
-                        <p className="text-xs text-muted-foreground truncate">{category.description}</p>
+                        <p className="text-sm font-medium text-foreground truncate">
+                          {category.label}
+                        </p>
+                        <p className="text-xs text-muted-foreground truncate">
+                          {category.description}
+                        </p>
                       </div>
                     </div>
                   </button>
@@ -662,14 +806,17 @@ export default function TiendaSettingsPage() {
 
             <div className="mt-auto p-4">
               <div className="rounded-2xl border border-border/70 bg-background p-3.5">
-                <p className="text-[11px] font-medium text-muted-foreground mb-2">Estado de la tienda</p>
+                <p className="text-[11px] font-medium text-muted-foreground mb-2">
+                  Estado de la tienda
+                </p>
                 <div className="flex items-center gap-2">
                   <span
                     className={cn(
                       "h-2 w-2 rounded-full",
                       !config.convertirTienda
                         ? "bg-muted-foreground/40"
-                        : tiendaMetodoPagoActual === "mercadopago" && !hasMercadoPagoCredentials
+                        : tiendaMetodoPagoActual === "mercadopago" &&
+                            !hasMercadoPagoCredentials
                           ? "bg-[color:var(--status-warning)]"
                           : "bg-[color:var(--status-success-strong)]",
                     )}
@@ -709,14 +856,17 @@ export default function TiendaSettingsPage() {
                 <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
                   <div className="flex items-start gap-3">
                     <div className="h-10 w-10 rounded-2xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
-                      {activeCategory && <activeCategory.icon className="h-5 w-5" />}
+                      {activeCategory && (
+                        <activeCategory.icon className="h-5 w-5" />
+                      )}
                     </div>
                     <div>
                       <h2 className="text-lg sm:text-xl font-semibold leading-tight">
                         {activeCategory?.label ?? "Configuracion"}
                       </h2>
                       <p className="text-sm text-muted-foreground mt-1 max-w-2xl">
-                        {activeCategory?.description}. Ajustes optimizados para desktop, tablet y celular.
+                        {activeCategory?.description}. Ajustes optimizados para
+                        desktop, tablet y celular.
                       </p>
                     </div>
                   </div>
@@ -734,7 +884,11 @@ export default function TiendaSettingsPage() {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => setPreviewMode((prev) => (prev === "desktop" ? "mobile" : "desktop"))}
+                      onClick={() =>
+                        setPreviewMode((prev) =>
+                          prev === "desktop" ? "mobile" : "desktop",
+                        )
+                      }
                       className="rounded-xl h-9"
                     >
                       {previewMode === "desktop" ? (
@@ -783,10 +937,16 @@ export default function TiendaSettingsPage() {
                   <LayoutTab config={config} setConfig={setConfigWithDirty} />
                 )}
                 {activeTab === "themes" && (
-                  <ThemesTab branding={branding} setBranding={setBrandingWithDirty} />
+                  <ThemesTab
+                    branding={branding}
+                    setBranding={setBrandingWithDirty}
+                  />
                 )}
                 {activeTab === "social" && (
-                  <SocialTab branding={branding} setBranding={setBrandingWithDirty} />
+                  <SocialTab
+                    branding={branding}
+                    setBranding={setBrandingWithDirty}
+                  />
                 )}
               </section>
             </div>
@@ -800,7 +960,9 @@ export default function TiendaSettingsPage() {
               <div className="h-full w-full flex flex-col">
                 <div className="shrink-0 border-b border-border/60 px-3 sm:px-6 py-2.5 sm:py-3 flex items-center justify-between gap-2">
                   <div className="min-w-0">
-                    <p className="text-sm font-semibold truncate">Vista previa de tu tienda</p>
+                    <p className="text-sm font-semibold truncate">
+                      Vista previa de tu tienda
+                    </p>
                     <p className="text-xs text-muted-foreground hidden sm:block">
                       Cambia entre dispositivo movil y escritorio.
                     </p>
@@ -854,7 +1016,11 @@ export default function TiendaSettingsPage() {
                         : "w-[min(1450px,95vw)] h-[min(820px,88vh)] rounded-2xl",
                     )}
                   >
-                    <StorePreviewArea branding={branding} config={config} mode={previewMode} />
+                    <StorePreviewArea
+                      branding={branding}
+                      config={config}
+                      mode={previewMode}
+                    />
                   </div>
                 </div>
               </div>
@@ -870,7 +1036,11 @@ export default function TiendaSettingsPage() {
               disabled={saving}
               className="h-12 w-12 rounded-full p-0 shadow-lg shadow-primary/30"
             >
-              {saving ? <Loader2 className="h-5 w-5 animate-spin" /> : <Save className="h-5 w-5" />}
+              {saving ? (
+                <Loader2 className="h-5 w-5 animate-spin" />
+              ) : (
+                <Save className="h-5 w-5" />
+              )}
             </Button>
           </div>
         )}

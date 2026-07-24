@@ -15,12 +15,17 @@ export async function POST(req: Request) {
   if (!auth.ok) return auth.res;
 
   try {
-    const { sesionId, montoReal, observaciones } = (await req.json()) as CerrarCajaBody;
+    const { sesionId, montoReal, observaciones } =
+      (await req.json()) as CerrarCajaBody;
     const sesionCajaId = typeof sesionId === "number" ? sesionId : Number.NaN;
-    const montoRealNumerico = typeof montoReal === "number" ? montoReal : Number.NaN;
+    const montoRealNumerico =
+      typeof montoReal === "number" ? montoReal : Number.NaN;
 
     if (!Number.isFinite(sesionCajaId) || !Number.isFinite(montoRealNumerico)) {
-      return NextResponse.json({ error: "Datos invalidos para cerrar la caja." }, { status: 400 });
+      return NextResponse.json(
+        { error: "Datos invalidos para cerrar la caja." },
+        { status: 400 },
+      );
     }
 
     const sesion = await prisma.sesionCaja.findFirst({
@@ -35,10 +40,16 @@ export async function POST(req: Request) {
     });
 
     if (!sesion || sesion.estado === "CERRADA") {
-      return NextResponse.json({ error: "Sesion no encontrada o ya cerrada." }, { status: 400 });
+      return NextResponse.json(
+        { error: "Sesion no encontrada o ya cerrada." },
+        { status: 400 },
+      );
     }
 
-    const totalVentas = sesion.ventas.reduce((acc, venta) => acc + Number(venta.total), 0);
+    const totalVentas = sesion.ventas.reduce(
+      (acc, venta) => acc + Number(venta.total),
+      0,
+    );
     const totalIngresos = sesion.movimientos
       .filter((movimiento) => movimiento.tipo === "INGRESO")
       .reduce((acc, movimiento) => acc + Number(movimiento.monto), 0);
@@ -46,19 +57,20 @@ export async function POST(req: Request) {
       .filter((movimiento) => movimiento.tipo === "EGRESO")
       .reduce((acc, movimiento) => acc + Number(movimiento.monto), 0);
 
-    const montoEsperado = Number(sesion.montoInicial) + totalVentas + totalIngresos - totalEgresos;
+    const montoEsperado =
+      Number(sesion.montoInicial) + totalVentas + totalIngresos - totalEgresos;
     const diferencia = montoRealNumerico - montoEsperado;
 
     const timezone = await resolveTimezoneForAuth(auth);
 
     const sesionCerrada = await prisma.sesionCaja.update({
       where: { id: sesionCajaId },
-        data: {
-          estado: "CERRADA",
-          fechaCierre: nowAR(timezone.tz),
-          montoFinalEsperado: montoEsperado,
-          montoFinalReal: montoRealNumerico,
-          diferencia,
+      data: {
+        estado: "CERRADA",
+        fechaCierre: nowAR(timezone.tz),
+        montoFinalEsperado: montoEsperado,
+        montoFinalReal: montoRealNumerico,
+        diferencia,
         observaciones: observaciones ?? null,
       },
     });
@@ -66,6 +78,9 @@ export async function POST(req: Request) {
     return NextResponse.json({ data: sesionCerrada });
   } catch (error) {
     console.error("Error al cerrar la caja:", error);
-    return NextResponse.json({ error: "Error al cerrar la caja" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Error al cerrar la caja" },
+      { status: 500 },
+    );
   }
 }

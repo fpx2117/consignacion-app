@@ -21,7 +21,13 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Label } from "@/components/ui/label";
-import type { Consignacion, ConsignacionDetalle, Liquidacion, LiquidacionItem, Producto } from "@/lib/types";
+import type {
+  Consignacion,
+  ConsignacionDetalle,
+  Liquidacion,
+  LiquidacionItem,
+  Producto,
+} from "@/lib/types";
 
 // Dialogs
 import { SuccessDialog } from "@/components/feedback/success-dialog";
@@ -93,7 +99,9 @@ export default function EditarLiquidacionPage() {
     setLoading(true);
 
     try {
-      const liq = (await apiService.getLiquidacion(liquidacionId)) as LiquidacionEditable | null;
+      const liq = (await apiService.getLiquidacion(
+        liquidacionId,
+      )) as LiquidacionEditable | null;
 
       if (!liq) throw new Error("No se encontró la liquidación");
 
@@ -106,7 +114,9 @@ export default function EditarLiquidacionPage() {
         setPorcentajeAumento(cons.porcentajeAumento || 0);
       }
 
-      const mappedItems: EditableLiquidacionItem[] = ((liq.items || []) as LiquidacionItemEditable[]).map((item) => {
+      const mappedItems: EditableLiquidacionItem[] = (
+        (liq.items || []) as LiquidacionItemEditable[]
+      ).map((item) => {
         const det = item.detalle || item.consignacionDetalle;
 
         if (!det) {
@@ -114,7 +124,9 @@ export default function EditarLiquidacionPage() {
         }
 
         const pendienteActual =
-          (det.unitsEntregadas ?? 0) - (det.unitsVendidasAcum ?? 0) - (det.unitsDevueltasAcum ?? 0);
+          (det.unitsEntregadas ?? 0) -
+          (det.unitsVendidasAcum ?? 0) -
+          (det.unitsDevueltasAcum ?? 0);
 
         const vend = item.unitsVendidas ?? 0;
         const dev = item.unitsDevueltas ?? 0;
@@ -123,7 +135,9 @@ export default function EditarLiquidacionPage() {
         return {
           consignacionDetalleId: item.consignacionDetalleId,
           productoNombre: det.producto?.nombre || "Producto",
-          precioUnitario: Number(det.producto?.precioVenta ?? item.precioUnitario ?? 0),
+          precioUnitario: Number(
+            det.producto?.precioVenta ?? item.precioUnitario ?? 0,
+          ),
           unitsVendidas: vend,
           unitsDevueltas: dev,
           maxDisponibleParaEstaEdicion: Math.max(0, maxUnidades),
@@ -135,7 +149,10 @@ export default function EditarLiquidacionPage() {
       setErrorDialog({
         open: true,
         title: "Error de carga",
-        description: getErrorMessage(error, "No se pudo cargar la liquidación."),
+        description: getErrorMessage(
+          error,
+          "No se pudo cargar la liquidación.",
+        ),
       });
     } finally {
       setLoading(false);
@@ -149,7 +166,7 @@ export default function EditarLiquidacionPage() {
   const handleUpdate = (
     detalleId: number,
     field: "unitsVendidas" | "unitsDevueltas",
-    value: number
+    value: number,
   ) => {
     const nextVal = clampInt(value);
 
@@ -171,14 +188,17 @@ export default function EditarLiquidacionPage() {
         }
 
         return item;
-      })
+      }),
     );
   };
 
   const handleSubmit = async () => {
     if (items.length === 0) return;
     for (const item of items) {
-      if (item.unitsVendidas + item.unitsDevueltas > item.maxDisponibleParaEstaEdicion) {
+      if (
+        item.unitsVendidas + item.unitsDevueltas >
+        item.maxDisponibleParaEstaEdicion
+      ) {
         setErrorDialog({
           open: true,
           title: "Excede el stock",
@@ -203,7 +223,10 @@ export default function EditarLiquidacionPage() {
       setErrorDialog({
         open: true,
         title: "Error al guardar",
-        description: getErrorMessage(error, "No se pudieron guardar los cambios."),
+        description: getErrorMessage(
+          error,
+          "No se pudieron guardar los cambios.",
+        ),
       });
     } finally {
       setSaving(false);
@@ -216,15 +239,18 @@ export default function EditarLiquidacionPage() {
   };
 
   const totalVenta = items.reduce(
-    (acc, item) => acc + (item.unitsVendidas * calcularPrecioConAumento(item.precioUnitario)),
-    0
+    (acc, item) =>
+      acc + item.unitsVendidas * calcularPrecioConAumento(item.precioUnitario),
+    0,
   );
 
   if (loading) {
     return (
       <div className="min-h-[400px] flex flex-col items-center justify-center gap-4">
         <Loader2 className="h-10 w-10 animate-spin text-primary" />
-        <p className="text-sm text-muted-foreground italic">Obteniendo datos...</p>
+        <p className="text-sm text-muted-foreground italic">
+          Obteniendo datos...
+        </p>
       </div>
     );
   }
@@ -232,20 +258,27 @@ export default function EditarLiquidacionPage() {
   return (
     <div className="max-w-5xl mx-auto p-4 space-y-8 animate-in fade-in duration-500">
       <header className="flex flex-col gap-2">
-        <Button variant="ghost" size="sm" onClick={() => router.back()} className="w-fit -ml-2">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => router.back()}
+          className="w-fit -ml-2"
+        >
           <ArrowLeft className="h-4 w-4 mr-1" /> Volver
         </Button>
 
         <div className="flex items-center gap-3">
           <h1 className="text-3xl font-black">Corregir Liquidación</h1>
-          <Badge variant="outline" className="border-[color:var(--status-warning)]/30 text-[color:var(--status-warning)]">
+          <Badge
+            variant="outline"
+            className="border-[color:var(--status-warning)]/30 text-[color:var(--status-warning)]"
+          >
             #{liquidacionId}
           </Badge>
           {/* BADGE DE AUMENTO */}
           {porcentajeAumento > 0 && (
             <Badge className="bg-[color:var(--status-success-strong)] text-[color:var(--status-success-strong)] border-[color:var(--status-success-strong)] hover:bg-[color:var(--status-success-strong)] gap-1">
-              <BadgePercent className="h-3 w-3" />
-              +{porcentajeAumento}% Aumento
+              <BadgePercent className="h-3 w-3" />+{porcentajeAumento}% Aumento
             </Badge>
           )}
         </div>
@@ -268,7 +301,10 @@ export default function EditarLiquidacionPage() {
                         Base: {formatMoney(item.precioUnitario)}
                       </div>
                       <div className="text-sm font-bold text-[color:var(--status-success-strong)]">
-                        {formatMoney(precioFinal)} <span className="text-[10px] text-[color:var(--status-success-strong)] font-normal">/u</span>
+                        {formatMoney(precioFinal)}{" "}
+                        <span className="text-[10px] text-[color:var(--status-success-strong)] font-normal">
+                          /u
+                        </span>
                       </div>
                     </div>
                   </div>
@@ -284,7 +320,11 @@ export default function EditarLiquidacionPage() {
                           min={0}
                           value={item.unitsVendidas}
                           onChange={(e) =>
-                            handleUpdate(item.consignacionDetalleId, "unitsVendidas", Number(e.target.value))
+                            handleUpdate(
+                              item.consignacionDetalleId,
+                              "unitsVendidas",
+                              Number(e.target.value),
+                            )
                           }
                           className="h-12 text-lg font-bold bg-[color:var(--status-success-strong)]/5 border-[color:var(--status-success-strong)]"
                         />
@@ -303,7 +343,11 @@ export default function EditarLiquidacionPage() {
                         min={0}
                         value={item.unitsDevueltas}
                         onChange={(e) =>
-                          handleUpdate(item.consignacionDetalleId, "unitsDevueltas", Number(e.target.value))
+                          handleUpdate(
+                            item.consignacionDetalleId,
+                            "unitsDevueltas",
+                            Number(e.target.value),
+                          )
                         }
                         className="h-12 text-lg font-bold bg-[color:var(--status-warning)]/5 border-[color:var(--status-warning)]"
                       />
@@ -319,32 +363,52 @@ export default function EditarLiquidacionPage() {
                   </div>
                 </CardContent>
               </Card>
-            )
+            );
           })}
         </div>
 
         <div className="space-y-6">
           <Card className="sticky top-6 border-primary/20 shadow-xl overflow-hidden bg-card">
             <CardHeader className="bg-primary/5 border-b">
-              <CardTitle className="text-sm font-bold uppercase">Resumen de Ajuste</CardTitle>
+              <CardTitle className="text-sm font-bold uppercase">
+                Resumen de Ajuste
+              </CardTitle>
             </CardHeader>
             <CardContent className="pt-6 space-y-6">
               <div className="flex justify-between items-center">
                 <div className="flex flex-col">
-                  <span className="text-sm text-muted-foreground">Nuevo Total</span>
-                  {porcentajeAumento > 0 && <span className="text-[10px] text-[color:var(--status-success-strong)] font-bold">Incluye +{porcentajeAumento}%</span>}
+                  <span className="text-sm text-muted-foreground">
+                    Nuevo Total
+                  </span>
+                  {porcentajeAumento > 0 && (
+                    <span className="text-[10px] text-[color:var(--status-success-strong)] font-bold">
+                      Incluye +{porcentajeAumento}%
+                    </span>
+                  )}
                 </div>
-                <span className="text-3xl font-black">{formatMoney(totalVenta)}</span>
+                <span className="text-3xl font-black">
+                  {formatMoney(totalVenta)}
+                </span>
               </div>
 
               <Separator />
 
               <p className="text-[11px] text-muted-foreground italic bg-[color:var(--status-warning)]/5 p-3 border border-[color:var(--status-warning)]/30 rounded-lg text-center">
-                Al guardar, se recalculará el saldo del cliente usando los precios con el aumento aplicado.
+                Al guardar, se recalculará el saldo del cliente usando los
+                precios con el aumento aplicado.
               </p>
 
-              <Button className="w-full h-14 text-lg font-bold" onClick={handleSubmit} disabled={saving}>
-                {saving ? <Loader2 className="animate-spin mr-2" /> : <Save className="mr-2 h-5 w-5" />} Guardar Cambios
+              <Button
+                className="w-full h-14 text-lg font-bold"
+                onClick={handleSubmit}
+                disabled={saving}
+              >
+                {saving ? (
+                  <Loader2 className="animate-spin mr-2" />
+                ) : (
+                  <Save className="mr-2 h-5 w-5" />
+                )}{" "}
+                Guardar Cambios
               </Button>
             </CardContent>
           </Card>

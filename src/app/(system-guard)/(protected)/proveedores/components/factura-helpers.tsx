@@ -13,9 +13,12 @@ const ESTADO_LABEL: Record<EstadoFacturaProveedor, string> = {
 const ESTADO_CLASS: Record<EstadoFacturaProveedor, string> = {
   PENDIENTE: "bg-muted text-muted-foreground",
   PROCESANDO: "bg-primary/10 text-primary",
-  REQUIERE_REVISION: "bg-[color:var(--status-warning)]/10 text-[color:var(--status-warning)]",
-  CONFIRMADA: "bg-[color:var(--status-success-strong)]/10 text-[color:var(--status-success-strong)]",
-  CANCELADA: "bg-[color:var(--status-danger)]/10 text-[color:var(--status-danger)]",
+  REQUIERE_REVISION:
+    "bg-[color:var(--status-warning)]/10 text-[color:var(--status-warning)]",
+  CONFIRMADA:
+    "bg-[color:var(--status-success-strong)]/10 text-[color:var(--status-success-strong)]",
+  CANCELADA:
+    "bg-[color:var(--status-danger)]/10 text-[color:var(--status-danger)]",
   ERROR: "bg-[color:var(--status-danger)]/10 text-[color:var(--status-danger)]",
 };
 
@@ -50,5 +53,9 @@ export function formatFecha(fecha: string | null | undefined): string {
   if (!fecha) return "Sin fecha";
   const d = new Date(fecha);
   if (Number.isNaN(d.getTime())) return "Sin fecha";
-  return d.toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit", year: "numeric" });
+  return d.toLocaleDateString("es-AR", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  });
 }

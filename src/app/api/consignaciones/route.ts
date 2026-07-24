@@ -9,11 +9,17 @@ import {
   TipoMovimientoStock,
 } from "@prisma/client";
 import { checkFeature } from "@/lib/subscriptions/require-subscription";
-import { buildSucursalWhere, isGlobalSucursalView } from "@/lib/security/sucursalScope";
+import {
+  buildSucursalWhere,
+  isGlobalSucursalView,
+} from "@/lib/security/sucursalScope";
 
 // âœ… Imports Centralizados de Config y Notificaciones
 import { obtenerConfiguracionGlobal } from "@/lib/config";
-import { evaluateStockAlert, processNotificationQueue } from "@/lib/notificaciones/stock-alerts";
+import {
+  evaluateStockAlert,
+  processNotificationQueue,
+} from "@/lib/notificaciones/stock-alerts";
 
 type NotificationQueueItem = NonNullable<ReturnType<typeof evaluateStockAlert>>;
 type StockSucursalWithProducto = Prisma.StockSucursalGetPayload<{
@@ -27,7 +33,10 @@ const consignacionInclude = Prisma.validator<Prisma.ConsignacionInclude>()({
 });
 
 function parseEstadoConsignacion(value: string): EstadoConsignacion | null {
-  if (value === EstadoConsignacion.ABIERTA || value === EstadoConsignacion.CERRADA) {
+  if (
+    value === EstadoConsignacion.ABIERTA ||
+    value === EstadoConsignacion.CERRADA
+  ) {
     return value;
   }
 
@@ -53,7 +62,10 @@ export async function GET(req: Request) {
   // Si no se pasan page/limit → devuelve todos (backward compatibility)
   const isPaginated = pageParam !== null || limitParam !== null;
   const page = Math.max(1, parseInt(pageParam || "1", 10) || 1);
-  const limit = Math.min(100, Math.max(1, parseInt(limitParam || "20", 10) || 20));
+  const limit = Math.min(
+    100,
+    Math.max(1, parseInt(limitParam || "20", 10) || 20),
+  );
   const skip = (page - 1) * limit;
 
   // Construcción del where con filtros
@@ -83,11 +95,14 @@ export async function GET(req: Request) {
       orderBy: { id: "desc" },
       include: consignacionInclude,
     });
-    return NextResponse.json({ data: consignaciones }, {
-      headers: {
-        "Cache-Control": "private, max-age=20, stale-while-revalidate=60",
+    return NextResponse.json(
+      { data: consignaciones },
+      {
+        headers: {
+          "Cache-Control": "private, max-age=20, stale-while-revalidate=60",
+        },
       },
-    });
+    );
   }
 
   // Con paginación → count + findMany en paralelo
@@ -104,17 +119,20 @@ export async function GET(req: Request) {
 
   const totalPages = Math.ceil(total / limit);
 
-  return NextResponse.json({
-    data: consignaciones,
-    total,
-    page,
-    limit,
-    totalPages,
-  }, {
-    headers: {
-      "Cache-Control": "private, max-age=20, stale-while-revalidate=60",
+  return NextResponse.json(
+    {
+      data: consignaciones,
+      total,
+      page,
+      limit,
+      totalPages,
     },
-  });
+    {
+      headers: {
+        "Cache-Control": "private, max-age=20, stale-while-revalidate=60",
+      },
+    },
+  );
 }
 
 // POST: Crear ConsignaciÃ³n
@@ -122,13 +140,22 @@ export async function POST(req: Request) {
   const auth = await requireAuth();
   if (!auth.ok) return auth.res;
   if (isGlobalSucursalView(auth)) {
-    return NextResponse.json({ error: "Vista global en modo solo lectura. Selecciona una sucursal para crear consignaciones." }, { status: 409 });
+    return NextResponse.json(
+      {
+        error:
+          "Vista global en modo solo lectura. Selecciona una sucursal para crear consignaciones.",
+      },
+      { status: 409 },
+    );
   }
 
   // Guard: Verificar que el plan permite consignaciones
   const featureCheck = await checkFeature("consignaciones");
   if (!featureCheck.allowed) {
-    return NextResponse.json({ error: featureCheck.message, limitReached: true }, { status: 403 });
+    return NextResponse.json(
+      { error: featureCheck.message, limitReached: true },
+      { status: 403 },
+    );
   }
 
   const body = await req.json().catch(() => null);
@@ -137,7 +164,7 @@ export async function POST(req: Request) {
   if (!parsed.success) {
     return NextResponse.json(
       { error: "ValidaciÃ³n fallida", details: parsed.error.flatten() },
-      { status: 400 }
+      { status: 400 },
     );
   }
 
@@ -146,7 +173,7 @@ export async function POST(req: Request) {
   const notificationsQueue: NotificationQueueItem[] = [];
 
   const porcentaje = configGlobal.porcentajeAumentoConsignacion || 0;
-  const factorAumento = 1 + (porcentaje / 100);
+  const factorAumento = 1 + porcentaje / 100;
 
   try {
     const result = await prisma.$transaction(async (tx) => {
@@ -160,10 +187,12 @@ export async function POST(req: Request) {
       const ultimaConsignacion = await tx.consignacion.findFirst({
         where: { clienteId: parsed.data.clienteId },
         orderBy: { numeroFolio: "desc" },
-        select: { numeroFolio: true }
+        select: { numeroFolio: true },
       });
 
-      const nuevoFolio = ultimaConsignacion ? ultimaConsignacion.numeroFolio + 1 : 1;
+      const nuevoFolio = ultimaConsignacion
+        ? ultimaConsignacion.numeroFolio + 1
+        : 1;
 
       // 3. Validar productos y stock en la sucursal activa
       const sucursalId = auth.activeSucursalId;
@@ -172,13 +201,13 @@ export async function POST(req: Request) {
       const stocksSucursal = await tx.stockSucursal.findMany({
         where: {
           productoId: { in: productIds },
-          sucursalId
+          sucursalId,
         },
-        include: { producto: true }
+        include: { producto: true },
       });
 
       const mapStock = new Map<number, StockSucursalWithProducto>(
-        stocksSucursal.map((stock) => [stock.productoId, stock])
+        stocksSucursal.map((stock) => [stock.productoId, stock]),
       );
 
       for (const it of parsed.data.items) {
@@ -248,8 +277,8 @@ export async function POST(req: Request) {
             cantidad: it.unitsEntregadas,
             stockPrevio: sAntes.stockDisponibleUnits,
             stockPosterior: sDespues.stockDisponibleUnits,
-            observaciones: `Entrega de ConsignaciÃ³n Folio #${nuevoFolio}`
-          }
+            observaciones: `Entrega de ConsignaciÃ³n Folio #${nuevoFolio}`,
+          },
         });
 
         const alerta = evaluateStockAlert(pDespues, configGlobal);
@@ -276,23 +305,28 @@ export async function POST(req: Request) {
     await processNotificationQueue(notificationsQueue, auth.activeSucursalId);
 
     return NextResponse.json({ data: result }, { status: 201 });
-
   } catch (error) {
     const msg = getErrorMessage(error);
 
     if (msg === "CLIENTE_NO_EXISTE") {
-      return NextResponse.json({ error: "Cliente no encontrado" }, { status: 404 });
+      return NextResponse.json(
+        { error: "Cliente no encontrado" },
+        { status: 404 },
+      );
     }
     if (msg.startsWith("PRODUCTO_NO_ASIGNADO_SUCURSAL:")) {
       return NextResponse.json(
-        { error: "Producto no asignado a la sucursal", productoId: Number(msg.split(":")[1]) },
-        { status: 404 }
+        {
+          error: "Producto no asignado a la sucursal",
+          productoId: Number(msg.split(":")[1]),
+        },
+        { status: 404 },
       );
     }
     if (msg.startsWith("STOCK_INSUF:")) {
       return NextResponse.json(
         { error: "Stock insuficiente", productoId: Number(msg.split(":")[1]) },
-        { status: 409 }
+        { status: 409 },
       );
     }
 

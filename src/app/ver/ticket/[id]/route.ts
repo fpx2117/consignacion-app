@@ -2,7 +2,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import type { Page } from "puppeteer-core";
 import { getSharedReportBrowser } from "@/lib/chromium/resolve-executable-path";
-import { withChromiumSlot, ChromiumBusyError } from "@/lib/chromium/chromium-semaphore";
+import {
+  withChromiumSlot,
+  ChromiumBusyError,
+} from "@/lib/chromium/chromium-semaphore";
 import { verifyPdfToken } from "@/lib/security/pdf-token";
 import type { VentaReportDTO } from "@/lib/reports/base/venta-report-template";
 import { buildVentaHtmlAsync } from "@/lib/reports/base/venta-report-template";
@@ -24,13 +27,20 @@ function getPublicOrigin(req: NextRequest): string {
     return `${proto}://${host}`;
   }
 
-  const envBase = process.env.NEXT_PUBLIC_APP_URL?.trim() || "http://localhost:3000";
-  if (envBase.startsWith("http://") || envBase.startsWith("https://")) return envBase.replace(/\/$/, "");
+  const envBase =
+    process.env.NEXT_PUBLIC_APP_URL?.trim() || "http://localhost:3000";
+  if (envBase.startsWith("http://") || envBase.startsWith("https://"))
+    return envBase.replace(/\/$/, "");
   return `https://${envBase.replace(/\/$/, "")}`;
 }
 
-function redirectStatus(req: NextRequest, state: "invalid" | "expired" | "limit") {
-  return NextResponse.redirect(new URL(`/x/status?state=${state}`, getPublicOrigin(req)));
+function redirectStatus(
+  req: NextRequest,
+  state: "invalid" | "expired" | "limit",
+) {
+  return NextResponse.redirect(
+    new URL(`/x/status?state=${state}`, getPublicOrigin(req)),
+  );
 }
 
 function safeFilename(input: string) {
@@ -44,7 +54,7 @@ function safeFilename(input: string) {
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
   let page: Page | null = null;
 
@@ -65,8 +75,10 @@ export async function GET(
       const link = await prisma.shareLink.findUnique({ where: { codeHash } });
 
       if (!link) return redirectStatus(request, "invalid");
-      if (link.type !== "TICKET" || link.targetId !== id) return redirectStatus(request, "invalid");
-      if (new Date() > link.expiresAt) return redirectStatus(request, "expired");
+      if (link.type !== "TICKET" || link.targetId !== id)
+        return redirectStatus(request, "invalid");
+      if (new Date() > link.expiresAt)
+        return redirectStatus(request, "expired");
       if (link.views >= link.maxViews) return redirectStatus(request, "limit");
     } else {
       if (!token || !verifyPdfToken(id, token)) {
@@ -83,7 +95,11 @@ export async function GET(
       },
     });
 
-    if (!ventaRaw) return NextResponse.json({ error: "Venta no encontrada" }, { status: 404 });
+    if (!ventaRaw)
+      return NextResponse.json(
+        { error: "Venta no encontrada" },
+        { status: 404 },
+      );
 
     const timezone = await resolveTimezone({
       userId: ventaRaw.sesionCaja?.usuarioId ?? null,
@@ -109,7 +125,7 @@ export async function GET(
         cantidad: d.units,
         precioUnitario: Number(d.precioUnitario),
         descuento: Number(d.descuento ?? 0),
-        subtotal: (Number(d.precioUnitario) * d.units) - Number(d.descuento ?? 0),
+        subtotal: Number(d.precioUnitario) * d.units - Number(d.descuento ?? 0),
       })),
     };
 
@@ -122,7 +138,10 @@ export async function GET(
     const pdfUint8Array = await withChromiumSlot(async () => {
       const browser = await getSharedReportBrowser();
       page = await browser.newPage();
-      await page.setContent(html, { waitUntil: "domcontentloaded", timeout: 30000 });
+      await page.setContent(html, {
+        waitUntil: "domcontentloaded",
+        timeout: 30000,
+      });
 
       const bytes = await page.pdf({
         format: "A4",
@@ -147,13 +166,22 @@ export async function GET(
     });
   } catch (error) {
     if (error instanceof ChromiumBusyError) {
-      return NextResponse.json({ error: "Servidor ocupado generando otros reportes, reintentá en unos segundos." }, { status: 503 });
+      return NextResponse.json(
+        {
+          error:
+            "Servidor ocupado generando otros reportes, reintentá en unos segundos.",
+        },
+        { status: 503 },
+      );
     }
     console.error("PDF TICKET ERROR:", error);
-    return NextResponse.json({ error: "Error generando Ticket PDF" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Error generando Ticket PDF" },
+      { status: 500 },
+    );
   } finally {
     try {
       await (page as Page | null)?.close();
-    } catch { }
+    } catch {}
   }
 }

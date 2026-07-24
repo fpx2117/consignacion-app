@@ -3,7 +3,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/auth/require-auth";
-import { canAccessSucursalResource, isGlobalSucursalView } from "@/lib/security/sucursalScope";
+import {
+  canAccessSucursalResource,
+  isGlobalSucursalView,
+} from "@/lib/security/sucursalScope";
 import { updateProveedorSchema } from "@/lib/validators/proveedor";
 
 export async function GET(
@@ -16,12 +19,20 @@ export async function GET(
   const { id } = await params;
   const proveedorId = Number(id);
   if (!Number.isInteger(proveedorId)) {
-    return NextResponse.json({ error: "Proveedor no encontrado" }, { status: 404 });
+    return NextResponse.json(
+      { error: "Proveedor no encontrado" },
+      { status: 404 },
+    );
   }
 
-  const proveedor = await prisma.proveedor.findUnique({ where: { id: proveedorId } });
+  const proveedor = await prisma.proveedor.findUnique({
+    where: { id: proveedorId },
+  });
   if (!proveedor || !canAccessSucursalResource(auth, proveedor.sucursalId)) {
-    return NextResponse.json({ error: "Proveedor no encontrado" }, { status: 404 });
+    return NextResponse.json(
+      { error: "Proveedor no encontrado" },
+      { status: 404 },
+    );
   }
 
   return NextResponse.json(proveedor);
@@ -36,7 +47,10 @@ export async function PATCH(
   if (!auth.ok) return auth.res;
   if (isGlobalSucursalView(auth)) {
     return NextResponse.json(
-      { error: "Vista global en modo solo lectura. Selecciona una sucursal para editar un proveedor." },
+      {
+        error:
+          "Vista global en modo solo lectura. Selecciona una sucursal para editar un proveedor.",
+      },
       { status: 409 },
     );
   }
@@ -44,7 +58,10 @@ export async function PATCH(
   const { id } = await params;
   const proveedorId = Number(id);
   if (!Number.isInteger(proveedorId)) {
-    return NextResponse.json({ error: "Proveedor no encontrado" }, { status: 404 });
+    return NextResponse.json(
+      { error: "Proveedor no encontrado" },
+      { status: 404 },
+    );
   }
 
   const body = await req.json().catch(() => null);
@@ -56,25 +73,39 @@ export async function PATCH(
     );
   }
 
-  const existing = await prisma.proveedor.findUnique({ where: { id: proveedorId } });
+  const existing = await prisma.proveedor.findUnique({
+    where: { id: proveedorId },
+  });
   if (!existing || !canAccessSucursalResource(auth, existing.sucursalId)) {
-    return NextResponse.json({ error: "Proveedor no encontrado" }, { status: 404 });
+    return NextResponse.json(
+      { error: "Proveedor no encontrado" },
+      { status: 404 },
+    );
   }
 
   try {
     const updated = await prisma.proveedor.update({
       where: { id: proveedorId },
       data: {
-        ...(parsed.data.nombre !== undefined && { nombre: parsed.data.nombre.trim() }),
-        ...(parsed.data.cuit !== undefined && { cuit: parsed.data.cuit?.trim() || null }),
-        ...(parsed.data.monedaPreferida !== undefined && { monedaPreferida: parsed.data.monedaPreferida }),
+        ...(parsed.data.nombre !== undefined && {
+          nombre: parsed.data.nombre.trim(),
+        }),
+        ...(parsed.data.cuit !== undefined && {
+          cuit: parsed.data.cuit?.trim() || null,
+        }),
+        ...(parsed.data.monedaPreferida !== undefined && {
+          monedaPreferida: parsed.data.monedaPreferida,
+        }),
         ...(parsed.data.activo !== undefined && { activo: parsed.data.activo }),
       },
     });
     return NextResponse.json(updated);
   } catch (err) {
     console.error("Error al actualizar proveedor:", err);
-    return NextResponse.json({ error: "Error al actualizar el proveedor" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Error al actualizar el proveedor" },
+      { status: 500 },
+    );
   }
 }
 
@@ -88,7 +119,10 @@ export async function DELETE(
   if (!auth.ok) return auth.res;
   if (isGlobalSucursalView(auth)) {
     return NextResponse.json(
-      { error: "Vista global en modo solo lectura. Selecciona una sucursal para eliminar un proveedor." },
+      {
+        error:
+          "Vista global en modo solo lectura. Selecciona una sucursal para eliminar un proveedor.",
+      },
       { status: 409 },
     );
   }
@@ -96,12 +130,20 @@ export async function DELETE(
   const { id } = await params;
   const proveedorId = Number(id);
   if (!Number.isInteger(proveedorId)) {
-    return NextResponse.json({ error: "Proveedor no encontrado" }, { status: 404 });
+    return NextResponse.json(
+      { error: "Proveedor no encontrado" },
+      { status: 404 },
+    );
   }
 
-  const existing = await prisma.proveedor.findUnique({ where: { id: proveedorId } });
+  const existing = await prisma.proveedor.findUnique({
+    where: { id: proveedorId },
+  });
   if (!existing || !canAccessSucursalResource(auth, existing.sucursalId)) {
-    return NextResponse.json({ error: "Proveedor no encontrado" }, { status: 404 });
+    return NextResponse.json(
+      { error: "Proveedor no encontrado" },
+      { status: 404 },
+    );
   }
 
   await prisma.proveedor.update({

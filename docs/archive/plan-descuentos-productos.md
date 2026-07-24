@@ -80,12 +80,16 @@ export function calcularDescuentoEfectivo(
     descuentoHasta: string | Date | null;
     precioVenta: number;
   },
-  ahora: Date = new Date()
+  ahora: Date = new Date(),
 ): DescuentoEfectivo | null {
   if (!producto.descuentoActivo || !producto.descuentoPorcentaje) return null;
 
-  const desde = producto.descuentoDesde ? new Date(producto.descuentoDesde) : null;
-  const hasta = producto.descuentoHasta ? new Date(producto.descuentoHasta) : null;
+  const desde = producto.descuentoDesde
+    ? new Date(producto.descuentoDesde)
+    : null;
+  const hasta = producto.descuentoHasta
+    ? new Date(producto.descuentoHasta)
+    : null;
 
   if (desde && ahora < desde) return null;
   if (hasta && ahora > hasta) return null;
@@ -140,7 +144,9 @@ import { calcularDescuentoEfectivo } from "@/lib/descuento-utils";
 // Al mapear cada producto en el SELECT de Prisma:
 const descuentoEfectivo = calcularDescuentoEfectivo({
   descuentoActivo: p.descuentoActivo,
-  descuentoPorcentaje: p.descuentoPorcentaje ? Number(p.descuentoPorcentaje) : null,
+  descuentoPorcentaje: p.descuentoPorcentaje
+    ? Number(p.descuentoPorcentaje)
+    : null,
   descuentoDesde: p.descuentoDesde,
   descuentoHasta: p.descuentoHasta,
   precioVenta: Number(p.precioVentaOverride ?? p.precioVenta),
@@ -188,7 +194,9 @@ Con refinement para validar coherencia de fechas:
 En `edit-producto-dialog.tsx` y `create-producto-dialog.tsx`, agregar una sección colapsable "Descuento":
 
 ```tsx
-{/* Sección descuento */}
+{
+  /* Sección descuento */
+}
 <div className="space-y-3 border rounded-lg p-4">
   <div className="flex items-center justify-between">
     <Label className="text-sm font-medium">Descuento</Label>
@@ -202,7 +210,12 @@ En `edit-producto-dialog.tsx` y `create-producto-dialog.tsx`, agregar una secci�
     <div className="space-y-3">
       <div>
         <Label>Porcentaje (%)</Label>
-        <Input type="number" min={1} max={99} {...form.register("descuentoPorcentaje")} />
+        <Input
+          type="number"
+          min={1}
+          max={99}
+          {...form.register("descuentoPorcentaje")}
+        />
       </div>
       <div className="grid grid-cols-2 gap-3">
         <div>
@@ -221,13 +234,15 @@ En `edit-producto-dialog.tsx` y `create-producto-dialog.tsx`, agregar una secci�
           <span className="line-through">{formatCurrency(precioVenta)}</span>
           {" → "}
           <span className="font-semibold text-destructive">
-            {formatCurrency(precioVenta * (1 - form.watch("descuentoPorcentaje") / 100))}
+            {formatCurrency(
+              precioVenta * (1 - form.watch("descuentoPorcentaje") / 100),
+            )}
           </span>
         </p>
       )}
     </div>
   )}
-</div>
+</div>;
 ```
 
 **Qué se reutiliza:** los date pickers ya existen en el formulario (`fechaVencimiento`). El toggle Switch (`activo`) ya existe también. Solo se replica el patrón.
@@ -241,23 +256,25 @@ En `edit-producto-dialog.tsx` y `create-producto-dialog.tsx`, agregar una secci�
 Solo visualización — sin lógica de cálculo ni evaluación de fechas:
 
 ```tsx
-{producto.descuentoEfectivo ? (
-  <div className="flex items-center gap-2 flex-wrap">
-    <span className="line-through text-muted-foreground text-sm">
-      {formatCurrency(producto.descuentoEfectivo.precioOriginal)}
+{
+  producto.descuentoEfectivo ? (
+    <div className="flex items-center gap-2 flex-wrap">
+      <span className="line-through text-muted-foreground text-sm">
+        {formatCurrency(producto.descuentoEfectivo.precioOriginal)}
+      </span>
+      <span className="font-bold text-destructive text-lg">
+        {formatCurrency(producto.descuentoEfectivo.precioFinal)}
+      </span>
+      <Badge variant="destructive" className="text-xs">
+        -{producto.descuentoEfectivo.porcentaje}%
+      </Badge>
+    </div>
+  ) : (
+    <span className="font-bold text-lg">
+      {formatCurrency(Number(producto.precioVenta))}
     </span>
-    <span className="font-bold text-destructive text-lg">
-      {formatCurrency(producto.descuentoEfectivo.precioFinal)}
-    </span>
-    <Badge variant="destructive" className="text-xs">
-      -{producto.descuentoEfectivo.porcentaje}%
-    </Badge>
-  </div>
-) : (
-  <span className="font-bold text-lg">
-    {formatCurrency(Number(producto.precioVenta))}
-  </span>
-)}
+  );
+}
 ```
 
 ### En `product-modal.tsx`
@@ -265,26 +282,34 @@ Solo visualización — sin lógica de cálculo ni evaluación de fechas:
 Con más espacio visual para mostrar el ahorro en pesos:
 
 ```tsx
-{producto.descuentoEfectivo ? (
-  <div className="space-y-1">
-    <div className="flex items-center gap-3">
-      <span className="line-through text-muted-foreground">
-        {formatCurrency(producto.descuentoEfectivo.precioOriginal)}
-      </span>
-      <Badge variant="destructive">-{producto.descuentoEfectivo.porcentaje}%</Badge>
+{
+  producto.descuentoEfectivo ? (
+    <div className="space-y-1">
+      <div className="flex items-center gap-3">
+        <span className="line-through text-muted-foreground">
+          {formatCurrency(producto.descuentoEfectivo.precioOriginal)}
+        </span>
+        <Badge variant="destructive">
+          -{producto.descuentoEfectivo.porcentaje}%
+        </Badge>
+      </div>
+      <p className="text-2xl font-bold text-destructive">
+        {formatCurrency(producto.descuentoEfectivo.precioFinal)}
+      </p>
+      <p className="text-sm text-green-600">
+        Ahorrás{" "}
+        {formatCurrency(
+          producto.descuentoEfectivo.precioOriginal -
+            producto.descuentoEfectivo.precioFinal,
+        )}
+      </p>
     </div>
-    <p className="text-2xl font-bold text-destructive">
-      {formatCurrency(producto.descuentoEfectivo.precioFinal)}
+  ) : (
+    <p className="text-2xl font-bold">
+      {formatCurrency(Number(producto.precioVenta))}
     </p>
-    <p className="text-sm text-green-600">
-      Ahorrás {formatCurrency(
-        producto.descuentoEfectivo.precioOriginal - producto.descuentoEfectivo.precioFinal
-      )}
-    </p>
-  </div>
-) : (
-  <p className="text-2xl font-bold">{formatCurrency(Number(producto.precioVenta))}</p>
-)}
+  );
+}
 ```
 
 ### En el carrito (`cart-drawer.tsx`)
@@ -293,7 +318,8 @@ Usar `precioFinal` del descuento como precio base para el subtotal:
 
 ```typescript
 const subtotalProductos = cart.reduce((acc, item) => {
-  const precioUnitario = item.descuentoEfectivo?.precioFinal ?? Number(item.precioVenta);
+  const precioUnitario =
+    item.descuentoEfectivo?.precioFinal ?? Number(item.precioVenta);
   return acc + precioUnitario * item.quantity;
 }, 0);
 ```
@@ -351,13 +377,13 @@ Frontend consume descuentoEfectivo (sin lógica de negocio)
 
 ## Resumen por etapa
 
-| Etapa | Archivos modificados | Archivos nuevos |
-|-------|---------------------|-----------------|
-| 1 — DB | `prisma/schema.prisma` | migración SQL generada por Prisma |
-| 2 — Utilidad | — | `src/lib/descuento-utils.ts` |
-| 3 — Backend | `src/app/api/productos/route.ts`, `src/app/api/productos/[id]/route.ts`, `src/lib/validators/producto.ts`, `src/lib/types.ts` | — |
-| 4 — Admin UI | `edit-producto-dialog.tsx`, `create-producto-dialog.tsx` | — |
-| 5 — Catálogo | `product-card.tsx`, `product-modal.tsx`, `cart-drawer.tsx` | — |
-| 6 — Data service | `src/lib/public-catalog.ts` | — |
+| Etapa            | Archivos modificados                                                                                                          | Archivos nuevos                   |
+| ---------------- | ----------------------------------------------------------------------------------------------------------------------------- | --------------------------------- |
+| 1 — DB           | `prisma/schema.prisma`                                                                                                        | migración SQL generada por Prisma |
+| 2 — Utilidad     | —                                                                                                                             | `src/lib/descuento-utils.ts`      |
+| 3 — Backend      | `src/app/api/productos/route.ts`, `src/app/api/productos/[id]/route.ts`, `src/lib/validators/producto.ts`, `src/lib/types.ts` | —                                 |
+| 4 — Admin UI     | `edit-producto-dialog.tsx`, `create-producto-dialog.tsx`                                                                      | —                                 |
+| 5 — Catálogo     | `product-card.tsx`, `product-modal.tsx`, `cart-drawer.tsx`                                                                    | —                                 |
+| 6 — Data service | `src/lib/public-catalog.ts`                                                                                                   | —                                 |
 
 **Archivos que no se tocan:** modelos de venta, consignación, categorías, stock, rutas de auth, dashboard KPIs. El descuento de producto es ortogonal a todo eso.

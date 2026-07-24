@@ -79,13 +79,11 @@ function mapToDTO(branding: BrandingRecord): BrandingDTO {
 
   return {
     businessName:
-      normalizeString(branding.businessName) ??
-      DEFAULT_BRANDING.businessName,
+      normalizeString(branding.businessName) ?? DEFAULT_BRANDING.businessName,
     logoUrl,
     logoBase64,
     primaryColor:
-      normalizeString(branding.primaryColor) ??
-      DEFAULT_BRANDING.primaryColor,
+      normalizeString(branding.primaryColor) ?? DEFAULT_BRANDING.primaryColor,
     footerText: normalizeString(branding.footerText),
     phone: normalizeString(branding.phone),
     address: normalizeString(branding.address),

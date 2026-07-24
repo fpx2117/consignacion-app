@@ -2,7 +2,15 @@
 
 import * as React from "react";
 import { useForm } from "react-hook-form";
-import { Plus, Loader2, User, Phone, MapPin, Building2, Save } from "lucide-react";
+import {
+  Plus,
+  Loader2,
+  User,
+  Phone,
+  MapPin,
+  Building2,
+  Save,
+} from "lucide-react";
 
 import {
   Dialog,
@@ -25,23 +33,35 @@ interface CreateClienteDialogProps {
   trigger?: React.ReactNode;
 }
 
-export function CreateClienteDialog({ onCreated, trigger }: CreateClienteDialogProps) {
+export function CreateClienteDialog({
+  onCreated,
+  trigger,
+}: CreateClienteDialogProps) {
   const [open, setOpen] = React.useState(false);
   const [loading, setLoading] = React.useState(false);
 
   type FormValues = { nombre: string; telefono: string; direccion: string };
-  const { register, handleSubmit, reset, formState: { errors } } = useForm<FormValues>({
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors },
+  } = useForm<FormValues>({
     defaultValues: {
       nombre: "",
       telefono: "",
       direccion: "",
-    }
+    },
   });
 
   const onSubmit = async (data: FormValues) => {
     setLoading(true);
     try {
-      await apiService.createCliente({ nombre: data.nombre, telefono: data.telefono || null, direccion: data.direccion || null });
+      await apiService.createCliente({
+        nombre: data.nombre,
+        telefono: data.telefono || null,
+        direccion: data.direccion || null,
+      });
       toast.success("Cliente creado correctamente");
       setOpen(false);
       reset();
@@ -96,19 +116,29 @@ export function CreateClienteDialog({ onCreated, trigger }: CreateClienteDialogP
               </div>
 
               <div className="space-y-2 group">
-                <Label htmlFor="nombre" className="text-xs font-medium ml-1 group-focus-within:text-primary transition-colors">
-                  Nombre Completo <span className="text-[color:var(--status-danger)]">*</span>
+                <Label
+                  htmlFor="nombre"
+                  className="text-xs font-medium ml-1 group-focus-within:text-primary transition-colors"
+                >
+                  Nombre Completo{" "}
+                  <span className="text-[color:var(--status-danger)]">*</span>
                 </Label>
                 <div className="relative">
                   <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
                   <Input
                     id="nombre"
-                    {...register("nombre", { required: "El nombre es obligatorio" })}
+                    {...register("nombre", {
+                      required: "El nombre es obligatorio",
+                    })}
                     placeholder="Ej. Juan Pérez"
                     className="pl-10 h-11 bg-muted/40 border-border/50 hover:bg-muted/70 focus:bg-background transition-all rounded-xl focus-visible:ring-primary/20 focus-visible:border-primary/50"
                   />
                 </div>
-                {errors.nombre && <span className="text-xs text-[color:var(--status-danger)] ml-1 font-medium">{errors.nombre.message as string}</span>}
+                {errors.nombre && (
+                  <span className="text-xs text-[color:var(--status-danger)] ml-1 font-medium">
+                    {errors.nombre.message as string}
+                  </span>
+                )}
               </div>
             </div>
 
@@ -122,7 +152,10 @@ export function CreateClienteDialog({ onCreated, trigger }: CreateClienteDialogP
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2 group">
-                  <Label htmlFor="telefono" className="text-xs font-medium ml-1 group-focus-within:text-primary transition-colors">
+                  <Label
+                    htmlFor="telefono"
+                    className="text-xs font-medium ml-1 group-focus-within:text-primary transition-colors"
+                  >
                     Teléfono
                   </Label>
                   <div className="relative">
@@ -137,7 +170,10 @@ export function CreateClienteDialog({ onCreated, trigger }: CreateClienteDialogP
                 </div>
 
                 <div className="space-y-2 group">
-                  <Label htmlFor="direccion" className="text-xs font-medium ml-1 group-focus-within:text-primary transition-colors">
+                  <Label
+                    htmlFor="direccion"
+                    className="text-xs font-medium ml-1 group-focus-within:text-primary transition-colors"
+                  >
                     Dirección
                   </Label>
                   <div className="relative">

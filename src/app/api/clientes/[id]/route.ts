@@ -1,7 +1,10 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/auth/require-auth";
-import { canAccessSucursalResource, isGlobalSucursalView } from "@/lib/security/sucursalScope";
+import {
+  canAccessSucursalResource,
+  isGlobalSucursalView,
+} from "@/lib/security/sucursalScope";
 
 type RouteContext = {
   params: Promise<{ id: string }>;
@@ -27,12 +30,14 @@ export async function GET(request: Request, { params }: RouteContext) {
     });
 
     if (!cliente || !canAccessSucursalResource(auth, cliente.sucursalId)) {
-      return NextResponse.json({ error: "Cliente no encontrado" }, { status: 404 });
+      return NextResponse.json(
+        { error: "Cliente no encontrado" },
+        { status: 404 },
+      );
     }
 
     // ✅ IMPORTANTE: Envolvemos en 'data' para que apiService lo lea bien
     return NextResponse.json({ data: cliente });
-
   } catch (error) {
     console.error("Error GET cliente:", error);
     return NextResponse.json({ error: "Error interno" }, { status: 500 });
@@ -47,7 +52,13 @@ export async function PUT(request: Request, { params }: RouteContext) {
     const auth = await requireAuth();
     if (!auth.ok) return auth.res;
     if (isGlobalSucursalView(auth)) {
-      return NextResponse.json({ error: "Vista global en modo solo lectura. Selecciona una sucursal para editar clientes." }, { status: 409 });
+      return NextResponse.json(
+        {
+          error:
+            "Vista global en modo solo lectura. Selecciona una sucursal para editar clientes.",
+        },
+        { status: 409 },
+      );
     }
 
     const { id: idString } = await params;
@@ -59,7 +70,10 @@ export async function PUT(request: Request, { params }: RouteContext) {
 
     const existing = await prisma.cliente.findUnique({ where: { id } });
     if (!existing || existing.sucursalId !== auth.activeSucursalId) {
-      return NextResponse.json({ error: "Cliente no encontrado" }, { status: 404 });
+      return NextResponse.json(
+        { error: "Cliente no encontrado" },
+        { status: 404 },
+      );
     }
 
     const body = await request.json();
@@ -78,7 +92,6 @@ export async function PUT(request: Request, { params }: RouteContext) {
 
     // ✅ Envolvemos en 'data'
     return NextResponse.json({ data: clienteActualizado });
-
   } catch (error) {
     console.error("Error PUT cliente:", error);
     return NextResponse.json({ error: "Error al actualizar" }, { status: 500 });
@@ -93,7 +106,13 @@ export async function DELETE(request: Request, { params }: RouteContext) {
     const auth = await requireAuth();
     if (!auth.ok) return auth.res;
     if (isGlobalSucursalView(auth)) {
-      return NextResponse.json({ error: "Vista global en modo solo lectura. Selecciona una sucursal para eliminar clientes." }, { status: 409 });
+      return NextResponse.json(
+        {
+          error:
+            "Vista global en modo solo lectura. Selecciona una sucursal para eliminar clientes.",
+        },
+        { status: 409 },
+      );
     }
 
     const { id: idString } = await params;
@@ -105,7 +124,10 @@ export async function DELETE(request: Request, { params }: RouteContext) {
 
     const existing = await prisma.cliente.findUnique({ where: { id } });
     if (!existing || existing.sucursalId !== auth.activeSucursalId) {
-      return NextResponse.json({ error: "Cliente no encontrado" }, { status: 404 });
+      return NextResponse.json(
+        { error: "Cliente no encontrado" },
+        { status: 404 },
+      );
     }
 
     // Eliminación lógica (recomendada)
@@ -117,9 +139,8 @@ export async function DELETE(request: Request, { params }: RouteContext) {
     // ✅ Envolvemos en 'data'
     return NextResponse.json({
       data: clienteDesactivado,
-      message: "Cliente desactivado correctamente"
+      message: "Cliente desactivado correctamente",
     });
-
   } catch (error) {
     console.error("Error DELETE cliente:", error);
     return NextResponse.json({ error: "Error al eliminar" }, { status: 500 });

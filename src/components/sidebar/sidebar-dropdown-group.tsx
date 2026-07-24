@@ -33,7 +33,9 @@ export function SidebarDropdownGroup({
   getBadgeCount,
 }: SidebarDropdownGroupProps) {
   const groupActive = items.some((item) => isActive(item.href));
-  const totalBadge = (getBadgeCount ? items.reduce((sum, item) => sum + getBadgeCount(item), 0) : 0);
+  const totalBadge = getBadgeCount
+    ? items.reduce((sum, item) => sum + getBadgeCount(item), 0)
+    : 0;
 
   return (
     <DropdownMenu>
@@ -47,7 +49,7 @@ export function SidebarDropdownGroup({
               "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
               groupActive
                 ? "bg-primary text-primary-foreground shadow-lg scale-110"
-                : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                : "text-muted-foreground hover:bg-muted hover:text-foreground",
             )}
           >
             <GroupIcon className="size-5" />
@@ -82,10 +84,15 @@ export function SidebarDropdownGroup({
               onSelect={() => onNavigate(item.href)}
               className={cn(
                 "cursor-pointer rounded-xl px-3 py-2.5 data-[highlighted]:bg-muted data-[highlighted]:text-foreground",
-                active && "bg-primary/10 text-primary"
+                active && "bg-primary/10 text-primary",
               )}
             >
-              <ItemIcon className={cn("h-4 w-4", active ? "text-primary" : "text-muted-foreground")} />
+              <ItemIcon
+                className={cn(
+                  "h-4 w-4",
+                  active ? "text-primary" : "text-muted-foreground",
+                )}
+              />
               <span className="flex-1 text-sm font-medium">{item.label}</span>
               {badgeCount > 0 && (
                 <span className="inline-flex min-w-[18px] h-[18px] items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-black leading-none text-destructive-foreground">

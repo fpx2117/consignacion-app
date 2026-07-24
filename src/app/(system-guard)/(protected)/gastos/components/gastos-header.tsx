@@ -9,7 +9,10 @@ type GastosHeaderProps = {
   onOpenNew: () => void;
 };
 
-export function GastosHeader({ onOpenCategories, onOpenNew }: GastosHeaderProps) {
+export function GastosHeader({
+  onOpenCategories,
+  onOpenNew,
+}: GastosHeaderProps) {
   return (
     <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 px-2 md:px-0">
       <div className="space-y-1">

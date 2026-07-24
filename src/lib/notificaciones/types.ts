@@ -10,25 +10,28 @@ export enum NOTIFICATION_TYPE {
 
   // 💳 Suscripciones
   SUBSCRIPTION_EXPIRING = "SUBSCRIPTION_EXPIRING", // Suscripción por vencer
-  TRIAL_ENDING = "TRIAL_ENDING",                 // Trial por vencer
-  SUBSCRIPTION_ACTIVE = "SUBSCRIPTION_ACTIVE",     // Suscripción activada
+  TRIAL_ENDING = "TRIAL_ENDING", // Trial por vencer
+  SUBSCRIPTION_ACTIVE = "SUBSCRIPTION_ACTIVE", // Suscripción activada
 
   // ⚙️ Sistema
   SYSTEM = "SYSTEM",
 
   // 🔮 Futuro (Sugerencias útiles)
-  NEW_ORDER = "NEW_ORDER",           // Nueva venta (para que suene la caja)
+  NEW_ORDER = "NEW_ORDER", // Nueva venta (para que suene la caja)
   PAYMENT_RECEIVED = "PAYMENT_RECEIVED", // Pago confirmado
-  PAYMENT_FAILED = "PAYMENT_FAILED",     // Error en pago
-  EXPORT_READY = "EXPORT_READY",     // "Tu reporte PDF está listo"
+  PAYMENT_FAILED = "PAYMENT_FAILED", // Error en pago
+  EXPORT_READY = "EXPORT_READY", // "Tu reporte PDF está listo"
   CLIENT_REGISTERED = "CLIENT_REGISTERED", // Nuevo cliente
   CONSIGNMENT_ALERT = "CONSIGNMENT_ALERT", // Alerta de tiempo en consignación
-  PEDIDO_VENCIDO = "PEDIDO_VENCIDO"         // Pedido de reposicion con fecha vencida
+  PEDIDO_VENCIDO = "PEDIDO_VENCIDO", // Pedido de reposicion con fecha vencida
 }
 
 // 2. Configuración visual (Opcional, pero muy útil para el Frontend)
 // Esto te ayuda a saber qué color o icono mostrar según el tipo
-export const NOTIFICATION_CONFIG: Record<NOTIFICATION_TYPE, { label: string; severity: "info" | "warning" | "error" | "success" }> = {
+export const NOTIFICATION_CONFIG: Record<
+  NOTIFICATION_TYPE,
+  { label: string; severity: "info" | "warning" | "error" | "success" }
+> = {
   [NOTIFICATION_TYPE.LOW_STOCK]: {
     label: "Stock Bajo",
     severity: "warning", // Amarillo

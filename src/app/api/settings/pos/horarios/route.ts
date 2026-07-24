@@ -30,7 +30,10 @@ export async function GET() {
     return NextResponse.json({ data: usuarios });
   } catch (error) {
     console.error("Error al obtener los horarios:", error);
-    return NextResponse.json({ error: "Error al obtener los horarios" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Error al obtener los horarios" },
+      { status: 500 },
+    );
   }
 }
 
@@ -51,7 +54,9 @@ export async function POST(req: Request) {
 
     for (const horario of horarios) {
       await prisma.horarioLaboral.upsert({
-        where: { usuarioId_diaSemana: { usuarioId, diaSemana: horario.diaSemana } },
+        where: {
+          usuarioId_diaSemana: { usuarioId, diaSemana: horario.diaSemana },
+        },
         update: {
           horaInicio: horario.horaInicio,
           horaFin: horario.horaFin,
@@ -70,6 +75,9 @@ export async function POST(req: Request) {
     return NextResponse.json({ message: "Horarios actualizados" });
   } catch (error) {
     console.error("Error al actualizar los horarios:", error);
-    return NextResponse.json({ error: "Error al actualizar los horarios" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Error al actualizar los horarios" },
+      { status: 500 },
+    );
   }
 }
