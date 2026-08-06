@@ -1,4 +1,4 @@
-# KNOWLEDGE,cloud — Fases 0-5
+# KNOWLEDGE,cloud — Fases 0-6
 
 ## Completado (Fase 0)
 
@@ -71,9 +71,9 @@
   fondo, tarjeta y texto coincidiendo con `know-design-system.ts`. Sin
   hallazgos de contraste a simple vista. Capturas no versionadas (quedaron
   en el scratchpad de la sesión, no en el repo).
-- Falta revisar pantallas autenticadas (dashboard, tablas, gráficos) con
-  capturas reales — no se hizo en esta sesión porque requiere login: queda
-  para cuando la Fase 5 (módulos protegidos) las toque directamente.
+- Revisar pantallas autenticadas (dashboard, tablas, gráficos) con
+  capturas reales: no se hizo en esta sesión porque requiere login.
+  Resuelto en Fase 6.
 
 ## Completado (Fase 2 — Satoshi global)
 
@@ -223,6 +223,46 @@ layout raíz en vez del nombre/logo real que configuró el dueño.
   probó en vivo — no hay ninguna tienda con `tiendaSlug` configurado en
   este entorno — pero usa la misma `buildStorefrontMetadata` ya validada
   en `/lista` y compila sin errores de tipos.
+
+## Completado (Fase 6 — revisión visual autenticada)
+
+Cierra el ítem que quedó pendiente desde Fase 1: revisión con capturas
+reales de pantallas autenticadas en light y dark.
+
+- Pantallas revisadas: `/dashboard` (KPIs + gráficos de rentabilidad),
+  `/productos` (tabla con filtros), `/consignaciones` (tabla, estado
+  vacío), `/ventas/nueva` (formulario denso + carrito). Sin hallazgos de
+  contraste, tipografía o paleta fuera de `know-design-system.ts` en
+  ninguna, en ambos temas.
+- `/settings/tienda` (`BrandingTab`): confirmado por snapshot de
+  accesibilidad (no por captura — ver nota de tooling abajo) que renderiza
+  bien; el selector de tipografía por tienda sigue mostrando "Inter" como
+  antes (correcto, fuera del alcance de esta fase, es branding del
+  cliente).
+- **Hallazgo real, corregido**: la consola del navegador marcaba
+  `Image with src "/brand/logo_negro.png" was detected as the Largest
+Contentful Paint (LCP). Please add the loading="eager" property` — Fase
+  3 le había quitado `priority` a los `<Image>` de `brand-logo.tsx` para
+  entrar en el presupuesto del ratchet de `visual-guard`. Se volvió a
+  agregar `priority` y se compensó la línea acortando el comentario
+  vecino a una sola línea; baseline regenerado.
+- Nota de tooling: `playwright-cli` se cerró solo dos veces durante esta
+  sesión (browser crash sin causa clara) y en un momento navegó
+  espontáneamente a `/dashboard` con el panel de notificaciones abierto
+  en vez de mostrar `/settings/tienda` — no se pudo conseguir una captura
+  limpia de esa pantalla, se usó el snapshot de accesibilidad como
+  evidencia en su lugar.
+- Se observaron dos 500 transitorios (`/ventas/nueva`, `/settings/tienda`)
+  en la primera navegación tras horas de dev server sin reiniciar —
+  resueltos con un reload, contenido correcto después. No se investigó a
+  fondo la causa (compilación on-demand de Turbopack es la hipótesis más
+  probable); si se repite con el server recién iniciado, sí sería un
+  hallazgo real a seguir.
+- **No tocado a propósito**: `src/components/notifications/notifications-panel.tsx`
+  apareció modificado en el working tree durante esta sesión sin que
+  ninguna edición de esta conversación lo tocara — probablemente trabajo
+  en curso del usuario en paralelo (IDE abierto). No se incluyó en el
+  commit de Fase 6 ni se descartó.
 
 ## Deuda preexistente
 

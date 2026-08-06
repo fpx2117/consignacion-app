@@ -8,8 +8,7 @@ interface BrandLogoProps {
   size?: "sm" | "md" | "lg";
 }
 const SIZE_PX = { sm: 32, md: 40, lg: 48 } as const;
-// El CSS (.dark) elige la variante visible; hacerlo en JS via useTheme()
-// desincroniza SSR/CSR (el tema real solo se conoce en el cliente) y rompe la hidratacion.
+// El CSS (.dark) elige la variante; en JS via useTheme() desincroniza SSR/CSR y rompe la hidratacion.
 const VARIANTS = [
   { src: LOGOS.light, css: "dark:hidden" },
   { src: LOGOS.dark, css: "hidden dark:block" },
@@ -25,6 +24,7 @@ export function BrandLogo({ className, size = "md" }: BrandLogoProps) {
           alt="KNOWLEDGE,cloud"
           width={px}
           height={px}
+          priority
           className={css}
         />
       ))}
