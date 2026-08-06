@@ -615,7 +615,7 @@
     ["src/components/layout/brand-logo.tsx", 33],
     ["src/components/layout/sidebar-dock.tsx", 663],
     ["src/components/layout/top-bar.tsx", 154],
-    ["src/components/notifications/notifications-panel.tsx", 429],
+    ["src/components/notifications/notifications-panel.tsx", 415],
     ["src/components/performance-vitals.tsx", 38],
     ["src/components/reports/download-inventory-button.tsx", 26],
     ["src/components/reports/inventory-pdf-options-dialog.tsx", 261],
