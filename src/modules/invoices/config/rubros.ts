@@ -65,6 +65,12 @@ export const RUBROS_NEGOCIO: RubroNegocio[] = [
       "marca, línea, tono, color, número de tono, presentación, ml, gramos, tipo de piel, acabado, textura, waterproof, vencimiento, lote, código de barras, categoría",
   },
   {
+    slug: "vapes",
+    label: "Vapes / Cigarrillos Electrónicos",
+    atributosTipicos:
+      "marca, modelo, sabor, puffs, caladas, nicotina, mg, ml, capacidad, descartable, recargable, pod, kit, resistencia, ohm, batería, mah, color, mentol, tabaco, código de barras, lote",
+  },
+  {
     slug: "farmacia",
     label: "Farmacia",
     atributosTipicos:

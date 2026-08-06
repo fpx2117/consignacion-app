@@ -28,6 +28,19 @@ export interface AtributoFijoDef {
 }
 
 export const RUBRO_ATRIBUTOS_FIJOS: Record<string, AtributoFijoDef[]> = {
+  vapes: [
+    { clave: "marca", label: "Marca", tipo: "texto", requerido: true },
+    { clave: "sabor", label: "Sabor", tipo: "texto", requerido: true },
+    { clave: "puffs", label: "Puffs", tipo: "numero" },
+    { clave: "nicotina_mg", label: "Nicotina (mg)", tipo: "numero" },
+    {
+      clave: "tipo_dispositivo",
+      label: "Tipo",
+      tipo: "seleccion",
+      opciones: ["Descartable", "Recargable", "Pod", "Kit"],
+    },
+    { clave: "capacidad_ml", label: "Capacidad (ml)", tipo: "numero" },
+  ],
   perfumeria: [
     { clave: "marca", label: "Marca", tipo: "texto", requerido: true },
     { clave: "linea", label: "Línea", tipo: "texto" },
