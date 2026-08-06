@@ -13,6 +13,7 @@ import {
   createProductoSchema,
   type CreateProductoInput,
 } from "@/lib/validators/producto";
+import { validarAtributosFijosProducto } from "@/lib/validators/producto-atributos-fijos";
 import { sendNotification } from "@/lib/notificaciones/socket-trigger";
 import { NOTIFICATION_TYPE } from "@/lib/notificaciones/types";
 import { obtenerConfiguracionGlobal } from "@/lib/config";
@@ -275,6 +276,21 @@ export async function POST(req: Request) {
     const data = parsed.data;
     const stockInicial = data.stockDisponibleUnits ?? 0;
 
+    // Resolvemos la config de la sucursal una sola vez: la reusamos abajo
+    // para el umbral de alerta de stock (ya se hacía) y acá para validar
+    // los atributos fijos del rubro activo.
+    const configGlobal = await obtenerConfiguracionGlobal(sucursalId);
+    const atributosError = validarAtributosFijosProducto(
+      data.atributosExtra,
+      configGlobal.rubroNegocio,
+    );
+    if (atributosError) {
+      return NextResponse.json(
+        { error: "Validación fallida", details: atributosError.fieldErrors },
+        { status: 400 },
+      );
+    }
+
     // --- TRANSACCIÓN ATÓMICA ---
     const created = await prisma.$transaction(async (tx) => {
       // 1. Crear el producto
@@ -344,9 +360,6 @@ export async function POST(req: Request) {
     });
 
     // --- LÓGICA DE NOTIFICACIONES ---
-    const configGlobal = await obtenerConfiguracionGlobal(
-      auth.activeSucursalId,
-    );
     const umbralAlerta =
       created.stockMinUnits > 0
         ? created.stockMinUnits

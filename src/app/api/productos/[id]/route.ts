@@ -13,6 +13,7 @@ import {
   updateProductoSchema,
   type UpdateProductoInput,
 } from "@/lib/validators/producto";
+import { validarAtributosFijosProducto } from "@/lib/validators/producto-atributos-fijos";
 import { deleteFileSystemImage } from "@/lib/uploads/file-utils";
 
 // Imports del Sistema de Notificaciones
@@ -177,11 +178,25 @@ export async function PUT(req: Request, { params }: RouteParams) {
     );
   }
 
-  try {
-    const configGlobal = await obtenerConfiguracionGlobal(
-      auth.activeSucursalId,
-    );
+  const configGlobal = await obtenerConfiguracionGlobal(auth.activeSucursalId);
 
+  // Solo validamos atributos fijos si este PUT efectivamente toca
+  // atributosExtra — un ajuste parcial de stock (ajustar-stock-dialog) no
+  // lo envía y no debe verse bloqueado por requeridos de otro campo.
+  if (parsed.data.atributosExtra !== undefined) {
+    const atributosError = validarAtributosFijosProducto(
+      parsed.data.atributosExtra,
+      configGlobal.rubroNegocio,
+    );
+    if (atributosError) {
+      return NextResponse.json(
+        { error: "Validación fallida", details: atributosError.fieldErrors },
+        { status: 400 },
+      );
+    }
+  }
+
+  try {
     // --- TRANSACCIÓN PARA ACTUALIZAR Y REGISTRAR MOVIMIENTO ---
     const updated = await prisma.$transaction(async (tx) => {
       // 1. Obtener estado actual de la sucursal antes de la actualización
