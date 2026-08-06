@@ -222,6 +222,19 @@ export function ProductosView() {
     return map;
   }, [rubroNegocio]);
 
+  // Rubros con forma marca+sabor (ej. vapes) auto-componen el nombre del
+  // producto (ver producto-wizard-dialog.tsx) — mostrar ese texto de nuevo
+  // en la columna "Producto" repite exactamente lo que ya dicen las
+  // columnas Marca/Sabor/Puffs, así que ahí esa celda queda solo con
+  // imagen y código de barras.
+  const nombreEsAutoCompuesto = React.useMemo(() => {
+    const defs = getAtributosFijos(rubroNegocio);
+    return (
+      defs.some((d) => d.clave === "marca") &&
+      defs.some((d) => d.clave === "sabor")
+    );
+  }, [rubroNegocio]);
+
   const handleColumnasAtributosChange = async (nuevas: string[]) => {
     setColumnasAtributos(nuevas); // optimista
     try {
@@ -816,6 +829,7 @@ export function ProductosView() {
                         isLow={isLowStock(p)}
                         isOut={isOutOfStock(p)}
                         columnasAtributos={columnasAtributos}
+                        nombreEsAutoCompuesto={nombreEsAutoCompuesto}
                       />
                     ))}
                     {sorted.length === 0 && (
@@ -1140,6 +1154,7 @@ function ProductoRow({
   isLow,
   isOut,
   columnasAtributos,
+  nombreEsAutoCompuesto,
 }: {
   p: ProductoViewItem;
   idx: number;
@@ -1147,6 +1162,7 @@ function ProductoRow({
   isLow: boolean;
   isOut: boolean;
   columnasAtributos: string[];
+  nombreEsAutoCompuesto: boolean;
 }) {
   const desc = React.useMemo(
     () =>
@@ -1180,7 +1196,12 @@ function ProductoRow({
       transition={{ delay: idx * 0.03 }}
       className="group border-b border-border/40 hover:bg-muted/30 transition-colors"
     >
-      <TableCell className="pl-6 py-4 w-[30%] max-w-0">
+      <TableCell
+        className={cn(
+          "pl-6 py-4 max-w-0",
+          nombreEsAutoCompuesto ? "w-16" : "w-[30%]",
+        )}
+      >
         <div className="flex items-center gap-4 min-w-0">
           <div className="h-12 w-12 rounded-lg bg-muted/50 border border-border/60 overflow-hidden flex items-center justify-center shrink-0 relative">
             {p.imagenUrl ? (
@@ -1195,28 +1216,34 @@ function ProductoRow({
               <ImageIcon className="h-6 w-6 text-muted-foreground/40" />
             )}
           </div>
-          <div className="flex flex-col gap-1 min-w-0">
-            <span
-              className="font-bold text-foreground text-sm leading-none group-hover:text-primary transition-colors truncate"
-              title={p.nombre}
-            >
-              {p.nombre}
-            </span>
-            <div className="flex items-center gap-2 pt-1">
-              {p.codigoBarra ? (
-                <Badge
-                  variant="outline"
-                  className="text-[10px] h-5 px-1.5 font-mono text-muted-foreground border-border/60 bg-background/50 gap-1 rounded-md"
-                >
-                  <Barcode className="h-3 w-3 opacity-50" /> {p.codigoBarra}
-                </Badge>
-              ) : (
-                <span className="text-[10px] text-muted-foreground/40 italic">
-                  Sin código
-                </span>
-              )}
+          {/* Si el nombre se auto-compone desde Marca+Sabor+Puffs, mostrarlo
+              acá de nuevo repite exactamente esas columnas — la celda queda
+              solo con la imagen. El código de barras, cuando existe, sigue
+              siendo buscable desde el buscador de arriba. */}
+          {!nombreEsAutoCompuesto && (
+            <div className="flex flex-col gap-1 min-w-0">
+              <span
+                className="font-bold text-foreground text-sm leading-none group-hover:text-primary transition-colors truncate"
+                title={p.nombre}
+              >
+                {p.nombre}
+              </span>
+              <div className="flex items-center gap-2 pt-1">
+                {p.codigoBarra ? (
+                  <Badge
+                    variant="outline"
+                    className="text-[10px] h-5 px-1.5 font-mono text-muted-foreground border-border/60 bg-background/50 gap-1 rounded-md"
+                  >
+                    <Barcode className="h-3 w-3 opacity-50" /> {p.codigoBarra}
+                  </Badge>
+                ) : (
+                  <span className="text-[10px] text-muted-foreground/40 italic">
+                    Sin código
+                  </span>
+                )}
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </TableCell>
 
