@@ -7,8 +7,6 @@
     ["prisma.config.ts", 12],
     ["prisma/seed.ts", 96],
     ["public/file.svg", 1],
-    ["public/font/example.html", 102],
-    ["public/font/style.css", 91],
     ["public/globe.svg", 1],
     ["public/next.svg", 1],
     ["public/vercel.svg", 1],
@@ -543,8 +541,8 @@
     ["src/app/api/webhooks/paypal/route.ts", 123],
     ["src/app/consignacion-loading/[id]/page.tsx", 138],
     ["src/app/external-colors.css", 109],
-    ["src/app/globals.css", 186],
-    ["src/app/layout.tsx", 68],
+    ["src/app/globals.css", 190],
+    ["src/app/layout.tsx", 83],
     ["src/app/lista/catalog-client.tsx", 1254],
     ["src/app/lista/components/cart-drawer.tsx", 680],
     ["src/app/lista/components/category-tabs.tsx", 118],
@@ -569,7 +567,7 @@
     ["src/app/lista/layout.tsx", 13],
     ["src/app/lista/lib/theme-utils.ts", 182],
     ["src/app/lista/page.tsx", 45],
-    ["src/app/lista/render-catalog-page.tsx", 160],
+    ["src/app/lista/render-catalog-page.tsx", 149],
     ["src/app/lista/storefront.css", 134],
     ["src/app/motion.css", 83],
     ["src/app/setup/components/SetupShell.tsx", 175],
@@ -606,7 +604,6 @@
     ["src/app/ver/remito/[id]/route.ts", 166],
     ["src/app/ver/ticket/[id]/route.ts", 187],
     ["src/app/x/[code]/route.ts", 189],
-    ["src/components/admin/ThemeEditor.tsx", 392],
     ["src/components/auth/SubscriptionGuard.tsx", 35],
     ["src/components/auth/global-readonly-guard.tsx", 69],
     ["src/components/auth/login-form.tsx", 280],
@@ -627,7 +624,6 @@
     ["src/components/sidebar/sidebar-dropdown-group.tsx", 108],
     ["src/components/sidebar/sidebar-icon-link.tsx", 64],
     ["src/components/sidebar/types.ts", 7],
-    ["src/components/theme/ThemeInjector.tsx", 50],
     ["src/components/theme/theme-provider.tsx", 166],
     ["src/components/timezone/timezone-migration-dialog.tsx", 404],
     ["src/components/timezone/timezone-selector.tsx", 205],
@@ -753,7 +749,7 @@
     ["src/lib/reports/report-share-link-validation.ts", 67],
     ["src/lib/reports/report-theme.ts", 88],
     ["src/lib/reports/resolve-report-share-link.ts", 31],
-    ["src/lib/reports/tailwind-inline.ts", 178],
+    ["src/lib/reports/tailwind-inline.ts", 180],
     ["src/lib/reports/template-helpers.ts", 63],
     ["src/lib/reports/types.ts", 9],
     ["src/lib/security/audit.ts", 85],
@@ -803,7 +799,6 @@
     ["src/providers/socket-provider.tsx", 146],
     ["src/providers/socket-toaster.tsx", 88],
     ["src/proxy.ts", 134],
-    ["src/store/themeStore.ts", 80],
     ["src/store/useSucursalStore.ts", 76],
     ["src/theme/know-design-system.test.ts", 84],
     ["src/theme/know-design-system.ts", 213],
@@ -813,21 +808,6 @@
   ],
   "violationRecords": [
     ["public/file.svg", "colors", [["#666", "fill=", "2291f417483b"]]],
-    [
-      "public/font/style.css",
-      "colors",
-      [
-        ["black", "@font-face|font-family: |slot:0", "8e149738d8c8"],
-        ["black", "@font-face|font-family: |slot:0", "c814d5527ee3"],
-        ["black", "local(\"<string>\"),|slot:0.0", "5303a2dad0c3"],
-        ["black", "local(\"<string>\"),|slot:0.0", "74f70d93df90"],
-        [
-          "black",
-          "url(\"<string>\") format(\"<string>\");|slot:1.0",
-          "7b77f3619433"
-        ]
-      ]
-    ],
     [
       "public/globe.svg",
       "colors",
@@ -3483,26 +3463,6 @@
     ],
     [
       "src/app/layout.tsx",
-      "legacyFonts",
-      [
-        ["Geist", "geistSans =", "65e1a713a405"],
-        [
-          "Geist",
-          "import { Geist, Geist_Mono } from \"<string>\";",
-          "cccbb2062322"
-        ],
-        ["Geist_Mono", "geistMono =", "63547449c74a"],
-        [
-          "Geist_Mono",
-          "import { Geist, Geist_Mono } from \"<string>\";",
-          "8e8917ef0eb4"
-        ],
-        ["geist", "const geistMono = Geist_Mono(|variable:", "57f377e6c1eb"],
-        ["geist", "const geistSans = Geist(|variable:", "32b202f176a6"]
-      ]
-    ],
-    [
-      "src/app/layout.tsx",
       "legacyBrands",
       [["\"Dashboard\"", "Metadata|title:", "5d051f43ad46"]]
     ],
@@ -5863,16 +5823,6 @@
       ]
     ],
     [
-      "src/app/lista/render-catalog-page.tsx",
-      "legacyFonts",
-      [
-        ["Inter", "import { Inter } from \"<string>\";", "d53b6770a0d0"],
-        ["Inter", "inter =", "90d1af3fe6dc"],
-        ["inter", "className={<visual-value>.className}", "370b24845cef"],
-        ["inter", "const <visual-value> = Inter({", "a538ea9407ba"]
-      ]
-    ],
-    [
       "src/app/lista/storefront.css",
       "colors",
       [
@@ -6003,14 +5953,6 @@
         ],
         ["#ffffff", "[data-theme=\"minimal\"]|--theme-bg:", "33a5f3a8ce07"],
         ["#ffffff", "[data-theme=\"modern\"]|--theme-bg:", "2b7455f6ad17"]
-      ]
-    ],
-    [
-      "src/app/lista/storefront.css",
-      "legacyFonts",
-      [
-        ["Inter", ":root|storefront-font-body:", "eab379f25489"],
-        ["Inter", ":root|storefront-font-heading:", "1f06cf466fba"]
       ]
     ],
     [
@@ -6317,99 +6259,6 @@
           ")/case \"REPORTE_DASHBOARD\":|destPath =",
           "09b478a56add"
         ]
-      ]
-    ],
-    [
-      "src/components/admin/ThemeEditor.tsx",
-      "colors",
-      [
-        ["#ffffff", "? \"<string>\"", "4029fdb7cd6b"],
-        ["#ffffff", "? \"<string>\"", "9e9096d7282f"],
-        ["#ffffff", "? \"<string>\"", "9e9096d7282f"],
-        [
-          "#ffffff",
-          "previewTheme.backgroundColor === \"<string>\"",
-          "79f7ec16a097"
-        ],
-        [
-          "#ffffff",
-          "previewTheme.backgroundColor === \"<string>\"",
-          "d3ba26c1f096"
-        ],
-        [
-          "#ffffff",
-          "previewTheme.backgroundColor === \"<string>\"",
-          "d3ba26c1f096"
-        ]
-      ]
-    ],
-    [
-      "src/components/admin/ThemeEditor.tsx",
-      "paletteClasses",
-      [
-        [
-          "bg-amber-400",
-          "export function ThemeEditor()|className=",
-          "196bb548e365"
-        ],
-        [
-          "bg-green-400",
-          "export function ThemeEditor()|className=",
-          "c9cbcf62eaf8"
-        ],
-        [
-          "bg-neutral-100/50",
-          "export function ThemeEditor()|className=",
-          "735014862208"
-        ],
-        [
-          "bg-neutral-50/10",
-          "export function ThemeEditor()|hover:",
-          "6380b86fd0bf"
-        ],
-        [
-          "bg-red-400",
-          "export function ThemeEditor()|className=",
-          "d4af32cc6adc"
-        ],
-        [
-          "bg-red-50",
-          "export function ThemeEditor()/</Card>|className=",
-          "ccbfe3ac37ff"
-        ],
-        [
-          "border-neutral-200",
-          "export function ThemeEditor()|className=",
-          "1b656b3aa268"
-        ],
-        [
-          "border-neutral-200",
-          "export function ThemeEditor()|className=",
-          "de926904d93c"
-        ],
-        [
-          "border-red-100",
-          "export function ThemeEditor()/</Card>|className=",
-          "c9298549add1"
-        ],
-        [
-          "text-neutral-500",
-          "export function ThemeEditor()|className=",
-          "2ca56e312bd0"
-        ],
-        [
-          "text-red-600",
-          "export function ThemeEditor()/</Card>|className=",
-          "f531af541102"
-        ]
-      ]
-    ],
-    [
-      "src/components/admin/ThemeEditor.tsx",
-      "legacyFonts",
-      [
-        ["Inter", "\"<string>\",", "3fff274d95a7"],
-        ["Poppins", "\"<string>\",", "a4f41d9ab7ea"]
       ]
     ],
     [
@@ -8948,47 +8797,6 @@
         ["text-teal-600", ".<visual-value>{color:#0d9488}", "95fd22b4bda0"],
         ["text-violet-600", ".<visual-value>{color:#7c3aed}", "1d0eefc48205"],
         ["text-white", ".<visual-value>{color:#fff}", "a9e72575af2e"]
-      ]
-    ],
-    [
-      "src/lib/reports/tailwind-inline.ts",
-      "legacyFonts",
-      [
-        [
-          "Inter",
-          "export function getReportHeadAssets(extraCss = \"",
-          "31ed8ea73db0"
-        ],
-        [
-          "Poppins",
-          "// <visual-value> embebida como base64 — funcion",
-          "0376a69f14db"
-        ],
-        [
-          "Poppins",
-          "export function getReportHeadAssets(extraCss = \"",
-          "2672a287ac64"
-        ],
-        [
-          "Poppins",
-          "export function getReportHeadAssets(extraCss = \"",
-          "82b79946ea76"
-        ],
-        [
-          "Poppins",
-          "export function getReportHeadAssets(extraCss = \"",
-          "947d159f88b7"
-        ],
-        [
-          "Poppins",
-          "export function getReportHeadAssets(extraCss = \"",
-          "989a96437d2e"
-        ],
-        [
-          "Poppins",
-          "export function getReportHeadAssets(extraCss = \"",
-          "a37820304668"
-        ]
       ]
     ],
     [

@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import localFont from "next/font/local";
 import "./globals.css";
 
 import { ThemeProvider } from "@/components/theme/theme-provider";
@@ -7,16 +7,31 @@ import { PerformanceVitals } from "@/components/performance-vitals";
 
 import { Toaster } from "sonner";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
+const satoshi = localFont({
+  variable: "--font-satoshi",
   display: "swap",
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-  display: "swap",
+  src: [
+    {
+      path: "../../public/font/Satoshi-Light.woff",
+      weight: "300",
+      style: "normal",
+    },
+    {
+      path: "../../public/font/Satoshi-Regular.woff",
+      weight: "400",
+      style: "normal",
+    },
+    {
+      path: "../../public/font/Satoshi-Medium.woff",
+      weight: "500",
+      style: "normal",
+    },
+    {
+      path: "../../public/font/Satoshi-Bold.woff",
+      weight: "700",
+      style: "normal",
+    },
+  ],
 });
 
 export const metadata: Metadata = {
@@ -39,7 +54,7 @@ export default function RootLayout({
       <head />
       <body
         suppressHydrationWarning
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`${satoshi.variable} antialiased`}
       >
         <ThemeProvider
           attribute="class"

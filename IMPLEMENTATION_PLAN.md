@@ -74,7 +74,57 @@
 - Falta revisar pantallas autenticadas (dashboard, tablas, gráficos) con
   capturas reales — no se hizo en esta sesión porque requiere login: queda
   para cuando la Fase 5 (módulos protegidos) las toque directamente.
-- Iniciar Fase 2 (Satoshi global) en una sesión separada.
+
+## En curso (Fase 2 — Satoshi global)
+
+- `layout.tsx`: `Geist`/`Geist_Mono` (`next/font/google`) reemplazadas por
+  `next/font/local` (`satoshi`, variable `--font-satoshi`), cargando
+  `Satoshi-{Light,Regular,Medium,Bold}.woff` desde `public/font/` (10 pesos
+  disponibles en la carpeta, sólo 4 wireados por ahora).
+  `globals.css`: `--font-sans` apunta a `--font-satoshi`; `body` la usa
+  explícitamente.
+  `storefront.css`: `--storefront-font-heading`/`--storefront-font-body`
+  dejaron de hardcodear `"Inter"`, heredan `var(--font-sans)`.
+  `render-catalog-page.tsx`: se quitó el `Inter` de `next/font/google` que
+  quedaba aplicado sólo al storefront (ahora hereda Satoshi global).
+  `tailwind-inline.ts` (reportes/PDF, fuente embebida en base64 para
+  Railway sin internet): Poppins → Satoshi.
+  `package.json`: se retiró `@fontsource/poppins` (ya no se usa).
+- Cleanup no relacionado a fuentes, hecho en la misma sesión: se borraron
+  `ThemeEditor.tsx`, `ThemeInjector.tsx` y `themeStore.ts` (sin ningún
+  import restante, confirmado por grep — código muerto tras el refactor de
+  Fase 1).
+- Verificación en esta sesión: `npm run visual:check` (549 archivos OK),
+  `npm run visual:test` (29/29 tests OK), `npx tsc --noEmit` (único error
+  preexistente y no relacionado, `money-input.test.ts` TS5097, ya presente
+  antes de esta sesión), `npm run build` completo sin errores.
+  Smoke visual manual con `playwright-cli` (chromium, 1440×900):
+  - `/login` en light y dark: `getComputedStyle(body).fontFamily` confirma
+    `satoshi, "satoshi Fallback", system-ui, sans-serif`. Tipografía
+    renderiza correctamente, sin FOUT visible, contraste y paleta
+    (Cobalto/Eléctrico) intactos en ambos modos.
+  - `/lista` (storefront): tipografía Satoshi aplicada correctamente en
+    headings, precios y categorías. Los 22 errores de consola son 400 de
+    `/api/files/*.webp` (imágenes de producto faltantes en el entorno
+    local) — no relacionados con la fuente, no son regresión de esta
+    sesión.
+  - Capturas (`fase2-login-light.png`, `fase2-login-dark.png`,
+    `fase2-lista.png`) generadas en el repo, sin commitear todavía.
+- Sin commitear: todo el trabajo de Fase 2 sigue en el working tree. Hay
+  además untracked `public/brand/logo*.png` (Fase 3, marca — no debería ir
+  en el commit de Fase 2 salvo decisión explícita en contrario) y
+  `public/font/*.woff` (10 pesos Satoshi, de los cuales sólo 4 están
+  wireados en `layout.tsx`).
+- Pendiente antes de cerrar Fase 2:
+  - No existe un `PROMPT.md` específico de Fase 2 en disco — el actual
+    sigue siendo el de Fase 1. Falta correr `/spec` o redactarlo a mano
+    antes de dar la fase por cerrada, según el contrato de loopkit.
+  - Decidir si `public/brand/*.png` se separa a un commit de Fase 3 o se
+    incluye igual (está fuera del alcance declarado de Fase 2).
+  - Decidir si los 6 pesos de Satoshi no usados (`*Italic`, `Black`) se
+    eliminan de `public/font/` o se dejan para consumo futuro.
+- Iniciar Fase 3 (marca/logos) en una sesión separada, una vez cerrada y
+  commiteada la Fase 2.
 
 ## Deuda preexistente
 

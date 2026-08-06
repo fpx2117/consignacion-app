@@ -1,12 +1,5 @@
-import { Inter } from "next/font/google";
 import { CatalogClient } from "./catalog-client";
 import "./storefront.css";
-
-const inter = Inter({
-  subsets: ["latin"],
-  weight: ["300", "400", "500", "600", "700", "800", "900"],
-  display: "swap",
-});
 
 const THEME_COLORS: Record<
   string,
@@ -143,11 +136,7 @@ export function renderCatalogPage(
         href={`/api/public/branding-media?type=logo&sucursalId=${sucursalId}`}
       />
       <style dangerouslySetInnerHTML={{ __html: cssVars }} />
-      <div
-        data-theme={themeId}
-        data-store-config="true"
-        className={inter.className}
-      >
+      <div data-theme={themeId} data-store-config="true">
         <CatalogClient
           initialData={null}
           initialError={null}
