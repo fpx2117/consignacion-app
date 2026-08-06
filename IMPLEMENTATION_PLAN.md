@@ -1,4 +1,4 @@
-# KNOWLEDGE,cloud — Fases 0-4
+# KNOWLEDGE,cloud — Fases 0-5
 
 ## Completado (Fase 0)
 
@@ -184,33 +184,45 @@ Knowledge Cloud"`).
   correctamente (`"Iniciar sesión | Knowledge Cloud"` en `/login`,
   `"Knowledge | Cloud"` por defecto en `/dashboard`, que no define
   `metadata.title` propio), cero errores de consola.
-- No se tocó la metadata del storefront público (`lista/page.tsx`,
-  `[slug]/page.tsx`) — sigue siendo el hallazgo pendiente documentado
-  abajo, no es esta fase.
+- No se tocó la metadata del storefront público en Fase 4 — quedó como el
+  hallazgo que resuelve Fase 5, documentado abajo.
 
-### Hallazgo (no corregido): metadata del storefront hereda la del layout raíz
+## Completado (Fase 5 — metadata dinámica del storefront)
 
-Detectado al investigar el pedido del usuario sobre el logo de tienda:
-`src/app/lista/page.tsx` y `src/app/[slug]/page.tsx` (las páginas públicas
-del catálogo/storefront) no definen `generateMetadata`/`export const
-metadata` propio. Como consecuencia, el `<title>` del navegador y el
-favicon del catálogo público de cada tienda heredan el `metadata` estático
-del layout raíz (`"KNOWLEDGE,cloud"` / `LOGOS.favicon`) en vez de reflejar
-el nombre y logo reales de la tienda que el dueño configuró.
+Resuelve el hallazgo de Fase 3: `lista/page.tsx` y `[slug]/page.tsx` no
+definían `generateMetadata` propio, así que el `<title>`/favicon del
+catálogo público de cada tienda heredaban el `metadata` estático del
+layout raíz en vez del nombre/logo real que configuró el dueño.
 
-El logo visual del catálogo sí es correcto: `render-catalog-page.tsx` ya
-sirve el logo subido por el usuario vía
-`/api/public/branding-media?type=logo&sucursalId=...` (por eso el logo que
-se ve en `/lista` es el de la tienda, no el de `LOGOS`). El gap es
-específicamente la metadata del `<head>` (title/favicon), no el logo
-visible en la página.
-
-Fix pendiente (fuera de alcance de Fase 3, que es la identidad _propia_ de
-la app, no el branding configurable por tienda): agregar
-`generateMetadata` a `lista/page.tsx` y `[slug]/page.tsx` que resuelva el
-nombre de la tienda (vía la misma fuente que ya usa
-`branding-media`/`getTiendaGlobalConfig`) para `title`, y el logo de la
-tienda para `icons.icon`.
+- `src/lib/storefront/store-identity.ts` (nuevo): `getStoreIdentity`
+  (`sucursal.branding?.businessName || sucursal.nombre`, mismo criterio
+  que ya usaba `getPublicCatalogDataRaw` para `storeName`) y
+  `buildStorefrontMetadata` (arma `{ title, icons.icon }`, usando el logo
+  de la tienda vía `/api/public/branding-media` si existe, o `LOGOS.favicon`
+  si no — nunca un ícono roto).
+- `resolveStorefrontSucursalId` (la resolución modo-unificado → sucursal
+  principal que antes vivía inline en `getPublicCatalogDataRaw`) se
+  extrajo a este mismo archivo y `public-catalog.ts` pasa a importarla —
+  refactor mecánico, mismo comportamiento, ahora reusada por la metadata.
+  Cambió de retornar sólo el id resuelto a `{ resolvedId, modoUnificado }`
+  porque `getPublicCatalogDataRaw` también necesita `modoUnificado` más
+  abajo en la función.
+- `generateListaMetadata`/`generateSlugMetadata`: la lógica completa de
+  `generateMetadata` para cada página vive en `store-identity.ts` (no en
+  los archivos de página) y se re-exporta con una sola línea
+  (`export { generateListaMetadata as generateMetadata } from "..."`) —
+  el ratchet de `visual-guard` no permite crecimiento en archivos
+  existentes, y este patrón deja `lista/page.tsx`/`[slug]/page.tsx`
+  prácticamente intactos en vez de forzar una compresión agresiva del
+  código ya existente ahí.
+- Verificación: `visual:check`/`visual:test`/`tsc --noEmit`/`build` en
+  verde. Smoke visual con `playwright-cli` en `/lista`: `<title>` muestra
+  `"ImportVPS | Knowledge Cloud"` (nombre real de la tienda de prueba, no
+  el placeholder de la app), favicon apunta a
+  `/api/public/branding-media?type=logo&sucursalId=1`. `/[slug]` no se
+  probó en vivo — no hay ninguna tienda con `tiendaSlug` configurado en
+  este entorno — pero usa la misma `buildStorefrontMetadata` ya validada
+  en `/lista` y compila sin errores de tipos.
 
 ## Deuda preexistente
 
@@ -223,12 +235,14 @@ tienda para `icons.icon`.
 - Fase 1 no tocó tipografía (Satoshi/Geist, es Fase 2) ni marca/logos
   (`brand-logo.tsx`, favicon, metadata, es Fase 3).
 - Fase 3 no tocó el branding configurable por tienda (`BrandingTab.tsx`,
-  `render-catalog-page.tsx`) ni la metadata del storefront público (ver
-  hallazgo arriba) — es identidad _propia_ de la app, no del cliente.
+  `render-catalog-page.tsx`) ni la metadata del storefront público — eso
+  lo resolvió Fase 5.
+- Fase 5 sólo lee el branding existente (`sucursal.branding`); no agrega
+  campos nuevos ni toca `BrandingTab.tsx`.
 - No se tocó ningún archivo bloqueado por la auditoría (>1000 líneas).
 - Máximo 300 líneas por archivo manual nuevo.
 
 ## Próximos pasos
 
-- Fase 5 (si aplica): resolver el hallazgo de metadata dinámica del
-  storefront (`generateMetadata` en `lista/page.tsx` y `[slug]/page.tsx`).
+- Validar `/[slug]` en un entorno con al menos una tienda con
+  `tiendaSlug` configurado (no se pudo probar en vivo en esta sesión).
