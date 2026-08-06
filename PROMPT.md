@@ -1,44 +1,59 @@
 # Goal
 
-Implementar la Fase 3 de KNOWLEDGE,cloud ("marca/logos"): reemplazar el
-placeholder de `BrandLogo` (caja "POS") y el favicon/metadata heredados del
-scaffold (MagicUI/"Dashboard") por los assets reales de marca ya
-registrados en `LOGOS` (`src/theme/know-design-system.ts`, preparado en
-Fase 1) desde `public/brand/`.
+Implementar la Fase 4 de KNOWLEDGE,cloud ("lockup tipográfico"): agregar el
+header de marca `KNOWLEDGE | CLOUD` a la cabecera del producto (`TopBar`),
+y un `title` template de Next.js para el `<title>` del navegador, según la
+guía de diseño que dio el usuario en la sesión anterior. La firma
+institucional `KNOWLEDGE,cloud` (con coma) no se toca — sigue siendo el
+`alt` del logo y el texto que usan los comentarios/tests del sistema de
+diseño.
 
 # Done when
 
-- `src/components/layout/brand-logo.tsx` renderiza el logo real
-  (`LOGOS.light`/`LOGOS.dark` según el tema activo) en vez del placeholder
-  de texto "POS".
-- `src/app/layout.tsx`: `metadata.icons` usa `LOGOS.favicon` en vez del
-  `/logo.png` heredado del scaffold de Next.js; `metadata.title` es
-  "KNOWLEDGE,cloud" y `metadata.description` ya no menciona "MagicUI".
-- `public/logo.png` (620×715, sin canal alpha, placeholder de Next.js/
-  MagicUI) se elimina si queda sin otro consumidor tras el cambio.
-- `npm run visual:check`, `npm run visual:test` y `npm run build` terminan
-  en verde.
-- Smoke visual manual (`playwright-cli`, light/dark) confirma que el logo
-  se ve correctamente en el sidebar y que el favicon carga sin errores de
-  red.
+- Nuevo componente `src/components/layout/brand-lockup.tsx`: renderiza el
+  ícono (`BrandLogo`) + `KNOWLEDGE` (peso medio) + separador de 1px de
+  ancho / 16px de alto vía `<span aria-hidden>` con bajo contraste (no el
+  carácter `|` literal) + `CLOUD` (azul de marca, `var(--primary)`), con
+  espaciado equilibrado a ambos lados del separador.
+- `TopBar` (`src/components/layout/top-bar.tsx`) usa `BrandLockup` en el
+  espacio vacío del lado izquierdo (hoy sólo tiene un comentario "Logo
+  oculto en mobile..." sin JSX) — visible en desktop, oculto en mobile
+  (el rail de `SidebarDock` ya es icon-only en mobile, sin espacio para
+  texto).
+- `src/app/layout.tsx`: `metadata.title` pasa de un string estático a
+  `{ default: "Knowledge | Cloud", template: "%s | Knowledge Cloud" }`.
+- Se resuelven las colisiones que el template genera en los 2 títulos de
+  página existentes (`export const metadata` en `page.tsx`, no toasts):
+  - `login/page.tsx`: `title: "Dashboard"` (placeholder incorrecto, ya
+    flageado en Fase 3) → `title: "Iniciar sesión"`.
+  - `settings/branches/page.tsx`: `title: "Sucursales | Configuración"` →
+    `title: "Sucursales"` (el `| Configuración` manual duplicaría el
+    template y quedaría `Sucursales | Configuración | Knowledge Cloud`).
+- `src/components/layout/brand-logo.tsx`: se retira `showText` de la
+  interfaz (prop muerta, nunca se usó — el lockup vive en su propio
+  componente, no en `BrandLogo`).
+- `npm run visual:check`, `npm run visual:test`, `npx tsc --noEmit` (sin
+  errores nuevos) y `npm run build` terminan en verde.
+- Smoke visual manual (`playwright-cli`, autenticado, light/dark) confirma
+  que el lockup se ve en el `TopBar` de escritorio y que el `<title>` del
+  navegador compone correctamente con el template.
 
 # Never touch
 
-- Tipografía (ya cerrado en Fase 2).
-- El selector de tipografía/logo configurable por tienda
-  (`BrandingTab.tsx`, branding del storefront de cada cliente) — es
-  personalización por tienda, no la identidad propia de la app.
-- `LOGOS.print` (`report-theme.ts` / reportes PDF) — no forma parte del
-  alcance de esta fase salvo que romper la carga de `logo.png` lo requiera.
-- Archivos bloqueados por la auditoría (>1000 líneas) no listados como
-  núcleo de marca.
-- Migraciones, schema Prisma, lógica de negocio.
+- El texto `KNOWLEDGE,cloud` como firma institucional (alt del logo,
+  comentarios de `know-design-system.ts`/`external-colors.css`,
+  `tailwind-inline.ts`).
+- Metadata del storefront público (`lista/page.tsx`, `[slug]/page.tsx`,
+  `lista/layout.tsx`) — es el hallazgo documentado en Fase 3, no esta fase.
+- Los `title` que son en realidad textos de toasts/cards dentro de
+  funciones (ej. `dashboard/page.tsx`, `ventas/nueva/page.tsx`) — no son
+  `metadata.title`, no los toca el template.
+- Archivos bloqueados por la auditoría (>1000 líneas).
 
 # Stop if
 
-- Los assets de `public/brand/` no alcanzan (falta un tamaño, formato o
-  variante necesaria) y hace falta generar arte nuevo.
-- El cambio de favicon/logo requiere tocar el branding configurable por
-  tienda del storefront.
-- Un componente compartido rompe visualmente de forma no resoluble sin
-  salir del alcance de "marca".
+- El template de `title` rompe un título de página que no se puede
+  resolver sin tocar un archivo bloqueado por la auditoría.
+- El ratchet de `visual-guard` (ninguna línea puede crecer en un archivo
+  existente) obliga a un cambio de diseño que se sale del alcance de esta
+  fase para poder cerrar.

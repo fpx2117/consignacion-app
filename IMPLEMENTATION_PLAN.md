@@ -1,4 +1,4 @@
-# KNOWLEDGE,cloud — Fases 0-3
+# KNOWLEDGE,cloud — Fases 0-4
 
 ## Completado (Fase 0)
 
@@ -150,29 +150,43 @@ Commiteado como `05d2f17`.
   historial de esos ajustes no queda en git (son intermedios dentro de la
   misma sesión), sólo el resultado final.
 
-### Mejora documentada (no implementada): lockup tipográfico de marca
+## Completado (Fase 4 — lockup tipográfico de marca)
 
-El usuario pidió registrar esto como mejora para una sesión futura, no
-implementarlo ahora:
+Implementa la guía que dio el usuario en la sesión de Fase 3, quedó
+documentada ahí como mejora pendiente y se implementó en esta sesión:
 
-- Reemplazar la coma en "KNOWLEDGE,cloud" por una barra vertical fina y de
-  bajo contraste como separador, en vez del carácter `|` literal (mejor
-  control de alto/color/espaciado con un `<span>` de 1px de ancho).
-- Jerarquía tipográfica en el lockup: `KNOWLEDGE` en peso medio,
-  `CLOUD` en azul de marca o gris claro, barra separadora fina gris tenue,
-  espaciado equilibrado a ambos lados.
-- La identidad queda en tres capas distintas según el contexto:
-  - Firma institucional (fuera del producto, ej. legal/emails): `KNOWLEDGE,cloud`.
-  - Cabecera del SaaS (dentro del producto): `KNOWLEDGE | CLOUD`.
-  - Título del navegador (`<title>`): `Knowledge | Cloud`, con
-    `title: { default: "Knowledge | Cloud", template: "%s | Knowledge Cloud" }`
-    en `metadata` (Next.js title template) en vez del string estático
-    actual.
-- No se tocó nada de esto en Fase 3: `metadata.title` sigue siendo el
-  string estático `"KNOWLEDGE,cloud"` (la firma institucional), no el
-  template. Cambiarlo a template affecta cómo cada página hija compone su
-  `<title>` (varias ya definen su propio `metadata.title`, ej. `/login` →
-  "Dashboard" — ese valor también debería revisarse en esa misma sesión).
+- `src/components/layout/brand-lockup.tsx` (nuevo): `KNOWLEDGE | CLOUD`.
+  Separador con `<span aria-hidden>` de 1px de ancho / 16px de alto y bajo
+  contraste (`bg-border`), no el carácter `|` literal. `KNOWLEDGE` en peso
+  medio; `CLOUD` en azul de marca (`var(--primary)`); espaciado
+  equilibrado a ambos lados del separador vía `mx-2`.
+- `src/components/layout/top-bar.tsx`: el lockup ocupa el espacio vacío
+  del lado izquierdo que sólo tenía un comentario ("Logo oculto en
+  mobile..." sin JSX real detrás) — visible en desktop (`hidden md:flex`),
+  oculto en mobile (el rail de `SidebarDock` ya es icon-only ahí).
+- `src/app/layout.tsx`: `metadata.title` pasa del string estático
+  `"KNOWLEDGE,cloud"` a
+  `{ default: "Knowledge | Cloud", template: "%s | Knowledge Cloud" }`
+  (Next.js title template). La firma institucional con coma
+  (`KNOWLEDGE,cloud`) queda intacta en el `alt` del logo y en los
+  comentarios del sistema de diseño — no es lo que compone el `<title>`.
+- Colisiones que generaba el template, resueltas: `login/page.tsx`
+  (`title: "Dashboard"`, placeholder ya flageado en Fase 3) → `"Iniciar
+sesión"`; `settings/branches/page.tsx` (`title: "Sucursales |
+Configuración"`, con `|` manual) → `"Sucursales"` (el template ya agrega
+  el sufijo; dejarlo tal cual hubiera dado `"Sucursales | Configuración |
+Knowledge Cloud"`).
+- `brand-logo.tsx`: se retiró `showText` de la interfaz (prop muerta,
+  nunca se usó — el lockup vive en su propio componente).
+- Verificación: `visual:check`/`visual:test`/`tsc --noEmit`/`build` en
+  verde. Smoke visual con `playwright-cli` autenticado (`/dashboard`,
+  light y dark): lockup visible en el `TopBar`, `<title>` compone
+  correctamente (`"Iniciar sesión | Knowledge Cloud"` en `/login`,
+  `"Knowledge | Cloud"` por defecto en `/dashboard`, que no define
+  `metadata.title` propio), cero errores de consola.
+- No se tocó la metadata del storefront público (`lista/page.tsx`,
+  `[slug]/page.tsx`) — sigue siendo el hallazgo pendiente documentado
+  abajo, no es esta fase.
 
 ### Hallazgo (no corregido): metadata del storefront hereda la del layout raíz
 
@@ -216,8 +230,5 @@ tienda para `icons.icon`.
 
 ## Próximos pasos
 
-- Fase 4 (si aplica): resolver el hallazgo de metadata dinámica del
+- Fase 5 (si aplica): resolver el hallazgo de metadata dinámica del
   storefront (`generateMetadata` en `lista/page.tsx` y `[slug]/page.tsx`).
-- Sesión aparte: aplicar el lockup tipográfico `KNOWLEDGE | CLOUD`
-  documentado arriba (cabecera del SaaS + `title` template del navegador),
-  sin tocar la firma institucional `KNOWLEDGE,cloud`.
