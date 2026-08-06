@@ -755,6 +755,7 @@ export function ProductosView() {
                 <Table>
                   <TableHeader className="bg-muted/30">
                     <TableRow className="hover:bg-transparent border-b border-border/60">
+                      {/* Grupo identidad: qué es el producto */}
                       <SortableHead
                         label="Producto"
                         sortKey="nombre"
@@ -762,12 +763,24 @@ export function ProductosView() {
                         onSort={handleSort}
                         className="pl-6 w-[30%]"
                       />
+                      {columnasAtributos.map((clave) => (
+                        <SortableHead
+                          key={clave}
+                          label={labelAtributoFijo.get(clave) ?? clave}
+                          sortKey={`attr:${clave}`}
+                          currentSort={sortConfig}
+                          onSort={handleSort}
+                          className="text-center capitalize"
+                        />
+                      ))}
                       <SortableHead
                         label="Categoría / Subcat."
                         sortKey="categoria"
                         currentSort={sortConfig}
                         onSort={handleSort}
                       />
+
+                      {/* Grupo comercial/operativo: cómo está en el negocio */}
                       <TableHead className="text-center font-bold text-xs uppercase tracking-wider text-muted-foreground/70">
                         Estado
                       </TableHead>
@@ -788,16 +801,6 @@ export function ProductosView() {
                         onSort={handleSort}
                         className="text-right pr-6"
                       />
-                      {columnasAtributos.map((clave) => (
-                        <SortableHead
-                          key={clave}
-                          label={labelAtributoFijo.get(clave) ?? clave}
-                          sortKey={`attr:${clave}`}
-                          currentSort={sortConfig}
-                          onSort={handleSort}
-                          className="text-center capitalize"
-                        />
-                      ))}
                       <TableHead className="w-[180px] text-right pr-6 font-bold text-xs uppercase tracking-wider text-muted-foreground/70">
                         Acciones
                       </TableHead>
@@ -1217,6 +1220,17 @@ function ProductoRow({
         </div>
       </TableCell>
 
+      {columnasAtributos.map((clave) => (
+        <TableCell
+          key={clave}
+          className="text-center text-sm text-muted-foreground"
+        >
+          {(p.atributosExtra as Record<string, string> | null | undefined)?.[
+            clave
+          ] ?? "—"}
+        </TableCell>
+      ))}
+
       <TableCell className="text-left">
         <div className="flex flex-col gap-1">
           {(() => {
@@ -1362,17 +1376,6 @@ function ProductoRow({
           </span>
         </div>
       </TableCell>
-
-      {columnasAtributos.map((clave) => (
-        <TableCell
-          key={clave}
-          className="text-center text-sm text-muted-foreground"
-        >
-          {(p.atributosExtra as Record<string, string> | null | undefined)?.[
-            clave
-          ] ?? "—"}
-        </TableCell>
-      ))}
 
       <TableCell className="text-right pr-6">
         {/* ACCIONES INLINE (SIN DROPDOWN) */}
