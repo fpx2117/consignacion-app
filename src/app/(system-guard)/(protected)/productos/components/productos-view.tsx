@@ -1239,7 +1239,9 @@ function ProductoRow({
               </Badge>
             );
           })()}
-          {p.subcategoria && (
+          {/* Si ya se muestra la columna "marca", la subcategoría suele
+              repetir la misma info (ver openspec/columnas-fijas-por-rubro) */}
+          {p.subcategoria && !columnasAtributos.includes("marca") && (
             <span className="text-[10px] text-muted-foreground font-medium ml-1">
               {p.subcategoria.nombre}
             </span>
@@ -1500,7 +1502,7 @@ function MobileProductCard({
                       />
                       {catName}
                     </Badge>
-                    {p.subcategoria && (
+                    {p.subcategoria && !columnasAtributos.includes("marca") && (
                       <span className="text-[10px] text-muted-foreground font-medium ml-1">
                         {p.subcategoria.nombre}
                       </span>

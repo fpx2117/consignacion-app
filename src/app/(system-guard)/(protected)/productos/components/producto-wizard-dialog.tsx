@@ -67,7 +67,10 @@ import {
   getAtributosTipicos,
   getRubroLabel,
 } from "@/modules/invoices/config/rubros";
-import { getAtributosFijos } from "@/modules/invoices/config/rubro-atributos";
+import {
+  componerNombreProducto,
+  getAtributosFijos,
+} from "@/modules/invoices/config/rubro-atributos";
 import { validarAtributosFijosProducto } from "@/lib/validators/producto-atributos-fijos";
 import { toast } from "sonner";
 import { useBarcodeScanner } from "@/hooks/useBarcodeScanner";
@@ -418,6 +421,14 @@ export function ProductoWizardDialog({
     () => validarAtributosFijosProducto(atributosExtra, rubroNegocio),
     [atributosExtra, rubroNegocio],
   );
+  // Para rubros con forma marca+sabor (ej. vapes), el nombre final se
+  // compone solo a partir de esos atributos — lo que se tipeó en "Nombre"
+  // en el paso 1 es un placeholder temporal hasta llegar a este cálculo.
+  const nombreCompuesto = React.useMemo(
+    () => componerNombreProducto(atributosFijos, atributosExtra),
+    [atributosFijos, atributosExtra],
+  );
+  const nombreFinal = nombreCompuesto ?? nombre.trim();
 
   function actualizarAtributoFijo(clave: string, valor: string) {
     setAtributosExtra((prev) => {
@@ -505,7 +516,7 @@ export function ProductoWizardDialog({
 
       if (mode === "create") {
         const payload = {
-          nombre: nombre.trim(),
+          nombre: nombreFinal,
           codigoBarra: codigoBarra.trim() || undefined,
           precioVenta: pv,
           precioCosto: pc,
@@ -552,7 +563,7 @@ export function ProductoWizardDialog({
         onProductoCreado?.(created);
       } else {
         const payload: UpdateProductoPayload = {
-          nombre: nombre.trim(),
+          nombre: nombreFinal,
           codigoBarra: codigoBarra.trim() || null,
           precioVenta: pv,
           precioCosto: pc,
@@ -1193,9 +1204,16 @@ export function ProductoWizardDialog({
                   Resumen
                 </p>
                 <div className="grid grid-cols-2 gap-x-3 gap-y-1.5 text-sm">
-                  <span className="text-muted-foreground">Nombre</span>
+                  <span className="text-muted-foreground">
+                    Nombre
+                    {nombreCompuesto && (
+                      <span className="block text-[9px] normal-case font-normal text-muted-foreground/70">
+                        auto: marca + sabor + puffs
+                      </span>
+                    )}
+                  </span>
                   <span className="font-medium text-right truncate">
-                    {nombre || "—"}
+                    {nombreFinal || "—"}
                   </span>
                   <span className="text-muted-foreground">Categoría</span>
                   <span className="font-medium text-right truncate">
