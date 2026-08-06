@@ -931,7 +931,11 @@ export type CrearLiquidacionResponse = {
    DASHBOARD
 ========================= */
 
-export type DashboardPeriod = "today" | "week" | "month" | "all";
+export type DashboardPeriod = "today" | "week" | "month" | "all" | "custom";
+export type DashboardDateRange = {
+  from: string;
+  to: string;
+};
 export type DashboardFilter = "all" | "consignacion" | "pos";
 
 /** /api/dashboard/kpis */

@@ -15,19 +15,18 @@ import {
   buildPosReportHtml,
   type PosReportData,
 } from "@/lib/reports/base/pos-report-template";
-import { resolveRequestedSucursalId } from "@/lib/security/sucursalScope";
+import { nowAR, formatDateTimeAR } from "@/lib/date-format/utils-date";
 import {
-  nowAR,
-  startOfDayAR,
-  startOfWeekAR,
-  startOfMonthAR,
-  formatDateTimeAR,
-} from "@/lib/date-format/utils-date";
+  DashboardDateRangeError,
+  dashboardPeriodLabel,
+  parseDashboardDateQuery,
+  resolveDashboardDateWhere,
+} from "@/lib/dashboard/date-range";
+import { resolveReportShareLink } from "@/lib/reports/resolve-report-share-link";
+import { hashCode, verifyViewCookie } from "@/lib/sharing/share-links";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
-
-type Period = "today" | "week" | "month" | "all";
 
 type CatalogVisitDelegate = {
   count: (args: { where: Record<string, unknown> }) => Promise<number>;
@@ -44,21 +43,6 @@ function getCatalogVisitDelegate(): CatalogVisitDelegate | null {
     : null;
 }
 
-function getPeriodStart(period: Period, tz: string): Date | undefined {
-  if (period === "all") return undefined;
-  const now = nowAR(tz);
-  if (period === "today") return startOfDayAR(now, tz);
-  if (period === "week") return startOfWeekAR(now, tz);
-  return startOfMonthAR(now, tz);
-}
-
-const PERIOD_LABELS: Record<Period, string> = {
-  today: "Hoy",
-  week: "Esta semana",
-  month: "Este mes",
-  all: "Historico",
-};
-
 export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ period: string }> },
@@ -66,33 +50,49 @@ export async function GET(
   let page: Page | null = null;
   try {
     const { period: rawPeriod } = await params;
-    const VALID: Period[] = ["today", "week", "month", "all"];
-    const period: Period = VALID.includes(rawPeriod as Period)
-      ? (rawPeriod as Period)
-      : "month";
-
     const { searchParams } = new URL(req.url);
+    const periodParams = new URLSearchParams(searchParams);
+    periodParams.set("period", rawPeriod);
+    let dateQuery;
+    try {
+      dateQuery = parseDashboardDateQuery(periodParams);
+    } catch (error) {
+      if (error instanceof DashboardDateRangeError) {
+        return NextResponse.json({ error: error.message }, { status: 400 });
+      }
+      throw error;
+    }
+    const { period, range } = dateQuery;
     const code = searchParams.get("code");
-    const requestedSucursalId = Number(searchParams.get("sucursalId") ?? 1);
-    const auth = await requireAuth();
-    const authUserId = auth.ok ? Number(auth.user.sub) : null;
-    const userId = Number.isFinite(authUserId) ? authUserId : null;
-    const scopedSucursalId = auth.ok
-      ? resolveRequestedSucursalId(auth, requestedSucursalId)
-      : 1;
-    const isGlobal = scopedSucursalId === 0;
-
     if (!code) {
       return NextResponse.json({ error: "Code is required" }, { status: 400 });
     }
+    const shareLink = await resolveReportShareLink({
+      code,
+      expectedType: "REPORTE_POS",
+      period,
+      requestedRange: range,
+      hasViewedCookie: verifyViewCookie(
+        code,
+        req.cookies.get(`v_${hashCode(code)}`)?.value,
+      ),
+    });
+    if (!shareLink) {
+      return NextResponse.json({ error: "Enlace invalido" }, { status: 403 });
+    }
+    const auth = await requireAuth();
+    const authUserId = auth.ok ? Number(auth.user.sub) : null;
+    const userId = Number.isFinite(authUserId) ? authUserId : null;
+    const scopedSucursalId = shareLink.sucursalId;
+    const isGlobal = scopedSucursalId === 0;
 
     const timezone = await resolveTimezone({
       userId,
       sucursalId: scopedSucursalId,
     });
     const tz = timezone.tz;
-    const start = getPeriodStart(period, tz);
-    const dateWhere = start ? { gte: start } : undefined;
+    const dateWhere = resolveDashboardDateWhere(period, nowAR(tz), tz, range);
+    const periodLabel = dashboardPeriodLabel(period, range);
     const sucursalWhere = isGlobal ? {} : { sucursalId: scopedSucursalId };
 
     const catalogVisitDelegate = getCatalogVisitDelegate();
@@ -105,7 +105,7 @@ export async function GET(
     const hasSharedCatalog = Boolean(sharedCatalogConfig);
     const catalogVisitWhere = {
       ...(!isGlobal && !hasSharedCatalog ? sucursalWhere : {}),
-      ...(start ? { visitedAt: { gte: start } } : {}),
+      ...(dateWhere ? { visitedAt: dateWhere } : {}),
     };
 
     // Fetch data in parallel
@@ -357,7 +357,7 @@ export async function GET(
 
     const reportData: PosReportData = {
       period,
-      periodLabel: PERIOD_LABELS[period],
+      periodLabel,
       fechaGeneracion: formatDateTimeAR(new Date(), true, tz),
       scopeLabel: isGlobal ? "Vista global" : `Sucursal ${scopedSucursalId}`,
       totalVentas: totalVentasNeto,
@@ -406,10 +406,11 @@ export async function GET(
       return bytes;
     });
 
+    const filenameLabel = periodLabel.replace(/[^a-zA-Z0-9]+/g, "-");
     return new NextResponse(Buffer.from(pdfBytes), {
       headers: {
         "Content-Type": "application/pdf",
-        "Content-Disposition": `inline; filename="Reporte-POS-${PERIOD_LABELS[period].replace(/\s+/g, "-")}.pdf"`,
+        "Content-Disposition": `inline; filename="Reporte-POS-${filenameLabel}.pdf"`,
         "Cache-Control": "no-store",
       },
     });

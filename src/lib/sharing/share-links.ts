@@ -23,6 +23,20 @@ export function hashCode(code: string) {
   return crypto.createHash("sha256").update(code).digest("hex");
 }
 
+export function createViewCookieValue(code: string): string {
+  return crypto.createHmac("sha256", getKey()).update(code).digest("base64url");
+}
+
+export function verifyViewCookie(code: string, value?: string): boolean {
+  if (!value) return false;
+  const expected = Buffer.from(createViewCookieValue(code));
+  const received = Buffer.from(value);
+  return (
+    expected.length === received.length &&
+    crypto.timingSafeEqual(expected, received)
+  );
+}
+
 // AES-256-GCM: devuelve base64url( iv | tag | ciphertext )
 export function encryptCode(code: string) {
   const key = getKey();

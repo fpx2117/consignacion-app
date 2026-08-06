@@ -69,8 +69,12 @@ const KpiSortableGrid = dynamic(
 
 import { formatNumber, formatMoney } from "@/lib/date-format/utils-format";
 
-import { DashboardPeriod, DashboardFilter } from "@/lib/types";
-// import { useTimezone } from "@/hooks/useTimezone";
+import {
+  DashboardPeriod,
+  DashboardFilter,
+  type DashboardDateRange,
+} from "@/lib/types";
+import { useTimezone } from "@/hooks/useTimezone";
 import { cn } from "@/lib/utils";
 import { useSucursalStore } from "@/store/useSucursalStore";
 import type { KpiConfig } from "./components/kpi-sortable-grid";
@@ -132,12 +136,28 @@ const PERIOD_LABEL: Record<DashboardPeriod, string> = {
   week: "esta semana",
   month: "este mes",
   all: "histórico",
+  custom: "el rango seleccionado",
 };
 
+function getDefaultDateRange(tz: string): DashboardDateRange {
+  const now = new Date();
+  const to = new Intl.DateTimeFormat("en-CA", {
+    timeZone: tz,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(now);
+  return { from: `${to.slice(0, 7)}-01`, to };
+}
+
 export default function DashboardPage() {
-  // const { formatDateTime } = useTimezone(); // Unused
+  const { tz } = useTimezone();
   const activeSucursalId = useSucursalStore((s) => s.activeSucursalId);
   const [period, setPeriod] = React.useState<DashboardPeriod>("month");
+  const [dateRange, setDateRange] = React.useState<DashboardDateRange>(() =>
+    getDefaultDateRange(tz),
+  );
+  const customRangeEditedRef = React.useRef(false);
   const [filter, setFilter] = React.useState<DashboardFilter>("all");
   const [showSensitiveData, setShowSensitiveData] = React.useState(false);
   const [hiddenKpis, setHiddenKpis] = React.useState<Record<string, boolean>>(
@@ -148,8 +168,20 @@ export default function DashboardPage() {
     finance: [],
   });
   const [prefsLoaded, setPrefsLoaded] = React.useState(false);
-  const { kpis, consig, top, trend, loading, error, refresh } =
-    useDashboard(period);
+  const { kpis, consig, top, trend, loading, error, refresh } = useDashboard(
+    period,
+    period === "custom" ? dateRange : undefined,
+  );
+
+  React.useEffect(() => {
+    if (period !== "custom") customRangeEditedRef.current = false;
+    if (!customRangeEditedRef.current) setDateRange(getDefaultDateRange(tz));
+  }, [period, tz]);
+
+  const applyDateRange = React.useCallback((range: DashboardDateRange) => {
+    customRangeEditedRef.current = true;
+    setDateRange(range);
+  }, []);
   const ventasStats = kpis?.finanzas?.ventas as
     { total?: number; soloVenta?: number; soloConsig?: number } | undefined;
   const pagosStats = kpis?.finanzas?.pagos as
@@ -545,6 +577,8 @@ export default function DashboardPage() {
         <DashboardHeader
           period={period}
           setPeriod={setPeriod}
+          dateRange={dateRange}
+          setDateRange={applyDateRange}
           filter={filter}
           setFilter={setFilter}
           refresh={refresh}

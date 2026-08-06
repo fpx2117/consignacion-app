@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { hashCode } from "@/lib/sharing/share-links";
+import {
+  createViewCookieValue,
+  hashCode,
+  verifyViewCookie,
+} from "@/lib/sharing/share-links";
 import { decodeHistorialShareTarget } from "@/lib/sharing/historial-share-links";
 
 export const dynamic = "force-dynamic";
@@ -35,6 +39,9 @@ function redirectAbs(
     res.cookies.set(cookieToSet.name, cookieToSet.value, {
       path: "/",
       maxAge: 60 * 60 * 24, // 24 horas de validez
+      httpOnly: true,
+      sameSite: "lax",
+      secure: url.protocol === "https:",
     });
   }
 
@@ -55,7 +62,11 @@ export async function GET(
     return redirectAbs(req, `/x/status?state=expired`);
 
   const cookieName = `v_${codeHash}`;
-  const hasViewedCookie = req.cookies.get(cookieName);
+  const cookieValue = createViewCookieValue(code);
+  const hasViewedCookie = verifyViewCookie(
+    code,
+    req.cookies.get(cookieName)?.value,
+  );
 
   if (!hasViewedCookie && link.views >= link.maxViews) {
     return redirectAbs(req, `/x/status?state=limit`);
@@ -90,7 +101,7 @@ export async function GET(
 
       return redirectAbs(req, `${destPath}${query}`, {
         name: cookieName,
-        value: "1",
+        value: cookieValue,
       });
     }
     case "INVENTARIO":
@@ -108,11 +119,18 @@ export async function GET(
         2: "week",
         3: "month",
         4: "all",
+        5: "custom",
       };
       const periodName = PERIOD_MAP[periodId] ?? "month";
       destPath = `/ver/dashboard/${periodName}`;
       destPath += `?code=${encodeURIComponent(code)}&sucursalId=${sucursalId}`;
-      return redirectAbs(req, destPath, { name: cookieName, value: "1" });
+      if (periodName === "custom" && link.rangeStart && link.rangeEnd) {
+        destPath += `&from=${link.rangeStart.toISOString().slice(0, 10)}&to=${link.rangeEnd.toISOString().slice(0, 10)}`;
+      }
+      return redirectAbs(req, destPath, {
+        name: cookieName,
+        value: cookieValue,
+      });
     }
     case "REPORTE_POS": {
       const fullId = link.targetId || 11;
@@ -123,11 +141,18 @@ export async function GET(
         2: "week",
         3: "month",
         4: "all",
+        5: "custom",
       };
       const periodName = PERIOD_MAP_POS[periodId] ?? "month";
       destPath = `/ver/pos/${periodName}`;
       destPath += `?code=${encodeURIComponent(code)}&sucursalId=${sucursalId}`;
-      return redirectAbs(req, destPath, { name: cookieName, value: "1" });
+      if (periodName === "custom" && link.rangeStart && link.rangeEnd) {
+        destPath += `&from=${link.rangeStart.toISOString().slice(0, 10)}&to=${link.rangeEnd.toISOString().slice(0, 10)}`;
+      }
+      return redirectAbs(req, destPath, {
+        name: cookieName,
+        value: cookieValue,
+      });
     }
     case "REPORTE_CONSIGNACION": {
       const fullId = link.targetId || 11;
@@ -138,11 +163,18 @@ export async function GET(
         2: "week",
         3: "month",
         4: "all",
+        5: "custom",
       };
       const periodName = PERIOD_MAP_CONSIG[periodId] ?? "month";
       destPath = `/ver/consig/${periodName}`;
       destPath += `?code=${encodeURIComponent(code)}&sucursalId=${sucursalId}`;
-      return redirectAbs(req, destPath, { name: cookieName, value: "1" });
+      if (periodName === "custom" && link.rangeStart && link.rangeEnd) {
+        destPath += `&from=${link.rangeStart.toISOString().slice(0, 10)}&to=${link.rangeEnd.toISOString().slice(0, 10)}`;
+      }
+      return redirectAbs(req, destPath, {
+        name: cookieName,
+        value: cookieValue,
+      });
     }
     case "COMPROBANTE_GASTO":
       destPath = `/ver/gasto/${link.targetId}`;
@@ -153,5 +185,5 @@ export async function GET(
 
   const finalUrl = `${destPath}${queryParams}`;
 
-  return redirectAbs(req, finalUrl, { name: cookieName, value: "1" });
+  return redirectAbs(req, finalUrl, { name: cookieName, value: cookieValue });
 }

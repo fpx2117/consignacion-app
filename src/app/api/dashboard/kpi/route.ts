@@ -1,14 +1,26 @@
 import { NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth/require-auth";
 import { getDashboardKpis } from "@/lib/dashboard/kpi-logic";
-import { DashboardPeriod } from "@/lib/types";
+import {
+  DashboardDateRangeError,
+  parseDashboardDateQuery,
+} from "@/lib/dashboard/date-range";
 
 export async function GET(req: Request) {
   const auth = await requireAuth();
   if (!auth.ok) return auth.res;
 
   const { searchParams } = new URL(req.url);
-  const period = (searchParams.get("period") as DashboardPeriod) ?? "month";
+  let query;
+  try {
+    query = parseDashboardDateQuery(searchParams);
+  } catch (error) {
+    if (error instanceof DashboardDateRangeError) {
+      return NextResponse.json({ error: error.message }, { status: 400 });
+    }
+    throw error;
+  }
+  const { period, range } = query;
 
   const sucursalId = auth.activeSucursalId;
   const isAdmin = auth.user.rol === "ADMIN";
@@ -19,6 +31,7 @@ export async function GET(req: Request) {
     period,
     isAdmin,
     Number.isFinite(userId) ? userId : undefined,
+    range,
   );
 
   return NextResponse.json(

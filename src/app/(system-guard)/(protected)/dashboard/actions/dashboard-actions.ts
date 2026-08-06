@@ -11,6 +11,7 @@ import { prisma } from "@/lib/prisma";
 import { resolveRequestedSucursalId } from "@/lib/security/sucursalScope";
 import type {
   DashboardPeriod,
+  DashboardDateRange,
   DashboardKpis,
   DashboardConsignacionesResponse,
   DashboardTopProductos,
@@ -36,6 +37,7 @@ class UnauthorizedError extends Error {
 export async function fetchDashboardKpis(
   period: DashboardPeriod = "month",
   requestedSucursalId?: number,
+  range?: DashboardDateRange | null,
 ): Promise<DashboardKpis> {
   const auth = await requireAuth();
   if (!auth.ok) throw new UnauthorizedError();
@@ -52,6 +54,7 @@ export async function fetchDashboardKpis(
     period,
     isAdmin,
     Number.isFinite(userId) ? userId : undefined,
+    range,
   );
 
   return {
@@ -203,6 +206,7 @@ export async function fetchDashboardTopProductos(
   period: DashboardPeriod = "month",
   limit: number = 5,
   requestedSucursalId?: number,
+  range?: DashboardDateRange | null,
 ): Promise<DashboardTopProductos> {
   const auth = await requireAuth();
   if (!auth.ok) throw new UnauthorizedError();
@@ -223,6 +227,7 @@ export async function fetchDashboardTopProductos(
       isAdmin,
       safeLimit,
       Number.isFinite(userId) ? userId : undefined,
+      range,
     ),
     getDashboardTopConsignados(
       scopedSucursalId,
@@ -230,6 +235,7 @@ export async function fetchDashboardTopProductos(
       isAdmin,
       safeLimit,
       Number.isFinite(userId) ? userId : undefined,
+      range,
     ),
   ]);
 
@@ -251,6 +257,7 @@ export async function fetchDashboardTopProductos(
 export async function fetchDashboardTendencia(
   period: Exclude<DashboardPeriod, "all"> = "month",
   requestedSucursalId?: number,
+  range?: DashboardDateRange | null,
 ): Promise<DashboardTendencia> {
   const auth = await requireAuth();
   if (!auth.ok) throw new UnauthorizedError();
@@ -268,6 +275,7 @@ export async function fetchDashboardTendencia(
     period,
     isAdmin,
     Number.isFinite(userId) ? userId : undefined,
+    range,
   );
 
   const series = (data.series ?? []).map(

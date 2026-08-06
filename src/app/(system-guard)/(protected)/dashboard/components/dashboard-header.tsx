@@ -1,7 +1,15 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import type { DateRange } from "react-day-picker";
+import { es } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import {
   Select,
   SelectContent,
@@ -29,7 +37,11 @@ import {
   ShoppingCart,
   Handshake,
 } from "lucide-react";
-import { DashboardPeriod, DashboardFilter } from "@/lib/types";
+import type {
+  DashboardPeriod,
+  DashboardFilter,
+  DashboardDateRange,
+} from "@/lib/types";
 import { apiService } from "@/lib/apiService";
 import { motion } from "motion/react";
 import { cn } from "@/lib/utils";
@@ -37,6 +49,8 @@ import { cn } from "@/lib/utils";
 interface DashboardHeaderProps {
   period: DashboardPeriod;
   setPeriod: (v: DashboardPeriod) => void;
+  dateRange: DashboardDateRange;
+  setDateRange: (v: DashboardDateRange) => void;
   filter: DashboardFilter;
   setFilter: (v: DashboardFilter) => void;
   refresh: () => void;
@@ -48,7 +62,36 @@ const PERIOD_LABELS: Record<DashboardPeriod, string> = {
   week: "Esta semana",
   month: "Este mes",
   all: "Histórico",
+  custom: "Rango personalizado",
 };
+
+const REPORT_PERIODS: DashboardPeriod[] = [
+  "today",
+  "week",
+  "month",
+  "all",
+  "custom",
+];
+
+function inputDateToLocal(value: string): Date {
+  const [year, month, day] = value.split("-").map(Number);
+  return new Date(year, month - 1, day);
+}
+
+function localDateToInput(value: Date): string {
+  const year = value.getFullYear();
+  const month = String(value.getMonth() + 1).padStart(2, "0");
+  const day = String(value.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function formatRange(range: DashboardDateRange): string {
+  const format = (value: string) => {
+    const [year, month, day] = value.split("-");
+    return `${day}/${month}/${year}`;
+  };
+  return `${format(range.from)} - ${format(range.to)}`;
+}
 
 type ReportType = "pos" | "consignacion";
 type DownloadKey = `${ReportType}-${DashboardPeriod}`;
@@ -56,6 +99,8 @@ type DownloadKey = `${ReportType}-${DashboardPeriod}`;
 export function DashboardHeader({
   period,
   setPeriod,
+  dateRange,
+  setDateRange,
   filter,
   setFilter,
   refresh,
@@ -63,6 +108,18 @@ export function DashboardHeader({
 }: DashboardHeaderProps) {
   const [downloading, setDownloading] = useState<DownloadKey | null>(null);
   const [greeting, setGreeting] = useState("Bienvenido");
+  const [rangeOpen, setRangeOpen] = useState(false);
+  const [draftRange, setDraftRange] = useState<DateRange>({
+    from: inputDateToLocal(dateRange.from),
+    to: inputDateToLocal(dateRange.to),
+  });
+
+  useEffect(() => {
+    setDraftRange({
+      from: inputDateToLocal(dateRange.from),
+      to: inputDateToLocal(dateRange.to),
+    });
+  }, [dateRange]);
 
   const getGreetingByHour = () => {
     const hour = new Date().getHours();
@@ -88,12 +145,18 @@ export function DashboardHeader({
     try {
       const url =
         type === "pos"
-          ? await apiService.getPosReporteUrl(targetPeriod)
-          : await apiService.getConsigReporteUrl(targetPeriod);
+          ? await apiService.getPosReporteUrl(
+              targetPeriod,
+              targetPeriod === "custom" ? dateRange : undefined,
+            )
+          : await apiService.getConsigReporteUrl(
+              targetPeriod,
+              targetPeriod === "custom" ? dateRange : undefined,
+            );
       if (newWindow) {
         newWindow.location.href = url;
       } else {
-        window.location.href = url;
+        window.location.assign(url);
       }
     } catch {
       newWindow?.close();
@@ -135,7 +198,7 @@ export function DashboardHeader({
       <motion.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
-        className="flex flex-col gap-3 sm:flex-row sm:items-center bg-card/40 p-1.5 rounded-2xl border border-border/50 backdrop-blur-xl shadow-sm"
+        className="flex flex-col gap-3 bg-card/40 p-1.5 rounded-2xl border border-border/50 backdrop-blur-xl shadow-sm sm:flex-row sm:flex-wrap sm:items-center lg:flex-nowrap"
       >
         {/* FILTRO */}
         <div className="relative group min-w-[160px]">
@@ -176,9 +239,77 @@ export function DashboardHeader({
               <SelectItem value="week">Esta semana</SelectItem>
               <SelectItem value="month">Este mes</SelectItem>
               <SelectItem value="all">Histórico</SelectItem>
+              <SelectItem value="custom">Rango personalizado</SelectItem>
             </SelectContent>
           </Select>
         </div>
+
+        {period === "custom" && (
+          <>
+            <div className="h-6 w-[1px] bg-border hidden sm:block" />
+            <Popover open={rangeOpen} onOpenChange={setRangeOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  className="h-10 min-w-[210px] justify-start rounded-xl px-3 text-xs font-semibold hover:bg-muted/45"
+                  aria-label={`Cambiar rango de fechas. Seleccion actual: ${formatRange(dateRange)}`}
+                >
+                  <CalendarDays className="mr-2 h-3.5 w-3.5 text-primary" />
+                  {formatRange(dateRange)}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent
+                align="end"
+                className="w-auto max-w-[calc(100vw-2rem)] rounded-2xl p-0 shadow-2xl"
+              >
+                <div className="border-b px-4 py-3">
+                  <p className="text-sm font-bold">Rango del reporte</p>
+                  <p className="text-xs text-muted-foreground">
+                    Selecciona hasta 366 dias. Ambas fechas estan incluidas.
+                  </p>
+                </div>
+                <Calendar
+                  mode="range"
+                  locale={es}
+                  selected={draftRange}
+                  onSelect={(nextRange) =>
+                    setDraftRange(
+                      nextRange ?? { from: undefined, to: undefined },
+                    )
+                  }
+                  defaultMonth={draftRange.from}
+                  captionLayout="dropdown"
+                  max={365}
+                  required={false}
+                />
+                <div className="flex items-center justify-between gap-3 border-t p-3">
+                  <span className="text-[11px] text-muted-foreground">
+                    {draftRange.from && draftRange.to
+                      ? `${localDateToInput(draftRange.from)} / ${localDateToInput(draftRange.to)}`
+                      : "Seleccion incompleta"}
+                  </span>
+                  <Button
+                    type="button"
+                    size="sm"
+                    disabled={!draftRange.from || !draftRange.to}
+                    onClick={() => {
+                      if (!draftRange.from || !draftRange.to) return;
+                      setDateRange({
+                        from: localDateToInput(draftRange.from),
+                        to: localDateToInput(draftRange.to),
+                      });
+                      setRangeOpen(false);
+                    }}
+                    className="rounded-lg"
+                  >
+                    Aplicar rango
+                  </Button>
+                </div>
+              </PopoverContent>
+            </Popover>
+          </>
+        )}
 
         <div className="h-6 w-[1px] bg-border hidden sm:block" />
 
@@ -215,31 +346,31 @@ export function DashboardHeader({
               <DropdownMenuLabel className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-[color:var(--theme-ocean-primary)] px-3 py-2">
                 <ShoppingCart className="h-3 w-3" /> Ventas · POS
               </DropdownMenuLabel>
-              {(["today", "week", "month", "all"] as DashboardPeriod[]).map(
-                (p) => (
-                  <DropdownMenuItem
-                    key={`pos-${p}`}
-                    onClick={() => handleDownload("pos", p)}
-                    disabled={!!downloading}
-                    className={cn(
-                      "flex items-center gap-2.5 rounded-lg mx-1 cursor-pointer transition-colors",
-                      p === period &&
-                        "bg-[color:var(--theme-ocean-primary)] dark:bg-[color:var(--theme-ocean-primary)]/30 text-[color:var(--theme-ocean-primary)] font-semibold",
-                    )}
-                  >
-                    <FileText className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                    <span className="text-sm">{PERIOD_LABELS[p]}</span>
-                    {isDownloading("pos", p) && (
-                      <Loader2 className="h-3 w-3 animate-spin ml-auto" />
-                    )}
-                    {p === period && !isDownloading("pos", p) && (
-                      <span className="ml-auto text-[9px] font-bold uppercase tracking-wide text-[color:var(--theme-ocean-primary)] opacity-70">
-                        Actual
-                      </span>
-                    )}
-                  </DropdownMenuItem>
-                ),
-              )}
+              {REPORT_PERIODS.map((p) => (
+                <DropdownMenuItem
+                  key={`pos-${p}`}
+                  onClick={() => handleDownload("pos", p)}
+                  disabled={!!downloading}
+                  className={cn(
+                    "flex items-center gap-2.5 rounded-lg mx-1 cursor-pointer transition-colors",
+                    p === period &&
+                      "bg-[color:var(--theme-ocean-primary)] dark:bg-[color:var(--theme-ocean-primary)]/30 text-[color:var(--theme-ocean-primary)] font-semibold",
+                  )}
+                >
+                  <FileText className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                  <span className="text-sm">
+                    {p === "custom" ? formatRange(dateRange) : PERIOD_LABELS[p]}
+                  </span>
+                  {isDownloading("pos", p) && (
+                    <Loader2 className="h-3 w-3 animate-spin ml-auto" />
+                  )}
+                  {p === period && !isDownloading("pos", p) && (
+                    <span className="ml-auto text-[9px] font-bold uppercase tracking-wide text-[color:var(--theme-ocean-primary)] opacity-70">
+                      Actual
+                    </span>
+                  )}
+                </DropdownMenuItem>
+              ))}
 
               <DropdownMenuSeparator className="my-1" />
 
@@ -247,31 +378,31 @@ export function DashboardHeader({
               <DropdownMenuLabel className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-[color:var(--primary)] px-3 py-2">
                 <Handshake className="h-3 w-3" /> Consignaciones
               </DropdownMenuLabel>
-              {(["today", "week", "month", "all"] as DashboardPeriod[]).map(
-                (p) => (
-                  <DropdownMenuItem
-                    key={`consig-${p}`}
-                    onClick={() => handleDownload("consignacion", p)}
-                    disabled={!!downloading}
-                    className={cn(
-                      "flex items-center gap-2.5 rounded-lg mx-1 cursor-pointer transition-colors",
-                      p === period &&
-                        "bg-[color:var(--primary)] dark:bg-[color:var(--primary)]/30 text-[color:var(--primary)] font-semibold",
-                    )}
-                  >
-                    <FileText className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                    <span className="text-sm">{PERIOD_LABELS[p]}</span>
-                    {isDownloading("consignacion", p) && (
-                      <Loader2 className="h-3 w-3 animate-spin ml-auto" />
-                    )}
-                    {p === period && !isDownloading("consignacion", p) && (
-                      <span className="ml-auto text-[9px] font-bold uppercase tracking-wide text-[color:var(--primary)] opacity-70">
-                        Actual
-                      </span>
-                    )}
-                  </DropdownMenuItem>
-                ),
-              )}
+              {REPORT_PERIODS.map((p) => (
+                <DropdownMenuItem
+                  key={`consig-${p}`}
+                  onClick={() => handleDownload("consignacion", p)}
+                  disabled={!!downloading}
+                  className={cn(
+                    "flex items-center gap-2.5 rounded-lg mx-1 cursor-pointer transition-colors",
+                    p === period &&
+                      "bg-[color:var(--primary)] dark:bg-[color:var(--primary)]/30 text-[color:var(--primary)] font-semibold",
+                  )}
+                >
+                  <FileText className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                  <span className="text-sm">
+                    {p === "custom" ? formatRange(dateRange) : PERIOD_LABELS[p]}
+                  </span>
+                  {isDownloading("consignacion", p) && (
+                    <Loader2 className="h-3 w-3 animate-spin ml-auto" />
+                  )}
+                  {p === period && !isDownloading("consignacion", p) && (
+                    <span className="ml-auto text-[9px] font-bold uppercase tracking-wide text-[color:var(--primary)] opacity-70">
+                      Actual
+                    </span>
+                  )}
+                </DropdownMenuItem>
+              ))}
             </DropdownMenuContent>
           </DropdownMenu>
 

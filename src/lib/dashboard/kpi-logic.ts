@@ -2,13 +2,13 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { differenceInDays } from "date-fns";
 import {
+  formatDateInputAR,
   nowAR,
-  startOfDayAR,
-  startOfWeekAR,
   startOfMonthAR,
 } from "@/lib/date-format/utils-date";
 import { resolveTimezone } from "@/lib/timezone/get-configured-tz";
-import { DashboardPeriod } from "../types";
+import type { DashboardDateRange, DashboardPeriod } from "../types";
+import { resolveDashboardDateWhere } from "./date-range";
 
 type CatalogVisitDelegate = {
   count: (args: { where: Record<string, unknown> }) => Promise<number>;
@@ -74,33 +74,6 @@ async function resolveKpiTimezone(sucursalId: number, userId?: number | null) {
   return resolveTimezone({ userId: userId ?? null, sucursalId });
 }
 
-function resolvePeriodDateWhere(
-  period: DashboardPeriod,
-  now: Date,
-  tz: string,
-) {
-  if (period === "all") return undefined;
-
-  if (period === "today") {
-    const start = startOfDayAR(now, tz);
-    return { gte: start, lt: new Date(start.getTime() + 86_400_000) };
-  }
-
-  if (period === "week") {
-    const start = startOfWeekAR(now, tz);
-    return { gte: start, lt: new Date(start.getTime() + 7 * 86_400_000) };
-  }
-
-  const start = startOfMonthAR(now, tz);
-  const nextMonthReference = new Date(now);
-  nextMonthReference.setMonth(nextMonthReference.getMonth() + 1);
-
-  return {
-    gte: start,
-    lt: startOfMonthAR(nextMonthReference, tz),
-  };
-}
-
 /**
  * UTORIDAD CENTRAL PARA CÁLCULOS DE KPI
  * Centraliza la lógica de filtrado por sucursal, periodos y fórmulas de rentabilidad.
@@ -111,11 +84,12 @@ export async function getDashboardKpis(
   period: DashboardPeriod,
   isAdmin: boolean = false,
   userId?: number | null,
+  range?: DashboardDateRange | null,
 ) {
   const timezone = await resolveKpiTimezone(sucursalId, userId);
   const tz = timezone.tz;
   const now = nowAR(tz);
-  const dateWhere = resolvePeriodDateWhere(period, now, tz);
+  const dateWhere = resolveDashboardDateWhere(period, now, tz, range);
 
   // Si sucursalId es 0 y es admin, no filtramos por sucursal (Vista Global),
   // pero solo se incluyen las sucursales que optaron por participar (opt-out via Sucursal.incluidaEnDashboardGlobal)
@@ -493,6 +467,7 @@ export async function getDashboardTendencia(
   period: DashboardPeriod,
   isAdmin: boolean = false,
   userId?: number | null,
+  range?: DashboardDateRange | null,
 ) {
   const isGlobal = sucursalId === 0 && isAdmin;
   const includedGlobalIds = isGlobal
@@ -501,7 +476,7 @@ export async function getDashboardTendencia(
   const timezone = await resolveKpiTimezone(sucursalId, userId);
   const tz = timezone.tz;
   const now = nowAR(tz);
-  const dateWhere = resolvePeriodDateWhere(period, now, tz) ?? {
+  const dateWhere = resolveDashboardDateWhere(period, now, tz, range) ?? {
     gte: startOfMonthAR(now, tz),
   };
   const start = dateWhere.gte;
@@ -509,7 +484,13 @@ export async function getDashboardTendencia(
   const sucursalWhere = isGlobal
     ? { sucursalId: { in: includedGlobalIds } }
     : { sucursalId };
-  const days = differenceInDays(now, start) + 1;
+  const days =
+    period === "custom" && range
+      ? differenceInDays(
+          new Date(`${range.to}T00:00:00.000Z`),
+          new Date(`${range.from}T00:00:00.000Z`),
+        ) + 1
+      : differenceInDays(now, start) + 1;
 
   const [ventas, pagos] = await Promise.all([
     prisma.venta.findMany({
@@ -528,7 +509,7 @@ export async function getDashboardTendencia(
     }),
   ]);
 
-  const key = (d: Date) => startOfDayAR(d, tz).toISOString().slice(0, 10);
+  const key = (d: Date) => formatDateInputAR(d, tz);
   const seriesMap: Record<
     string,
     {
@@ -592,6 +573,7 @@ export async function getDashboardTopProductos(
   isAdmin: boolean = false,
   limit: number = 10,
   userId?: number | null,
+  range?: DashboardDateRange | null,
 ) {
   const isGlobal = sucursalId === 0 && isAdmin;
   const includedGlobalIds = isGlobal
@@ -604,7 +586,7 @@ export async function getDashboardTopProductos(
   const sucursalWhere = isGlobal
     ? { sucursalId: { in: includedGlobalIds } }
     : { sucursalId };
-  const dateWhere = resolvePeriodDateWhere(period, now, tz);
+  const dateWhere = resolveDashboardDateWhere(period, now, tz, range);
 
   const [liqItems, posItems] = await Promise.all([
     prisma.liquidacionItem.findMany({
@@ -696,6 +678,7 @@ export async function getDashboardTopConsignados(
   isAdmin: boolean = false,
   limit: number = 10,
   userId?: number | null,
+  range?: DashboardDateRange | null,
 ) {
   const isGlobal = sucursalId === 0 && isAdmin;
   const includedGlobalIds = isGlobal
@@ -708,7 +691,7 @@ export async function getDashboardTopConsignados(
   const sucursalWhere = isGlobal
     ? { sucursalId: { in: includedGlobalIds } }
     : { sucursalId };
-  const dateWhere = resolvePeriodDateWhere(period, now, tz);
+  const dateWhere = resolveDashboardDateWhere(period, now, tz, range);
 
   const detalles = await prisma.consignacionDetalle.findMany({
     where: {
