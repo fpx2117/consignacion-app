@@ -1,29 +1,46 @@
 # Goal
 
-Implementar la Fase 0 de KNOWLEDGE,cloud: guardrails automáticos que impidan aumentar hardcoding visual o tamaño de archivos mientras la deuda existente se reduce por ratchet.
+Implementar la Fase 1 de KNOWLEDGE,cloud ("refactor del núcleo"): crear la
+fuente canónica de tokens visuales, dividir `globals.css` por responsabilidad,
+retirar la duplicación de `color-tokens.ts` y estabilizar los alias de
+Tailwind v4. Se aplica la paleta nueva (Cobalto/Profundo/Eléctrico/Pálido/
+Carbón/etc.) al `:root` global light/dark en este mismo commit.
 
 # Done when
 
-- Existe un scanner Node sin dependencias externas.
-- Detecta colores literales, clases Tailwind de paleta, fuentes legacy e identidades legacy.
-- Detecta archivos productivos manuales de más de 300 líneas.
-- Archivos nuevos deben tener cero violaciones y máximo 300 líneas.
-- Archivos existentes no pueden superar su baseline de líneas o violaciones.
-- El baseline es compacto, versionable y regenerable explícitamente.
-- Hay salida humana y JSON con exit code no cero ante regresiones.
-- Pruebas unitarias, scanner, lint y build finalizan correctamente.
-- Ningún archivo manual nuevo supera 300 líneas.
+- Existe `src/theme/know-design-system.ts` (máximo 300 líneas) con:
+  primitivos cromáticos, roles semánticos light/dark, colores externos
+  autorizados (brand/provider/status/swatch/theme presets/wa/traffic/ui-fx/
+  report), y un generador de CSS a partir de esos tokens.
+- `globals.css` no contiene valores cromáticos literales fuera de alias
+  Tailwind estructurales; los valores light/dark provienen de la fuente
+  canónica.
+- `globals.css` se divide en `globals.css` (aliases + base, objetivo <150
+  líneas), `motion.css` (keyframes/transiciones) y `storefront-theme.css`
+  (`.store-theme-root`).
+- `src/lib/theme/color-tokens.ts` se elimina; su único consumidor
+  (`report-theme.ts`) pasa a usar la fuente canónica.
+- `tailwind.config.ts` (config v3 no referenciada por Tailwind v4/PostCSS) se
+  elimina.
+- Un test verifica que `globals.css`/`storefront-theme.css` no diverjan de
+  los valores declarados en `know-design-system.ts`.
+- `npm run visual:check`, `npm run visual:test`, `npx tsc --noEmit` (sin
+  errores nuevos) y `npm run build` terminan en verde.
+- Smoke visual manual en el navegador (light/dark) sin regresiones de
+  contraste evidentes.
 
 # Never touch
 
-- UI, colores o tipografía productiva en esta fase.
-- Archivos locales bajo `.claude/`, `.playwright-cli/` y `MEMORY.md`.
-- Migraciones existentes, schema o datos productivos.
-- Cambios previos no relacionados presentes en el worktree.
+- Tipografía (Satoshi/Geist) — es Fase 2.
+- Marca/logos (`brand-logo.tsx`, favicon, metadata) — es Fase 3.
+- Archivos bloqueados por la auditoría (>1000 líneas) no listados como núcleo
+  visual.
+- Migraciones, schema Prisma, lógica de negocio.
 
 # Stop if
 
-- El scanner requiere una dependencia nueva.
-- El baseline supera 300 líneas sin una razón generada y documentada.
-- La implementación exige modificar más de seis archivos fuera de documentación y tests.
-- Una prueba previamente verde falla por comportamiento no relacionado.
+- Hace falta tocar un archivo bloqueado por la auditoría para completar el
+  refactor del núcleo.
+- El generador de CSS requiere una dependencia nueva.
+- Un componente compartido rompe visualmente de forma no resoluble sin salir
+  del alcance de "núcleo".
