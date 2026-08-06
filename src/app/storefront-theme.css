@@ -1,0 +1,35 @@
+/* =========================
+   Store Theme Root
+   Fuerza modo claro en el storefront público y su preview, aislado del
+   theme global. Los valores deben coincidir con LIGHT_THEME en
+   src/theme/know-design-system.ts (ver know-design-system.test.ts).
+   ========================= */
+.store-theme-root {
+  --background: #f6f5f1;
+  --foreground: #202020;
+
+  --store-canvas: #ececea;
+  --store-surface: #ffffff;
+  --store-surface-rgb: 255, 255, 255;
+
+  --card: var(--store-surface);
+  --card-foreground: #202020;
+
+  --popover: var(--store-surface);
+  --popover-foreground: #202020;
+
+  --muted: #ececea;
+  --muted-foreground: #777777;
+
+  --accent: #b9c7ff;
+  --accent-foreground: #202020;
+
+  --destructive: #ef4444;
+  --destructive-foreground: #ffffff;
+
+  --border: #d9d9d9;
+  --input: #d9d9d9;
+
+  --success: #22c55e;
+  --success-foreground: #202020;
+}

@@ -13,7 +13,7 @@
     "visual:baseline": "node scripts/check-visual-guard.mjs --update-baseline",
     "visual:check": "node scripts/check-visual-guard.mjs",
     "visual:check:json": "node scripts/check-visual-guard.mjs --json",
-    "visual:test": "node --test scripts/check-visual-guard.test.mjs scripts/check-visual-guard.integration.test.mjs"
+    "visual:test": "node --test scripts/check-visual-guard.test.mjs scripts/check-visual-guard.integration.test.mjs && tsx --test src/theme/know-design-system.test.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
