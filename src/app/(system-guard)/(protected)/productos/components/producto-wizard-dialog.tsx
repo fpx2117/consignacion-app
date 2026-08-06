@@ -443,8 +443,13 @@ export function ProductoWizardDialog({
     });
   }
 
-  const pv = toNumber(precioVenta) || 0;
-  const pc = toNumber(precioCosto) || 0;
+  // precioVenta/precioCosto vienen del input de máscara "caja registradora"
+  // (formatearInputMonto, con "." de miles y "," decimal) — toNumber() solo
+  // sabe convertir la coma decimal y rompe con montos >= 1000 (el punto de
+  // miles queda como si fuera otro separador decimal). digitosAMonto() es el
+  // inverso real de formatearInputMonto() y parsea esto correctamente.
+  const pv = digitosAMonto(precioVenta) ?? 0;
+  const pc = digitosAMonto(precioCosto) ?? 0;
   const dpct =
     descuentoActivo && tipoDescuento === "porcentaje"
       ? (toNumber(descuentoPorcentaje) ?? 0)
