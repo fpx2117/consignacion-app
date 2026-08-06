@@ -1,5 +1,4 @@
 "use client";
-
 import * as React from "react";
 import {
   Store,
@@ -10,6 +9,7 @@ import {
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useSucursalStore } from "@/store/useSucursalStore";
+import { BrandLockup } from "@/components/layout/brand-lockup";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import {
@@ -55,7 +55,7 @@ export function TopBar() {
   return (
     <div className="absolute top-0 left-0 right-0 z-40 bg-transparent px-4 md:px-6 md:pr-10 md:pl-[110px] transition-all">
       <div className="h-16 flex items-center justify-between">
-        {/* Logo oculto en mobile - ya está en el menú hamburguesa del dock */}
+        <BrandLockup className="hidden md:flex" />
 
         <div className="flex items-center gap-4 ml-auto">
           {activeSucursalId === 0 && (

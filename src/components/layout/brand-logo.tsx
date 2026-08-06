@@ -5,7 +5,6 @@ import { cn } from "@/lib/utils";
 import { LOGOS } from "@/theme/know-design-system";
 interface BrandLogoProps {
   className?: string;
-  showText?: boolean;
   size?: "sm" | "md" | "lg";
 }
 const SIZE_PX = { sm: 32, md: 40, lg: 48 } as const;

@@ -13,7 +13,7 @@ import { TutorialButton } from "@/components/ui/tutorial-button";
 import { BRANCHES_TUTORIAL } from "@/lib/tutorial-content";
 
 export const metadata: Metadata = {
-  title: "Sucursales | Configuración",
+  title: "Sucursales",
   description: "Administrá los puntos de venta y depósitos",
 };
 

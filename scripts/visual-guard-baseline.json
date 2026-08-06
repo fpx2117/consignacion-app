@@ -611,7 +611,8 @@
     ["src/components/feedback/help-dialog.tsx", 75],
     ["src/components/feedback/success-dialog.tsx", 101],
     ["src/components/image-upload.tsx", 126],
-    ["src/components/layout/brand-logo.tsx", 34],
+    ["src/components/layout/brand-lockup.tsx", 22],
+    ["src/components/layout/brand-logo.tsx", 33],
     ["src/components/layout/sidebar-dock.tsx", 663],
     ["src/components/layout/top-bar.tsx", 154],
     ["src/components/notifications/notifications-panel.tsx", 429],
@@ -3226,7 +3227,6 @@
       "src/app/(system-guard)/login/page.tsx",
       "legacyBrands",
       [
-        ["\"Dashboard\"", "Metadata|title:", "5d051f43ad46"],
         [
           "AllData",
           "© {new Date().getFullYear()} <visual-value> · Si",

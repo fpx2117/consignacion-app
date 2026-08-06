@@ -35,7 +35,7 @@ const satoshi = localFont({
 });
 
 export const metadata: Metadata = {
-  title: "KNOWLEDGE,cloud",
+  title: { default: "Knowledge | Cloud", template: "%s | Knowledge Cloud" },
   description: "Sistema de gestión para consignaciones y punto de venta.",
   icons: {
     icon: LOGOS.favicon,
