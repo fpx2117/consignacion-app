@@ -10,6 +10,7 @@ import type {
   Subcategoria,
   Pago,
   DashboardPeriod,
+  DashboardDateRange,
   DashboardKpis,
   DashboardConsignacionesResponse,
   DashboardTopProductos,
@@ -1102,9 +1103,17 @@ export const apiService = {
   },
 
   /* ---------- DASHBOARD ---------- */
-  getDashboardKpis(period: DashboardPeriod = "month") {
+  getDashboardKpis(
+    period: DashboardPeriod = "month",
+    range?: DashboardDateRange,
+  ) {
+    const query = new URLSearchParams({ period });
+    if (period === "custom" && range) {
+      query.set("from", range.from);
+      query.set("to", range.to);
+    }
     return apiData<DashboardKpis>(
-      `${API_ROUTES.DASHBOARD.KPIS}?period=${period}`,
+      `${API_ROUTES.DASHBOARD.KPIS}?${query.toString()}`,
     );
   },
 
@@ -1114,24 +1123,48 @@ export const apiService = {
     );
   },
 
-  getDashboardTopProductos(period: DashboardPeriod = "month", limit = 10) {
+  getDashboardTopProductos(
+    period: DashboardPeriod = "month",
+    limit = 10,
+    range?: DashboardDateRange,
+  ) {
+    const query = new URLSearchParams({ period, limit: String(limit) });
+    if (period === "custom" && range) {
+      query.set("from", range.from);
+      query.set("to", range.to);
+    }
     return apiData<DashboardTopProductos>(
-      `${API_ROUTES.DASHBOARD.TOP_PRODUCTOS}?period=${period}&limit=${limit}`,
+      `${API_ROUTES.DASHBOARD.TOP_PRODUCTOS}?${query.toString()}`,
     );
   },
 
-  getDashboardTendencia(period: Exclude<DashboardPeriod, "all"> = "month") {
+  getDashboardTendencia(
+    period: Exclude<DashboardPeriod, "all"> = "month",
+    range?: DashboardDateRange,
+  ) {
+    const query = new URLSearchParams({ period });
+    if (period === "custom" && range) {
+      query.set("from", range.from);
+      query.set("to", range.to);
+    }
     return apiData<DashboardTendencia>(
-      `${API_ROUTES.DASHBOARD.TENDENCIA}?period=${period}`,
+      `${API_ROUTES.DASHBOARD.TENDENCIA}?${query.toString()}`,
     );
   },
 
   async getDashboardReporteUrl(
     period: DashboardPeriod = "month",
     type: "general" | "pos" | "consignacion" = "general",
+    range?: DashboardDateRange,
   ): Promise<string> {
+    const query = new URLSearchParams({ period, type });
+    if (period === "custom" && range) {
+      query.set("from", range.from);
+      query.set("to", range.to);
+    }
+    query.delete("period");
     const data = await apiRequest<{ url?: string }>(
-      `${API_ROUTES.DASHBOARD.REPORTE_LINK(period)}&type=${type}`,
+      `${API_ROUTES.DASHBOARD.REPORTE_LINK(period)}&${query.toString()}`,
     );
     const url = getObjectUrl(data) ?? getObjectUrl(data.data);
     if (!url) {
@@ -1140,12 +1173,18 @@ export const apiService = {
     return normalizeShareUrl(url);
   },
 
-  getPosReporteUrl(period: DashboardPeriod = "month"): Promise<string> {
-    return apiService.getDashboardReporteUrl(period, "pos");
+  getPosReporteUrl(
+    period: DashboardPeriod = "month",
+    range?: DashboardDateRange,
+  ): Promise<string> {
+    return apiService.getDashboardReporteUrl(period, "pos", range);
   },
 
-  getConsigReporteUrl(period: DashboardPeriod = "month"): Promise<string> {
-    return apiService.getDashboardReporteUrl(period, "consignacion");
+  getConsigReporteUrl(
+    period: DashboardPeriod = "month",
+    range?: DashboardDateRange,
+  ): Promise<string> {
+    return apiService.getDashboardReporteUrl(period, "consignacion", range);
   },
 
   /* ---------- NOTIFICACIONES ---------- */

@@ -276,8 +276,16 @@ export function parseDateInputAR(value: string, tz = TZ_AR): Date {
     throw new Error(`Fecha invalida: ${value}`);
   }
 
-  const ref = new Date(Date.UTC(year, month - 1, day, 12, 0, 0));
-  return startOfDayAR(ref, tz);
+  const midnightUtc = Date.UTC(year, month - 1, day);
+  const noonReference = new Date(Date.UTC(year, month - 1, day, 12));
+  const firstCandidate = new Date(
+    midnightUtc + getTzOffsetMinutes(tz, noonReference) * 60_000,
+  );
+
+  // En cambios de DST, el offset de medianoche puede diferir del mediodia.
+  return new Date(
+    midnightUtc + getTzOffsetMinutes(tz, firstCandidate) * 60_000,
+  );
 }
 
 export function parseDateTimeInputAR(

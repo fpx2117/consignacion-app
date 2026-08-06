@@ -16,19 +16,18 @@ import {
   buildDashboardReportHtml,
   type DashboardReportData,
 } from "@/lib/reports/base/dashboard-report-template";
+import { nowAR, formatDateTimeAR } from "@/lib/date-format/utils-date";
 import {
-  nowAR,
-  startOfDayAR,
-  startOfWeekAR,
-  startOfMonthAR,
-  formatDateTimeAR,
-} from "@/lib/date-format/utils-date";
-import { resolveRequestedSucursalId } from "@/lib/security/sucursalScope";
+  DashboardDateRangeError,
+  dashboardPeriodLabel,
+  parseDashboardDateQuery,
+  resolveDashboardDateWhere,
+} from "@/lib/dashboard/date-range";
+import { resolveReportShareLink } from "@/lib/reports/resolve-report-share-link";
+import { hashCode, verifyViewCookie } from "@/lib/sharing/share-links";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
-
-type Period = "today" | "week" | "month" | "all";
 
 type GastoDetalleRecord = Prisma.GastoGetPayload<{
   select: {
@@ -52,24 +51,6 @@ type GastoCompartidoDetalleRecord = Prisma.GastoSucursalGetPayload<{
   };
 }>;
 
-function getPeriodStart(period: Period, tz: string): Date | undefined {
-  if (period === "all") return undefined;
-  const now = nowAR(tz);
-  if (period === "today") return startOfDayAR(now, tz);
-  if (period === "week") return startOfWeekAR(now, tz);
-  return startOfMonthAR(now, tz);
-}
-
-function getPeriodLabel(period: Period): string {
-  const labels: Record<Period, string> = {
-    today: "Hoy",
-    week: "Esta semana",
-    month: "Este mes",
-    all: "Histórico",
-  };
-  return labels[period] ?? period;
-}
-
 export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ period: string }> },
@@ -78,33 +59,48 @@ export async function GET(
 
   try {
     const { period: rawPeriod } = await params;
-    const VALID_PERIODS: Period[] = ["today", "week", "month", "all"];
-    const period: Period = VALID_PERIODS.includes(rawPeriod as Period)
-      ? (rawPeriod as Period)
-      : "month";
-
     const { searchParams } = new URL(req.url);
+    const periodParams = new URLSearchParams(searchParams);
+    periodParams.set("period", rawPeriod);
+    let dateQuery;
+    try {
+      dateQuery = parseDashboardDateQuery(periodParams);
+    } catch (error) {
+      if (error instanceof DashboardDateRangeError) {
+        return NextResponse.json({ error: error.message }, { status: 400 });
+      }
+      throw error;
+    }
+    const { period, range } = dateQuery;
     const code = searchParams.get("code");
-    const requestedSucursalId = Number(searchParams.get("sucursalId") ?? 1);
-    const auth = await requireAuth();
-    const authUserId = auth.ok ? Number(auth.user.sub) : null;
-    const userId = Number.isFinite(authUserId) ? authUserId : null;
-    const scopedSucursalId = auth.ok
-      ? resolveRequestedSucursalId(auth, requestedSucursalId)
-      : 1;
-    const isGlobal = scopedSucursalId === 0;
-
     if (!code) {
       return NextResponse.json({ error: "Code is required" }, { status: 400 });
     }
+    const shareLink = await resolveReportShareLink({
+      code,
+      expectedType: "REPORTE_DASHBOARD",
+      period,
+      requestedRange: range,
+      hasViewedCookie: verifyViewCookie(
+        code,
+        req.cookies.get(`v_${hashCode(code)}`)?.value,
+      ),
+    });
+    if (!shareLink) {
+      return NextResponse.json({ error: "Enlace invalido" }, { status: 403 });
+    }
+    const auth = await requireAuth();
+    const authUserId = auth.ok ? Number(auth.user.sub) : null;
+    const userId = Number.isFinite(authUserId) ? authUserId : null;
+    const scopedSucursalId = shareLink.sucursalId;
+    const isGlobal = scopedSucursalId === 0;
 
     const timezone = await resolveTimezone({
       userId,
       sucursalId: scopedSucursalId,
     });
     const tz = timezone.tz;
-    const start = getPeriodStart(period, tz);
-    const dateWhere = start ? { gte: start } : undefined;
+    const dateWhere = resolveDashboardDateWhere(period, nowAR(tz), tz, range);
     const sucursalWhere = isGlobal ? {} : { sucursalId: scopedSucursalId };
 
     // 1. Usar getDashboardKpis como única fuente de verdad para KPIs financieros
@@ -116,7 +112,13 @@ export async function GET(
       gastosPropiosDetalle,
       gastosLinksDetalle,
     ] = await Promise.all([
-      getDashboardKpis(scopedSucursalId, period, isGlobal, userId ?? undefined),
+      getDashboardKpis(
+        scopedSucursalId,
+        period,
+        isGlobal,
+        userId ?? undefined,
+        range,
+      ),
 
       // Consignaciones cerradas (kpi-logic no lo expone)
       prisma.consignacion.count({
@@ -265,7 +267,7 @@ export async function GET(
 
     const reportData: DashboardReportData = {
       period,
-      periodLabel: getPeriodLabel(period),
+      periodLabel: dashboardPeriodLabel(period, range),
       fechaGeneracion: formatDateTimeAR(new Date(), true, tz),
       gananciaBruta,
       gananciaNeta,
@@ -311,7 +313,8 @@ export async function GET(
       return bytes;
     });
 
-    const filename = `Reporte-Dashboard-${reportData.periodLabel.replace(/\s+/g, "-")}.pdf`;
+    const filenameLabel = reportData.periodLabel.replace(/[^a-zA-Z0-9]+/g, "-");
+    const filename = `Reporte-Dashboard-${filenameLabel}.pdf`;
 
     return new NextResponse(Buffer.from(pdfBytes), {
       headers: {

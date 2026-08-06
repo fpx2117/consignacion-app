@@ -12,6 +12,7 @@ const PERIOD_LABELS: Record<string, string> = {
   week: "Esta semana",
   month: "Este mes",
   all: "Histórico",
+  custom: "Rango personalizado",
 };
 
 export default function DashboardReporteLoadingPage({
@@ -22,11 +23,15 @@ export default function DashboardReporteLoadingPage({
   const { period } = use(params);
   const searchParams = useSearchParams();
   const code = searchParams.get("code");
-  const sucursalId = searchParams.get("sucursalId") || "1";
-  const label = PERIOD_LABELS[period] ?? period;
+  const from = searchParams.get("from");
+  const to = searchParams.get("to");
+  const label =
+    period === "custom" && from && to
+      ? `${from.split("-").reverse().join("/")} al ${to.split("-").reverse().join("/")}`
+      : (PERIOD_LABELS[period] ?? period);
 
   const pdfUrl = code
-    ? `/ver/dashboard/${period}/pdf?code=${code}&sucursalId=${sucursalId}`
+    ? `/ver/dashboard/${period}/pdf?${searchParams.toString()}`
     : null;
   const fetchError = useReportPdfNavigation(pdfUrl);
 

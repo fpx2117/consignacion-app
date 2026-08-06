@@ -1,0 +1,3 @@
+ALTER TABLE "ShareLink"
+ADD COLUMN "rangeStart" TIMESTAMP(3),
+ADD COLUMN "rangeEnd" TIMESTAMP(3);

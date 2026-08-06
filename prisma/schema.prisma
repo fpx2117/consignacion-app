@@ -374,6 +374,8 @@ model ShareLink {
   createdAt    DateTime      @default(now())
   lastViewedAt DateTime?
   codeEnc      String
+  rangeStart   DateTime?
+  rangeEnd     DateTime?
 
   @@index([type, targetId, expiresAt])
 }

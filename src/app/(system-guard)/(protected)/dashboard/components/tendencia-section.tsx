@@ -39,6 +39,17 @@ interface TendenciaSectionProps {
   filter?: DashboardFilter;
 }
 
+function formatCivilDate(
+  value: string,
+  options: Intl.DateTimeFormatOptions,
+): string {
+  const [year, month, day] = value.split("-").map(Number);
+  return new Intl.DateTimeFormat("es-AR", {
+    ...options,
+    timeZone: "UTC",
+  }).format(new Date(Date.UTC(year, month - 1, day, 12)));
+}
+
 export function TendenciaSection({
   trend,
   period,
@@ -88,10 +99,9 @@ export function TendenciaSection({
 
     return data.map((day) => ({
       ...day,
-      formattedDate: new Date(day.date).toLocaleDateString("es-AR", {
+      formattedDate: formatCivilDate(day.date, {
         day: "2-digit",
         month: "short",
-        timeZone: tz,
       }),
     }));
   }, [trend, selectedMonth, period, tz]);
@@ -268,10 +278,7 @@ export function TendenciaSection({
                       return (
                         <div className="rounded-xl border border-border bg-card/95 p-4 shadow-2xl backdrop-blur-xl ring-1 ring-border/50">
                           <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/80 mb-3">
-                            {new Date(data.date).toLocaleDateString("es-AR", {
-                              dateStyle: "long",
-                              timeZone: tz,
-                            })}
+                            {formatCivilDate(data.date, { dateStyle: "long" })}
                           </p>
                           <div className="space-y-2">
                             {metric === "amounts" ? (
