@@ -59,14 +59,21 @@
 
 ## Pendiente
 
-- Screenshots base con revisión visual real en navegador: no se pudo
-  completar en esta sesión (Playwright no tiene ningún browser instalado
-  en este entorno — `chrome`/`msedge` fallan, la descarga con `npx
-playwright install` no bajó binarios). Verificado en su lugar con: tests
-  de paridad token↔CSS, `next build` exitoso, y razonamiento de contraste
-  al definir cada rol (ver tabla de la paleta en el plan). Recomendado:
-  correr `npm run visual:baseline`-equivalente visual (captura de pantalla
-  real) apenas haya un browser disponible, antes de avanzar a Fase 5+.
+- Screenshots base con revisión visual real: completado en sesión de
+  seguimiento. `playwright-cli open --browser=chromium` funciona con los
+  binarios de Chromium ya cacheados en `%LOCALAPPDATA%\ms-playwright`
+  (`chrome`/`msedge` fallan porque esos canales requieren el navegador de
+  sistema, no instalado; el bundle de Playwright no necesitó descarga
+  nueva). Se revisó `/login` en light y dark a 1440×900, con el formulario
+  vacío y lleno (para ver `--primary` sin la opacidad del estado
+  `disabled`). Resultado: `--primary` renderiza exactamente `#1737c8`
+  (Cobalto) en light y `#3155ff` (Eléctrico) en dark, con foco/anillo,
+  fondo, tarjeta y texto coincidiendo con `know-design-system.ts`. Sin
+  hallazgos de contraste a simple vista. Capturas no versionadas (quedaron
+  en el scratchpad de la sesión, no en el repo).
+- Falta revisar pantallas autenticadas (dashboard, tablas, gráficos) con
+  capturas reales — no se hizo en esta sesión porque requiere login: queda
+  para cuando la Fase 5 (módulos protegidos) las toque directamente.
 - Iniciar Fase 2 (Satoshi global) en una sesión separada.
 
 ## Deuda preexistente
