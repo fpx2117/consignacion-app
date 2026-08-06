@@ -9,7 +9,6 @@ import {
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useSucursalStore } from "@/store/useSucursalStore";
-import { BrandLockup } from "@/components/layout/brand-lockup";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import {
@@ -24,6 +23,14 @@ export function TopBar() {
   const { availableSucursales, activeSucursalId, switchSucursal } =
     useSucursalStore();
   const [switching, setSwitching] = React.useState(false);
+  const [scrolled, setScrolled] = React.useState(false);
+
+  React.useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 8);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
 
   const handleSwitch = React.useCallback(
     async (id: number) => {
@@ -53,9 +60,16 @@ export function TopBar() {
         availableSucursales[0];
 
   return (
-    <div className="absolute top-0 left-0 right-0 z-40 bg-transparent px-4 md:px-6 md:pr-10 md:pl-[110px] transition-all">
+    <div
+      className={cn(
+        "fixed top-0 left-0 right-0 z-40 px-4 md:px-6 md:pr-10 md:pl-[110px] transition-colors",
+        scrolled
+          ? "bg-background border-b border-border/60 shadow-sm"
+          : "bg-transparent",
+      )}
+    >
       <div className="h-16 flex items-center justify-between">
-        <BrandLockup className="hidden md:flex" />
+        {/* Logo/wordmark vive en SidebarDock (arriba del riel de navegación). */}
 
         <div className="flex items-center gap-4 ml-auto">
           {activeSucursalId === 0 && (
