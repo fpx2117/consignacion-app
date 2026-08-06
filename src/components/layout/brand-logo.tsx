@@ -1,36 +1,34 @@
 "use client";
-
 import * as React from "react";
+import Image from "next/image";
 import { cn } from "@/lib/utils";
-
+import { LOGOS } from "@/theme/know-design-system";
 interface BrandLogoProps {
   className?: string;
   showText?: boolean;
   size?: "sm" | "md" | "lg";
 }
-
-export function BrandLogo({
-  className,
-  showText: _showText = false,
-  size = "md",
-}: BrandLogoProps) {
-  const sizeClasses = {
-    sm: "h-8 w-8",
-    md: "h-10 w-10",
-    lg: "h-12 w-12",
-  };
-
+const SIZE_PX = { sm: 32, md: 40, lg: 48 } as const;
+// El CSS (.dark) elige la variante visible; hacerlo en JS via useTheme()
+// desincroniza SSR/CSR (el tema real solo se conoce en el cliente) y rompe la hidratacion.
+const VARIANTS = [
+  { src: LOGOS.light, css: "dark:hidden" },
+  { src: LOGOS.dark, css: "hidden dark:block" },
+] as const;
+export function BrandLogo({ className, size = "md" }: BrandLogoProps) {
+  const px = SIZE_PX[size];
   return (
-    <div className={cn("flex items-center gap-2", className)}>
-      <div
-        className={cn(
-          "flex shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-lg transition-all font-black tracking-tighter",
-          sizeClasses[size],
-          size === "sm" ? "text-[10px]" : size === "md" ? "text-xs" : "text-sm",
-        )}
-      >
-        POS
-      </div>
+    <div className={cn("flex shrink-0 items-center gap-2", className)}>
+      {VARIANTS.map(({ src, css }) => (
+        <Image
+          key={src}
+          src={src}
+          alt="KNOWLEDGE,cloud"
+          width={px}
+          height={px}
+          className={css}
+        />
+      ))}
     </div>
   );
 }

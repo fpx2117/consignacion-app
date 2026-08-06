@@ -1,61 +1,44 @@
 # Goal
 
-Implementar la Fase 2 de KNOWLEDGE,cloud ("Satoshi global"): reemplazar las
-fuentes heredadas (Geist en la app, Inter en el storefront, Poppins en los
-reportes/PDF) por Satoshi como fuente única de la identidad, servida como
-`next/font/local` desde `public/font/` sin dependencia de Google Fonts ni de
-paquetes npm de fuentes.
+Implementar la Fase 3 de KNOWLEDGE,cloud ("marca/logos"): reemplazar el
+placeholder de `BrandLogo` (caja "POS") y el favicon/metadata heredados del
+scaffold (MagicUI/"Dashboard") por los assets reales de marca ya
+registrados en `LOGOS` (`src/theme/know-design-system.ts`, preparado en
+Fase 1) desde `public/brand/`.
 
 # Done when
 
-- `src/app/layout.tsx` carga Satoshi vía `next/font/local` (pesos
-  Light/Regular/Medium/Bold) en la variable `--font-satoshi`, en vez de
-  `Geist`/`Geist_Mono` de `next/font/google`.
-- `globals.css` define `--font-sans: var(--font-satoshi), system-ui,
-sans-serif` y `body` la usa explícitamente.
-- `storefront.css` (`.store-theme-root`) hereda `var(--font-sans)` en vez de
-  hardcodear `"Inter"`.
-- `render-catalog-page.tsx` deja de instanciar `Inter` vía
-  `next/font/google`; el storefront hereda la fuente global.
-- Los reportes/PDF (`tailwind-inline.ts`, fuente embebida en base64 para
-  funcionar en Railway sin acceso a internet) usan Satoshi en vez de
-  Poppins.
-- Se retira `@fontsource/poppins` de `package.json` (dependencia sin otro
-  consumidor).
+- `src/components/layout/brand-logo.tsx` renderiza el logo real
+  (`LOGOS.light`/`LOGOS.dark` según el tema activo) en vez del placeholder
+  de texto "POS".
+- `src/app/layout.tsx`: `metadata.icons` usa `LOGOS.favicon` en vez del
+  `/logo.png` heredado del scaffold de Next.js; `metadata.title` es
+  "KNOWLEDGE,cloud" y `metadata.description` ya no menciona "MagicUI".
+- `public/logo.png` (620×715, sin canal alpha, placeholder de Next.js/
+  MagicUI) se elimina si queda sin otro consumidor tras el cambio.
 - `npm run visual:check`, `npm run visual:test` y `npm run build` terminan
   en verde.
-- Smoke visual manual (`playwright-cli`, light/dark) en `/login` y `/lista`
-  confirma que `getComputedStyle(body).fontFamily` resuelve a Satoshi y que
-  no hay regresiones visuales evidentes.
+- Smoke visual manual (`playwright-cli`, light/dark) confirma que el logo
+  se ve correctamente en el sidebar y que el favicon carga sin errores de
+  red.
 
 # Never touch
 
-- Marca/logos (`brand-logo.tsx`, favicon, metadata, `public/brand/`) — es
-  Fase 3.
-- El selector de tipografía configurable del storefront por tienda
-  (`BrandingTab.tsx`, opciones "Inter"/"Poppins"/etc.) — es una feature de
-  personalización por cliente, no la identidad visual propia de la app; no
-  se cambia en esta fase.
+- Tipografía (ya cerrado en Fase 2).
+- El selector de tipografía/logo configurable por tienda
+  (`BrandingTab.tsx`, branding del storefront de cada cliente) — es
+  personalización por tienda, no la identidad propia de la app.
+- `LOGOS.print` (`report-theme.ts` / reportes PDF) — no forma parte del
+  alcance de esta fase salvo que romper la carga de `logo.png` lo requiera.
 - Archivos bloqueados por la auditoría (>1000 líneas) no listados como
-  núcleo de tipografía.
+  núcleo de marca.
 - Migraciones, schema Prisma, lógica de negocio.
 
 # Stop if
 
-- Hace falta tocar `public/brand/` o cualquier asset de marca para que la
-  tipografía funcione.
-- El cambio de fuente requiere modificar el selector de tipografía por
-  tienda (`BrandingTab.tsx`) para que siga funcionando.
+- Los assets de `public/brand/` no alcanzan (falta un tamaño, formato o
+  variante necesaria) y hace falta generar arte nuevo.
+- El cambio de favicon/logo requiere tocar el branding configurable por
+  tienda del storefront.
 - Un componente compartido rompe visualmente de forma no resoluble sin
-  salir del alcance de "tipografía".
-
-# Notas (retroactivo)
-
-Este documento se redactó después de implementar y verificar la fase (no
-antes, como pide el flujo normal de `/spec`), a pedido explícito del
-usuario, para dejar registro del contrato antes de commitear. El detalle de
-lo verificado en esta sesión (tests, build, smoke visual) está en
-`IMPLEMENTATION_PLAN.md`, sección "En curso (Fase 2 — Satoshi global)".
-`public/font/` incluye 10 pesos de Satoshi; sólo 4 (Light/Regular/Medium/
-Bold) están wireados en `layout.tsx`. Los 6 restantes (itálicas y Black)
-quedan en el repo sin usar, disponibles para cuando se necesiten.
+  salir del alcance de "marca".
