@@ -33,6 +33,7 @@ import {
   clearNotificationsCache,
 } from "@/hooks/useNotifications";
 import { useBroadcastChannel } from "@/hooks/useBroadcastChannel";
+import { useScrolled } from "@/hooks/useScrolled";
 import { useSucursalStore } from "@/store/useSucursalStore";
 import { apiService } from "@/lib/apiService";
 import type { PlanLimits } from "@/lib/subscriptions/require-subscription";
@@ -158,6 +159,7 @@ export function SidebarDock({ initialUserData }: SidebarDockProps = {}) {
   const pathname = usePathname() ?? "";
   const router = useRouter();
   const { setTheme, resolvedTheme } = useTheme();
+  const scrolled = useScrolled();
 
   const [themeMounted, setThemeMounted] = React.useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
@@ -360,6 +362,9 @@ export function SidebarDock({ initialUserData }: SidebarDockProps = {}) {
 
   return (
     <aside className="fixed bottom-0 left-0 z-50 w-full border-t border-border/60 bg-background/75 backdrop-blur-2xl md:top-0 md:h-screen md:w-[88px] md:border-t-0">
+      {scrolled && (
+        <div className="absolute top-16 left-0 right-0 hidden h-px bg-border/60 md:block" />
+      )}
       <div className="md:hidden flex justify-center py-2 pb-[max(env(safe-area-inset-bottom),0.5rem)]">
         <div className="relative overflow-hidden rounded-2xl p-[1px]">
           <Dock

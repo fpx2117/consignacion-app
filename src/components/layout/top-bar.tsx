@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useSucursalStore } from "@/store/useSucursalStore";
+import { useScrolled } from "@/hooks/useScrolled";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import {
@@ -23,14 +24,7 @@ export function TopBar() {
   const { availableSucursales, activeSucursalId, switchSucursal } =
     useSucursalStore();
   const [switching, setSwitching] = React.useState(false);
-  const [scrolled, setScrolled] = React.useState(false);
-
-  React.useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 8);
-    onScroll();
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
-  }, []);
+  const scrolled = useScrolled();
 
   const handleSwitch = React.useCallback(
     async (id: number) => {
