@@ -22,7 +22,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 
-import { BrandLogo } from "@/components/layout/brand-logo";
+import { BrandLockup } from "@/components/layout/brand-lockup";
 import { NotificationsAnimatedPanel } from "@/components/notifications/notifications-panel";
 import { SidebarDropdownGroup } from "@/components/sidebar/sidebar-dropdown-group";
 import { SidebarIconLink } from "@/components/sidebar/sidebar-icon-link";
@@ -125,7 +125,11 @@ function NotificationButton({
           )}
         </button>
       </SheetTrigger>
-      <SheetContent side="right" className="p-0" showCloseButton={false}>
+      <SheetContent
+        side="right"
+        className="w-full p-0 sm:max-w-sm md:max-w-md"
+        showCloseButton={false}
+      >
         <SheetTitle className="sr-only">Notificaciones</SheetTitle>
         <NotificationsAnimatedPanel
           notificationsState={notificationsState}
@@ -355,7 +359,7 @@ export function SidebarDock({ initialUserData }: SidebarDockProps = {}) {
   }, [activeSucursalId, setPedidosVencidosCount]);
 
   return (
-    <aside className="fixed bottom-0 left-0 z-50 w-full border-t border-border/60 bg-background/75 backdrop-blur-2xl md:top-0 md:h-screen md:w-[88px] md:border-r md:border-t-0">
+    <aside className="fixed bottom-0 left-0 z-50 w-full border-t border-border/60 bg-background/75 backdrop-blur-2xl md:top-0 md:h-screen md:w-[88px] md:border-t-0">
       <div className="md:hidden flex justify-center py-2 pb-[max(env(safe-area-inset-bottom),0.5rem)]">
         <div className="relative overflow-hidden rounded-2xl p-[1px]">
           <Dock
@@ -530,10 +534,10 @@ export function SidebarDock({ initialUserData }: SidebarDockProps = {}) {
       <div className="hidden h-full w-full md:flex md:flex-col md:items-center md:py-6">
         <Link
           href="/dashboard"
-          className="mb-8 transition-transform active:scale-95"
+          className="mb-8 w-full self-start pl-6 transition-transform active:scale-95"
           aria-label="Ir al dashboard"
         >
-          <BrandLogo size="md" />
+          <BrandLockup />
         </Link>
 
         <div className="flex w-full flex-1 flex-col items-center justify-center">

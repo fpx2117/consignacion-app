@@ -1,4 +1,4 @@
-# KNOWLEDGE,cloud — Fases 0-6
+# KNOWLEDGE,cloud — Fases 0-7
 
 ## Completado (Fase 0)
 
@@ -263,6 +263,58 @@ Contentful Paint (LCP). Please add the loading="eager" property` — Fase
   ninguna edición de esta conversación lo tocara — probablemente trabajo
   en curso del usuario en paralelo (IDE abierto). No se incluyó en el
   commit de Fase 6 ni se descartó.
+
+## Completado (Fase 7 — feedback directo del usuario sobre el header)
+
+El usuario dio feedback visual directo mirando la app corriendo (no vía
+`PROMPT.md` previo) sobre tres problemas concretos del header/sidebar:
+
+1. **Logo duplicado**: el ícono de marca aparecía dos veces — solo arriba
+   del riel de navegación (sidebar, `BrandLogo` en `sidebar-dock.tsx`) y
+   de nuevo como ícono+wordmark en el `TopBar` (`BrandLockup`, Fase 4).
+   Se preguntó al usuario dónde debía vivir el wordmark final: eligió
+   sacar el ícono del sidebar y dejar sólo el `BrandLockup` (icono+
+   "KNOWLEDGE | CLOUD") como marca visible.
+2. Se pidió también quitar la línea que dividía el sidebar del contenido
+   (`md:border-r` del `<aside>`).
+3. Iteración: tras verlo, el usuario marcó que el wordmark "queda raro en
+   esa posición" (el `TopBar` tenía `md:pl-[110px]`, dejando un hueco
+   visible entre el riel de 88px y el wordmark, sin nada que los
+   conecte). Se movió `BrandLockup` **dentro** de `SidebarDock` (arriba
+   del riel, `self-start` + overflow natural hacia la derecha, ya que el
+   `<aside>` es `z-50` y no tiene `overflow-hidden`), anclado al borde
+   izquierdo real de la pantalla en vez de flotar con un padding
+   arbitrario. `TopBar` volvió a quedar sin logo propio.
+4. El usuario notó dos bugs reales al probar el resultado, no pedidos
+   explícitamente pero corregidos en el momento porque eran consecuencia
+   directa del cambio anterior:
+   - `TopBar` usaba `position: absolute` (no `fixed`) — al hacer scroll
+     se iba con el contenido en vez de quedar anclado arriba, a
+     diferencia del `<aside>` que sí usa `fixed`. Cambiado a `fixed`.
+   - Con `TopBar` ahora `fixed` y `bg-transparent`, el contenido scrolleado
+     quedaba visible _detrás_ del wordmark (texto superpuesto,
+     ilegible). Se agregó un listener de scroll (`window.scrollY > 8`)
+     que aplica `bg-background` sólido + borde inferior tenue cuando hay
+     scroll, y vuelve a `bg-transparent` en el tope de la página —
+     confirmado en light (fondo claro sólido) y dark (fondo negro
+     sólido) con `playwright-cli`.
+
+- `sidebar-dock.tsx` quedó con `Link` de vuelta como import (se había
+  retirado al sacar el logo, se reincorporó al mover `BrandLockup` ahí).
+- Baseline regenerado dos veces con `--bootstrap-baseline` durante esta
+  fase: la primera corrida capturó por accidente el estado a medio
+  editar de `notifications-panel.tsx` (archivo ajeno, ver nota de Fase 6)
+  junto con un estado intermedio de `sidebar-dock.tsx` todavía sin el
+  `Link` reincorporado — eso generó falsos "hallazgos nuevos" al
+  comparar contra ese snapshot corrupto en la siguiente verificación. Se
+  corrigió apartando `notifications-panel.tsx` con `git stash push --
+<path>` (nunca con ediciones manuales del JSON) antes de re-bootstrapear,
+  y restaurándolo con `stash pop` al terminar. Lección para sesiones
+  futuras: no bootstrapear el baseline mientras hay archivos ajenos o
+  ediciones propias a medio terminar en el working tree.
+- Verificado: `visual:check`/`visual:test`/`tsc --noEmit`/`build` en
+  verde. Smoke visual con `playwright-cli` (light/dark, con scroll real)
+  confirmando los 4 puntos de arriba.
 
 ## Deuda preexistente
 
