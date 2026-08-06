@@ -35,6 +35,7 @@ import type {
   TimezoneSource,
 } from "@/lib/types";
 import { useTimezone } from "@/hooks/useTimezone";
+import { useSucursalStore } from "@/store/useSucursalStore";
 import {
   RUBROS_NEGOCIO,
   RUBRO_OTRO_SLUG,
@@ -75,6 +76,7 @@ export default function GeneralSettingsPage() {
   const router = useRouter();
   const timezone = useTimezone();
   const isAdmin = timezone.role === "ADMIN";
+  const activeSucursalId = useSucursalStore((s) => s.activeSucursalId);
 
   const [migrationStatus, setMigrationStatus] =
     React.useState<MigrationStatus | null>(null);
@@ -138,6 +140,12 @@ export default function GeneralSettingsPage() {
             esRubroConocido ? rubroGuardado : RUBRO_OTRO_SLUG,
           );
           setRubroOtroTexto(esRubroConocido ? "" : rubroGuardado);
+        } else {
+          // Sin rubro para esta sucursal (o recién cambiamos de sucursal y
+          // la anterior sí tenía uno) — limpiar, si no queda pisado el
+          // valor de la sucursal anterior.
+          setRubroSeleccionado("");
+          setRubroOtroTexto("");
         }
       } catch {
         if (!cancelled) {
@@ -163,6 +171,7 @@ export default function GeneralSettingsPage() {
     };
   }, [
     isAdmin,
+    activeSucursalId,
     timezone.branchTimezone,
     timezone.resolvedTimezone,
     timezone.source,
