@@ -214,6 +214,14 @@ export function ProductosView() {
     [clavesAtributosEnUso, sugerenciasRubro],
   );
 
+  const labelAtributoFijo = React.useMemo(() => {
+    const map = new Map<string, string>();
+    for (const def of getAtributosFijos(rubroNegocio)) {
+      map.set(def.clave, def.label);
+    }
+    return map;
+  }, [rubroNegocio]);
+
   const handleColumnasAtributosChange = async (nuevas: string[]) => {
     setColumnasAtributos(nuevas); // optimista
     try {
@@ -783,7 +791,7 @@ export function ProductosView() {
                       {columnasAtributos.map((clave) => (
                         <SortableHead
                           key={clave}
-                          label={clave}
+                          label={labelAtributoFijo.get(clave) ?? clave}
                           sortKey={`attr:${clave}`}
                           currentSort={sortConfig}
                           onSort={handleSort}
@@ -883,6 +891,7 @@ export function ProductosView() {
                   isLow={isLowStock(p)}
                   isOut={isOutOfStock(p)}
                   columnasAtributos={columnasAtributos}
+                  labelAtributoFijo={labelAtributoFijo}
                 />
               ))}
 
@@ -1423,6 +1432,7 @@ function MobileProductCard({
   isLow,
   isOut,
   columnasAtributos,
+  labelAtributoFijo,
 }: {
   p: ProductoViewItem;
   idx: number;
@@ -1430,6 +1440,7 @@ function MobileProductCard({
   isLow: boolean;
   isOut: boolean;
   columnasAtributos: string[];
+  labelAtributoFijo: Map<string, string>;
 }) {
   return (
     <motion.div
@@ -1560,7 +1571,7 @@ function MobileProductCard({
                     variant="outline"
                     className="text-[10px] h-5 px-1.5 font-normal text-muted-foreground border-border/60 bg-background/50 rounded-md capitalize"
                   >
-                    {clave}: {atributos[clave]}
+                    {labelAtributoFijo.get(clave) ?? clave}: {atributos[clave]}
                   </Badge>
                 ))}
               </div>
