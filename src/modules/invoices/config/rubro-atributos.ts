@@ -30,7 +30,9 @@ export interface AtributoFijoDef {
 export const RUBRO_ATRIBUTOS_FIJOS: Record<string, AtributoFijoDef[]> = {
   vapes: [
     { clave: "marca", label: "Marca", tipo: "texto", requerido: true },
-    { clave: "sabor", label: "Sabor", tipo: "texto", requerido: true },
+    // No requerido: los dispositivos recargables/pods (ej. Vaporesso XROS)
+    // no tienen sabor, a diferencia de los descartables.
+    { clave: "sabor", label: "Sabor", tipo: "texto" },
     { clave: "puffs", label: "Puffs", tipo: "numero" },
     { clave: "nicotina_mg", label: "Nicotina (mg)", tipo: "numero" },
     {

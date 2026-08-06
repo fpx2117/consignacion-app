@@ -11,11 +11,11 @@ test("devuelve los atributos fijos definidos para un rubro cubierto", () => {
   assert.ok(atributos.some((a) => a.clave === "ml" && a.tipo === "numero"));
 });
 
-test("vapes tiene marca y sabor como requeridos", () => {
+test("vapes tiene marca requerida, sabor opcional (hay dispositivos sin sabor)", () => {
   const atributos = getAtributosFijos("vapes");
   assert.ok(atributos.length > 0);
   assert.ok(atributos.some((a) => a.clave === "marca" && a.requerido));
-  assert.ok(atributos.some((a) => a.clave === "sabor" && a.requerido));
+  assert.ok(atributos.some((a) => a.clave === "sabor" && !a.requerido));
 });
 
 test("devuelve [] para un rubro sin catálogo fijo definido", () => {
