@@ -4,12 +4,16 @@
   "private": true,
   "scripts": {
     "dev": "tsx server.ts",
-    "build": "echo \"DELETE FROM _prisma_migrations WHERE migration_name = '20260523120000_add_storefront_content_to_branding';\" | npx prisma db execute --stdin 2>/dev/null; prisma generate && next build",
+    "build": "node scripts/build.mjs",
     "start": "echo \"DELETE FROM _prisma_migrations WHERE migration_name = '20260523120000_add_storefront_content_to_branding';\" | npx prisma db execute --stdin 2>/dev/null; npx prisma migrate deploy && cross-env NODE_ENV=production tsx server.ts",
-    "lint": "eslint",
+    "lint": "npm run visual:check && eslint",
     "seed": "prisma db seed",
     "security:audit": "npm audit --omit=dev --audit-level=high",
-    "security:scan-secrets-local": "node scripts/security/check-secret-hygiene.mjs"
+    "security:scan-secrets-local": "node scripts/security/check-secret-hygiene.mjs",
+    "visual:baseline": "node scripts/check-visual-guard.mjs --update-baseline",
+    "visual:check": "node scripts/check-visual-guard.mjs",
+    "visual:check:json": "node scripts/check-visual-guard.mjs --json",
+    "visual:test": "node --test scripts/check-visual-guard.test.mjs scripts/check-visual-guard.integration.test.mjs"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
