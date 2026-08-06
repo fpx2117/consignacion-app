@@ -118,6 +118,12 @@ interface SortConfig {
   direction: SortDirection;
 }
 
+// Clave sintética para "Vencimiento" en el picker de columnas — no es un
+// atributo de rubro, es Producto.fechaVencimiento, pero comparte el mismo
+// mecanismo de columnasAtributosProducto para que el usuario la pueda
+// ocultar/mostrar igual que Marca/Sabor/Puffs.
+const COLUMNA_VENCIMIENTO = "vencimiento";
+
 export function ProductosView() {
   const activeSucursalId = useSucursalStore((s) => s.activeSucursalId);
   const catalogoHref = activeSucursalId
@@ -172,20 +178,17 @@ export function ProductosView() {
           return;
         }
 
-        // Sin columnas elegidas todavía: si el rubro activo tiene atributos
-        // fijos definidos, las sugerimos como default (una sola vez — no
-        // pisa una elección manual, porque solo corre cuando el array
-        // guardado está vacío).
+        // Sin columnas elegidas todavía: sembramos "vencimiento" (visible
+        // por default históricamente, antes de que fuera togglable) + los
+        // atributos fijos del rubro activo, si los tiene — una sola vez, no
+        // pisa una elección manual porque solo corre cuando el array
+        // guardado está vacío.
         const clavesFijas = getAtributosFijos(rubro).map((def) => def.clave);
-        if (clavesFijas.length === 0) {
-          setColumnasAtributos([]);
-          return;
-        }
-
-        setColumnasAtributos(clavesFijas);
+        const seed = [...clavesFijas, COLUMNA_VENCIMIENTO];
+        setColumnasAtributos(seed);
         try {
           await apiService.actualizarConfiguracionGeneral({
-            columnasAtributosProducto: clavesFijas,
+            columnasAtributosProducto: seed,
           });
         } catch {
           // No es crítico: la UI ya muestra las columnas, solo no quedó
@@ -219,16 +222,29 @@ export function ProductosView() {
     [rubroNegocio],
   );
 
+  // "vencimiento" no es un atributo de rubro (es Producto.fechaVencimiento,
+  // un campo nativo) — se maneja aparte de columnasAtributos.map() más
+  // abajo, pero comparte el mismo picker/array de columnas visibles porque
+  // para el usuario es la misma decisión: "qué columna quiero ver".
   const candidatasAtributos = React.useMemo(
     () =>
       Array.from(
         new Set([
+          COLUMNA_VENCIMIENTO,
           ...clavesAtributosEnUso,
           ...sugerenciasRubro,
           ...clavesFijasDelRubro,
         ]),
       ),
     [clavesAtributosEnUso, sugerenciasRubro, clavesFijasDelRubro],
+  );
+
+  // Loop genérico de columnasAtributos.map() (header/celdas) no debe
+  // renderizar "vencimiento" — tiene su propia celda dedicada porque lee
+  // p.fechaVencimiento, no p.atributosExtra.
+  const columnasAtributosGenericos = React.useMemo(
+    () => columnasAtributos.filter((c) => c !== COLUMNA_VENCIMIENTO),
+    [columnasAtributos],
   );
 
   const labelAtributoFijo = React.useMemo(() => {
@@ -793,7 +809,7 @@ export function ProductosView() {
                         onSort={handleSort}
                         className="pl-6 w-[30%]"
                       />
-                      {columnasAtributos.map((clave) => (
+                      {columnasAtributosGenericos.map((clave) => (
                         <SortableHead
                           key={clave}
                           label={labelAtributoFijo.get(clave) ?? clave}
@@ -821,9 +837,11 @@ export function ProductosView() {
                         onSort={handleSort}
                         className="text-center"
                       />
-                      <TableHead className="text-center font-bold text-xs uppercase tracking-wider text-muted-foreground/70">
-                        Vencimiento
-                      </TableHead>
+                      {columnasAtributos.includes(COLUMNA_VENCIMIENTO) && (
+                        <TableHead className="text-center font-bold text-xs uppercase tracking-wider text-muted-foreground/70">
+                          Vencimiento
+                        </TableHead>
+                      )}
                       <SortableHead
                         label="Precio"
                         sortKey="precioVenta"
@@ -1264,16 +1282,18 @@ function ProductoRow({
         </div>
       </TableCell>
 
-      {columnasAtributos.map((clave) => (
-        <TableCell
-          key={clave}
-          className="text-center text-sm text-muted-foreground"
-        >
-          {(p.atributosExtra as Record<string, string> | null | undefined)?.[
-            clave
-          ] ?? "—"}
-        </TableCell>
-      ))}
+      {columnasAtributos
+        .filter((clave) => clave !== COLUMNA_VENCIMIENTO)
+        .map((clave) => (
+          <TableCell
+            key={clave}
+            className="text-center text-sm text-muted-foreground"
+          >
+            {(p.atributosExtra as Record<string, string> | null | undefined)?.[
+              clave
+            ] ?? "—"}
+          </TableCell>
+        ))}
 
       <TableCell className="text-left">
         <div className="flex flex-col gap-1">
@@ -1344,45 +1364,47 @@ function ProductoRow({
         </span>
       </TableCell>
 
-      <TableCell className="text-center">
-        {(() => {
-          if (!p.fechaVencimiento)
+      {columnasAtributos.includes(COLUMNA_VENCIMIENTO) && (
+        <TableCell className="text-center">
+          {(() => {
+            if (!p.fechaVencimiento)
+              return (
+                <span className="text-[10px] text-muted-foreground/40 italic">
+                  Sin venc.
+                </span>
+              );
+            const expired = dateExpired(p.fechaVencimiento);
+            const soon = isExpiringSoon(p.fechaVencimiento);
             return (
-              <span className="text-[10px] text-muted-foreground/40 italic">
-                Sin venc.
-              </span>
-            );
-          const expired = dateExpired(p.fechaVencimiento);
-          const soon = isExpiringSoon(p.fechaVencimiento);
-          return (
-            <div className="flex flex-col items-center gap-0.5">
-              <span
-                className={cn(
-                  "text-xs font-bold tabular-nums flex items-center gap-1",
-                  expired
-                    ? "text-[color:var(--status-danger)]"
-                    : soon
-                      ? "text-[color:var(--status-warning)]"
-                      : "text-muted-foreground",
+              <div className="flex flex-col items-center gap-0.5">
+                <span
+                  className={cn(
+                    "text-xs font-bold tabular-nums flex items-center gap-1",
+                    expired
+                      ? "text-[color:var(--status-danger)]"
+                      : soon
+                        ? "text-[color:var(--status-warning)]"
+                        : "text-muted-foreground",
+                  )}
+                >
+                  <Calendar className="h-3 w-3" />
+                  {formatDateSafe(p.fechaVencimiento)}
+                </span>
+                {expired && (
+                  <span className="text-[9px] font-black text-[color:var(--status-danger)] uppercase">
+                    Vencido
+                  </span>
                 )}
-              >
-                <Calendar className="h-3 w-3" />
-                {formatDateSafe(p.fechaVencimiento)}
-              </span>
-              {expired && (
-                <span className="text-[9px] font-black text-[color:var(--status-danger)] uppercase">
-                  Vencido
-                </span>
-              )}
-              {soon && (
-                <span className="text-[9px] font-black text-[color:var(--status-warning)] uppercase">
-                  Pronto
-                </span>
-              )}
-            </div>
-          );
-        })()}
-      </TableCell>
+                {soon && (
+                  <span className="text-[9px] font-black text-[color:var(--status-warning)] uppercase">
+                    Pronto
+                  </span>
+                )}
+              </div>
+            );
+          })()}
+        </TableCell>
+      )}
 
       <TableCell className="text-right pr-6">
         <div className="flex flex-col items-end gap-0.5">
