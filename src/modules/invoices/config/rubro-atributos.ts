@@ -120,3 +120,35 @@ export function getAtributosFijos(
   if (!rubro) return [];
   return RUBRO_ATRIBUTOS_FIJOS[rubro] ?? [];
 }
+
+/**
+ * Compone el nombre de un producto a partir de sus atributos fijos, para
+ * rubros que definen tanto "marca" como "sabor" (hoy: vapes). Genérico —
+ * no hardcodea el slug del rubro, así que cualquier rubro futuro con esa
+ * misma forma (marca + sabor, opcionalmente puffs) lo hereda gratis.
+ *
+ * Devuelve null si el rubro no tiene esa forma, o si falta la marca (dato
+ * mínimo indispensable) — en esos casos el nombre sigue siendo el que
+ * tipeó el usuario a mano.
+ */
+export function componerNombreProducto(
+  atributosFijos: AtributoFijoDef[],
+  atributosExtra: Record<string, string> | null | undefined,
+): string | null {
+  const tieneMarca = atributosFijos.some((d) => d.clave === "marca");
+  const tieneSabor = atributosFijos.some((d) => d.clave === "sabor");
+  if (!tieneMarca || !tieneSabor) return null;
+
+  const marca = atributosExtra?.marca?.trim();
+  if (!marca) return null;
+
+  const partes = [marca];
+  const sabor = atributosExtra?.sabor?.trim();
+  if (sabor) partes.push(sabor);
+
+  const tienePuffs = atributosFijos.some((d) => d.clave === "puffs");
+  const puffs = atributosExtra?.puffs?.trim();
+  if (tienePuffs && puffs) partes.push(`${puffs} Puffs`);
+
+  return partes.join(" - ");
+}

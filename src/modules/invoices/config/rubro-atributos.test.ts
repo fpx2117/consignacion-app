@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
+  componerNombreProducto,
   getAtributosFijos,
   RUBRO_ATRIBUTOS_FIJOS,
 } from "@/modules/invoices/config/rubro-atributos";
@@ -16,6 +17,36 @@ test("vapes tiene marca requerida, sabor opcional (hay dispositivos sin sabor)",
   assert.ok(atributos.length > 0);
   assert.ok(atributos.some((a) => a.clave === "marca" && a.requerido));
   assert.ok(atributos.some((a) => a.clave === "sabor" && !a.requerido));
+});
+
+test("componerNombreProducto: marca + sabor + puffs (vapes)", () => {
+  const def = getAtributosFijos("vapes");
+  const nombre = componerNombreProducto(def, {
+    marca: "ELFBAR ICE KING",
+    sabor: "Black Mint",
+    puffs: "40000",
+  });
+  assert.equal(nombre, "ELFBAR ICE KING - Black Mint - 40000 Puffs");
+});
+
+test("componerNombreProducto: marca sin sabor ni puffs (dispositivo)", () => {
+  const def = getAtributosFijos("vapes");
+  const nombre = componerNombreProducto(def, { marca: "Vaporesso" });
+  assert.equal(nombre, "Vaporesso");
+});
+
+test("componerNombreProducto: null si falta la marca", () => {
+  const def = getAtributosFijos("vapes");
+  assert.equal(componerNombreProducto(def, { sabor: "Mango" }), null);
+  assert.equal(componerNombreProducto(def, null), null);
+});
+
+test("componerNombreProducto: null para rubros sin forma marca+sabor (ej. ferretería)", () => {
+  const def = getAtributosFijos("ferreteria");
+  assert.equal(
+    componerNombreProducto(def, { marca: "Bosch", medida: "10mm" }),
+    null,
+  );
 });
 
 test("devuelve [] para un rubro sin catálogo fijo definido", () => {
