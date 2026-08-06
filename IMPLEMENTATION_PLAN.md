@@ -1,4 +1,4 @@
-# KNOWLEDGE,cloud — Fases 0-7
+# KNOWLEDGE,cloud — Fases 0-8
 
 ## Completado (Fase 0)
 
@@ -315,6 +315,42 @@ El usuario dio feedback visual directo mirando la app corriendo (no vía
 - Verificado: `visual:check`/`visual:test`/`tsc --noEmit`/`build` en
   verde. Smoke visual con `playwright-cli` (light/dark, con scroll real)
   confirmando los 4 puntos de arriba.
+
+## Completado (Fase 8 — línea del TopBar incompleta bajo el logo)
+
+Bug real encontrado por el usuario al probar Fase 7: el borde inferior
+sólido que aparece al scrollear (agregado en Fase 7) sólo era visible
+desde `x=88px` (borde derecho del riel) hacia la derecha — por debajo
+del wordmark/logo (`x:0-88`, cubierto por el `<aside>` del sidebar,
+`z-50`, opaco) el borde simplemente no se pintaba, y la línea se veía
+cortada/incompleta en vez de cruzar toda la pantalla.
+
+- `src/hooks/useScrolled.ts` (nuevo): hook compartido
+  (`window.scrollY > threshold`) para no duplicar el listener de scroll
+  que antes vivía sólo en `TopBar`.
+- `top-bar.tsx`: usa `useScrolled()` en vez de su propio estado/efecto.
+- `sidebar-dock.tsx`: usa el mismo `useScrolled()` y agrega un `div`
+  `absolute top-16 left-0 right-0 h-px bg-border/60` dentro del
+  `<aside>` (mismo alto que el borde de `TopBar`, `h-16`), visible sólo
+  cuando `scrolled` — así la línea queda continua de punta a punta,
+  pintada por el propio riel en la franja que le corresponde en vez de
+  depender de que el `TopBar` (por debajo, `z-40`) se vea a través de
+  algo que lo tapa.
+- Verificado con `playwright-cli`: capturas recortadas (`clip` de 400×100
+  en la esquina superior izquierda) en light y dark confirmando la línea
+  continua con scroll, y ausente en el tope de la página (sin scroll) en
+  ambos temas.
+- Nota de sesión: en este punto había trabajo en curso del usuario en
+  paralelo (`openspec/changes/columnas-fijas-por-rubro/`,
+  `src/app/api/productos/route.ts` y `[id]/route.ts`,
+  `src/lib/config.ts`, `src/lib/validators/producto-atributos-fijos.ts`,
+  `src/modules/invoices/config/rubro-atributos.ts` — una feature de
+  atributos fijos por rubro, con un error de tipos transitorio en
+  `productos/route.ts` por un campo `rubroNegocio` que el cliente de
+  Prisma generado todavía no reconocía). Se apartó todo ese set con
+  `git stash push -u -- <paths>` antes de verificar/bootstrapear, y se
+  restauró completo con `stash pop` al terminar — nada de eso se tocó ni
+  se incluyó en el commit de esta fase.
 
 ## Deuda preexistente
 
