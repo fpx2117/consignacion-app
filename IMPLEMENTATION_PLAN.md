@@ -1,4 +1,4 @@
-# KNOWLEDGE,cloud — Fase 1
+# KNOWLEDGE,cloud — Fases 0-3
 
 ## Completado (Fase 0)
 
@@ -75,7 +75,9 @@
   capturas reales — no se hizo en esta sesión porque requiere login: queda
   para cuando la Fase 5 (módulos protegidos) las toque directamente.
 
-## En curso (Fase 2 — Satoshi global)
+## Completado (Fase 2 — Satoshi global)
+
+Commiteado como `05d2f17`.
 
 - `layout.tsx`: `Geist`/`Geist_Mono` (`next/font/google`) reemplazadas por
   `next/font/local` (`satoshi`, variable `--font-satoshi`), cargando
@@ -108,23 +110,93 @@
     `/api/files/*.webp` (imágenes de producto faltantes en el entorno
     local) — no relacionados con la fuente, no son regresión de esta
     sesión.
-  - Capturas (`fase2-login-light.png`, `fase2-login-dark.png`,
-    `fase2-lista.png`) generadas en el repo, sin commitear todavía.
-- Sin commitear: todo el trabajo de Fase 2 sigue en el working tree. Hay
-  además untracked `public/brand/logo*.png` (Fase 3, marca — no debería ir
-  en el commit de Fase 2 salvo decisión explícita en contrario) y
-  `public/font/*.woff` (10 pesos Satoshi, de los cuales sólo 4 están
-  wireados en `layout.tsx`).
-- Pendiente antes de cerrar Fase 2:
-  - No existe un `PROMPT.md` específico de Fase 2 en disco — el actual
-    sigue siendo el de Fase 1. Falta correr `/spec` o redactarlo a mano
-    antes de dar la fase por cerrada, según el contrato de loopkit.
-  - Decidir si `public/brand/*.png` se separa a un commit de Fase 3 o se
-    incluye igual (está fuera del alcance declarado de Fase 2).
-  - Decidir si los 6 pesos de Satoshi no usados (`*Italic`, `Black`) se
-    eliminan de `public/font/` o se dejan para consumo futuro.
-- Iniciar Fase 3 (marca/logos) en una sesión separada, una vez cerrada y
-  commiteada la Fase 2.
+  - Capturas de smoke test descartadas tras la verificación (no quedan
+    versionadas en el repo).
+- Decisiones tomadas antes del commit: `public/brand/*.png` se dejó fuera
+  a propósito (es Fase 3). Los 6 pesos de Satoshi sin usar (`*Italic`,
+  `Black`) se dejaron en `public/font/` para consumo futuro, sin wirear.
+  `PROMPT.md` se redactó de forma retroactiva (implementación ya hecha y
+  verificada) a pedido explícito del usuario.
+
+## Completado (Fase 3 — marca/logos)
+
+- `src/components/layout/brand-logo.tsx`: reemplaza el placeholder de texto
+  ("POS" en una caja de color) por el logo real. Renderiza **ambas**
+  variantes (`LOGOS.light`/`LOGOS.dark`) siempre; el CSS (`.dark:hidden` /
+  `hidden dark:block`) decide cuál se ve. Elegir el `src` en JS vía
+  `useTheme()` se probó primero y se descartó: el tema real sólo se conoce
+  en el cliente (localStorage/`matchMedia`), así que el HTML del servidor
+  siempre asume el tema por defecto — eso generaba mismatch de hidratación
+  en el `<img>` (atributo `srcSet` distinto entre servidor y cliente) cada
+  vez que el usuario tenía dark guardado. Encontrado con
+  `playwright-cli console error` durante el smoke test de esta sesión, no
+  visible sólo con `visual:test`/build.
+- `src/app/layout.tsx`: `metadata.icons` usa `LOGOS.favicon` en vez del
+  `/logo.png` heredado del scaffold de Next.js; `metadata.title` pasa de
+  "Dashboard" a "KNOWLEDGE,cloud"; `metadata.description` ya no menciona
+  "MagicUI".
+- `public/logo.png` (620×715, sin canal alpha, placeholder de Next.js/
+  MagicUI) eliminado: sin otro consumidor tras el cambio (confirmado por
+  grep).
+- Verificación: `visual:check`/`visual:test`/`tsc --noEmit`/`build` en
+  verde. Smoke visual con `playwright-cli` autenticado (`/dashboard`,
+  light y dark, recarga real con `theme` en `localStorage` antes de cargar
+  la página — no con `classList` post-mount, que no reproduce el mismatch
+  de hidratación real): logo correcto en ambos temas, cero errores de
+  consola tras el fix.
+- El ratchet de `visual-guard` (ninguna línea puede crecer en un archivo
+  existente) obligó a comprimir `brand-logo.tsx` y `layout.tsx` varias
+  veces durante la sesión para caber en el presupuesto previo — el
+  historial de esos ajustes no queda en git (son intermedios dentro de la
+  misma sesión), sólo el resultado final.
+
+### Mejora documentada (no implementada): lockup tipográfico de marca
+
+El usuario pidió registrar esto como mejora para una sesión futura, no
+implementarlo ahora:
+
+- Reemplazar la coma en "KNOWLEDGE,cloud" por una barra vertical fina y de
+  bajo contraste como separador, en vez del carácter `|` literal (mejor
+  control de alto/color/espaciado con un `<span>` de 1px de ancho).
+- Jerarquía tipográfica en el lockup: `KNOWLEDGE` en peso medio,
+  `CLOUD` en azul de marca o gris claro, barra separadora fina gris tenue,
+  espaciado equilibrado a ambos lados.
+- La identidad queda en tres capas distintas según el contexto:
+  - Firma institucional (fuera del producto, ej. legal/emails): `KNOWLEDGE,cloud`.
+  - Cabecera del SaaS (dentro del producto): `KNOWLEDGE | CLOUD`.
+  - Título del navegador (`<title>`): `Knowledge | Cloud`, con
+    `title: { default: "Knowledge | Cloud", template: "%s | Knowledge Cloud" }`
+    en `metadata` (Next.js title template) en vez del string estático
+    actual.
+- No se tocó nada de esto en Fase 3: `metadata.title` sigue siendo el
+  string estático `"KNOWLEDGE,cloud"` (la firma institucional), no el
+  template. Cambiarlo a template affecta cómo cada página hija compone su
+  `<title>` (varias ya definen su propio `metadata.title`, ej. `/login` →
+  "Dashboard" — ese valor también debería revisarse en esa misma sesión).
+
+### Hallazgo (no corregido): metadata del storefront hereda la del layout raíz
+
+Detectado al investigar el pedido del usuario sobre el logo de tienda:
+`src/app/lista/page.tsx` y `src/app/[slug]/page.tsx` (las páginas públicas
+del catálogo/storefront) no definen `generateMetadata`/`export const
+metadata` propio. Como consecuencia, el `<title>` del navegador y el
+favicon del catálogo público de cada tienda heredan el `metadata` estático
+del layout raíz (`"KNOWLEDGE,cloud"` / `LOGOS.favicon`) en vez de reflejar
+el nombre y logo reales de la tienda que el dueño configuró.
+
+El logo visual del catálogo sí es correcto: `render-catalog-page.tsx` ya
+sirve el logo subido por el usuario vía
+`/api/public/branding-media?type=logo&sucursalId=...` (por eso el logo que
+se ve en `/lista` es el de la tienda, no el de `LOGOS`). El gap es
+específicamente la metadata del `<head>` (title/favicon), no el logo
+visible en la página.
+
+Fix pendiente (fuera de alcance de Fase 3, que es la identidad _propia_ de
+la app, no el branding configurable por tienda): agregar
+`generateMetadata` a `lista/page.tsx` y `[slug]/page.tsx` que resuelva el
+nombre de la tienda (vía la misma fuente que ya usa
+`branding-media`/`getTiendaGlobalConfig`) para `title`, y el logo de la
+tienda para `icons.icon`.
 
 ## Deuda preexistente
 
@@ -136,5 +208,16 @@
 
 - Fase 1 no tocó tipografía (Satoshi/Geist, es Fase 2) ni marca/logos
   (`brand-logo.tsx`, favicon, metadata, es Fase 3).
+- Fase 3 no tocó el branding configurable por tienda (`BrandingTab.tsx`,
+  `render-catalog-page.tsx`) ni la metadata del storefront público (ver
+  hallazgo arriba) — es identidad _propia_ de la app, no del cliente.
 - No se tocó ningún archivo bloqueado por la auditoría (>1000 líneas).
 - Máximo 300 líneas por archivo manual nuevo.
+
+## Próximos pasos
+
+- Fase 4 (si aplica): resolver el hallazgo de metadata dinámica del
+  storefront (`generateMetadata` en `lista/page.tsx` y `[slug]/page.tsx`).
+- Sesión aparte: aplicar el lockup tipográfico `KNOWLEDGE | CLOUD`
+  documentado arriba (cabecera del SaaS + `title` template del navegador),
+  sin tocar la firma institucional `KNOWLEDGE,cloud`.

@@ -611,7 +611,7 @@
     ["src/components/feedback/help-dialog.tsx", 75],
     ["src/components/feedback/success-dialog.tsx", 101],
     ["src/components/image-upload.tsx", 126],
-    ["src/components/layout/brand-logo.tsx", 36],
+    ["src/components/layout/brand-logo.tsx", 34],
     ["src/components/layout/sidebar-dock.tsx", 663],
     ["src/components/layout/top-bar.tsx", 154],
     ["src/components/notifications/notifications-panel.tsx", 429],
@@ -3462,11 +3462,6 @@
       [["border-gray-100", "\"<string>\",", "3a984697227d"]]
     ],
     [
-      "src/app/layout.tsx",
-      "legacyBrands",
-      [["\"Dashboard\"", "Metadata|title:", "5d051f43ad46"]]
-    ],
-    [
       "src/app/lista/catalog-client.tsx",
       "colors",
       [
@@ -6314,17 +6309,6 @@
           "b5915d3c47d0"
         ],
         ["shadow-emerald-900/20", ": SuccessDialogProps)|dark:", "cd29515c1718"]
-      ]
-    ],
-    [
-      "src/components/layout/brand-logo.tsx",
-      "legacyBrands",
-      [
-        [
-          "<div className={cn( \"flex shrink-0 items-center ",
-          "<div",
-          "3876aa906da4"
-        ]
       ]
     ],
     [

@@ -4,8 +4,8 @@ import "./globals.css";
 
 import { ThemeProvider } from "@/components/theme/theme-provider";
 import { PerformanceVitals } from "@/components/performance-vitals";
-
 import { Toaster } from "sonner";
+import { LOGOS } from "@/theme/know-design-system";
 
 const satoshi = localFont({
   variable: "--font-satoshi",
@@ -35,12 +35,12 @@ const satoshi = localFont({
 });
 
 export const metadata: Metadata = {
-  title: "Dashboard",
-  description: "Sistema de gestión con MagicUI",
+  title: "KNOWLEDGE,cloud",
+  description: "Sistema de gestión para consignaciones y punto de venta.",
   icons: {
-    icon: "/logo.png",
-    shortcut: "/logo.png",
-    apple: "/logo.png",
+    icon: LOGOS.favicon,
+    shortcut: LOGOS.favicon,
+    apple: LOGOS.favicon,
   },
 };
 
