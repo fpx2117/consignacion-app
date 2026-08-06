@@ -1,6 +1,6 @@
 :root {
-  --storefront-font-heading: "Inter", sans-serif;
-  --storefront-font-body: "Inter", sans-serif;
+  --storefront-font-heading: var(--font-sans);
+  --storefront-font-body: var(--font-sans);
 
   /* Online Store CSS Variables — defaults (sobrescribibles via page.tsx) */
   --store-primary: #007aff;
