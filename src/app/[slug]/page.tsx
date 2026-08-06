@@ -3,9 +3,9 @@ import { prisma } from "@/lib/prisma";
 import { getTiendaGlobalConfig } from "@/lib/storefront/tienda-global";
 import { isValidSlugFormat } from "@/lib/storefront/slug";
 import { renderCatalogPage } from "@/app/lista/render-catalog-page";
+export { generateSlugMetadata as generateMetadata } from "@/lib/storefront/store-identity";
 
 export const dynamic = "force-dynamic";
-
 type SlugPageProps = {
   params: Promise<{ slug: string }>;
   searchParams?: Promise<Record<string, string | string[] | undefined>>;

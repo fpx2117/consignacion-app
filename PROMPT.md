@@ -1,59 +1,57 @@
 # Goal
 
-Implementar la Fase 4 de KNOWLEDGE,cloud ("lockup tipográfico"): agregar el
-header de marca `KNOWLEDGE | CLOUD` a la cabecera del producto (`TopBar`),
-y un `title` template de Next.js para el `<title>` del navegador, según la
-guía de diseño que dio el usuario en la sesión anterior. La firma
-institucional `KNOWLEDGE,cloud` (con coma) no se toca — sigue siendo el
-`alt` del logo y el texto que usan los comentarios/tests del sistema de
-diseño.
+Implementar la Fase 5 de KNOWLEDGE,cloud ("metadata dinámica del
+storefront"): el `<title>` y el favicon del catálogo público de cada
+tienda (`/lista`, `/[slug]`) deben reflejar el nombre y el logo reales que
+el dueño configuró, en vez de heredar el `metadata` estático del layout
+raíz (`"Knowledge | Cloud"` / `LOGOS.favicon`). Es el hallazgo documentado
+en Fase 3.
 
 # Done when
 
-- Nuevo componente `src/components/layout/brand-lockup.tsx`: renderiza el
-  ícono (`BrandLogo`) + `KNOWLEDGE` (peso medio) + separador de 1px de
-  ancho / 16px de alto vía `<span aria-hidden>` con bajo contraste (no el
-  carácter `|` literal) + `CLOUD` (azul de marca, `var(--primary)`), con
-  espaciado equilibrado a ambos lados del separador.
-- `TopBar` (`src/components/layout/top-bar.tsx`) usa `BrandLockup` en el
-  espacio vacío del lado izquierdo (hoy sólo tiene un comentario "Logo
-  oculto en mobile..." sin JSX) — visible en desktop, oculto en mobile
-  (el rail de `SidebarDock` ya es icon-only en mobile, sin espacio para
-  texto).
-- `src/app/layout.tsx`: `metadata.title` pasa de un string estático a
-  `{ default: "Knowledge | Cloud", template: "%s | Knowledge Cloud" }`.
-- Se resuelven las colisiones que el template genera en los 2 títulos de
-  página existentes (`export const metadata` en `page.tsx`, no toasts):
-  - `login/page.tsx`: `title: "Dashboard"` (placeholder incorrecto, ya
-    flageado en Fase 3) → `title: "Iniciar sesión"`.
-  - `settings/branches/page.tsx`: `title: "Sucursales | Configuración"` →
-    `title: "Sucursales"` (el `| Configuración` manual duplicaría el
-    template y quedaría `Sucursales | Configuración | Knowledge Cloud`).
-- `src/components/layout/brand-logo.tsx`: se retira `showText` de la
-  interfaz (prop muerta, nunca se usó — el lockup vive en su propio
-  componente, no en `BrandLogo`).
+- Nuevo helper server-only (`src/lib/storefront/store-identity.ts` o
+  similar) que resuelve, a partir de un `sucursalId`, el nombre a mostrar
+  (`sucursal.branding?.businessName || sucursal.nombre`, mismo criterio
+  que ya usa `getPublicCatalogDataRaw` para `storeName`) y si esa sucursal
+  tiene logo propio cargado (`branding.logoData`).
+- La resolución de `sucursalId` en modo unificado (sucursal principal si
+  `modoUnificado`, igual que hace hoy `getPublicCatalogDataRaw`) se
+  extrae a una función compartida en vez de duplicarse — `public-catalog.ts`
+  pasa a usarla también, no sólo el nuevo código.
+- `src/app/lista/page.tsx` y `src/app/[slug]/page.tsx` exportan
+  `generateMetadata`:
+  - `title`: nombre de la tienda (compone con el template del layout raíz:
+    `"<Nombre tienda> | Knowledge Cloud"`).
+  - `icons.icon`: `/api/public/branding-media?type=logo&sucursalId=...` si
+    la tienda tiene logo propio cargado; si no, cae a `LOGOS.favicon` (el
+    de la app) — nunca un ícono roto.
+- `src/app/lista/layout.tsx` (`title: "Catálogo online"` estático) se
+  revisa: si `generateMetadata` en `page.tsx` ya cubre el título real, el
+  título del layout queda sólo como fallback antes de que resuelva la
+  promesa — confirmar que no compite/pisa el de la página.
 - `npm run visual:check`, `npm run visual:test`, `npx tsc --noEmit` (sin
   errores nuevos) y `npm run build` terminan en verde.
-- Smoke visual manual (`playwright-cli`, autenticado, light/dark) confirma
-  que el lockup se ve en el `TopBar` de escritorio y que el `<title>` del
-  navegador compone correctamente con el template.
+- Smoke visual manual (`playwright-cli`) en `/lista` confirma que el
+  `<title>` del navegador muestra el nombre real de la tienda de prueba
+  (no "Knowledge | Cloud" ni "Catálogo online").
 
 # Never touch
 
-- El texto `KNOWLEDGE,cloud` como firma institucional (alt del logo,
-  comentarios de `know-design-system.ts`/`external-colors.css`,
-  `tailwind-inline.ts`).
-- Metadata del storefront público (`lista/page.tsx`, `[slug]/page.tsx`,
-  `lista/layout.tsx`) — es el hallazgo documentado en Fase 3, no esta fase.
-- Los `title` que son en realidad textos de toasts/cards dentro de
-  funciones (ej. `dashboard/page.tsx`, `ventas/nueva/page.tsx`) — no son
-  `metadata.title`, no los toca el template.
+- El logo _visible en la página_ del catálogo (`render-catalog-page.tsx`)
+  — ya usa el logo de marca correcto, no es parte de este hallazgo.
+- Identidad propia de la app (`layout.tsx` raíz, `BrandLogo`,
+  `BrandLockup`) — esta fase es sobre el branding _del cliente_, no el de
+  KNOWLEDGE,cloud.
+- El branding configurable por tienda (`BrandingTab.tsx`) — sólo se lee,
+  no se agrega ningún campo nuevo.
 - Archivos bloqueados por la auditoría (>1000 líneas).
 
 # Stop if
 
-- El template de `title` rompe un título de página que no se puede
-  resolver sin tocar un archivo bloqueado por la auditoría.
-- El ratchet de `visual-guard` (ninguna línea puede crecer en un archivo
-  existente) obliga a un cambio de diseño que se sale del alcance de esta
-  fase para poder cerrar.
+- Resolver el nombre/logo real requiere una consulta tan pesada como
+  `getPublicCatalogDataRaw` completo (productos, banners) — en ese caso
+  frenar y decidir con el usuario si vale la pena el costo extra por
+  request o si hay que cachear.
+- El refactor de `resolveStorefrontSucursalId` cambia el comportamiento
+  observable de `getPublicCatalogDataRaw` (debe ser un movimiento
+  mecánico, no un cambio de lógica).

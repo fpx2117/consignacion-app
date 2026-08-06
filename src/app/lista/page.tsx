@@ -1,9 +1,9 @@
 import { notFound } from "next/navigation";
 import { getTiendaGlobalConfig } from "@/lib/storefront/tienda-global";
 import { renderCatalogPage } from "./render-catalog-page";
+export { generateListaMetadata as generateMetadata } from "@/lib/storefront/store-identity";
 
 export const dynamic = "force-dynamic";
-
 type ListaPageProps = {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
 };
