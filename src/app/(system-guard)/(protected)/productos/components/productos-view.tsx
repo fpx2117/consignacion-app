@@ -209,9 +209,26 @@ export function ProductosView() {
     return Array.from(set);
   }, [statsItems]);
 
+  // Las claves fijas del rubro (marca, sabor, puffs, etc.) tienen que ser
+  // siempre candidatas, aunque ningún producto tenga ese dato cargado
+  // todavía y aunque la clave no matchee ninguna palabra suelta del hint
+  // de texto libre — si no, quedan seleccionadas por el seed automático
+  // (ver Fase 4) sin ningún checkbox para poder sacarlas del picker.
+  const clavesFijasDelRubro = React.useMemo(
+    () => getAtributosFijos(rubroNegocio).map((def) => def.clave),
+    [rubroNegocio],
+  );
+
   const candidatasAtributos = React.useMemo(
-    () => Array.from(new Set([...clavesAtributosEnUso, ...sugerenciasRubro])),
-    [clavesAtributosEnUso, sugerenciasRubro],
+    () =>
+      Array.from(
+        new Set([
+          ...clavesAtributosEnUso,
+          ...sugerenciasRubro,
+          ...clavesFijasDelRubro,
+        ]),
+      ),
+    [clavesAtributosEnUso, sugerenciasRubro, clavesFijasDelRubro],
   );
 
   const labelAtributoFijo = React.useMemo(() => {
