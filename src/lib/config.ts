@@ -36,6 +36,7 @@ export async function obtenerConfiguracionGlobal(sucursalId: number = 1) {
       sucursalId,
       minStockGlobal: 5,
       diasAnticipacionVencimiento: 7,
+      rubroNegocio: null,
       notificarVencimientos: true,
       notificarStockBajo: true,
       notificarVentas: true,

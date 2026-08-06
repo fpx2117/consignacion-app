@@ -1,11 +1,12 @@
 "use client";
 
-// Selector de columnas dinámicas para la tabla de productos (Fase 4 de
-// openspec/changes/rubro-contexto-ocr/) — el usuario elige explícitamente
-// qué claves de atributosExtra quiere ver como columna. Las candidatas son
-// las claves que YA existen en el catálogo cargado (dato real) más las
-// sugeridas por el rubro configurado — nunca detección automática ni
-// columnas fijas por rubro (ver Decisión 7 del documento).
+// Selector de columnas dinámicas para la tabla de productos. Las candidatas
+// son las claves que YA existen en el catálogo cargado (dato real) más las
+// sugeridas por el rubro configurado. Sigue siendo editable a mano: el
+// picker es la fuente de verdad de qué se muestra, incluso cuando
+// productos-view.tsx sembró un default a partir del catálogo de atributos
+// fijos del rubro (ver openspec/changes/columnas-fijas-por-rubro/). Las
+// claves que vienen de ese catálogo fijo se marcan con la badge "rubro".
 
 import * as React from "react";
 import { Columns3 } from "lucide-react";
@@ -16,12 +17,15 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { getAtributosFijos } from "@/modules/invoices/config/rubro-atributos";
 
 interface ColumnasProductoPickerProps {
   candidatas: string[];
   seleccionadas: string[];
   onChange: (nuevas: string[]) => void;
   disabled?: boolean;
+  /** Usado solo para mostrar el label lindo y una badge en las claves que vienen del catálogo fijo del rubro. */
+  rubroNegocio?: string | null;
 }
 
 export function ColumnasProductoPicker({
@@ -29,7 +33,16 @@ export function ColumnasProductoPicker({
   seleccionadas,
   onChange,
   disabled,
+  rubroNegocio,
 }: ColumnasProductoPickerProps) {
+  const labelPorClave = React.useMemo(() => {
+    const map = new Map<string, string>();
+    for (const def of getAtributosFijos(rubroNegocio)) {
+      map.set(def.clave, def.label);
+    }
+    return map;
+  }, [rubroNegocio]);
+
   const toggle = (clave: string) => {
     if (seleccionadas.includes(clave)) {
       onChange(seleccionadas.filter((c) => c !== clave));
@@ -77,7 +90,14 @@ export function ColumnasProductoPicker({
                   onCheckedChange={() => toggle(clave)}
                   disabled={disabled}
                 />
-                <span className="capitalize">{clave}</span>
+                <span className="capitalize">
+                  {labelPorClave.get(clave) ?? clave}
+                </span>
+                {labelPorClave.has(clave) && (
+                  <span className="ml-auto rounded-full bg-primary/10 text-primary px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide">
+                    rubro
+                  </span>
+                )}
               </label>
             ))}
           </div>

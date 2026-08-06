@@ -62,7 +62,13 @@ import { Switch } from "@/components/ui/switch";
 import { ImageUpload } from "@/components/image-upload";
 import { CreateCategoriaDialog } from "./create-categoria-dialog";
 import { AtributosExtraEditor } from "./atributos-extra-editor";
-import { getAtributosTipicos } from "@/modules/invoices/config/rubros";
+import { AtributosFijosForm } from "./atributos-fijos-form";
+import {
+  getAtributosTipicos,
+  getRubroLabel,
+} from "@/modules/invoices/config/rubros";
+import { getAtributosFijos } from "@/modules/invoices/config/rubro-atributos";
+import { validarAtributosFijosProducto } from "@/lib/validators/producto-atributos-fijos";
 import { toast } from "sonner";
 import { useBarcodeScanner } from "@/hooks/useBarcodeScanner";
 import { BarcodeCameraSheet } from "./barcode-camera-sheet";
@@ -254,6 +260,7 @@ export function ProductoWizardDialog({
   const [sugerenciasAtributos, setSugerenciasAtributos] = React.useState<
     string[]
   >([]);
+  const [rubroNegocio, setRubroNegocio] = React.useState<string | null>(null);
   const codigoBarraInputRef = React.useRef<HTMLInputElement | null>(null);
 
   const confirmBarcode = React.useCallback(() => {
@@ -352,8 +359,12 @@ export function ProductoWizardDialog({
       .then((config) => {
         const hint = getAtributosTipicos(config?.rubroNegocio);
         setSugerenciasAtributos(hint ? hint.split(", ").filter(Boolean) : []);
+        setRubroNegocio(config?.rubroNegocio ?? null);
       })
-      .catch(() => setSugerenciasAtributos([]));
+      .catch(() => {
+        setSugerenciasAtributos([]);
+        setRubroNegocio(null);
+      });
 
     if (producto?.categoriaId) {
       apiService
@@ -386,6 +397,52 @@ export function ProductoWizardDialog({
     }
   }, [categoriaId]);
 
+  // Atributos fijos del rubro activo: se muestran como campos estructurados
+  // (AtributosFijosForm); el resto de las claves sigue en el editor libre.
+  const atributosFijos = React.useMemo(
+    () => getAtributosFijos(rubroNegocio),
+    [rubroNegocio],
+  );
+  const clavesFijas = React.useMemo(
+    () => new Set(atributosFijos.map((def) => def.clave)),
+    [atributosFijos],
+  );
+  const atributosExtraLibres = React.useMemo(() => {
+    if (!atributosExtra) return null;
+    const entries = Object.entries(atributosExtra).filter(
+      ([clave]) => !clavesFijas.has(clave),
+    );
+    return entries.length > 0 ? Object.fromEntries(entries) : null;
+  }, [atributosExtra, clavesFijas]);
+  const atributosFijosValidacion = React.useMemo(
+    () => validarAtributosFijosProducto(atributosExtra, rubroNegocio),
+    [atributosExtra, rubroNegocio],
+  );
+
+  function actualizarAtributoFijo(clave: string, valor: string) {
+    setAtributosExtra((prev) => {
+      const next = { ...(prev ?? {}) };
+      if (valor.trim() === "") {
+        delete next[clave];
+      } else {
+        next[clave] = valor;
+      }
+      return Object.keys(next).length > 0 ? next : null;
+    });
+  }
+
+  function actualizarAtributosLibres(
+    valorLibres: Record<string, string> | null,
+  ) {
+    setAtributosExtra((prev) => {
+      const fijos = Object.fromEntries(
+        Object.entries(prev ?? {}).filter(([clave]) => clavesFijas.has(clave)),
+      );
+      const merged = { ...fijos, ...(valorLibres ?? {}) };
+      return Object.keys(merged).length > 0 ? merged : null;
+    });
+  }
+
   const pv = toNumber(precioVenta) || 0;
   const pc = toNumber(precioCosto) || 0;
   const dpct =
@@ -416,7 +473,8 @@ export function ProductoWizardDialog({
   const step0Valid =
     nombre.trim().length >= 2 && (isEdit || categoriaId !== "");
   const step2Valid = pv > 0 && pc > 0 && !esGananciaNegativa;
-  const canSubmit = step0Valid && step2Valid;
+  const step3Valid = !atributosFijosValidacion;
+  const canSubmit = step0Valid && step2Valid && step3Valid;
 
   function canAdvanceFrom(i: number) {
     if (i === 0) return step0Valid;
@@ -1070,7 +1128,25 @@ export function ProductoWizardDialog({
                 )}
               </div>
 
-              {/* Sección Atributos adicionales — colapsada por default */}
+              {/* Atributos fijos del rubro activo — visibles por default */}
+              {atributosFijos.length > 0 && (
+                <div className="rounded-xl border p-3 space-y-3 bg-muted/10">
+                  <p className="text-xs font-bold uppercase text-muted-foreground">
+                    Atributos de {getRubroLabel(rubroNegocio) || "este rubro"}
+                  </p>
+                  <AtributosFijosForm
+                    definiciones={atributosFijos}
+                    valores={atributosExtra}
+                    onChange={actualizarAtributoFijo}
+                    errores={
+                      atributosFijosValidacion?.fieldErrors.atributosExtra
+                    }
+                    disabled={saving}
+                  />
+                </div>
+              )}
+
+              {/* Sección de atributos libres — colapsada por default */}
               <div className="rounded-xl border border-dashed border-muted-foreground/30 p-3 space-y-3 bg-muted/10">
                 <button
                   type="button"
@@ -1078,7 +1154,9 @@ export function ProductoWizardDialog({
                   className="flex items-center justify-between w-full text-left"
                 >
                   <span className="text-xs font-bold uppercase text-muted-foreground">
-                    Atributos adicionales (opcional)
+                    {atributosFijos.length > 0
+                      ? "Otros atributos (opcional)"
+                      : "Atributos adicionales (opcional)"}
                   </span>
                   <span className="text-[10px] text-muted-foreground">
                     {mostrarAtributos ? "Ocultar" : "Mostrar"}
@@ -1087,8 +1165,16 @@ export function ProductoWizardDialog({
                 {mostrarAtributos && (
                   <div className="animate-in fade-in slide-in-from-top-2 duration-200">
                     <AtributosExtraEditor
-                      value={atributosExtra}
-                      onChange={setAtributosExtra}
+                      value={
+                        atributosFijos.length > 0
+                          ? atributosExtraLibres
+                          : atributosExtra
+                      }
+                      onChange={
+                        atributosFijos.length > 0
+                          ? actualizarAtributosLibres
+                          : setAtributosExtra
+                      }
                       sugerencias={sugerenciasAtributos}
                       disabled={saving}
                     />

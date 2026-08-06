@@ -86,6 +86,7 @@ import { ProductosAgotadosSheetContent } from "./productos-agotados-sheet-conten
 import { ProductosBajoStockSheetContent } from "./productos-bajo-stock-sheet-content";
 import { ColumnasProductoPicker } from "./columnas-producto-picker";
 import { getAtributosTipicos } from "@/modules/invoices/config/rubros";
+import { getAtributosFijos } from "@/modules/invoices/config/rubro-atributos";
 
 // --- Interfaces ---
 interface StatCardProps {
@@ -154,18 +155,47 @@ export function ProductosView() {
     [],
   );
   const [sugerenciasRubro, setSugerenciasRubro] = React.useState<string[]>([]);
+  const [rubroNegocio, setRubroNegocio] = React.useState<string | null>(null);
 
   React.useEffect(() => {
     apiService
       .getConfiguracionGeneral()
-      .then((config) => {
-        setColumnasAtributos(config?.columnasAtributosProducto ?? []);
-        const hint = getAtributosTipicos(config?.rubroNegocio);
+      .then(async (config) => {
+        const rubro = config?.rubroNegocio ?? null;
+        setRubroNegocio(rubro);
+        const hint = getAtributosTipicos(rubro);
         setSugerenciasRubro(hint ? hint.split(", ").filter(Boolean) : []);
+
+        const columnasGuardadas = config?.columnasAtributosProducto ?? [];
+        if (columnasGuardadas.length > 0) {
+          setColumnasAtributos(columnasGuardadas);
+          return;
+        }
+
+        // Sin columnas elegidas todavía: si el rubro activo tiene atributos
+        // fijos definidos, las sugerimos como default (una sola vez — no
+        // pisa una elección manual, porque solo corre cuando el array
+        // guardado está vacío).
+        const clavesFijas = getAtributosFijos(rubro).map((def) => def.clave);
+        if (clavesFijas.length === 0) {
+          setColumnasAtributos([]);
+          return;
+        }
+
+        setColumnasAtributos(clavesFijas);
+        try {
+          await apiService.actualizarConfiguracionGeneral({
+            columnasAtributosProducto: clavesFijas,
+          });
+        } catch {
+          // No es crítico: la UI ya muestra las columnas, solo no quedó
+          // persistida la preferencia hasta el próximo cambio manual.
+        }
       })
       .catch(() => {
         setColumnasAtributos([]);
         setSugerenciasRubro([]);
+        setRubroNegocio(null);
       });
   }, [activeSucursalId]);
 
@@ -694,6 +724,7 @@ export function ProductosView() {
             candidatas={candidatasAtributos}
             seleccionadas={columnasAtributos}
             onChange={handleColumnasAtributosChange}
+            rubroNegocio={rubroNegocio}
           />
         </div>
 
