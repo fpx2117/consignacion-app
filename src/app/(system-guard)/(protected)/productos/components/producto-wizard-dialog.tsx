@@ -680,7 +680,12 @@ export function ProductoWizardDialog({
               {/* Imagen + nombre (el nombre no se muestra si el rubro lo
                   auto-compone desde sus atributos — ver más abajo). */}
               <div className="flex gap-4 items-start">
-                <div className="shrink-0 w-[88px] space-y-1">
+                <div
+                  className={cn(
+                    "space-y-1",
+                    rubroComponeNombre ? "w-full" : "shrink-0 w-[88px]",
+                  )}
+                >
                   <Label className="text-[10px] font-bold uppercase text-muted-foreground">
                     Imagen
                   </Label>
@@ -754,48 +759,10 @@ export function ProductoWizardDialog({
                         : "sm:col-span-2",
                     )}
                   >
-                    <Label className="text-xs font-bold uppercase text-muted-foreground">
-                      Categoría
-                    </Label>
-                    <div className="flex gap-2">
-                      <div className="relative flex-1">
-                        <Layers className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground z-10" />
-                        <Select
-                          value={categoriaId}
-                          onValueChange={setCategoriaId}
-                        >
-                          <SelectTrigger className="pl-9 h-10 bg-muted/30">
-                            <SelectValue
-                              placeholder={
-                                isEdit
-                                  ? "Sin categoría"
-                                  : "Seleccionar categoría..."
-                              }
-                            />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {categorias.map((cat) => {
-                              const catColor = getCategoryColorByKey(cat.color);
-                              return (
-                                <SelectItem
-                                  key={cat.id}
-                                  value={cat.id.toString()}
-                                >
-                                  <span className="flex items-center gap-2">
-                                    <span
-                                      className={cn(
-                                        "h-2 w-2 rounded-full shrink-0",
-                                        catColor.dot,
-                                      )}
-                                    />
-                                    {cat.nombre}
-                                  </span>
-                                </SelectItem>
-                              );
-                            })}
-                          </SelectContent>
-                        </Select>
-                      </div>
+                    <div className="flex items-center justify-between">
+                      <Label className="text-xs font-bold uppercase text-muted-foreground">
+                        Categoría
+                      </Label>
                       <CreateCategoriaDialog
                         onCreated={() => {
                           apiService
@@ -805,7 +772,56 @@ export function ProductoWizardDialog({
                             );
                           onCategoriasChanged?.();
                         }}
+                        trigger={
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-5 w-5 text-muted-foreground hover:text-primary"
+                            title="Administrar categorías"
+                          >
+                            <Pencil className="h-3 w-3" />
+                          </Button>
+                        }
                       />
+                    </div>
+                    <div className="relative">
+                      <Layers className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground z-10" />
+                      <Select
+                        value={categoriaId}
+                        onValueChange={setCategoriaId}
+                      >
+                        <SelectTrigger className="pl-9 h-10 bg-muted/30">
+                          <SelectValue
+                            placeholder={
+                              isEdit
+                                ? "Sin categoría"
+                                : "Seleccionar categoría..."
+                            }
+                          />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {categorias.map((cat) => {
+                            const catColor = getCategoryColorByKey(cat.color);
+                            return (
+                              <SelectItem
+                                key={cat.id}
+                                value={cat.id.toString()}
+                              >
+                                <span className="flex items-center gap-2">
+                                  <span
+                                    className={cn(
+                                      "h-2 w-2 rounded-full shrink-0",
+                                      catColor.dot,
+                                    )}
+                                  />
+                                  {cat.nombre}
+                                </span>
+                              </SelectItem>
+                            );
+                          })}
+                        </SelectContent>
+                      </Select>
                     </div>
                   </div>
 
