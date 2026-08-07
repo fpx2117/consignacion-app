@@ -733,8 +733,15 @@ export function ProductoWizardDialog({
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div className="space-y-1 sm:col-span-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-3 border-t border-border/50">
+                <div
+                  className={cn(
+                    "space-y-1",
+                    categoriaId && subcategorias.length > 0
+                      ? "sm:col-span-1"
+                      : "sm:col-span-2",
+                  )}
+                >
                   <Label className="text-xs font-bold uppercase text-muted-foreground">
                     Categoría
                   </Label>
@@ -791,7 +798,7 @@ export function ProductoWizardDialog({
                 </div>
 
                 {categoriaId && subcategorias.length > 0 && (
-                  <div className="space-y-1 sm:col-span-2 animate-in fade-in slide-in-from-top-2 duration-300">
+                  <div className="space-y-1 sm:col-span-1 animate-in fade-in slide-in-from-top-2 duration-300">
                     <Label className="text-xs font-bold uppercase text-muted-foreground">
                       Subcategoría (Opcional)
                     </Label>
@@ -820,10 +827,13 @@ export function ProductoWizardDialog({
 
               {/* Atributos fijos del rubro activo — son datos básicos del
                   producto (marca, sabor, puffs...), no algo secundario, así
-                  que van acá y no en "Extras y confirmación". */}
+                  que van acá y no en "Extras y confirmación". Mismo estilo
+                  de separador que el bloque de Categoría de arriba, para
+                  que el paso se lea como un solo formulario con secciones,
+                  no como widgets sueltos sin relación entre sí. */}
               {atributosFijos.length > 0 && (
-                <div className="rounded-xl border p-3 space-y-3 bg-muted/10">
-                  <p className="text-xs font-bold uppercase text-muted-foreground">
+                <div className="space-y-3 pt-3 border-t border-border/50">
+                  <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
                     Atributos de {getRubroLabel(rubroNegocio) || "este rubro"}
                   </p>
                   <AtributosFijosForm
