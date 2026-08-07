@@ -56,18 +56,13 @@ const PRODUCT_IMAGE_ALLOWED_TYPES = [
   },
 ] satisfies readonly AllowedUploadType[];
 
-const PDF_SIGNATURE = Buffer.from("%PDF-", "ascii");
-
+// Las facturas de proveedor se cargan SIEMPRE como imagen (JPG, PNG, WEBP) —
+// el OCR es visión directa de OpenRouter, que no soporta PDF local. A
+// diferencia de las imágenes, aquí NO se admite PDF.
 const FACTURA_PROVEEDOR_ALLOWED_TYPES = [
   PRODUCT_IMAGE_ALLOWED_TYPES[0], // jpg
   PRODUCT_IMAGE_ALLOWED_TYPES[1], // png
   PRODUCT_IMAGE_ALLOWED_TYPES[2], // webp
-  {
-    canonicalExtension: "pdf",
-    extensions: ["pdf"],
-    mimeTypes: ["application/pdf"],
-    sniff: (buffer: Buffer) => hasPrefix(buffer, Array.from(PDF_SIGNATURE)),
-  },
 ] satisfies readonly AllowedUploadType[];
 
 const UPLOAD_POLICIES: Record<UploadUseCase, UploadPolicy> = {

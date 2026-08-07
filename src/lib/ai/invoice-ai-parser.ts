@@ -1,32 +1,23 @@
 // src/lib/ai/invoice-ai-parser.ts
-// Reemplaza a src/lib/modal/ocr-client.ts. Orquesta: extracción de texto barata
-// (CPU, ver extraer-texto-factura.ts) → prompt dinámico desde
-// invoice-extraction.config.ts → OpenRouter → validación → shape normalizado
-// para el resto del pipeline (matching-engine, etc.), que no se modifica.
+// Reemplaza a src/lib/modal/ocr-client.ts. Orquesta: visión directa de la
+// imagen de la factura → prompt dinámico desde invoice-extraction.config.ts →
+// OpenRouter → validación → shape normalizado para el resto del pipeline
+// (matching-engine, etc.), que no se modifica.
 //
-// PDF con texto nativo (imagenParaVision null, confianzaOcr 100 fijo) →
-// solo texto, no hay nada que una imagen pudiera corregir.
-//
-// Foto o PDF escaneado (siempre hay imagenParaVision disponible) → SIEMPRE
-// se manda texto + imagen juntos, no solo cuando la confianza de OCR es
-// baja. Medido en producción: un documento con confianza "aceptable" en
-// promedio puede tener una línea puntual mal leída por Tesseract (ej. un
-// precio unitario confundido) sin que el promedio del documento lo refleje
-// — la confianza es una métrica del documento entero, no de cada celda. El
-// costo extra de mandar la imagen es de centavos por factura (medido:
-// ~$0.0045 vs ~$0.0006-0.0016 solo texto), así que no vale la pena arriesgar
-// un dato financiero mal leído para ahorrar eso.
+// Solo se aceptan imágenes (JPG, PNG, WEBP): el OCR local
+// (sharp/tesseract/pdf-parse/chromium) fue eliminado. La imagen se manda tal
+// cual al modelo de visión de OpenRouter (image_url), que la lee y estructura
+// en un solo call — ver openspec/changes sobre visión directa.
 
 import {
   buildExpectedOutputSchema,
   buildInvoiceExtractionPrompt,
   calculateInvoiceConfidence,
-  truncateOcrText,
   validateExtractedInvoice,
   type ExtractedInvoiceData,
   type ExtractedInvoiceItem,
 } from "@/modules/invoices/config/invoice-extraction.config";
-import { extraerTextoFactura } from "@/lib/ocr/extraer-texto-factura";
+import { esImagenSoportada } from "@/lib/ocr/mime-types";
 import { validarConsistenciaFactura } from "./validar-consistencia-factura";
 import {
   callOpenRouterJson,
@@ -84,9 +75,14 @@ export type InvoiceAiErrorResult = {
 export type InvoiceAiResult = InvoiceAiSuccessResult | InvoiceAiErrorResult;
 
 /**
- * Procesa una factura ya subida (bytes en poder del backend): extrae texto
- * localmente y le pide a OpenRouter que lo estructure. Nunca escribe en la DB —
- * eso lo sigue haciendo el caller (process/route.ts) con matching-engine.
+ * Procesa una factura ya subida (bytes en poder del backend): manda la imagen
+ * directo al modelo de visión de OpenRouter y estructura la respuesta. Nunca
+ * escribe en la DB — eso lo sigue haciendo el caller (process/route.ts) con
+ * matching-engine.
+ *
+ * Solo se soportan imágenes (jpg/png/webp): los tickets se cargan como imagen,
+ * no como PDF. El OCR local (sharp/tesseract/chromium/pdf-parse) fue eliminado
+ * del flujo de facturas — ver openspec/changes sobre visión directa.
  */
 export async function procesarFacturaConIA(input: {
   buffer: Buffer;
@@ -95,46 +91,40 @@ export async function procesarFacturaConIA(input: {
    * para el prompt, ver invoice-extraction.config.ts. */
   rubroNegocio?: string | null;
 }): Promise<InvoiceAiResult> {
-  const { texto, confianzaOcr, imagenParaVision } =
-    await extraerTextoFactura(input);
+  const { buffer, mimeType } = input;
+  const esImagen = esImagenSoportada(mimeType);
 
-  // Siempre que haya imagen disponible (foto o PDF escaneado), se manda junto
-  // al texto — no solo cuando la confianza del documento completo es baja.
-  const necesitaVision = Boolean(imagenParaVision);
-
-  if (!texto.trim() && !necesitaVision) {
-    // Caso residual: PDF con texto nativo que igual vino vacío — no hubo
-    // rasterización (imagenParaVision es null acá), no hay imagen que ofrecer.
+  if (!esImagen) {
     return {
       status: "error",
-      message: "No se pudo extraer texto legible del archivo.",
+      message: `Solo se admiten imágenes (JPG, PNG, WEBP). Tipo recibido: ${mimeType || "(vacío)"}.`,
     };
   }
 
-  const textoTruncado = truncateOcrText(texto);
+  // Visión directa: se manda el archivo tal cual al modelo de visión
+  // (image_url), sin pasar por ningún OCR local.
+  const texto = "";
+  const imagenParaVision: Buffer = buffer;
+
   const systemPrompt = buildInvoiceExtractionPrompt(input.rubroNegocio);
   const schema = buildExpectedOutputSchema();
 
-  const userPrompt = necesitaVision
-    ? `Extraé los datos estructurados de esta factura de proveedor según las reglas indicadas. ` +
-      `Se adjunta también la imagen original del comprobante — el texto de abajo viene de un OCR local que puede tener errores ` +
-      `(caracteres confundidos, precios mal leídos, líneas cortadas). Usá la imagen como fuente de verdad para cotejar y corregir ` +
-      `cualquier dato del texto que no coincida con lo que ves en la imagen, especialmente precios y cantidades.\n\n` +
-      `Texto OCR (referencia, puede tener errores):\n${textoTruncado || "(vacío)"}`
-    : `Extraé los datos estructurados de esta factura de proveedor según las reglas indicadas:\n\n${textoTruncado}`;
+  const userPrompt =
+    `Extraé los datos estructurados de esta factura de proveedor según las reglas indicadas. ` +
+    `Se te adjunta la imagen del comprobante como fuente de verdad: leela directamente y extraé ` +
+    `proveedor, datos generales y cada item con su código, cantidad, precio unitario y total de línea.\n\n` +
+    `NO se adjunta texto OCR previo: toda la información sale de la imagen.`;
 
   const respuesta = await callOpenRouterJson({
     systemPrompt,
     userPrompt,
     jsonSchema: { name: "factura_extraida", schema },
-    images: necesitaVision
-      ? [
-          {
-            mimeType: "image/png",
-            base64: imagenParaVision!.toString("base64"),
-          },
-        ]
-      : undefined,
+    images: [
+      {
+        mimeType,
+        base64: imagenParaVision.toString("base64"),
+      },
+    ],
   });
 
   const parsed = parseJsonContent(respuesta.content);
@@ -166,21 +156,12 @@ export async function procesarFacturaConIA(input: {
     items: itemsConConfidenceAjustada,
   };
 
-  // La confianza final es el mínimo entre "qué tan bien se leyó el archivo"
-  // (Tesseract/pdf-parse, 0-100) y "qué tan segura está la IA de haber
-  // estructurado bien ese texto" (0-1, ya ajustada por la validación de
-  // consistencia de arriba). Una foto borrosa con OCR de baja confianza debe
-  // marcar la factura para revisión aunque la IA "suene seguro" interpretando
-  // el texto ruidoso que le llegó — EXCEPTO cuando se usó visión: ahí la IA
-  // tuvo la imagen real, no solo el texto degradado, así que capar su
-  // confianza contra confianzaOcr (bajo por definición en este camino)
-  // penalizaría injustamente una extracción que sí rescató bien.
-  const globalConfidence = necesitaVision
-    ? calculateInvoiceConfidence(datosConConfidenceAjustada)
-    : Math.min(
-        calculateInvoiceConfidence(datosConConfidenceAjustada),
-        confianzaOcr / 100,
-      );
+  // Siempre se usa visión directa (el modelo ve la imagen real), así que la
+  // confianza final es la del modelo con la imagen — no se capa contra un
+  // confianzaOcr local (ya no existe OCR local).
+  const globalConfidence = calculateInvoiceConfidence(
+    datosConConfidenceAjustada,
+  );
 
   return {
     status: "success",
