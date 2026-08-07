@@ -57,6 +57,7 @@ import {
   CheckCircle2,
   ChevronLeft,
   ChevronRight,
+  Sparkles,
 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { ImageUpload } from "@/components/image-upload";
@@ -410,6 +411,16 @@ export function ProductoWizardDialog({
     () => new Set(atributosFijos.map((def) => def.clave)),
     [atributosFijos],
   );
+  // Es una propiedad del RUBRO (no de lo que ya se tipeó): si el rubro
+  // define marca+sabor, el nombre siempre se va a auto-componer en el
+  // paso "Extras" (ver componerNombreProducto) — el input de "Nombre" del
+  // paso 1 no tiene sentido en ese caso, se descartaría igual.
+  const rubroComponeNombre = React.useMemo(
+    () =>
+      atributosFijos.some((d) => d.clave === "marca") &&
+      atributosFijos.some((d) => d.clave === "sabor"),
+    [atributosFijos],
+  );
   const atributosExtraLibres = React.useMemo(() => {
     if (!atributosExtra) return null;
     const entries = Object.entries(atributosExtra).filter(
@@ -487,10 +498,11 @@ export function ProductoWizardDialog({
       (tipoDescuento === "monto" && dmonto > 0));
 
   const step0Valid =
-    nombre.trim().length >= 2 && (isEdit || categoriaId !== "");
+    (rubroComponeNombre || nombre.trim().length >= 2) &&
+    (isEdit || categoriaId !== "") &&
+    !atributosFijosValidacion;
   const step2Valid = pv > 0 && pc > 0 && !esGananciaNegativa;
-  const step3Valid = !atributosFijosValidacion;
-  const canSubmit = step0Valid && step2Valid && step3Valid;
+  const canSubmit = step0Valid && step2Valid;
 
   function canAdvanceFrom(i: number) {
     if (i === 0) return step0Valid;
@@ -680,19 +692,29 @@ export function ProductoWizardDialog({
                 </div>
 
                 <div className="min-w-0 flex-1 space-y-2.5">
-                  <div className="space-y-1">
-                    <Label className="text-xs font-bold uppercase text-muted-foreground">
-                      Nombre
-                    </Label>
-                    <div className="relative">
-                      <Tag className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        value={nombre}
-                        onChange={(e) => setNombre(e.target.value)}
-                        className="pl-9 h-10 bg-muted/30"
-                      />
+                  {rubroComponeNombre ? (
+                    <div className="flex items-start gap-2 rounded-lg border border-dashed border-muted-foreground/30 bg-muted/10 p-2.5">
+                      <Sparkles className="h-3.5 w-3.5 shrink-0 mt-0.5 text-primary" />
+                      <p className="text-[11px] leading-snug text-muted-foreground">
+                        El nombre se genera solo con Marca + Sabor + Puffs en el
+                        paso &quot;Extras&quot;.
+                      </p>
                     </div>
-                  </div>
+                  ) : (
+                    <div className="space-y-1">
+                      <Label className="text-xs font-bold uppercase text-muted-foreground">
+                        Nombre
+                      </Label>
+                      <div className="relative">
+                        <Tag className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          value={nombre}
+                          onChange={(e) => setNombre(e.target.value)}
+                          className="pl-9 h-10 bg-muted/30"
+                        />
+                      </div>
+                    </div>
+                  )}
 
                   <div className="space-y-1">
                     <Label className="text-xs font-bold uppercase text-muted-foreground">
@@ -795,6 +817,26 @@ export function ProductoWizardDialog({
                   </div>
                 )}
               </div>
+
+              {/* Atributos fijos del rubro activo — son datos básicos del
+                  producto (marca, sabor, puffs...), no algo secundario, así
+                  que van acá y no en "Extras y confirmación". */}
+              {atributosFijos.length > 0 && (
+                <div className="rounded-xl border p-3 space-y-3 bg-muted/10">
+                  <p className="text-xs font-bold uppercase text-muted-foreground">
+                    Atributos de {getRubroLabel(rubroNegocio) || "este rubro"}
+                  </p>
+                  <AtributosFijosForm
+                    definiciones={atributosFijos}
+                    valores={atributosExtra}
+                    onChange={actualizarAtributoFijo}
+                    errores={
+                      atributosFijosValidacion?.fieldErrors.atributosExtra
+                    }
+                    disabled={saving}
+                  />
+                </div>
+              )}
             </>
           )}
 
@@ -1143,24 +1185,6 @@ export function ProductoWizardDialog({
                   </div>
                 )}
               </div>
-
-              {/* Atributos fijos del rubro activo — visibles por default */}
-              {atributosFijos.length > 0 && (
-                <div className="rounded-xl border p-3 space-y-3 bg-muted/10">
-                  <p className="text-xs font-bold uppercase text-muted-foreground">
-                    Atributos de {getRubroLabel(rubroNegocio) || "este rubro"}
-                  </p>
-                  <AtributosFijosForm
-                    definiciones={atributosFijos}
-                    valores={atributosExtra}
-                    onChange={actualizarAtributoFijo}
-                    errores={
-                      atributosFijosValidacion?.fieldErrors.atributosExtra
-                    }
-                    disabled={saving}
-                  />
-                </div>
-              )}
 
               {/* Sección de atributos libres — colapsada por default */}
               <div className="rounded-xl border border-dashed border-muted-foreground/30 p-3 space-y-3 bg-muted/10">
