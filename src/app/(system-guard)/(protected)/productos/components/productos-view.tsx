@@ -86,7 +86,7 @@ import { ProductosAgotadosSheetContent } from "./productos-agotados-sheet-conten
 import { ProductosBajoStockSheetContent } from "./productos-bajo-stock-sheet-content";
 import { ColumnasProductoPicker } from "./columnas-producto-picker";
 import { getAtributosTipicos } from "@/modules/invoices/config/rubros";
-import { getAtributosFijos } from "@/modules/invoices/config/rubro-atributos";
+import { getAtributosFijos, getNombreCompuestoDef } from "@/modules/invoices/config/rubro-atributos";
 
 // --- Interfaces ---
 interface StatCardProps {
@@ -162,17 +162,26 @@ export function ProductosView() {
   );
   const [sugerenciasRubro, setSugerenciasRubro] = React.useState<string[]>([]);
   const [rubroNegocio, setRubroNegocio] = React.useState<string | null>(null);
+  // El rubro (que decide si la celda "Producto" muestra el nombre o lo
+  // oculta porque se auto-compone desde columnas) se carga async. Hasta no
+  // saberlo no mostramos el nombre: evita que aparezca un frame y luego lo
+  // reemplacen las columnas Marca/Línea/Concentración.
+  const [configCargado, setConfigCargado] = React.useState(false);
 
   React.useEffect(() => {
+    setConfigCargado(false);
     apiService
       .getConfiguracionGeneral()
       .then(async (config) => {
         const rubro = config?.rubroNegocio ?? null;
         setRubroNegocio(rubro);
+        setConfigCargado(true);
         const hint = getAtributosTipicos(rubro);
         setSugerenciasRubro(hint ? hint.split(", ").filter(Boolean) : []);
 
-        const columnasGuardadas = config?.columnasAtributosProducto ?? [];
+        const columnasGuardadas = [
+          ...new Set(config?.columnasAtributosProducto ?? []),
+        ];
         if (columnasGuardadas.length > 0) {
           setColumnasAtributos(columnasGuardadas);
           return;
@@ -196,6 +205,7 @@ export function ProductosView() {
         }
       })
       .catch(() => {
+        setConfigCargado(true);
         setColumnasAtributos([]);
         setSugerenciasRubro([]);
         setRubroNegocio(null);
@@ -255,18 +265,20 @@ export function ProductosView() {
     return map;
   }, [rubroNegocio]);
 
-  // Rubros con forma marca+sabor (ej. vapes) auto-componen el nombre del
-  // producto (ver producto-wizard-dialog.tsx) — mostrar ese texto de nuevo
-  // en la columna "Producto" repite exactamente lo que ya dicen las
-  // columnas Marca/Sabor/Puffs, así que ahí esa celda queda solo con
-  // imagen y código de barras.
-  const nombreEsAutoCompuesto = React.useMemo(() => {
-    const defs = getAtributosFijos(rubroNegocio);
-    return (
-      defs.some((d) => d.clave === "marca") &&
-      defs.some((d) => d.clave === "sabor")
-    );
-  }, [rubroNegocio]);
+  // Rubros que auto-componen el nombre del producto (vapes: marca+sabor+
+  // puffs; perfumes: marca+línea+concentración+ml+género; ver
+  // producto-wizard-dialog.tsx) — mostrar ese texto de nuevo en la columna
+  // "Producto" repite exactamente lo que ya dicen las columnas del rubro,
+  // así que ahí esa celda queda solo con imagen y código de barras.
+  const nombreEsAutoCompuesto = React.useMemo(
+    () => !!getNombreCompuestoDef(rubroNegocio),
+    [rubroNegocio],
+  );
+  // Mostramos el nombre en la celda "Producto" solo cuando sabemos que el
+  // rubro NO lo auto-compone (y tras cargar la config). Mientras no se sabe,
+  // la celda queda con imagen (+ código) para no hacer el flash "nombre que
+  // aparece y luego lo reemplazan las columnas".
+  const mostrarNombreProducto = configCargado && !nombreEsAutoCompuesto;
 
   const handleColumnasAtributosChange = async (nuevas: string[]) => {
     setColumnasAtributos(nuevas); // optimista
@@ -864,7 +876,7 @@ export function ProductosView() {
                         isLow={isLowStock(p)}
                         isOut={isOutOfStock(p)}
                         columnasAtributos={columnasAtributos}
-                        nombreEsAutoCompuesto={nombreEsAutoCompuesto}
+                        mostrarNombreProducto={mostrarNombreProducto}
                       />
                     ))}
                     {sorted.length === 0 && (
@@ -1189,7 +1201,7 @@ function ProductoRow({
   isLow,
   isOut,
   columnasAtributos,
-  nombreEsAutoCompuesto,
+  mostrarNombreProducto,
 }: {
   p: ProductoViewItem;
   idx: number;
@@ -1197,7 +1209,7 @@ function ProductoRow({
   isLow: boolean;
   isOut: boolean;
   columnasAtributos: string[];
-  nombreEsAutoCompuesto: boolean;
+  mostrarNombreProducto: boolean;
 }) {
   const desc = React.useMemo(
     () =>
@@ -1234,7 +1246,7 @@ function ProductoRow({
       <TableCell
         className={cn(
           "pl-6 py-4 max-w-0",
-          nombreEsAutoCompuesto ? "w-16" : "w-[30%]",
+          mostrarNombreProducto ? "w-[30%]" : "w-16",
         )}
       >
         <div className="flex items-center gap-4 min-w-0">
@@ -1251,11 +1263,12 @@ function ProductoRow({
               <ImageIcon className="h-6 w-6 text-muted-foreground/40" />
             )}
           </div>
-          {/* Si el nombre se auto-compone desde Marca+Sabor+Puffs, mostrarlo
-              acá de nuevo repite exactamente esas columnas — la celda queda
-              solo con la imagen. El código de barras, cuando existe, sigue
-              siendo buscable desde el buscador de arriba. */}
-          {!nombreEsAutoCompuesto && (
+          {/* Si el nombre se auto-compone desde las columnas del rubro
+              (Marca+Línea+Concentración...), mostrarlo acá de nuevo repite
+              exactamente esas columnas — la celda queda solo con la imagen.
+              El código de barras, cuando existe, sigue siendo buscable desde
+              el buscador de arriba. */}
+          {mostrarNombreProducto && (
             <div className="flex flex-col gap-1 min-w-0">
               <span
                 className="font-bold text-foreground text-sm leading-none group-hover:text-primary transition-colors truncate"

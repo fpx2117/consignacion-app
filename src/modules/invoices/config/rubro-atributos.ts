@@ -59,7 +59,6 @@ export const RUBRO_ATRIBUTOS_FIJOS: Record<string, AtributoFijoDef[]> = {
       tipo: "seleccion",
       opciones: ["Femenino", "Masculino", "Unisex"],
     },
-    { clave: "vencimiento", label: "Vencimiento", tipo: "fecha" },
   ],
   indumentaria: [
     { clave: "marca", label: "Marca", tipo: "texto" },
@@ -122,33 +121,81 @@ export function getAtributosFijos(
 }
 
 /**
- * Compone el nombre de un producto a partir de sus atributos fijos, para
- * rubros que definen tanto "marca" como "sabor" (hoy: vapes). Genérico —
- * no hardcodea el slug del rubro, así que cualquier rubro futuro con esa
- * misma forma (marca + sabor, opcionalmente puffs) lo hereda gratis.
+ * Una parte del nombre compuesto: la `clave` de atributo cuyo valor se
+ * incluye, con un `sufijo` opcional (ej. " Puffs" para los vapes).
+ */
+export interface NombreParte {
+  clave: string;
+  sufijo?: string;
+}
+
+/**
+ * Definición de nombre compuesto para un rubro: `partes` en orden (se
+ * omiten las que no tienen valor) y una `etiqueta` legible para el Resumen
+ * del wizard (ej. "marca + sabor + puffs").
+ */
+export interface RubroNombreCompuesto {
+  partes: NombreParte[];
+  etiqueta: string;
+}
+
+// Rubros cuyo nombre se compone automáticamente desde sus atributos fijos.
+// La clave "marca" es el dato mínimo indispensable en todos; el resto de las
+// partes se agregan solo si tienen valor.
+const RUBRO_NOMBRE_COMPUESTO: Record<string, RubroNombreCompuesto> = {
+  vapes: {
+    partes: [
+      { clave: "marca" },
+      { clave: "sabor" },
+      { clave: "puffs", sufijo: " Puffs" },
+    ],
+    etiqueta: "marca + sabor + puffs",
+  },
+  perfumeria: {
+    partes: [
+      { clave: "marca" },
+      { clave: "linea" },
+      { clave: "concentracion" },
+      { clave: "ml" },
+      { clave: "genero" },
+    ],
+    etiqueta: "marca + línea + concentración + ml + género",
+  },
+};
+
+/** Devuelve la definición de nombre compuesto del rubro, o null si ese
+ * rubro no auto-compone el nombre. */
+export function getNombreCompuestoDef(
+  rubro: string | null | undefined,
+): RubroNombreCompuesto | null {
+  return rubro ? RUBRO_NOMBRE_COMPUESTO[rubro] ?? null : null;
+}
+
+/**
+ * Compone el nombre de un producto a partir de su rubro y sus atributos.
+ * Declarativo por rubro (ver RUBRO_NOMBRE_COMPUESTO) — cada rubro declara
+ * el orden de claves y sus sufijos, así se hereda gratis para cualquier
+ * rubro que lo agregue.
  *
- * Devuelve null si el rubro no tiene esa forma, o si falta la marca (dato
+ * Devuelve null si el rubro no compone nombre, o si falta la marca (dato
  * mínimo indispensable) — en esos casos el nombre sigue siendo el que
  * tipeó el usuario a mano.
  */
 export function componerNombreProducto(
-  atributosFijos: AtributoFijoDef[],
+  rubro: string | null | undefined,
   atributosExtra: Record<string, string> | null | undefined,
 ): string | null {
-  const tieneMarca = atributosFijos.some((d) => d.clave === "marca");
-  const tieneSabor = atributosFijos.some((d) => d.clave === "sabor");
-  if (!tieneMarca || !tieneSabor) return null;
+  const def = getNombreCompuestoDef(rubro);
+  if (!def) return null;
 
   const marca = atributosExtra?.marca?.trim();
   if (!marca) return null;
 
-  const partes = [marca];
-  const sabor = atributosExtra?.sabor?.trim();
-  if (sabor) partes.push(sabor);
-
-  const tienePuffs = atributosFijos.some((d) => d.clave === "puffs");
-  const puffs = atributosExtra?.puffs?.trim();
-  if (tienePuffs && puffs) partes.push(`${puffs} Puffs`);
-
-  return partes.join(" - ");
+  const partes: string[] = [];
+  for (const parte of def.partes) {
+    const valor = atributosExtra?.[parte.clave]?.trim();
+    if (!valor) continue;
+    partes.push(parte.sufijo ? `${valor}${parte.sufijo}` : valor);
+  }
+  return partes.length > 0 ? partes.join(" - ") : null;
 }

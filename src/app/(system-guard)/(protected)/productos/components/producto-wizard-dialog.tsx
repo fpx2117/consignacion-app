@@ -70,6 +70,7 @@ import {
 import {
   componerNombreProducto,
   getAtributosFijos,
+  getNombreCompuestoDef,
 } from "@/modules/invoices/config/rubro-atributos";
 import { validarAtributosFijosProducto } from "@/lib/validators/producto-atributos-fijos";
 import { toast } from "sonner";
@@ -264,6 +265,10 @@ export function ProductoWizardDialog({
     string[]
   >([]);
   const [rubroNegocio, setRubroNegocio] = React.useState<string | null>(null);
+  // El rubro (que decide si el input "Nombre" se muestra) se carga async al
+  // abrir el dialog. Hasta no saberlo no mostramos ese input: evitamos que
+  // aparezca un frame y desaparezca cuando el rubro auto-compone el nombre.
+  const [configCargado, setConfigCargado] = React.useState(false);
   const codigoBarraInputRef = React.useRef<HTMLInputElement | null>(null);
 
   const confirmBarcode = React.useCallback(() => {
@@ -295,6 +300,7 @@ export function ProductoWizardDialog({
   React.useEffect(() => {
     if (!open) return;
     setStep(0);
+    setConfigCargado(false);
     setNombre(producto?.nombre ?? initialValues?.nombre ?? "");
     setCodigoBarra(producto?.codigoBarra ?? initialValues?.codigoBarra ?? "");
     setBarcodeCameraOpen(false);
@@ -363,10 +369,12 @@ export function ProductoWizardDialog({
         const hint = getAtributosTipicos(config?.rubroNegocio);
         setSugerenciasAtributos(hint ? hint.split(", ").filter(Boolean) : []);
         setRubroNegocio(config?.rubroNegocio ?? null);
+        setConfigCargado(true);
       })
       .catch(() => {
         setSugerenciasAtributos([]);
         setRubroNegocio(null);
+        setConfigCargado(true);
       });
 
     if (producto?.categoriaId) {
@@ -411,15 +419,19 @@ export function ProductoWizardDialog({
     [atributosFijos],
   );
   // Es una propiedad del RUBRO (no de lo que ya se tipeó): si el rubro
-  // define marca+sabor, el nombre siempre se va a auto-componer en el
-  // paso "Extras" (ver componerNombreProducto) — el input de "Nombre" del
-  // paso 1 no tiene sentido en ese caso, se descartaría igual.
+  // define nombre compuesto (marca+sabor en vapes, marca+línea+... en
+  // perfumes), el nombre siempre se va a auto-componer en el paso "Extras"
+  // (ver componerNombreProducto) — el input de "Nombre" del paso 1 no tiene
+  // sentido en ese caso, se descartaría igual.
   const rubroComponeNombre = React.useMemo(
-    () =>
-      atributosFijos.some((d) => d.clave === "marca") &&
-      atributosFijos.some((d) => d.clave === "sabor"),
-    [atributosFijos],
+    () => !!getNombreCompuestoDef(rubroNegocio),
+    [rubroNegocio],
   );
+  // El input "Nombre" solo tiene sentido si el rubro NO auto-compone el
+  // nombre. Y solo lo mostramos una vez que el rubro se cargó (configCargado)
+  // — hasta entonces no se sabe, así que no renderizamos nada para no hacer
+  // el flash "aparece y se va".
+  const mostrarNombre = configCargado && !rubroComponeNombre;
   const atributosExtraLibres = React.useMemo(() => {
     if (!atributosExtra) return null;
     const entries = Object.entries(atributosExtra).filter(
@@ -431,12 +443,17 @@ export function ProductoWizardDialog({
     () => validarAtributosFijosProducto(atributosExtra, rubroNegocio),
     [atributosExtra, rubroNegocio],
   );
-  // Para rubros con forma marca+sabor (ej. vapes), el nombre final se
-  // compone solo a partir de esos atributos — lo que se tipeó en "Nombre"
-  // en el paso 1 es un placeholder temporal hasta llegar a este cálculo.
+  // Para rubros que auto-componen el nombre (vapes, perfumes), el nombre
+  // final se compone solo a partir de esos atributos — lo que se tipeó en
+  // "Nombre" en el paso 1 es un placeholder temporal hasta llegar a este
+  // cálculo.
   const nombreCompuesto = React.useMemo(
-    () => componerNombreProducto(atributosFijos, atributosExtra),
-    [atributosFijos, atributosExtra],
+    () => componerNombreProducto(rubroNegocio, atributosExtra),
+    [rubroNegocio, atributosExtra],
+  );
+  const etiquetaNombreAuto = React.useMemo(
+    () => getNombreCompuestoDef(rubroNegocio)?.etiqueta ?? "",
+    [rubroNegocio],
   );
   const nombreFinal = nombreCompuesto ?? nombre.trim();
 
@@ -683,7 +700,7 @@ export function ProductoWizardDialog({
                 <div
                   className={cn(
                     "space-y-1",
-                    rubroComponeNombre ? "w-full" : "shrink-0 w-[88px]",
+                    mostrarNombre ? "shrink-0 w-[88px]" : "w-full",
                   )}
                 >
                   <Label className="text-[10px] font-bold uppercase text-muted-foreground">
@@ -696,7 +713,7 @@ export function ProductoWizardDialog({
                   />
                 </div>
 
-                {!rubroComponeNombre && (
+                {mostrarNombre && (
                   <div className="min-w-0 flex-1 space-y-1">
                     <Label className="text-xs font-bold uppercase text-muted-foreground">
                       Nombre
@@ -1251,9 +1268,9 @@ export function ProductoWizardDialog({
                 <div className="grid grid-cols-2 gap-x-3 gap-y-1.5 text-sm">
                   <span className="text-muted-foreground">
                     Nombre
-                    {nombreCompuesto && (
+                    {nombreCompuesto && etiquetaNombreAuto && (
                       <span className="block text-[9px] normal-case font-normal text-muted-foreground/70">
-                        auto: marca + sabor + puffs
+                        auto: {etiquetaNombreAuto}
                       </span>
                     )}
                   </span>
