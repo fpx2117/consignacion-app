@@ -20,8 +20,7 @@ test("vapes tiene marca requerida, sabor opcional (hay dispositivos sin sabor)",
 });
 
 test("componerNombreProducto: marca + sabor + puffs (vapes)", () => {
-  const def = getAtributosFijos("vapes");
-  const nombre = componerNombreProducto(def, {
+  const nombre = componerNombreProducto("vapes", {
     marca: "ELFBAR ICE KING",
     sabor: "Black Mint",
     puffs: "40000",
@@ -30,21 +29,40 @@ test("componerNombreProducto: marca + sabor + puffs (vapes)", () => {
 });
 
 test("componerNombreProducto: marca sin sabor ni puffs (dispositivo)", () => {
-  const def = getAtributosFijos("vapes");
-  const nombre = componerNombreProducto(def, { marca: "Vaporesso" });
+  const nombre = componerNombreProducto("vapes", { marca: "Vaporesso" });
   assert.equal(nombre, "Vaporesso");
 });
 
 test("componerNombreProducto: null si falta la marca", () => {
-  const def = getAtributosFijos("vapes");
-  assert.equal(componerNombreProducto(def, { sabor: "Mango" }), null);
-  assert.equal(componerNombreProducto(def, null), null);
+  assert.equal(componerNombreProducto("vapes", { sabor: "Mango" }), null);
+  assert.equal(componerNombreProducto("vapes", null), null);
 });
 
-test("componerNombreProducto: null para rubros sin forma marca+sabor (ej. ferretería)", () => {
-  const def = getAtributosFijos("ferreteria");
+test("componerNombreProducto: perfumes = marca + línea + concentración + ml + género", () => {
+  const nombre = componerNombreProducto("perfumeria", {
+    marca: "Dior",
+    linea: "Miss Dior",
+    concentracion: "EDP",
+    ml: "50",
+    genero: "Femenino",
+  });
+  assert.equal(nombre, "Dior - Miss Dior - EDP - 50 - Femenino");
+});
+
+test("componerNombreProducto: perfumes omite partes sin valor", () => {
+  const nombre = componerNombreProducto("perfumeria", {
+    marca: "Dior",
+    ml: "100",
+  });
+  assert.equal(nombre, "Dior - 100");
+});
+
+test("componerNombreProducto: null para rubros sin nombre compuesto (ej. ferretería)", () => {
   assert.equal(
-    componerNombreProducto(def, { marca: "Bosch", medida: "10mm" }),
+    componerNombreProducto("ferreteria", {
+      marca: "Bosch",
+      medida: "10mm",
+    }),
     null,
   );
 });
