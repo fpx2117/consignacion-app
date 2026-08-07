@@ -57,7 +57,6 @@ import {
   CheckCircle2,
   ChevronLeft,
   ChevronRight,
-  Sparkles,
 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { ImageUpload } from "@/components/image-upload";
@@ -678,7 +677,8 @@ export function ProductoWizardDialog({
         <div className="flex-1 space-y-3 overflow-y-auto px-5 py-4">
           {step === 0 && (
             <>
-              {/* Imagen + nombre + categoría/subcategoría + vencimiento */}
+              {/* Imagen + nombre (el nombre no se muestra si el rubro lo
+                  auto-compone desde sus atributos — ver más abajo). */}
               <div className="flex gap-4 items-start">
                 <div className="shrink-0 w-[88px] space-y-1">
                   <Label className="text-[10px] font-bold uppercase text-muted-foreground">
@@ -691,146 +691,25 @@ export function ProductoWizardDialog({
                   />
                 </div>
 
-                <div className="min-w-0 flex-1 space-y-2.5">
-                  {rubroComponeNombre ? (
-                    <div className="flex items-start gap-2 rounded-lg border border-dashed border-muted-foreground/30 bg-muted/10 p-2.5">
-                      <Sparkles className="h-3.5 w-3.5 shrink-0 mt-0.5 text-primary" />
-                      <p className="text-[11px] leading-snug text-muted-foreground">
-                        El nombre se genera solo con Marca + Sabor + Puffs en el
-                        paso &quot;Extras&quot;.
-                      </p>
-                    </div>
-                  ) : (
-                    <div className="space-y-1">
-                      <Label className="text-xs font-bold uppercase text-muted-foreground">
-                        Nombre
-                      </Label>
-                      <div className="relative">
-                        <Tag className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                        <Input
-                          value={nombre}
-                          onChange={(e) => setNombre(e.target.value)}
-                          className="pl-9 h-10 bg-muted/30"
-                        />
-                      </div>
-                    </div>
-                  )}
-
-                  <div className="space-y-1">
+                {!rubroComponeNombre && (
+                  <div className="min-w-0 flex-1 space-y-1">
                     <Label className="text-xs font-bold uppercase text-muted-foreground">
-                      Vencimiento (Opcional)
+                      Nombre
                     </Label>
                     <div className="relative">
-                      <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Tag className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                       <Input
-                        type="date"
-                        value={fechaVencimiento}
-                        onChange={(e) => setFechaVencimiento(e.target.value)}
+                        value={nombre}
+                        onChange={(e) => setNombre(e.target.value)}
                         className="pl-9 h-10 bg-muted/30"
                       />
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-3 border-t border-border/50">
-                <div
-                  className={cn(
-                    "space-y-1",
-                    categoriaId && subcategorias.length > 0
-                      ? "sm:col-span-1"
-                      : "sm:col-span-2",
-                  )}
-                >
-                  <Label className="text-xs font-bold uppercase text-muted-foreground">
-                    Categoría
-                  </Label>
-                  <div className="flex gap-2">
-                    <div className="relative flex-1">
-                      <Layers className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground z-10" />
-                      <Select
-                        value={categoriaId}
-                        onValueChange={setCategoriaId}
-                      >
-                        <SelectTrigger className="pl-9 h-10 bg-muted/30">
-                          <SelectValue
-                            placeholder={
-                              isEdit
-                                ? "Sin categoría"
-                                : "Seleccionar categoría..."
-                            }
-                          />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {categorias.map((cat) => {
-                            const catColor = getCategoryColorByKey(cat.color);
-                            return (
-                              <SelectItem
-                                key={cat.id}
-                                value={cat.id.toString()}
-                              >
-                                <span className="flex items-center gap-2">
-                                  <span
-                                    className={cn(
-                                      "h-2 w-2 rounded-full shrink-0",
-                                      catColor.dot,
-                                    )}
-                                  />
-                                  {cat.nombre}
-                                </span>
-                              </SelectItem>
-                            );
-                          })}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <CreateCategoriaDialog
-                      onCreated={() => {
-                        apiService
-                          .getCategorias()
-                          .then((data) =>
-                            setCategorias(Array.isArray(data) ? data : []),
-                          );
-                        onCategoriasChanged?.();
-                      }}
-                    />
-                  </div>
-                </div>
-
-                {categoriaId && subcategorias.length > 0 && (
-                  <div className="space-y-1 sm:col-span-1 animate-in fade-in slide-in-from-top-2 duration-300">
-                    <Label className="text-xs font-bold uppercase text-muted-foreground">
-                      Subcategoría (Opcional)
-                    </Label>
-                    <div className="relative">
-                      <Tag className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground z-10" />
-                      <Select
-                        value={subcategoriaId}
-                        onValueChange={setSubcategoriaId}
-                      >
-                        <SelectTrigger className="pl-9 h-10 bg-muted/30">
-                          <SelectValue placeholder="Seleccionar subcategoría..." />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="none">Sin subcategoría</SelectItem>
-                          {subcategorias.map((sub) => (
-                            <SelectItem key={sub.id} value={sub.id.toString()}>
-                              {sub.nombre}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
                     </div>
                   </div>
                 )}
               </div>
 
-              {/* Atributos fijos del rubro activo — son datos básicos del
-                  producto (marca, sabor, puffs...), no algo secundario, así
-                  que van acá y no en "Extras y confirmación". Mismo estilo
-                  de separador que el bloque de Categoría de arriba, para
-                  que el paso se lea como un solo formulario con secciones,
-                  no como widgets sueltos sin relación entre sí. */}
+              {/* Atributos fijos del rubro activo — son el dato principal
+                  del producto (marca, sabor, puffs...), van primero. */}
               {atributosFijos.length > 0 && (
                 <div className="space-y-3 pt-3 border-t border-border/50">
                   <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
@@ -847,6 +726,122 @@ export function ProductoWizardDialog({
                   />
                 </div>
               )}
+
+              {/* Vencimiento + Categoría/Subcategoría — datos secundarios,
+                  agrupados juntos al final del paso. */}
+              <div className="space-y-3 pt-3 border-t border-border/50">
+                <div className="space-y-1">
+                  <Label className="text-xs font-bold uppercase text-muted-foreground">
+                    Vencimiento (Opcional)
+                  </Label>
+                  <div className="relative">
+                    <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      type="date"
+                      value={fechaVencimiento}
+                      onChange={(e) => setFechaVencimiento(e.target.value)}
+                      className="pl-9 h-10 bg-muted/30"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div
+                    className={cn(
+                      "space-y-1",
+                      categoriaId && subcategorias.length > 0
+                        ? "sm:col-span-1"
+                        : "sm:col-span-2",
+                    )}
+                  >
+                    <Label className="text-xs font-bold uppercase text-muted-foreground">
+                      Categoría
+                    </Label>
+                    <div className="flex gap-2">
+                      <div className="relative flex-1">
+                        <Layers className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground z-10" />
+                        <Select
+                          value={categoriaId}
+                          onValueChange={setCategoriaId}
+                        >
+                          <SelectTrigger className="pl-9 h-10 bg-muted/30">
+                            <SelectValue
+                              placeholder={
+                                isEdit
+                                  ? "Sin categoría"
+                                  : "Seleccionar categoría..."
+                              }
+                            />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {categorias.map((cat) => {
+                              const catColor = getCategoryColorByKey(cat.color);
+                              return (
+                                <SelectItem
+                                  key={cat.id}
+                                  value={cat.id.toString()}
+                                >
+                                  <span className="flex items-center gap-2">
+                                    <span
+                                      className={cn(
+                                        "h-2 w-2 rounded-full shrink-0",
+                                        catColor.dot,
+                                      )}
+                                    />
+                                    {cat.nombre}
+                                  </span>
+                                </SelectItem>
+                              );
+                            })}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <CreateCategoriaDialog
+                        onCreated={() => {
+                          apiService
+                            .getCategorias()
+                            .then((data) =>
+                              setCategorias(Array.isArray(data) ? data : []),
+                            );
+                          onCategoriasChanged?.();
+                        }}
+                      />
+                    </div>
+                  </div>
+
+                  {categoriaId && subcategorias.length > 0 && (
+                    <div className="space-y-1 sm:col-span-1 animate-in fade-in slide-in-from-top-2 duration-300">
+                      <Label className="text-xs font-bold uppercase text-muted-foreground">
+                        Subcategoría (Opcional)
+                      </Label>
+                      <div className="relative">
+                        <Tag className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground z-10" />
+                        <Select
+                          value={subcategoriaId}
+                          onValueChange={setSubcategoriaId}
+                        >
+                          <SelectTrigger className="pl-9 h-10 bg-muted/30">
+                            <SelectValue placeholder="Seleccionar subcategoría..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none">
+                              Sin subcategoría
+                            </SelectItem>
+                            {subcategorias.map((sub) => (
+                              <SelectItem
+                                key={sub.id}
+                                value={sub.id.toString()}
+                              >
+                                {sub.nombre}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
             </>
           )}
 
