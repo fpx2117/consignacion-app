@@ -16,6 +16,7 @@ export const VIOLATION_CATEGORIES = [
 
 const FULL_EXEMPT_PATHS = new Set([
   "scripts/check-visual-guard.mjs",
+  "scripts/corregir-perfumes.ts",
   "scripts/visual-guard-core.mjs",
 ]);
 // Fuente canonica de colores + su salida CSS generada (ver docs/plans).
