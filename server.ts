@@ -6,7 +6,6 @@ import { Server } from "socket.io";
 // @ts-expect-error cookie viene como dep transitiva de socket.io/engine.io
 import { parse as parseCookie } from "cookie";
 import { jwtVerify } from "jose";
-import { shutdownTesseractWorker } from "./src/lib/ocr/tesseract-service";
 import { startMemoryLogger } from "./src/lib/observability/memory-logger";
 
 const dev = process.env.NODE_ENV !== "production";
@@ -201,7 +200,6 @@ app.prepare().then(() => {
   // 9. Graceful shutdown
   const shutdown = async () => {
     console.log("\n🛑 Apagando servidor...");
-    await shutdownTesseractWorker();
     io?.close();
     httpServer.close();
     process.exit(0);
