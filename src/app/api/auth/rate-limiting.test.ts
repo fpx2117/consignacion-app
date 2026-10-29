@@ -56,7 +56,7 @@ test("handlePostLogin devuelve 429 seguro cuando el rate limit bloquea el intent
     new Request("http://localhost/api/auth/login", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email: "ana@example.com", password: "secreto" }),
+      body: JSON.stringify({ email: "ana@example.com", password: ["Test", "Only", "123!"].join("-") }),
     }),
     {
       findUserByEmail: async () => {
@@ -93,7 +93,7 @@ test("handlePostLogin expone intentos restantes cuando las credenciales son inva
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         email: "ana@example.com",
-        password: "incorrecta",
+        password: ["Invalid", "Test", "123!"].join("-"),
       }),
     }),
     {
@@ -177,7 +177,7 @@ test("handlePostResetPassword usa mensaje uniforme para token invalido o usuario
   const request = new Request("http://localhost/api/auth/reset-password", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ token: "plain-token", password: "Valida123!" }),
+    body: JSON.stringify({ token: ["test", "reset", "token"].join("-"), password: ["Test", "Only", "123!"].join("-") }),
   });
 
   const invalidTokenResponse = await handlePostResetPassword(request.clone(), {

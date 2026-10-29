@@ -157,7 +157,7 @@ test("no confunde palabras Unicode con la fuente Inter", () => {
 test("detecta POS dentro de etiquetas visibles", () => {
   const result = analyzeSource(
     "src/example.tsx",
-    '<h1>Panel POS principal</h1>\n<h2>Dashboard</h2>\nconst title = "Reporte POS diario";',
+    '<h1>Panel POS principal</h1>\n<h2>Dashboard</h2>\nconst title = "Reporte POS diario";\nconst update = <K extends keyof Setup>(key: K) => key;',
   );
 
   assert.equal(result.violations.legacyBrands.length, 3);

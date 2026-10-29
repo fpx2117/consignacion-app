@@ -58,6 +58,9 @@ eslint.json
 # local AI tooling caches (not part of the app)
 .agent/
 .codegraph/
+.claude/settings.local.json
+/debug_pg.js
+/clean_db.js
 
 # scratch: archivos/carpetas sueltos que no son parte de la arquitectura
 # (backups, builds rotas, logs, screenshots temporales, caches)

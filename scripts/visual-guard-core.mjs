@@ -77,8 +77,8 @@ const LEGACY_BRANDS = [
   /\bAllData\b/gi,
   /["'`][^"'`\n]*\bPOS\b[^"'`\n]*["'`]/g,
   /["'`][^"'`\n]*\bDashboard\b[^"'`\n]*["'`]/gi,
-  /<[^>]+>[^<]*\bPOS\b[^<]*</g,
-  /<[^>]+>[^<]*\bDashboard\b[^<]*</gi,
+  /<(?!\/|[A-Za-z_$][\w$]*\s+extends\b)[^>]+>[^<]*\bPOS\b[^<]*</g,
+  /<(?!\/|[A-Za-z_$][\w$]*\s+extends\b)[^>]+>[^<]*\bDashboard\b[^<]*</gi,
   /import\.vps/gi,
 ];
 

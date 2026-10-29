@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
+import { randomBytes } from "node:crypto";
 import { prisma } from "@/lib/prisma";
+import { validateSetupSecurity } from "./setup-security";
 import {
   SUBSCRIPTION_PLANS,
   PLAN_LIMITS_DEFAULTS,
@@ -11,7 +13,6 @@ import {
   RolUsuario,
 } from "@prisma/client";
 
-// ✅ IMPORTANT: Prisma necesita Node runtime (NO Edge)
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
@@ -122,9 +123,8 @@ export async function POST(req: Request) {
       notifications,
     } = body;
 
-    if (!admin?.nombre || !admin?.email || !admin?.password) {
-      return jsonError(400, { message: "Faltan datos del administrador" });
-    }
+    const securityError = validateSetupSecurity({ admin, staff, branding });
+    if (securityError) return jsonError(400, { message: securityError });
 
     const adminEmail = normalizeEmail(admin.email);
 
@@ -543,9 +543,9 @@ export async function POST(req: Request) {
           const passwordToUse =
             member.password && member.password.trim() !== ""
               ? member.password
-              : Math.random().toString(36).slice(-8);
+              : randomBytes(18).toString("base64url");
 
-          const staffHash = await bcrypt.hash(passwordToUse, 10);
+          const staffHash = await bcrypt.hash(passwordToUse, 12);
 
           await tx.usuario.create({
             data: {

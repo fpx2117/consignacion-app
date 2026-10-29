@@ -24,6 +24,7 @@ import { SUBSCRIPTION_PLANS } from "@/constants/subscriptions";
 
 import type { SetupStep, SetupFormData, InitializePayload } from "./types";
 import type { SubscriptionPlan } from "@/constants/subscriptions";
+import { fileToBase64 } from "./client-security";
 
 const ENABLED_SETUP_PLAN_IDS = [2, 3] as const;
 const isEnabledSetupPlan = (planId: number) =>
@@ -32,20 +33,6 @@ const isEnabledSetupPlan = (planId: number) =>
   );
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
-
-function fileToBase64(file: File): Promise<{ data: string; mime: string }> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      const result = reader.result as string;
-      const [mimeInfo, data] = result.split(";base64,");
-      const mime = mimeInfo.split(":")[1];
-      resolve({ data, mime });
-    };
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
-}
 
 function toSafeData(form: SetupFormData): Record<string, unknown> {
   const { password: _ap, confirmPassword: _acp, ...safeAdmin } = form.adminData;
@@ -208,15 +195,7 @@ export default function SetupPage() {
   // ─── Payment + Initialize ──────────────────────────────────────────────
   const handlePaymentSuccess = useCallback(
     async (promoCode?: string, paymentId?: string) => {
-      console.log(
-        "🚀 handlePaymentSuccess llamado - promoCode:",
-        promoCode,
-        "paymentId:",
-        paymentId,
-      );
-
       if (!selectedPlan && !promoCode) {
-        console.warn("⚠️ No hay selectedPlan ni promoCode");
         return;
       }
 
@@ -279,12 +258,9 @@ export default function SetupPage() {
           body: JSON.stringify(payload),
         });
 
-        console.log("📡 API Response status:", response.status);
-
         if (response.ok) {
-          console.log("✅ Setup inicializado correctamente");
-          console.log("📝 Response:", await response.clone().json());
           sessionStorage.removeItem("setup_data_v2");
+          setForm({ ...DEFAULT_FORM_DATA });
           goToStep("success");
           setTimeout(() => {
             console.log("🔄 Redirigiendo a /dashboard...");
@@ -292,7 +268,6 @@ export default function SetupPage() {
           }, 4000);
         } else {
           const error = await response.json();
-          console.error("❌ API Error:", error);
           toast.error(error.message || "Error al inicializar el sistema");
           goToStep("payment");
         }

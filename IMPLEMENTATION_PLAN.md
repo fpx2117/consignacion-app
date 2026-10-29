@@ -374,3 +374,20 @@ cortada/incompleta en vez de cruzar toda la pantalla.
 
 - Validar `/[slug]` en un entorno con al menos una tienda con
   `tiendaSlug` configurado (no se pudo probar en vivo en esta sesión).
+
+## Remediación de seguridad (2026-10-28)
+
+- Se dejó de versionar `.claude/settings.local.json` y se sanitizaron sus
+  credenciales locales. `debug_pg.js` y `clean_db.js` ya no existen en HEAD;
+  el escáner impide que esos tres archivos vuelvan a versionarse.
+- El escáner local ahora cubre OpenRouter, callback OCR y catálogo global.
+- Setup valida contraseñas y logos (tipo, tamaño, base64 y firma real), usa
+  aleatoriedad criptográfica y evita logs de pagos/respuestas sensibles.
+- Usuarios valida IDs, emails y roles, sube bcrypt a 12 rondas e impide que un
+  administrador se elimine a sí mismo.
+- Pendiente operativo externo: revocar y rotar en Railway/OpenRouter los
+  secretos comprometidos y, con autorización explícita, purgarlos del historial
+  Git compartido. Borrarlos del HEAD no invalida copias históricas.
+- Deuda detectada fuera de esta remediación: `npm audit --omit=dev` informa 1
+  vulnerabilidad crítica y 28 altas; requiere una actualización de dependencias
+  separada y validada, sin `audit fix --force` automático.
