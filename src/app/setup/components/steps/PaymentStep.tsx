@@ -21,12 +21,14 @@ import { useDolarBlue } from "@/hooks/useDolarBlue";
 
 interface PaymentStepProps {
   plan: SubscriptionPlan;
+  adminEmail: string;
   onPaymentSuccess: (promoCode?: string, paymentId?: string) => Promise<void>;
   loading: boolean;
 }
 
 export function PaymentStep({
   plan,
+  adminEmail,
   onPaymentSuccess,
   loading,
 }: PaymentStepProps) {
@@ -41,7 +43,6 @@ export function PaymentStep({
   const [isRedirecting, setIsRedirecting] = useState(false);
   const { rate, isLoading: isLoadingDolar } = useDolarBlue();
 
-  // Calcular precio dinámico basado en dólar cripto (ignorar precio de DB)
   const calculatedPrice = Math.round(plan.precioUSD * (rate || 1200));
   const finalPrice =
     promoApplied?.discountPercentage === 100 ? 0 : calculatedPrice;
@@ -81,7 +82,7 @@ export function PaymentStep({
       const res = await fetch("/api/setup/create-paypal", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ planId: plan.id }),
+        body: JSON.stringify({ planId: plan.id, adminEmail }),
       });
       const data = await res.json();
       if (res.ok && data.approveUrl) {
@@ -95,14 +96,13 @@ export function PaymentStep({
       setIsRedirecting(false);
     }
   };
-
   const handleMercadoPagoPayment = async () => {
     setIsRedirecting(true);
     try {
       const res = await fetch("/api/setup/create-mp-subscription", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ planId: plan.id }),
+        body: JSON.stringify({ planId: plan.id, payerEmail: adminEmail }),
       });
       const data = await res.json();
       if (res.ok && data.initPoint) {

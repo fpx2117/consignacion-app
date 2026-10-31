@@ -4,6 +4,11 @@ import { randomBytes } from "node:crypto";
 import { prisma } from "@/lib/prisma";
 import { validateSetupSecurity } from "./setup-security";
 import {
+  isVerifiedMercadoPagoActivation,
+  isPayPalSubscriptionId,
+  isVerifiedPayPalSubscription,
+} from "../setup-payment-reference";
+import {
   SUBSCRIPTION_PLANS,
   PLAN_LIMITS_DEFAULTS,
 } from "@/constants/subscriptions";
@@ -92,21 +97,18 @@ function normalizeEmail(email: string) {
 
 export async function POST(req: Request) {
   try {
-    // ✅ Hard fail early if DB is not configured
     requireEnv("DATABASE_URL");
-
-    // 1) Security check: only initialize if there are NO users
-    const userCount = await prisma.usuario.count();
-    if (userCount > 0) {
+    if ((await prisma.usuario.count()) > 0)
       return jsonError(403, { message: "El sistema ya ha sido inicializado" });
-    }
-
     let body: InitializeBody;
     try {
       body = (await req.json()) as InitializeBody;
     } catch {
       return jsonError(400, { message: "Body inválido (JSON requerido)" });
     }
+
+    const securityError = validateSetupSecurity(body);
+    if (securityError) return jsonError(400, { message: securityError });
 
     const {
       admin,
@@ -123,25 +125,24 @@ export async function POST(req: Request) {
       notifications,
     } = body;
 
-    const securityError = validateSetupSecurity({ admin, staff, branding });
-    if (securityError) return jsonError(400, { message: securityError });
-
     const adminEmail = normalizeEmail(admin.email);
 
-    // --- VERIFICATION LOGIC (robusta) ---
     let verificationProvider: ProveedorSuscripcion | null = null;
     let verificationExternalId: string | null = null;
     const verificationStatus: EstadoSuscripcion = EstadoSuscripcion.ACTIVO;
     let trialDays = 30;
     let finalPlanId: number | null = typeof planId === "number" ? planId : null;
 
-    // Validate planId when provided
     if (finalPlanId !== null && finalPlanId <= 0) {
       return jsonError(400, { message: "planId inválido" });
     }
+    const requestedPlan = finalPlanId
+      ? SUBSCRIPTION_PLANS.find((plan) => plan.id === finalPlanId)
+      : null;
+    if (finalPlanId !== null && !requestedPlan)
+      return jsonError(400, { message: "planId inválido" });
 
     if (promoCode && String(promoCode).trim() !== "") {
-      // Promo verification (read now; increment later in TX to keep atomic)
       const promo = await prisma.promoCode.findUnique({
         where: { code: promoCode.toUpperCase() },
         include: { plan: true },
@@ -162,12 +163,13 @@ export async function POST(req: Request) {
       trialDays = promo.durationDays || 30;
       finalPlanId = promo.planId;
     } else if (paymentId && String(paymentId).trim() !== "") {
+      if (!requestedPlan)
+        return jsonError(400, { message: "planId requerido para el pago" });
       const pid = String(paymentId).trim();
-      const isPayPal = pid.startsWith("S-");
+      const isPayPal = isPayPalSubscriptionId(pid);
 
       if (isPayPal) {
-        // PayPal verification
-        try {
+          try {
           const { paymentConfig } = await import("@/lib/payments/config");
           const { getPayPalAccessToken } =
             await import("@/lib/payments/paypal");
@@ -196,9 +198,9 @@ export async function POST(req: Request) {
 
           const subData =
             (await response.json()) as PayPalSubscriptionStatusResponse;
-          if (subData.status !== "ACTIVE") {
+          if (!isVerifiedPayPalSubscription(subData, requestedPlan, admin.email)) {
             return jsonError(400, {
-              message: `La suscripción de PayPal no está activa (Estado: ${subData.status})`,
+              message: "La suscripción de PayPal no coincide con la activación",
             });
           }
 
@@ -210,7 +212,6 @@ export async function POST(req: Request) {
           return jsonError(400, { message: "Error verificando con PayPal" });
         }
       } else {
-        // MercadoPago verification (Payment or PreApproval)
         try {
           const { paymentConfig } = await import("@/lib/payments/config");
           const mpAccessToken = paymentConfig?.mp?.accessToken;
@@ -228,24 +229,21 @@ export async function POST(req: Request) {
 
           let verified = false;
 
-          // Try as single payment
           try {
             const payment = new Payment(mpClient);
             const paymentData = (await payment.get({
               id: pid,
             })) as MercadoPagoPaymentStatusResponse;
 
-            if (paymentData?.status === "approved") {
+            if (isVerifiedMercadoPagoActivation(paymentData, "approved", requestedPlan.id, admin.email)) {
               verificationProvider = ProveedorSuscripcion.MERCADOPAGO;
               verificationExternalId = pid;
               trialDays = 30;
               verified = true;
             }
           } catch {
-            // ignore -> try preapproval
           }
 
-          // Try as subscription (preapproval)
           if (!verified) {
             const { PreApproval } = await import("mercadopago");
             const preApproval = new PreApproval(mpClient);
@@ -253,9 +251,9 @@ export async function POST(req: Request) {
               id: pid,
             })) as MercadoPagoPreapprovalStatusResponse;
 
-            if (subData?.status !== "authorized") {
+            if (!isVerifiedMercadoPagoActivation(subData, "authorized", requestedPlan.id, admin.email)) {
               return jsonError(400, {
-                message: `La suscripción de Mercado Pago no está autorizada (Estado: ${subData?.status})`,
+                message: "La suscripción de Mercado Pago no coincide con la activación",
               });
             }
 
@@ -298,7 +296,6 @@ export async function POST(req: Request) {
       return jsonError(400, { message: "planId inválido" });
     }
 
-    // Exchange rate (NO rompe si falla)
     let exchangeRate = 1;
     try {
       const { fetchDolarBlue } = await import("@/lib/integrations/dolarBlue");
@@ -309,9 +306,9 @@ export async function POST(req: Request) {
       exchangeRate = 1;
     }
 
-    // ✅ Transaction (todo lo que puede faltar -> upsert / create seguro)
     const result = await prisma.$transaction(async (tx) => {
-      // 0) Ensure Sucursal 1 exists (evita FK defaults sucursalId=1) - usar nombre del branch o default
+      await tx.$queryRaw`SELECT pg_advisory_xact_lock(72658463821001)`;
+      if ((await tx.usuario.count()) > 0) return null;
       const branchName = branch?.nombre?.trim() || "Sucursal Principal";
       const sucursalResult = await tx.sucursal.upsert({
         where: { id: 1 },
@@ -326,7 +323,6 @@ export async function POST(req: Request) {
       });
       const sucursalId = sucursalResult.id;
 
-      // 1) Sync plans and limits (upsert)
       for (const p of SUBSCRIPTION_PLANS) {
         const calculatedPrecioARS = p.precioUSD * exchangeRate;
 
@@ -492,7 +488,7 @@ export async function POST(req: Request) {
       });
 
       // 5) Admin user
-      const adminHash = await bcrypt.hash(admin.password, 10);
+      const adminHash = await bcrypt.hash(admin.password, 12);
       const mainAdmin = await tx.usuario.create({
         data: {
           nombre: admin.nombre,
@@ -563,7 +559,8 @@ export async function POST(req: Request) {
       return { adminId: mainAdmin.id, subId: sub.id, user: mainAdmin };
     });
 
-    // 9) Login cookie
+    if (!result)
+      return jsonError(403, { message: "El sistema ya ha sido inicializado" });
     const { signUserJwt, setAuthCookie } = await import("@/lib/auth/core");
     const token = await signUserJwt({
       sub: String(result.adminId),

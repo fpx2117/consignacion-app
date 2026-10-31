@@ -32,7 +32,42 @@ test("rechaza contenido que no coincide con el MIME declarado", () => {
   assert.match(message ?? "", /logo inválido/i);
 });
 
-test("acepta datos seguros sin persistir secretos", () => {
+test("rechaza empleados con estructura o datos inválidos", () => {
+  assert.match(
+    validateSetupSecurity({ admin: validAdmin, staff: [null] as never }) ?? "",
+    /empleados inválida/i,
+  );
+  assert.match(
+    validateSetupSecurity({
+      admin: validAdmin,
+      staff: [
+        { nombre: "", email: "not-an-email", password: 123 },
+      ] as never,
+    }) ?? "",
+    /empleado inválido/i,
+  );
+});
+
+test("rechaza colores de branding que permiten inyección CSS o HTML", () => {
+  const message = validateSetupSecurity({
+    admin: validAdmin,
+    branding: { primaryColor: '\" onmouseover=\"alert(1)' },
+  });
+  assert.match(message ?? "", /color inválido/i);
+});
+
+test("rechaza contraseñas que bcrypt truncaría", () => {
+  const message = validateSetupSecurity({
+    admin: { ...validAdmin, password: `Aa1${"x".repeat(70)}` },
+  });
+  assert.match(message ?? "", /72 bytes/i);
+});
+
+test("rechaza payloads que no son objetos", () => {
+  assert.match(validateSetupSecurity(null) ?? "", /payload inválido/i);
+});
+
+test("acepta un payload seguro", () => {
   const message = validateSetupSecurity({ admin: validAdmin, staff: [] });
   assert.equal(message, null);
 });

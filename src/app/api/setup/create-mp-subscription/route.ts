@@ -4,6 +4,7 @@ import { MercadoPagoConfig, PreApproval } from "mercadopago";
 import crypto from "crypto";
 import { paymentConfig } from "@/lib/payments/config";
 import { prisma } from "@/lib/prisma";
+import { createSetupPaymentReference } from "../setup-payment-reference";
 
 type CreateMpSubscriptionBody = {
   planId?: number;
@@ -52,7 +53,7 @@ export async function POST(req: Request) {
     let normalizedPayerEmail = String(payerEmail || "")
       .trim()
       .toLowerCase();
-    if (!normalizedPayerEmail) {
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedPayerEmail)) {
       const admin = await prisma.usuario.findFirst({
         where: { rol: "ADMIN", activo: true },
         orderBy: { id: "asc" },
@@ -76,7 +77,6 @@ export async function POST(req: Request) {
     const exchangeRate = await fetchDolarBlue();
     const precioARS = Number(plan.precioUSD) * exchangeRate;
 
-    // Creamos la suscripción basada en el PlanId de MP (o con esquema propio si no hay PlanId)
     // Usamos el esquema de "Plan" de MP si está disponible, o definimos la recurrencia aquí.
     const response = await preApproval.create({
       body: {
@@ -88,7 +88,7 @@ export async function POST(req: Request) {
           currency_id: "ARS",
         },
         back_url: `${process.env.NEXT_PUBLIC_APP_URL}/setup?status=success`,
-        external_reference: JSON.stringify({ flow: "setup", planId: plan.id }),
+        external_reference: createSetupPaymentReference(plan.id, normalizedPayerEmail),
         payer_email: normalizedPayerEmail,
         status: "pending",
       },

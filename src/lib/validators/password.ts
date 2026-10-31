@@ -1,14 +1,10 @@
-/**
- * Server-side password strength validation.
- * Enforces minimum security requirements for user passwords.
- */
-
 export interface PasswordValidationResult {
   valid: boolean;
   errors: string[];
 }
 
 const MIN_LENGTH = 8;
+const MAX_BCRYPT_BYTES = 72;
 
 export function validatePasswordStrength(
   password: string,
@@ -21,6 +17,10 @@ export function validatePasswordStrength(
 
   if (password.length < MIN_LENGTH) {
     errors.push(`La contraseña debe tener al menos ${MIN_LENGTH} caracteres`);
+  }
+
+  if (Buffer.byteLength(password, "utf8") > MAX_BCRYPT_BYTES) {
+    errors.push("La contraseña no puede superar 72 bytes");
   }
 
   if (!/[A-Z]/.test(password)) {

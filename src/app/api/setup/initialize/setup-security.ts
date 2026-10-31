@@ -1,12 +1,13 @@
 import { validatePasswordStrength } from "@/lib/validators/password";
+import { validatePrimaryColor, validateSetupStaff } from "./setup-input-security";
 
 const ALLOWED_LOGO_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 const MAX_LOGO_BYTES = 5 * 1024 * 1024;
 
 type Input = {
   admin?: { nombre?: unknown; email?: unknown; password?: unknown };
-  staff?: Array<{ email?: string; password?: string }>;
-  branding?: { logoData?: unknown; logoMime?: unknown };
+  staff?: unknown;
+  branding?: { logoData?: unknown; logoMime?: unknown; primaryColor?: unknown };
 };
 
 function base64Size(value: string): number | null {
@@ -28,8 +29,10 @@ function hasExpectedSignature(data: string, mime: string): boolean {
   );
 }
 
-export function validateSetupSecurity(input: Input): string | null {
-  const { admin, staff, branding } = input;
+export function validateSetupSecurity(input: unknown): string | null {
+  if (!input || typeof input !== "object" || Array.isArray(input))
+    return "Payload inválido";
+  const { admin, staff, branding } = input as Input;
   if (
     typeof admin?.nombre !== "string" ||
     !admin.nombre.trim() ||
@@ -42,8 +45,10 @@ export function validateSetupSecurity(input: Input): string | null {
     return "Faltan datos del administrador";
   const adminPassword = validatePasswordStrength(admin.password);
   if (!adminPassword.valid) return adminPassword.errors.join(". ");
-  if (staff !== undefined && (!Array.isArray(staff) || staff.length > 100))
-    return "Lista de empleados inválida";
+  const staffError = validateSetupStaff(staff);
+  if (staffError) return staffError;
+  const colorError = validatePrimaryColor(branding?.primaryColor);
+  if (colorError) return colorError;
   if (branding?.logoData) {
     if (typeof branding.logoData !== "string") return "Logo inválido";
     const size = base64Size(branding.logoData);
@@ -55,13 +60,6 @@ export function validateSetupSecurity(input: Input): string | null {
       !hasExpectedSignature(branding.logoData, branding.logoMime)
     )
       return "Logo inválido o mayor a 5 MB";
-  }
-  for (const member of staff ?? []) {
-    if (
-      member.password?.trim() &&
-      !validatePasswordStrength(member.password).valid
-    )
-      return `Contraseña inválida para ${member.email || "un empleado"}`;
   }
   return null;
 }

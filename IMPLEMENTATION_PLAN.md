@@ -391,3 +391,17 @@ cortada/incompleta en vez de cruzar toda la pantalla.
 - Deuda detectada fuera de esta remediación: `npm audit --omit=dev` informa 1
   vulnerabilidad crítica y 28 altas; requiere una actualización de dependencias
   separada y validada, sin `audit fix --force` automático.
+
+## Endurecimiento adicional y build (2026-10-31)
+
+- Setup valida payload, staff, color, límite bcrypt y vincula pagos al plan,
+  correo administrador, instalación y nonce mediante HMAC.
+- Gestión de usuarios aplica alcance por sucursal, revoca sesiones al cambiar
+  permisos y serializa cupos/protección del último administrador.
+- El escáner cubre asignaciones sensibles con y sin comillas; `security:test`
+  ejecuta el escaneo real y 25 pruebas focalizadas.
+- Baseline visual regenerado sin aceptar deuda: la comparación previa confirmó
+  cero aumentos y cero reducciones; las diferencias eran huellas de espacios.
+- `npm run build` finaliza correctamente, incluido TypeScript y 71 páginas.
+- Pendiente externo: configurar una nueva clave OpenRouter funcional en Railway;
+  la clave compartida por chat se considera comprometida y no debe reutilizarse.

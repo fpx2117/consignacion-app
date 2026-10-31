@@ -281,11 +281,11 @@ export default function SetupPage() {
     [form, goToStep, router, selectedPlan],
   );
 
-  // ─── Payment redirect handler ──────────────────────────────────────────
   useEffect(() => {
     const status = searchParams.get("status");
     const paymentId =
       searchParams.get("payment_id") ??
+      searchParams.get("preapproval_id") ??
       searchParams.get("preference_id") ??
       searchParams.get("subscription_id");
 
@@ -389,11 +389,11 @@ export default function SetupPage() {
           onPlanSelected={handlePlanSelected}
         />
       )}
-
       {currentStep === "payment" && selectedPlan && (
         <PaymentStep
           key="payment"
           plan={selectedPlan}
+          adminEmail={form.adminData.email}
           onPaymentSuccess={handlePaymentSuccess}
           loading={isProcessing}
         />

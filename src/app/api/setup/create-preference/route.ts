@@ -2,9 +2,11 @@ import { NextResponse } from "next/server";
 import { SUBSCRIPTION_PLANS } from "@/constants/subscriptions";
 import { MercadoPagoConfig, Preference } from "mercadopago";
 import { paymentConfig } from "@/lib/payments/config";
+import { createSetupPaymentReference } from "../setup-payment-reference";
 
 type CreatePreferenceBody = {
   planId?: number;
+  adminEmail?: string;
 };
 
 const client = new MercadoPagoConfig({
@@ -14,7 +16,7 @@ const client = new MercadoPagoConfig({
 
 export async function POST(req: Request) {
   try {
-    const { planId } = (await req.json()) as CreatePreferenceBody;
+    const { planId, adminEmail } = (await req.json()) as CreatePreferenceBody;
 
     const plan = SUBSCRIPTION_PLANS.find((p) => p.id === planId);
     if (!plan) {
@@ -23,11 +25,11 @@ export async function POST(req: Request) {
         { status: 404 },
       );
     }
+    if (typeof adminEmail !== "string" || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(adminEmail))
+      return NextResponse.json({ error: "Email inválido" }, { status: 400 });
 
     const preference = new Preference(client);
 
-    // Note: For SETUP, we don't have a userId yet.
-    // We'll use a placeholder or specific flag in external_reference.
     const { fetchDolarBlue } = await import("@/lib/integrations/dolarBlue");
     const exchangeRate = await fetchDolarBlue();
     const precioARS = plan.precioUSD * exchangeRate;
@@ -49,12 +51,10 @@ export async function POST(req: Request) {
           pending: `${process.env.NEXT_PUBLIC_APP_URL}/setup?status=pending`,
         },
         auto_return: "approved",
-        external_reference: JSON.stringify({ flow: "setup", planId: plan.id }),
-        // Webhook will still fire to api/webhooks/mercadopago if needed
+        external_reference: createSetupPaymentReference(plan.id, adminEmail),
         notification_url: `${process.env.NEXT_PUBLIC_APP_URL}/api/webhooks/mercadopago`,
       },
     });
-
     return NextResponse.json({
       id: response.id,
       initPoint: response.init_point,

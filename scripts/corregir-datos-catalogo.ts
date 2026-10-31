@@ -1,5 +1,3 @@
-// scripts/corregir-datos-catalogo.ts
-//
 // Limpieza one-off de Producto.atributosExtra (+ nombre recompuesto) para las
 // sucursales de rubro "vapes" y "perfumeria". NO cambia la lógica de la app:
 // solo normaliza datos históricos ya cargados.
@@ -15,11 +13,9 @@
 //   - concentracion fuera del select del wizard (ELIXIR, EXTRAIT DE PARFUM,
 //     PARFUM INTENSE, PARFUM/Parfum). Ver RUBRO_ATRIBUTOS_FIJOS.perfumeria.
 //   - Productos duplicados (mismo nombre canónico).
-//
 // Uso:
 //   npx tsx scripts/corregir-datos-catalogo.ts          # preview (dry-run)
 //   npx tsx scripts/corregir-datos-catalogo.ts --apply  # escribe
-
 import "dotenv/config";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
@@ -93,6 +89,10 @@ async function main() {
 
   const ignorados: string[] = [];
   for (const p of productos) {
+    if (p.sucursalId === null) {
+      ignorados.push(`#${p.id} "${p.nombre}" (sin sucursal)`);
+      continue;
+    }
     if (/TEST E2E/i.test(p.nombre)) {
       ignorados.push(`#${p.id} "${p.nombre}"`);
       continue;

@@ -52,13 +52,11 @@ export async function getPayPalAccessToken() {
   }
 }
 
-/**
- * Creates a subscription manually via PayPal REST API.
- */
 export async function createPayPalSubscription(
   planId: string,
   returnUrl?: string,
   cancelUrl?: string,
+  customId?: string,
 ) {
   const accessToken = await getPayPalAccessToken();
 
@@ -73,6 +71,7 @@ export async function createPayPalSubscription(
     },
     body: JSON.stringify({
       plan_id: planId,
+      ...(customId && { custom_id: customId }),
       application_context: {
         brand_name: "Consignaciones POS",
         locale: "es-ES", // es-AR isn't always supported for billing

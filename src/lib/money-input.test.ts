@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 
-import { digitosAMonto, formatearInputMonto } from "./money-input.ts";
+import { digitosAMonto, formatearInputMonto } from "./money-input";
 
 test("digitosAMonto mantiene mascara decimal por centavos", () => {
   assert.equal(digitosAMonto("1"), 0.01);

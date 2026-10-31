@@ -1,8 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
-import { Prisma } from "@prisma/client";
-import { checkUserLimit } from "@/lib/subscriptions/require-subscription";
 import { requireAuth, requireRole } from "@/lib/auth/require-auth";
 import { validatePasswordStrength } from "@/lib/validators/password";
 import {
@@ -11,7 +9,18 @@ import {
   parsePositiveId,
   parseRequiredString,
 } from "./user-input";
-
+import {
+  canChangeOwnRole,
+  canManageSucursal,
+  getUserAccessError,
+  manageableUsersWhere,
+} from "./user-authorization";
+import {
+  deleteUserAndProtectLastAdmin,
+  createUserWithinPlanLimit,
+  type UserUpdate,
+  updateUserAndRevokeSessions,
+} from "./user-update";
 export async function GET() {
   const auth = await requireAuth();
   if (!auth.ok) return auth.res;
@@ -21,9 +30,9 @@ export async function GET() {
       { status: 403 },
     );
   }
-
   try {
     const usuarios = await prisma.usuario.findMany({
+      where: manageableUsersWhere(auth),
       select: {
         id: true,
         nombre: true,
@@ -36,7 +45,6 @@ export async function GET() {
       },
       orderBy: { createdAt: "desc" },
     });
-
     return NextResponse.json({ ok: true, data: usuarios });
   } catch {
     return NextResponse.json(
@@ -55,7 +63,6 @@ export async function POST(req: Request) {
       { status: 403 },
     );
   }
-
   try {
     const body = await req.json();
     if (!body || typeof body !== "object" || Array.isArray(body))
@@ -68,7 +75,6 @@ export async function POST(req: Request) {
       sucursalId,
       zonaHoraria,
     } = body;
-
     const safeName = parseRequiredString(nombre, 120);
     const safeEmail = parseEmail(email);
     const targetSucursalId = parsePositiveId(sucursalId ?? auth.activeSucursalId);
@@ -84,9 +90,9 @@ export async function POST(req: Request) {
         { status: 400 },
       );
     }
-
+    if (!canManageSucursal(targetSucursalId, auth.allowedSucursalIds, auth.isGlobalView))
+      return NextResponse.json({ ok: false, error: "No autorizado" }, { status: 403 });
     const normalizedEmail = safeEmail;
-
     const pwCheck = validatePasswordStrength(plaintextPassword);
     if (!pwCheck.valid) {
       return NextResponse.json(
@@ -94,16 +100,6 @@ export async function POST(req: Request) {
         { status: 400 },
       );
     }
-
-    // Guard: Verificar límite de usuarios del plan
-    const userCheck = await checkUserLimit();
-    if (!userCheck.allowed) {
-      return NextResponse.json(
-        { ok: false, error: userCheck.message, limitReached: true },
-        { status: 403 },
-      );
-    }
-
     const existe = await prisma.usuario.findUnique({
       where: { email: normalizedEmail },
     });
@@ -113,32 +109,22 @@ export async function POST(req: Request) {
         { status: 400 },
       );
     }
-
     const hash = await bcrypt.hash(plaintextPassword, 12);
-
-    const nuevoUsuario = await prisma.usuario.create({
-      data: {
-        nombre: safeName,
-        email: normalizedEmail,
-        hash,
-        rol,
-        sucursalId: targetSucursalId,
-        zonaHoraria: typeof zonaHoraria === "string" ? zonaHoraria : null,
-        activo: true,
-      },
-      select: {
-        id: true,
-        nombre: true,
-        email: true,
-        rol: true,
-        sucursalId: true,
-        zonaHoraria: true,
-        activo: true,
-        createdAt: true,
-      },
+    const creation = await createUserWithinPlanLimit({
+      nombre: safeName,
+      email: normalizedEmail,
+      hash,
+      rol,
+      sucursalId: targetSucursalId,
+      zonaHoraria: typeof zonaHoraria === "string" ? zonaHoraria : null,
+      activo: true,
     });
-
-    return NextResponse.json({ ok: true, data: nuevoUsuario });
+    if ("error" in creation)
+      return NextResponse.json(
+        { ok: false, error: creation.error, limitReached: true },
+        { status: 403 },
+      );
+    return NextResponse.json({ ok: true, data: creation.user });
   } catch {
     return NextResponse.json(
       { ok: false, error: "Error al crear usuario" },
@@ -156,7 +142,6 @@ export async function PUT(req: Request) {
       { status: 403 },
     );
   }
-
   try {
     const body = await req.json();
     if (!body || typeof body !== "object" || Array.isArray(body))
@@ -170,7 +155,6 @@ export async function PUT(req: Request) {
       sucursalId,
       zonaHoraria,
     } = body;
-
     const numericId = parsePositiveId(id);
     const safeName = parseRequiredString(nombre, 120);
     const safeEmail = parseEmail(email);
@@ -188,9 +172,14 @@ export async function PUT(req: Request) {
         { status: 400 },
       );
     }
-
     const normalizedEmail = safeEmail;
-
+    if (!canChangeOwnRole(Number(auth.user.sub), numericId, rol))
+      return NextResponse.json(
+        { ok: false, error: "No puedes cambiar tu propio rol" },
+        { status: 400 },
+      );
+    const accessError = await getUserAccessError(numericId, auth, targetSucursalId);
+    if (accessError) return accessError;
     const existe = await prisma.usuario.findUnique({
       where: { email: normalizedEmail },
     });
@@ -200,8 +189,7 @@ export async function PUT(req: Request) {
         { status: 400 },
       );
     }
-
-    const dataToUpdate: Prisma.UsuarioUncheckedUpdateInput = {
+    const dataToUpdate: UserUpdate = {
       nombre: safeName,
       email: normalizedEmail,
       rol,
@@ -226,21 +214,16 @@ export async function PUT(req: Request) {
       dataToUpdate.hash = await bcrypt.hash(plaintextPassword, 12);
     }
 
-    const usuarioActualizado = await prisma.usuario.update({
-      where: { id: numericId },
-      data: dataToUpdate,
-      select: {
-        id: true,
-        nombre: true,
-        email: true,
-        rol: true,
-        sucursalId: true,
-        zonaHoraria: true,
-        activo: true,
-        createdAt: true,
-      },
-    });
-
+    const usuarioActualizado = await updateUserAndRevokeSessions(
+      numericId,
+      dataToUpdate,
+      auth,
+    );
+    if (!usuarioActualizado)
+      return NextResponse.json(
+        { ok: false, error: "Debe permanecer al menos un administrador activo" },
+        { status: 409 },
+      );
     return NextResponse.json({ ok: true, data: usuarioActualizado });
   } catch {
     return NextResponse.json(
@@ -259,7 +242,6 @@ export async function DELETE(req: Request) {
       { status: 403 },
     );
   }
-
   try {
     const { searchParams } = new URL(req.url);
     const id = searchParams.get("id");
@@ -278,10 +260,14 @@ export async function DELETE(req: Request) {
         { status: 400 },
       );
     }
+    const accessError = await getUserAccessError(numericId, auth);
+    if (accessError) return accessError;
 
-    await prisma.usuario.delete({
-      where: { id: numericId },
-    });
+    if (!(await deleteUserAndProtectLastAdmin(numericId, auth)))
+      return NextResponse.json(
+        { ok: false, error: "Debe permanecer al menos un administrador activo" },
+        { status: 409 },
+      );
 
     return NextResponse.json({ ok: true, message: "Usuario eliminado" });
   } catch {

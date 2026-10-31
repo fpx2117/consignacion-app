@@ -1,9 +1,11 @@
 import { NextResponse } from "next/server";
 import { createPayPalSubscription } from "@/lib/payments/paypal";
 import { SUBSCRIPTION_PLANS } from "@/constants/subscriptions";
+import { createSetupPaymentReference } from "../setup-payment-reference";
 
 type CreatePayPalBody = {
   planId?: number;
+  adminEmail?: string;
 };
 
 type PayPalSubscriptionLink = {
@@ -19,7 +21,7 @@ type PayPalSubscriptionResponse = {
 
 export async function POST(req: Request) {
   try {
-    const { planId } = (await req.json()) as CreatePayPalBody;
+    const { planId, adminEmail } = (await req.json()) as CreatePayPalBody;
 
     if (!planId) {
       return NextResponse.json(
@@ -27,8 +29,6 @@ export async function POST(req: Request) {
         { status: 400 },
       );
     }
-
-    // Buscamos el plan en nuestras constantes
     const plan = SUBSCRIPTION_PLANS.find((p) => p.id === planId);
     if (!plan) {
       return NextResponse.json(
@@ -36,8 +36,9 @@ export async function POST(req: Request) {
         { status: 404 },
       );
     }
+    if (typeof adminEmail !== "string" || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(adminEmail))
+      return NextResponse.json({ error: "Email inválido" }, { status: 400 });
 
-    // Llamamos a nuestro servicio de PayPal con URLs de retorno para el setup
     const returnUrl = `${process.env.NEXT_PUBLIC_APP_URL}/setup?status=success&provider=paypal`;
     const cancelUrl = `${process.env.NEXT_PUBLIC_APP_URL}/setup?status=cancel&provider=paypal`;
 
@@ -45,11 +46,10 @@ export async function POST(req: Request) {
       plan.paypalId,
       returnUrl,
       cancelUrl,
+      createSetupPaymentReference(plan.id, adminEmail),
     )) as PayPalSubscriptionResponse;
 
-    // Retornamos los links de aprobación para que el frontend pueda redireccionar
     const approveLink = result.links?.find((link) => link.rel === "approve");
-
     return NextResponse.json({
       id: result.id,
       status: result.status,
