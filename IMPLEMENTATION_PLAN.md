@@ -385,9 +385,9 @@ cortada/incompleta en vez de cruzar toda la pantalla.
   aleatoriedad criptográfica y evita logs de pagos/respuestas sensibles.
 - Usuarios valida IDs, emails y roles, sube bcrypt a 12 rondas e impide que un
   administrador se elimine a sí mismo.
-- Pendiente operativo externo: revocar y rotar en Railway/OpenRouter los
-  secretos comprometidos y, con autorización explícita, purgarlos del historial
-  Git compartido. Borrarlos del HEAD no invalida copias históricas.
+- Operación completada: secretos rotados, OpenRouter verificado sin exponer la
+  clave y el historial compartido saneado mediante publicación coordinada.
+  Los colaboradores deben volver a clonar por la reescritura de historial.
 - Deuda detectada fuera de esta remediación: `npm audit --omit=dev` informa 1
   vulnerabilidad crítica y 28 altas; requiere una actualización de dependencias
   separada y validada, sin `audit fix --force` automático.
@@ -402,6 +402,8 @@ cortada/incompleta en vez de cruzar toda la pantalla.
   ejecuta el escaneo real y 25 pruebas focalizadas.
 - Baseline visual regenerado sin aceptar deuda: la comparación previa confirmó
   cero aumentos y cero reducciones; las diferencias eran huellas de espacios.
+- Hotfix de portabilidad: las huellas normalizan espacios antes del slot
+  estructural; validado en Windows, Node 22.23.3 y Linux/WSL sin alterar conteos.
 - `npm run build` finaliza correctamente, incluido TypeScript y 71 páginas.
-- Pendiente externo: configurar una nueva clave OpenRouter funcional en Railway;
-  la clave compartida por chat se considera comprometida y no debe reutilizarse.
+- La nueva clave OpenRouter de Railway respondió HTTP 200; la clave compartida
+  por chat sigue considerándose comprometida y no debe reutilizarse.

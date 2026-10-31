@@ -254,6 +254,23 @@ test("bloquea intercambiar valores entre objetos anidados", () => {
   assert.equal(compareSnapshots(moved, baseline).length, 1);
 });
 
+test("ignora espacios antes del slot estructural", () => {
+  const compact = {
+    "src/theme.ts": analyzeSource(
+      "src/theme.ts",
+      'const colors = ["red"];\nconst colors = ["red"];',
+    ),
+  };
+  const trailingSpace = {
+    "src/theme.ts": analyzeSource(
+      "src/theme.ts",
+      'const colors = ["red"]; \nconst colors = ["red"];',
+    ),
+  };
+
+  assert.deepEqual(compareSnapshots(trailingSpace, compact), []);
+});
+
 test("permite quitar un literal anterior sin sustituir el retenido", () => {
   const baseline = {
     "src/legacy.ts": analyzeSource(

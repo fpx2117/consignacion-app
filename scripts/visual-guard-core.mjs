@@ -87,16 +87,23 @@ function countLines(content) {
   return content.replace(/\r?\n$/, "").split(/\r?\n/).length;
 }
 
+function normalizeFindingContext(context) {
+  return context
+    .trim()
+    .replace(/\s+/g, " ")
+    .replace(/\s+\|slot:/g, "|slot:");
+}
+
 function hashFinding(category, value, context, occurrence) {
   const normalizedValue = value.trim().replace(/\s+/g, " ");
+  const normalizedContext = normalizeFindingContext(context);
   const digest = crypto
     .createHash("sha256")
     .update(
-      `${category}\0${normalizedValue}\0${context.trim().replace(/\s+/g, " ")}\0${occurrence}`,
+      `${category}\0${normalizedValue}\0${normalizedContext}\0${occurrence}`,
     )
     .digest("hex")
     .slice(0, 12);
-  const normalizedContext = context.trim().replace(/\s+/g, " ");
   return `${normalizedValue.slice(0, 48)}\0${normalizedContext.slice(0, 48)}\0${digest}`;
 }
 
@@ -150,7 +157,7 @@ function collectFindings(content, matches, category, filter = () => true) {
     if (!filter(match)) continue;
     const value = match[0];
     const context = findingContext(content, match.index, value);
-    const key = `${value}\0${context}`;
+    const key = `${value}\0${normalizeFindingContext(context)}`;
     const occurrence = (occurrences.get(key) ?? 0) + 1;
     occurrences.set(key, occurrence);
     findings.push(hashFinding(category, value, context, occurrence));
@@ -189,7 +196,7 @@ function collectNamedColors(content) {
   }
   const occurrences = new Map();
   return values.map(({ word, context }) => {
-    const key = `${word}\0${context}`;
+    const key = `${word}\0${normalizeFindingContext(context)}`;
     const occurrence = (occurrences.get(key) ?? 0) + 1;
     occurrences.set(key, occurrence);
     return hashFinding("colors", word, context, occurrence);
