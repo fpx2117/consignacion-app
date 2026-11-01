@@ -28,7 +28,7 @@ export function PaymentSelector({
   return (
     <section
       aria-label="Metodo de pago"
-      className="grid grid-cols-4 gap-2 md:gap-3"
+      className="grid min-w-0 grid-cols-4 gap-1.5 min-[360px]:gap-2 md:gap-3"
     >
       {opciones.map((metodo) => {
         if (metodo.value === "OTRO") {
@@ -37,11 +37,11 @@ export function PaymentSelector({
               key="descuento"
               type="button"
               onClick={onOpenDescuento}
-              className="relative flex flex-col items-center justify-center gap-0.5 rounded-xl font-bold border transition-all h-[62px] md:h-[72px] bg-card border-border hover:bg-[color:var(--status-success-strong)]/10 text-[color:var(--status-success-strong)] focus-visible:ring-2"
+              className="relative min-w-0 px-1 flex flex-col items-center justify-center gap-0.5 rounded-xl font-bold border transition-all h-[62px] md:h-[72px] [@media(max-height:600px)]:h-[52px] bg-card border-border hover:bg-[color:var(--status-success-strong)]/10 text-[color:var(--status-success-strong)] focus-visible:ring-2"
               aria-label="Aplicar descuento general (F5)"
             >
               <BadgePercent className="h-5 w-5" aria-hidden="true" />
-              <span className="text-[10px] tracking-wider uppercase font-bold">
+              <span className="max-w-full truncate text-[10px] tracking-wider uppercase font-bold">
                 Desc.
               </span>
               <FKeyBadge label="F5" active={false} />
@@ -59,7 +59,7 @@ export function PaymentSelector({
             type="button"
             onClick={() => onChange(metodo.value)}
             className={cn(
-              "relative flex flex-col items-center justify-center gap-0.5 rounded-xl font-bold border transition-all h-[62px] md:h-[72px] focus-visible:ring-2",
+              "relative min-w-0 px-1 flex flex-col items-center justify-center gap-0.5 rounded-xl font-bold border transition-all h-[62px] md:h-[72px] [@media(max-height:600px)]:h-[52px] focus-visible:ring-2",
               isSelected
                 ? "bg-primary border-primary text-primary-foreground shadow-md"
                 : "bg-card border-border hover:bg-muted/50 text-muted-foreground",
@@ -74,7 +74,7 @@ export function PaymentSelector({
               )}
               aria-hidden="true"
             />
-            <span className="text-[10px] tracking-wider uppercase">
+            <span className="max-w-full truncate text-[10px] tracking-wider uppercase">
               {metodo.label}
             </span>
             <FKeyBadge label={fkey} active={isSelected} />

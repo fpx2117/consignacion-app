@@ -743,7 +743,7 @@ export default function NuevaVentaPage() {
   if (verificandoCaja) {
     return (
       <div
-        className="h-[100dvh] flex flex-col items-center justify-center bg-background"
+        className="h-[calc(100dvh-12rem)] md:-mx-8 md:-mt-8 md:-mb-6 md:h-[calc(100dvh-4rem)] min-h-0 flex flex-col items-center justify-center bg-background"
         role="status"
         aria-live="polite"
       >
@@ -760,14 +760,14 @@ export default function NuevaVentaPage() {
 
   if (usaCajaEstricta && cajaAbierta === false) {
     return (
-      <main className="h-[100dvh] flex flex-col items-center justify-center bg-background px-4 text-center">
+      <main className="h-[calc(100dvh-12rem)] md:-mx-8 md:-mt-8 md:-mb-6 md:h-[calc(100dvh-4rem)] min-h-0 flex flex-col items-center justify-center bg-background px-4 text-center">
         <div className="h-24 w-24 bg-muted/50 rounded-full flex items-center justify-center mb-6 border shadow-sm">
           <Lock
             className="h-10 w-10 text-muted-foreground"
             aria-hidden="true"
           />
         </div>
-        <h1 className="text-2xl font-black text-foreground tracking-tight mb-2">
+        <h1 className="text-2xl font-[900] text-foreground tracking-tight mb-2">
           Caja Cerrada
         </h1>
         <p className="text-muted-foreground max-w-sm mb-8 text-sm leading-relaxed">
@@ -796,7 +796,7 @@ export default function NuevaVentaPage() {
   }
 
   return (
-    <div className="h-[100dvh] flex flex-col bg-background overflow-hidden selection:bg-primary/20">
+    <div className="h-[calc(100dvh-12rem)] md:-mx-8 md:-mt-8 md:-mb-6 md:h-[calc(100dvh-4rem)] min-h-0 min-w-0 flex flex-col bg-background overflow-hidden selection:bg-primary/20">
       <VentaHeader
         onBack={() => router.back()}
         onCloseShift={() => router.push("/caja/cerrar")}
@@ -817,13 +817,13 @@ export default function NuevaVentaPage() {
         </Alert>
       )}
 
-      <main className="flex-1 flex overflow-hidden" aria-label="Flujo de venta">
+      <main className="flex-1 min-h-0 min-w-0 flex overflow-hidden" aria-label="Flujo de venta">
         <section
           className="flex-1 flex flex-col min-h-0 relative bg-background"
           aria-label="Carga de ticket"
         >
           <section
-            className="shrink-0 p-3 space-y-3 bg-card/30 border-b z-10 shadow-sm"
+            className="shrink-0 p-3 space-y-3 [@media(max-height:600px)]:p-2 [@media(max-height:600px)]:space-y-2 bg-card/30 border-b z-10 shadow-sm"
             aria-label="Controles de venta"
           >
             {error && (
@@ -874,7 +874,7 @@ export default function NuevaVentaPage() {
                     ? "Buscando producto..."
                     : "Escanear o buscar..."}
                 </span>
-                <span className="hidden md:inline-flex items-center justify-center h-5 px-1.5 rounded border border-border bg-muted text-[9px] font-black font-mono text-muted-foreground shrink-0">
+                <span className="hidden md:inline-flex items-center justify-center h-5 px-1.5 rounded border border-border bg-muted text-[9px] font-[900] font-mono text-muted-foreground shrink-0">
                   F1
                 </span>
               </button>
@@ -891,14 +891,14 @@ export default function NuevaVentaPage() {
               </Button>
             </div>
 
-            <p className="text-[11px] text-muted-foreground px-1">
+            <p className="text-[11px] text-muted-foreground px-1 [@media(max-height:600px)]:hidden">
               Podés usar scanner físico tipo teclado o abrir la cámara para
               buscar y agregar un producto por código de barras.
             </p>
           </section>
 
           <section
-            className="flex-1 overflow-y-auto p-3 bg-muted/5"
+            className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-2 sm:p-3 bg-muted/5"
             aria-label="Listado de carrito"
           >
             <CartList
@@ -932,7 +932,7 @@ export default function NuevaVentaPage() {
         />
       </main>
 
-      <div className="lg:hidden shrink-0">
+      <div className="xl:hidden shrink-0">
         <MobileSummaryBar
           metodoPago={metodoPago}
           opcionesPago={METODOS_PAGO}
@@ -963,7 +963,7 @@ export default function NuevaVentaPage() {
         description={
           <span className="text-center block text-muted-foreground mt-2 font-medium">
             Total:{" "}
-            <span className="text-primary font-black text-xl ml-1">
+            <span className="text-primary font-[900] text-xl ml-1">
               {formatCurrency(totalAmount)}
             </span>
           </span>
@@ -1010,8 +1010,8 @@ export default function NuevaVentaPage() {
         open={openBarcodeCamera}
         onOpenChange={setOpenBarcodeCamera}
         onDetected={processBarcode}
+        constrainToViewport
       />
-
       <Dialog open={openDescuento} onOpenChange={setOpenDescuento}>
         <DialogContent className="sm:max-w-xs md:max-w-sm rounded-2xl border-border/60 bg-background">
           <DialogHeader className="space-y-3">
@@ -1024,7 +1024,7 @@ export default function NuevaVentaPage() {
                 Promocion
               </span>
             </div>
-            <DialogTitle className="text-xl font-black tracking-tight">
+            <DialogTitle className="text-xl font-[900] tracking-tight">
               Descuento General
             </DialogTitle>
           </DialogHeader>
@@ -1093,7 +1093,7 @@ export default function NuevaVentaPage() {
               <span className="font-semibold text-primary">
                 Descuento estimado
               </span>
-              <span className="font-black text-primary">
+              <span className="font-[900] text-primary">
                 - {formatCurrency(descuentoPreview)}
               </span>
             </div>

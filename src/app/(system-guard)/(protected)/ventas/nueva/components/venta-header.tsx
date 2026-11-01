@@ -17,7 +17,7 @@ export function VentaHeader({
   onCloseShift,
 }: VentaHeaderProps) {
   return (
-    <header className="shrink-0 h-14 border-b bg-background flex items-center justify-between px-4 z-20 shadow-sm">
+    <header className="shrink-0 h-14 [@media(max-height:600px)]:h-12 border-b bg-background flex items-center justify-between px-4 [@media(max-height:600px)]:px-3 z-20 shadow-sm">
       <div className="flex items-center gap-2 min-w-0">
         <Button
           variant="ghost"
@@ -50,7 +50,7 @@ export function VentaHeader({
           variant="outline"
           size="sm"
           type="button"
-          className="text-[color:var(--status-danger)] border-[color:var(--status-danger)] hover:bg-[color:var(--status-danger)] hover:text-[color:var(--status-danger)] font-semibold text-xs h-8 rounded-lg focus-visible:ring-2"
+          className="text-[color:var(--status-danger)] border-[color:var(--status-danger)] hover:bg-[color:var(--status-danger)] hover:text-[color:var(--status-danger)] font-semibold text-xs h-10 rounded-lg focus-visible:ring-2"
           onClick={onCloseShift}
           aria-label="Cerrar turno de caja"
         >

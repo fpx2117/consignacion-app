@@ -81,7 +81,6 @@ export function ProductSearchModal({
   return (
     <DialogPrimitive.Root open={open} onOpenChange={onOpenChange}>
       <DialogPrimitive.Portal>
-        {/* Overlay */}
         <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-black/50 backdrop-blur-[2px] data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0" />
 
         {/* Contenedor — ancho real sin interferencia de shadcn */}
@@ -89,8 +88,8 @@ export function ProductSearchModal({
           aria-describedby={undefined}
           className={cn(
             "fixed left-1/2 top-1/2 z-50 -translate-x-1/2 -translate-y-1/2",
-            "w-[90vw] max-w-2xl", // ancho real
-            "rounded-2xl border border-border/60 bg-background shadow-2xl overflow-hidden",
+            "w-[calc(100vw-1rem)] sm:w-[90vw] max-w-2xl max-h-[calc(100dvh-1rem)]", // ancho real
+            "rounded-2xl border border-border/60 bg-background shadow-2xl overflow-hidden flex flex-col",
             "outline-none",
             "data-[state=open]:animate-in data-[state=closed]:animate-out",
             "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
@@ -105,6 +104,7 @@ export function ProductSearchModal({
           </DialogPrimitive.Description>
 
           <Command
+            className="min-h-0"
             filter={(value, search) => {
               const p = productos.find((item) => String(item.id) === value);
               if (!p) return 0;
@@ -145,7 +145,7 @@ export function ProductSearchModal({
             </div>
 
             {/* ── Lista ─────────────────────────────────────────────────── */}
-            <CommandList className="p-2">
+            <CommandList className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-2">
               <CommandEmpty>
                 <div className="flex flex-col items-center justify-center gap-2 py-12 text-muted-foreground">
                   <Package className="h-10 w-10 opacity-30" />
