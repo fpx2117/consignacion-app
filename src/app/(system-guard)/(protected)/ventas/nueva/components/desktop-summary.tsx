@@ -49,7 +49,7 @@ export function DesktopSummary({
 }: DesktopSummaryProps) {
   return (
     <aside
-      className="hidden lg:flex w-[380px] bg-background border-l border-border/40 flex-col shadow-xl z-20"
+      className="hidden xl:flex w-[clamp(20rem,28vw,24rem)] min-h-0 shrink-0 bg-background border-l border-border/40 flex-col shadow-xl z-20"
       aria-label="Resumen de compra"
     >
       <div className="p-6 border-b bg-muted/10">

@@ -44,14 +44,12 @@ export function CartList({
   }
 
   return (
-    <section className="space-y-2.5 pb-4" aria-label="Productos en carrito">
-      <AnimatePresence mode="popLayout" initial={false}>
+    <section className="w-full min-w-0 max-w-full space-y-2.5 overflow-x-clip pb-4" aria-label="Productos en carrito">
+      <AnimatePresence initial={false}>
         {cart.map((item, idx) => {
           const discountInfo = getDiscountInfo(item);
           return (
-            <motion.div
-              key={item.producto.id}
-              layout
+            <motion.div key={item.producto.id} className="w-full min-w-0 max-w-full"
               initial={{ opacity: 0, scale: 0.95, y: 10 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, x: -20 }}

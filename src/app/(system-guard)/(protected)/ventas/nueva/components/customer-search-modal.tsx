@@ -51,7 +51,7 @@ export function CustomerSearchModal({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        className="p-0 gap-0 rounded-2xl border-border/60 shadow-2xl overflow-hidden w-[min(90vw,520px)] max-w-none sm:max-w-none"
+        className="p-0 gap-0 rounded-2xl border-border/60 shadow-2xl overflow-hidden w-[calc(100vw-1rem)] sm:w-[min(90vw,520px)] max-w-none sm:max-w-none max-h-[calc(100dvh-1rem)] flex flex-col"
         showCloseButton={false}
         aria-describedby={undefined}
       >
@@ -78,7 +78,7 @@ export function CustomerSearchModal({
             if (cliente.telefono?.toLowerCase().includes(q)) return 1;
             return 0;
           }}
-          className="bg-background w-full"
+          className="bg-background w-full min-h-0 flex flex-col"
         >
           {/* ── Search input ─────────────────────────────────────────── */}
           <div className="flex items-center h-14 border-b border-border/60 bg-background">
@@ -108,7 +108,7 @@ export function CustomerSearchModal({
             </div>
           </div>
 
-          <CommandList className="max-h-[60vh] overflow-y-auto p-2">
+          <CommandList className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-2">
             <CommandEmpty>
               <div className="flex flex-col items-center justify-center gap-2 py-10 text-muted-foreground">
                 <UserCircle2 className="h-10 w-10 opacity-30" />

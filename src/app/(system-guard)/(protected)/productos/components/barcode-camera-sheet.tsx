@@ -150,17 +150,18 @@ async function createUnifiedDetector(): Promise<UnifiedDetector | null> {
   }
 }
 
-// ── Props ─────────────────────────────────────────────────────────────────────
 interface BarcodeCameraSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onDetected: (code: string) => void;
+  constrainToViewport?: boolean;
 }
 
 export function BarcodeCameraSheet({
   open,
   onOpenChange,
   onDetected,
+  constrainToViewport = false,
 }: BarcodeCameraSheetProps) {
   const videoRef = React.useRef<HTMLVideoElement | null>(null);
   const streamRef = React.useRef<MediaStream | null>(null);
@@ -174,14 +175,6 @@ export function BarcodeCameraSheet({
     "idle" | "starting" | "ready" | "error"
   >("idle");
   const [errorMsg, setErrorMsg] = React.useState<string | null>(null);
-  const [debugLog, setDebugLog] = React.useState<string[]>([]);
-
-  const log = React.useCallback((msg: string) => {
-    setDebugLog((prev) => [
-      ...prev.slice(-6),
-      `${new Date().toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}: ${msg}`,
-    ]);
-  }, []);
 
   // ── Detener todo ────────────────────────────────────────────────────────────
   const stopAll = React.useCallback(() => {
@@ -205,7 +198,6 @@ export function BarcodeCameraSheet({
   const startNativeLoop = React.useCallback(
     (detector: UnifiedDetector) => {
       scanningRef.current = true;
-      log("loop iniciado");
 
       const tick = async () => {
         if (!scanningRef.current) return;
@@ -215,7 +207,6 @@ export function BarcodeCameraSheet({
           try {
             const code = await detector.detect(v);
             if (code && code !== lastValueRef.current) {
-              log(`detectado: ${code}`);
               lastValueRef.current = code;
               stopAll();
               onDetected(code);
@@ -232,16 +223,13 @@ export function BarcodeCameraSheet({
 
       frameRef.current = requestAnimationFrame(() => void tick());
     },
-    [onDetected, onOpenChange, stopAll, log],
+    [onDetected, onOpenChange, stopAll],
   );
 
   // ── Cuando el video puede reproducir: iniciar detección ────────────────────
   const handleCanPlay = React.useCallback(() => {
     const v = videoRef.current;
     const detector = detectorRef.current;
-    log(
-      `onCanPlay — detector:${detector ? "OK" : "null"} scanning:${scanningRef.current}`,
-    );
     if (!v || !detector || scanningRef.current) return;
 
     // Asegurar reproducción (autoPlay puede no haber arrancado aún)
@@ -253,7 +241,7 @@ export function BarcodeCameraSheet({
 
     setPhase("ready");
     startNativeLoop(detector);
-  }, [startNativeLoop, log]);
+  }, [startNativeLoop]);
 
   // ── Efecto principal ────────────────────────────────────────────────────────
   React.useEffect(() => {
@@ -275,12 +263,10 @@ export function BarcodeCameraSheet({
     let cancelled = false;
 
     const init = async () => {
-      log("init: esperando animación...");
       // Esperar animación del Sheet (slide-in ~500ms) + paint del Portal de Radix
       await new Promise<void>((r) => setTimeout(r, 600));
       if (cancelled) return;
 
-      log("init: pidiendo cámara + detector...");
       // Obtener stream + detector en paralelo
       let stream: MediaStream;
       let detector: UnifiedDetector | null;
@@ -290,7 +276,6 @@ export function BarcodeCameraSheet({
           getCamera(),
           createUnifiedDetector(),
         ]);
-        log(`init: stream OK, detector:${detector ? "OK" : "null"}`);
       } catch (err) {
         if (cancelled) return;
         const msg =
@@ -301,7 +286,6 @@ export function BarcodeCameraSheet({
                 ? "No se encontró ninguna cámara en este dispositivo."
                 : "No se pudo acceder a la cámara."
             : "No se pudo acceder a la cámara.";
-        log(`ERROR cámara: ${msg}`);
         setErrorMsg(msg);
         setPhase("error");
         startedRef.current = false;
@@ -318,7 +302,6 @@ export function BarcodeCameraSheet({
         stream.getTracks().forEach((t) => t.stop());
         const msg =
           "Este navegador no soporta escaneo de códigos. Usá el scanner físico o ingresá el código manualmente.";
-        log(`ERROR: ${msg}`);
         setErrorMsg(msg);
         setPhase("error");
         startedRef.current = false;
@@ -334,14 +317,12 @@ export function BarcodeCameraSheet({
         detector.stop();
         const msg =
           "Error interno al inicializar la cámara. Cerrá y volvé a intentar.";
-        log(`ERROR: videoRef null`);
         setErrorMsg(msg);
         setPhase("error");
         startedRef.current = false;
         return;
       }
 
-      log(`init: asignando srcObject, videoRef OK`);
       // Asignar stream al video. El browser dispara onCanPlay cuando hay frames.
       // load() fuerza el procesamiento del nuevo srcObject en algunos Android.
       v.srcObject = stream;
@@ -361,7 +342,7 @@ export function BarcodeCameraSheet({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
         side="bottom"
-        className="rounded-t-[2rem] border-t p-0 max-h-[92dvh] overflow-hidden gap-0"
+        className={cn("rounded-t-[2rem] border-t p-0 max-h-[92dvh] overflow-hidden gap-0", constrainToViewport && "overflow-y-auto overscroll-contain")}
       >
         <SheetHeader className="border-b bg-muted/20 px-5 py-4">
           <div className="flex items-center gap-2 text-primary">
@@ -374,7 +355,7 @@ export function BarcodeCameraSheet({
           </SheetDescription>
         </SheetHeader>
 
-        <div className="space-y-4 p-5 pb-6">
+        <div className={cn("space-y-4 p-5 pb-6", constrainToViewport && "pb-[max(1.5rem,env(safe-area-inset-bottom))]")}>
           <div className="relative overflow-hidden rounded-2xl border bg-black shadow-inner">
             <video
               ref={videoRef}
@@ -386,7 +367,7 @@ export function BarcodeCameraSheet({
               width={1280}
               height={720}
               onCanPlay={handleCanPlay}
-              className={cn("aspect-[3/4] w-full object-cover sm:aspect-video")}
+              className={cn("aspect-[3/4] w-full object-cover sm:aspect-video", constrainToViewport && "max-h-[55dvh] [@media(max-height:600px)]:max-h-[42dvh]")}
               aria-label="Vista previa de cámara para escaneo"
             />
 
@@ -427,15 +408,6 @@ export function BarcodeCameraSheet({
                   válido.
                 </p>
               </div>
-            </div>
-          )}
-
-          {/* DEBUG TEMPORAL — borrar después */}
-          {debugLog.length > 0 && (
-            <div className="rounded-xl border border-yellow-400/40 bg-yellow-50/80 px-3 py-2 font-mono text-[10px] text-yellow-900 dark:bg-yellow-900/20 dark:text-yellow-200">
-              {debugLog.map((line, i) => (
-                <div key={i}>{line}</div>
-              ))}
             </div>
           )}
 
