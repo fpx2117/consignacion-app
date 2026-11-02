@@ -6,10 +6,13 @@ import pg from "pg";
 /**
  * 1. Setup the Connection String
  */
-const connectionString = process.env.DATABASE_URL;
+const connectionString =
+  process.env.RUNTIME_DATABASE_URL ?? process.env.DATABASE_URL;
 
 if (!connectionString) {
-  throw new Error("DATABASE_URL is not defined in your .env file");
+  throw new Error(
+    "DATABASE_URL or RUNTIME_DATABASE_URL is not defined in your .env file",
+  );
 }
 
 /**

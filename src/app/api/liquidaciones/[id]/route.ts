@@ -14,6 +14,10 @@ import {
   buildSucursalWhere,
   isGlobalSucursalView,
 } from "@/lib/security/sucursalScope";
+import {
+  assertVentaNumberingAuthority,
+  createVentaWithAuthority,
+} from "@/modules/ventas/venta-numbering-authority";
 
 type RouteParams = {
   params: Promise<{ id: string }>;
@@ -212,6 +216,7 @@ export async function PUT(req: Request, { params }: RouteParams) {
 
       // Revertir venta y saldo
       if (liqExistente.venta) {
+        await assertVentaNumberingAuthority(tx);
         await tx.cliente.update({
           where: { id: liqExistente.consignacion.clienteId },
           data: { saldoCuenta: { decrement: liqExistente.venta.total } },
@@ -352,7 +357,7 @@ export async function PUT(req: Request, { params }: RouteParams) {
 
       // 4) Crear nueva venta y saldo
       if (nuevoTotalVenta > 0) {
-        await tx.venta.create({
+        await createVentaWithAuthority(tx, {
           data: {
             clienteId: liqExistente.consignacion.clienteId,
             liquidacionId,

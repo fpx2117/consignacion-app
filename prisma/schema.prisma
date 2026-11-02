@@ -409,7 +409,7 @@ model Consignacion {
 
   @@index([clienteId, fecha])
   @@index([estado, fecha])
-  @@index([clienteId, numeroFolio])
+  @@unique([clienteId, numeroFolio], map: "Consignacion_clienteId_numeroFolio_key_t12")
   @@index([sucursalId])
 }
 
@@ -512,6 +512,17 @@ model Venta {
   @@index([sesionCajaId])
   @@index([tipo])
   @@index([sucursalId])
+  @@unique([sucursalId, numeroVenta], map: "Venta_sucursalId_numeroVenta_key_t12")
+}
+
+model VentaNumerador {
+  sucursalId    Int @id
+  ultimoNumero Int
+}
+
+model ConsignacionNumerador {
+  clienteId     Int @id
+  ultimoNumero Int
 }
 
 model Envio {
@@ -690,6 +701,7 @@ model StockSucursal {
 
   @@unique([productoId, sucursalId])
 }
+
 
 model Gasto {
   id                    Int             @id @default(autoincrement())

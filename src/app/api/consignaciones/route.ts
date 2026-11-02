@@ -13,6 +13,7 @@ import {
   buildSucursalWhere,
   isGlobalSucursalView,
 } from "@/lib/security/sucursalScope";
+import { getPersistedConsignacionFolio } from "@/modules/consignaciones/consignacion-numbering";
 
 // âœ… Imports Centralizados de Config y Notificaciones
 import { obtenerConfiguracionGlobal } from "@/lib/config";
@@ -277,7 +278,7 @@ export async function POST(req: Request) {
             cantidad: it.unitsEntregadas,
             stockPrevio: sAntes.stockDisponibleUnits,
             stockPosterior: sDespues.stockDisponibleUnits,
-            observaciones: `Entrega de ConsignaciÃ³n Folio #${nuevoFolio}`,
+            observaciones: `Entrega de ConsignaciÃ³n Folio #${getPersistedConsignacionFolio(consignacion)}`,
           },
         });
 

@@ -8,6 +8,7 @@ import {
   buildSucursalWhere,
   isGlobalSucursalView,
 } from "@/lib/security/sucursalScope";
+import { createVentaWithAuthority } from "@/modules/ventas/venta-numbering-authority";
 
 // âœ… Imports Centralizados de Config y Notificaciones
 import { obtenerConfiguracionGlobal } from "@/lib/config";
@@ -569,7 +570,7 @@ export async function POST(req: Request, { params }: RouteParams) {
 
       // D) Crear Venta Asociada si hubo ventas
       if (totalVenta > 0) {
-        await tx.venta.create({
+        await createVentaWithAuthority(tx, {
           data: {
             clienteId: consignacion.clienteId,
             liquidacionId: liquidacion.id,
