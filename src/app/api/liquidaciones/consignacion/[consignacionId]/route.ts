@@ -17,6 +17,7 @@ import {
 } from "@/lib/notificaciones/stock-alerts";
 import { sendNotification } from "@/lib/notificaciones/socket-trigger";
 import { isGlobalSucursalView } from "@/lib/security/sucursalScope";
+import { createVentaWithAuthority } from "@/modules/ventas/venta-numbering-authority";
 
 type RouteParams = {
   params: Promise<{ consignacionId: string }>;
@@ -241,13 +242,14 @@ export async function POST(req: Request, { params }: RouteParams) {
           select: { numeroVenta: true },
         });
         const nextNumeroVenta = (lastVenta?.numeroVenta || 0) + 1;
+        // Retained during mixed-version rollout; PostgreSQL assigns the value.
+        void nextNumeroVenta;
 
-        nuevaVenta = await tx.venta.create({
+        nuevaVenta = await createVentaWithAuthority(tx, {
           data: {
             tipo: TipoVenta.LIQUIDACION, // 👈 Clasificamos la venta
             clienteId: consignacion.clienteId,
             sucursalId: consignacion.sucursalId, // Usa la sucursal de la consignación
-            numeroVenta: nextNumeroVenta,
             liquidacionId: nuevaLiquidacion.id,
             total: totalVenta,
             // sesionCajaId: null, (No se envía porque es opcional en el Schema)

@@ -5,6 +5,7 @@ import { paymentConfig } from "@/lib/payments/config";
 import { sendNotification } from "@/lib/notificaciones/socket-trigger";
 import { NOTIFICATION_TYPE } from "@/lib/notificaciones/types";
 import { seedPlanLimits } from "@/lib/subscriptions/require-subscription";
+import { createVentaWithAuthority } from "@/modules/ventas/venta-numbering-authority";
 import {
   MotivoMovimientoStock,
   Prisma,
@@ -418,6 +419,8 @@ async function processApprovedCheckoutPayment(
       });
 
       const nextNumeroVenta = (lastVenta?.numeroVenta || 0) + 1;
+      // Retained during mixed-version rollout; PostgreSQL assigns the value.
+      void nextNumeroVenta;
       const totalGeneral = toNumber(totalsSnapshot.totalGeneral, NaN);
       const totalVenta = Number.isFinite(totalGeneral)
         ? totalGeneral
@@ -438,12 +441,11 @@ async function processApprovedCheckoutPayment(
       const metodoEnvio = toNonEmptyString(envioSnapshot.metodoEnvio);
       const shouldCreateEnvio = metodoEnvio !== null || costoEnvio > 0;
 
-      const venta = await tx.venta.create({
+      const venta = await createVentaWithAuthority(tx, {
         data: {
           tipo: TipoVenta.CASUAL,
           clienteId: cliente.id,
           sucursalId,
-          numeroVenta: nextNumeroVenta,
           total: totalVenta,
           descuentoGlobal: 0,
           metodoPago: "TARJETA",

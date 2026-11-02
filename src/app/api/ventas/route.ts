@@ -23,6 +23,7 @@ import {
   isGlobalSucursalView,
 } from "@/lib/security/sucursalScope";
 import { calcularDescuentoEfectivo } from "@/lib/storefront/descuento-utils";
+import { createVentaWithAuthority } from "@/modules/ventas/venta-numbering-authority";
 
 const MAX_VENTA_RETRIES = 3;
 const createVentaSchema = z.object({
@@ -353,6 +354,8 @@ export async function handlePostVenta(
               select: { numeroVenta: true },
             });
             const nextNumeroVenta = (lastVenta?.numeroVenta || 0) + 1;
+            // Retained during mixed-version rollout; PostgreSQL assigns the value.
+            void nextNumeroVenta;
 
             const descGlobalFinal = Number(descuentoGlobal) || 0;
             let montoInteres = 0;
@@ -366,12 +369,11 @@ export async function handlePostVenta(
 
             const totalFinal = totalVenta - descGlobalFinal + montoInteres;
 
-            const nuevaVenta = await tx.venta.create({
+            const nuevaVenta = await createVentaWithAuthority(tx, {
               data: {
                 tipo: TipoVenta.CASUAL,
                 clienteId: finalClienteId,
                 sucursalId: auth.activeSucursalId,
-                numeroVenta: nextNumeroVenta,
                 metodoPago: metodoPago ?? MetodoPago.EFECTIVO,
                 sesionCajaId: sesionActiva?.id || null,
                 fecha: deps.nowAR(timezone.tz),
