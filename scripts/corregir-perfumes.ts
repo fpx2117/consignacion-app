@@ -45,36 +45,66 @@ const APPLY = process.argv.includes("--apply");
 // solo, con datos verificados en internet (agosto 2026). Un kit de varios
 // frascos no tiene un solo ML, así que el tamaño va en `linea` y no se setea
 // `ml` numérico.
-const MANUALES: Record<number, { nombre: string; extra: Record<string, string> }> = {
+const MANUALES: Record<
+  number,
+  { nombre: string; extra: Record<string, string> }
+> = {
   73: {
     // ARMAF Club de Nuit Discovery Set, 10 frascos de 10ml, EDP.
     nombre: "ARMAF - CLUB DE NUIT KIT 10x10mL - EDP",
-    extra: { marca: "ARMAF", linea: "CLUB DE NUIT KIT 10x10mL", concentracion: "EDP" },
+    extra: {
+      marca: "ARMAF",
+      linea: "CLUB DE NUIT KIT 10x10mL",
+      concentracion: "EDP",
+    },
   },
   98: {
     // Kit 2x10ml (Asad Black + Asad Zanzibar), EDP.
     nombre: "LATTAFA - KIT ASAD BLACK & ASAD ZANZIBAR 2x10mL - EDP",
-    extra: { marca: "LATTAFA", linea: "KIT ASAD BLACK & ASAD ZANZIBAR 2x10mL", concentracion: "EDP" },
+    extra: {
+      marca: "LATTAFA",
+      linea: "KIT ASAD BLACK & ASAD ZANZIBAR 2x10mL",
+      concentracion: "EDP",
+    },
   },
   126: {
     // Kit 2x100ml (Yara + Yara Candy), EDP.
     nombre: "LATTAFA - KIT YARA & YARA CANDY 2x100mL - EDP",
-    extra: { marca: "LATTAFA", linea: "KIT YARA & YARA CANDY 2x100mL", concentracion: "EDP" },
+    extra: {
+      marca: "LATTAFA",
+      linea: "KIT YARA & YARA CANDY 2x100mL",
+      concentracion: "EDP",
+    },
   },
   185: {
     // Xerjoff Erba Pura es oficialmente EDP (no Extrait).
     nombre: "XERJOFF - ERBA PURA - EDP - 100",
-    extra: { marca: "XERJOFF", linea: "ERBA PURA", concentracion: "EDP", ml: "100" },
+    extra: {
+      marca: "XERJOFF",
+      linea: "ERBA PURA",
+      concentracion: "EDP",
+      ml: "100",
+    },
   },
   190: {
     // Maison Alhambra Salvo Elixir = EDP, tamaño común 100ml.
     nombre: "MAISON ALHAMBRA - SALVO ELIXIR - EDP - 100",
-    extra: { marca: "MAISON ALHAMBRA", linea: "SALVO ELIXIR", concentracion: "EDP", ml: "100" },
+    extra: {
+      marca: "MAISON ALHAMBRA",
+      linea: "SALVO ELIXIR",
+      concentracion: "EDP",
+      ml: "100",
+    },
   },
   213: {
     // "HAMAS" es typo de "HAWAS" (Rasasi Hawas Fire 100ml EDP).
     nombre: "RASASI - HAWAS FIRE - EDP - 100",
-    extra: { marca: "RASASI", linea: "HAWAS FIRE", concentracion: "EDP", ml: "100" },
+    extra: {
+      marca: "RASASI",
+      linea: "HAWAS FIRE",
+      concentracion: "EDP",
+      ml: "100",
+    },
   },
 };
 
@@ -208,7 +238,9 @@ async function main() {
   }
 
   if (!APPLY) {
-    console.log("\nModo preview (dry-run). Pasá --apply para escribir los cambios.");
+    console.log(
+      "\nModo preview (dry-run). Pasá --apply para escribir los cambios.",
+    );
     return;
   }
 
@@ -221,7 +253,9 @@ async function main() {
       },
     });
   }
-  console.log(`\nAplicados ${aEditar.length} cambios (nombre + atributosExtra).`);
+  console.log(
+    `\nAplicados ${aEditar.length} cambios (nombre + atributosExtra).`,
+  );
 }
 
 main()
