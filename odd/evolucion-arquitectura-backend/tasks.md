@@ -6,12 +6,13 @@ Diagnóstico y diseño aprobados. T08 fue autorizada y ejecutada de forma aislad
 T09 y las tareas posteriores requieren autorización explícita por tarea; commits,
 push y despliegue continúan sin autorización.
 
-**Estado actual (2026-11-03):** T11–T17 están implementadas, verificadas y
-**commiteadas en `main` local** en seis commits sobre `5b41eb4`; el origen ya
-contenía el release T12, así que el rebase solo sumó T13–T17. El gate 6 queda
-cumplido en local: falta el push, que hace una persona, y el despliegue. Producción
-sigue en el release T12-only; faltan T15-R (deploy de los writers `B1`) y T16
-(cutover), ambas sujetas a autorización.
+**Estado actual (2026-11-03):** T11–T17 están commiteadas, pusheadas a
+`origin/main` (`5b41eb4..08eaf16`) y **desplegadas**: Railway auto-desplegó
+`c8df76d5` desde ese commit, `/login` 200, 32 migraciones sin pendientes y la suite
+de integración (13 archivos, 22 tests) verde sobre el HEAD rebaseado. El deploy
+ocurrió **sin fence ni ventana** porque Railway auto-despliega `main`: T15-R queda
+desplegado con el smoke autenticado pendiente. Producción ya no corre el T12-only.
+T16 sigue bloqueada por el comando de arranque de Railway (ver T16).
 
 ## Diagnóstico
 
@@ -200,16 +201,24 @@ sigue en el release T12-only; faltan T15-R (deploy de los writers `B1`) y T16
   implementación completo:** el código y las pruebas están hechos; lo que falta es
   el despliegue, que es **T15-R**. La tarea queda marcada por su alcance de
   implementación, igual que T12 y T14-A frente a sus rollouts.
-- [ ] **T15-R — Rollout de los writers `B1` en producción.** Desplegar el cuerpo
-  T11–T17 (hoy sin commitear) con ventana y fence, verificar `StockAutoridad` en
-  `APP_DUAL_WRITE`, deriva 0 y smoke de POS, anulación, consignación, liquidación,
-  OCR, pedidos y checkout, dejando el release como precondición de T16. Requiere
-  autorización explícita de commit, push y deploy; sin ella no se ejecuta.
+- [ ] **T15-R — Rollout de los writers `B1` en producción.** **Parcialmente
+  ejecutada el 2026-11-03:** el push a `origin/main` (`5b41eb4..08eaf16`) disparó el
+  auto-deploy `c8df76d5`, SUCCESS, `/login` 200, 32 migraciones sin pendientes y sin
+  errores de arranque. **No se usó ventana ni fence** porque Railway despliega `main`
+  automáticamente. Verificado además: la suite de integración completa (13 archivos,
+  22 tests) pasa sobre el HEAD desplegado. **Falta el smoke autenticado** de POS,
+  anulación, consignación, liquidación, OCR, pedidos y checkout, y confirmar deriva 0
+  tras esas operaciones. Queda abierta por eso, no por el deploy.
 - [ ] **T16 — Ejecutar cutover y rollback de stock.** Pausar escrituras,
   reconciliar, activar proyección y `DB_PROJECTION` en una transacción, verificar
   entrada/salida/restitución, observar `B1`, promover después a `C2` y ensayar los
   rollbacks compensatorios `C2 -> B1 -> APP_DUAL_WRITE` sin editar migraciones
-  aplicadas. **Bloqueada** por T15-R (los writers `B1` no están desplegados) y por
+  aplicadas. **Bloqueo resuelto el 2026-11-03:** el `startCommand` del servicio
+  `import.vps - POS` en Railway era
+  `prisma migrate deploy && NODE_ENV=production tsx server.ts` —configuración del
+  panel, ausente en `package.json`, `server.ts` y `nixpacks.toml`— y se cambió a
+  `NODE_ENV=production tsx server.ts`. Railway no redesplegó al guardarlo: el cambio
+  aplica en el próximo deploy, que debe verificarse sin el paso de Prisma. Queda la
   autorización explícita de producción.
 - [x] **T17 — Extraer cálculos puros sin cambiar aritmética.** Tipos con escala y
   redondeo sólo después de probar equivalencia.
