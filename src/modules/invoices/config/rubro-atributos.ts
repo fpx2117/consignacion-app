@@ -104,6 +104,78 @@ export const RUBRO_ATRIBUTOS_FIJOS: Record<string, AtributoFijoDef[]> = {
     { clave: "modelo", label: "Modelo", tipo: "texto" },
     { clave: "codigo_interno", label: "Código interno", tipo: "texto" },
   ],
+  kiosco: [
+    { clave: "marca", label: "Marca", tipo: "texto" },
+    { clave: "sabor_variedad", label: "Sabor / Variedad", tipo: "texto" },
+    {
+      clave: "presentacion",
+      label: "Presentación",
+      tipo: "seleccion",
+      opciones: ["Unidad", "Pack", "Caja"],
+    },
+    { clave: "cantidad_pack", label: "Cantidad por pack", tipo: "numero" },
+    {
+      clave: "envase",
+      label: "Envase",
+      tipo: "seleccion",
+      opciones: ["Botella", "Lata", "Sachet", "Bolsa", "Caja", "Otro"],
+    },
+  ],
+  almacen: [
+    { clave: "marca", label: "Marca", tipo: "texto" },
+    {
+      clave: "presentacion",
+      label: "Presentación",
+      tipo: "seleccion",
+      opciones: ["Unidad", "Pack", "Caja", "Bolsa"],
+    },
+    { clave: "peso_volumen", label: "Peso / Volumen", tipo: "texto" },
+    { clave: "cantidad_pack", label: "Cantidad por pack", tipo: "numero" },
+    { clave: "lote", label: "Lote", tipo: "texto" },
+  ],
+  farmacia: [
+    { clave: "laboratorio", label: "Laboratorio", tipo: "texto" },
+    { clave: "principio_activo", label: "Principio activo", tipo: "texto" },
+    { clave: "concentracion", label: "Concentración", tipo: "texto" },
+    {
+      clave: "presentacion",
+      label: "Presentación",
+      tipo: "seleccion",
+      opciones: [
+        "Comprimidos",
+        "Cápsulas",
+        "Jarabe",
+        "Crema",
+        "Ampolla",
+        "Gotas",
+        "Otro",
+      ],
+    },
+    {
+      clave: "condicion_venta",
+      label: "Condición de venta",
+      tipo: "seleccion",
+      opciones: ["Venta libre", "Bajo receta", "Bajo receta archivada"],
+    },
+    { clave: "lote", label: "Lote", tipo: "texto" },
+  ],
+  veterinaria: [
+    { clave: "marca", label: "Marca", tipo: "texto" },
+    {
+      clave: "especie",
+      label: "Especie",
+      tipo: "seleccion",
+      opciones: ["Perro", "Gato", "Ave", "Roedor", "General", "Otro"],
+    },
+    { clave: "principio_activo", label: "Principio activo", tipo: "texto" },
+    { clave: "presentacion", label: "Presentación", tipo: "texto" },
+    {
+      clave: "peso_tamano",
+      label: "Peso / Tamaño de mascota",
+      tipo: "texto",
+    },
+    { clave: "lote", label: "Lote", tipo: "texto" },
+  ],
 };
 
 /**
@@ -168,7 +240,7 @@ const RUBRO_NOMBRE_COMPUESTO: Record<string, RubroNombreCompuesto> = {
 export function getNombreCompuestoDef(
   rubro: string | null | undefined,
 ): RubroNombreCompuesto | null {
-  return rubro ? RUBRO_NOMBRE_COMPUESTO[rubro] ?? null : null;
+  return rubro ? (RUBRO_NOMBRE_COMPUESTO[rubro] ?? null) : null;
 }
 
 /**

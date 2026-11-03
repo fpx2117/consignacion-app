@@ -86,7 +86,10 @@ import { ProductosAgotadosSheetContent } from "./productos-agotados-sheet-conten
 import { ProductosBajoStockSheetContent } from "./productos-bajo-stock-sheet-content";
 import { ColumnasProductoPicker } from "./columnas-producto-picker";
 import { getAtributosTipicos } from "@/modules/invoices/config/rubros";
-import { getAtributosFijos, getNombreCompuestoDef } from "@/modules/invoices/config/rubro-atributos";
+import {
+  getAtributosFijos,
+  getNombreCompuestoDef,
+} from "@/modules/invoices/config/rubro-atributos";
 
 // --- Interfaces ---
 interface StatCardProps {

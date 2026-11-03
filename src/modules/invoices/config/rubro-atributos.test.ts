@@ -68,7 +68,28 @@ test("componerNombreProducto: null para rubros sin nombre compuesto (ej. ferrete
 });
 
 test("devuelve [] para un rubro sin catálogo fijo definido", () => {
-  assert.deepEqual(getAtributosFijos("kiosco"), []);
+  assert.deepEqual(getAtributosFijos("supermercado"), []);
+});
+
+test("kiosco, almacén, farmacia y veterinaria tienen catálogo fijo sin campos requeridos", () => {
+  for (const rubro of ["kiosco", "almacen", "farmacia", "veterinaria"]) {
+    const atributos = getAtributosFijos(rubro);
+    assert.ok(atributos.length > 0, `"${rubro}" debería tener atributos fijos`);
+    assert.ok(
+      atributos.every((a) => !a.requerido),
+      `"${rubro}" no debería tener campos requeridos (rubro heterogéneo o con productos mixtos)`,
+    );
+  }
+});
+
+test("farmacia: condición de venta cubre las 3 categorías regulatorias reales", () => {
+  const atributos = getAtributosFijos("farmacia");
+  const condicion = atributos.find((a) => a.clave === "condicion_venta");
+  assert.deepEqual(condicion?.opciones, [
+    "Venta libre",
+    "Bajo receta",
+    "Bajo receta archivada",
+  ]);
 });
 
 test("devuelve [] para rubro null, undefined o vacío", () => {
