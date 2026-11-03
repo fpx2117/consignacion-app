@@ -10,12 +10,36 @@ const OPENROUTER_BASE_URL = (
   process.env.OPENROUTER_BASE_URL || "https://openrouter.ai/api/v1"
 ).replace(/\/$/, "");
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
-const OPENROUTER_MODEL = process.env.OPENROUTER_MODEL || "openai/gpt-4o-mini";
+/**
+ * Normaliza un ID de modelo leído de entorno: recorta espacios, saca comillas
+ * envolventes (un valor pegado desde un panel o un .env suele quedar como
+ * `"proveedor/modelo`) y cae al default si queda vacío. Un ID con comillas llegó
+ * a OpenRouter y volvió como "is not a valid model ID", sin pistas en la UI.
+ */
+export function normalizeModelId(
+  raw: string | undefined,
+  fallback: string,
+): string {
+  const trimmed = (raw ?? "").trim();
+  const unquoted = trimmed.replace(/^["'`]+/, "").replace(/["'`]+$/, "").trim();
+  return unquoted || fallback;
+}
+
+export function isInvalidModelError(bodyText: string): boolean {
+  return /not a valid model ID/i.test(bodyText);
+}
+
+const OPENROUTER_MODEL = normalizeModelId(
+  process.env.OPENROUTER_MODEL,
+  "openai/gpt-4o-mini",
+);
 // Modelo separado para el fallback de visión (ver invoice-ai-parser.ts): independiente
 // de OPENROUTER_MODEL a propósito, para que el camino texto-only pueda apuntar a un
 // modelo más barato sin depender de que ese modelo también soporte imágenes.
-const OPENROUTER_VISION_MODEL =
-  process.env.OPENROUTER_VISION_MODEL || "openai/gpt-4o-mini";
+const OPENROUTER_VISION_MODEL = normalizeModelId(
+  process.env.OPENROUTER_VISION_MODEL,
+  "openai/gpt-4o-mini",
+);
 // 150s: medido contra facturas reales, la latencia de qwen3.6-35b-a3b sin
 // reasoning varía bastante según a qué proveedor upstream de OpenRouter te
 // toque (AtlasCloud, Parasail, etc.) y según qué tan "sucio" salga el texto
@@ -165,6 +189,14 @@ export async function callOpenRouterJson(input: {
 
     if (!response.ok) {
       const bodyText = await response.text().catch(() => "");
+      if (isInvalidModelError(bodyText)) {
+        const envVar = usedVision
+          ? "OPENROUTER_VISION_MODEL"
+          : "OPENROUTER_MODEL";
+        throw new OpenRouterConfigError(
+          `El modelo "${model}" configurado en ${envVar} no es un ID válido de OpenRouter. Revisá esa variable (sin comillas ni sufijos) contra https://openrouter.ai/models.`,
+        );
+      }
       throw new OpenRouterRequestError(
         `OpenRouter respondió ${response.status}: ${bodyText.slice(0, 500)}`,
         response.status,
