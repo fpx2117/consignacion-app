@@ -61,9 +61,18 @@ Regresión: `npm run stock:authority:test` (T14) sigue verde, y las suites de
 integración de autoridad, transiciones, OCR, concurrencia y POS pasan sobre el
 esquema con la función nueva.
 
-## Lo que falta
+## Ejecución en producción (2026-11-03)
 
-Ejecutar en producción, en este orden: desplegar la migración (el `startCommand` ya
-no migra, así que se aplica explícitamente), correr el cutover y verificar
-`DB_PROJECTION` + trigger presente + deriva 0. La pausa de escrituras la da el lock
-de capacidad y tablas; el rollback es la compensación T14, ya probada.
+Deploy `75207a3a` con la migración; `prisma migrate deploy` aplicado dentro del
+contenedor (33 migraciones). Cutover transaccional: `driftBefore=0`, `probe=in-out`,
+`productCount=248`, commit confirmado. Estado final: `DB_PROJECTION`, trigger
+presente, deriva 0, `/login` 200. Sonda posterior en una transacción revertida:
+`1 → 2 → 1` con proyección igual a la suma en cada paso.
+
+## Lo que queda después
+
+- Observación de `B1` en `DB_PROJECTION` antes de cualquier `C2` (cambio de código,
+  fuera de T16).
+- Smoke autenticado de los flujos de T15-R.
+- Rollback disponible en cualquier momento: `compensate-t14`
+  (`DB_PROJECTION → APP_DUAL_WRITE`), ya probado en descartable.

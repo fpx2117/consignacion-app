@@ -12,7 +12,8 @@ push y despliegue continúan sin autorización.
 de integración (13 archivos, 22 tests) verde sobre el HEAD rebaseado. El deploy
 ocurrió **sin fence ni ventana** porque Railway auto-despliega `main`: T15-R queda
 desplegado con el smoke autenticado pendiente. Producción ya no corre el T12-only.
-T16 sigue bloqueada por el comando de arranque de Railway (ver T16).
+**T16 ejecutado el mismo día:** producción está en `DB_PROJECTION` con la
+proyección serializada, trigger presente y deriva 0 (ver T16).
 
 ## Diagnóstico
 
@@ -209,25 +210,24 @@ T16 sigue bloqueada por el comando de arranque de Railway (ver T16).
   22 tests) pasa sobre el HEAD desplegado. **Falta el smoke autenticado** de POS,
   anulación, consignación, liquidación, OCR, pedidos y checkout, y confirmar deriva 0
   tras esas operaciones. Queda abierta por eso, no por el deploy.
-- [ ] **T16 — Ejecutar cutover y rollback de stock.** Pausar escrituras,
+- [x] **T16 — Ejecutar cutover y rollback de stock.** Pausar escrituras,
   reconciliar, activar proyección y `DB_PROJECTION` en una transacción, verificar
   entrada/salida/restitución, observar `B1`, promover después a `C2` y ensayar los
   rollbacks compensatorios `C2 -> B1 -> APP_DUAL_WRITE` sin editar migraciones
-  aplicadas. **Bloqueo resuelto el 2026-11-03:** el `startCommand` del servicio
-  `import.vps - POS` en Railway era
-  `prisma migrate deploy && NODE_ENV=production tsx server.ts` —configuración del
-  panel, ausente en `package.json`, `server.ts` y `nixpacks.toml`— y se cambió a
-  `NODE_ENV=production tsx server.ts`. Railway no redesplegó al guardarlo: el cambio
-  aplica en el próximo deploy, que debe verificarse sin el paso de Prisma. Queda la
-  autorización explícita de producción. **Segundo bloqueo, corregido:** la
-  herramienta de cutover y su verificación están escritas y la migración aditiva
-  `20261101040000_serialize_stock_projection` arregla el defecto reproducido: el
-  trigger ahora toma el lock de la fila de `Producto` antes de recomputar, así que
-  dos writers concurrentes en sucursales distintas ya no pierden la actualización
-  (deriva 0 en la prueba). `stock:cutover:test` pasa completo y T14 sigue verde.
-  T16 queda **implementada y verificada, pendiente de ejecución en producción**,
-  que requiere aplicar la migración y correr el cutover con autorización. Detalle
-  en `t16-cutover.md`.
+  aplicadas.
+  **Ejecutado el 2026-11-03 en producción.** Prerrequisitos resueltos: el
+  `startCommand` de Railway ya no corre migraciones (verificado en el boot del
+  deploy `b2b7cf49`) y el defecto de concurrencia del trigger quedó corregido por la
+  migración aditiva `20261101040000_serialize_stock_projection`, que bloquea la fila
+  de `Producto` antes de recomputar. Secuencia: deploy `75207a3a` (33 migraciones),
+  `prisma migrate deploy` aplicado dentro del contenedor, cutover transaccional con
+  `driftBefore=0`, `probe=in-out` y `productCount=248`. Estado final verificado:
+  `DB_PROJECTION`, trigger presente, deriva 0, 914 ventas y `/login` 200. Sonda
+  posterior dentro de una transacción revertida: `1 → 2 → 1` con proyección igual a
+  la suma en cada paso. La aplicación sigue en `B1`; `C2` es un cambio de código
+  posterior a la ventana de observación. Rollback disponible: `compensate-t14`
+  (`DB_PROJECTION -> APP_DUAL_WRITE`), probado en descartable. Detalle en
+  `t16-cutover.md`.
 - [x] **T17 — Extraer cálculos puros sin cambiar aritmética.** Tipos con escala y
   redondeo sólo después de probar equivalencia.
   **Etapa T17-A verificada:** `src/modules/ventas/sale-totals.ts` concentra
