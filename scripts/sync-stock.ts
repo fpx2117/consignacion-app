@@ -1,87 +1,36 @@
 // scripts/sync-stock.ts
-// Ejecutar: npx tsx scripts/sync-stock.ts
-// Sincroniza Producto.stockDisponibleUnits y stockConsignadoUnits
-// con la suma real de StockSucursal (repara desync por bug previo).
+// RETIRADO. Recalculaba Producto = SUM(StockSucursal) producto por producto, sin
+// transacción, sin lock y sin leer la autoridad de stock: podía pisar un delta
+// en vuelo (o competir con el trigger de proyección en DB_PROJECTION).
+//
+// La reparación global válida es la compensación T14, que bloquea la capacidad
+// y las tablas de stock, reconcilia y verifica deriva 0 antes de commitear.
+//
+// Este archivo queda como guarda: no abre conexión y sale con código 2.
 
-import { PrismaClient } from "@prisma/client";
-import { PrismaPg } from "@prisma/adapter-pg";
-import pg from "pg";
-import * as dotenv from "dotenv";
+const COMPENSATION_SCRIPT =
+  "scripts/migrations/compensate-t14-stock-authority.mjs";
 
-dotenv.config();
+console.error(
+  [
+    "[RETIRADO] scripts/sync-stock.ts ya no repara stock.",
+    "",
+    "Escribía Producto = SUM(StockSucursal) sin lock ni autoridad de stock.",
+    "La reparación válida es la compensación T14:",
+    "",
+    `  node ${COMPENSATION_SCRIPT}`,
+    "",
+    "Requiere:",
+    "  DATABASE_URL=<url>",
+    "  T14_CONFIRM_DATABASE=<nombre exacto de la base>",
+    "  T14_ALLOW_PRODUCTION=true   # solo si el destino es producción",
+    "",
+    "La compensación bloquea StockAutoridad, StockSucursal y Producto,",
+    "reconcilia y falla si queda deriva.",
+    "",
+    "OJO: fuerza APP_DUAL_WRITE y retira el trigger de proyección.",
+    "No la ejecutes con T16 activo (DB_PROJECTION).",
+  ].join("\n"),
+);
 
-const connectionString = process.env.DATABASE_URL;
-if (!connectionString) throw new Error("DATABASE_URL no definido en .env");
-
-const pool = new pg.Pool({ connectionString });
-const adapter = new PrismaPg(pool);
-const prisma = new PrismaClient({ adapter });
-
-async function main() {
-  console.log("🔍 Leyendo productos y sus stocks por sucursal...");
-
-  const productos = await prisma.producto.findMany({
-    select: {
-      id: true,
-      nombre: true,
-      stockDisponibleUnits: true,
-      stockConsignadoUnits: true,
-      stockSucursals: {
-        select: {
-          stockDisponibleUnits: true,
-          stockConsignadoUnits: true,
-        },
-      },
-    },
-  });
-
-  console.log(`📦 Total productos: ${productos.length}`);
-
-  let actualizados = 0;
-  let sinCambios = 0;
-
-  for (const producto of productos) {
-    const disponibleReal = producto.stockSucursals.reduce(
-      (acc, s) => acc + (s.stockDisponibleUnits ?? 0),
-      0,
-    );
-    const consignadoReal = producto.stockSucursals.reduce(
-      (acc, s) => acc + (s.stockConsignadoUnits ?? 0),
-      0,
-    );
-
-    const disponibleActual = producto.stockDisponibleUnits ?? 0;
-    const consignadoActual = producto.stockConsignadoUnits ?? 0;
-
-    if (
-      disponibleActual !== disponibleReal ||
-      consignadoActual !== consignadoReal
-    ) {
-      await prisma.producto.update({
-        where: { id: producto.id },
-        data: {
-          stockDisponibleUnits: disponibleReal,
-          stockConsignadoUnits: consignadoReal,
-        },
-      });
-      console.log(
-        `  ✅ [ID ${producto.id}] ${producto.nombre}: disponible ${disponibleActual} → ${disponibleReal} | consignado ${consignadoActual} → ${consignadoReal}`,
-      );
-      actualizados++;
-    } else {
-      sinCambios++;
-    }
-  }
-
-  console.log("\n✅ Sincronización completa:");
-  console.log(`   Corregidos : ${actualizados}`);
-  console.log(`   Sin cambios: ${sinCambios}`);
-  console.log(`   Total      : ${productos.length}`);
-}
-
-main()
-  .catch((e) => {
-    console.error("❌ Error:", e);
-    process.exit(1);
-  })
-  .finally(() => prisma.$disconnect());
+process.exit(2);

@@ -1,4 +1,5 @@
 import type { CatalogCartItem } from "@/lib/types";
+import { applyConsignmentMarkup } from "@/modules/pricing/consignment-markup";
 
 type CatalogCartPricingContext = {
   porcentajeAumentoConsignacion?: number;
@@ -27,7 +28,7 @@ export function getCatalogCartUnitPrice(
     const basePrice = Number(item.precioVenta);
     if (item.pricingMode === "consigne") {
       const surcharge = Number(context.porcentajeAumentoConsignacion) || 0;
-      price = basePrice * (1 + surcharge / 100);
+      price = applyConsignmentMarkup(basePrice, surcharge);
     } else {
       price = basePrice;
     }

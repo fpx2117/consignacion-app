@@ -4,6 +4,11 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth, requireRole } from "@/lib/auth/require-auth";
+import {
+  incrementBranchStock,
+  lockStockAuthority,
+  StockAuthorityError,
+} from "@/modules/inventory/stock-authority";
 import { confirmarPedidoSchema } from "@/lib/validators/pedidos-esperados";
 import { isGlobalSucursalView } from "@/lib/security/sucursalScope";
 import { EstadoPedidoEsperado, EstadoItemPedido } from "@prisma/client";
@@ -127,6 +132,7 @@ export async function POST(req: Request, { params }: RouteParams) {
     // 5. Ejecutar todo dentro de una transacción atómica
     const { pedidoActualizado, movimientos } = await prisma.$transaction(
       async (tx) => {
+        const stockAuthority = await lockStockAuthority(tx);
         const movimientosCreados = [];
 
         for (const input of itemsInput) {
@@ -135,21 +141,13 @@ export async function POST(req: Request, { params }: RouteParams) {
           // Validado previamente: allItemsValid asegura que el item existe
           const item = itemsDelPedido.get(input.itemId)!;
 
-          // a. Obtener StockSucursal actual
-          const stockActual = await tx.stockSucursal.findUnique({
-            where: {
-              productoId_sucursalId: {
-                productoId: item.productoId,
-                sucursalId,
-              },
-            },
-            select: { stockDisponibleUnits: true },
-          });
+          const { prev: stockPrevio, post: stockPosterior } =
+            await incrementBranchStock(tx, stockAuthority, {
+              productoId: item.productoId,
+              sucursalId,
+              units: input.cantidadRecibida,
+            });
 
-          const stockPrevio = stockActual?.stockDisponibleUnits ?? 0;
-          const stockPosterior = stockPrevio + input.cantidadRecibida;
-
-          // b. Crear MovimientoStock
           const movimiento = await tx.movimientoStock.create({
             data: {
               productoId: item.productoId,
@@ -163,34 +161,6 @@ export async function POST(req: Request, { params }: RouteParams) {
             },
           });
           movimientosCreados.push(movimiento);
-
-          // c. Upsert StockSucursal incrementando stock disponible
-          await tx.stockSucursal.upsert({
-            where: {
-              productoId_sucursalId: {
-                productoId: item.productoId,
-                sucursalId,
-              },
-            },
-            create: {
-              productoId: item.productoId,
-              sucursalId,
-              stockDisponibleUnits: input.cantidadRecibida,
-              stockConsignadoUnits: 0,
-              stockMinUnits: 0,
-            },
-            update: {
-              stockDisponibleUnits: { increment: input.cantidadRecibida },
-            },
-          });
-
-          // c2. Sincronizar stockDisponibleUnits del Producto global
-          await tx.producto.update({
-            where: { id: item.productoId },
-            data: {
-              stockDisponibleUnits: { increment: input.cantidadRecibida },
-            },
-          });
 
           // d. Actualizar PedidoEsperadoItem estado y cantidadRecibida
           const estadoItem: EstadoItemPedido =
@@ -258,6 +228,13 @@ export async function POST(req: Request, { params }: RouteParams) {
       })),
     });
   } catch (error) {
+    if (error instanceof StockAuthorityError) {
+      console.error("Autoridad de stock rechazada:", error.code);
+      return NextResponse.json(
+        { error: "Autoridad de stock no disponible." },
+        { status: 503 },
+      );
+    }
     console.error("Error al confirmar pedido:", error);
     return NextResponse.json(
       { error: "Error interno al confirmar pedido" },

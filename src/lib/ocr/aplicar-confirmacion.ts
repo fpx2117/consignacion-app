@@ -18,6 +18,11 @@ import {
 } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { getFacturaProveedorStorageDir } from "@/lib/uploads/uploads";
+import {
+  applyProductoGlobalDelta,
+  calculateStockTransition,
+  lockStockAuthority,
+} from "@/modules/inventory/stock-authority";
 
 type TxClient = Prisma.TransactionClient;
 
@@ -48,19 +53,9 @@ export async function aplicarMovimientoStock(
     observaciones: string;
   },
 ) {
-  const stockActual = await tx.stockSucursal.findUnique({
-    where: {
-      productoId_sucursalId: {
-        productoId: params.productoId,
-        sucursalId: params.sucursalId,
-      },
-    },
-  });
+  const stockAuthority = await lockStockAuthority(tx);
 
-  const stockPrevio = stockActual?.stockDisponibleUnits ?? 0;
-  const stockPosterior = stockPrevio + params.cantidad;
-
-  await tx.stockSucursal.upsert({
+  const stockActualizado = await tx.stockSucursal.upsert({
     where: {
       productoId_sucursalId: {
         productoId: params.productoId,
@@ -70,25 +65,24 @@ export async function aplicarMovimientoStock(
     create: {
       productoId: params.productoId,
       sucursalId: params.sucursalId,
-      stockDisponibleUnits: stockPosterior,
+      stockDisponibleUnits: params.cantidad,
       stockConsignadoUnits: 0,
       stockMinUnits: 0,
     },
-    update: { stockDisponibleUnits: stockPosterior },
+    update: {
+      stockDisponibleUnits: { increment: params.cantidad },
+    },
   });
 
-  const todosStocks = await tx.stockSucursal.findMany({
-    where: { productoId: params.productoId },
-    select: { stockDisponibleUnits: true },
-  });
-  const stockGlobal = todosStocks.reduce(
-    (acc, s) => acc + (s.stockDisponibleUnits ?? 0),
-    0,
+  const { prev: stockPrevio, post: stockPosterior } = calculateStockTransition(
+    stockActualizado.stockDisponibleUnits,
+    params.cantidad,
   );
 
-  await tx.producto.update({
-    where: { id: params.productoId },
-    data: { stockDisponibleUnits: stockGlobal },
+  await applyProductoGlobalDelta(tx, stockAuthority, {
+    productoId: params.productoId,
+    disponibleDelta: params.cantidad,
+    consignadoDelta: 0,
   });
 
   await tx.movimientoStock.create({

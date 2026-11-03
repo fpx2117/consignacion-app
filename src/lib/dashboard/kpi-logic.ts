@@ -9,6 +9,7 @@ import {
 import { resolveTimezone } from "@/lib/timezone/get-configured-tz";
 import type { DashboardDateRange, DashboardPeriod } from "../types";
 import { resolveDashboardDateWhere } from "./date-range";
+import { calculateGrossProfit } from "@/modules/finance/profit";
 
 type CatalogVisitDelegate = {
   count: (args: { where: Record<string, unknown> }) => Promise<number>;
@@ -313,16 +314,19 @@ export async function getDashboardKpis(
   let unitsVendidasConsig = 0;
 
   for (const v of ventasData) {
-    let gananciaVenta = 0;
+    const gananciaVenta = calculateGrossProfit(
+      v.detalles.map((det) => ({
+        subtotal: Number(det.subtotal),
+        units: det.units,
+        unitCost: Number(det.producto?.precioCosto || 0),
+      })),
+      Number(v.descuentoGlobal || 0),
+    );
     for (const det of v.detalles) {
-      const subtotalItem = Number(det.subtotal);
-      const costoItem = Number(det.producto?.precioCosto || 0) * det.units;
-      gananciaVenta += subtotalItem - costoItem;
       unitsVendidasTotal += det.units;
       if (v.tipo === "LIQUIDACION") unitsVendidasConsig += det.units;
       else unitsVendidasPos += det.units;
     }
-    gananciaVenta -= Number(v.descuentoGlobal || 0);
 
     if (v.tipo === "LIQUIDACION") gananciaConsig += gananciaVenta;
     else gananciaPos += gananciaVenta;

@@ -25,6 +25,8 @@ import {
 } from "@/lib/dashboard/date-range";
 import { resolveReportShareLink } from "@/lib/reports/resolve-report-share-link";
 import { hashCode, verifyViewCookie } from "@/lib/sharing/share-links";
+import { calculatePendingUnits } from "@/modules/consignaciones/units";
+import { calculateLineProfit } from "@/modules/finance/profit";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -215,18 +217,17 @@ export async function GET(
     for (const item of liquidacionItems) {
       const precioVenta = Number(item.precioUnitario);
       const descuento = Number(item.descuento || 0);
-      const costo =
-        Number(item.detalle?.producto?.precioCosto || 0) * item.unitsVendidas;
-      gananciaTotal += precioVenta * item.unitsVendidas - descuento - costo;
+      gananciaTotal += calculateLineProfit({
+        subtotal: precioVenta * item.unitsVendidas - descuento,
+        units: item.unitsVendidas,
+        unitCost: Number(item.detalle?.producto?.precioCosto || 0),
+      });
     }
 
     // ── Unidades pendientes
     let unitsPendientesTotal = 0;
     for (const d of detallesAbiertas) {
-      unitsPendientesTotal += Math.max(
-        0,
-        d.unitsEntregadas - d.unitsVendidasAcum - d.unitsDevueltasAcum,
-      );
+      unitsPendientesTotal += Math.max(0, calculatePendingUnits(d));
     }
 
     // ── Conteo abierta/cerrada
@@ -248,11 +249,12 @@ export async function GET(
           for (const item of liq.items) {
             const pVenta = Number(item.precioUnitario);
             const desc = Number(item.descuento || 0);
-            const costoTotal =
-              Number(item.detalle?.producto?.precioCosto || 0) *
-              item.unitsVendidas;
 
-            gananciaCliente += pVenta * item.unitsVendidas - desc - costoTotal;
+            gananciaCliente += calculateLineProfit({
+              subtotal: pVenta * item.unitsVendidas - desc,
+              units: item.unitsVendidas,
+              unitCost: Number(item.detalle?.producto?.precioCosto || 0),
+            });
             unitsVendidas += item.unitsVendidas;
             unitsDevueltas += item.unitsDevueltas;
           }
@@ -260,10 +262,7 @@ export async function GET(
 
         let unitsPendientes = 0;
         for (const d of c.detalles) {
-          unitsPendientes += Math.max(
-            0,
-            d.unitsEntregadas - d.unitsVendidasAcum - d.unitsDevueltasAcum,
-          );
+          unitsPendientes += Math.max(0, calculatePendingUnits(d));
         }
 
         return {
@@ -300,10 +299,12 @@ export async function GET(
         for (const liqItem of d.liquidacionItems) {
           const pVenta = Number(liqItem.precioUnitario);
           const desc = Number(liqItem.descuento || 0);
-          const cost =
-            Number(d.producto?.precioCosto || 0) * liqItem.unitsVendidas;
           unitsVendidas += liqItem.unitsVendidas;
-          gAcum += pVenta * liqItem.unitsVendidas - desc - cost;
+          gAcum += calculateLineProfit({
+            subtotal: pVenta * liqItem.unitsVendidas - desc,
+            units: liqItem.unitsVendidas,
+            unitCost: Number(d.producto?.precioCosto || 0),
+          });
         }
         prev.unitsVendidas += unitsVendidas;
         prev.ganancia += gAcum;
@@ -345,9 +346,11 @@ export async function GET(
         );
         const pVenta = Number(item.precioUnitario);
         const desc = Number(item.descuento || 0);
-        const cost =
-          Number(item.detalle?.producto?.precioCosto || 0) * item.unitsVendidas;
-        const g = pVenta * item.unitsVendidas - desc - cost;
+        const g = calculateLineProfit({
+          subtotal: pVenta * item.unitsVendidas - desc,
+          units: item.unitsVendidas,
+          unitCost: Number(item.detalle?.producto?.precioCosto || 0),
+        });
         gananciaByDate.set(key, (gananciaByDate.get(key) ?? 0) + g);
       }
     }

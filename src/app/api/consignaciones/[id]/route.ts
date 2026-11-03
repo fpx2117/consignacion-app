@@ -16,6 +16,14 @@ import {
   evaluateStockAlert,
   processNotificationQueue,
 } from "@/lib/notificaciones/stock-alerts";
+import { createVentaWithAuthority } from "@/modules/ventas/venta-numbering-authority";
+import {
+  applyProductoGlobalDelta,
+  lockStockAuthority,
+  StockAuthorityError,
+} from "@/modules/inventory/stock-authority";
+import { calculatePendingUnits, validateSettlement } from "@/modules/consignaciones/units";
+import { applyConsignmentMarkup } from "@/modules/pricing/consignment-markup";
 
 type NotificationQueueItem = NonNullable<ReturnType<typeof evaluateStockAlert>>;
 type RouteParams = { params: Promise<{ id: string }> };
@@ -23,6 +31,24 @@ type SoldProductResume = {
   units: number;
   precioUnitario: number;
   descuento: number;
+};
+
+export type ConsignacionItemDeps = {
+  prisma: typeof prisma;
+  requireAuth: typeof requireAuth;
+  isGlobalSucursalView: typeof isGlobalSucursalView;
+  obtenerConfiguracionGlobal: typeof obtenerConfiguracionGlobal;
+  evaluateStockAlert: typeof evaluateStockAlert;
+  processNotificationQueue: typeof processNotificationQueue;
+};
+
+const defaultItemDeps: ConsignacionItemDeps = {
+  prisma,
+  requireAuth,
+  isGlobalSucursalView,
+  obtenerConfiguracionGlobal,
+  evaluateStockAlert,
+  processNotificationQueue,
 };
 
 function getErrorMessage(error: unknown): string {
@@ -84,10 +110,18 @@ export async function GET(_: Request, { params }: RouteParams) {
 /**
  * PUT: Corregir estructura base (Ajuste Manual)
  */
-export async function PUT(req: Request, { params }: RouteParams) {
-  const auth = await requireAuth();
+export async function PUT(req: Request, context: RouteParams) {
+  return handlePutConsignacion(req, context);
+}
+
+export async function handlePutConsignacion(
+  req: Request,
+  { params }: RouteParams,
+  deps: ConsignacionItemDeps = defaultItemDeps,
+) {
+  const auth = await deps.requireAuth();
   if (!auth.ok) return auth.res;
-  if (isGlobalSucursalView(auth)) {
+  if (deps.isGlobalSucursalView(auth)) {
     return NextResponse.json(
       {
         error:
@@ -114,11 +148,14 @@ export async function PUT(req: Request, { params }: RouteParams) {
   }
 
   // âœ… 1. Cola de Alertas
-  const configGlobal = await obtenerConfiguracionGlobal(auth.activeSucursalId);
+  const configGlobal = await deps.obtenerConfiguracionGlobal(
+    auth.activeSucursalId,
+  );
   const notificationsQueue: NotificationQueueItem[] = [];
 
   try {
-    const updated = await prisma.$transaction(async (tx) => {
+    const updated = await deps.prisma.$transaction(async (tx) => {
+      const stockAuthority = await lockStockAuthority(tx);
       const consignacion = await tx.consignacion.findFirst({
         where: { id: consignacionId, sucursalId: auth.activeSucursalId },
         include: { detalles: true },
@@ -183,13 +220,15 @@ export async function PUT(req: Request, { params }: RouteParams) {
           });
 
           // 3. Sincronizar Stock Global
-          const productoDespues = await tx.producto.update({
-            where: { id: item.productoId },
-            data: {
-              stockDisponibleUnits: { decrement: deltaEntregadas },
-              stockConsignadoUnits: { increment: deltaEntregadas },
+          const productoDespues = await applyProductoGlobalDelta(
+            tx,
+            stockAuthority,
+            {
+              productoId: item.productoId,
+              disponibleDelta: -deltaEntregadas,
+              consignadoDelta: deltaEntregadas,
             },
-          });
+          );
 
           // âœ… REGISTRO DE AUDITORÃA (AJUSTE)
           await tx.movimientoStock.create({
@@ -212,7 +251,7 @@ export async function PUT(req: Request, { params }: RouteParams) {
           });
 
           // Evaluar alertas
-          const alerta = evaluateStockAlert(productoDespues, configGlobal);
+          const alerta = deps.evaluateStockAlert(productoDespues, configGlobal);
           if (alerta) notificationsQueue.push(alerta);
         }
 
@@ -244,9 +283,10 @@ export async function PUT(req: Request, { params }: RouteParams) {
               unitsEntregadas: item.unitsEntregadas,
               unitsVendidasAcum: 0,
               unitsDevueltasAcum: 0,
-              precioUnitario:
-                Number(stockSucursal.producto.precioVenta) *
-                (1 + consignacion.porcentajeAumento / 100),
+              precioUnitario: applyConsignmentMarkup(
+                Number(stockSucursal.producto.precioVenta),
+                consignacion.porcentajeAumento,
+              ),
               descuento: 0,
             },
           });
@@ -286,13 +326,15 @@ export async function PUT(req: Request, { params }: RouteParams) {
           });
 
           // 3. Sincronizar stock global
-          const productoDespues = await tx.producto.update({
-            where: { id: prodId },
-            data: {
-              stockDisponibleUnits: { increment: oldDet.unitsEntregadas },
-              stockConsignadoUnits: { decrement: oldDet.unitsEntregadas },
+          const productoDespues = await applyProductoGlobalDelta(
+            tx,
+            stockAuthority,
+            {
+              productoId: prodId,
+              disponibleDelta: oldDet.unitsEntregadas,
+              consignadoDelta: -oldDet.unitsEntregadas,
             },
-          });
+          );
 
           // âœ… AUDITORÃA: REVERSO DE CONSIGNACIÃ“N
           await tx.movimientoStock.create({
@@ -308,7 +350,7 @@ export async function PUT(req: Request, { params }: RouteParams) {
             },
           });
 
-          const alerta = evaluateStockAlert(productoDespues, configGlobal);
+          const alerta = deps.evaluateStockAlert(productoDespues, configGlobal);
           if (alerta) notificationsQueue.push(alerta);
 
           await tx.consignacionDetalle.delete({ where: { id: oldDet.id } });
@@ -332,10 +374,20 @@ export async function PUT(req: Request, { params }: RouteParams) {
     });
 
     // âœ… DISPARAR ALERTAS
-    await processNotificationQueue(notificationsQueue, auth.activeSucursalId);
+    await deps.processNotificationQueue(
+      notificationsQueue,
+      auth.activeSucursalId,
+    );
 
     return NextResponse.json({ data: updated });
   } catch (error) {
+    if (error instanceof StockAuthorityError) {
+      console.error("Autoridad de stock rechazada:", error.code);
+      return NextResponse.json(
+        { error: "Autoridad de stock no disponible." },
+        { status: 503 },
+      );
+    }
     const message = getErrorMessage(error);
 
     if (message === "CONSIGNACION_NO_EXISTE") {
@@ -373,10 +425,18 @@ export async function PUT(req: Request, { params }: RouteParams) {
 /**
  * POST: Crear una liquidaciÃ³n para esta consignaciÃ³n
  */
-export async function POST(req: Request, { params }: RouteParams) {
-  const auth = await requireAuth();
+export async function POST(req: Request, context: RouteParams) {
+  return handlePostLiquidacionConsignacion(req, context);
+}
+
+export async function handlePostLiquidacionConsignacion(
+  req: Request,
+  { params }: RouteParams,
+  deps: ConsignacionItemDeps = defaultItemDeps,
+) {
+  const auth = await deps.requireAuth();
   if (!auth.ok) return auth.res;
-  if (isGlobalSucursalView(auth)) {
+  if (deps.isGlobalSucursalView(auth)) {
     return NextResponse.json(
       {
         error:
@@ -410,11 +470,14 @@ export async function POST(req: Request, { params }: RouteParams) {
     );
   }
 
-  const configGlobal = await obtenerConfiguracionGlobal(auth.activeSucursalId);
+  const configGlobal = await deps.obtenerConfiguracionGlobal(
+    auth.activeSucursalId,
+  );
   const notificationsQueue: NotificationQueueItem[] = [];
 
   try {
-    const result = await prisma.$transaction(async (tx) => {
+    const result = await deps.prisma.$transaction(async (tx) => {
+      const stockAuthority = await lockStockAuthority(tx);
       const consignacion = await tx.consignacion.findFirst({
         where: { id: consignacionId, sucursalId: auth.activeSucursalId },
         include: {
@@ -444,9 +507,15 @@ export async function POST(req: Request, { params }: RouteParams) {
         const devueltas = it.unitsDevueltas ?? 0;
         if (vendidas === 0 && devueltas === 0) throw new Error("ITEM_VACIO");
 
-        const pendiente =
-          det.unitsEntregadas - det.unitsVendidasAcum - det.unitsDevueltasAcum;
-        if (vendidas + devueltas > pendiente)
+        if (
+          !validateSettlement({
+            unitsEntregadas: det.unitsEntregadas,
+            unitsVendidasAcum: det.unitsVendidasAcum,
+            unitsDevueltasAcum: det.unitsDevueltasAcum,
+            unitsVendidas: vendidas,
+            unitsDevueltas: devueltas,
+          }).ok
+        )
           throw new Error(`EXCEDE_PENDIENTE:${det.id}`);
 
         const precioUnit = Number(det.precioUnitario);
@@ -521,15 +590,15 @@ export async function POST(req: Request, { params }: RouteParams) {
         });
 
         // 3. Sincronizar Stock Global
-        const productoDespues = await tx.producto.update({
-          where: { id: det.productoId },
-          data: {
-            stockConsignadoUnits: { decrement: vendidas + devueltas },
-            ...(devueltas > 0
-              ? { stockDisponibleUnits: { increment: devueltas } }
-              : {}),
+        const productoDespues = await applyProductoGlobalDelta(
+          tx,
+          stockAuthority,
+          {
+            productoId: det.productoId,
+            disponibleDelta: devueltas,
+            consignadoDelta: -(vendidas + devueltas),
           },
-        });
+        );
 
         // âœ… AUDITORÃA: SI DEVOLVIÃ“ ALGO (Entra al almacÃ©n de la sucursal)
         if (devueltas > 0) {
@@ -564,7 +633,7 @@ export async function POST(req: Request, { params }: RouteParams) {
         }
 
         // Evaluar alertas (Aunque el stock devuelto suma, si estÃ¡ muy bajo avisa)
-        const alerta = evaluateStockAlert(productoDespues, configGlobal);
+        const alerta = deps.evaluateStockAlert(productoDespues, configGlobal);
         if (alerta) notificationsQueue.push(alerta);
       }
 
@@ -602,11 +671,7 @@ export async function POST(req: Request, { params }: RouteParams) {
         where: { consignacionId },
       });
       const cerrada = !detallesFinales.some(
-        (detalle) =>
-          detalle.unitsEntregadas -
-            detalle.unitsVendidasAcum -
-            detalle.unitsDevueltasAcum >
-          0,
+        (detalle) => calculatePendingUnits(detalle) > 0,
       );
       if (cerrada)
         await tx.consignacion.update({
@@ -618,10 +683,20 @@ export async function POST(req: Request, { params }: RouteParams) {
     });
 
     // ✅ DISPARAR ALERTAS
-    await processNotificationQueue(notificationsQueue, auth.activeSucursalId);
+    await deps.processNotificationQueue(
+      notificationsQueue,
+      auth.activeSucursalId,
+    );
 
     return NextResponse.json({ data: result }, { status: 201 });
   } catch (error) {
+    if (error instanceof StockAuthorityError) {
+      console.error("Autoridad de stock rechazada:", error.code);
+      return NextResponse.json(
+        { error: "Autoridad de stock no disponible." },
+        { status: 503 },
+      );
+    }
     const message = getErrorMessage(error);
 
     if (message === "CONSIGNACION_NO_EXISTE") {

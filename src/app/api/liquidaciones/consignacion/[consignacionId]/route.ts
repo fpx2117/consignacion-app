@@ -18,6 +18,12 @@ import {
 import { sendNotification } from "@/lib/notificaciones/socket-trigger";
 import { isGlobalSucursalView } from "@/lib/security/sucursalScope";
 import { createVentaWithAuthority } from "@/modules/ventas/venta-numbering-authority";
+import {
+  applyProductoGlobalDelta,
+  lockStockAuthority,
+  StockAuthorityError,
+} from "@/modules/inventory/stock-authority";
+import { calculatePendingUnits, validateSettlement } from "@/modules/consignaciones/units";
 
 type RouteParams = {
   params: Promise<{ consignacionId: string }>;
@@ -25,10 +31,38 @@ type RouteParams = {
 
 type StockNotification = NonNullable<ReturnType<typeof evaluateStockAlert>>;
 
-export async function POST(req: Request, { params }: RouteParams) {
-  const auth = await requireAuth();
+export type LiquidacionByConsignacionDeps = {
+  prisma: typeof prisma;
+  requireAuth: typeof requireAuth;
+  isGlobalSucursalView: typeof isGlobalSucursalView;
+  obtenerConfiguracionGlobal: typeof obtenerConfiguracionGlobal;
+  evaluateStockAlert: typeof evaluateStockAlert;
+  processNotificationQueue: typeof processNotificationQueue;
+  sendNotification: typeof sendNotification;
+};
+
+const defaultDeps: LiquidacionByConsignacionDeps = {
+  prisma,
+  requireAuth,
+  isGlobalSucursalView,
+  obtenerConfiguracionGlobal,
+  evaluateStockAlert,
+  processNotificationQueue,
+  sendNotification,
+};
+
+export async function POST(req: Request, context: RouteParams) {
+  return handlePostLiquidacionByConsignacion(req, context);
+}
+
+export async function handlePostLiquidacionByConsignacion(
+  req: Request,
+  { params }: RouteParams,
+  deps: LiquidacionByConsignacionDeps = defaultDeps,
+) {
+  const auth = await deps.requireAuth();
   if (!auth.ok) return auth.res;
-  if (isGlobalSucursalView(auth)) {
+  if (deps.isGlobalSucursalView(auth)) {
     return NextResponse.json(
       {
         error:
@@ -72,11 +106,14 @@ export async function POST(req: Request, { params }: RouteParams) {
   const { items } = parsed.data;
 
   // ✅ 2. Preparar Alertas y Config
-  const configGlobal = await obtenerConfiguracionGlobal(auth.activeSucursalId);
+  const configGlobal = await deps.obtenerConfiguracionGlobal(
+    auth.activeSucursalId,
+  );
   const notificationsQueue: StockNotification[] = [];
 
   try {
-    const result = await prisma.$transaction(async (tx) => {
+    const result = await deps.prisma.$transaction(async (tx) => {
+      const stockAuthority = await lockStockAuthority(tx);
       const consignacion = await tx.consignacion.findFirst({
         where: {
           id: consignacionId,
@@ -116,9 +153,15 @@ export async function POST(req: Request, { params }: RouteParams) {
         const devueltas = item.unitsDevueltas ?? 0;
 
         // Validar que no se liquide más de lo pendiente
-        const pendiente =
-          det.unitsEntregadas - det.unitsVendidasAcum - det.unitsDevueltasAcum;
-        if (vendidas + devueltas > pendiente) {
+        if (
+          !validateSettlement({
+            unitsEntregadas: det.unitsEntregadas,
+            unitsVendidasAcum: det.unitsVendidasAcum,
+            unitsDevueltasAcum: det.unitsDevueltasAcum,
+            unitsVendidas: vendidas,
+            unitsDevueltas: devueltas,
+          }).ok
+        ) {
           throw new Error(`EXCEDE_PENDIENTE:${det.id}`);
         }
 
@@ -138,17 +181,6 @@ export async function POST(req: Request, { params }: RouteParams) {
         if (!productoAntes)
           throw new Error(`PRODUCTO_NO_ENCONTRADO:${det.productoId}`);
 
-        // Actualizar Stocks del producto
-        const productoDespues = await tx.producto.update({
-          where: { id: det.productoId },
-          data: {
-            stockConsignadoUnits: { decrement: vendidas + devueltas },
-            ...(devueltas > 0
-              ? { stockDisponibleUnits: { increment: devueltas } }
-              : {}),
-          },
-        });
-
         // Sincronizar StockSucursal
         await tx.stockSucursal.update({
           where: {
@@ -164,6 +196,17 @@ export async function POST(req: Request, { params }: RouteParams) {
               : {}),
           },
         });
+
+        // Actualizar Stocks globales según la autoridad
+        const productoDespues = await applyProductoGlobalDelta(
+          tx,
+          stockAuthority,
+          {
+            productoId: det.productoId,
+            disponibleDelta: devueltas,
+            consignadoDelta: -(vendidas + devueltas),
+          },
+        );
 
         // ✅ Auditoría de Stock: Devolución (Vuelve al almacén disponible)
         if (devueltas > 0) {
@@ -200,7 +243,7 @@ export async function POST(req: Request, { params }: RouteParams) {
         }
 
         // Evaluar si el nuevo stock disponible requiere alerta
-        const alerta = evaluateStockAlert(productoDespues, configGlobal);
+        const alerta = deps.evaluateStockAlert(productoDespues, configGlobal);
         if (alerta) notificationsQueue.push(alerta);
 
         const precioUnit = Number(
@@ -279,8 +322,7 @@ export async function POST(req: Request, { params }: RouteParams) {
       });
 
       const todoLiquidado = detallesActualizados.every(
-        (d) =>
-          d.unitsEntregadas - d.unitsVendidasAcum - d.unitsDevueltasAcum <= 0,
+        (d) => calculatePendingUnits(d) <= 0,
       );
 
       if (todoLiquidado) {
@@ -294,7 +336,10 @@ export async function POST(req: Request, { params }: RouteParams) {
     });
 
     // ✅ Disparar notificaciones fuera de la transacción para no bloquear
-    await processNotificationQueue(notificationsQueue, auth.activeSucursalId);
+    await deps.processNotificationQueue(
+      notificationsQueue,
+      auth.activeSucursalId,
+    );
 
     // ✅ Disparar notificación de Venta si corresponde
     if (result.venta && configGlobal.notificarVentas !== false) {
@@ -302,7 +347,7 @@ export async function POST(req: Request, { params }: RouteParams) {
         result.consignacion.cliente?.nombre || "Consumidor Final";
       const clientId = result.consignacion.clienteId;
 
-      const dbNotif = await prisma.notification
+      const dbNotif = await deps.prisma.notification
         .create({
           data: {
             type: "NEW_ORDER",
@@ -315,7 +360,7 @@ export async function POST(req: Request, { params }: RouteParams) {
         })
         .catch(() => null);
 
-      sendNotification({
+      deps.sendNotification({
         id: dbNotif?.id,
         type: "NEW_ORDER",
         title: "Venta Exitosa (Liquidación)",
@@ -330,6 +375,13 @@ export async function POST(req: Request, { params }: RouteParams) {
     // Devolvemos solo la liquidación para no romper la respuesta esperada en el frontend
     return NextResponse.json({ data: result.liquidacion }, { status: 201 });
   } catch (error) {
+    if (error instanceof StockAuthorityError) {
+      console.error("Autoridad de stock rechazada:", error.code);
+      return NextResponse.json(
+        { error: "Autoridad de stock no disponible." },
+        { status: 503 },
+      );
+    }
     console.error("Error en liquidación:", error);
     const msg = error instanceof Error ? error.message : "";
 

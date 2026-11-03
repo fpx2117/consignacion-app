@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import {
   Store,
   Instagram,
@@ -171,12 +172,12 @@ export function StoreFooter({ config }: { config: PublicCatalogConfig }) {
             {config.footerText && (
               <p className="text-xs text-gray-400">{config.footerText}</p>
             )}
-            <a
+            <Link
               href="/login"
               className="text-xs text-gray-400 hover:text-gray-700 transition-colors underline underline-offset-4"
             >
               Panel Administrador
-            </a>
+            </Link>
           </div>
         </div>
       </div>

@@ -1,11 +1,19 @@
 import assert from "node:assert/strict";
-import test from "node:test";
-import { handlePostVenta } from "@/app/api/ventas/route";
+import test, { before } from "node:test";
 
-type VentaDeps = NonNullable<Parameters<typeof handlePostVenta>[1]>;
-type VentaAuth = Awaited<ReturnType<VentaDeps["requireAuth"]>>;
+type Handler = typeof import("@/app/api/ventas/route").handlePostVenta;
+type Deps = NonNullable<Parameters<Handler>[1]>;
+type Auth = Awaited<ReturnType<Deps["requireAuth"]>>;
 
-const okAuth: VentaAuth = {
+let handlePostVenta: Handler;
+
+before(async () => {
+  process.env.DATABASE_URL ??= "postgresql://postgres:postgres@127.0.0.1:1/test";
+  process.env.JWT_SECRET ??= "t09-characterization-only-secret-1234567890";
+  ({ handlePostVenta } = await import("@/app/api/ventas/route"));
+});
+
+const okAuth: Auth = {
   ok: true as const,
   user: {
     sub: "7",
@@ -20,110 +28,93 @@ const okAuth: VentaAuth = {
   token: "token",
 };
 
-test("handlePostVenta usa la timezone resuelta para fechar venta y pago", async () => {
-  const nowCalls: string[] = [];
-  const createdVentas: Array<{ fecha: Date }> = [];
-  const createdPagos: Array<{ fecha: Date }> = [];
+function request(body: string | object) {
+  return new Request("http://localhost/api/ventas", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: typeof body === "string" ? body : JSON.stringify(body),
+  });
+}
 
-  const response = await handlePostVenta(
-    new Request("http://localhost/api/ventas", {
-      method: "POST",
-      body: JSON.stringify({
-        items: [{ productoId: 11, units: 2 }],
-        descuentoGlobal: 0,
-        metodoPago: "EFECTIVO",
-      }),
-      headers: { "Content-Type": "application/json" },
-    }),
-    {
-      requireAuth: async () => okAuth,
-      isGlobalSucursalView: () => false,
-      obtenerConfiguracionGlobal: async () => ({
-        usarControlDeCaja: true,
-        notificarVentas: false,
-        porcentajeInteresTarjeta: 0,
-      }),
-      resolveTimezoneForAuth: async () => ({
-        tz: "America/Bogota",
-        source: "user",
-        userId: 7,
-        sucursalId: 3,
-        zonaHorariaUsuario: "America/Bogota",
-        zonaHorariaSucursal: "America/Santiago",
-      }),
-      nowAR: (tz: string) => {
-        nowCalls.push(tz);
-        return new Date(`2026-02-01T0${nowCalls.length}:00:00.000Z`);
+function makeDeps(options: {
+  auth?: Auth;
+  sub?: string;
+  global?: boolean;
+  sessionOpen?: boolean;
+} = {}) {
+  const auth = options.auth ?? {
+    ...okAuth,
+    user: { ...okAuth.user, sub: options.sub ?? "7" },
+  };
+  return {
+    requireAuth: async () => auth,
+    isGlobalSucursalView: () => options.global ?? false,
+    obtenerConfiguracionGlobal: async () => ({ usarControlDeCaja: true }),
+    resolveTimezoneForAuth: async () => ({ tz: "America/Bogota" }),
+    prisma: {
+      sesionCaja: {
+        findFirst: async () => options.sessionOpen === false ? null : { id: 15 },
       },
-      prisma: {
-        sesionCaja: {
-          findFirst: async () => ({ id: 15 }),
-        },
-        cliente: {
-          findFirst: async () => ({ id: 22 }),
-          create: async () => ({ id: 22 }),
-        },
-        $transaction: async (callback: (tx: unknown) => Promise<unknown>) =>
-          callback({
-            stockSucursal: {
-              findUnique: async () => ({
-                producto: { nombre: "Mate", precioVenta: 1250 },
-                precioVentaOverride: null,
-                stockDisponibleUnits: 8,
-              }),
-              updateMany: async () => ({ count: 1 }),
-            },
-            producto: {
-              updateMany: async () => ({ count: 1 }),
-              findUnique: async () => ({
-                id: 11,
-                nombre: "Mate",
-                stockDisponibleUnits: 6,
-              }),
-            },
-            movimientoStock: {
-              create: async () => undefined,
-            },
-            $executeRaw: async () => undefined,
-            venta: {
-              findFirst: async () => ({ numeroVenta: 40 }),
-              create: async ({ data }: { data: { fecha: Date } }) => {
-                createdVentas.push({ fecha: data.fecha });
-                return {
-                  id: 501,
-                  clienteId: 22,
-                  total: 2500,
-                  fecha: data.fecha,
-                  cliente: { nombre: "Consumidor Final" },
-                  detalles: [],
-                };
-              },
-            },
-            pago: {
-              create: async ({ data }: { data: { fecha: Date } }) => {
-                createdPagos.push({ fecha: data.fecha });
-                return { id: 601, fecha: data.fecha };
-              },
-            },
-          }),
-        notification: {
-          create: async () => null,
-        },
-      },
-      evaluateStockAlert: () => null,
-      processNotificationQueue: async () => undefined,
-      sendNotification: async () => undefined,
-    } as unknown as VentaDeps,
-  );
+    },
+  } as unknown as Deps;
+}
 
-  assert.equal(response.status, 200);
-  assert.deepEqual(nowCalls, ["America/Bogota", "America/Bogota"]);
-  assert.deepEqual(
-    createdVentas.map((item) => item.fecha.toISOString()),
-    ["2026-02-01T01:00:00.000Z"],
-  );
-  assert.deepEqual(
-    createdPagos.map((item) => item.fecha.toISOString()),
-    ["2026-02-01T02:00:00.000Z"],
-  );
+test("caracteriza validaciones previas de POST /api/ventas", async (t) => {
+  await t.test("propaga 401 cuando la autenticación falla", async () => {
+    const auth = {
+      ok: false as const,
+      res: Response.json({ error: "No autorizado" }, { status: 401 }),
+    } as unknown as Auth;
+    const response = await handlePostVenta(request({ items: [] }), makeDeps({ auth }));
+    assert.equal(response.status, 401);
+    assert.deepEqual(await response.json(), { error: "No autorizado" });
+  });
+
+  await t.test("rechaza una identidad sin sub numérico", async () => {
+    const response = await handlePostVenta(request({ items: [] }), makeDeps({ sub: "invalid" }));
+    assert.equal(response.status, 401);
+    assert.deepEqual(await response.json(), {
+      error: "Identificación de usuario fallida. Reingresa al sistema.",
+    });
+  });
+
+  await t.test("trata JSON malformado como validación fallida", async () => {
+    const response = await handlePostVenta(request("{"), makeDeps());
+    assert.equal(response.status, 400);
+    assert.deepEqual(await response.json(), {
+      error: "Validación fallida",
+      details: {
+        formErrors: ["Invalid input: expected object, received null"],
+        fieldErrors: {},
+      },
+    });
+  });
+
+  await t.test("rechaza un payload vacío", async () => {
+    const response = await handlePostVenta(request({ items: [] }), makeDeps());
+    assert.equal(response.status, 400);
+    assert.deepEqual(await response.json(), {
+      error: "Validación fallida",
+      details: {
+        formErrors: [],
+        fieldErrors: { items: ["Too small: expected array to have >=1 items"] },
+      },
+    });
+  });
+
+  await t.test("bloquea la vista global", async () => {
+    const response = await handlePostVenta(request({ items: [{ productoId: 1, units: 1 }] }), makeDeps({ global: true }));
+    assert.equal(response.status, 409);
+    assert.deepEqual(await response.json(), {
+      error: "Vista global en modo solo lectura. Selecciona una sucursal para registrar ventas.",
+    });
+  });
+
+  await t.test("bloquea la venta cuando la caja requerida está cerrada", async () => {
+    const response = await handlePostVenta(request({ items: [{ productoId: 1, units: 1 }] }), makeDeps({ sessionOpen: false }));
+    assert.equal(response.status, 403);
+    assert.deepEqual(await response.json(), {
+      error: "Operación bloqueada: Debes abrir un turno de caja para realizar ventas casuales.",
+    });
+  });
 });

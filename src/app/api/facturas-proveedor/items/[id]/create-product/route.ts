@@ -25,6 +25,10 @@ import {
   convertirCostoAArs,
   purgarArchivoFacturaSiFinalizada,
 } from "@/lib/ocr/aplicar-confirmacion";
+import {
+  lockStockAuthority,
+  StockAuthorityError,
+} from "@/modules/inventory/stock-authority";
 
 type ProductoCreateBody = CreateProductoInput & {
   subcategoriaId?: number | null;
@@ -97,6 +101,7 @@ export async function POST(
     );
 
     const resultado = await prisma.$transaction(async (tx) => {
+      await lockStockAuthority(tx);
       const nuevoProducto = await tx.producto.create({
         data: {
           nombre: data.nombre,
@@ -203,6 +208,13 @@ export async function POST(
       { status: 201 },
     );
   } catch (error) {
+    if (error instanceof StockAuthorityError) {
+      console.error("Autoridad de stock rechazada:", error.code);
+      return NextResponse.json(
+        { error: "Autoridad de stock no disponible." },
+        { status: 503 },
+      );
+    }
     // Mismo manejo de duplicados que POST /api/productos: el item de factura sin
     // match confiable puede traer un código de barras que ya pertenece a otro
     // producto de la sucursal (ej. el usuario lo escaneó a mano en el paso de

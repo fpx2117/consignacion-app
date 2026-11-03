@@ -17,6 +17,7 @@ import type {
   DashboardTopProductos,
   DashboardTendencia,
 } from "@/lib/types";
+import { calculatePendingUnits } from "@/modules/consignaciones/units";
 
 /** Lanza UnauthorizedError si la sesión no es válida */
 class UnauthorizedError extends Error {
@@ -152,11 +153,10 @@ export async function fetchDashboardConsignaciones(
 
   const pendientesPrioridad = abiertas
     .map((c) => {
-      const unitsPendientes = c.detalles.reduce((acc, d) => {
-        return (
-          acc + (d.unitsEntregadas - d.unitsVendidasAcum - d.unitsDevueltasAcum)
-        );
-      }, 0);
+      const unitsPendientes = c.detalles.reduce(
+        (acc, d) => acc + calculatePendingUnits(d),
+        0,
+      );
       return { ...c, unitsPendientes };
     })
     .sort((a, b) => b.unitsPendientes - a.unitsPendientes)

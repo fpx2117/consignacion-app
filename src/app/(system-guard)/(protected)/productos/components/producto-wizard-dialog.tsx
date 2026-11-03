@@ -76,6 +76,7 @@ import { validarAtributosFijosProducto } from "@/lib/validators/producto-atribut
 import { toast } from "sonner";
 import { useBarcodeScanner } from "@/hooks/useBarcodeScanner";
 import { BarcodeCameraSheet } from "./barcode-camera-sheet";
+import { calculateMarginPercentage } from "@/modules/finance/profit";
 
 function toNumber(v: string): number | undefined {
   const t = String(v).replace(",", ".").trim();
@@ -504,8 +505,10 @@ export function ProductoWizardDialog({
         : pv
     : pv;
   const gananciaUnitaria = precioEfectivo - pc;
-  const margenPorcentaje =
-    precioEfectivo > 0 ? (gananciaUnitaria / precioEfectivo) * 100 : 0;
+  const margenPorcentaje = calculateMarginPercentage({
+    profit: gananciaUnitaria,
+    base: precioEfectivo,
+  });
   const esGananciaNegativa =
     precioEfectivo > 0 && pc > 0 && gananciaUnitaria < 0;
   const muestraDescuento =

@@ -9,11 +9,34 @@ import {
 } from "@/lib/security/sucursalScope";
 import { nowAR } from "@/lib/date-format/utils-date";
 import { resolveTimezoneForAuth } from "@/lib/timezone/get-configured-tz";
+import {
+  applyProductoGlobalDelta,
+  lockStockAuthority,
+  StockAuthorityError,
+} from "@/modules/inventory/stock-authority";
 
 const ventaAnulacionSchema = z.object({
   motivo: z.string().trim().min(1).optional(),
   brokenItems: z.array(z.number().int().positive()).optional(),
 });
+const VENTA_NOT_FOUND = "Venta no encontrada";
+const VENTA_ALREADY_CANCELLED = "La venta ya fue anulada";
+
+type RouteContext = { params: Promise<{ id: string }> };
+type VentaCancellationDeps = {
+  prisma: typeof prisma;
+  requireAuth: typeof requireAuth;
+  isGlobalSucursalView: typeof isGlobalSucursalView;
+  resolveTimezoneForAuth: typeof resolveTimezoneForAuth;
+  nowAR: typeof nowAR;
+};
+const defaultCancellationDeps: VentaCancellationDeps = {
+  prisma,
+  requireAuth,
+  isGlobalSucursalView,
+  resolveTimezoneForAuth,
+  nowAR,
+};
 
 function getErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : "";
@@ -55,11 +78,19 @@ export async function GET(
 // DELETE: Anular venta (soft-delete) con manejo de stock y roturas
 export async function DELETE(
   req: Request,
-  { params }: { params: Promise<{ id: string }> },
+  context: RouteContext,
 ) {
-  const auth = await requireAuth();
+  return handleDeleteVenta(req, context);
+}
+
+export async function handleDeleteVenta(
+  req: Request,
+  { params }: RouteContext,
+  deps: VentaCancellationDeps = defaultCancellationDeps,
+) {
+  const auth = await deps.requireAuth();
   if (!auth.ok) return auth.res;
-  if (isGlobalSucursalView(auth)) {
+  if (deps.isGlobalSucursalView(auth)) {
     return NextResponse.json(
       {
         error:
@@ -97,30 +128,36 @@ export async function DELETE(
   }
 
   try {
-    const timezone = await resolveTimezoneForAuth(auth);
+    const timezone = await deps.resolveTimezoneForAuth(auth);
 
-    const venta = await prisma.venta.findFirst({
-      where: { id, sucursalId: auth.activeSucursalId },
-      include: { detalles: true },
-    });
+    await deps.prisma.$transaction(async (tx) => {
+      const stockAuthority = await lockStockAuthority(tx);
+      const claimed = await tx.venta.updateMany({
+        where: {
+          id,
+          sucursalId: auth.activeSucursalId,
+          anulada: false,
+        },
+        data: {
+          anulada: true,
+          motivoAnulacion: motivo,
+          fechaAnulacion: deps.nowAR(timezone.tz),
+        },
+      });
+      if (claimed.count === 0) {
+        const existing = await tx.venta.findFirst({
+          where: { id, sucursalId: auth.activeSucursalId },
+          select: { anulada: true },
+        });
+        throw new Error(existing ? VENTA_ALREADY_CANCELLED : VENTA_NOT_FOUND);
+      }
 
-    if (!venta) {
-      return NextResponse.json(
-        { error: "Venta no encontrada" },
-        { status: 404 },
-      );
-    }
+      const venta = await tx.venta.findUniqueOrThrow({
+        where: { id },
+        include: { detalles: { orderBy: { id: "asc" } } },
+      });
+      const sucursalId = venta.sucursalId;
 
-    if (venta.anulada) {
-      return NextResponse.json(
-        { error: "La venta ya fue anulada" },
-        { status: 400 },
-      );
-    }
-
-    const sucursalId = venta.sucursalId;
-
-    await prisma.$transaction(async (tx) => {
       // A) Marcar detalles como rotura y restituir stock solo para los no-rotos
       for (const detalle of venta.detalles) {
         const esRotura = brokenItems.includes(detalle.id);
@@ -163,13 +200,15 @@ export async function DELETE(
                 observaciones: `Anulación venta #${id} - ${motivo}`,
               },
             });
-          }
 
-          // Sincronizar stock global del producto
-          await tx.producto.update({
-            where: { id: detalle.productoId },
-            data: { stockDisponibleUnits: { increment: detalle.units } },
-          });
+            // Sincronizar stock global sólo si la restitución local existió;
+            // de lo contrario Producto quedaría en deriva permanente.
+            await applyProductoGlobalDelta(tx, stockAuthority, {
+              productoId: detalle.productoId,
+              disponibleDelta: detalle.units,
+              consignadoDelta: 0,
+            });
+          }
         } else {
           // Rotura: registrar movimiento de pérdida sin devolver stock
           const stockSucursal = await tx.stockSucursal.findUnique({
@@ -196,15 +235,6 @@ export async function DELETE(
         }
       }
 
-      // B) Marcar la venta como anulada (soft-delete)
-      await tx.venta.update({
-        where: { id },
-        data: {
-          anulada: true,
-          motivoAnulacion: motivo,
-          fechaAnulacion: nowAR(timezone.tz),
-        },
-      });
     });
 
     return NextResponse.json({
@@ -213,8 +243,22 @@ export async function DELETE(
     });
   } catch (error) {
     console.error("Error anulando venta:", error);
+    if (error instanceof StockAuthorityError) {
+      console.error("Autoridad de stock rechazada:", error.code);
+      return NextResponse.json(
+        { error: "Autoridad de stock no disponible." },
+        { status: 503 },
+      );
+    }
+    const message = getErrorMessage(error);
+    if (message === VENTA_NOT_FOUND) {
+      return NextResponse.json({ error: message }, { status: 404 });
+    }
+    if (message === VENTA_ALREADY_CANCELLED) {
+      return NextResponse.json({ error: message }, { status: 400 });
+    }
     return NextResponse.json(
-      { error: getErrorMessage(error) || "Error al anular la venta" },
+      { error: "Error al anular la venta" },
       { status: 500 },
     );
   }

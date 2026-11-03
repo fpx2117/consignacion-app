@@ -7,6 +7,11 @@ import { NOTIFICATION_TYPE } from "@/lib/notificaciones/types";
 import { seedPlanLimits } from "@/lib/subscriptions/require-subscription";
 import { createVentaWithAuthority } from "@/modules/ventas/venta-numbering-authority";
 import {
+  decrementBranchStock,
+  lockStockAuthority,
+  StockAuthorityError,
+} from "@/modules/inventory/stock-authority";
+import {
   MotivoMovimientoStock,
   Prisma,
   TipoMovimientoStock,
@@ -245,6 +250,7 @@ async function processApprovedCheckoutPayment(
 
   return prisma.$transaction(
     async (tx) => {
+      const stockAuthority = await lockStockAuthority(tx);
       const txWithCheckoutIntent = tx as TxWithCheckoutIntent;
 
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${externalReference}))`;
@@ -351,50 +357,17 @@ async function processApprovedCheckoutPayment(
           );
         }
 
-        const affectedStockSucursal = await tx.stockSucursal.updateMany({
-          where: {
-            productoId: item.productoId,
-            sucursalId,
-            stockDisponibleUnits: { gte: item.units },
-          },
-          data: { stockDisponibleUnits: { decrement: item.units } },
+        const adjusted = await decrementBranchStock(tx, stockAuthority, {
+          productoId: item.productoId,
+          sucursalId,
+          units: item.units,
         });
 
-        if (affectedStockSucursal.count === 0) {
+        if (!adjusted) {
           throw new Error(
             `Stock insuficiente para "${stockSucursalInfo.producto.nombre}".`,
           );
         }
-
-        const stockSucursalDespues = await tx.stockSucursal.findUnique({
-          where: {
-            productoId_sucursalId: { productoId: item.productoId, sucursalId },
-          },
-          select: { stockDisponibleUnits: true },
-        });
-
-        if (!stockSucursalDespues) {
-          throw new Error(
-            `No se pudo confirmar stock para el producto #${item.productoId}.`,
-          );
-        }
-
-        const affectedProducto = await tx.producto.updateMany({
-          where: {
-            id: item.productoId,
-            stockDisponibleUnits: { gte: item.units },
-          },
-          data: { stockDisponibleUnits: { decrement: item.units } },
-        });
-
-        if (affectedProducto.count === 0) {
-          throw new Error(
-            `Inconsistencia de stock para "${stockSucursalInfo.producto.nombre}".`,
-          );
-        }
-
-        const stockPosterior = stockSucursalDespues.stockDisponibleUnits;
-        const stockPrevio = stockPosterior + item.units;
 
         await tx.movimientoStock.create({
           data: {
@@ -403,8 +376,8 @@ async function processApprovedCheckoutPayment(
             tipo: TipoMovimientoStock.SALIDA,
             motivo: MotivoMovimientoStock.VENTA,
             cantidad: item.units,
-            stockPrevio,
-            stockPosterior,
+            stockPrevio: adjusted.prev,
+            stockPosterior: adjusted.post,
             observaciones: `Checkout público Mercado Pago (${externalReference})`,
           },
         });
@@ -749,6 +722,13 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ received: true });
   } catch (error) {
+    if (error instanceof StockAuthorityError) {
+      console.error("Autoridad de stock rechazada:", error.code);
+      return NextResponse.json(
+        { error: "Autoridad de stock no disponible." },
+        { status: 503 },
+      );
+    }
     console.error("[MercadoPago Webhook Error]:", error);
     return NextResponse.json(
       { error: "Internal server error" },

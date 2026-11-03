@@ -40,6 +40,8 @@ import { Progress } from "@/components/ui/progress";
 import { SuccessDialog } from "@/components/feedback/success-dialog";
 
 import type { Subcategoria } from "@/lib/types";
+import { calculatePendingUnits } from "@/modules/consignaciones/units";
+import { applyConsignmentMarkup } from "@/modules/pricing/consignment-markup";
 
 type Row = {
   consignacionDetalleId: number;
@@ -85,15 +87,12 @@ export default function LiquidarConsignacionPage() {
       const porcentaje = c.porcentajeAumento || 0;
 
       const mapped: Row[] = (c.detalles ?? []).map((d) => {
-        const pend = Math.max(
-          0,
-          d.unitsEntregadas - d.unitsVendidasAcum - d.unitsDevueltasAcum,
-        );
+        const pend = Math.max(0, calculatePendingUnits(d));
         const precioBase = Number(d.producto?.precioVenta ?? 0);
 
         let precioFinal = Number(d.precioVentaAplicado);
         if (!precioFinal || precioFinal === 0) {
-          precioFinal = precioBase * (1 + porcentaje / 100);
+          precioFinal = applyConsignmentMarkup(precioBase, porcentaje);
         }
 
         return {

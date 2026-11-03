@@ -9,6 +9,7 @@ import {
   formatNumberAR,
 } from "@/lib/reports/template-helpers";
 import type { BrandingDTO } from "@/lib/reports/types";
+import { calculateMarginPercentage } from "@/modules/finance/profit";
 
 // ─────────────────────────────────────────────
 // DATA TYPES
@@ -137,10 +138,12 @@ export function buildPosReportHtml(
   // Color primario del branding (con fallback sky-700 ≈ #0369A1)
   const primaryColor = branding.primaryColor ?? "#0369A1";
 
-  const rentabilidad =
-    data.totalVentas > 0
-      ? Math.round((data.totalGanancia / data.totalVentas) * 100)
-      : 0;
+  const rentabilidad = Math.round(
+    calculateMarginPercentage({
+      profit: data.totalGanancia,
+      base: data.totalVentas,
+    }),
+  );
 
   // Usar los valores calculados en el route (ya incluyen roturas)
   const utilidadNeta =

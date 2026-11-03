@@ -289,6 +289,103 @@ export default function NuevaVentaPage() {
     );
   };
 
+  const totalSinInteres = React.useMemo(
+    () =>
+      cart.reduce(
+        (accumulator, current) =>
+          accumulator + Number(current.producto.precioVenta) * current.quantity,
+        0,
+      ),
+    [cart],
+  );
+
+  const subcategoryQtyMap = React.useMemo(() => {
+    const map = new Map<number, number>();
+    cart.forEach((item) => {
+      const subcategoryId = item.producto.subcategoriaId;
+      if (subcategoryId) {
+        map.set(subcategoryId, (map.get(subcategoryId) ?? 0) + item.quantity);
+      }
+    });
+    return map;
+  }, [cart]);
+
+  const getDiscountMeta = React.useCallback(
+    (item: CartItem) => {
+      // Prioridad: descuento de catálogo del producto
+      if (item.producto.descuentoEfectivo) {
+        return {
+          totalSubQty: 0,
+          bestDiscountPct: item.producto.descuentoEfectivo.porcentaje,
+          nextDiscountPct: null,
+          nextDiscountQty: null,
+          subcategoriaNombre: item.producto.subcategoria?.nombre ?? "marca",
+        };
+      }
+
+      const subcategoryId = item.producto.subcategoriaId;
+      const totalSubQty = subcategoryId
+        ? (subcategoryQtyMap.get(subcategoryId) ?? 0)
+        : 0;
+      const descuentos = item.producto.subcategoria?.descuentos as
+        DescuentoNivel[] | null | undefined;
+      const best = getBestDiscount(descuentos, totalSubQty);
+      const next = getNextDiscount(descuentos, totalSubQty);
+
+      return {
+        totalSubQty,
+        bestDiscountPct: best?.porcentaje ?? null,
+        nextDiscountPct: next?.porcentaje ?? null,
+        nextDiscountQty: next?.cantidadMin ?? null,
+        subcategoriaNombre: item.producto.subcategoria?.nombre ?? "marca",
+      };
+    },
+    [subcategoryQtyMap],
+  );
+
+  const totalDescuento = React.useMemo(
+    () =>
+      cart.reduce((accumulator, item) => {
+        const precio = Number(item.producto.precioVenta);
+
+        // Descuento de catálogo del producto (porcentaje o monto fijo)
+        if (item.producto.descuentoEfectivo) {
+          return (
+            accumulator +
+            item.producto.descuentoEfectivo.montoDescuento * item.quantity
+          );
+        }
+
+        // Descuento por tiers de subcategoría
+        const subcategoryId = item.producto.subcategoriaId;
+        if (!subcategoryId) return accumulator;
+
+        const totalSubQty = subcategoryQtyMap.get(subcategoryId) ?? 0;
+        const subDescuentos = item.producto.subcategoria?.descuentos as
+          DescuentoNivel[] | null | undefined;
+        const best = getBestDiscount(subDescuentos, totalSubQty);
+
+        if (!best) return accumulator;
+
+        return accumulator + precio * item.quantity * (best.porcentaje / 100);
+      }, 0),
+    [cart, subcategoryQtyMap],
+  );
+
+  const subtotalNetoItems = totalSinInteres - totalDescuento;
+
+  const montoDescuentoGlobal = React.useMemo(() => {
+    if (!descuentoAplicado) {
+      return 0;
+    }
+
+    if (descuentoAplicado.tipo === "MONTO") {
+      return descuentoAplicado.valor;
+    }
+
+    return subtotalNetoItems * (descuentoAplicado.valor / 100);
+  }, [descuentoAplicado, subtotalNetoItems]);
+
   const handleCobrar = async () => {
     setError(null);
     if (cart.length === 0) {
@@ -509,102 +606,6 @@ export default function NuevaVentaPage() {
     );
   }, []);
 
-  const totalSinInteres = React.useMemo(
-    () =>
-      cart.reduce(
-        (accumulator, current) =>
-          accumulator + Number(current.producto.precioVenta) * current.quantity,
-        0,
-      ),
-    [cart],
-  );
-
-  const subcategoryQtyMap = React.useMemo(() => {
-    const map = new Map<number, number>();
-    cart.forEach((item) => {
-      const subcategoryId = item.producto.subcategoriaId;
-      if (subcategoryId) {
-        map.set(subcategoryId, (map.get(subcategoryId) ?? 0) + item.quantity);
-      }
-    });
-    return map;
-  }, [cart]);
-
-  const getDiscountMeta = React.useCallback(
-    (item: CartItem) => {
-      // Prioridad: descuento de catálogo del producto
-      if (item.producto.descuentoEfectivo) {
-        return {
-          totalSubQty: 0,
-          bestDiscountPct: item.producto.descuentoEfectivo.porcentaje,
-          nextDiscountPct: null,
-          nextDiscountQty: null,
-          subcategoriaNombre: item.producto.subcategoria?.nombre ?? "marca",
-        };
-      }
-
-      const subcategoryId = item.producto.subcategoriaId;
-      const totalSubQty = subcategoryId
-        ? (subcategoryQtyMap.get(subcategoryId) ?? 0)
-        : 0;
-      const descuentos = item.producto.subcategoria?.descuentos as
-        DescuentoNivel[] | null | undefined;
-      const best = getBestDiscount(descuentos, totalSubQty);
-      const next = getNextDiscount(descuentos, totalSubQty);
-
-      return {
-        totalSubQty,
-        bestDiscountPct: best?.porcentaje ?? null,
-        nextDiscountPct: next?.porcentaje ?? null,
-        nextDiscountQty: next?.cantidadMin ?? null,
-        subcategoriaNombre: item.producto.subcategoria?.nombre ?? "marca",
-      };
-    },
-    [subcategoryQtyMap],
-  );
-
-  const totalDescuento = React.useMemo(
-    () =>
-      cart.reduce((accumulator, item) => {
-        const precio = Number(item.producto.precioVenta);
-
-        // Descuento de catálogo del producto (porcentaje o monto fijo)
-        if (item.producto.descuentoEfectivo) {
-          return (
-            accumulator +
-            item.producto.descuentoEfectivo.montoDescuento * item.quantity
-          );
-        }
-
-        // Descuento por tiers de subcategoría
-        const subcategoryId = item.producto.subcategoriaId;
-        if (!subcategoryId) return accumulator;
-
-        const totalSubQty = subcategoryQtyMap.get(subcategoryId) ?? 0;
-        const subDescuentos = item.producto.subcategoria?.descuentos as
-          DescuentoNivel[] | null | undefined;
-        const best = getBestDiscount(subDescuentos, totalSubQty);
-
-        if (!best) return accumulator;
-
-        return accumulator + precio * item.quantity * (best.porcentaje / 100);
-      }, 0),
-    [cart, subcategoryQtyMap],
-  );
-
-  const subtotalNetoItems = totalSinInteres - totalDescuento;
-
-  const montoDescuentoGlobal = React.useMemo(() => {
-    if (!descuentoAplicado) {
-      return 0;
-    }
-
-    if (descuentoAplicado.tipo === "MONTO") {
-      return descuentoAplicado.valor;
-    }
-
-    return subtotalNetoItems * (descuentoAplicado.valor / 100);
-  }, [descuentoAplicado, subtotalNetoItems]);
 
   const montoInteres =
     metodoPago === "TARJETA"

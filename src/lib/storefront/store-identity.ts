@@ -69,7 +69,7 @@ function firstParam(value: string | string[] | undefined) {
 }
 
 /** `generateMetadata` de `lista/page.tsx` — re-exportado ahí como
- * `generateMetadata` para no crecer ese archivo (ratchet de visual-guard). */
+ * `generateMetadata` para no seguir engordando ese archivo. */
 export async function generateListaMetadata({
   searchParams,
 }: {

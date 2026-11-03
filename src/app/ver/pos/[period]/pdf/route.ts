@@ -24,6 +24,7 @@ import {
 } from "@/lib/dashboard/date-range";
 import { resolveReportShareLink } from "@/lib/reports/resolve-report-share-link";
 import { hashCode, verifyViewCookie } from "@/lib/sharing/share-links";
+import { calculateGrossProfit, calculateLineProfit } from "@/modules/finance/profit";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -257,14 +258,24 @@ export async function GET(
       const descGlobalVenta = Number(v.descuentoGlobal || 0);
       totalDescuentosGlob += descGlobalVenta;
 
-      let gananciaVenta = 0;
       const netoVenta = Number(v.total) - descGlobalVenta;
+
+      const gananciaVenta = calculateGrossProfit(
+        v.detalles.map((d) => ({
+          subtotal: Number(d.subtotal),
+          units: d.units,
+          unitCost: Number(d.producto?.precioCosto || 0),
+        })),
+        descGlobalVenta,
+      );
 
       for (const d of v.detalles) {
         const sub = Number(d.subtotal);
-        const costoTotal = Number(d.producto?.precioCosto || 0) * d.units;
-        const gItem = sub - costoTotal;
-        gananciaVenta += gItem;
+        const gItem = calculateLineProfit({
+          subtotal: sub,
+          units: d.units,
+          unitCost: Number(d.producto?.precioCosto || 0),
+        });
 
         const name = d.producto?.nombre ?? "Desconocido";
         const pPrev = productoMap.get(name) ?? {
@@ -277,9 +288,6 @@ export async function GET(
         pPrev.ganancia += gItem;
         productoMap.set(name, pPrev);
       }
-
-      // Aplicar descuento global a la ganancia de la venta
-      gananciaVenta -= descGlobalVenta;
       totalGanancia += gananciaVenta;
 
       tPrev.ventasTotal += netoVenta;

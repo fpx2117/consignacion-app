@@ -39,7 +39,8 @@ Tocar primero:
 - `src/app/api/productos/*`
 - `src/app/api/ventas/route.ts`
 - `src/app/api/consignaciones/route.ts`
-- `scripts/sync-stock.ts`
+- `scripts/migrations/compensate-t14-stock-authority.mjs` (única reparación
+  global; `scripts/sync-stock.ts` está retirado)
 
 ### Cambios en consignaciones y liquidaciones
 

@@ -23,9 +23,20 @@ import {
   isGlobalSucursalView,
 } from "@/lib/security/sucursalScope";
 import { calcularDescuentoEfectivo } from "@/lib/storefront/descuento-utils";
+import {
+  calculateLineTotal,
+  calculateSaleTotals,
+} from "@/modules/ventas/sale-totals";
 import { createVentaWithAuthority } from "@/modules/ventas/venta-numbering-authority";
+import {
+  applyProductoGlobalDelta,
+  lockStockAuthority,
+  StockAuthorityError,
+} from "@/modules/inventory/stock-authority";
 
 const MAX_VENTA_RETRIES = 3;
+const CLIENT_SCOPE_ERROR =
+  "El cliente seleccionado no pertenece a la sucursal activa.";
 const createVentaSchema = z.object({
   clienteId: z.number().int().positive().optional().nullable(),
   descuentoGlobal: z.number().nonnegative().optional(),
@@ -211,10 +222,15 @@ export async function handlePostVenta(
       try {
         result = await deps.prisma.$transaction(
           async (tx) => {
-            let totalVenta = 0;
             const txNotificationsQueue: NotificationQueueItem[] = [];
             const detallesData = [];
             const sucursalId = auth.activeSucursalId;
+            const stockAuthority = await lockStockAuthority(tx);
+            const scopedClient = await tx.cliente.findFirst({
+              where: { id: finalClienteId, sucursalId },
+              select: { id: true },
+            });
+            if (!scopedClient) throw new Error(CLIENT_SCOPE_ERROR);
 
             for (const item of items) {
               const stockSucursalInfo = await tx.stockSucursal.findUnique({
@@ -264,24 +280,18 @@ export async function handlePostVenta(
                 );
               }
 
-              // Sincronizar el campo legacy Producto.stockDisponibleUnits sumando todos los StockSucursal
-              const allStocksSucursal = await tx.stockSucursal.findMany({
-                where: { productoId: item.productoId },
-                select: { stockDisponibleUnits: true },
-              });
-              const nuevoStockGlobal = allStocksSucursal.reduce(
-                (acc, s) => acc + (s.stockDisponibleUnits ?? 0),
-                0,
+              // Sincronizar el campo legacy Producto según la autoridad de stock:
+              // APP_DUAL_WRITE aplica el delta atómicamente; DB_PROJECTION deja
+              // que la proyección lo haga y sólo lee el valor ya proyectado.
+              const productoDespues = await applyProductoGlobalDelta(
+                tx,
+                stockAuthority,
+                {
+                  productoId: item.productoId,
+                  disponibleDelta: -item.units,
+                  consignadoDelta: 0,
+                },
               );
-
-              const productoDespues = await tx.producto.update({
-                where: { id: item.productoId },
-                data: { stockDisponibleUnits: nuevoStockGlobal },
-              });
-
-              if (!productoDespues) {
-                throw new Error(`Producto #${item.productoId} no encontrado.`);
-              }
 
               const stockPosterior = stockSucursalDespues.stockDisponibleUnits;
               const stockPrevio = stockPosterior + item.units;
@@ -312,37 +322,36 @@ export async function handlePostVenta(
                   stockSucursalInfo.producto.precioVenta,
               );
 
-              // Si no viene descuento manual del POS, aplicar el descuento de catálogo del producto
-              let descuento = Number(item.descuento || 0);
-              if (descuento === 0) {
-                const prod = stockSucursalInfo.producto;
-                const descuentoAuto = calcularDescuentoEfectivo({
-                  descuentoActivo: prod.descuentoActivo,
-                  tipoDescuento: prod.tipoDescuento,
-                  descuentoPorcentaje: prod.descuentoPorcentaje
-                    ? Number(prod.descuentoPorcentaje)
-                    : null,
-                  descuentoMonto: prod.descuentoMonto
-                    ? Number(prod.descuentoMonto)
-                    : null,
-                  descuentoDesde: prod.descuentoDesde,
-                  descuentoHasta: prod.descuentoHasta,
-                  precioVenta,
-                });
-                if (descuentoAuto) {
-                  descuento = descuentoAuto.montoDescuento * item.units;
-                }
-              }
+              // El descuento de catálogo se resuelve siempre; `applyDiscount`
+              // ignora el de catálogo cuando la línea trae uno manual.
+              const prod = stockSucursalInfo.producto;
+              const descuentoAuto = calcularDescuentoEfectivo({
+                descuentoActivo: prod.descuentoActivo,
+                tipoDescuento: prod.tipoDescuento,
+                descuentoPorcentaje: prod.descuentoPorcentaje
+                  ? Number(prod.descuentoPorcentaje)
+                  : null,
+                descuentoMonto: prod.descuentoMonto
+                  ? Number(prod.descuentoMonto)
+                  : null,
+                descuentoDesde: prod.descuentoDesde,
+                descuentoHasta: prod.descuentoHasta,
+                precioVenta,
+              });
 
-              const subtotal = precioVenta * item.units - descuento;
-              totalVenta += subtotal;
+              const linea = calculateLineTotal({
+                unitPrice: precioVenta,
+                units: item.units,
+                manualDiscount: item.descuento,
+                catalogDiscountPerUnit: descuentoAuto?.montoDescuento ?? null,
+              });
 
               detallesData.push({
                 productoId: item.productoId,
                 units: item.units,
                 precioUnitario: precioVenta,
-                descuento,
-                subtotal,
+                descuento: linea.discount,
+                subtotal: linea.subtotal,
               });
             }
 
@@ -357,17 +366,12 @@ export async function handlePostVenta(
             // Retained during mixed-version rollout; PostgreSQL assigns the value.
             void nextNumeroVenta;
 
-            const descGlobalFinal = Number(descuentoGlobal) || 0;
-            let montoInteres = 0;
-            const porcentajeInteres =
-              Number(configGlobal.porcentajeInteresTarjeta) || 0;
-
-            if (metodoPago === "TARJETA" && porcentajeInteres > 0) {
-              montoInteres =
-                (totalVenta - descGlobalFinal) * (porcentajeInteres / 100);
-            }
-
-            const totalFinal = totalVenta - descGlobalFinal + montoInteres;
+            const totals = calculateSaleTotals({
+              lineSubtotals: detallesData.map((detalle) => detalle.subtotal),
+              globalDiscount: descuentoGlobal,
+              appliesCardSurcharge: metodoPago === "TARJETA",
+              cardSurchargePercentage: configGlobal.porcentajeInteresTarjeta,
+            });
 
             const nuevaVenta = await createVentaWithAuthority(tx, {
               data: {
@@ -377,8 +381,8 @@ export async function handlePostVenta(
                 metodoPago: metodoPago ?? MetodoPago.EFECTIVO,
                 sesionCajaId: sesionActiva?.id || null,
                 fecha: deps.nowAR(timezone.tz),
-                total: totalFinal,
-                descuentoGlobal: descGlobalFinal,
+                total: totals.total,
+                descuentoGlobal: totals.globalDiscount,
                 detalles: { create: detallesData },
               },
               include: { detalles: true, cliente: true },
@@ -391,7 +395,7 @@ export async function handlePostVenta(
                 tipo: "VENTA",
                 sesionCajaId: sesionActiva?.id || null,
                 fecha: deps.nowAR(timezone.tz),
-                monto: totalFinal,
+                monto: totals.total,
                 metodo: metodoPago ?? MetodoPago.EFECTIVO,
               },
             });
@@ -463,11 +467,19 @@ export async function handlePostVenta(
     return NextResponse.json({ data: result.venta, pago: result.pago });
   } catch (error) {
     console.error("Error POS:", error);
+    if (error instanceof StockAuthorityError) {
+      console.error("Autoridad de stock rechazada:", error.code);
+      return NextResponse.json(
+        { error: "Autoridad de stock no disponible." },
+        { status: 503 },
+      );
+    }
     const msg = getErrorMessage(error);
     if (
       msg.includes("Stock insuficiente") ||
       msg.includes("no está asignado") ||
-      msg.includes("Inconsistencia de stock")
+      msg.includes("Inconsistencia de stock") ||
+      msg === CLIENT_SCOPE_ERROR
     ) {
       return NextResponse.json({ error: msg }, { status: 409 });
     }

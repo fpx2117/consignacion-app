@@ -32,6 +32,7 @@ import type {
 // Dialogs
 import { SuccessDialog } from "@/components/feedback/success-dialog";
 import { ErrorDialog } from "@/components/feedback/error-dialog";
+import { applyConsignmentMarkup } from "@/modules/pricing/consignment-markup";
 
 type EditableLiquidacionItem = {
   consignacionDetalleId: number;
@@ -235,7 +236,7 @@ export default function EditarLiquidacionPage() {
 
   // 3. CÁLCULO DE TOTALES APLICANDO EL AUMENTO
   const calcularPrecioConAumento = (precioBase: number) => {
-    return precioBase * (1 + porcentajeAumento / 100);
+    return applyConsignmentMarkup(precioBase, porcentajeAumento);
   };
 
   const totalVenta = items.reduce(

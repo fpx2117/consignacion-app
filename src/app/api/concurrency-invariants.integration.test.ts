@@ -1,0 +1,275 @@
+import assert from "node:assert/strict";
+import test from "node:test";
+import {
+  backendPid,
+  connect,
+  lockHarness,
+  requireIsolatedDatabase,
+  resetDatabase,
+  rollbackQuietly,
+  seedCore,
+  waitForLock,
+} from "@/app/api/concurrency-baseline.integration-fixture";
+
+// T10-R: los archivos originales de T10 reproducian los defectos ANTES de las
+// correcciones. Con T12 (folios), T13-B (anulacion) y T14/T15 (stock) aplicados
+// esas intercalaciones ya no pueden completarse: la segunda insercion espera al
+// indice unico y el test colgaba. Aca se afirma el invariante post-correccion.
+//
+// Los dos escenarios cuyo defecto sigue vigente se conservan como `test.skip`
+// con su unidad responsable (T20 caja, T21 liquidaciones).
+
+const databaseUrl = requireIsolatedDatabase();
+
+async function reset(fixtureClient: Awaited<ReturnType<typeof connect>>) {
+  await resetDatabase(fixtureClient);
+  // Los numeradores no estan en el truncado compartido: sin esto los folios
+  // siguen contando entre tests y las aserciones absolutas dejan de valer.
+  await fixtureClient.query(
+    `TRUNCATE TABLE "VentaNumerador", "ConsignacionNumerador" RESTART IDENTITY CASCADE`,
+  );
+}
+
+test("la asignacion de folios concurrente no colisiona", async () => {
+  const observer = await connect(databaseUrl);
+  const first = await connect(databaseUrl);
+  const second = await connect(databaseUrl);
+  try {
+    await lockHarness(observer);
+    await reset(observer);
+    const fixture = await seedCore(observer);
+    const secondPid = await backendPid(second);
+
+    await first.query("BEGIN");
+    const firstInsert = await first.query<{ numeroVenta: number }>(
+      `INSERT INTO "Venta" ("clienteId", "sucursalId", total, tipo)
+       VALUES ($1, $2, 10, 'CASUAL') RETURNING "numeroVenta"`,
+      [fixture.clienteId, fixture.sucursalA],
+    );
+
+    await second.query("BEGIN");
+    const blocked = second.query<{ numeroVenta: number }>(
+      `INSERT INTO "Venta" ("clienteId", "sucursalId", total, tipo)
+       VALUES ($1, $2, 20, 'CASUAL') RETURNING "numeroVenta"`,
+      [fixture.clienteId, fixture.sucursalA],
+    );
+    await waitForLock(observer, secondPid);
+    await first.query("COMMIT");
+    const secondInsert = (await blocked).rows[0];
+    await second.query("COMMIT");
+
+    const numbers = [firstInsert.rows[0].numeroVenta, secondInsert.numeroVenta];
+    assert.equal(new Set(numbers).size, 2, `folios repetidos: ${numbers}`);
+    assert.deepEqual(numbers, [1, 2]);
+  } finally {
+    await rollbackQuietly(first);
+    await rollbackQuietly(second);
+    await Promise.all([observer.end(), first.end(), second.end()]);
+  }
+});
+
+test("la autoridad asigna el numero de venta e ignora el valor del cliente", async () => {
+  const observer = await connect(databaseUrl);
+  try {
+    await lockHarness(observer);
+    await reset(observer);
+    const fixture = await seedCore(observer);
+
+    // El trigger BEFORE INSERT siempre asigna: mandar 99 no fija el folio.
+    const venta = await observer.query<{ id: number; numeroVenta: number }>(
+      `INSERT INTO "Venta" ("clienteId", "sucursalId", "numeroVenta", total, tipo)
+       VALUES ($1, $2, 99, 10, 'CASUAL') RETURNING id, "numeroVenta"`,
+      [fixture.clienteId, fixture.sucursalA],
+    );
+    assert.equal(venta.rows[0].numeroVenta, 1);
+
+    // Y una vez asignado, el numero es inmutable.
+    await assert.rejects(
+      observer.query(`UPDATE "Venta" SET "numeroVenta" = 5 WHERE id = $1`, [
+        venta.rows[0].id,
+      ]),
+      (error: { message?: string }) => {
+        assert.match(error.message ?? "", /immutable/);
+        return true;
+      },
+    );
+  } finally {
+    await observer.end();
+  }
+});
+
+test("la autoridad asigna el folio de consignacion e ignora el valor del cliente", async () => {
+  const observer = await connect(databaseUrl);
+  try {
+    await lockHarness(observer);
+    await reset(observer);
+    const fixture = await seedCore(observer);
+
+    const consignacion = await observer.query<{
+      id: number;
+      numeroFolio: number;
+    }>(
+      `INSERT INTO "Consignacion" ("clienteId", "sucursalId", "numeroFolio")
+       VALUES ($1, $2, 99) RETURNING id, "numeroFolio"`,
+      [fixture.clienteId, fixture.sucursalA],
+    );
+    assert.equal(consignacion.rows[0].numeroFolio, 1);
+
+    await assert.rejects(
+      observer.query(
+        `UPDATE "Consignacion" SET "numeroFolio" = 5 WHERE id = $1`,
+        [consignacion.rows[0].id],
+      ),
+      (error: { message?: string }) => {
+        assert.match(error.message ?? "", /immutable/);
+        return true;
+      },
+    );
+  } finally {
+    await observer.end();
+  }
+});
+
+test("una venta se anula una sola vez bajo concurrencia", async () => {
+  const observer = await connect(databaseUrl);
+  const first = await connect(databaseUrl);
+  const second = await connect(databaseUrl);
+  try {
+    await lockHarness(observer);
+    await reset(observer);
+    const fixture = await seedCore(observer);
+    const venta = await observer.query<{ id: number }>(
+      `INSERT INTO "Venta" ("clienteId", "sucursalId", total, tipo)
+       VALUES ($1, $2, 30, 'CASUAL') RETURNING id`,
+      [fixture.clienteId, fixture.sucursalA],
+    );
+    const secondPid = await backendPid(second);
+
+    await Promise.all([first.query("BEGIN"), second.query("BEGIN")]);
+    const claimFirst = await first.query(
+      `UPDATE "Venta" SET anulada = true
+       WHERE id = $1 AND anulada = false`,
+      [venta.rows[0].id],
+    );
+    assert.equal(claimFirst.rowCount, 1);
+
+    const blocked = second.query(
+      `UPDATE "Venta" SET anulada = true
+       WHERE id = $1 AND anulada = false`,
+      [venta.rows[0].id],
+    );
+    await waitForLock(observer, secondPid);
+    await first.query("COMMIT");
+    const claimSecond = await blocked;
+    await second.query("COMMIT");
+
+    assert.equal(claimSecond.rowCount, 0, "el perdedor no debe reclamar la venta");
+    const state = await observer.query<{ anulada: boolean }>(
+      `SELECT anulada FROM "Venta" WHERE id = $1`,
+      [venta.rows[0].id],
+    );
+    assert.equal(state.rows[0].anulada, true);
+  } finally {
+    await rollbackQuietly(first);
+    await rollbackQuietly(second);
+    await Promise.all([observer.end(), first.end(), second.end()]);
+  }
+});
+
+test.skip(
+  "T20 pendiente: una venta validada antes del cierre queda ligada a una caja cerrada",
+  async () => {
+    const observer = await connect(databaseUrl);
+    const pos = await connect(databaseUrl);
+    const close = await connect(databaseUrl);
+    try {
+      await lockHarness(observer);
+      await reset(observer);
+      const fixture = await seedCore(observer);
+      const caja = await observer.query<{ id: number }>(
+        `INSERT INTO "Caja" (nombre, "sucursalId") VALUES ('T20 Caja', $1) RETURNING id`,
+        [fixture.sucursalA],
+      );
+      const session = await observer.query<{ id: number }>(
+        `INSERT INTO "SesionCaja" ("cajaId", "usuarioId", "montoInicial")
+         VALUES ($1, $2, 100) RETURNING id`,
+        [caja.rows[0].id, fixture.usuarioId],
+      );
+
+      await pos.query(
+        `SELECT estado FROM "SesionCaja" WHERE id = $1 AND estado = 'ABIERTA'`,
+        [session.rows[0].id],
+      );
+      const snapshot = await close.query<{ expected: string }>(
+        `SELECT (s."montoInicial" + COALESCE(SUM(v.total), 0))::text expected
+         FROM "SesionCaja" s
+         LEFT JOIN "Venta" v ON v."sesionCajaId" = s.id AND v.tipo = 'CASUAL'
+         WHERE s.id = $1 GROUP BY s.id`,
+        [session.rows[0].id],
+      );
+      await close.query(
+        `UPDATE "SesionCaja" SET estado = 'CERRADA', "fechaCierre" = now(),
+           "montoFinalEsperado" = $2, "montoFinalReal" = $2, diferencia = 0
+         WHERE id = $1`,
+        [session.rows[0].id, snapshot.rows[0].expected],
+      );
+      await pos.query(
+        `INSERT INTO "Venta" ("clienteId", "sucursalId", "sesionCajaId", total, tipo)
+         VALUES ($1, $2, $3, 50, 'CASUAL')`,
+        [fixture.clienteId, fixture.sucursalA, session.rows[0].id],
+      );
+    } finally {
+      await Promise.all([observer.end(), pos.end(), close.end()]);
+    }
+  },
+);
+
+test.skip(
+  "T21 pendiente: dos liquidaciones exceden las unidades pendientes",
+  async () => {
+    const observer = await connect(databaseUrl);
+    const first = await connect(databaseUrl);
+    const second = await connect(databaseUrl);
+    try {
+      await lockHarness(observer);
+      await reset(observer);
+      const fixture = await seedCore(observer, 0);
+      await observer.query(
+        `UPDATE "StockSucursal" SET "stockConsignadoUnits" = 5 WHERE id = $1`,
+        [fixture.stockAId],
+      );
+      const consignacion = await observer.query<{ id: number }>(
+        `INSERT INTO "Consignacion" ("clienteId", "sucursalId", "numeroFolio")
+         VALUES ($1, $2, 1) RETURNING id`,
+        [fixture.clienteId, fixture.sucursalA],
+      );
+      const detalle = await observer.query<{ id: number }>(
+        `INSERT INTO "ConsignacionDetalle" (
+           "consignacionId", "productoId", "unitsEntregadas", "precioUnitario"
+         ) VALUES ($1, $2, 5, 100) RETURNING id`,
+        [consignacion.rows[0].id, fixture.productoId],
+      );
+      const secondPid = await backendPid(second);
+
+      await Promise.all([first.query("BEGIN"), second.query("BEGIN")]);
+      await first.query(
+        `UPDATE "ConsignacionDetalle"
+         SET "unitsVendidasAcum" = "unitsVendidasAcum" + 4 WHERE id = $1`,
+        [detalle.rows[0].id],
+      );
+      const blocked = second.query(
+        `UPDATE "ConsignacionDetalle"
+         SET "unitsVendidasAcum" = "unitsVendidasAcum" + 4 WHERE id = $1`,
+        [detalle.rows[0].id],
+      );
+      await waitForLock(observer, secondPid);
+      await first.query("COMMIT");
+      await blocked;
+      await second.query("COMMIT");
+    } finally {
+      await rollbackQuietly(first);
+      await rollbackQuietly(second);
+      await Promise.all([observer.end(), first.end(), second.end()]);
+    }
+  },
+);

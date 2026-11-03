@@ -41,6 +41,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Progress } from "@/components/ui/progress";
+import { applyConsignmentMarkup } from "@/modules/pricing/consignment-markup";
 
 export default function ConsignacionDetailPage() {
   const { formatWithOptions } = useTimezone();
@@ -165,7 +166,7 @@ export default function ConsignacionDetailPage() {
       let precio = Number(d.precioUnitario);
       if (!precio || precio === 0) {
         const precioBase = Number(d.producto?.precioVenta || 0);
-        precio = precioBase * (1 + porcentajeAumento / 100);
+        precio = applyConsignmentMarkup(precioBase, porcentajeAumento);
       }
       return (
         total +
@@ -546,7 +547,7 @@ function ProductRow({
 
   if (!precioFinal || precioFinal === 0) {
     const precioBase = Number(d.producto?.precioVenta || 0);
-    precioFinal = precioBase * (1 + porcentajeAumento / 100);
+    precioFinal = applyConsignmentMarkup(precioBase, porcentajeAumento);
   }
 
   return (

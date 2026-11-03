@@ -16,6 +16,7 @@ import {
   purgarArchivoFacturaSiFinalizada,
   convertirCostoAArs,
 } from "@/lib/ocr/aplicar-confirmacion";
+import { StockAuthorityError } from "@/modules/inventory/stock-authority";
 
 export async function POST(
   req: NextRequest,
@@ -119,6 +120,13 @@ export async function POST(
       advertenciaConversion: conversion.advertencia,
     });
   } catch (error) {
+    if (error instanceof StockAuthorityError) {
+      console.error("Autoridad de stock rechazada:", error.code);
+      return NextResponse.json(
+        { error: "Autoridad de stock no disponible." },
+        { status: 503 },
+      );
+    }
     console.error("[FACTURA_PROVEEDOR_ITEM_CONFIRM_ERROR]", { itemId, error });
     return NextResponse.json(
       { error: "Error al confirmar el item" },

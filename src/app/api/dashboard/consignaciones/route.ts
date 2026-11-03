@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/auth/require-auth";
 import { getIncludedGlobalSucursalIds } from "@/lib/dashboard/kpi-logic";
+import { calculatePendingUnits } from "@/modules/consignaciones/units";
 
 export async function GET(req: Request) {
   const auth = await requireAuth();
@@ -31,11 +32,10 @@ export async function GET(req: Request) {
   // Calculamos units pendientes por consignación
   const conPendientes = abiertas
     .map((c) => {
-      const pendientes = c.detalles.reduce((acc, d) => {
-        const p =
-          d.unitsEntregadas - d.unitsVendidasAcum - d.unitsDevueltasAcum;
-        return acc + p;
-      }, 0);
+      const pendientes = c.detalles.reduce(
+        (acc, d) => acc + calculatePendingUnits(d),
+        0,
+      );
 
       return {
         ...c,

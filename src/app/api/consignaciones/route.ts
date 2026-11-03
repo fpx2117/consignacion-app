@@ -21,11 +21,38 @@ import {
   evaluateStockAlert,
   processNotificationQueue,
 } from "@/lib/notificaciones/stock-alerts";
+import { getPersistedConsignacionFolio } from "@/modules/consignaciones/consignacion-numbering";
+import {
+  applyProductoGlobalDelta,
+  lockStockAuthority,
+  StockAuthorityError,
+} from "@/modules/inventory/stock-authority";
+import { applyConsignmentMarkup } from "@/modules/pricing/consignment-markup";
 
 type NotificationQueueItem = NonNullable<ReturnType<typeof evaluateStockAlert>>;
 type StockSucursalWithProducto = Prisma.StockSucursalGetPayload<{
   include: { producto: true };
 }>;
+
+export type ConsignacionesPostDeps = {
+  prisma: typeof prisma;
+  requireAuth: typeof requireAuth;
+  isGlobalSucursalView: typeof isGlobalSucursalView;
+  checkFeature: typeof checkFeature;
+  obtenerConfiguracionGlobal: typeof obtenerConfiguracionGlobal;
+  evaluateStockAlert: typeof evaluateStockAlert;
+  processNotificationQueue: typeof processNotificationQueue;
+};
+
+const defaultPostDeps: ConsignacionesPostDeps = {
+  prisma,
+  requireAuth,
+  isGlobalSucursalView,
+  checkFeature,
+  obtenerConfiguracionGlobal,
+  evaluateStockAlert,
+  processNotificationQueue,
+};
 
 const consignacionInclude = Prisma.validator<Prisma.ConsignacionInclude>()({
   cliente: true,
@@ -137,10 +164,13 @@ export async function GET(req: Request) {
 }
 
 // POST: Crear ConsignaciÃ³n
-export async function POST(req: Request) {
-  const auth = await requireAuth();
+export async function handlePostConsignacion(
+  req: Request,
+  deps: ConsignacionesPostDeps = defaultPostDeps,
+) {
+  const auth = await deps.requireAuth();
   if (!auth.ok) return auth.res;
-  if (isGlobalSucursalView(auth)) {
+  if (deps.isGlobalSucursalView(auth)) {
     return NextResponse.json(
       {
         error:
@@ -151,7 +181,7 @@ export async function POST(req: Request) {
   }
 
   // Guard: Verificar que el plan permite consignaciones
-  const featureCheck = await checkFeature("consignaciones");
+  const featureCheck = await deps.checkFeature("consignaciones");
   if (!featureCheck.allowed) {
     return NextResponse.json(
       { error: featureCheck.message, limitReached: true },
@@ -170,14 +200,16 @@ export async function POST(req: Request) {
   }
 
   // âœ… 1. Preparar ConfiguraciÃ³n y Cola de Notificaciones
-  const configGlobal = await obtenerConfiguracionGlobal(auth.activeSucursalId);
+  const configGlobal = await deps.obtenerConfiguracionGlobal(
+    auth.activeSucursalId,
+  );
   const notificationsQueue: NotificationQueueItem[] = [];
 
   const porcentaje = configGlobal.porcentajeAumentoConsignacion || 0;
-  const factorAumento = 1 + porcentaje / 100;
 
   try {
-    const result = await prisma.$transaction(async (tx) => {
+    const result = await deps.prisma.$transaction(async (tx) => {
+      const stockAuthority = await lockStockAuthority(tx);
       // 1. Validar existencia del cliente
       const cliente = await tx.cliente.findUnique({
         where: { id: parsed.data.clienteId },
@@ -233,7 +265,7 @@ export async function POST(req: Request) {
             create: parsed.data.items.map((it) => {
               const s = mapStock.get(it.productoId);
               const precioBase = Number(s?.producto.precioVenta || 0);
-              const precioFinal = precioBase * factorAumento;
+              const precioFinal = applyConsignmentMarkup(precioBase, porcentaje);
 
               return {
                 productoId: it.productoId,
@@ -260,12 +292,10 @@ export async function POST(req: Request) {
         });
 
         // B) Sincronizar Stock Global (legacy support)
-        const pDespues = await tx.producto.update({
-          where: { id: it.productoId },
-          data: {
-            stockDisponibleUnits: { decrement: it.unitsEntregadas },
-            stockConsignadoUnits: { increment: it.unitsEntregadas },
-          },
+        const pDespues = await applyProductoGlobalDelta(tx, stockAuthority, {
+          productoId: it.productoId,
+          disponibleDelta: -it.unitsEntregadas,
+          consignadoDelta: it.unitsEntregadas,
         });
 
         // C) Registro de MovimientoStock
@@ -278,11 +308,12 @@ export async function POST(req: Request) {
             cantidad: it.unitsEntregadas,
             stockPrevio: sAntes.stockDisponibleUnits,
             stockPosterior: sDespues.stockDisponibleUnits,
-            observaciones: `Entrega de ConsignaciÃ³n Folio #${getPersistedConsignacionFolio(consignacion)}`,
+            observaciones:
+              `Entrega de ConsignaciÃ³n Folio #${getPersistedConsignacionFolio(consignacion)}`,
           },
         });
 
-        const alerta = evaluateStockAlert(pDespues, configGlobal);
+        const alerta = deps.evaluateStockAlert(pDespues, configGlobal);
         if (alerta) notificationsQueue.push(alerta);
       }
 
@@ -303,10 +334,20 @@ export async function POST(req: Request) {
     });
 
     // âœ… 6. DISPARAR NOTIFICACIONES DE STOCK (Centralizado y fuera de la transacciÃ³n)
-    await processNotificationQueue(notificationsQueue, auth.activeSucursalId);
+    await deps.processNotificationQueue(
+      notificationsQueue,
+      auth.activeSucursalId,
+    );
 
     return NextResponse.json({ data: result }, { status: 201 });
   } catch (error) {
+    if (error instanceof StockAuthorityError) {
+      console.error("Autoridad de stock rechazada:", error.code);
+      return NextResponse.json(
+        { error: "Autoridad de stock no disponible." },
+        { status: 503 },
+      );
+    }
     const msg = getErrorMessage(error);
 
     if (msg === "CLIENTE_NO_EXISTE") {
@@ -334,4 +375,8 @@ export async function POST(req: Request) {
     console.error("Consignaciones POST error:", error);
     return NextResponse.json({ error: "Error inesperado" }, { status: 500 });
   }
+}
+
+export async function POST(req: Request) {
+  return handlePostConsignacion(req);
 }

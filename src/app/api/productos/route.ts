@@ -24,6 +24,10 @@ import {
   resolveRequestedSucursalId,
 } from "@/lib/security/sucursalScope";
 import { calcularDescuentoEfectivo } from "@/lib/storefront/descuento-utils";
+import {
+  lockStockAuthority,
+  StockAuthorityError,
+} from "@/modules/inventory/stock-authority";
 
 type ProductoCreateBody = CreateProductoInput & {
   subcategoriaId?: number | null;
@@ -36,6 +40,30 @@ type ProductoListado = Prisma.ProductoGetPayload<{
     stockSucursals: true;
   };
 }>;
+
+export type ProductosPostDeps = {
+  prisma: typeof prisma;
+  requireAuth: typeof requireAuth;
+  requireRole: typeof requireRole;
+  isGlobalSucursalView: typeof isGlobalSucursalView;
+  checkProductLimit: typeof checkProductLimit;
+  obtenerConfiguracionGlobal: typeof obtenerConfiguracionGlobal;
+  validarAtributosFijosProducto: typeof validarAtributosFijosProducto;
+  sendNotification: typeof sendNotification;
+  revalidateTag: typeof revalidateTag;
+};
+
+const defaultPostDeps: ProductosPostDeps = {
+  prisma,
+  requireAuth,
+  requireRole,
+  isGlobalSucursalView,
+  checkProductLimit,
+  obtenerConfiguracionGlobal,
+  validarAtributosFijosProducto,
+  sendNotification,
+  revalidateTag,
+};
 
 /**
  * GET: OBTENER PRODUCTOS
@@ -227,10 +255,17 @@ export async function GET(req: Request) {
  * Crea el producto, el registro de stock para la sucursal actual y registra el movimiento inicial.
  */
 export async function POST(req: Request) {
+  return handlePostProducto(req);
+}
+
+export async function handlePostProducto(
+  req: Request,
+  deps: ProductosPostDeps = defaultPostDeps,
+) {
   try {
-    const auth = await requireAuth();
+    const auth = await deps.requireAuth();
     if (!auth.ok) return auth.res;
-    if (isGlobalSucursalView(auth)) {
+    if (deps.isGlobalSucursalView(auth)) {
       return NextResponse.json(
         {
           error:
@@ -240,7 +275,7 @@ export async function POST(req: Request) {
       );
     }
 
-    if (!requireRole(auth.user, ["ADMIN"])) {
+    if (!deps.requireRole(auth.user, ["ADMIN"])) {
       return NextResponse.json(
         { error: "No tienes permisos (Admin requerido)" },
         { status: 403 },
@@ -250,7 +285,7 @@ export async function POST(req: Request) {
     const sucursalId = auth.activeSucursalId;
 
     // Guard: Verificar límite de productos del plan
-    const productCheck = await checkProductLimit();
+    const productCheck = await deps.checkProductLimit();
     if (!productCheck.allowed) {
       return NextResponse.json(
         { error: productCheck.message, limitReached: true },
@@ -279,8 +314,8 @@ export async function POST(req: Request) {
     // Resolvemos la config de la sucursal una sola vez: la reusamos abajo
     // para el umbral de alerta de stock (ya se hacía) y acá para validar
     // los atributos fijos del rubro activo.
-    const configGlobal = await obtenerConfiguracionGlobal(sucursalId);
-    const atributosError = validarAtributosFijosProducto(
+    const configGlobal = await deps.obtenerConfiguracionGlobal(sucursalId);
+    const atributosError = deps.validarAtributosFijosProducto(
       data.atributosExtra,
       configGlobal.rubroNegocio,
     );
@@ -292,7 +327,8 @@ export async function POST(req: Request) {
     }
 
     // --- TRANSACCIÓN ATÓMICA ---
-    const created = await prisma.$transaction(async (tx) => {
+    const created = await deps.prisma.$transaction(async (tx) => {
+      await lockStockAuthority(tx);
       // 1. Crear el producto
       const nuevoProducto = await tx.producto.create({
         data: {
@@ -366,14 +402,14 @@ export async function POST(req: Request) {
         : configGlobal.minStockGlobal;
 
     if (stockInicial === 0) {
-      await sendNotification({
+      await deps.sendNotification({
         type: NOTIFICATION_TYPE.OUT_OF_STOCK,
         title: "Nuevo Producto Sin Stock",
         message: `Se ha creado "${created.nombre}" sin inventario.`,
         data: { productId: created.id },
       });
     } else if (stockInicial <= umbralAlerta) {
-      await sendNotification({
+      await deps.sendNotification({
         type: NOTIFICATION_TYPE.LOW_STOCK,
         title: "Stock Bajo al Crear",
         message: `"${created.nombre}" inicia con ${stockInicial} u. (Mínimo: ${umbralAlerta}).`,
@@ -382,10 +418,17 @@ export async function POST(req: Request) {
     }
 
     // Invalidar caché del catálogo público para que el nuevo producto aparezca de inmediato
-    revalidateTag("public-catalog", "default");
+    deps.revalidateTag("public-catalog", "default");
 
     return NextResponse.json({ data: created }, { status: 201 });
   } catch (error) {
+    if (error instanceof StockAuthorityError) {
+      console.error("Autoridad de stock rechazada:", error.code);
+      return NextResponse.json(
+        { error: "Autoridad de stock no disponible." },
+        { status: 503 },
+      );
+    }
     // Manejo de duplicados (Unique Constraints)
     if (
       error instanceof Prisma.PrismaClientKnownRequestError &&

@@ -13,6 +13,7 @@ import {
   actualizarEstadoFacturaSiCompleta,
   purgarArchivoFacturaSiFinalizada,
 } from "@/lib/ocr/aplicar-confirmacion";
+import { StockAuthorityError } from "@/modules/inventory/stock-authority";
 
 export async function POST(
   _req: NextRequest,
@@ -91,6 +92,13 @@ export async function POST(
       });
       confirmados++;
     } catch (error) {
+      if (error instanceof StockAuthorityError) {
+        console.error("Autoridad de stock rechazada:", error.code);
+        return NextResponse.json(
+          { error: "Autoridad de stock no disponible." },
+          { status: 503 },
+        );
+      }
       console.error("[FACTURA_PROVEEDOR_CONFIRM_ALL_ITEM_ERROR]", {
         itemId: item.id,
         error,

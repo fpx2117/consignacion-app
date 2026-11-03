@@ -18,12 +18,36 @@ import {
   assertVentaNumberingAuthority,
   createVentaWithAuthority,
 } from "@/modules/ventas/venta-numbering-authority";
+import {
+  applyProductoGlobalDelta,
+  lockStockAuthority,
+  StockAuthorityError,
+} from "@/modules/inventory/stock-authority";
+import { calculatePendingUnits, validateSettlement } from "@/modules/consignaciones/units";
 
 type RouteParams = {
   params: Promise<{ id: string }>;
 };
 
 type StockNotification = NonNullable<ReturnType<typeof evaluateStockAlert>>;
+
+export type LiquidacionPutDeps = {
+  prisma: typeof prisma;
+  requireAuth: typeof requireAuth;
+  isGlobalSucursalView: typeof isGlobalSucursalView;
+  obtenerConfiguracionGlobal: typeof obtenerConfiguracionGlobal;
+  evaluateStockAlert: typeof evaluateStockAlert;
+  processNotificationQueue: typeof processNotificationQueue;
+};
+
+const defaultPutDeps: LiquidacionPutDeps = {
+  prisma,
+  requireAuth,
+  isGlobalSucursalView,
+  obtenerConfiguracionGlobal,
+  evaluateStockAlert,
+  processNotificationQueue,
+};
 
 /**
  * GET /api/liquidaciones/[id]
@@ -67,10 +91,18 @@ export async function GET(_: Request, { params }: RouteParams) {
  * PUT /api/liquidaciones/[id]
  * Corregir una liquidación existente (reversa + aplica nuevo)
  */
-export async function PUT(req: Request, { params }: RouteParams) {
-  const auth = await requireAuth();
+export async function PUT(req: Request, context: RouteParams) {
+  return handlePutLiquidacion(req, context);
+}
+
+export async function handlePutLiquidacion(
+  req: Request,
+  { params }: RouteParams,
+  deps: LiquidacionPutDeps = defaultPutDeps,
+) {
+  const auth = await deps.requireAuth();
   if (!auth.ok) return auth.res;
-  if (isGlobalSucursalView(auth)) {
+  if (deps.isGlobalSucursalView(auth)) {
     return NextResponse.json(
       {
         error:
@@ -98,11 +130,14 @@ export async function PUT(req: Request, { params }: RouteParams) {
   }
 
   // ✅ 1. Preparar Configuración y Cola de Notificaciones
-  const configGlobal = await obtenerConfiguracionGlobal(auth.activeSucursalId);
+  const configGlobal = await deps.obtenerConfiguracionGlobal(
+    auth.activeSucursalId,
+  );
   const notificationsQueue: StockNotification[] = [];
 
   try {
-    const result = await prisma.$transaction(async (tx) => {
+    const result = await deps.prisma.$transaction(async (tx) => {
+      const stockAuthority = await lockStockAuthority(tx);
       // 0) Buscar liquidación existente
       const liqExistente = await tx.liquidacion.findFirst({
         where: {
@@ -153,18 +188,6 @@ export async function PUT(req: Request, { params }: RouteParams) {
         if (!productoAntes)
           throw new Error(`PRODUCTO_NO_ENCONTRADO:${det.productoId}`);
 
-        const productoDespues = await tx.producto.update({
-          where: { id: det.productoId },
-          data: {
-            stockConsignadoUnits: {
-              increment: item.unitsVendidas + item.unitsDevueltas,
-            },
-            ...(item.unitsDevueltas > 0
-              ? { stockDisponibleUnits: { decrement: item.unitsDevueltas } }
-              : {}),
-          },
-        });
-
         // Sincronizar StockSucursal (reverso)
         await tx.stockSucursal.update({
           where: {
@@ -182,6 +205,16 @@ export async function PUT(req: Request, { params }: RouteParams) {
               : {}),
           },
         });
+
+        const productoDespues = await applyProductoGlobalDelta(
+          tx,
+          stockAuthority,
+          {
+            productoId: det.productoId,
+            disponibleDelta: -item.unitsDevueltas,
+            consignadoDelta: item.unitsVendidas + item.unitsDevueltas,
+          },
+        );
 
         // Auditoría Reversa: Lo que se devolvió al almacén, ahora se "des-devuelve" (Sale)
         if (item.unitsDevueltas > 0) {
@@ -216,6 +249,8 @@ export async function PUT(req: Request, { params }: RouteParams) {
 
       // Revertir venta y saldo
       if (liqExistente.venta) {
+        // Tomar la autoridad de numeración sólo después de los locks de stock,
+        // igual que el resto de writers, para no invertir el orden global.
         await assertVentaNumberingAuthority(tx);
         await tx.cliente.update({
           where: { id: liqExistente.consignacion.clienteId },
@@ -247,12 +282,15 @@ export async function PUT(req: Request, { params }: RouteParams) {
         const freshDet = await tx.consignacionDetalle.findUniqueOrThrow({
           where: { id: det.id },
         });
-        const pendiente =
-          freshDet.unitsEntregadas -
-          freshDet.unitsVendidasAcum -
-          freshDet.unitsDevueltasAcum;
-
-        if (vendidas + devueltas > pendiente)
+        if (
+          !validateSettlement({
+            unitsEntregadas: freshDet.unitsEntregadas,
+            unitsVendidasAcum: freshDet.unitsVendidasAcum,
+            unitsDevueltasAcum: freshDet.unitsDevueltasAcum,
+            unitsVendidas: vendidas,
+            unitsDevueltas: devueltas,
+          }).ok
+        )
           throw new Error(`EXCEDE_PENDIENTE:${det.id}`);
 
         const precioUnit = Number(det.producto.precioVenta);
@@ -281,17 +319,6 @@ export async function PUT(req: Request, { params }: RouteParams) {
         if (!productoAntes)
           throw new Error(`PRODUCTO_NO_ENCONTRADO:${det.productoId}`);
 
-        // Aplicar nuevo stock
-        const productoDespues = await tx.producto.update({
-          where: { id: det.productoId },
-          data: {
-            stockConsignadoUnits: { decrement: vendidas + devueltas },
-            ...(devueltas > 0
-              ? { stockDisponibleUnits: { increment: devueltas } }
-              : {}),
-          },
-        });
-
         // Sincronizar StockSucursal
         await tx.stockSucursal.update({
           where: {
@@ -307,6 +334,17 @@ export async function PUT(req: Request, { params }: RouteParams) {
               : {}),
           },
         });
+
+        // Aplicar nuevo stock global según la autoridad
+        const productoDespues = await applyProductoGlobalDelta(
+          tx,
+          stockAuthority,
+          {
+            productoId: det.productoId,
+            disponibleDelta: devueltas,
+            consignadoDelta: -(vendidas + devueltas),
+          },
+        );
 
         // Auditoría Nuevo: Devolución (Entra stock disponible)
         if (devueltas > 0) {
@@ -339,7 +377,7 @@ export async function PUT(req: Request, { params }: RouteParams) {
         }
 
         // Evaluar alertas por los nuevos movimientos
-        const alerta = evaluateStockAlert(productoDespues, configGlobal);
+        const alerta = deps.evaluateStockAlert(productoDespues, configGlobal);
         if (alerta) notificationsQueue.push(alerta);
       }
 
@@ -389,8 +427,7 @@ export async function PUT(req: Request, { params }: RouteParams) {
         where: { consignacionId },
       });
       const quedaPendiente = detallesFinales.some(
-        (d) =>
-          d.unitsEntregadas - d.unitsVendidasAcum - d.unitsDevueltasAcum > 0,
+        (d) => calculatePendingUnits(d) > 0,
       );
 
       if (!quedaPendiente) {
@@ -417,10 +454,20 @@ export async function PUT(req: Request, { params }: RouteParams) {
     });
 
     // ✅ DISPARAR ALERTAS (Centralizado)
-    await processNotificationQueue(notificationsQueue, auth.activeSucursalId);
+    await deps.processNotificationQueue(
+      notificationsQueue,
+      auth.activeSucursalId,
+    );
 
     return NextResponse.json({ data: result }, { status: 200 });
   } catch (error) {
+    if (error instanceof StockAuthorityError) {
+      console.error("Autoridad de stock rechazada:", error.code);
+      return NextResponse.json(
+        { error: "Autoridad de stock no disponible." },
+        { status: 503 },
+      );
+    }
     const msg = error instanceof Error ? error.message : "";
     if (msg === "LIQUIDACION_NO_ENCONTRADA")
       return NextResponse.json({ error: "No encontrada" }, { status: 404 });

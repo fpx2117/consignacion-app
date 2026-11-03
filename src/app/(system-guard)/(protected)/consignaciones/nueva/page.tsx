@@ -49,6 +49,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { applyConsignmentMarkup } from "@/modules/pricing/consignment-markup";
 
 // Extendemos el tipo Producto para asegurar que TS reconozca el stock
 type ProductoConStock = Producto & { stockDisponibleUnits?: number };
@@ -93,7 +94,7 @@ export default function NuevaConsignacionPage() {
 
   // --- Helper de Cálculo ---
   const aplicarAumento = (precio: number) =>
-    precio * (1 + porcentajeAumento / 100);
+    applyConsignmentMarkup(precio, porcentajeAumento);
 
   // --- Initial Load ---
   const fetchData = React.useCallback(async () => {

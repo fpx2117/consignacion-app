@@ -25,6 +25,11 @@ import {
   isGlobalSucursalView,
 } from "@/lib/security/sucursalScope";
 import { calcularDescuentoEfectivo } from "@/lib/storefront/descuento-utils";
+import {
+  applyProductoGlobalDelta,
+  lockStockAuthority,
+  StockAuthorityError,
+} from "@/modules/inventory/stock-authority";
 
 type RouteParams = { params: Promise<{ id: string }> };
 
@@ -35,6 +40,30 @@ type ProductoUpdateBody = UpdateProductoInput & {
     motivo: MotivoMovimientoStock;
     observaciones?: string | null;
   };
+};
+
+export type ProductoPutDeps = {
+  prisma: typeof prisma;
+  requireAuth: typeof requireAuth;
+  requireRole: typeof requireRole;
+  isGlobalSucursalView: typeof isGlobalSucursalView;
+  obtenerConfiguracionGlobal: typeof obtenerConfiguracionGlobal;
+  validarAtributosFijosProducto: typeof validarAtributosFijosProducto;
+  deleteFileSystemImage: typeof deleteFileSystemImage;
+  sendNotification: typeof sendNotification;
+  revalidateTag: typeof revalidateTag;
+};
+
+const defaultPutDeps: ProductoPutDeps = {
+  prisma,
+  requireAuth,
+  requireRole,
+  isGlobalSucursalView,
+  obtenerConfiguracionGlobal,
+  validarAtributosFijosProducto,
+  deleteFileSystemImage,
+  sendNotification,
+  revalidateTag,
 };
 
 /**
@@ -130,10 +159,18 @@ export async function GET(_: Request, { params }: RouteParams) {
 /**
  * PUT: Actualizar datos del producto + Registro de Movimiento de Stock
  */
-export async function PUT(req: Request, { params }: RouteParams) {
-  const auth = await requireAuth();
+export async function PUT(req: Request, context: RouteParams) {
+  return handlePutProducto(req, context);
+}
+
+export async function handlePutProducto(
+  req: Request,
+  { params }: RouteParams,
+  deps: ProductoPutDeps = defaultPutDeps,
+) {
+  const auth = await deps.requireAuth();
   if (!auth.ok) return auth.res;
-  if (isGlobalSucursalView(auth)) {
+  if (deps.isGlobalSucursalView(auth)) {
     return NextResponse.json(
       {
         error:
@@ -144,7 +181,7 @@ export async function PUT(req: Request, { params }: RouteParams) {
   }
 
   // Solo ADMIN puede editar productos
-  if (!requireRole(auth.user, ["ADMIN"])) {
+  if (!deps.requireRole(auth.user, ["ADMIN"])) {
     return NextResponse.json({ error: "No autorizado" }, { status: 403 });
   }
 
@@ -178,13 +215,15 @@ export async function PUT(req: Request, { params }: RouteParams) {
     );
   }
 
-  const configGlobal = await obtenerConfiguracionGlobal(auth.activeSucursalId);
+  const configGlobal = await deps.obtenerConfiguracionGlobal(
+    auth.activeSucursalId,
+  );
 
   // Solo validamos atributos fijos si este PUT efectivamente toca
   // atributosExtra — un ajuste parcial de stock (ajustar-stock-dialog) no
   // lo envía y no debe verse bloqueado por requeridos de otro campo.
   if (parsed.data.atributosExtra !== undefined) {
-    const atributosError = validarAtributosFijosProducto(
+    const atributosError = deps.validarAtributosFijosProducto(
       parsed.data.atributosExtra,
       configGlobal.rubroNegocio,
     );
@@ -198,11 +237,26 @@ export async function PUT(req: Request, { params }: RouteParams) {
 
   try {
     // --- TRANSACCIÓN PARA ACTUALIZAR Y REGISTRAR MOVIMIENTO ---
-    const updated = await prisma.$transaction(async (tx) => {
-      // 1. Obtener estado actual de la sucursal antes de la actualización
-      const anterior = await tx.stockSucursal.findUnique({
-        where: { productoId_sucursalId: { productoId: id, sucursalId } },
-      });
+    const updated = await deps.prisma.$transaction(async (tx) => {
+      const stockAuthority = await lockStockAuthority(tx);
+      const { stockDisponibleUnits: nuevoStock, ...productoData } = parsed.data;
+
+      // Serialize absolute adjustments for this product+branch and lock the
+      // canonical row, so the delta comes from the committed previous value.
+      await tx.$queryRaw`
+        SELECT pg_advisory_xact_lock(
+          hashtextextended(${`stock:${id}:${sucursalId}`}, 0)
+        )::text
+      `;
+      const lockedStock = await tx.$queryRaw<
+        Array<{ stockDisponibleUnits: number }>
+      >`
+        SELECT "stockDisponibleUnits"
+        FROM public."StockSucursal"
+        WHERE "productoId" = ${id} AND "sucursalId" = ${sucursalId}
+        FOR UPDATE
+      `;
+      const stockPrevio = lockedStock[0]?.stockDisponibleUnits ?? 0;
 
       const anteriorProducto = await tx.producto.findFirst({
         where: { id, sucursalId },
@@ -211,11 +265,43 @@ export async function PUT(req: Request, { params }: RouteParams) {
 
       if (!anteriorProducto) throw new Error("Producto no encontrado");
 
-      // 2. Ejecutar la actualización del producto (datos base)
+      // 1. Actualizar primero StockSucursal (orden B1: stock local -> global).
+      const stockMin = parsed.data.stockMinUnits;
+      const stockSucursalUpdate = await tx.stockSucursal.upsert({
+        where: { productoId_sucursalId: { productoId: id, sucursalId } },
+        create: {
+          productoId: id,
+          sucursalId,
+          stockDisponibleUnits: nuevoStock !== undefined ? nuevoStock : 0,
+          stockMinUnits:
+            stockMin !== undefined
+              ? stockMin
+              : (parsed.data.stockMinUnits ?? 0),
+        },
+        update: {
+          stockDisponibleUnits:
+            nuevoStock !== undefined ? nuevoStock : undefined,
+          stockMinUnits: stockMin !== undefined ? stockMin : undefined,
+        },
+      });
+
+      // 2. Aplicar el delta global según la autoridad de stock.
+      if (nuevoStock !== undefined) {
+        const disponibleDelta = nuevoStock - stockPrevio;
+        if (disponibleDelta !== 0) {
+          await applyProductoGlobalDelta(tx, stockAuthority, {
+            productoId: id,
+            disponibleDelta,
+            consignadoDelta: 0,
+          });
+        }
+      }
+
+      // 3. Actualizar los datos base del producto (sin stock).
       const productoUpdate = await tx.producto.update({
         where: { id },
         data: {
-          ...parsed.data,
+          ...productoData,
           subcategoriaId:
             body.subcategoriaId !== undefined ? body.subcategoriaId : undefined,
           fechaVencimiento: parsed.data.fechaVencimiento
@@ -245,56 +331,17 @@ export async function PUT(req: Request, { params }: RouteParams) {
         },
       });
 
-      // 2.5. Si cambió la imagen, borrar la vieja
+      // 3.5. Si cambió la imagen, borrar la vieja
       if (
         parsed.data.imagenUrl !== undefined &&
         anteriorProducto.imagenUrl &&
         anteriorProducto.imagenUrl !== parsed.data.imagenUrl
       ) {
-        await deleteFileSystemImage(anteriorProducto.imagenUrl);
-      }
-
-      // 3. Actualizar o crear registro en StockSucursal
-      const nuevoStock = parsed.data.stockDisponibleUnits;
-      const stockMin = parsed.data.stockMinUnits;
-
-      const stockSucursalUpdate = await tx.stockSucursal.upsert({
-        where: { productoId_sucursalId: { productoId: id, sucursalId } },
-        create: {
-          productoId: id,
-          sucursalId,
-          stockDisponibleUnits: nuevoStock !== undefined ? nuevoStock : 0,
-          stockMinUnits:
-            stockMin !== undefined
-              ? stockMin
-              : (parsed.data.stockMinUnits ?? 0),
-        },
-        update: {
-          stockDisponibleUnits:
-            nuevoStock !== undefined ? nuevoStock : undefined,
-          stockMinUnits: stockMin !== undefined ? stockMin : undefined,
-        },
-      });
-
-      // 3.5. Sincronizar Producto.stockDisponibleUnits con la suma de todas las sucursales
-      if (nuevoStock !== undefined) {
-        const allStocksSucursal = await tx.stockSucursal.findMany({
-          where: { productoId: id },
-          select: { stockDisponibleUnits: true },
-        });
-        const stockGlobalSincronizado = allStocksSucursal.reduce(
-          (acc, s) => acc + (s.stockDisponibleUnits ?? 0),
-          0,
-        );
-        await tx.producto.update({
-          where: { id },
-          data: { stockDisponibleUnits: stockGlobalSincronizado },
-        });
+        await deps.deleteFileSystemImage(anteriorProducto.imagenUrl);
       }
 
       // 4. Si hubo cambio de stock y tenemos información del movimiento, registrarlo
       if (movimientoInfo && nuevoStock !== undefined) {
-        const stockPrevio = anterior?.stockDisponibleUnits ?? 0;
         const stockPosterior = nuevoStock;
 
         if (stockPrevio !== stockPosterior) {
@@ -319,8 +366,6 @@ export async function PUT(req: Request, { params }: RouteParams) {
         stockDisponibleUnits: stockSucursalUpdate.stockDisponibleUnits,
         stockConsignadoUnits: stockSucursalUpdate.stockConsignadoUnits,
         stockMinUnits: stockSucursalUpdate.stockMinUnits,
-        // Nota: productoUpdate.stockDisponibleUnits fue sincronizado al global arriba,
-        // pero devolvemos el valor de la sucursal activa para el UI
       };
     });
 
@@ -337,14 +382,14 @@ export async function PUT(req: Request, { params }: RouteParams) {
         : "";
 
       if (nuevoStock <= 0) {
-        await sendNotification({
+        await deps.sendNotification({
           type: NOTIFICATION_TYPE.OUT_OF_STOCK,
           title: "⚠️ Stock Agotado",
           message: `El producto "${updated.nombre}" se quedó sin unidades en esta sucursal.${fechaVencMsg}`,
           data: { productId: updated.id },
         });
       } else if (nuevoStock <= umbralAlerta) {
-        await sendNotification({
+        await deps.sendNotification({
           type: NOTIFICATION_TYPE.LOW_STOCK,
           title: "⚡ Stock Bajo",
           message: `"${updated.nombre}" alcanzó el nivel crítico con ${nuevoStock} u. en esta sucursal.${fechaVencMsg}`,
@@ -354,10 +399,17 @@ export async function PUT(req: Request, { params }: RouteParams) {
     }
 
     // Invalidar caché del catálogo público para que los cambios (precio, descuento, imagen, etc.) se reflejen de inmediato
-    revalidateTag("public-catalog", "default");
+    deps.revalidateTag("public-catalog", "default");
 
     return NextResponse.json({ data: updated });
   } catch (error) {
+    if (error instanceof StockAuthorityError) {
+      console.error("Autoridad de stock rechazada:", error.code);
+      return NextResponse.json(
+        { error: "Autoridad de stock no disponible." },
+        { status: 503 },
+      );
+    }
     if (
       error instanceof Prisma.PrismaClientKnownRequestError &&
       error.code === "P2002"
