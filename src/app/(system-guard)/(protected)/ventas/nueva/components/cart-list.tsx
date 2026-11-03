@@ -30,15 +30,25 @@ export function CartList({
   if (cart.length === 0) {
     return (
       <div
-        className="h-full flex flex-col items-center justify-center text-muted-foreground/30 gap-3"
+        className="h-full min-h-0 flex flex-col items-center justify-center text-center gap-3 px-4 [@media(max-height:600px)]:gap-2"
         role="status"
       >
-        <div className="p-5 rounded-full bg-muted/50 border border-border/40">
-          <ShoppingCart className="h-10 w-10 opacity-30" aria-hidden="true" />
+        <div className="p-5 rounded-full bg-muted/60 border border-border/40 shadow-sm">
+          <ShoppingCart
+            className="h-10 w-10 text-muted-foreground/40"
+            aria-hidden="true"
+          />
         </div>
-        <p className="text-sm font-black tracking-widest uppercase">
-          Ticket vacio
-        </p>
+        <div className="space-y-1">
+          <p className="text-sm font-[900] tracking-widest uppercase text-muted-foreground/70">
+            Ticket vacio
+          </p>
+          <p className="text-xs text-muted-foreground/50 max-w-[240px] leading-relaxed">
+            Escanea un producto, presioná{" "}
+            <span className="font-mono font-bold text-foreground/70">F1</span>{" "}
+            para buscarlo o abrí la cámara.
+          </p>
+        </div>
       </div>
     );
   }

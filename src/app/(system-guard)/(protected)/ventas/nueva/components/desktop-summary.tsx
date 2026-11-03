@@ -52,8 +52,8 @@ export function DesktopSummary({
       className="hidden xl:flex w-[clamp(20rem,28vw,24rem)] min-h-0 shrink-0 bg-background border-l border-border/40 flex-col shadow-xl z-20"
       aria-label="Resumen de compra"
     >
-      <div className="p-6 border-b bg-muted/10">
-        <h2 className="font-black text-lg flex items-center gap-2 text-foreground tracking-tight">
+      <div className="p-6 [@media(max-height:600px)]:p-4 border-b bg-muted/10">
+        <h2 className="font-[900] text-lg flex items-center gap-2 text-foreground tracking-tight">
           <ShoppingCart className="h-5 w-5 text-primary" aria-hidden="true" />{" "}
           Resumen de Compra
         </h2>
@@ -62,17 +62,20 @@ export function DesktopSummary({
         </p>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-6 bg-background/50">
+      <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-6 [@media(max-height:600px)]:p-4 bg-background/50">
         {cart.length === 0 ? (
-          <div className="h-full flex flex-col items-center justify-center text-center opacity-30 gap-3">
+          <div className="h-full flex flex-col items-center justify-center text-center gap-3 opacity-45">
             <div className="p-4 rounded-full border-2 border-dashed border-muted-foreground/50">
               <Barcode
                 className="h-8 w-8 text-muted-foreground"
                 aria-hidden="true"
               />
             </div>
-            <p className="text-[10px] font-black tracking-widest uppercase">
+            <p className="text-[10px] font-[900] tracking-widest uppercase">
               Esperando items...
+            </p>
+            <p className="text-[11px] text-muted-foreground max-w-[200px] leading-relaxed">
+              Los productos escaneados aparecerán acá con su subtotal.
             </p>
           </div>
         ) : (
@@ -87,7 +90,7 @@ export function DesktopSummary({
                     {item.quantity}
                   </span>
                   <div className="flex flex-col min-w-0">
-                    <span className="font-semibold text-foreground leading-tight">
+                    <span className="block max-w-full truncate font-semibold text-foreground leading-tight" title={item.producto.nombre}>
                       {item.producto.nombre}
                     </span>
                     <span className="text-[10px] text-muted-foreground mt-0.5">
@@ -105,7 +108,7 @@ export function DesktopSummary({
         )}
       </div>
 
-      <div className="p-6 bg-muted/10 border-t border-border/40 space-y-4">
+      <div className="p-6 [@media(max-height:600px)]:p-4 bg-muted/10 border-t border-border/40 space-y-4 [@media(max-height:600px)]:space-y-2">
         {/* Totales */}
         <div className="space-y-2">
           <div className="flex justify-between text-sm text-muted-foreground font-medium">
@@ -137,11 +140,11 @@ export function DesktopSummary({
               <span>- {formatCurrency(montoDescuentoGlobal)}</span>
             </div>
           )}
-          <div className="flex justify-between items-end pt-2 border-t border-border/50">
-            <span className="text-sm font-black uppercase text-muted-foreground tracking-widest">
+          <div className="flex min-w-0 justify-between items-end gap-3 pt-2 border-t border-border/50">
+            <span className="text-sm font-[900] uppercase text-muted-foreground tracking-widest">
               Total
             </span>
-            <span className="text-3xl font-black text-primary tabular-nums">
+            <span className="min-w-0 text-right text-[clamp(1.25rem,2.2vw,1.875rem)] font-[900] text-primary tabular-nums break-words">
               {formatCurrency(totalAmount)}
             </span>
           </div>
@@ -160,20 +163,20 @@ export function DesktopSummary({
           type="button"
           onClick={onCobrar}
           disabled={disabled}
-          className="w-full h-14 text-lg font-black shadow-lg shadow-indigo-500/20 bg-primary hover:bg-primary/90 text-primary-foreground rounded-2xl active:scale-[0.98] transition-all focus-visible:ring-2"
+          className="w-full h-14 text-lg font-[900] shadow-lg shadow-[color:var(--primary)]/20 bg-primary hover:bg-primary/90 text-primary-foreground rounded-2xl active:scale-[0.98] transition-all focus-visible:ring-2"
           aria-label={`Cobrar venta por ${formatCurrency(totalAmount)}`}
         >
           {loading ? (
             <Loader2 className="animate-spin h-5 w-5" aria-hidden="true" />
           ) : (
-            <div className="flex justify-between w-full px-4 items-center">
+            <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] gap-2 w-full px-4 items-center">
               <span className="text-xs font-bold tracking-widest opacity-80 uppercase bg-foreground/10 px-2 py-1 rounded-md">
                 {cart.length} ITEMS
               </span>
-              <span className="text-xl tracking-tight">
+              <span className="min-w-0 truncate text-right text-xl tracking-tight">
                 COBRAR {formatCurrency(totalAmount)}
               </span>
-              <span className="inline-flex items-center justify-center h-5 px-2 rounded border border-white/40 bg-white/25 text-white text-[9px] font-black font-mono tracking-tight select-none">
+              <span className="inline-flex items-center justify-center h-5 px-2 rounded border border-white/40 bg-white/25 text-white text-[9px] font-[900] font-mono tracking-tight select-none">
                 F6
               </span>
             </div>
