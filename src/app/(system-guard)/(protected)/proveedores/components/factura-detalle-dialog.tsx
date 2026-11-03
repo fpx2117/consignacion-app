@@ -204,6 +204,10 @@ export function FacturaDetalleDialog({
                     onClick={() => setVisorAbierto(true)}
                     className="group relative block w-full rounded-2xl border border-border/50 overflow-hidden bg-muted/20 lg:h-full"
                   >
+                    {/* URL autenticada y dinámica, sin dimensiones conocidas:
+                        next/image exigiría width/height o fill y cambiaría el
+                        layout del visor. El <img> acá es intencional. */}
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       src={API_ROUTES.FACTURAS_PROVEEDOR.ARCHIVO(factura.id)}
                       alt="Factura original"

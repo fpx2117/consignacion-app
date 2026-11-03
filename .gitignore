@@ -68,3 +68,7 @@ eslint.json
 
 # cache de modelos de OCR (Tesseract.js descarga spa.traineddata en el primer uso)
 /.cache/
+
+# artefactos locales de herramientas
+/.atl/
+/.playwright-cli/
