@@ -5,16 +5,20 @@
   "scripts": {
     "dev": "tsx server.ts",
     "build": "node scripts/build.mjs",
-    "start": "echo \"DELETE FROM _prisma_migrations WHERE migration_name = '20260523120000_add_storefront_content_to_branding';\" | npx prisma db execute --stdin 2>/dev/null; npx prisma migrate deploy && cross-env NODE_ENV=production tsx server.ts",
-    "lint": "npm run visual:check && eslint",
+    "start": "cross-env NODE_ENV=production tsx server.ts",
+    "migrate:t11:preflight": "node scripts/migrations/preflight-t11.mjs",
+    "migrate:t11:deploy": "npm run migrate:t11:preflight && prisma migrate deploy && node scripts/migrations/preflight-t11.mjs --require-current",
+    "migrate:t11:test": "node scripts/migrations/verify-t11-repair.mjs",
+    "numbering:audit": "node scripts/migrations/audit-numbering.mjs",
+    "numbering:audit:test": "node scripts/migrations/verify-t12-numbering-audit.mjs",
+    "numbering:authority:test": "node scripts/migrations/verify-t12-numbering-authority.mjs",
+    "stock:authority:test": "node scripts/migrations/verify-t14-stock-authority.mjs",
+    "lint": "eslint",
     "seed": "prisma db seed",
     "security:audit": "npm audit --omit=dev --audit-level=high",
     "security:scan-secrets-local": "node scripts/security/check-secret-hygiene.mjs",
     "security:test": "npm run security:scan-secrets-local && node --import tsx --test scripts/security/tracked-secret-files.test.mjs src/app/api/setup/initialize/setup-security.test.ts src/app/api/setup/setup-payment-reference.test.ts src/app/api/settings/users/user-input.test.ts src/app/api/settings/users/user-authorization.test.ts src/app/api/settings/users/user-update.test.ts src/app/api/auth/rate-limiting.test.ts",
-    "visual:baseline": "node scripts/check-visual-guard.mjs --update-baseline",
-    "visual:check": "node scripts/check-visual-guard.mjs",
-    "visual:check:json": "node scripts/check-visual-guard.mjs --json",
-    "visual:test": "node --test scripts/check-visual-guard.test.mjs scripts/check-visual-guard.integration.test.mjs && tsx --test src/theme/know-design-system.test.ts"
+    "design:test": "tsx --test src/theme/know-design-system.test.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

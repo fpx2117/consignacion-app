@@ -10,7 +10,7 @@ Plataforma SaaS fullstack para negocios que necesitan operar **punto de venta**,
 
 ### Requisitos
 
-- Node.js 20+
+- Node.js 20.19+, 22.12+ o 24+
 - PostgreSQL 14+
 - npm
 
@@ -27,7 +27,7 @@ cp .env.example .env
 
 ```bash
 npx prisma generate
-npx prisma db push
+npm run migrate:t11:deploy
 npm run seed
 ```
 
@@ -256,8 +256,11 @@ npm run security:scan-secrets-local
 ### Notas de build y producción
 
 - `npm run build` genera Prisma Client y compila Next.js.
-- `npm start` ejecuta `prisma migrate deploy` antes de levantar el servidor.
-- El proyecto incluye una limpieza preventiva sobre una migración histórica específica antes de build/start.
+- `npm start` sólo levanta el servidor; no ejecuta migraciones.
+- Las migraciones se despliegan en una ventana controlada y separada del arranque.
+- La reparación T11 usa `npm run migrate:t11:deploy`; su preflight rechaza estados
+  parciales desconocidos. Ver
+  `odd/evolucion-arquitectura-backend/migration-repair.md`.
 
 ---
 

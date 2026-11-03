@@ -702,6 +702,11 @@ model StockSucursal {
   @@unique([productoId, sucursalId])
 }
 
+model StockAutoridad {
+  id           Int      @id
+  modo         String
+  actualizadoEn DateTime @default(now()) @db.Timestamptz(6)
+}
 
 model Gasto {
   id                    Int             @id @default(autoincrement())
