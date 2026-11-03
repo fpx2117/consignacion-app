@@ -6,12 +6,12 @@ Diagnóstico y diseño aprobados. T08 fue autorizada y ejecutada de forma aislad
 T09 y las tareas posteriores requieren autorización explícita por tarea; commits,
 push y despliegue continúan sin autorización.
 
-**Estado actual (2026-11-03):** T11–T17 están implementadas y verificadas en local,
-pero **sin commitear**. Por eso el gate 6 ("trabajo realizado sobre `main`") sigue
-sin cumplirse para todo ese cuerpo, y la marca `[x]` de cada tarea refleja
-implementación y verificación, no persistencia en Git. Producción corre el release
-T12-only; faltan T15-R (deploy de los writers `B1`) y T16 (cutover), ambas sujetas
-a autorización.
+**Estado actual (2026-11-03):** T11–T17 están implementadas, verificadas y
+**commiteadas en `main` local** en seis commits sobre `5b41eb4`; el origen ya
+contenía el release T12, así que el rebase solo sumó T13–T17. El gate 6 queda
+cumplido en local: falta el push, que hace una persona, y el despliegue. Producción
+sigue en el release T12-only; faltan T15-R (deploy de los writers `B1`) y T16
+(cutover), ambas sujetas a autorización.
 
 ## Diagnóstico
 
