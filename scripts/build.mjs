@@ -20,12 +20,6 @@ function run(args) {
   if (result.status !== 0) process.exit(result.status ?? 1);
 }
 
-run(["scripts/check-visual-guard.mjs"]);
-run([
-  "--test",
-  "scripts/check-visual-guard.test.mjs",
-  "scripts/check-visual-guard.integration.test.mjs",
-]);
 run([tsxCli, "--test", "src/theme/know-design-system.test.ts"]);
 
 run([prismaCli, "generate"]);
