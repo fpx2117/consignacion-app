@@ -127,7 +127,8 @@ export async function cutoverStockProjection({
     }
 
     const projectionFunction = await client.query(
-      `SELECT COUNT(*)::int AS count
+      `SELECT COUNT(*)::int AS count,
+              COALESCE(BOOL_OR(pg_get_functiondef(oid) LIKE '%FOR UPDATE%'), false) AS serialized
        FROM pg_catalog.pg_proc
        WHERE proname = 'sync_producto_stock'
          AND pronamespace = 'public'::regnamespace
@@ -136,6 +137,13 @@ export async function cutoverStockProjection({
     if (projectionFunction.rows[0].count !== 1) {
       throw new Error(
         "T16 cutover refused: the public, non-definer projection function is missing or duplicated",
+      );
+    }
+    // The lock is the fix for the lost update: without it the recompute reads a
+    // stale snapshot under concurrency. Refuse to activate an unsafe body.
+    if (!projectionFunction.rows[0].serialized) {
+      throw new Error(
+        "T16 cutover refused: projection function is not serialized (missing FOR UPDATE); apply migration 20261101040000 first",
       );
     }
 

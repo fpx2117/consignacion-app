@@ -1,8 +1,33 @@
-# T16 — Cutover a `DB_PROJECTION`: herramienta lista, diseño no probado
+# T16 — Cutover a `DB_PROJECTION`
 
-## Qué se construyó
+## Estado
 
-`scripts/migrations/cutover-t16-stock-projection.mjs` hace la transición
+Herramienta implementada y verificada. **El defecto que bloqueaba el cutover está
+corregido** por la migración aditiva `20261101040000_serialize_stock_projection`.
+Falta ejecutarlo en producción.
+
+## El defecto y la corrección
+
+El trigger histórico recalculaba `Producto = SUM(StockSucursal)` dentro de cada
+transacción. Bajo `READ COMMITTED` ese `SELECT` no bloquea sobre filas no
+confirmadas: lee la última versión confirmada. Dos writers concurrentes en
+sucursales distintas del mismo producto calculaban cada uno una suma que ignoraba
+al otro y el último pisaba la proyección. La verificación de T16 lo reprodujo:
+**deriva 1**.
+
+La corrección no cambia el mecanismo ni las rutas de creación: agrega
+`PERFORM 1 FROM "Producto" WHERE "id" = v_producto_id FOR UPDATE` antes del
+recalculo. El lock convierte la proyección en una sección crítica por producto: el
+segundo writer espera el commit del primero y su `SUM` arranca de un snapshot
+nuevo que ya incluye el cambio confirmado.
+
+Se descartó la proyección por delta: con el lock, el `SUM` sigue siendo idempotente
+para las rutas que crean producto y stock con el mismo valor inicial, así que no
+hace falta tocar T15-F/G.
+
+## La herramienta de cutover
+
+`scripts/migrations/cutover-t16-stock-projection.mjs` hace
 `APP_DUAL_WRITE` (B1, sin trigger) → `DB_PROJECTION` (B1, con proyección) en una
 sola transacción:
 
@@ -11,68 +36,34 @@ sola transacción:
   puede detectar instancias `L0`).
 - `pg_advisory_xact_lock`, capacidad `FOR UPDATE`, luego `StockSucursal` y
   `Producto` en `SHARE ROW EXCLUSIVE` (bloquea escrituras, deja leer).
-- Valida estado inicial: capacidad `APP_DUAL_WRITE` y trigger ausente; exige la
-  función `public.sync_producto_stock()` no `SECURITY DEFINER`.
-- Reconcilia `Producto = SUM(StockSucursal)`, instala el trigger, prueba
-  entrada/salida real sobre una fila y verifica deriva 0 antes de commitear.
+- Exige estado inicial `APP_DUAL_WRITE` sin trigger, función pública no
+  `SECURITY DEFINER` y **serializada** (`FOR UPDATE` en su definición); si no,
+  rechaza y no toca nada.
+- Reconcilia, instala el trigger, prueba entrada/salida real y verifica deriva 0
+  antes de commitear.
 - Devuelve evidencia: `driftBefore`, `probe`, `productCount`.
 
-`scripts/migrations/verify-t16-stock-projection.mjs` (npm `stock:cutover:test`)
-cubre en bases descartables: cutover + comportamiento de la proyección +
-rollback, rechazo de estados incompatibles, rollback ante fallo inyectado en
-`beforeCommit`, bloqueo del lock de capacidad, guardas de producción y un producto
-sin filas de sucursal.
+## Evidencia
 
-## El resultado que importa
+`npm run stock:cutover:test` (bases descartables, PostgreSQL 16) cubre:
 
-**La verificación falla a propósito.** El caso concurrente —dos writers en
-sucursales distintas, el escenario que el ADR 002 exige reproducir antes de
-aprobar el trigger— deja **deriva 1**:
+- Cutover completo y rollback compensatorio, con deriva 0 en ambos extremos.
+- Entrada, salida y restitución proyectadas por el trigger.
+- **Concurrencia**: dos writers en sucursales distintas del mismo producto dejan
+  deriva 0 (antes: 1).
+- Producto sin filas de sucursal reconciliado a 0.
+- Rechazo de estados incompatibles (capacidad distinta, trigger ya instalado).
+- Rechazo de una función de proyección no serializada.
+- Atomicidad: un fallo inyectado en `beforeCommit` revierte trigger y capacidad.
+- El lock de capacidad de un writer B1 bloquea el `FOR UPDATE` del cutover.
 
-```
-T16 bloqueado: la proyección por SUM pierde actualizaciones con writers
-concurrentes en sucursales distintas (drift=1).
-```
+Regresión: `npm run stock:authority:test` (T14) sigue verde, y las suites de
+integración de autoridad, transiciones, OCR, concurrencia y POS pasan sobre el
+esquema con la función nueva.
 
-## Por qué
+## Lo que falta
 
-El trigger recalcula `Producto = SUM(StockSucursal)` dentro de cada transacción.
-Un `SELECT` bajo `READ COMMITTED` **no bloquea** sobre filas no confirmadas: lee la
-última versión confirmada. Con dos transacciones concurrentes en sucursales
-distintas, la segunda suma el valor viejo de la primera y pisa la proyección.
-Es exactamente el motivo por el que `stock-authority.ts` eligió deltas atómicos
-para `APP_DUAL_WRITE` (T15-A).
-
-La reproducción de T10 ya lo insinuaba; ahora está caracterizada sobre la base
-real de T16, con el mecanismo que se pretendía activar.
-
-## Consecuencia
-
-`DB_PROJECTION` **no es seguro** con el trigger actual. T16 no se ejecuta en
-producción. Producción sigue en `APP_DUAL_WRITE`, que es la configuración que sí
-pasa concurrencia (deltas atómicos por fila).
-
-## Opciones (decisión pendiente)
-
-1. **Quedarse en `APP_DUAL_WRITE`** y retirar el objetivo `C2`. Es la opción más
-   barata y ya está validada; el costo es mantener el delta en la aplicación y no
-   poder simplificar los writers.
-2. **Proyección por delta**: nueva migración que reemplace el trigger por uno que
-   aplique `NEW - OLD` (o `+NEW` en INSERT, `-OLD` en DELETE) sobre `Producto`.
-   Los incrementos se serializan en el lock de fila de `Producto`, así que es
-   seguro bajo concurrencia. Requiere migración nueva, no editar la existente,
-   verificación de concurrencia y recién entonces el cutover ya escrito.
-3. **Serializar writers** con `FOR UPDATE` sobre `Producto`: correcto pero
-   convierte cada venta en un cuello de botella; no recomendado.
-
-La opción 2 es la única que preserva el objetivo arquitectónico. La herramienta
-de cutover ya está lista para usarse cuando la proyección sea segura; lo que falta
-es el mecanismo, no la transición.
-
-## Límites conocidos
-
-- El veredicto de concurrencia cubre sucursales distintas sobre el mismo producto.
-  Falta el caso de dos writers sobre la **misma** fila (hoy serializado por el lock
-  de fila) y el de INSERT/DELETE concurrentes.
-- La guarda "solo local" es defensa en profundidad: una URL puede cambiar el host
-  real; la barrera efectiva es la confirmación exacta del nombre de base.
+Ejecutar en producción, en este orden: desplegar la migración (el `startCommand` ya
+no migra, así que se aplica explícitamente), correr el cutover y verificar
+`DB_PROJECTION` + trigger presente + deriva 0. La pausa de escrituras la da el lock
+de capacidad y tablas; el rollback es la compensación T14, ya probada.

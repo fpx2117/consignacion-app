@@ -24,6 +24,7 @@ const names = {
   cutover: `${baseName}_t16_cutover_test`,
   incompatible: `${baseName}_t16_incompatible_test`,
   atomic: `${baseName}_t16_atomic_test`,
+  unsafe: `${baseName}_t16_unsafe_test`,
   lock: `${baseName}_t16_lock_test`,
 };
 for (const name of Object.values(names)) {
@@ -269,7 +270,8 @@ async function verifyCutoverAndRollback(url) {
     assert.deepEqual(snapshot.capability, [{ id: 1, modo: "APP_DUAL_WRITE" }]);
     assert.equal(snapshot.trigger, 0);
     assert.equal(snapshot.drift, 0);
-    assert.equal(await projected(), 10);
+    // The concurrent block left A=3 and B=2, so the canonical sum is 5.
+    assert.equal(await projected(), 5);
   });
 }
 
@@ -321,6 +323,52 @@ async function verifyAtomicity(url) {
       /injected failure/,
     );
 
+    assert.deepEqual(await stockSnapshot(client), before);
+  });
+}
+
+async function verifyUnsafeFunction(url) {
+  migrate(url);
+  await withClient(url, async (client) => {
+    await compensate(url);
+
+    // Replace the serialized projection with the historical SUM-only body.
+    await client.query(`
+      CREATE OR REPLACE FUNCTION sync_producto_stock()
+      RETURNS TRIGGER AS $$
+      DECLARE
+        v_producto_id INT;
+      BEGIN
+        IF TG_OP = 'DELETE' THEN
+          v_producto_id := OLD."productoId";
+        ELSE
+          v_producto_id := NEW."productoId";
+        END IF;
+
+        UPDATE "Producto"
+        SET
+          "stockDisponibleUnits" = (
+            SELECT COALESCE(SUM("stockDisponibleUnits"), 0)
+            FROM "StockSucursal"
+            WHERE "productoId" = v_producto_id
+          ),
+          "stockConsignadoUnits" = (
+            SELECT COALESCE(SUM("stockConsignadoUnits"), 0)
+            FROM "StockSucursal"
+            WHERE "productoId" = v_producto_id
+          )
+        WHERE "id" = v_producto_id;
+
+        RETURN NULL;
+      END;
+      $$ LANGUAGE plpgsql;
+    `);
+
+    const before = await stockSnapshot(client);
+    await assert.rejects(
+      cutover(url),
+      /projection function is not serialized/,
+    );
     assert.deepEqual(await stockSnapshot(client), before);
   });
 }
@@ -395,6 +443,7 @@ try {
   await verifyCutoverAndRollback(databaseUrl(names.cutover));
   await verifyIncompatible(databaseUrl(names.incompatible));
   await verifyAtomicity(databaseUrl(names.atomic));
+  await verifyUnsafeFunction(databaseUrl(names.unsafe));
   await verifyCapabilityLocks(databaseUrl(names.lock));
   await verifyGuards();
 
