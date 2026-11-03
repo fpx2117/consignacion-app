@@ -21,7 +21,6 @@ import {
   evaluateStockAlert,
   processNotificationQueue,
 } from "@/lib/notificaciones/stock-alerts";
-import { getPersistedConsignacionFolio } from "@/modules/consignaciones/consignacion-numbering";
 import {
   applyProductoGlobalDelta,
   lockStockAuthority,
