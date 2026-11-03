@@ -20,6 +20,18 @@ If `IMPLEMENTATION_PLAN.md` and the git log disagree, trust the git log. Git is 
 
 One feature per session. Sessions that pack multiple features ship them all half-done — we have measured this. The next session takes the next feature. There is no reward for finishing more in one session; there is a real cost to leaving things half-done.
 
+## Repository branch policy
+
+- Work directly on the local `main` branch. Do not create task, feature, fix,
+  security, develop, or client-specific branch variants for new work.
+- Fast-forward `main` from `origin/main` before starting a change.
+- Existing non-main branches are legacy. Do not use or delete them without
+  explicit user authorization and verification that they contain no exclusive
+  work.
+- If another dirty checkout prevents switching to `main`, preserve it and use a
+  temporary worktree checked out directly at `main`; do not create another
+  branch.
+
 ## Clean-state contract (end of every session)
 
 - All code committed to git. Prefer `scripts/committer "<msg>" <files>` — it refuses `.` and empty messages.
