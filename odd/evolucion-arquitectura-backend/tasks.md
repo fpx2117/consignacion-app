@@ -219,7 +219,13 @@ T16 sigue bloqueada por el comando de arranque de Railway (ver T16).
   panel, ausente en `package.json`, `server.ts` y `nixpacks.toml`— y se cambió a
   `NODE_ENV=production tsx server.ts`. Railway no redesplegó al guardarlo: el cambio
   aplica en el próximo deploy, que debe verificarse sin el paso de Prisma. Queda la
-  autorización explícita de producción.
+  autorización explícita de producción. **Segundo bloqueo, reproducido:** la
+  herramienta de cutover (`scripts/migrations/cutover-t16-stock-projection.mjs`) y
+  su verificación están escritas, pero `stock:cutover:test` **falla a propósito**:
+  dos writers concurrentes en sucursales distintas dejan deriva 1, porque el trigger
+  recalcula `SUM` desde un snapshot que no ve la transacción ajena. `DB_PROJECTION`
+  no es seguro con el mecanismo actual; ver `t16-cutover.md` y las tres opciones.
+  T16 queda bloqueada hasta decidir el mecanismo de proyección.
 - [x] **T17 — Extraer cálculos puros sin cambiar aritmética.** Tipos con escala y
   redondeo sólo después de probar equivalencia.
   **Etapa T17-A verificada:** `src/modules/ventas/sale-totals.ts` concentra

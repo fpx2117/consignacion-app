@@ -18,7 +18,8 @@
     "security:audit": "npm audit --omit=dev --audit-level=high",
     "security:scan-secrets-local": "node scripts/security/check-secret-hygiene.mjs",
     "security:test": "npm run security:scan-secrets-local && node --import tsx --test scripts/security/tracked-secret-files.test.mjs src/app/api/setup/initialize/setup-security.test.ts src/app/api/setup/setup-payment-reference.test.ts src/app/api/settings/users/user-input.test.ts src/app/api/settings/users/user-authorization.test.ts src/app/api/settings/users/user-update.test.ts src/app/api/auth/rate-limiting.test.ts",
-    "design:test": "tsx --test src/theme/know-design-system.test.ts"
+    "design:test": "tsx --test src/theme/know-design-system.test.ts",
+    "stock:cutover:test": "node scripts/migrations/verify-t16-stock-projection.mjs"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
