@@ -13,6 +13,7 @@
     "numbering:audit:test": "node scripts/migrations/verify-t12-numbering-audit.mjs",
     "numbering:authority:test": "node scripts/migrations/verify-t12-numbering-authority.mjs",
     "stock:authority:test": "node scripts/migrations/verify-t14-stock-authority.mjs",
+    "stock:bootstrap:test": "node scripts/migrations/verify-stock-authority-bootstrap.mjs",
     "lint": "eslint",
     "seed": "prisma db seed",
     "security:audit": "npm audit --omit=dev --audit-level=high",

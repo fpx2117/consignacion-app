@@ -37,6 +37,10 @@ export async function seedVentaIntegrationFixture(prisma: AppPrisma) {
       precioVenta: "99.99",
       precioCosto: "4.00",
       sucursalId: principal.id,
+      // APP_DUAL_WRITE exige que la creación escriba ambas representaciones: el
+      // global es la suma de las sucursales. No se delega en el trigger porque
+      // una base recién migrada no lo tiene instalado.
+      stockDisponibleUnits: 10,
     },
   });
   const termo = await prisma.producto.create({
@@ -47,6 +51,7 @@ export async function seedVentaIntegrationFixture(prisma: AppPrisma) {
       descuentoActivo: true,
       descuentoPorcentaje: "10.00",
       sucursalId: principal.id,
+      stockDisponibleUnits: 11,
     },
   });
 

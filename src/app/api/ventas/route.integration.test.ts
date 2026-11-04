@@ -86,8 +86,9 @@ test(
     const { principal, secundaria, usuario, cliente, sesion, mate, termo } =
       await seedVentaIntegrationFixture(prisma);
 
-    // T15-A: B1 requires APP_DUAL_WRITE with no projection trigger. Seeding ran
-    // with the trigger active, so Producto is already reconciled to SUM.
+    // T15-A: B1 requires APP_DUAL_WRITE with no projection trigger. A freshly
+    // migrated database already has none; the fixture writes both
+    // representations so Producto stays consistent either way.
     await prisma.$executeRawUnsafe(
       `DROP TRIGGER IF EXISTS "trg_sync_producto_stock" ON public."StockSucursal"`,
     );

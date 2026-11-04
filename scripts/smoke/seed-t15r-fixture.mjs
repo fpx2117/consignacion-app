@@ -41,7 +41,25 @@ if (!password) {
 const pool = new pg.Pool({ connectionString });
 const prisma = new PrismaClient({ adapter: new PrismaPg(pool) });
 
+async function assertProductionShapedAuthority() {
+  const [authority] = await prisma.$queryRawUnsafe(
+    'SELECT "modo" FROM public."StockAutoridad" WHERE "id" = 1',
+  );
+  const [trigger] = await prisma.$queryRawUnsafe(
+    `SELECT COUNT(*)::int AS count FROM pg_catalog.pg_trigger
+     WHERE tgrelid = 'public."StockSucursal"'::regclass
+       AND tgname = 'trg_sync_producto_stock' AND NOT tgisinternal`,
+  );
+  if (authority?.modo !== "DB_PROJECTION" || trigger?.count !== 1) {
+    throw new Error(
+      "El smoke necesita la configuración de producción: modo DB_PROJECTION y el trigger trg_sync_producto_stock instalado. Ver t15r-smoke.md.",
+    );
+  }
+}
+
 async function main() {
+  await assertProductionShapedAuthority();
+
   const sucursal = await prisma.sucursal.create({
     data: { nombre: "Sucursal Smoke T15R", esPrincipal: true },
   });

@@ -156,11 +156,12 @@ async function cutover(url, lockTimeoutMs = 2_000) {
 async function verifyCutoverAndRollback(url) {
   migrate(url);
   await withClient(url, async (client) => {
-    // Fresh schema: the historical trigger is installed and the capability is
-    // APP_DUAL_WRITE, which is the incompatible state B1 refuses to run in.
+    // A freshly migrated database is already in a B1-compatible state:
+    // APP_DUAL_WRITE without the projection trigger. The compensation below
+    // still proves the transition and the reconciliation.
     let snapshot = await stockSnapshot(client);
     assert.deepEqual(snapshot.capability, [{ id: 1, modo: "APP_DUAL_WRITE" }]);
-    assert.equal(snapshot.trigger, 1);
+    assert.equal(snapshot.trigger, 0);
 
     const fixture = await seedStock(client);
     assert.equal((await driftCount(client)) > 0, true);

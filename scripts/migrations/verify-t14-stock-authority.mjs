@@ -103,6 +103,14 @@ async function stockSnapshot(client) {
   };
 }
 
+async function installProjection(client) {
+  await client.query(`
+    CREATE TRIGGER "trg_sync_producto_stock"
+    AFTER INSERT OR UPDATE OR DELETE ON public."StockSucursal"
+    FOR EACH ROW EXECUTE FUNCTION public.sync_producto_stock()
+  `);
+}
+
 async function seedStock(client, divergent = true) {
   const sucursales = await client.query(`
     INSERT INTO public."Sucursal" (nombre, "esPrincipal", "updatedAt")
@@ -165,7 +173,10 @@ async function verifyFresh(url) {
     assert.deepEqual(snapshot.capability, [
       { id: 1, modo: "APP_DUAL_WRITE" },
     ]);
-    assert.equal(snapshot.trigger, 1);
+    // Una base nueva queda en APP_DUAL_WRITE sin proyección: la migración
+    // 20261101050000 retira el trigger que la combinación anterior dejaba
+    // instalado e incompatible.
+    assert.equal(snapshot.trigger, 0);
 
     const ids = await seedStock(client);
     assert.ok((await driftCount(client)) > 0);
@@ -173,6 +184,7 @@ async function verifyFresh(url) {
     // The rollback path from T16 starts at DB_PROJECTION with the projection
     // still active; compensation must prove the mode transition, not inherit
     // APP_DUAL_WRITE from the migration.
+    await installProjection(client);
     await client.query(
       `UPDATE public."StockAutoridad" SET "modo" = 'DB_PROJECTION' WHERE "id" = 1`,
     );
@@ -224,6 +236,7 @@ async function verifyFresh(url) {
 async function verifyRollback(url) {
   migrate(url);
   await withClient(url, async (client) => {
+    await installProjection(client);
     await seedStock(client);
     const before = await stockSnapshot(client);
     assert.equal(before.trigger, 1);
@@ -250,6 +263,7 @@ async function verifyRollback(url) {
 async function verifyDrain(url) {
   migrate(url);
   await withClient(url, async (client) => {
+    await installProjection(client);
     await seedStock(client);
   });
 
@@ -314,7 +328,7 @@ async function verifyIncompatible(url) {
       `UPDATE public."StockAutoridad" SET "modo" = 'DB_PROJECTION' WHERE "id" = 1`,
     );
     await client.query(
-      'DROP TRIGGER "trg_sync_producto_stock" ON public."StockSucursal"',
+      'DROP TRIGGER IF EXISTS "trg_sync_producto_stock" ON public."StockSucursal"',
     );
     const before = await stockSnapshot(client);
     assert.deepEqual(before.capability, [{ id: 1, modo: "DB_PROJECTION" }]);
