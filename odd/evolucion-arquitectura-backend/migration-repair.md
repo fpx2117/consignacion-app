@@ -98,7 +98,7 @@ una confirmación redundante del nombre. Crea y elimina siete bases nuevas
 derivadas y se niega a sobrescribir una base preexistente:
 
 ```bash
-TEST_DATABASE_URL='postgresql://.../consignacion_t11_test?schema=public' \
+TEST_DATABASE_URL='postgresql://postgres:postgres@127.0.0.1:5432/consignacion_t11_test?schema=public' \
 T11_CONFIRM_DATABASE='consignacion_t11_test' \
 npm run migrate:t11:test
 ```

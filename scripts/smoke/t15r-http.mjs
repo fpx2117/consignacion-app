@@ -12,7 +12,7 @@
 // Uso:
 //   SMOKE_BASE_URL=http://localhost:3100 \
 //   SMOKE_EMAIL=... SMOKE_PASSWORD=... \
-//   SMOKE_DATABASE_URL=postgresql://.../t15r_smoke \
+//   SMOKE_DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:5432/t15r_smoke \
 //   node scripts/smoke/t15r-http.mjs
 
 import assert from "node:assert/strict";

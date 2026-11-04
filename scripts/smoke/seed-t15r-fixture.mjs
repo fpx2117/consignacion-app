@@ -6,7 +6,7 @@
 // exige una base cuyo nombre termine en `_smoke` y una confirmación explícita.
 //
 // Uso:
-//   DATABASE_URL=postgresql://.../t15r_smoke \
+//   DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:5432/t15r_smoke \
 //   T15R_CONFIRM_DATABASE=t15r_smoke \
 //   SMOKE_PASSWORD='...' \
 //   node scripts/smoke/seed-t15r-fixture.mjs

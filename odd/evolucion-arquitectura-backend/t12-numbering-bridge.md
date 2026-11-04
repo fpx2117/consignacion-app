@@ -47,7 +47,7 @@ numeradores, triggers ni índices únicos.
 ```bash
 node --test scripts/migrations/audit-numbering.test.mjs
 node --import tsx --test src/modules/consignaciones/consignacion-numbering.test.ts src/modules/consignaciones/consignacion-numbering-wiring.test.ts
-TEST_DATABASE_URL=postgresql://.../t12_numbering_test T12_CONFIRM_DATABASE=t12_numbering_test npm run numbering:audit:test
+TEST_DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:5432/t12_numbering_test T12_CONFIRM_DATABASE=t12_numbering_test npm run numbering:audit:test
 ```
 
 El tercer comando crea una base hija descartable, aplica las migraciones, inserta
