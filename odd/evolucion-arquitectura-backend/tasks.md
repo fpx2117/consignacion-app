@@ -30,6 +30,8 @@ en una sola unidad y la sesión de venta atada a su sucursal (ver T22).
 enruta por salas de sucursal/usuario (ver T23).
 **T24 desplegada el mismo día** (`34c705df`, `4caecb7e`): webhooks con registro de
 eventos procesados y transiciones de ítems de OCR condicionales (ver T24).
+**T25 ejecutada el mismo día** (`37c6bb4a`): el handler legacy y el switch se
+retiraron; `POST /api/ventas` tiene un solo camino (ver T25).
 
 ## Diagnóstico
 
@@ -383,17 +385,18 @@ eventos procesados y transiciones de ítems de OCR condicionales (ver T24).
   409. Evidencia: unitarias del reclamo, prueba PostgreSQL de dos confirmaciones
   concurrentes (una sola gana), batería completa verde, deploys `34c705df` y
   `4caecb7e`, 36 migraciones y deriva 0. Detalle en `t24-idempotencia.md`.
-- [ ] **T25 — Retirar legacy.** Sólo después de T19, una ventana de observación
+- [x] **T25 — Retirar legacy.** Sólo después de T19, una ventana de observación
   aprobada, evidencia de cero tráfico o consumidores legacy, inventario sin
-  lectores ni writers pendientes y una revisión final de compatibilidad y
-  rollback.
-  **Bloqueada por evidencia, no por código (2026-11-04 05:45 UTC):** producción
-  tiene 922 ventas y la última es `2026-11-03T21:17Z` (18:17 local), **anterior a
-  la activación**. El dispatch `application` nunca procesó una venta real. Para
-  que la ventana sea medible se agregó una línea por venta:
-  `[ventas] sale {"mode":"application",...}`. Inventario de retiro, plan y costo
-  del rollback en `t25-retiro-legacy.md`. El único consumidor del legacy en
-  producción es `src/app/api/ventas/route.ts`.
+  lectores ni writers pendientes y una revisión final de compatibilidad y rollback.
+  **Ejecutada el 2026-11-04 por decisión explícita del usuario, sin la ventana de
+  observación.** Se retiraron `registerSaleLegacy` y sus helpers, el módulo de
+  switch y sus pruebas; `POST /api/ventas` llama al caso de uso directamente y la
+  variable `SALES_REGISTER_USE_CASE` se eliminó del servicio. La equivalencia ya
+  estaba probada (caracterización con ambos dispatches, relevo mixto) y el smoke
+  HTTP completo se ejecutó contra el build de un solo camino con deriva 0. 17
+  suites de integración verdes; deploy `37c6bb4a`, `/login` 200 y arranque sin
+  diagnóstico del switch. Rollback: revertir `9af282c`. Detalle, estado del gate y
+  deuda de proceso en `t25-retiro-legacy.md`.
 
 ## Gates obligatorios
 
