@@ -26,10 +26,10 @@ Tres ejes que **no son lo mismo** y que conviene no mezclar:
 | Tarea | Cerrada | Desplegada | Verificada en producción |
 | --- | --- | --- | --- |
 | M01 — runner de tests | ✅ | ✅ | N/A (no corre en el servidor) |
-| M02 — auditoría cableada | ✅ | ✅ | Pendiente: sin eventos reales todavía |
+| M02 — auditoría cableada | ✅ | ✅ | ✅ `LOGIN`/`CREATE`/`UPDATE`/`DELETE` registrados |
 | M03 — alias OCR por sucursal | ✅ | ✅ | Pendiente |
-| M04 — suscripción reasignada | ✅ | ✅ | Pendiente: depende del alta/baja de usuario |
-| Fix P0 — advisory locks | ✅ | ✅ | ✅ Causa raíz verificada en producción; flujo HTTP pendiente |
+| M04 — suscripción reasignada | ✅ | ✅ | Pendiente: el usuario de prueba no tenía suscripción |
+| Fix P0 — advisory locks | ✅ | ✅ | ✅ Alta, edición y baja de usuario funcionan |
 | M05 — README alineado | ✅ | ✅ | N/A (documento) |
 | M06 — ADR modelo de render | ✅ | ✅ | N/A (documento) |
 | M13 — índices compuestos | ✅ | ✅ | ✅ `EXPLAIN` usa `Venta_sucursalId_fecha_idx` |
@@ -39,9 +39,25 @@ Tres ejes que **no son lo mismo** y que conviene no mezclar:
 | M20 — preflight de migraciones | Diagnosticada | No | — |
 | M08, M09, M10, M11, M12, M15, M16, M17, M18 | Pendientes | — | — |
 
-**Qué falta para cerrar el nivel 3:** dos clics humanos (crear, editar y borrar un
-usuario desde `settings/security/employees`) y abrir el dashboard para confirmar
-que los números se ven igual que antes del despliegue.
+**Qué falta para cerrar el nivel 3:** abrir el dashboard en el navegador y confirmar
+que los números se ven igual que antes del despliegue (M14).
+
+### Verificación end-to-end en producción (2026-11-04)
+
+Ejecutada con una sesión real contra `importvps.com`:
+
+| Paso | Resultado |
+| --- | --- |
+| `POST /api/auth/login` | 200 |
+| `POST /api/settings/users` (alta) | 200, usuario id 6 |
+| `PUT /api/settings/users` (edición) | 200 |
+| `DELETE /api/settings/users?id=6` (baja) | 200, "Usuario eliminado" |
+| Usuario de prueba remanente | 0 |
+| `AuditLog` | `LOGIN/AUTH`, `CREATE/USERS`, `UPDATE/USERS`, `DELETE/USERS`, todos con actor y `targetUserId` |
+
+Esto cierra el P0 de advisory locks de punta a punta y confirma M02 en producción.
+La credencial usada se leyó desde un archivo local ignorado por git, nunca se
+imprimió, y se borró al terminar.
 
 ## Convención
 
