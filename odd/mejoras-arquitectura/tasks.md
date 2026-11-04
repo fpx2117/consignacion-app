@@ -29,7 +29,7 @@ Tres ejes que **no son lo mismo** y que conviene no mezclar:
 | M02 — auditoría cableada | ✅ | ✅ | Pendiente: sin eventos reales todavía |
 | M03 — alias OCR por sucursal | ✅ | ✅ | Pendiente |
 | M04 — suscripción reasignada | ✅ | ✅ | Pendiente: depende del alta/baja de usuario |
-| Fix P0 — advisory locks | ✅ | ✅ | **Pendiente: crear/editar/borrar usuario** |
+| Fix P0 — advisory locks | ✅ | ✅ | ✅ Causa raíz verificada en producción; flujo HTTP pendiente |
 | M05 — README alineado | ✅ | ✅ | N/A (documento) |
 | M06 — ADR modelo de render | ✅ | ✅ | N/A (documento) |
 | M13 — índices compuestos | ✅ | ✅ | ✅ `EXPLAIN` usa `Venta_sucursalId_fecha_idx` |
