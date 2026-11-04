@@ -1,6 +1,12 @@
-# Consignación App — B2B SaaS de POS, inventario, consignaciones y tienda online
+# Consignación App — POS, inventario, consignaciones y tienda online
 
-Plataforma SaaS fullstack para negocios que necesitan operar **punto de venta**, **stock multisucursal**, **consignaciones**, **catálogo público** y **suscripciones** desde un mismo sistema. Está construida con **Next.js 16**, **React 19**, **Prisma 7** y **PostgreSQL**, e incorpora tiempo real, reportes PDF, checkout online y automatizaciones operativas.
+Plataforma fullstack para negocios que necesitan operar **punto de venta**, **stock multisucursal**, **consignaciones**, **catálogo público** y **suscripciones** desde un mismo sistema. Está construida con **Next.js 16**, **React 19**, **Prisma 7** y **PostgreSQL**, e incorpora tiempo real, reportes PDF, checkout online y automatizaciones operativas.
+
+> **Unidad de despliegue:** una instalación con su propia base de datos por comercio.
+> No es multi-tenant: no existe tabla de organizaciones ni de tenants, y dos negocios
+> no comparten base. Cada instalación sí puede tener **varias sucursales**, que están
+> aisladas entre sí. Es una decisión tomada, no una deuda pendiente: ver
+> `odd/evolucion-arquitectura-backend/README.md`, decisión 1.
 
 > Documentación técnica extendida: [docs/INDEX.md](./docs/INDEX.md) · [docs/GUIA_TECNICA_PROYECTO.md](./docs/GUIA_TECNICA_PROYECTO.md) · [docs/API_REFERENCIA_TECNICA.md](./docs/API_REFERENCIA_TECNICA.md) · [ADR-0001](./docs/ADR/0001-servidor-custom-next-socketio.md)
 
@@ -43,7 +49,7 @@ App disponible en `http://localhost:3000`.
 
 ---
 
-## Qué resuelve este SaaS
+## Qué resuelve
 
 Consignación App unifica en una sola plataforma:
 
@@ -51,7 +57,7 @@ Consignación App unifica en una sola plataforma:
 - control de inventario por sucursal
 - mercadería entregada en consignación
 - catálogo/tienda online pública
-- cobranzas y suscripciones SaaS
+- cobranzas y suscripciones del plan
 - reportes operativos compartibles
 - seguridad, auditoría y sesiones activas
 
@@ -104,7 +110,10 @@ Está pensada para comercios con operación física, gestión por empleados y ne
 
 ### Seguridad y administración
 
-- **Auditoría central** de acciones por usuario y módulo.
+- **Auditoría de acciones administrativas**: altas, modificaciones y bajas de
+  usuarios, productos, ventas anuladas, consignaciones y configuración general se
+  registran en `AuditLog` con usuario, acción, módulo, IP y user agent. El resto
+  de los módulos todavía no audita: ver `odd/mejoras-arquitectura/tasks.md` (M18).
 - **Sesiones activas** con cierre remoto por dispositivo.
 - **Rate limiting en auth**, recuperación de contraseña por email y monitoreo de seguridad.
 - **Restricción por rol y horario laboral** para empleados.
@@ -114,7 +123,7 @@ Está pensada para comercios con operación física, gestión por empleados y ne
 
 - **Planes Básico, Pro y Enterprise** con límites y capacidades distintas.
 - **Mercado Pago + PayPal** para cobro de suscripciones.
-- **Auto-seeding de planes** si un tenant antiguo no tiene la tabla inicializada.
+- **Auto-seeding de planes** si una instalación antigua no tiene la tabla inicializada.
 - **Enterprise con OCR de facturas** y capacidad multisucursal.
 
 ---
@@ -170,20 +179,43 @@ Estas son algunas de las mejoras nuevas que ya conviene reflejar en la documenta
 
 ```text
 consignacion-app/
-├── prisma/                     # Schema y seed
+├── prisma/                     # Schema, migraciones y seed
 ├── src/
 │   ├── app/                    # App Router, API y vistas públicas/protegidas
 │   ├── lib/                    # Servicios, auth, seguridad, IA, reportes, storefront
-│   ├── modules/invoices/       # Configuración de extracción de facturas
+│   ├── modules/                # Dominio con límites explícitos
+│   │   ├── ventas/             # Caso de uso + adaptador de persistencia (patrón de referencia)
+│   │   ├── inventory/          # Autoridad de stock y transiciones
+│   │   ├── consignaciones/     # Numeración de folios y liquidaciones
+│   │   ├── finance/            # Cálculos de rentabilidad
+│   │   ├── pricing/            # Markup de consignación
+│   │   └── invoices/           # Configuración de extracción de facturas
 │   ├── providers/              # Socket provider y toaster
 │   ├── store/                  # Zustand
 │   ├── hooks/                  # Hooks de negocio/UI
 │   └── types/                  # Tipos compartidos
 ├── docs/                       # Documentación técnica
+├── odd/                        # Especificaciones y decisiones por esfuerzo
 └── server.ts                   # Servidor Next + Socket.io
 ```
 
+> `src/modules/ventas/` es el patrón de referencia: caso de uso puro con
+> dependencias inyectadas y un único adaptador que conoce Prisma. El resto de los
+> módulos todavía no sigue ese molde; migrarlos es trabajo pendiente, no estado
+> actual (ver `odd/mejoras-arquitectura/tasks.md`, M12).
+
 > `catalogo-global-api` ya no vive dentro de este repositorio. `consignacion-app` lo consume como servicio externo vía `CATALOGO_API_URL`.
+
+### Modelo de render
+
+La aplicación es una **SPA montada sobre el App Router**: 42 de 47 páginas son
+`"use client"` y hay un solo archivo `"use server"`. El acceso a datos ocurre en
+el cliente contra los route handlers de `/api`, salvo el **catálogo público**
+(`src/app/[slug]/page.tsx`), que sí renderiza en el servidor porque necesita SEO.
+
+No hay Server Actions en uso. Esto no es un pendiente: es cómo está construido
+hoy, y está registrado como decisión pendiente en
+`odd/mejoras-arquitectura/tasks.md` (M06).
 
 ---
 
@@ -212,7 +244,8 @@ consignacion-app/
 | `SHARE_LINK_SECRET`    | Seguridad de share links           |
 | `NEXT_PUBLIC_APP_URL`  | URL pública de la app              |
 | `NEXT_PUBLIC_BASE_URL` | Base URL usada por socket/reportes |
-| `SOCKET_DISPATCH_URL`  | Endpoint interno de despacho       |
+| `APP_URL`              | Base URL del despacho interno de notificaciones |
+| `SOCKET_DISPATCH_SECRET` | Secreto del endpoint `/api/socket/dispatch` (si falta, cae a `CRON_SECRET`) |
 
 ### Pagos SaaS
 
@@ -249,9 +282,17 @@ npm run build
 npm start
 npm run seed
 npm run lint
+npm test                    # 62 archivos unitarios, sin base de datos
+npm run test:integration    # 17 archivos; requiere TEST_DATABASE_URL
+npm run test:all            # unitarios + integración
 npm run security:audit
 npm run security:scan-secrets-local
 ```
+
+> `npm test` inyecta `DATABASE_URL` y `JWT_SECRET` descartables si no vienen del
+> entorno, para que los unitarios no dependan de una base. Los de integración
+> **fallan cerrado** sin `TEST_DATABASE_URL` porque ejecutan `TRUNCATE` sobre
+> tablas reales y no deben poder apuntar a la base de desarrollo por accidente.
 
 ### Notas de build y producción
 
@@ -274,7 +315,7 @@ npm run security:scan-secrets-local
 - **WhatsApp** con plantillas dinámicas.
 - **Tienda online** con branding, banners y checkout.
 - **Suscripciones** con historial de facturación.
-- **Setup inicial** guiado para dejar operativo el tenant.
+- **Setup inicial** guiado para dejar operativo el comercio.
 
 ---
 
@@ -290,9 +331,12 @@ npm run security:scan-secrets-local
 
 ## Estado del producto
 
-El proyecto ya cubre un escenario SaaS avanzado con operación física + online. Las actualizaciones recientes muestran una evolución clara hacia:
+El proyecto ya cubre un escenario operativo avanzado con venta física y canal online sobre una instalación por comercio. La evolución reciente apunta a:
 
 - más automatización operativa
 - más seguridad y trazabilidad
 - más personalización para storefront
 - más capacidades enterprise con IA/OCR e integraciones externas
+
+El estado de la deuda técnica y arquitectónica está en
+`odd/mejoras-arquitectura/tasks.md`, con las tareas priorizadas y su evidencia.
