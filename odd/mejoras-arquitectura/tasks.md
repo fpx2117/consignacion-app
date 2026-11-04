@@ -500,6 +500,7 @@ stack cuando hay una sola.
 ### M08 — Reducir `factura-proveedor-dialog.tsx` y `productos-view.tsx`
 
 - **Prioridad** P1 · **Esfuerzo** L · **Dependencias** M01
+- **Estado**: **en curso** (2026-11-04). `factura-proveedor-dialog.tsx` 1964 → 1747.
 - **Evidencia**: Eje 4.
 - **Alcance**: extraer subcomponentes y hooks con responsabilidad única, sin
   cambiar comportamiento ni estilos. Una extracción por commit, cada una con su
@@ -510,6 +511,22 @@ stack cuando hay una sola.
   prueba manual del flujo de carga de factura contra el baseline.
 - **Riesgo**: medio-alto. Es el flujo con más lógica de UI del sistema; se hace
   por partes, nunca de una.
+- **Progreso**:
+  1. `factura-proveedor-helpers.ts` — 120 líneas de helpers puros
+     (`badgeEstado`, `nivelConfianza`, `bucketsDeItem`, constantes de UI y tipos).
+  2. `factura-upload-pane.tsx` — 136 líneas de la vista de carga/escáner, con 11
+     props explícitas.
+  - Sin cambios de comportamiento: el JSX se movió verbatim y solo se removieron
+    los imports que quedaron sin uso. `tsc` y `eslint` en cero tras cada slice.
+- **Pendiente para cerrarla**:
+  3. La fila de ítem dentro del `.map()` (~430 líneas) — el bloque más grande.
+  4. El resumen lateral (~200 líneas).
+  5. El formulario de datos generales (~250 líneas).
+  6. Evaluar extraer los hooks de carga/proceso: sin eso, el componente no baja de
+     ~500 aunque se vacíe todo el JSX.
+  - Nota de criterio: la meta es cohesión, no el número. Si al terminar las
+    extracciones el archivo queda en ~600 con responsabilidades claras, el número
+    es el resultado y no la regla.
 
 ### M09 — Triar los 328 `TODO` y las menciones de `legacy`
 
