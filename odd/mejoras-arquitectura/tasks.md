@@ -456,14 +456,17 @@ stack cuando hay una sola.
 
 - **Prioridad** P0 · **Esfuerzo** S · **Dependencias** ninguna (medir después de
   M01 si se quiere baseline reproducible)
+- **Estado**: **cerrada** (2026-11-04). Migración
+  `20261104190000_venta_pago_sucursal_fecha_index`, verificada sobre el dump real
+  y aplicada al clúster descartable. **No desplegada a producción.**
 - **Evidencia**: `prisma/schema.prisma` declara `@@index([sucursalId])` y
   `@@index([clienteId, fecha])` en `Venta`, y `@@index([sucursalId])` en `Pago`,
   pero la consulta caliente es `(sucursalId, fecha, anulada)`
   (`src/lib/dashboard/kpi-logic.ts:499-514`). `MovimientoStock` tiene
   `(sucursalId)` y `(createdAt)` separados.
 - **Alcance**: migración **aditiva** con `(sucursalId, fecha)` en `Venta` y
-  `Pago`, más `(sucursalId, createdAt)` en `MovimientoStock`. Evaluar cada índice
-  contra el plan real antes de mergear; no agregar índices que el planner ignore.
+  `Pago`. Evaluar cada índice contra el plan real antes de mergear; no agregar
+  índices que el planner ignore.
 - **Aceptación**: `EXPLAIN (ANALYZE, BUFFERS)` antes/después sobre un dataset
   representativo muestra que la consulta deja de hacer scan con filtro; la
   migración aplica y revierte sin pérdida.
