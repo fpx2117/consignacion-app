@@ -286,6 +286,8 @@ npm run lint
 npm test                    # 62 archivos unitarios, sin base de datos
 npm run test:integration    # 17 archivos; requiere TEST_DATABASE_URL
 npm run test:all            # unitarios + integración
+npm run bundle:check        # First Load JS por ruta vs presupuesto (requiere build)
+npm run bundle:baseline     # regenera el baseline tras un cambio deliberado
 npm run security:audit
 npm run security:scan-secrets-local
 ```

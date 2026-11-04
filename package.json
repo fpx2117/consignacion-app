@@ -18,6 +18,8 @@
     "test": "node scripts/test.mjs",
     "test:integration": "node scripts/test.mjs --integration",
     "test:all": "node scripts/test.mjs --all",
+    "bundle:check": "node scripts/check-bundle-budget.mjs",
+    "bundle:baseline": "node scripts/check-bundle-budget.mjs --update-baseline",
     "seed": "prisma db seed",
     "security:audit": "npm audit --omit=dev --audit-level=high",
     "security:scan-secrets-local": "node scripts/security/check-secret-hygiene.mjs",

@@ -690,6 +690,8 @@ stack cuando hay una sola.
 ### M15 — Medir el bundle y fijar presupuesto por ruta
 
 - **Prioridad** P1 · **Esfuerzo** M · **Dependencias** M01
+- **Estado**: **cerrada** (2026-11-04). `scripts/check-bundle-budget.mjs` +
+  `bundle-budget.json`.
 - **Evidencia**: 42 de 47 páginas son cliente; `src/lib/apiService.ts` (1.225
   líneas) lo importan 50 archivos; 46 de 47 usos de `motion/react` están en
   componentes cliente. Nunca se midió First Load JS.
@@ -702,6 +704,40 @@ stack cuando hay una sola.
   baseline.
 - **Nota**: **medir antes de optimizar**. Sin baseline, cualquier "mejora de
   bundle" es una opinión.
+- **Resultado**:
+  - **Turbopack no imprime tamaños.** A diferencia de webpack, `next build` no
+    muestra la tabla de "First Load JS". Por eso el medidor es propio.
+  - **Cómo mide**: Next genera un `*_client-reference-manifest.js` por ruta con
+    `entryJSFiles` (chunks del root layout, layouts anidados y página). Se toma la
+    unión, se comprime cada chunk con gzip y se suma. 49 rutas medidas.
+  - **Baseline** (`bundle-budget.json`), las más pesadas:
+
+    | Ruta | KB gzip | Chunks |
+    | --- | --- | --- |
+    | `/settings/branding` | 312,5 | 12 |
+    | `/productos` | 239,1 | 16 |
+    | `/proveedores` | 236,8 | 16 |
+    | `/settings/tienda` | 227,5 | 14 |
+    | `/proveedores/[id]` | 224,6 | 16 |
+    | `/dashboard` | 213,2 | 14 |
+    | `/pedidos-esperados` | 211,6 | 15 |
+    | `/ventas/nueva` | 191,7 | 13 |
+
+  - **Presupuesto**: dos reglas combinadas, porque un techo absoluto solo no
+    detecta crecimientos silenciosos.
+    1. `defaultMaxKB: 350` — ninguna ruta puede pasar ese techo.
+    2. `maxGrowthKB: 10` — ninguna ruta puede crecer más de 10 KB sobre su
+       baseline, aunque quede debajo del techo.
+  - **Comandos**: `npm run bundle:check` (falla con exit 1 si hay violación) y
+    `npm run bundle:baseline` (regenera el baseline tras un cambio deliberado).
+  - **Canario ejecutado**: bajando el baseline de `/dashboard` a 100 KB, el check
+    responde `/dashboard: 213.2 KB > 110 KB` y sale 1. No es un falso verde.
+  - **Hallazgo del camino**: `JSON.parse` explota con BOM y un editor de Windows
+    lo agrega solo. El script ahora lo tolera.
+- **Lo que este número habilita**: cualquier discusión sobre migrar a RSC (M06) ya
+  tiene una medición. La ruta más pesada es `/settings/branding` con 312 KB, no el
+  POS ni el dashboard. Si algún día se reabre M06, el candidato obvio es esa
+  pantalla, no las que se suponían.
 
 ### M16 — Justificar o eliminar `force-dynamic`
 
