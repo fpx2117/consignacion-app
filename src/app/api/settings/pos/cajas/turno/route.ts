@@ -209,24 +209,36 @@ export async function handlePostTurno(
       );
     }
 
-    const activa = await deps.prisma.sesionCaja.findFirst({
-      where: { usuarioId, estado: "ABIERTA" },
+    // T22: la comprobación y el alta son una sola unidad. El lock sobre la fila
+    // del usuario serializa aperturas concurrentes; sin él, dos requests pasan
+    // el `findFirst` y quedan dos sesiones abiertas para el mismo usuario.
+    const nueva = await deps.prisma.$transaction(async (tx) => {
+      await tx.$queryRaw`
+        SELECT "id" FROM public."Usuario" WHERE "id" = ${usuarioId} FOR UPDATE
+      `;
+
+      const activa = await tx.sesionCaja.findFirst({
+        where: { usuarioId, estado: "ABIERTA" },
+        select: { id: true },
+      });
+      if (activa) return null;
+
+      return tx.sesionCaja.create({
+        data: {
+          cajaId: cajaIdNumerico,
+          usuarioId,
+          montoInicial: montoInicialNumerico,
+          estado: "ABIERTA",
+        },
+      });
     });
-    if (activa) {
+
+    if (!nueva) {
       return NextResponse.json(
         { error: "Ya tienes una sesion abierta." },
         { status: 403 },
       );
     }
-
-    const nueva = await deps.prisma.sesionCaja.create({
-      data: {
-        cajaId: cajaIdNumerico,
-        usuarioId,
-        montoInicial: montoInicialNumerico,
-        estado: "ABIERTA",
-      },
-    });
 
     return NextResponse.json({ data: nueva });
   } catch (error) {
@@ -327,67 +339,85 @@ export async function handlePutTurno(
       );
     }
 
-    const sesion = await deps.prisma.sesionCaja.findFirst({
-      where: {
-        usuarioId,
-        estado: "ABIERTA",
-        caja: { sucursalId: auth.activeSucursalId },
-      },
-      include: {
-        ventas: { where: { tipo: "CASUAL" } },
-        pagos: true,
-        movimientos: true,
-      },
+    // T22: lock, lectura, cálculo y cierre en una sola transacción. Si la lectura
+    // ocurriera fuera, una venta podría confirmarse entre el total y el cierre.
+    const cerrada = await deps.prisma.$transaction(async (tx) => {
+      const locked = await tx.$queryRaw<Array<{ id: number }>>`
+        SELECT s."id" FROM public."SesionCaja" s
+        JOIN public."Caja" c ON c."id" = s."cajaId"
+        WHERE s."usuarioId" = ${usuarioId}
+          AND s."estado" = 'ABIERTA'
+          AND c."sucursalId" = ${auth.activeSucursalId}
+        LIMIT 1
+        FOR UPDATE OF s
+      `;
+      const sesionId = locked[0]?.id;
+      if (!sesionId) return null;
+
+      const sesion = await tx.sesionCaja.findUnique({
+        where: { id: sesionId },
+        include: {
+          ventas: { where: { tipo: "CASUAL" } },
+          pagos: true,
+          movimientos: true,
+        },
+      });
+      if (!sesion || sesion.estado === "CERRADA") return null;
+
+      let esperado = Number(sesion.montoInicial);
+      const ventasEfectivo = sesion.ventas
+        .filter((venta) => venta.metodoPago === MetodoPago.EFECTIVO)
+        .reduce((total, venta) => total + Number(venta.total), 0);
+      const cobranzasEfectivo = sesion.pagos
+        .filter((pago) => pago.metodo === MetodoPago.EFECTIVO)
+        .reduce((total, pago) => total + Number(pago.monto), 0);
+      const ingresos = sesion.movimientos
+        .filter((movimiento) => movimiento.tipo === "INGRESO")
+        .reduce((total, movimiento) => total + Number(movimiento.monto), 0);
+      const egresos = sesion.movimientos
+        .filter((movimiento) => movimiento.tipo === "EGRESO")
+        .reduce((total, movimiento) => total + Number(movimiento.monto), 0);
+
+      esperado =
+        esperado + ventasEfectivo + cobranzasEfectivo + ingresos - egresos;
+      const diferencia = montoRealNumerico - esperado;
+      const observacionesCierre = observaciones?.trim();
+      const observacionesFinales = [
+        sesion.observaciones?.trim(),
+        observacionesCierre ? `Cierre: ${observacionesCierre}` : null,
+      ]
+        .filter(Boolean)
+        .join(" | ");
+
+      const claimed = await tx.sesionCaja.updateMany({
+        where: { id: sesionId, estado: "ABIERTA" },
+        data: {
+          estado: "CERRADA",
+          fechaCierre: deps.nowAR(timezone.tz),
+          montoFinalEsperado: esperado,
+          montoFinalReal: montoRealNumerico,
+          diferencia,
+          observaciones: observacionesFinales || null,
+        },
+      });
+      if (claimed.count !== 1) return null;
+      const sesionCerrada = await tx.sesionCaja.findUniqueOrThrow({
+        where: { id: sesionId },
+      });
+      return { sesion: sesionCerrada, esperado };
     });
 
-    if (!sesion) {
+    if (!cerrada) {
       return NextResponse.json(
         { error: "Caja no encontrada." },
         { status: 404 },
       );
     }
 
-    let esperado = Number(sesion.montoInicial);
-    const ventasEfectivo = sesion.ventas
-      .filter((venta) => venta.metodoPago === MetodoPago.EFECTIVO)
-      .reduce((total, venta) => total + Number(venta.total), 0);
-    const cobranzasEfectivo = sesion.pagos
-      .filter((pago) => pago.metodo === MetodoPago.EFECTIVO)
-      .reduce((total, pago) => total + Number(pago.monto), 0);
-    const ingresos = sesion.movimientos
-      .filter((movimiento) => movimiento.tipo === "INGRESO")
-      .reduce((total, movimiento) => total + Number(movimiento.monto), 0);
-    const egresos = sesion.movimientos
-      .filter((movimiento) => movimiento.tipo === "EGRESO")
-      .reduce((total, movimiento) => total + Number(movimiento.monto), 0);
-
-    esperado =
-      esperado + ventasEfectivo + cobranzasEfectivo + ingresos - egresos;
-    const diferencia = montoRealNumerico - esperado;
-    const observacionesCierre = observaciones?.trim();
-    const observacionesFinales = [
-      sesion.observaciones?.trim(),
-      observacionesCierre ? `Cierre: ${observacionesCierre}` : null,
-    ]
-      .filter(Boolean)
-      .join(" | ");
-
-    const cerrada = await deps.prisma.sesionCaja.update({
-      where: { id: sesion.id },
-      data: {
-        estado: "CERRADA",
-        fechaCierre: deps.nowAR(timezone.tz),
-        montoFinalEsperado: esperado,
-        montoFinalReal: montoRealNumerico,
-        diferencia,
-        observaciones: observacionesFinales || null,
-      },
-    });
-
     return NextResponse.json({
       message: "Caja cerrada correctamente",
-      data: cerrada,
-      extra: { esperadoEfectivo: esperado },
+      data: cerrada.sesion,
+      extra: { esperadoEfectivo: cerrada.esperado },
     });
   } catch (error) {
     console.error("Error al cerrar la caja:", error);

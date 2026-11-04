@@ -10,6 +10,11 @@ type CerrarCajaBody = {
   observaciones?: string | null;
 };
 
+const SESION_NO_ABIERTA = "SESION_NO_ABIERTA";
+const SESION_NO_ABIERTA_RESPONSE = {
+  error: "Sesion no encontrada o ya cerrada.",
+} as const;
+
 export async function POST(req: Request) {
   const auth = await requireAuth();
   if (!auth.ok) return auth.res;
@@ -28,55 +33,70 @@ export async function POST(req: Request) {
       );
     }
 
-    const sesion = await prisma.sesionCaja.findFirst({
-      where: {
-        id: sesionCajaId,
-        caja: { sucursalId: auth.activeSucursalId },
-      },
-      include: {
-        ventas: { where: { tipo: "CASUAL" } },
-        movimientos: true,
-      },
-    });
-
-    if (!sesion || sesion.estado === "CERRADA") {
-      return NextResponse.json(
-        { error: "Sesion no encontrada o ya cerrada." },
-        { status: 400 },
-      );
-    }
-
-    const totalVentas = sesion.ventas.reduce(
-      (acc, venta) => acc + Number(venta.total),
-      0,
-    );
-    const totalIngresos = sesion.movimientos
-      .filter((movimiento) => movimiento.tipo === "INGRESO")
-      .reduce((acc, movimiento) => acc + Number(movimiento.monto), 0);
-    const totalEgresos = sesion.movimientos
-      .filter((movimiento) => movimiento.tipo === "EGRESO")
-      .reduce((acc, movimiento) => acc + Number(movimiento.monto), 0);
-
-    const montoEsperado =
-      Number(sesion.montoInicial) + totalVentas + totalIngresos - totalEgresos;
-    const diferencia = montoRealNumerico - montoEsperado;
-
     const timezone = await resolveTimezoneForAuth(auth);
 
-    const sesionCerrada = await prisma.sesionCaja.update({
-      where: { id: sesionCajaId },
-      data: {
-        estado: "CERRADA",
-        fechaCierre: nowAR(timezone.tz),
-        montoFinalEsperado: montoEsperado,
-        montoFinalReal: montoRealNumerico,
-        diferencia,
-        observaciones: observaciones ?? null,
-      },
+    // T22: lock, lectura, cálculo y cierre en una sola transacción. Si la suma
+    // ocurriera fuera, una venta podría confirmarse entre el total y el cierre y
+    // quedar fuera de `montoFinalEsperado`; y dos cierres concurrentes podrían
+    // pisarse con totales distintos.
+    const sesionCerrada = await prisma.$transaction(async (tx) => {
+      const locked = await tx.$queryRaw<Array<{ id: number }>>`
+        SELECT s."id" FROM public."SesionCaja" s
+        JOIN public."Caja" c ON c."id" = s."cajaId"
+        WHERE s."id" = ${sesionCajaId}
+          AND c."sucursalId" = ${auth.activeSucursalId}
+        LIMIT 1
+        FOR UPDATE OF s
+      `;
+      if (locked.length === 0) throw new Error(SESION_NO_ABIERTA);
+
+      const sesion = await tx.sesionCaja.findUnique({
+        where: { id: sesionCajaId },
+        include: {
+          ventas: { where: { tipo: "CASUAL" } },
+          movimientos: true,
+        },
+      });
+      if (!sesion || sesion.estado === "CERRADA") {
+        throw new Error(SESION_NO_ABIERTA);
+      }
+
+      const totalVentas = sesion.ventas.reduce(
+        (acc, venta) => acc + Number(venta.total),
+        0,
+      );
+      const totalIngresos = sesion.movimientos
+        .filter((movimiento) => movimiento.tipo === "INGRESO")
+        .reduce((acc, movimiento) => acc + Number(movimiento.monto), 0);
+      const totalEgresos = sesion.movimientos
+        .filter((movimiento) => movimiento.tipo === "EGRESO")
+        .reduce((acc, movimiento) => acc + Number(movimiento.monto), 0);
+
+      const montoEsperado =
+        Number(sesion.montoInicial) + totalVentas + totalIngresos - totalEgresos;
+      const diferencia = montoRealNumerico - montoEsperado;
+
+      const claimed = await tx.sesionCaja.updateMany({
+        where: { id: sesionCajaId, estado: "ABIERTA" },
+        data: {
+          estado: "CERRADA",
+          fechaCierre: nowAR(timezone.tz),
+          montoFinalEsperado: montoEsperado,
+          montoFinalReal: montoRealNumerico,
+          diferencia,
+          observaciones: observaciones ?? null,
+        },
+      });
+      if (claimed.count !== 1) throw new Error(SESION_NO_ABIERTA);
+
+      return tx.sesionCaja.findUniqueOrThrow({ where: { id: sesionCajaId } });
     });
 
     return NextResponse.json({ data: sesionCerrada });
   } catch (error) {
+    if (error instanceof Error && error.message === SESION_NO_ABIERTA) {
+      return NextResponse.json(SESION_NO_ABIERTA_RESPONSE, { status: 400 });
+    }
     console.error("Error al cerrar la caja:", error);
     return NextResponse.json(
       { error: "Error al cerrar la caja" },

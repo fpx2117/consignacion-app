@@ -236,6 +236,80 @@ test("la venta espera al cierre y no queda ligada a una caja cerrada", async () 
   }
 });
 
+test("el cierre de caja espera la venta en vuelo y se reclama una sola vez", async () => {
+  const observer = await connect(databaseUrl);
+  const sale = await connect(databaseUrl);
+  const close = await connect(databaseUrl);
+  try {
+    await lockHarness(observer);
+    await reset(observer);
+    const fixture = await seedCore(observer);
+    const caja = await observer.query<{ id: number }>(
+      `INSERT INTO "Caja" (nombre, "sucursalId") VALUES ('T22 Caja', $1) RETURNING id`,
+      [fixture.sucursalA],
+    );
+    const session = await observer.query<{ id: number }>(
+      `INSERT INTO "SesionCaja" ("cajaId", "usuarioId", "montoInicial")
+       VALUES ($1, $2, 100) RETURNING id`,
+      [caja.rows[0].id, fixture.usuarioId],
+    );
+    const sessionId = session.rows[0].id;
+    const closePid = await backendPid(close);
+
+    // Venta en vuelo: reclama la sesión (FOR SHARE, como T20).
+    await sale.query("BEGIN");
+    await sale.query(
+      `SELECT "id" FROM "SesionCaja"
+       WHERE "id" = $1 AND "estado" = 'ABIERTA' FOR SHARE`,
+      [sessionId],
+    );
+
+    // El cierre pide el lock exclusivo: espera a que la venta termine.
+    await close.query("BEGIN");
+    const lock = close.query<{ id: number }>(
+      `SELECT "id" FROM "SesionCaja" WHERE "id" = $1 FOR UPDATE`,
+      [sessionId],
+    );
+    await waitForLock(observer, closePid);
+
+    await sale.query(
+      `INSERT INTO "Venta" ("clienteId", "sucursalId", "sesionCajaId", total, tipo)
+       VALUES ($1, $2, $3, 50, 'CASUAL')`,
+      [fixture.clienteId, fixture.sucursalA, sessionId],
+    );
+    await sale.query("COMMIT");
+
+    // Al retomar, el cierre ve la venta confirmada y la incluye.
+    await lock;
+    const total = await close.query<{ total: string }>(
+      `SELECT COALESCE(SUM(total), 0)::text AS total
+       FROM "Venta" WHERE "sesionCajaId" = $1 AND tipo = 'CASUAL'`,
+      [sessionId],
+    );
+    assert.equal(total.rows[0].total, "50.00");
+
+    const first = await close.query(
+      `UPDATE "SesionCaja" SET "estado" = 'CERRADA'
+       WHERE "id" = $1 AND "estado" = 'ABIERTA'`,
+      [sessionId],
+    );
+    await close.query("COMMIT");
+    assert.equal(first.rowCount, 1);
+
+    // Un segundo cierre ya no reclama nada y no pisa el total.
+    const second = await observer.query(
+      `UPDATE "SesionCaja" SET "estado" = 'CERRADA'
+       WHERE "id" = $1 AND "estado" = 'ABIERTA'`,
+      [sessionId],
+    );
+    assert.equal(second.rowCount, 0);
+  } finally {
+    await rollbackQuietly(sale);
+    await rollbackQuietly(close);
+    await Promise.all([observer.end(), sale.end(), close.end()]);
+  }
+});
+
 test("dos liquidaciones concurrentes no exceden las unidades pendientes", async () => {
   const observer = await connect(databaseUrl);
   const first = await connect(databaseUrl);
