@@ -202,14 +202,15 @@ test("la venta espera al cierre y no queda ligada a una caja cerrada", async () 
       [session.rows[0].id],
     );
 
-    // La venta bloquea la sesión con la misma consulta del adaptador (T20) y
-    // espera a que el cierre termine.
+    // La venta bloquea la sesión con la misma consulta del adaptador (T20/T22):
+    // usuario + sucursal de la caja, con FOR SHARE.
     await pos.query("BEGIN");
     const claim = pos.query<{ id: number }>(
-      `SELECT "id" FROM "SesionCaja"
-       WHERE "usuarioId" = $1 AND "estado" = 'ABIERTA'
-       LIMIT 1 FOR SHARE`,
-      [fixture.usuarioId],
+      `SELECT s."id" FROM "SesionCaja" s
+       JOIN "Caja" c ON c."id" = s."cajaId"
+       WHERE s."usuarioId" = $1 AND s."estado" = 'ABIERTA' AND c."sucursalId" = $2
+       LIMIT 1 FOR SHARE OF s`,
+      [fixture.usuarioId, fixture.sucursalA],
     );
     await waitForLock(observer, posPid);
 

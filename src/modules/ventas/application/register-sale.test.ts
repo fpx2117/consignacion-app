@@ -89,6 +89,7 @@ function makeHarness(options: HarnessOptions = {}) {
   const paymentInputs: PaymentCreation[] = [];
   const movementInputs: StockMovementDraft[] = [];
   const ensureDefaultCalls: number[] = [];
+  const sessionSucursales: number[] = [];
   const timezones: string[] = [];
   const dates = [
     new Date("2026-02-01T01:00:00.000Z"),
@@ -99,8 +100,9 @@ function makeHarness(options: HarnessOptions = {}) {
   let remainingRetries = options.retriesBeforeSuccess ?? 0;
 
   const tx: RegisterSaleTransaction<FakeSale, FakePayment> = {
-    lockOpenCashSession: async () => {
+    lockOpenCashSession: async ({ sucursalId }) => {
       journal.push("session");
+      sessionSucursales.push(sucursalId);
       if (options.hasOpenSession === false) return null;
       return { id: 15 };
     },
@@ -206,6 +208,7 @@ function makeHarness(options: HarnessOptions = {}) {
     paymentInputs,
     movementInputs,
     ensureDefaultCalls,
+    sessionSucursales,
     timezones,
     attempts: () => attempts,
   };
@@ -306,6 +309,8 @@ test("registra la venta con los totales, el orden y los efectos del contrato", a
 
   // Dos lecturas del reloj, siempre con la timezone resuelta.
   assert.deepEqual(harness.timezones, ["America/Bogota", "America/Bogota"]);
+  // La sesión se busca con la sucursal de la venta, no con una caja cualquiera.
+  assert.deepEqual(harness.sessionSucursales, [3]);
   assert.equal(sale.fecha.toISOString(), "2026-02-01T01:00:00.000Z");
   assert.equal(payment.fecha.toISOString(), "2026-02-01T02:00:00.000Z");
 

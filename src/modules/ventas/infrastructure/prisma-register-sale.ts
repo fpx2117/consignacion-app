@@ -44,15 +44,20 @@ function createTransaction(
 
     lockStockAuthority: () => lockStockAuthority(tx),
 
-    // Bloquea la sesión abierta del usuario. `FOR SHARE` impide que el cierre la
-    // marque CERRADA mientras la venta se registra, y si el cierre ya commiteó la
-    // fila deja de cumplir `estado = 'ABIERTA'` y no se devuelve nada.
-    lockOpenCashSession: async (usuarioId) => {
+    // Bloquea la sesión abierta del usuario **en la sucursal de la venta**.
+    // `FOR SHARE` impide que el cierre la marque CERRADA mientras la venta se
+    // registra, y si el cierre ya commiteó la fila deja de cumplir
+    // `estado = 'ABIERTA'` y no se devuelve nada. El join con `Caja` evita que
+    // una venta de otra sucursal se cuelgue de una caja ajena.
+    lockOpenCashSession: async ({ usuarioId, sucursalId }) => {
       const rows = await tx.$queryRaw<Array<{ id: number }>>`
-        SELECT "id" FROM public."SesionCaja"
-        WHERE "usuarioId" = ${usuarioId} AND "estado" = 'ABIERTA'
+        SELECT s."id" FROM public."SesionCaja" s
+        JOIN public."Caja" c ON c."id" = s."cajaId"
+        WHERE s."usuarioId" = ${usuarioId}
+          AND s."estado" = 'ABIERTA'
+          AND c."sucursalId" = ${sucursalId}
         LIMIT 1
-        FOR SHARE
+        FOR SHARE OF s
       `;
       return rows[0] ? { id: rows[0].id } : null;
     },

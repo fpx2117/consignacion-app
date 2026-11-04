@@ -171,11 +171,14 @@ export type RegisterSaleTransaction<
   }): Promise<{ id: number } | null>;
   lockStockAuthority(): Promise<StockAuthorityHandle>;
   /**
-   * Bloquea la sesión de caja abierta del usuario para el resto del intento. Si
-   * el cierre de caja ganó la carrera, devuelve `null` y la venta no se registra
-   * contra una sesión ya cerrada.
+   * Bloquea la sesión de caja abierta del usuario **para esa sucursal**. Si el
+   * cierre de caja ganó la carrera, o la sesión abierta pertenece a otra
+   * sucursal, devuelve `null` y la venta no se registra en una caja ajena.
    */
-  lockOpenCashSession(usuarioId: number): Promise<{ id: number } | null>;
+  lockOpenCashSession(input: {
+    usuarioId: number;
+    sucursalId: number;
+  }): Promise<{ id: number } | null>;
   /** Resuelve o crea el cliente "Consumidor Final" dentro del intento. */
   ensureDefaultCustomer(sucursalId: number): Promise<number>;
   findBranchProduct(input: {
@@ -424,7 +427,10 @@ export async function registerSale<
       return await deps.unitOfWork.runSerializable(async (tx) => {
         // T20: la sesión de caja se revalida y se bloquea dentro de cada
         // intento. Si el cierre ganó la carrera, el intento no registra nada.
-        const openSession = await tx.lockOpenCashSession(command.usuarioId);
+        const openSession = await tx.lockOpenCashSession({
+          usuarioId: command.usuarioId,
+          sucursalId: command.sucursalId,
+        });
         if (usesCashControl && !openSession) {
           throw new SaleDomainError(
             "CASH_SESSION_REQUIRED",
