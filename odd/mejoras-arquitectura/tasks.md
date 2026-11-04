@@ -471,6 +471,26 @@ stack cuando hay una sola.
   migrate:t11:preflight` (o el preflight vigente) sobre un entorno descartable.
 - **Riesgo**: bajo en lectura, medio en escritura por el costo de mantener el
   índice. Nunca editar una migración ya mergeada; siempre una nueva.
+- **Infraestructura de medición (2026-11-04)**: base descartable lista.
+
+  - Dump tomado de Railway (`POS - Import.VPS`, ambiente `production`, servicio
+    `Postgres`, PostgreSQL 17.11) con `pg_dump` en formato custom: **4 MB**,
+    guardado en `%TEMP%\consignacion-bench\prod-2026-11-04.dump` (fuera del repo).
+  - Restaurado en un clúster PostgreSQL **18** descartable inicializado en
+    `%TEMP%\consignacion-bench\pgdata`, puerto **55432**, usuario `bench`,
+    autenticación `trust`. No toca la instalación local.
+  - **Datos reales restaurados**: 922 `Venta`, 1.163 `VentaDetalle`, 922 `Pago`,
+    1.828 `MovimientoStock`, 248 `Producto`, 11 `Cliente`, 4 `Sucursal`.
+    Rango de ventas: 2026-03-01 a 2026-11-03.
+  - **Corrección**: la primera lectura desde producción mostró "17 ventas" porque
+    se leyó `pg_stat_user_tables.n_live_tup`, que era una estadística vieja. Los
+    conteos reales (`count(*)`) son los de arriba; siempre verificar con
+    `count(*)`, nunca con `n_live_tup`.
+  - **Conclusión para la aceptación**: 922 ventas ocupan ~12 páginas. El planner
+    va a elegir *Seq Scan* con o sin índice, así que esta base **todavía no
+    sirve** para demostrar el beneficio de un índice. Falta volumen sintético
+    encima del esquema real (del orden de 50k–300k ventas) antes de correr el
+    `EXPLAIN` antes/después.
 
 ### M14 — Mover la agregación del dashboard a SQL
 
