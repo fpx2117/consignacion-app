@@ -77,9 +77,12 @@ src/app/ver/ticket/[id]/route.ts
 ```
 
 Varios son públicos por diseño (catálogo, `ver/*` con token firmado, cron). El
-problema no es la lista: es que **nadie clasificó la lista**. Sin ese veredicto
-por archivo no se puede afirmar que el aislamiento es correcto, y es exactamente
-lo que se rompe al operar con la segunda sucursal.
+problema no era la lista: era que **nadie la había clasificado**. Sin ese
+veredicto por archivo no se puede afirmar que el aislamiento es correcto, y es
+exactamente lo que se rompe al operar con la segunda sucursal.
+
+> Clasificada en M03: ver [Matriz de aislamiento por sucursal](#matriz-de-aislamiento-por-sucursal-m03).
+> Resultado: 21 correctos, 1 corregido.
 
 ### Eje 4 — Cohesión de archivos
 
@@ -261,6 +264,8 @@ stack cuando hay una sola.
 ### M03 — Clasificar el aislamiento por sucursal de los 22 archivos
 
 - **Prioridad** P0 · **Esfuerzo** M · **Dependencias** M01
+- **Estado**: **cerrada** (2026-11-04). Matriz completa más abajo; 1 archivo
+  corregido.
 - **Evidencia**: ver Eje 3.
 - **Alcance**: producir una matriz `archivo → modelo → filtro aplicado →
   veredicto (correcto | corregir | público por diseño)`. Corregir solo los que
@@ -272,6 +277,17 @@ stack cuando hay una sola.
   casos corregidos (usuario de sucursal A no ve datos de sucursal B).
 - **Riesgo**: medio. Toca autorización; cualquier cambio requiere revisión
   independiente antes de mergear.
+- **Resultado**: 21 de 22 archivos ya estaban correctos; **uno tenía un hueco
+  real** (`matching-engine.ts`, ver matriz). Se corrigió en el origen y se
+  agregó `matching-scope.test.ts` con 3 casos, incluido el que verifica que los
+  alias de proveedor se filtren por la sucursal del producto.
+- **Criterio usado**: un filtro inline `{ sucursalId: auth.activeSucursalId }` es
+  equivalente a `buildSucursalWhere` **sólo** cuando la ruta no admite vista
+  global. Si admite `sucursalId === 0`, tiene que usar el helper o replicar su
+  lógica explícitamente.
+- **Hallazgo de método**: `Select-String -Path` interpreta `[id]` de las rutas
+  como comodines y produce falsos negativos. Los conteos de este documento se
+  rehicieron con `-LiteralPath` y `git grep`.
 
 ### M04 — Corregir la suscripción atada al usuario
 
@@ -481,6 +497,59 @@ stack cuando hay una sola.
 - **Verificación**: consultar el endpoint con datos reales y adjuntar la tabla.
 - **Nota**: no construir un tablero nuevo; la recolección ya existe. El trabajo es
   el umbral y la acción.
+
+---
+
+## Matriz de aislamiento por sucursal (M03)
+
+Los 22 archivos que tocan modelos con `sucursalId` sin pasar por
+`src/lib/security/sucursalScope.ts`, clasificados uno por uno.
+
+**Convención de veredicto:**
+
+- **Correcto**: filtra por sucursal, o valida explícitamente que el recurso
+  pertenece a la sucursal activa.
+- **Corregido**: tenía un hueco y se arregló en esta tarea.
+- **Público por diseño**: expone datos de la tienda o un recurso firmado; la
+  sucursal no es un límite de seguridad ahí.
+- **Proceso por diseño**: corre con secreto de cron sobre todas las sucursales.
+
+| Archivo | Modelos | Filtro aplicado | Veredicto |
+| --- | --- | --- | --- |
+| `src/lib/ocr/matching-engine.ts` | `Producto`, `ProductoProveedorAlias` | catálogo por `sucursalId`; **alias sin filtro** | **Corregido**: los alias podían apuntar a un producto de otra sucursal y el matcher lo proponía. Lo frenaba el guard de `confirm`, no el origen |
+| `src/lib/storefront/public-catalog.ts` | `Configuracion`, `StoreSettings`, `Producto`, `Categoria` | sucursal resuelta desde el slug | Público por diseño (catálogo de la tienda) |
+| `src/lib/subscriptions/require-subscription.ts` | `Subscription`, `Producto`, `Usuario`, `FacturaProveedor` | conteos por instalación, sin sucursal | Correcto por diseño: los límites del plan son de la instalación (decisión 1) |
+| `src/app/api/catalog/route.ts` | `Producto`, `Configuracion` | `sucursalId` de query (default 1) | Público por diseño (catálogo público) |
+| `src/app/api/public/checkout/route.ts` | `Configuracion`, `Producto`, `Cliente` | `sucursalId` del body | Público por diseño (checkout de la tienda) |
+| `src/app/api/consignaciones/[id]/remito-link/route.ts` | `Consignacion`, `ShareLink` | `sucursalId: auth.activeSucursalId` | Correcto |
+| `src/app/api/cron/check-vencimientos/route.ts` | `Producto`, `Notification`, `Subscription` | itera sucursales con `CRON_SECRET` | Proceso por diseño |
+| `src/app/api/cron/consignaciones/route.ts` | `Consignacion`, `Notification` | idem | Proceso por diseño |
+| `src/app/api/dashboard/consignaciones/route.ts` | `Consignacion`, `Liquidacion` | `sucursalWhere` con soporte de vista global | Correcto |
+| `src/app/api/facturas-proveedor/items/[id]/confirm/route.ts` | `Producto`, `FacturaProveedorItem` | `canAccessSucursalResource` + `producto.sucursalId === item.factura.sucursalId` | Correcto |
+| `src/app/api/gastos/[id]/comprobante-link/route.ts` | `Gasto`, `ShareLink` | `sucursalId` propio o `gastosCompartidos.some` | Correcto |
+| `src/app/api/gastos/categorias/[id]/route.ts` | `CategoriaGasto`, `Gasto` | comparación explícita contra `activeSucursalId` | Correcto |
+| `src/app/api/productos/barcode/[code]/route.ts` | `Producto` | `sucursalId: auth.activeSucursalId` | Correcto |
+| `src/app/api/settings/pos/cajas/route.ts` | `Caja` | `sucursalId` en lectura y en alta | Correcto |
+| `src/app/api/settings/pos/cajas/turno/route.ts` | `SesionCaja`, `Caja`, `HorarioLaboral` | `caja.sucursalId`, validación explícita y `$queryRaw` con `sucursalId` | Correcto |
+| `src/app/api/ventas/[id]/ticket-link/route.ts` | `Venta`, `ShareLink` | `sucursalId: auth.activeSucursalId` | Correcto |
+| `src/app/ver/consig/[period]/pdf/route.ts` | `Consignacion`, `StockSucursal`, `Cliente`, `Liquidacion` | `sucursalWhere` en las 10 consultas | Público por diseño (share link firmado) |
+| `src/app/ver/dashboard/[period]/pdf/route.ts` | `Consignacion`, `Venta`, `Gasto`, `GastoSucursal` | `sucursalWhere` / `scopedSucursalId` con `isGlobal` | Público por diseño (share link firmado) |
+| `src/app/ver/pos/[period]/pdf/route.ts` | `Venta`, `Pago`, `Gasto`, `GastoSucursal`, `VentaDetalle` | idem | Público por diseño (share link firmado) |
+| `src/app/ver/gasto/[id]/route.ts` | `Gasto` | `verifyPdfToken(id, token)` | Público por diseño (token firmado) |
+| `src/app/ver/remito/[id]/route.ts` | `Consignacion` | `verifyPdfToken(id, token)` | Público por diseño (token firmado) |
+| `src/app/ver/ticket/[id]/route.ts` | `Venta` | `verifyPdfToken(id, token)` | Público por diseño (token firmado) |
+
+**Lectura del resultado:** el aislamiento por sucursal estaba bien resuelto en
+21 de 22 archivos. El único hueco real no era de autorización clásica sino de
+procedencia de datos: un alias de proveedor podía venir de otra sucursal y el
+motor lo proponía como candidato. No era explotable porque `confirm` revalida
+`producto.sucursalId`, pero dependía de que ese guard existiera para siempre.
+Ahora el filtro está en el origen.
+
+**Lo que esta matriz NO prueba:** el comportamiento en runtime con dos sucursales
+reales. Para eso hace falta un test de integración con `TEST_DATABASE_URL` que
+cree datos en sucursal A y B y verifique que un usuario de A no los ve. Queda
+como verificación pendiente de M03 y es la deuda honesta de esta tarea.
 
 ---
 
