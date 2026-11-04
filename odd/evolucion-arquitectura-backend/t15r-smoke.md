@@ -68,33 +68,49 @@ HTTP completa lo demuestra ejecutada con ambos dispatches.
 docker run --rm -d --name t15r-postgres -e POSTGRES_USER=postgres \
   -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=t15r_smoke -p 55434:5432 postgres:16
 DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:55434/t15r_smoke npx prisma migrate deploy
-psql "$DATABASE_URL" -c "UPDATE \"StockAutoridad\" SET modo='DB_PROJECTION' WHERE id=1"
 
-# 2. Fixture y servidor
+# 2. Estado de producción: DB_PROJECTION con el trigger instalado. Las
+#    migraciones dejan a propósito APP_DUAL_WRITE sin trigger; el cutover es un
+#    paso operativo (ver la migración 20261101050000).
+psql "$DATABASE_URL" <<'SQL'
+UPDATE "StockAutoridad" SET modo = 'DB_PROJECTION' WHERE id = 1;
+CREATE TRIGGER "trg_sync_producto_stock"
+AFTER INSERT OR UPDATE OR DELETE ON "StockSucursal"
+FOR EACH ROW EXECUTE FUNCTION sync_producto_stock();
+SQL
+
+# 3. Fixture y servidor
 DATABASE_URL=... T15R_CONFIRM_DATABASE=t15r_smoke SMOKE_PASSWORD='...' \
   node scripts/smoke/seed-t15r-fixture.mjs
 DATABASE_URL=... RUNTIME_DATABASE_URL=... JWT_SECRET=... NODE_ENV=production PORT=3100 \
   npx tsx server.ts
 
-# 3. Smoke
+# 4. Smoke
 SMOKE_BASE_URL=http://localhost:3100 SMOKE_EMAIL=smoke-t15r@example.test \
   SMOKE_PASSWORD='...' SMOKE_DATABASE_URL=... node scripts/smoke/t15r-http.mjs
 ```
 
 Los scripts viven en `scripts/smoke/`. El fixture exige una base `*_smoke`
-confirmada por `T15R_CONFIRM_DATABASE`; el smoke exige `SMOKE_ALLOW_REMOTE=true`
-para apuntar fuera de `localhost`.
+confirmada por `T15R_CONFIRM_DATABASE` y **verifica el estado de producción**
+(`DB_PROJECTION` + trigger) antes de sembrar; el smoke exige
+`SMOKE_ALLOW_REMOTE=true` para apuntar fuera de `localhost`.
 
-## Hallazgos (no corregidos, fuera de T15-R)
+## Hallazgos corregidos
 
-1. **Una instalación nueva queda en un estado prohibido.** Con las 33 migraciones
-   aplicadas y sin pasos manuales, la base queda en `APP_DUAL_WRITE` **con** el
-   trigger de proyección instalado (lo crea
-   `20260322000000_trigger_sync_producto_stock` y T14 no lo retira). Esa
-   combinación es la que `lockStockAuthority` rechaza con
-   `STOCK_AUTHORITY_INCOMPATIBLE`: **todo writer `B1` devuelve `503`**. Producción
-   no lo sufre porque T14-R dejó el trigger desactivado y T16 lo reinstaló junto
-   con `DB_PROJECTION`. Reproducido en una base vacía durante esta tarea.
-2. **`GET /api/auth/me` devuelve el `hash` bcrypt del usuario.** El handler tipa la
-   respuesta sin `hash`, pero el objeto serializado lo incluye. Es el hash propio,
-   no el de terceros; igual conviene recortarlo.
+1. **Instalación nueva en estado prohibido.** La migración aditiva
+   `20261101050000_align_fresh_install_stock_authority` retira
+   `trg_sync_producto_stock` **sólo** cuando la capacidad sigue en
+   `APP_DUAL_WRITE`, que es la combinación que `lockStockAuthority` rechaza. No
+   convierte la capacidad a `DB_PROJECTION` a propósito: una base que se hubiera
+   revertido a `APP_DUAL_WRITE` no puede resucitar la proyección por aplicar una
+   migración pendiente. `npm run stock:bootstrap:test` verifica los dos estados
+   (fresca y ya cortada), la idempotencia y que `migrate deploy` posterior no
+   retira el trigger de una base cortada.
+   Consecuencia de modelo: una base nueva ya no proyecta al sembrar
+   `StockSucursal`. El fixture de ventas escribe ambas representaciones, que es
+   lo que `APP_DUAL_WRITE` exige.
+2. **`GET /api/auth/me` filtraba el hash bcrypt.** El handler hacía
+   `{ ...user }` sobre la fila completa. Ahora el adaptador usa un `select`
+   explícito y la respuesta enumera los campos públicos; `route.test.ts` fija el
+   conjunto exacto de claves y comprueba que un `hash` presente en el adaptador no
+   se serializa.

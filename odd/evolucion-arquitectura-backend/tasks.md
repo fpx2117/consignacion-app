@@ -220,7 +220,12 @@ dispatches verdes sobre el mismo contrato HTTP (ver T18).
   en producción a propósito (consumiría folios, stock y notificaciones reales); el
   riesgo ambiental ya estaba cerrado con la sonda de rol runtime. El checkout de
   Mercado Pago no se puede cerrar sin un pago real: su writer está cubierto por
-  T15-H. Scripts en `scripts/smoke/`; detalle y hallazgos en `t15r-smoke.md`.
+  T15-H. Scripts en `scripts/smoke/`; detalle, hallazgos y correcciones en
+  `t15r-smoke.md`. **Los dos hallazgos del smoke quedaron corregidos:** la
+  migración `20261101050000_align_fresh_install_stock_authority` deja una
+  instalación nueva en `APP_DUAL_WRITE` sin el trigger de proyección
+  (condicional: no toca una base ya cortada) y `GET /api/auth/me` dejó de
+  serializar el `hash` bcrypt.
 - [x] **T16 — Ejecutar cutover y rollback de stock.** Pausar escrituras,
   reconciliar, activar proyección y `DB_PROJECTION` en una transacción, verificar
   entrada/salida/restitución, observar `B1`, promover después a `C2` y ensayar los
@@ -337,6 +342,10 @@ Una tarea de implementación no se considerará completa sin:
   `src/app/api/ventas/route.ts`; y `producto-stock-writers.test.ts` declara los
   scripts de cutover/verificación de T16 en su allowlist de SQL crudo (fallaba
   desde T16).
+- **Guardrail nuevo:** `npm run stock:bootstrap:test` verifica que el estado
+  posterior a las migraciones sea compatible con la autoridad de stock —base
+  nueva en `APP_DUAL_WRITE` sin trigger, base cortada en `DB_PROJECTION` con el
+  trigger intacto— y que la migración condicional sea idempotente.
 - `_scratch/**` está ignorado por ESLint: adentro hay builds viejos que generaban
   2625 errores falsos. Con eso `npx eslint` queda en 0 errores y 1 warning.
 

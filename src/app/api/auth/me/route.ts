@@ -32,10 +32,20 @@ type AuthMeRouteDeps = {
 
 const defaultDeps: AuthMeRouteDeps = {
   requireAuth,
+  // `select` explícito: el hash de la contraseña no debe salir de la base para
+  // una respuesta de perfil. La forma pública es exactamente `AuthMeUser`.
   findUserById: (userId) =>
     prisma.usuario.findUnique({
       where: { id: userId },
-      include: {
+      select: {
+        id: true,
+        nombre: true,
+        email: true,
+        rol: true,
+        activo: true,
+        createdAt: true,
+        sucursalId: true,
+        zonaHoraria: true,
         subscription: {
           include: {
             plan: {
@@ -95,7 +105,16 @@ export async function handleGetMe(deps: AuthMeRouteDeps = defaultDeps) {
     return NextResponse.json(
       {
         data: {
-          ...user,
+          // Campos públicos explícitos: nunca se serializa la fila completa.
+          id: user.id,
+          nombre: user.nombre,
+          email: user.email,
+          rol: user.rol,
+          activo: user.activo,
+          createdAt: user.createdAt,
+          sucursalId: user.sucursalId,
+          zonaHoraria: user.zonaHoraria,
+          subscription: user.subscription,
           zonaHorariaSucursal: timezone.zonaHorariaSucursal,
           zonaHorariaResuelta: timezone.tz,
           timezoneSource: timezone.source,
