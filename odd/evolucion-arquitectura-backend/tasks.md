@@ -26,6 +26,8 @@ cada intento (ver T20). **T21 desplegada el mismo día** (`30d61fbe`): las
 liquidaciones reclaman las unidades pendientes de forma condicional (ver T21).
 **T22 desplegada el mismo día** (`fae1ce8`, `20e9e7e3`): apertura y cierre de caja
 en una sola unidad y la sesión de venta atada a su sucursal (ver T22).
+**T23 desplegada el mismo día** (`63604a35`): Socket.IO exige sesión vigente y
+enruta por salas de sucursal/usuario (ver T23).
 
 ## Diagnóstico
 
@@ -352,8 +354,21 @@ en una sola unidad y la sesión de venta atada a su sucursal (ver T22).
   incluye y el segundo no reclama) e integración de la ruta (esperado 175,
   segundo cierre 404); 14 suites verdes; deploys `fae1ce8` y `20e9e7e3`, deriva 0.
   Detalle en `t22-caja-pagos.md`.
-- [ ] **T23 — Aislar notificaciones y Socket.IO.** Salas, sesión vigente y efectos
+- [x] **T23 — Aislar notificaciones y Socket.IO.** Salas, sesión vigente y efectos
   post-commit/outbox.
+  **Ejecutada el 2026-11-04.** El handshake ahora exige la sesión vigente en la
+  base (misma regla que el guard HTTP, extraída a `session-validity.ts`) además de
+  la firma, y une el socket sólo a `install`, `user:{id}` y las sucursales
+  autorizadas (la activa, o todas las visibles en vista global). Los productores
+  pasan el destino: ventas y stock a su sucursal, suscripciones al usuario; el
+  dispatch emite con `io.to(room)` y ya no hace broadcast. Evidencia: unitarias de
+  salas y validez; cliente real que rechaza sin sesión/revocada/vencida y acepta
+  activa; dos clientes en sucursales distintas reciben sólo lo suyo; producción
+  `63604a35` con un socket real en `install, user:1, branch:1`. Outbox no se agregó:
+  los efectos ya son post-commit y el ADR lo deja para cuando se requiera entrega
+  garantizada. Detalle en `t23-socket-rooms.md`. **Nota:** al correr las unitarias
+  se detectó que `turno/route.test.ts` había quedado desactualizado por T22 (los
+  mocks no tenían `$transaction`); quedó corregido en el mismo commit.
 - [ ] **T24 — Hacer OCR y webhooks idempotentes.** Transiciones condicionales y
   registro de eventos procesados.
 - [ ] **T25 — Retirar legacy.** Sólo después de T19, una ventana de observación
