@@ -7,7 +7,7 @@ import { EstadoItemFactura } from "@prisma/client";
 import type { SucursalAuthContext } from "@/lib/security/sucursalScope";
 import { canAccessSucursalResource } from "@/lib/security/sucursalScope";
 
-const ESTADOS_TERMINALES: EstadoItemFactura[] = [
+export const ESTADOS_TERMINALES: EstadoItemFactura[] = [
   EstadoItemFactura.CONFIRMADO,
   EstadoItemFactura.PRODUCTO_CREADO,
   EstadoItemFactura.IGNORADO,

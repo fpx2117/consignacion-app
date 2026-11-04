@@ -14,6 +14,7 @@ import {
   purgarArchivoFacturaSiFinalizada,
 } from "@/lib/ocr/aplicar-confirmacion";
 import { StockAuthorityError } from "@/modules/inventory/stock-authority";
+import { claimItemState, ITEM_YA_PROCESADO } from "@/lib/ocr/claim-item";
 
 export async function POST(
   _req: NextRequest,
@@ -85,10 +86,13 @@ export async function POST(
           moneda: factura.moneda,
         });
 
-        await tx.facturaProveedorItem.update({
-          where: { id: item.id },
-          data: { estado: EstadoItemFactura.CONFIRMADO },
+        // Reclamo condicional: si otra confirmación ganó, el ítem cuenta como
+        // error y esta transacción se revierte entera (stock incluido).
+        const claimed = await claimItemState(tx, {
+          itemId: item.id,
+          estado: EstadoItemFactura.CONFIRMADO,
         });
+        if (!claimed) throw new Error(ITEM_YA_PROCESADO);
       });
       confirmados++;
     } catch (error) {

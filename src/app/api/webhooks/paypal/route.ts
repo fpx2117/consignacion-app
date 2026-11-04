@@ -5,6 +5,11 @@ import { paymentConfig } from "@/lib/payments/config";
 import { sendNotification } from "@/lib/notificaciones/socket-trigger";
 import { NOTIFICATION_TYPE } from "@/lib/notificaciones/types";
 import { seedPlanLimits } from "@/lib/subscriptions/require-subscription";
+import {
+  claimWebhookEvent,
+  prismaWebhookEventStore,
+  releaseWebhookEvent,
+} from "@/lib/webhooks/processed-events";
 
 // PayPal Webhook Verification (Requires calling PayPal API)
 async function verifyPayPalWebhook(headers: Headers, body: string) {
@@ -67,6 +72,21 @@ export async function POST(request: Request) {
 
   console.log(`[PayPal Webhook] Event: ${eventType}`, event.resource.id);
 
+  // Un reintento del proveedor no debe repetir efectos ni notificaciones.
+  const webhookProvider = "paypal";
+  const webhookEventId =
+    typeof event.id === "string" && event.id.trim() ? event.id : null;
+  let webhookClaimed = false;
+  if (webhookEventId) {
+    webhookClaimed = await claimWebhookEvent(prismaWebhookEventStore, {
+      provider: webhookProvider,
+      eventId: webhookEventId,
+    });
+    if (!webhookClaimed) {
+      return NextResponse.json({ received: true, duplicate: true });
+    }
+  }
+
   try {
     // 2. Handle Subscription Related Events
     if (
@@ -114,6 +134,12 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ received: true });
   } catch (error) {
+    if (webhookClaimed && webhookEventId) {
+      await releaseWebhookEvent(prismaWebhookEventStore, {
+        provider: webhookProvider,
+        eventId: webhookEventId,
+      }).catch(() => undefined);
+    }
     console.error("[PayPal Webhook Error]:", error);
     return NextResponse.json(
       { error: "Internal server error" },

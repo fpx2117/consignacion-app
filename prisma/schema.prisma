@@ -558,6 +558,18 @@ model VentaDetalle {
   @@index([productoId])
 }
 
+/// Registro de eventos de webhook ya procesados. La clave (provider, eventId) es
+/// única: un reintento del proveedor devuelve 200 sin repetir efectos.
+model WebhookEvent {
+  id        Int      @id @default(autoincrement())
+  provider  String
+  eventId   String
+  createdAt DateTime @default(now())
+
+  @@unique([provider, eventId])
+  @@index([createdAt])
+}
+
 model Pago {
   id           Int         @id @default(autoincrement())
   clienteId    Int

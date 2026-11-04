@@ -3,6 +3,11 @@ import crypto from "crypto";
 import { prisma } from "@/lib/prisma";
 import { paymentConfig } from "@/lib/payments/config";
 import { sendNotification } from "@/lib/notificaciones/socket-trigger";
+import {
+  claimWebhookEvent,
+  prismaWebhookEventStore,
+  releaseWebhookEvent,
+} from "@/lib/webhooks/processed-events";
 import { NOTIFICATION_TYPE } from "@/lib/notificaciones/types";
 import { seedPlanLimits } from "@/lib/subscriptions/require-subscription";
 import { createVentaWithAuthority } from "@/modules/ventas/venta-numbering-authority";
@@ -573,6 +578,21 @@ export async function POST(request: Request) {
 
   console.log(`[MercadoPago Webhook] Action: ${action}`, eventData);
 
+  // Un reintento del proveedor no debe repetir efectos. La clave es el id del
+  // evento (el mismo que firma Mercado Pago). Si el proceso falla, se libera.
+  const webhookProvider = "mercadopago";
+  const webhookEventId = dataId ?? null;
+  let webhookClaimed = false;
+  if (webhookEventId) {
+    webhookClaimed = await claimWebhookEvent(prismaWebhookEventStore, {
+      provider: webhookProvider,
+      eventId: webhookEventId,
+    });
+    if (!webhookClaimed) {
+      return NextResponse.json({ received: true, duplicate: true });
+    }
+  }
+
   try {
     // 2. Handle Subscription Related Actions (PreApproval)
     if (
@@ -722,6 +742,13 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ received: true });
   } catch (error) {
+    // El evento no quedó procesado: se libera para que el reintento lo tome.
+    if (webhookClaimed && webhookEventId) {
+      await releaseWebhookEvent(prismaWebhookEventStore, {
+        provider: webhookProvider,
+        eventId: webhookEventId,
+      }).catch(() => undefined);
+    }
     if (error instanceof StockAuthorityError) {
       console.error("Autoridad de stock rechazada:", error.code);
       return NextResponse.json(

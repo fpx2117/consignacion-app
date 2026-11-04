@@ -9,6 +9,7 @@ import { EstadoItemFactura } from "@prisma/client";
 import { requireAuth, requireRole } from "@/lib/auth/require-auth";
 import { confirmarItemSchema } from "@/lib/validators/factura-proveedor-item";
 import { cargarItemFacturaAccesible } from "@/lib/ocr/cargar-item-factura";
+import { claimItemState, ITEM_YA_PROCESADO } from "@/lib/ocr/claim-item";
 import {
   aplicarMovimientoStock,
   registrarCostoYAlias,
@@ -93,16 +94,21 @@ export async function POST(
         productoGlobalId: item.candidatoGlobalId,
       });
 
-      const itemActualizado = await tx.facturaProveedorItem.update({
+      // Reclamo condicional: si otra confirmación ganó la carrera, el count es 0
+      // y esta transacción se revierte entera, incluido el movimiento de stock.
+      const claimed = await claimItemState(tx, {
+        itemId: item.id,
+        estado: EstadoItemFactura.CONFIRMADO,
+        productoId: parsed.data.productoId,
+        matchMotivo:
+          item.productoId === parsed.data.productoId
+            ? item.matchMotivo
+            : "manual",
+      });
+      if (!claimed) throw new Error(ITEM_YA_PROCESADO);
+
+      const itemActualizado = await tx.facturaProveedorItem.findUniqueOrThrow({
         where: { id: item.id },
-        data: {
-          productoId: parsed.data.productoId,
-          estado: EstadoItemFactura.CONFIRMADO,
-          matchMotivo:
-            item.productoId === parsed.data.productoId
-              ? item.matchMotivo
-              : "manual",
-        },
       });
 
       await actualizarEstadoFacturaSiCompleta(tx, item.facturaId);
@@ -125,6 +131,12 @@ export async function POST(
       return NextResponse.json(
         { error: "Autoridad de stock no disponible." },
         { status: 503 },
+      );
+    }
+    if (error instanceof Error && error.message === ITEM_YA_PROCESADO) {
+      return NextResponse.json(
+        { error: "El item ya fue procesado por otra confirmación." },
+        { status: 409 },
       );
     }
     console.error("[FACTURA_PROVEEDOR_ITEM_CONFIRM_ERROR]", { itemId, error });

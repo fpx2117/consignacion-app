@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { EstadoItemFactura } from "@prisma/client";
 import { requireAuth, requireRole } from "@/lib/auth/require-auth";
 import { cargarItemFacturaAccesible } from "@/lib/ocr/cargar-item-factura";
+import { claimItemState, ITEM_YA_PROCESADO } from "@/lib/ocr/claim-item";
 import {
   actualizarEstadoFacturaSiCompleta,
   purgarArchivoFacturaSiFinalizada,
@@ -42,14 +43,32 @@ export async function POST(
   }
   const { item } = cargado;
 
-  const itemActualizado = await prisma.$transaction(async (tx) => {
-    const updated = await tx.facturaProveedorItem.update({
-      where: { id: item.id },
-      data: { estado: EstadoItemFactura.IGNORADO },
+  const itemActualizado = await prisma
+    .$transaction(async (tx) => {
+      const claimed = await claimItemState(tx, {
+        itemId: item.id,
+        estado: EstadoItemFactura.IGNORADO,
+      });
+      if (!claimed) throw new Error(ITEM_YA_PROCESADO);
+
+      await actualizarEstadoFacturaSiCompleta(tx, item.facturaId);
+      return tx.facturaProveedorItem.findUniqueOrThrow({
+        where: { id: item.id },
+      });
+    })
+    .catch((error: unknown) => {
+      if (error instanceof Error && error.message === ITEM_YA_PROCESADO) {
+        return null;
+      }
+      throw error;
     });
-    await actualizarEstadoFacturaSiCompleta(tx, item.facturaId);
-    return updated;
-  });
+
+  if (!itemActualizado) {
+    return NextResponse.json(
+      { error: "El item ya fue procesado por otra acción." },
+      { status: 409 },
+    );
+  }
 
   // Post-commit: purga el binario si la factura quedó completa.
   await purgarArchivoFacturaSiFinalizada(item.facturaId);
