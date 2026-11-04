@@ -1095,9 +1095,16 @@ export const apiService = {
     return apiData<Pago[]>(API_ROUTES.PAGOS);
   },
 
-  createPago(clienteId: number, payload: CreatePagoInput) {
+  createPago(
+    clienteId: number,
+    payload: CreatePagoInput,
+    idempotencyKey?: string,
+  ) {
     return apiData<CrearPagoResponse>(API_ROUTES.PAGO_CLIENTE(clienteId), {
       method: "POST",
+      headers: idempotencyKey
+        ? { "Idempotency-Key": idempotencyKey }
+        : undefined,
       body: JSON.stringify(payload),
     });
   },

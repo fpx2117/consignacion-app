@@ -116,8 +116,8 @@ export function assertVentaResponseContract(body: JsonBody, fixture: Fixture) {
     "units", "ventaId",
   ]);
   assert.deepEqual(Object.keys(body.pago).sort(), [
-    "clienteId", "fecha", "id", "metodo", "monto", "sesionCajaId",
-    "sucursalId", "tipo",
+    "clienteId", "fecha", "id", "idempotencyKey", "metodo", "monto",
+    "sesionCajaId", "sucursalId", "tipo",
   ]);
   assert.deepEqual(
     {
@@ -170,7 +170,7 @@ export function assertVentaResponseContract(body: JsonBody, fixture: Fixture) {
     {
       id: undefined, clienteId: cliente.id, sucursalId: principal.id,
       tipo: "VENTA", fecha: "2026-02-01T02:00:00.000Z", monto: "42.99",
-      metodo: "TARJETA", sesionCajaId: sesion.id,
+      metodo: "TARJETA", sesionCajaId: sesion.id, idempotencyKey: null,
     },
   );
 }

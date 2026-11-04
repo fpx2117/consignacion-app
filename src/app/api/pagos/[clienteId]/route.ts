@@ -1,18 +1,55 @@
 // src/app/api/pagos/[clienteId]/route.ts
 import { NextRequest, NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/auth/require-auth";
 import { createPagoSchema } from "@/lib/validators/cliente";
 import { isGlobalSucursalView } from "@/lib/security/sucursalScope";
 
+const IDEMPOTENCY_HEADER = "idempotency-key";
+const MAX_IDEMPOTENCY_KEY = 120;
+const CLIENTE_NO_ENCONTRADO = "CLIENTE_NO_ENCONTRADO";
+
 interface RouteContext {
   params: Promise<{ clienteId: string }>;
 }
 
-export async function POST(req: NextRequest, { params }: RouteContext) {
-  const auth = await requireAuth();
+type PagoRouteDeps = {
+  prisma: typeof prisma;
+  requireAuth: typeof requireAuth;
+  isGlobalSucursalView: typeof isGlobalSucursalView;
+};
+
+const defaultDeps: PagoRouteDeps = {
+  prisma,
+  requireAuth,
+  isGlobalSucursalView,
+};
+
+/**
+ * Un reintento con la misma clave devuelve el pago ya creado en lugar de
+ * registrar otro y volver a descontar el saldo. La transacción que choca con el
+ * índice único se revierte entera, así que el `decrement` no se aplica dos veces.
+ */
+function isIdempotencyConflict(error: unknown) {
+  return (
+    error instanceof Prisma.PrismaClientKnownRequestError &&
+    error.code === "P2002"
+  );
+}
+
+export async function POST(req: NextRequest, context: RouteContext) {
+  return handlePostPago(req, context);
+}
+
+export async function handlePostPago(
+  req: NextRequest,
+  { params }: RouteContext,
+  deps: PagoRouteDeps = defaultDeps,
+) {
+  const auth = await deps.requireAuth();
   if (!auth.ok) return auth.res;
-  if (isGlobalSucursalView(auth)) {
+  if (deps.isGlobalSucursalView(auth)) {
     return NextResponse.json(
       {
         error:
@@ -35,6 +72,19 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
       );
     }
 
+    const rawIdempotencyKey = req.headers.get(IDEMPOTENCY_HEADER);
+    const idempotencyKey = rawIdempotencyKey?.trim() ?? null;
+    if (
+      idempotencyKey !== null &&
+      (idempotencyKey.length === 0 ||
+        idempotencyKey.length > MAX_IDEMPOTENCY_KEY)
+    ) {
+      return NextResponse.json(
+        { error: "Idempotency-Key invalida" },
+        { status: 400 },
+      );
+    }
+
     const body = await req.json().catch(() => null);
     const parsed = createPagoSchema.safeParse(body);
 
@@ -45,7 +95,7 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
       );
     }
 
-    const sesionActiva = await prisma.sesionCaja.findFirst({
+    const sesionActiva = await deps.prisma.sesionCaja.findFirst({
       where: {
         usuarioId,
         estado: "ABIERTA",
@@ -61,15 +111,15 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
       );
     }
 
-    const result = await prisma
-      .$transaction(async (tx) => {
+    try {
+      const result = await deps.prisma.$transaction(async (tx) => {
         const cliente = await tx.cliente.findFirst({
           where: { id: clienteId, sucursalId: auth.activeSucursalId },
           select: { id: true },
         });
 
         if (!cliente) {
-          throw new Error("CLIENTE_NO_ENCONTRADO");
+          throw new Error(CLIENTE_NO_ENCONTRADO);
         }
 
         const nuevoPago = await tx.pago.create({
@@ -80,6 +130,7 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
             monto: parsed.data.monto,
             metodo: parsed.data.metodo,
             sesionCajaId: sesionActiva.id,
+            idempotencyKey,
           },
         });
 
@@ -90,26 +141,35 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
         });
 
         return { pago: nuevoPago, saldo: clienteActualizado.saldoCuenta };
-      })
-      .catch((error: unknown) => {
-        if (
-          error instanceof Error &&
-          error.message === "CLIENTE_NO_ENCONTRADO"
-        ) {
-          return null;
-        }
-
-        throw error;
       });
 
-    if (!result) {
-      return NextResponse.json(
-        { error: "Cliente no encontrado" },
-        { status: 404 },
-      );
-    }
+      return NextResponse.json({ data: result }, { status: 201 });
+    } catch (error) {
+      if (error instanceof Error && error.message === CLIENTE_NO_ENCONTRADO) {
+        return NextResponse.json(
+          { error: "Cliente no encontrado" },
+          { status: 404 },
+        );
+      }
 
-    return NextResponse.json({ data: result }, { status: 201 });
+      if (idempotencyKey && isIdempotencyConflict(error)) {
+        const [existing, cliente] = await Promise.all([
+          deps.prisma.pago.findUnique({ where: { idempotencyKey } }),
+          deps.prisma.cliente.findUnique({
+            where: { id: clienteId },
+            select: { saldoCuenta: true },
+          }),
+        ]);
+        if (existing) {
+          return NextResponse.json(
+            { data: { pago: existing, saldo: cliente?.saldoCuenta ?? null } },
+            { status: 200 },
+          );
+        }
+      }
+
+      throw error;
+    }
   } catch (error) {
     console.error("Error al registrar pago:", error);
     return NextResponse.json(

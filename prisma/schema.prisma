@@ -567,6 +567,10 @@ model Pago {
   monto        Decimal     @db.Decimal(10, 2)
   metodo       MetodoPago
   sesionCajaId Int?
+  /// Clave de idempotencia enviada por el cliente para un cobro manual. Un
+  /// reintento con la misma clave devuelve el pago existente en lugar de crear
+  /// otro y volver a descontar el saldo.
+  idempotencyKey String?   @unique
   cliente      Cliente     @relation(fields: [clienteId], references: [id])
   sucursal     Sucursal    @relation(fields: [sucursalId], references: [id])
   sesionCaja   SesionCaja? @relation(fields: [sesionCajaId], references: [id], onDelete: Restrict)
