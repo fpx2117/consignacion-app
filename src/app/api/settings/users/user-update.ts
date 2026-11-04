@@ -117,6 +117,37 @@ export async function deleteUserAndProtectLastAdmin(
       where: { rol: "ADMIN", activo: true },
     });
     if (!canRemoveUser(target.rol, adminCount)) return false;
+
+    // La suscripción pertenece a la instalación, no al usuario: `userId` es solo
+    // el contacto de facturación. Si se elimina ese contacto, se reasigna a otro
+    // administrador activo en la misma transacción, en lugar de dejar que la FK
+    // (`ON DELETE RESTRICT`) rompa el borrado con un 500 opaco.
+    // Ver odd/mejoras-arquitectura/adrs/002-suscripcion-de-la-instalacion.md.
+    const ownsSubscription = await tx.subscription.findUnique({
+      where: { userId },
+      select: { id: true },
+    });
+
+    if (ownsSubscription) {
+      const replacement = await tx.usuario.findFirst({
+        where: {
+          rol: "ADMIN",
+          activo: true,
+          id: { not: userId },
+          // `userId` es único en Subscription: el nuevo contacto no puede tener
+          // ya una suscripción propia.
+          subscription: { is: null },
+        },
+        orderBy: { id: "asc" },
+        select: { id: true },
+      });
+      if (!replacement) return false;
+      await tx.subscription.update({
+        where: { userId },
+        data: { userId: replacement.id },
+      });
+    }
+
     await tx.usuario.delete({ where: { id: userId } });
     return true;
   });
