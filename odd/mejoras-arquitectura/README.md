@@ -1,6 +1,9 @@
 # Mejoras de arquitectura — diagnóstico y backlog
 
-Estado: diagnóstico cerrado; backlog propuesto. **Implementación no autorizada.**
+Estado: diagnóstico cerrado. **Primer bloque ejecutado y desplegado** el
+2026-11-04 (9 tareas, 1 migración, 2 fixes P0). El resto del backlog sigue
+pendiente de autorización. Estado tarea por tarea en
+[tasks.md](./tasks.md#estado-consolidado).
 
 Este documento nace de una revisión estática del repositorio completo. No es una
 auditoría de seguridad ni un profiling en runtime. Cada afirmación numérica fue

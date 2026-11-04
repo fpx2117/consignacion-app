@@ -1,13 +1,47 @@
 # Plan y estado de tareas
 
-Baseline: `main` en `f29298eb20c54b0ca11368ce219bd70bb8e8e386`, árbol limpio,
-2026-11-04.
+Baseline de análisis: `main` en `f29298eb20c54b0ca11368ce219bd70bb8e8e386`,
+árbol limpio, 2026-11-04. Estado de ejecución al cierre de esa fecha: ver
+[Estado consolidado](#estado-consolidado).
 
 ## Estado general
 
-Diagnóstico cerrado. **Ninguna tarea está autorizada.** Cada tarea requiere
-autorización explícita e individual antes de empezar, y su verificación se
-declara antes de escribir código, no después.
+Diagnóstico cerrado y **primer bloque ejecutado y desplegado** el 2026-11-04
+(deployment `1aa80f82`, commit desplegado
+`345d11159e00569593ed4681ffb6f51dc110001d`, estado `SUCCESS`).
+Detalle en [deploy-2026-11-04.md](./deploy-2026-11-04.md).
+
+Las tareas que quedan siguen requiriendo autorización explícita e individual antes
+de empezar, y su verificación se declara antes de escribir código, no después.
+
+### Estado consolidado
+
+Tres ejes que **no son lo mismo** y que conviene no mezclar:
+
+- **Cerrada**: el trabajo está hecho, verificado y commiteado.
+- **Desplegada**: el cambio corre en el servidor real que usan los clientes.
+- **Verificada en producción**: se usó ahí y funcionó. Un cambio puede estar
+  desplegado y estar mal; desplegar no es verificar.
+
+| Tarea | Cerrada | Desplegada | Verificada en producción |
+| --- | --- | --- | --- |
+| M01 — runner de tests | ✅ | ✅ | N/A (no corre en el servidor) |
+| M02 — auditoría cableada | ✅ | ✅ | Pendiente: sin eventos reales todavía |
+| M03 — alias OCR por sucursal | ✅ | ✅ | Pendiente |
+| M04 — suscripción reasignada | ✅ | ✅ | Pendiente: depende del alta/baja de usuario |
+| Fix P0 — advisory locks | ✅ | ✅ | **Pendiente: crear/editar/borrar usuario** |
+| M05 — README alineado | ✅ | ✅ | N/A (documento) |
+| M06 — ADR modelo de render | ✅ | ✅ | N/A (documento) |
+| M13 — índices compuestos | ✅ | ✅ | ✅ `EXPLAIN` usa `Venta_sucursalId_fecha_idx` |
+| M14 — agregación en SQL | ✅ | ✅ | Pendiente: dashboard abierto en el navegador |
+| M07 — RSC parcial | Cancelada por M06 | — | — |
+| M19 — secuencias atrasadas | Diagnosticada | No | — |
+| M20 — preflight de migraciones | Diagnosticada | No | — |
+| M08, M09, M10, M11, M12, M15, M16, M17, M18 | Pendientes | — | — |
+
+**Qué falta para cerrar el nivel 3:** dos clics humanos (crear, editar y borrar un
+usuario desde `settings/security/employees`) y abrir el dashboard para confirmar
+que los números se ven igual que antes del despliegue.
 
 ## Convención
 
