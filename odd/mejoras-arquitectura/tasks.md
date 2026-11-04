@@ -486,11 +486,37 @@ stack cuando hay una sola.
     se leyó `pg_stat_user_tables.n_live_tup`, que era una estadística vieja. Los
     conteos reales (`count(*)`) son los de arriba; siempre verificar con
     `count(*)`, nunca con `n_live_tup`.
-  - **Conclusión para la aceptación**: 922 ventas ocupan ~12 páginas. El planner
-    va a elegir *Seq Scan* con o sin índice, así que esta base **todavía no
-    sirve** para demostrar el beneficio de un índice. Falta volumen sintético
-    encima del esquema real (del orden de 50k–300k ventas) antes de correr el
-    `EXPLAIN` antes/después.
+  - **Conclusión para la aceptación**: 922 ventas ocupan 18 páginas de heap
+    (144 kB). Medido con `EXPLAIN (ANALYZE, BUFFERS)` el 2026-11-04 sobre la base
+    restaurada, el resultado **no** es el que yo había anticipado:
+
+    | Consulta | Antes | Después del índice |
+    | --- | --- | --- |
+    | `Venta` sucursal 1, un mes | `Venta_clienteId_fecha_idx` + Filter `sucursalId`, 51 filas descartadas, **20 buffers** | `(sucursalId, fecha)`, 1 fila descartada, **10 buffers** |
+    | `Pago` sucursal 1, un mes | `Pago_clienteId_fecha_idx` + Filter `sucursalId`, 50 filas descartadas, **19 buffers** | `(sucursalId, fecha)`, **9 buffers** |
+    | `Venta` vista global, 8 meses | Seq Scan, 18 buffers | **Seq Scan, 18 buffers (sin cambio)** |
+    | `Pago` vista global, 8 meses | Seq Scan, 9 buffers | **Seq Scan, 9 buffers (sin cambio)** |
+    | `Venta` sin filtro de fecha | Seq Scan, 18 buffers | **Seq Scan, 18 buffers (sin cambio)** |
+
+  - **Lectura correcta**: el backup **sí alcanza** para justificar el índice. El
+    planner lo elige para la consulta caliente documentada (sucursal + rango de
+    fechas) en `Venta` y en `Pago`, y deja de descartar ~50 filas por el filtro de
+    sucursal. Los buffers se reducen a la mitad.
+  - **Lo que NO alcanza**: cuantificar la mejora en tiempo absoluto (0,18 ms →
+    0,14 ms es ruido de medición) y predecir el comportamiento de la vista global
+    con años de histórico. Con 922 filas ningún plan es caro.
+  - **Hallazgo de diseño**: el índice compuesto **no ayuda a la vista global** a
+    este tamaño, porque esa consulta selecciona 892 de 922 filas (97 %). Es la
+    decisión correcta del planner. A volumen real (cientos de miles de ventas en
+    varios años), una ventana de 8 meses sí sería selectiva y el índice pasaría a
+    usarse; pero eso no se puede demostrar con estos datos y no se afirma.
+  - **Decisión**: se procede con `(sucursalId, fecha)` en `Venta` y `Pago` por
+    evidencia de selección de plan, no por una mejora de tiempo medida.
+    `MovimientoStock` **no** se toca: sus consultas no son por rango de fecha y no
+    hay medición que lo respalde.
+  - **Volumen sintético**: no es necesario para cerrar M13. Se reserva para M14,
+    donde la comparación de agregación en SQL sí necesita volumen para mostrar
+    diferencia.
 
 ### M14 — Mover la agregación del dashboard a SQL
 
