@@ -485,9 +485,6 @@ export async function getDashboardTendencia(
   };
   const start = dateWhere.gte;
 
-  const sucursalWhere = isGlobal
-    ? { sucursalId: { in: includedGlobalIds } }
-    : { sucursalId };
   const days =
     period === "custom" && range
       ? differenceInDays(
@@ -496,23 +493,10 @@ export async function getDashboardTendencia(
         ) + 1
       : differenceInDays(now, start) + 1;
 
-  const [ventas, pagos] = await Promise.all([
-    prisma.venta.findMany({
-      where: { ...sucursalWhere, fecha: dateWhere, anulada: false },
-      select: {
-        fecha: true,
-        total: true,
-        tipo: true,
-        descuentoGlobal: true,
-        detalles: { select: { units: true } },
-      },
-    }),
-    prisma.pago.findMany({
-      where: { ...sucursalWhere, fecha: dateWhere },
-      select: { fecha: true, monto: true, tipo: true },
-    }),
-  ]);
+  const sucursalIds = isGlobal ? includedGlobalIds : [sucursalId];
 
+  // La serie se sigue armando en JS porque necesita los días con cero.
+  // Lo que se mueve a SQL es la agregación de filas.
   const key = (d: Date) => formatDateInputAR(d, tz);
   const seriesMap: Record<
     string,
@@ -540,27 +524,88 @@ export async function getDashboardTendencia(
     };
   }
 
-  for (const v of ventas) {
-    const k = key(v.fecha);
-    if (!seriesMap[k]) continue;
-    // `Venta.total` ya viene neto de `descuentoGlobal` y del recargo: restarlo
-    // otra vez acá duplicaba el descuento en la tendencia.
-    const totalNeto = Number(v.total);
-
-    // Sumar unidades vendidas
-    const unitsVenta =
-      v.detalles?.reduce((acc: number, d) => acc + (d.units || 0), 0) || 0;
-    seriesMap[k].unitsVendidas += unitsVenta;
-
-    seriesMap[k].ventasTotal += totalNeto;
-    if (v.tipo === "LIQUIDACION") seriesMap[k].ventasConsigTotal += totalNeto;
-    else seriesMap[k].ventasPosTotal += totalNeto;
+  // Mismo criterio de alcance que la consulta original: `in: []` no trae filas.
+  if (sucursalIds.length === 0) {
+    return { period, isGlobal, series: Object.values(seriesMap) };
   }
 
-  for (const p of pagos) {
-    const k = key(p.fecha);
-    if (!seriesMap[k]) continue;
-    seriesMap[k].pagosTotal += Number(p.monto);
+  // Las fechas se guardan como hora local en una columna `timestamp` sin zona.
+  // Prisma las lee como UTC, así que el día calendario se obtiene interpretando
+  // el valor como UTC y convirtiéndolo a la zona configurada. Es exactamente lo
+  // que hacía `formatDateInputAR(v.fecha, tz)` en JS.
+  const ventasDateFilter =
+    "lt" in dateWhere
+      ? Prisma.sql`AND v."fecha" >= ${dateWhere.gte} AND v."fecha" < ${dateWhere.lt}`
+      : Prisma.sql`AND v."fecha" >= ${dateWhere.gte}`;
+
+  const pagosDateFilter =
+    "lt" in dateWhere
+      ? Prisma.sql`AND p."fecha" >= ${dateWhere.gte} AND p."fecha" < ${dateWhere.lt}`
+      : Prisma.sql`AND p."fecha" >= ${dateWhere.gte}`;
+
+  type DiaVentas = {
+    dia: string;
+    total: string | number;
+    total_consig: string | number;
+    total_pos: string | number;
+    units: string | number;
+  };
+  type DiaPagos = { dia: string; monto: string | number };
+
+  const [ventasPorDia, pagosPorDia] = await Promise.all([
+    prisma.$queryRaw<DiaVentas[]>`
+      WITH filtradas AS (
+        SELECT v."id", v."fecha", v."total", v."tipo"
+        FROM "Venta" v
+        WHERE v."sucursalId" IN (${Prisma.join(sucursalIds)})
+          AND v."anulada" = false
+          ${ventasDateFilter}
+      ),
+      por_dia AS (
+        SELECT
+          to_char("fecha" AT TIME ZONE 'UTC' AT TIME ZONE ${tz}, 'YYYY-MM-DD') AS dia,
+          SUM("total") AS total,
+          SUM(CASE WHEN "tipo"::text = 'LIQUIDACION' THEN "total" ELSE 0 END) AS total_consig,
+          SUM(CASE WHEN "tipo"::text = 'LIQUIDACION' THEN 0 ELSE "total" END) AS total_pos
+        FROM filtradas
+        GROUP BY 1
+      ),
+      unidades AS (
+        SELECT
+          to_char(f."fecha" AT TIME ZONE 'UTC' AT TIME ZONE ${tz}, 'YYYY-MM-DD') AS dia,
+          SUM(COALESCE(d."units", 0)) AS units
+        FROM filtradas f
+        JOIN "VentaDetalle" d ON d."ventaId" = f."id"
+        GROUP BY 1
+      )
+      SELECT p.dia, p.total, p.total_consig, p.total_pos, COALESCE(u.units, 0) AS units
+      FROM por_dia p
+      LEFT JOIN unidades u USING (dia)
+    `,
+    prisma.$queryRaw<DiaPagos[]>`
+      SELECT
+        to_char(p."fecha" AT TIME ZONE 'UTC' AT TIME ZONE ${tz}, 'YYYY-MM-DD') AS dia,
+        SUM(p."monto") AS monto
+      FROM "Pago" p
+      WHERE p."sucursalId" IN (${Prisma.join(sucursalIds)})
+        ${pagosDateFilter}
+      GROUP BY 1
+    `,
+  ]);
+
+  for (const row of ventasPorDia) {
+    const bucket = seriesMap[row.dia];
+    if (!bucket) continue;
+    bucket.ventasTotal += Number(row.total);
+    bucket.ventasConsigTotal += Number(row.total_consig);
+    bucket.ventasPosTotal += Number(row.total_pos);
+    bucket.unitsVendidas += Number(row.units);
+  }
+
+  for (const row of pagosPorDia) {
+    const bucket = seriesMap[row.dia];
+    if (!bucket) continue;
+    bucket.pagosTotal += Number(row.monto);
   }
 
   return {
@@ -589,90 +634,84 @@ export async function getDashboardTopProductos(
   const tz = timezone.tz;
   const now = nowAR(tz);
 
-  const sucursalWhere = isGlobal
-    ? { sucursalId: { in: includedGlobalIds } }
-    : { sucursalId };
+  const sucursalIds = isGlobal ? includedGlobalIds : [sucursalId];
   const dateWhere = resolveDashboardDateWhere(period, now, tz, range);
 
-  const [liqItems, posItems] = await Promise.all([
-    prisma.liquidacionItem.findMany({
-      where: {
-        liquidacion: {
-          fecha: dateWhere,
-          consignacion: sucursalWhere,
-        },
-      },
-      select: {
-        unitsVendidas: true,
-        precioUnitario: true,
-        descuento: true,
-        detalle: {
-          select: { productoId: true, producto: { select: { nombre: true } } },
-        },
-      },
-    }),
-    prisma.ventaDetalle.findMany({
-      where: {
-        venta: {
-          fecha: dateWhere,
-          ...sucursalWhere,
-          tipo: "CASUAL",
-          anulada: false,
-        },
-      },
-      select: {
-        units: true,
-        precioUnitario: true,
-        subtotal: true,
-        producto: { select: { id: true, nombre: true } },
-      },
-    }),
-  ]);
+  // `in: []` no trae filas; mismo criterio que la consulta original.
+  if (sucursalIds.length === 0) return [];
 
-  const mapVendidos = new Map<
-    number,
-    { productoId: number; nombre: string; units: number; total: number }
-  >();
+  const liqDateFilter = dateWhere
+    ? Prisma.sql`AND l."fecha" >= ${dateWhere.gte} AND l."fecha" < ${dateWhere.lt}`
+    : Prisma.empty;
 
-  for (const it of liqItems) {
-    const productoId = it.detalle.productoId;
-    const units = it.unitsVendidas ?? 0;
-    const total = units * Number(it.precioUnitario) - Number(it.descuento || 0);
-    const prev = mapVendidos.get(productoId);
-    if (!prev)
-      mapVendidos.set(productoId, {
-        productoId,
-        nombre: it.detalle.producto.nombre,
-        units,
-        total,
-      });
-    else {
-      prev.units += units;
-      prev.total += total;
-    }
-  }
+  const posDateFilter = dateWhere
+    ? Prisma.sql`AND v."fecha" >= ${dateWhere.gte} AND v."fecha" < ${dateWhere.lt}`
+    : Prisma.empty;
 
-  for (const it of posItems) {
-    const productoId = it.producto.id;
-    const units = it.units ?? 0;
-    const total = Number(it.subtotal);
-    const prev = mapVendidos.get(productoId);
-    if (!prev)
-      mapVendidos.set(productoId, {
-        productoId,
-        nombre: it.producto.nombre,
-        units,
-        total,
-      });
-    else {
-      prev.units += units;
-      prev.total += total;
-    }
-  }
+  type TopRow = {
+    producto_id: number;
+    nombre: string;
+    units: string | number;
+    total: string | number;
+  };
 
-  return Array.from(mapVendidos.values())
-    .sort((a, b) => b.units - a.units)
-    .slice(0, limit);
+  const rows = await prisma.$queryRaw<TopRow[]>`
+    WITH liq AS (
+      SELECT
+        d."productoId" AS producto_id,
+        SUM(COALESCE(li."unitsVendidas", 0)) AS units,
+        SUM(
+          COALESCE(li."unitsVendidas", 0) * li."precioUnitario"
+          - COALESCE(li."descuento", 0)
+        ) AS total,
+        0 AS orden,
+        MIN(li."id") AS orden_seq
+      FROM "LiquidacionItem" li
+      JOIN "Liquidacion" l ON l."id" = li."liquidacionId"
+      JOIN "Consignacion" c ON c."id" = l."consignacionId"
+      JOIN "ConsignacionDetalle" d ON d."id" = li."consignacionDetalleId"
+      WHERE c."sucursalId" IN (${Prisma.join(sucursalIds)})
+        ${liqDateFilter}
+      GROUP BY 1
+    ),
+    pos AS (
+      SELECT
+        vd."productoId" AS producto_id,
+        SUM(COALESCE(vd."units", 0)) AS units,
+        SUM(vd."subtotal") AS total,
+        1 AS orden,
+        MIN(vd."id") AS orden_seq
+      FROM "VentaDetalle" vd
+      JOIN "Venta" v ON v."id" = vd."ventaId"
+      WHERE v."sucursalId" IN (${Prisma.join(sucursalIds)})
+        AND v."tipo"::text = 'CASUAL'
+        AND v."anulada" = false
+        ${posDateFilter}
+      GROUP BY 1
+    ),
+    unificado AS (
+      SELECT * FROM liq
+      UNION ALL
+      SELECT * FROM pos
+    )
+    SELECT
+      u.producto_id,
+      MAX(p."nombre") AS nombre,
+      SUM(u.units) AS units,
+      SUM(u.total) AS total
+    FROM unificado u
+    JOIN "Producto" p ON p."id" = u.producto_id
+    GROUP BY u.producto_id
+    ORDER BY SUM(u.units) DESC, MIN(u.orden) ASC, MIN(u.orden_seq) ASC, u.producto_id ASC
+    LIMIT ${limit}
+  `;
+
+  return rows.map((row) => ({
+    productoId: row.producto_id,
+    nombre: row.nombre,
+    units: Number(row.units),
+    total: Number(row.total),
+  }));
 }
 
 /**
