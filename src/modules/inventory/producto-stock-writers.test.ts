@@ -24,9 +24,13 @@ import test from "node:test";
 //   revisión manual del rollout.
 
 const AUTHORITY_MODULE = "src/modules/inventory/stock-authority.ts";
-const T14_TOOLING = [
+// Herramientas declaradas que escriben stock global por SQL crudo: la
+// compensación T14 y el cutover/verificación T16. Cualquier otra queda fuera.
+const STOCK_SQL_TOOLING = [
   "scripts/migrations/compensate-t14-stock-authority.mjs",
   "scripts/migrations/verify-t14-stock-authority.mjs",
+  "scripts/migrations/cutover-t16-stock-projection.mjs",
+  "scripts/migrations/verify-t16-stock-projection.mjs",
 ];
 const ROOTS = ["src", "scripts"];
 const NON_SOURCE = [
@@ -285,7 +289,7 @@ test("the repository only moves global Producto stock through the authority", as
   );
 });
 
-test("raw SQL stock repairers stay inside the T14 tooling", async () => {
+test("raw SQL stock writers stay inside the declared tooling", async () => {
   const files = (
     await Promise.all(
       ROOTS.map((root) => listSources(resolve(root), /\.(?:mjs|cjs|js)$/)),
@@ -295,7 +299,7 @@ test("raw SQL stock repairers stay inside the T14 tooling", async () => {
 
   const offenders: string[] = [];
   for (const path of files) {
-    if (T14_TOOLING.includes(path)) continue;
+    if (STOCK_SQL_TOOLING.includes(path)) continue;
     const source = await readFile(resolve(path), "utf8");
     if (RAW_STOCK_WRITE.test(source)) offenders.push(path);
   }
@@ -303,7 +307,7 @@ test("raw SQL stock repairers stay inside the T14 tooling", async () => {
   assert.deepEqual(
     offenders,
     [],
-    `raw SQL Producto stock writes belong to the T14 tooling: ${offenders.join(", ")}`,
+    `raw SQL Producto stock writes belong to the declared tooling: ${offenders.join(", ")}`,
   );
 });
 

@@ -8,8 +8,9 @@ const expectedWriters = [
   "src/app/api/consignaciones/[id]/route.ts",
   "src/app/api/liquidaciones/[id]/route.ts",
   "src/app/api/liquidaciones/consignacion/[consignacionId]/route.ts",
-  "src/app/api/ventas/route.ts",
+  "src/app/api/ventas/register-sale-handlers.ts",
   "src/app/api/webhooks/mercadopago/route.ts",
+  "src/modules/ventas/infrastructure/prisma-register-sale.ts",
 ];
 
 function listTypeScriptFiles(directory: string): string[] {

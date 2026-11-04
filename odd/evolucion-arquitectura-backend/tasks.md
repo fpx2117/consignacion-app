@@ -14,6 +14,9 @@ ocurrió **sin fence ni ventana** porque Railway auto-despliega `main`: T15-R qu
 desplegado con el smoke autenticado pendiente. Producción ya no corre el T12-only.
 **T16 ejecutado el mismo día:** producción está en `DB_PROJECTION` con la
 proyección serializada, trigger presente y deriva 0 (ver T16).
+**T18 implementada el mismo día, sin desplegar:** el piloto `RegistrarVenta` está
+extraído detrás de `SALES_REGISTER_USE_CASE`, con el switch en `legacy` y ambos
+dispatches verdes sobre el mismo contrato HTTP (ver T18).
 
 ## Diagnóstico
 
@@ -257,10 +260,21 @@ proyección serializada, trigger presente y deriva 0 (ver T16).
   `aplicarMovimientoStock`. Diferenciales por `Object.is`, casos de ganancia
   negativa, base no positiva y coma flotante, e integración PostgreSQL de stock y
   OCR verdes. Con esto las diez funciones puras del diseño están extraídas.
-- [ ] **T18 — Extraer piloto `RegistrarVenta` detrás de un switch.** Preservar
+- [x] **T18 — Extraer piloto `RegistrarVenta` detrás de un switch.** Preservar
   respuesta completa y unidad transaccional; implementar un único dispatch
   `SALES_REGISTER_USE_CASE=legacy|application`, con ausencia, vacío o valor
   inválido resueltos a `legacy` más diagnóstico, sin ejecución doble ni fallback.
+  **Implementada y verificada en descartable el 2026-11-03, no desplegada.** El
+  caso de uso vive en `src/modules/ventas/application/register-sale.ts` con
+  puertos propios (cliente, autoridad de stock, movimiento, venta, pago) y una
+  unidad de trabajo Prisma que abre la transacción `Serializable` y conserva los
+  reintentos `P2002`/`P2034`. La ruta quedó en autenticar, validar, despachar y
+  traducir errores; el adaptador legacy se movió sin cambios de contrato. Ambos
+  dispatches pasan la misma caracterización HTTP sobre PostgreSQL 16 —
+  `APP_DUAL_WRITE`, `DB_PROJECTION`, estado incompatible `503` y autoridad de
+  numeración ausente— además de los casos de borde por ruta. El lock heredado de
+  serie por sucursal se conserva en el adaptador Prisma para no alterar el orden
+  frente al webhook de Mercado Pago. Detalle en `t18-registrar-venta.md`.
 - [ ] **T19 — Activar y revertir el piloto.** Exigir `B1`, numeración PostgreSQL y
   caracterización verde; activar una instancia canary, operar mezcla
   `legacy|application`, comparar snapshots, errores, efectos y latencia, promover
@@ -308,6 +322,13 @@ Una tarea de implementación no se considerará completa sin:
   ahora sólo ESLint y `build.mjs` corre el test de tema antes del build.
 - No hay script `test` global: cada suite se invoca con
   `node --import tsx --test <archivo>`.
+- **Guardrails corregidos en T18:** `venta-numbering-wiring.test.ts` ahora
+  inventaría los dos adaptadores reales de venta
+  (`src/app/api/ventas/register-sale-handlers.ts` y
+  `src/modules/ventas/infrastructure/prisma-register-sale.ts`) en lugar de
+  `src/app/api/ventas/route.ts`; y `producto-stock-writers.test.ts` declara los
+  scripts de cutover/verificación de T16 en su allowlist de SQL crudo (fallaba
+  desde T16).
 - `_scratch/**` está ignorado por ESLint: adentro hay builds viejos que generaban
   2625 errores falsos. Con eso `npx eslint` queda en 0 errores y 1 warning.
 
