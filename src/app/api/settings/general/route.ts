@@ -9,6 +9,8 @@ import {
 } from "@/lib/timezone/get-configured-tz";
 import { RUBRO_MAX_LENGTH } from "@/modules/invoices/config/rubros";
 import { validateSlug } from "@/lib/storefront/slug";
+import { recordAuditLog } from "@/lib/security/audit";
+import { settingsUpdated } from "@/lib/security/audit-events";
 
 type GeneralSettingsBody = {
   minStockGlobal?: number;
@@ -357,6 +359,14 @@ export async function PUT(req: Request) {
     const message = migrationMessage
       ? `Zona horaria de sucursal actualizada${migrationMessage}`
       : "Configuración general actualizada";
+
+    await recordAuditLog(
+      settingsUpdated({
+        actorId: Number(auth.user.sub),
+        sucursalId: auth.activeSucursalId,
+        fields: Object.keys(body),
+      }),
+    );
 
     return NextResponse.json({ data: configActualizada, message });
   } catch (error) {

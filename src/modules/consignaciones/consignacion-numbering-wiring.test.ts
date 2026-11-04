@@ -56,6 +56,7 @@ test("the handler uses the persisted folio for effects and response", async () =
     }),
     evaluateStockAlert: () => null,
     processNotificationQueue: async () => undefined,
+    recordAuditLog: async () => undefined,
     prisma: {
       $transaction: async (callback: (tx: typeof transaction) => unknown) =>
         callback(transaction),

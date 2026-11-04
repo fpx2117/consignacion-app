@@ -14,6 +14,8 @@ import {
   lockStockAuthority,
   StockAuthorityError,
 } from "@/modules/inventory/stock-authority";
+import { recordAuditLog } from "@/lib/security/audit";
+import { saleCancelled } from "@/lib/security/audit-events";
 
 const ventaAnulacionSchema = z.object({
   motivo: z.string().trim().min(1).optional(),
@@ -29,6 +31,7 @@ type VentaCancellationDeps = {
   isGlobalSucursalView: typeof isGlobalSucursalView;
   resolveTimezoneForAuth: typeof resolveTimezoneForAuth;
   nowAR: typeof nowAR;
+  recordAuditLog: typeof recordAuditLog;
 };
 const defaultCancellationDeps: VentaCancellationDeps = {
   prisma,
@@ -36,6 +39,7 @@ const defaultCancellationDeps: VentaCancellationDeps = {
   isGlobalSucursalView,
   resolveTimezoneForAuth,
   nowAR,
+  recordAuditLog,
 };
 
 function getErrorMessage(error: unknown): string {
@@ -236,6 +240,16 @@ export async function handleDeleteVenta(
       }
 
     });
+
+    await deps.recordAuditLog(
+      saleCancelled({
+        actorId: Number(auth.user.sub),
+        ventaId: id,
+        sucursalId: auth.activeSucursalId,
+        motivo,
+        roturaCount: brokenItems.length,
+      }),
+    );
 
     return NextResponse.json({
       success: true,

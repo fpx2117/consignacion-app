@@ -21,6 +21,12 @@ import {
   type UserUpdate,
   updateUserAndRevokeSessions,
 } from "./user-update";
+import { recordAuditLog } from "@/lib/security/audit";
+import {
+  userCreated,
+  userDeleted,
+  userUpdated,
+} from "@/lib/security/audit-events";
 export async function GET() {
   const auth = await requireAuth();
   if (!auth.ok) return auth.res;
@@ -124,6 +130,15 @@ export async function POST(req: Request) {
         { ok: false, error: creation.error, limitReached: true },
         { status: 403 },
       );
+    await recordAuditLog(
+      userCreated({
+        actorId: Number(auth.user.sub),
+        userId: creation.user.id,
+        email: normalizedEmail,
+        rol,
+        sucursalId: targetSucursalId,
+      }),
+    );
     return NextResponse.json({ ok: true, data: creation.user });
   } catch {
     return NextResponse.json(
@@ -224,6 +239,16 @@ export async function PUT(req: Request) {
         { ok: false, error: "Debe permanecer al menos un administrador activo" },
         { status: 409 },
       );
+    await recordAuditLog(
+      userUpdated({
+        actorId: Number(auth.user.sub),
+        userId: numericId,
+        email: normalizedEmail,
+        rol,
+        sucursalId: targetSucursalId,
+        passwordChanged: Boolean(dataToUpdate.hash),
+      }),
+    );
     return NextResponse.json({ ok: true, data: usuarioActualizado });
   } catch {
     return NextResponse.json(
@@ -268,6 +293,10 @@ export async function DELETE(req: Request) {
         { ok: false, error: "Debe permanecer al menos un administrador activo" },
         { status: 409 },
       );
+
+    await recordAuditLog(
+      userDeleted({ actorId: Number(auth.user.sub), userId: numericId }),
+    );
 
     return NextResponse.json({ ok: true, message: "Usuario eliminado" });
   } catch {

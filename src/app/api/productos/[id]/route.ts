@@ -24,6 +24,11 @@ import {
   canAccessSucursalResource,
   isGlobalSucursalView,
 } from "@/lib/security/sucursalScope";
+import { recordAuditLog } from "@/lib/security/audit";
+import {
+  productDeactivated,
+  productUpdated,
+} from "@/lib/security/audit-events";
 import { calcularDescuentoEfectivo } from "@/lib/storefront/descuento-utils";
 import {
   applyProductoGlobalDelta,
@@ -52,6 +57,7 @@ export type ProductoPutDeps = {
   deleteFileSystemImage: typeof deleteFileSystemImage;
   sendNotification: typeof sendNotification;
   revalidateTag: typeof revalidateTag;
+  recordAuditLog: typeof recordAuditLog;
 };
 
 const defaultPutDeps: ProductoPutDeps = {
@@ -64,6 +70,7 @@ const defaultPutDeps: ProductoPutDeps = {
   deleteFileSystemImage,
   sendNotification,
   revalidateTag,
+  recordAuditLog,
 };
 
 /**
@@ -403,6 +410,15 @@ export async function handlePutProducto(
     // Invalidar caché del catálogo público para que los cambios (precio, descuento, imagen, etc.) se reflejen de inmediato
     deps.revalidateTag("public-catalog", "default");
 
+    await deps.recordAuditLog(
+      productUpdated({
+        actorId: Number(auth.user.sub),
+        productoId: updated.id,
+        nombre: updated.nombre,
+        sucursalId: updated.sucursalId,
+      }),
+    );
+
     return NextResponse.json({ data: updated });
   } catch (error) {
     if (error instanceof StockAuthorityError) {
@@ -480,6 +496,14 @@ export async function DELETE(_: Request, { params }: RouteParams) {
 
     // Invalidar caché del catálogo público tras desactivar producto
     revalidateTag("public-catalog", "default");
+
+    await recordAuditLog(
+      productDeactivated({
+        actorId: Number(auth.user.sub),
+        productoId: id,
+        sucursalId: auth.activeSucursalId,
+      }),
+    );
 
     return NextResponse.json({
       data: {

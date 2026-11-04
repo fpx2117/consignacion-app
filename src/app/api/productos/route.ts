@@ -24,6 +24,8 @@ import {
   resolveRequestedSucursalId,
 } from "@/lib/security/sucursalScope";
 import { calcularDescuentoEfectivo } from "@/lib/storefront/descuento-utils";
+import { recordAuditLog } from "@/lib/security/audit";
+import { productCreated } from "@/lib/security/audit-events";
 import {
   lockStockAuthority,
   StockAuthorityError,
@@ -51,6 +53,7 @@ export type ProductosPostDeps = {
   validarAtributosFijosProducto: typeof validarAtributosFijosProducto;
   sendNotification: typeof sendNotification;
   revalidateTag: typeof revalidateTag;
+  recordAuditLog: typeof recordAuditLog;
 };
 
 const defaultPostDeps: ProductosPostDeps = {
@@ -63,6 +66,7 @@ const defaultPostDeps: ProductosPostDeps = {
   validarAtributosFijosProducto,
   sendNotification,
   revalidateTag,
+  recordAuditLog,
 };
 
 /**
@@ -421,6 +425,16 @@ export async function handlePostProducto(
 
     // Invalidar caché del catálogo público para que el nuevo producto aparezca de inmediato
     deps.revalidateTag("public-catalog", "default");
+
+    await deps.recordAuditLog(
+      productCreated({
+        actorId: Number(auth.user.sub),
+        productoId: created.id,
+        nombre: data.nombre,
+        sucursalId,
+        stockInicial,
+      }),
+    );
 
     return NextResponse.json({ data: created }, { status: 201 });
   } catch (error) {

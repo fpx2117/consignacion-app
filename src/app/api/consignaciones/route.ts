@@ -13,6 +13,8 @@ import {
   buildSucursalWhere,
   isGlobalSucursalView,
 } from "@/lib/security/sucursalScope";
+import { recordAuditLog } from "@/lib/security/audit";
+import { consignmentCreated } from "@/lib/security/audit-events";
 import { getPersistedConsignacionFolio } from "@/modules/consignaciones/consignacion-numbering";
 
 // âœ… Imports Centralizados de Config y Notificaciones
@@ -41,6 +43,7 @@ export type ConsignacionesPostDeps = {
   obtenerConfiguracionGlobal: typeof obtenerConfiguracionGlobal;
   evaluateStockAlert: typeof evaluateStockAlert;
   processNotificationQueue: typeof processNotificationQueue;
+  recordAuditLog: typeof recordAuditLog;
 };
 
 const defaultPostDeps: ConsignacionesPostDeps = {
@@ -51,6 +54,7 @@ const defaultPostDeps: ConsignacionesPostDeps = {
   obtenerConfiguracionGlobal,
   evaluateStockAlert,
   processNotificationQueue,
+  recordAuditLog,
 };
 
 const consignacionInclude = Prisma.validator<Prisma.ConsignacionInclude>()({
@@ -336,6 +340,16 @@ export async function handlePostConsignacion(
     await deps.processNotificationQueue(
       notificationsQueue,
       auth.activeSucursalId,
+    );
+
+    await deps.recordAuditLog(
+      consignmentCreated({
+        actorId: Number(auth.user.sub),
+        consignacionId: result.id,
+        clienteId: result.clienteId,
+        sucursalId: result.sucursalId,
+        itemsCount: result.detalles?.length ?? 0,
+      }),
     );
 
     return NextResponse.json({ data: result }, { status: 201 });
