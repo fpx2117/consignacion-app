@@ -9,10 +9,8 @@ import {
   type RegisterSaleCommand,
   type SaleDomainErrorCode,
 } from "@/modules/ventas/application/register-sale";
-import { readRegisterSaleUseCase } from "@/modules/ventas/register-sale-switch";
 import {
   applyPostCommit,
-  registerSaleLegacy,
   registerSaleThroughApplication,
   type RegisterSaleOutcome,
 } from "@/app/api/ventas/register-sale-handlers";
@@ -118,11 +116,8 @@ export async function handlePostVenta(
 
     const { clienteId, descuentoGlobal, items, metodoPago } = parsed.data;
 
-    // Punto único de dispatch (ADR 006): se resuelve antes de cualquier efecto
-    // durable y esta request ejecuta exactamente un handler. No hay fallback
-    // entre ellos después de iniciar efectos.
-    const selection = readRegisterSaleUseCase();
-
+    // Un único camino (T25): el adaptador legacy se retiró después de probar la
+    // equivalencia con ambos dispatches y el relevo mixto.
     const command: RegisterSaleCommand = {
       usuarioId,
       sucursalId: auth.activeSucursalId,
@@ -132,19 +127,18 @@ export async function handlePostVenta(
       items,
     };
 
-    const outcome: RegisterSaleOutcome =
-      selection.name === "application"
-        ? await registerSaleThroughApplication(command, auth, deps)
-        : await registerSaleLegacy(command, auth, deps);
+    const outcome: RegisterSaleOutcome = await registerSaleThroughApplication(
+      command,
+      auth,
+      deps,
+    );
 
     await applyPostCommit(outcome, auth.activeSucursalId, deps);
 
-    // Evidencia para la ventana de observación de T25: qué dispatch atendió la
-    // venta y cuánto tardó. No cambia la respuesta.
+    // Evidencia por venta: folio, total y latencia. No cambia la respuesta.
     console.info(
       "[ventas] sale",
       JSON.stringify({
-        mode: selection.name,
         ventaId: outcome.sale.id,
         numeroVenta: outcome.sale.numeroVenta,
         total: String(outcome.sale.total),

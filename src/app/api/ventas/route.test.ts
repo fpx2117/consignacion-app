@@ -127,24 +127,4 @@ test("caracteriza validaciones previas de POST /api/ventas", async (t) => {
       error: "Operación bloqueada: Debes abrir un turno de caja para realizar ventas casuales.",
     });
   });
-
-  // Ambos dispatches comparten la verificación de caja: el switch no habilita
-  // una ruta que omita el control.
-  for (const useCase of ["legacy", "application"] as const) {
-    await t.test(`bloquea la venta sin caja en el dispatch ${useCase}`, async () => {
-      process.env.SALES_REGISTER_USE_CASE = useCase;
-      try {
-        const response = await handlePostVenta(
-          request({ items: [{ productoId: 1, units: 1 }] }),
-          makeDeps({ sessionOpen: false }),
-        );
-        assert.equal(response.status, 403);
-        assert.deepEqual(await response.json(), {
-          error: "Operación bloqueada: Debes abrir un turno de caja para realizar ventas casuales.",
-        });
-      } finally {
-        delete process.env.SALES_REGISTER_USE_CASE;
-      }
-    });
-  }
 });

@@ -135,61 +135,52 @@ function makeHarness(failure: Failure) {
   return { deps, attempts: () => attempts };
 }
 
-test("caracteriza fallos transaccionales de POST /api/ventas en ambos dispatches", async (t) => {
+test("caracteriza fallos transaccionales de POST /api/ventas", async (t) => {
   t.mock.method(console, "error", () => undefined);
 
-  for (const useCase of ["legacy", "application"] as const) {
-    await t.test(`dispatch ${useCase}`, async (dispatch) => {
-      dispatch.after(() => {
-        delete process.env.SALES_REGISTER_USE_CASE;
-      });
-      process.env.SALES_REGISTER_USE_CASE = useCase;
-
-      await dispatch.test("producto sin asignación devuelve 409", async () => {
-        const { deps } = makeHarness("missing");
-        const response = await handlePostVenta(request(), deps);
-        assert.equal(response.status, 409);
-        assert.deepEqual(await response.json(), {
-          error: "El producto #11 no está asignado a esta sucursal.",
-        });
-      });
-
-      await dispatch.test("stock insuficiente devuelve 409", async () => {
-        const { deps } = makeHarness("insufficient");
-        const response = await handlePostVenta(request(), deps);
-        assert.equal(response.status, 409);
-        assert.deepEqual(await response.json(), {
-          error: 'Stock insuficiente para "Mate".',
-        });
-      });
-
-      await dispatch.test("stock ausente después del decremento se sanitiza", async () => {
-        const { deps } = makeHarness("post-missing");
-        const response = await handlePostVenta(request(), deps);
-        assert.equal(response.status, 500);
-        assert.deepEqual(await response.json(), {
-          error: "Error al procesar la venta",
-        });
-      });
-
-      await dispatch.test("un error inesperado se sanitiza", async () => {
-        const { deps } = makeHarness("unexpected");
-        const response = await handlePostVenta(request(), deps);
-        assert.equal(response.status, 500);
-        assert.deepEqual(await response.json(), {
-          error: "Error al procesar la venta",
-        });
-      });
-
-      await dispatch.test("un conflicto P2034 agota tres intentos", async () => {
-        const { deps, attempts } = makeHarness("retry");
-        const response = await handlePostVenta(request(), deps);
-        assert.equal(response.status, 500);
-        assert.equal(attempts(), 3);
-        assert.deepEqual(await response.json(), {
-          error: "Error al procesar la venta",
-        });
-      });
+  await t.test("producto sin asignación devuelve 409", async () => {
+    const { deps } = makeHarness("missing");
+    const response = await handlePostVenta(request(), deps);
+    assert.equal(response.status, 409);
+    assert.deepEqual(await response.json(), {
+      error: "El producto #11 no está asignado a esta sucursal.",
     });
-  }
+  });
+
+  await t.test("stock insuficiente devuelve 409", async () => {
+    const { deps } = makeHarness("insufficient");
+    const response = await handlePostVenta(request(), deps);
+    assert.equal(response.status, 409);
+    assert.deepEqual(await response.json(), {
+      error: 'Stock insuficiente para "Mate".',
+    });
+  });
+
+  await t.test("stock ausente después del decremento se sanitiza", async () => {
+    const { deps } = makeHarness("post-missing");
+    const response = await handlePostVenta(request(), deps);
+    assert.equal(response.status, 500);
+    assert.deepEqual(await response.json(), {
+      error: "Error al procesar la venta",
+    });
+  });
+
+  await t.test("un error inesperado se sanitiza", async () => {
+    const { deps } = makeHarness("unexpected");
+    const response = await handlePostVenta(request(), deps);
+    assert.equal(response.status, 500);
+    assert.deepEqual(await response.json(), {
+      error: "Error al procesar la venta",
+    });
+  });
+
+  await t.test("un conflicto P2034 agota tres intentos", async () => {
+    const { deps, attempts } = makeHarness("retry");
+    const response = await handlePostVenta(request(), deps);
+    assert.equal(response.status, 500);
+    assert.equal(attempts(), 3);
+    assert.deepEqual(await response.json(), {
+      error: "Error al procesar la venta",
+    });
+  });
 });
