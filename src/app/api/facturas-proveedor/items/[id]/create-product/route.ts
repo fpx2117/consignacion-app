@@ -19,6 +19,7 @@ import {
 } from "@/lib/validators/producto";
 import { checkProductLimit } from "@/lib/subscriptions/require-subscription";
 import { cargarItemFacturaAccesible } from "@/lib/ocr/cargar-item-factura";
+import { claimItemState, ITEM_YA_PROCESADO } from "@/lib/ocr/claim-item";
 import {
   registrarCostoYAlias,
   actualizarEstadoFacturaSiCompleta,
@@ -102,6 +103,15 @@ export async function POST(
 
     const resultado = await prisma.$transaction(async (tx) => {
       await lockStockAuthority(tx);
+
+      // Reclamo condicional antes de crear: dos requests concurrentes crearían
+      // dos productos para el mismo ítem. El perdedor revierte su producto.
+      const claimed = await claimItemState(tx, {
+        itemId: item.id,
+        estado: EstadoItemFactura.PRODUCTO_CREADO,
+      });
+      if (!claimed) throw new Error(ITEM_YA_PROCESADO);
+
       const nuevoProducto = await tx.producto.create({
         data: {
           nombre: data.nombre,
@@ -186,7 +196,6 @@ export async function POST(
         where: { id: item.id },
         data: {
           productoId: nuevoProducto.id,
-          estado: EstadoItemFactura.PRODUCTO_CREADO,
           matchMotivo: "manual",
         },
       });
@@ -213,6 +222,12 @@ export async function POST(
       return NextResponse.json(
         { error: "Autoridad de stock no disponible." },
         { status: 503 },
+      );
+    }
+    if (error instanceof Error && error.message === ITEM_YA_PROCESADO) {
+      return NextResponse.json(
+        { error: "El item ya fue procesado por otra acción." },
+        { status: 409 },
       );
     }
     // Mismo manejo de duplicados que POST /api/productos: el item de factura sin
