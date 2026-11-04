@@ -19,7 +19,7 @@ export async function createUserWithinPlanLimit(
   const { prisma } = await import("@/lib/prisma");
   const { checkUserLimit } = await import("@/lib/subscriptions/require-subscription");
   return prisma.$transaction(async (tx) => {
-    await tx.$queryRaw`SELECT pg_advisory_xact_lock(72658463821002)`;
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(72658463821002)`;
     const limit = await checkUserLimit();
     if (!limit.allowed) return { error: limit.message } as const;
     const user = await tx.usuario.create({
@@ -46,7 +46,7 @@ export async function updateUserAndRevokeSessions(
 ) {
   const { prisma } = await import("@/lib/prisma");
   return prisma.$transaction(async (tx) => {
-    await tx.$queryRaw`SELECT pg_advisory_xact_lock(72658463821002)`;
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(72658463821002)`;
     const current = await tx.usuario.findUnique({
       where: { id: userId },
       select: { rol: true, sucursalId: true },
@@ -99,7 +99,7 @@ export async function deleteUserAndProtectLastAdmin(
 ) {
   const { prisma } = await import("@/lib/prisma");
   return prisma.$transaction(async (tx) => {
-    await tx.$queryRaw`SELECT pg_advisory_xact_lock(72658463821002)`;
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(72658463821002)`;
     const target = await tx.usuario.findUnique({
       where: { id: userId },
       select: { rol: true, sucursalId: true },

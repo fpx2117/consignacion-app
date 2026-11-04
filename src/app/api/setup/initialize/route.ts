@@ -307,7 +307,7 @@ export async function POST(req: Request) {
     }
 
     const result = await prisma.$transaction(async (tx) => {
-      await tx.$queryRaw`SELECT pg_advisory_xact_lock(72658463821001)`;
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(72658463821001)`;
       if ((await tx.usuario.count()) > 0) return null;
       const branchName = branch?.nombre?.trim() || "Sucursal Principal";
       const sucursalResult = await tx.sucursal.upsert({
