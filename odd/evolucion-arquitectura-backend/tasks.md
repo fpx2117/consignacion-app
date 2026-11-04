@@ -16,9 +16,11 @@ descartable en configuración de producción: los siete flujos con deriva 0 (ver
 T15-R). Producción ya no corre el T12-only.
 **T16 ejecutado el mismo día:** producción está en `DB_PROJECTION` con la
 proyección serializada, trigger presente y deriva 0 (ver T16).
-**T18 implementada el mismo día, sin desplegar:** el piloto `RegistrarVenta` está
-extraído detrás de `SALES_REGISTER_USE_CASE`, con el switch en `legacy` y ambos
-dispatches verdes sobre el mismo contrato HTTP (ver T18).
+**T18 desplegada el 2026-11-04** (`c0a56a80`): el piloto `RegistrarVenta` quedó
+extraído detrás de `SALES_REGISTER_USE_CASE`, con ambos dispatches verdes sobre el
+mismo contrato HTTP. **T19 activada el mismo día** (`b2a2d0b8`, variable
+`application` confirmada en el contenedor): producción corre la ruta nueva con
+deriva 0 (ver T19).
 
 ## Diagnóstico
 
@@ -288,12 +290,23 @@ dispatches verdes sobre el mismo contrato HTTP (ver T18).
   numeración ausente— además de los casos de borde por ruta. El lock heredado de
   serie por sucursal se conserva en el adaptador Prisma para no alterar el orden
   frente al webhook de Mercado Pago. Detalle en `t18-registrar-venta.md`.
-- [ ] **T19 — Activar y revertir el piloto.** Exigir `B1`, numeración PostgreSQL y
+- [x] **T19 — Activar y revertir el piloto.** Exigir `B1`, numeración PostgreSQL y
   caracterización verde; activar una instancia canary, operar mezcla
   `legacy|application`, comparar snapshots, errores, efectos y latencia, promover
   gradualmente y ensayar rollback mixto sobre los mismos registros. Mantener la
   autoridad de numeración y aprobar una ventana de observación antes de retirar
   el handler legacy.
+  **Ejecutada el 2026-11-04.** Deploy `c0a56a80` y migración
+  `20261101050000` aplicada en el contenedor (34 migraciones; el trigger de
+  proyección quedó intacto, `drift 0`). Relevo mixto sobre base descartable en
+  configuración de producción: 3 ventas con `application`, lectura y anulación con
+  `legacy`, 2 ventas más, vuelta a `application` y una venta final — 6 folios
+  únicos y monótonos, sin duplicados, deriva 0, latencias equivalentes.
+  **Activación:** `SALES_REGISTER_USE_CASE=application` desplegado en `b2a2d0b8`
+  (SUCCESS, `/login` 200, variable confirmada dentro del contenedor). El servicio
+  es único, así que no hubo instancia canary separada: la activación es al 100%
+  del tráfico, con rollback de una variable. La observación con tráfico real queda
+  como gate de T25. Detalle en `t19-rollout-controlado.md`.
 - [ ] **T20 — Endurecer límites transaccionales de ventas.** Cliente por defecto y
   sesión de caja dentro de cada intento, con aprobación de conducta observable.
 - [ ] **T21 — Migrar consignaciones y liquidaciones.** Incorporar locks,
