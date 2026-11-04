@@ -43,18 +43,34 @@ const UMBRAL_REVISION = 0.7;
 // se fuerza revisión manual aunque el score crudo del primero fuera "seguro".
 const MARGEN_AMBIGUEDAD = 0.05;
 
-export async function construirContextoMatching(params: {
-  sucursalId: number;
-  proveedorId: number | null;
-}): Promise<ContextoMatching> {
+export type MatchingDeps = {
+  prisma: Pick<typeof prisma, "producto" | "productoProveedorAlias">;
+};
+
+const defaultMatchingDeps: MatchingDeps = { prisma };
+
+export async function construirContextoMatching(
+  params: {
+    sucursalId: number;
+    proveedorId: number | null;
+  },
+  deps: MatchingDeps = defaultMatchingDeps,
+): Promise<ContextoMatching> {
   const [productos, aliasProveedor] = await Promise.all([
-    prisma.producto.findMany({
+    deps.prisma.producto.findMany({
       where: { sucursalId: params.sucursalId, activo: true },
       select: { id: true, nombre: true },
     }),
     params.proveedorId
-      ? prisma.productoProveedorAlias.findMany({
-          where: { proveedorId: params.proveedorId },
+      ? deps.prisma.productoProveedorAlias.findMany({
+          where: {
+            proveedorId: params.proveedorId,
+            // El alias se usa para proponer un producto. Si apuntara a un
+            // producto de otra sucursal, la propuesta sería inválida y sólo
+            // quedaría frenada por el guard de confirmación. Se filtra en el
+            // origen para no depender de ese guard.
+            producto: { sucursalId: params.sucursalId },
+          },
         })
       : Promise.resolve([]),
   ]);
