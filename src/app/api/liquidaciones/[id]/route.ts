@@ -24,6 +24,7 @@ import {
   StockAuthorityError,
 } from "@/modules/inventory/stock-authority";
 import { calculatePendingUnits, validateSettlement } from "@/modules/consignaciones/units";
+import { claimSettlementUnits } from "@/modules/consignaciones/settlement-claim";
 
 type RouteParams = {
   params: Promise<{ id: string }>;
@@ -138,6 +139,13 @@ export async function handlePutLiquidacion(
   try {
     const result = await deps.prisma.$transaction(async (tx) => {
       const stockAuthority = await lockStockAuthority(tx);
+
+      // Serializa correcciones de la misma liquidación: dos correcciones
+      // concurrentes revertirían dos veces los mismos acumulados.
+      await tx.$queryRaw`
+        SELECT "id" FROM public."Liquidacion" WHERE "id" = ${liquidacionId} FOR UPDATE
+      `;
+
       // 0) Buscar liquidación existente
       const liqExistente = await tx.liquidacion.findFirst({
         where: {
@@ -304,14 +312,16 @@ export async function handlePutLiquidacion(
           });
         }
 
-        // Aplicar nuevos contadores
-        await tx.consignacionDetalle.update({
-          where: { id: det.id },
-          data: {
-            unitsVendidasAcum: { increment: vendidas },
-            unitsDevueltasAcum: { increment: devueltas },
-          },
-        });
+        // Aplicar nuevos contadores (sólo si todavía alcanza)
+        if (
+          !(await claimSettlementUnits(tx, {
+            consignacionDetalleId: det.id,
+            unitsVendidas: vendidas,
+            unitsDevueltas: devueltas,
+          }))
+        ) {
+          throw new Error(`EXCEDE_PENDIENTE:${det.id}`);
+        }
 
         const productoAntes = await tx.producto.findUnique({
           where: { id: det.productoId },

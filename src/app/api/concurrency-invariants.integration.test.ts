@@ -16,9 +16,8 @@ import {
 // esas intercalaciones ya no pueden completarse: la segunda insercion espera al
 // indice unico y el test colgaba. Aca se afirma el invariante post-correccion.
 //
-// Los escenarios ya corregidos se afirman como invariante post-correccion; el
-// unico defecto que sigue vigente se conserva como `test.skip` con su unidad
-// responsable (T21 liquidaciones).
+// Los escenarios ya corregidos se afirman como invariante post-correccion. No
+// quedan caracterizaciones pendientes en este archivo.
 
 const databaseUrl = requireIsolatedDatabase();
 
@@ -237,52 +236,70 @@ test("la venta espera al cierre y no queda ligada a una caja cerrada", async () 
   }
 });
 
-test.skip(
-  "T21 pendiente: dos liquidaciones exceden las unidades pendientes",
-  async () => {
-    const observer = await connect(databaseUrl);
-    const first = await connect(databaseUrl);
-    const second = await connect(databaseUrl);
-    try {
-      await lockHarness(observer);
-      await reset(observer);
-      const fixture = await seedCore(observer, 0);
-      await observer.query(
-        `UPDATE "StockSucursal" SET "stockConsignadoUnits" = 5 WHERE id = $1`,
-        [fixture.stockAId],
-      );
-      const consignacion = await observer.query<{ id: number }>(
-        `INSERT INTO "Consignacion" ("clienteId", "sucursalId", "numeroFolio")
-         VALUES ($1, $2, 1) RETURNING id`,
-        [fixture.clienteId, fixture.sucursalA],
-      );
-      const detalle = await observer.query<{ id: number }>(
-        `INSERT INTO "ConsignacionDetalle" (
-           "consignacionId", "productoId", "unitsEntregadas", "precioUnitario"
-         ) VALUES ($1, $2, 5, 100) RETURNING id`,
-        [consignacion.rows[0].id, fixture.productoId],
-      );
-      const secondPid = await backendPid(second);
+test("dos liquidaciones concurrentes no exceden las unidades pendientes", async () => {
+  const observer = await connect(databaseUrl);
+  const first = await connect(databaseUrl);
+  const second = await connect(databaseUrl);
+  try {
+    await lockHarness(observer);
+    await reset(observer);
+    const fixture = await seedCore(observer, 0);
+    await observer.query(
+      `UPDATE "StockSucursal" SET "stockConsignadoUnits" = 5 WHERE id = $1`,
+      [fixture.stockAId],
+    );
+    const consignacion = await observer.query<{ id: number }>(
+      `INSERT INTO "Consignacion" ("clienteId", "sucursalId", "numeroFolio")
+       VALUES ($1, $2, 1) RETURNING id`,
+      [fixture.clienteId, fixture.sucursalA],
+    );
+    const detalle = await observer.query<{ id: number }>(
+      `INSERT INTO "ConsignacionDetalle" (
+         "consignacionId", "productoId", "unitsEntregadas", "precioUnitario"
+       ) VALUES ($1, $2, 5, 100) RETURNING id`,
+      [consignacion.rows[0].id, fixture.productoId],
+    );
+    const detalleId = detalle.rows[0].id;
+    const secondPid = await backendPid(second);
 
-      await Promise.all([first.query("BEGIN"), second.query("BEGIN")]);
-      await first.query(
-        `UPDATE "ConsignacionDetalle"
-         SET "unitsVendidasAcum" = "unitsVendidasAcum" + 4 WHERE id = $1`,
-        [detalle.rows[0].id],
-      );
-      const blocked = second.query(
-        `UPDATE "ConsignacionDetalle"
-         SET "unitsVendidasAcum" = "unitsVendidasAcum" + 4 WHERE id = $1`,
-        [detalle.rows[0].id],
-      );
-      await waitForLock(observer, secondPid);
-      await first.query("COMMIT");
-      await blocked;
-      await second.query("COMMIT");
-    } finally {
-      await rollbackQuietly(first);
-      await rollbackQuietly(second);
-      await Promise.all([observer.end(), first.end(), second.end()]);
-    }
-  },
-);
+    // La misma condición que aplica `claimSettlementUnits`.
+    const claim = `UPDATE "ConsignacionDetalle"
+      SET "unitsVendidasAcum" = "unitsVendidasAcum" + 4
+      WHERE "id" = $1
+        AND ("unitsEntregadas" - "unitsVendidasAcum" - "unitsDevueltasAcum") >= 4
+      RETURNING "id"`;
+
+    await Promise.all([first.query("BEGIN"), second.query("BEGIN")]);
+    const firstClaim = await first.query<{ id: number }>(claim, [detalleId]);
+    const blocked = second.query<{ id: number }>(claim, [detalleId]);
+    await waitForLock(observer, secondPid);
+    await first.query("COMMIT");
+
+    const secondClaim = await blocked;
+    await second.query("COMMIT");
+
+    // El segundo escritor espera el lock de fila y re-evalúa contra la versión
+    // confirmada: ya no quedan pendientes suficientes.
+    assert.equal(firstClaim.rowCount, 1);
+    assert.equal(secondClaim.rowCount, 0);
+
+    const final = await observer.query<{
+      unitsEntregadas: number;
+      unitsVendidasAcum: number;
+      unitsDevueltasAcum: number;
+    }>(
+      `SELECT "unitsEntregadas", "unitsVendidasAcum", "unitsDevueltasAcum"
+       FROM "ConsignacionDetalle" WHERE "id" = $1`,
+      [detalleId],
+    );
+    assert.equal(final.rows[0].unitsVendidasAcum, 4);
+    assert.ok(
+      final.rows[0].unitsVendidasAcum + final.rows[0].unitsDevueltasAcum <=
+        final.rows[0].unitsEntregadas,
+    );
+  } finally {
+    await rollbackQuietly(first);
+    await rollbackQuietly(second);
+    await Promise.all([observer.end(), first.end(), second.end()]);
+  }
+});

@@ -24,6 +24,7 @@ import {
   StockAuthorityError,
 } from "@/modules/inventory/stock-authority";
 import { calculatePendingUnits, validateSettlement } from "@/modules/consignaciones/units";
+import { claimSettlementUnits } from "@/modules/consignaciones/settlement-claim";
 
 type RouteParams = {
   params: Promise<{ consignacionId: string }>;
@@ -152,7 +153,8 @@ export async function handlePostLiquidacionByConsignacion(
         const vendidas = item.unitsVendidas ?? 0;
         const devueltas = item.unitsDevueltas ?? 0;
 
-        // Validar que no se liquide más de lo pendiente
+        // Validar que no se liquide más de lo pendiente. El chequeo en memoria
+        // da el 409 temprano; el reclamo condicional de abajo es la garantía.
         if (
           !validateSettlement({
             unitsEntregadas: det.unitsEntregadas,
@@ -165,14 +167,16 @@ export async function handlePostLiquidacionByConsignacion(
           throw new Error(`EXCEDE_PENDIENTE:${det.id}`);
         }
 
-        // Actualizar acumulados de la consignación
-        await tx.consignacionDetalle.update({
-          where: { id: det.id },
-          data: {
-            unitsVendidasAcum: { increment: vendidas },
-            unitsDevueltasAcum: { increment: devueltas },
-          },
-        });
+        // Actualizar acumulados de la consignación (sólo si todavía alcanza)
+        if (
+          !(await claimSettlementUnits(tx, {
+            consignacionDetalleId: det.id,
+            unitsVendidas: vendidas,
+            unitsDevueltas: devueltas,
+          }))
+        ) {
+          throw new Error(`EXCEDE_PENDIENTE:${det.id}`);
+        }
 
         // Capturar estado previo para auditoría
         const productoAntes = await tx.producto.findUnique({

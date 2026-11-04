@@ -72,6 +72,10 @@ test("liquidation by consignacion obeys the B1 stock authority", async (t) => {
   });
 
   await prisma.$executeRawUnsafe(truncateSql);
+  // Estado de entrada explícito: APP_DUAL_WRITE con la proyección instalada, que
+  // es como el test siembra y luego pasa a DB_PROJECTION. Las migraciones ya no
+  // dejan el trigger instalado, así que no se puede heredar del entorno.
+  await restoreStockAuthority();
   const sucursal = await prisma.sucursal.create({
     data: { nombre: "T15-E POST Sucursal", esPrincipal: true },
   });

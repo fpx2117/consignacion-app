@@ -22,6 +22,7 @@ import {
   StockAuthorityError,
 } from "@/modules/inventory/stock-authority";
 import { calculatePendingUnits, validateSettlement } from "@/modules/consignaciones/units";
+import { claimSettlementUnits } from "@/modules/consignaciones/settlement-claim";
 import { applyConsignmentMarkup } from "@/modules/pricing/consignment-markup";
 
 type NotificationQueueItem = NonNullable<ReturnType<typeof evaluateStockAlert>>;
@@ -556,13 +557,17 @@ export async function handlePostLiquidacionConsignacion(
         const vendidas = it.unitsVendidas ?? 0;
         const devueltas = it.unitsDevueltas ?? 0;
 
-        await tx.consignacionDetalle.update({
-          where: { id: det.id },
-          data: {
-            unitsVendidasAcum: { increment: vendidas },
-            unitsDevueltasAcum: { increment: devueltas },
-          },
-        });
+        // Reclamo condicional: si otra liquidación consumió las unidades
+        // primero, la transacción entera se revierte.
+        if (
+          !(await claimSettlementUnits(tx, {
+            consignacionDetalleId: det.id,
+            unitsVendidas: vendidas,
+            unitsDevueltas: devueltas,
+          }))
+        ) {
+          throw new Error(`EXCEDE_PENDIENTE:${det.id}`);
+        }
 
         const sucursalId = consignacion.sucursalId;
 
