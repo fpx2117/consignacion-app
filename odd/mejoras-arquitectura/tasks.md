@@ -292,8 +292,11 @@ stack cuando hay una sola.
 ### M04 — Corregir la suscripción atada al usuario
 
 - **Prioridad** P1 · **Esfuerzo** M · **Dependencias** M03
-- **Evidencia**: `Subscription.userId @unique` en `prisma/schema.prisma`;
-  `src/lib/subscriptions/require-subscription.ts`.
+- **Estado**: **cerrada** (2026-11-04). ADR
+  [`adrs/002-suscripcion-de-la-instalacion.md`](./adrs/002-suscripcion-de-la-instalacion.md).
+- **Evidencia**: `Subscription.userId @unique` en `prisma/schema.prisma`; la FK
+  es `ON DELETE RESTRICT` (migración `20260225061121_new`).
+  `src/lib/subscriptions/require-subscription.ts` ya lee a nivel instalación.
 - **Alcance**: definir y documentar qué pasa con la suscripción cuando cambia el
   usuario dueño o cuando el dueño es dado de baja. Si hace falta, migrar el
   anclaje a una entidad estable de la instalación (no un tenant: ver decisión 1).
@@ -302,6 +305,50 @@ stack cuando hay una sola.
   cambio de dueño.
 - **Verificación**: tests nuevos + revisión de la migración con plan de rollback.
 - **Riesgo**: alto. Toca datos persistidos; requiere migración reversible.
+- **Resultado**: se resolvió **sin migración**, revirtiendo el riesgo.
+  - **El diagnóstico real**: no era un problema de lectura (el código ya busca
+    cualquier suscripción activa), sino de ciclo de vida. La FK `RESTRICT` hacía
+    que borrar al contacto de facturación fallara con un 500 opaco.
+  - **Regla (ADR 002)**: la suscripción pertenece a la instalación; `userId` es el
+    contacto de facturación. Al eliminarlo, se reasigna en la misma transacción
+    al administrador activo de menor `id` que no tenga ya una suscripción.
+  - **Por qué no se migró**: hacer `userId` nullable habría obligado a tocar
+    siete puntos de facturación que dereferencian `sub.user.nombre`
+    (`check-subscriptions` ×2, `check-vencimientos` ×4, webhooks MP y PayPal). Un
+    `null` sin manejar rompe el aviso de vencimiento justo cuando más importa.
+    Anclar a `Sucursal` era desproporcionado para un caso que ocurre una vez al
+    año. Sin migración no hay plan de rollback que diseñar.
+  - **Test**: `subscription-ownership.integration.test.ts`, ejecutado contra el
+    dump restaurado. Verifica que el borrado no falla, que la suscripción
+    sobrevive con plan y estado intactos, que el nuevo contacto es un admin
+    activo sin otra suscripción, y que `getActivePlanLimits()` sigue resolviendo.
+  - **Hallazgo que el test destapó**: el primer intento de reasignación falló por
+    violación de unicidad, porque el candidato ya tenía suscripción propia. El
+    filtro `subscription: { is: null }` es necesario, no cosmético.
+
+### M19 — Corregir secuencias atrasadas en producción
+
+- **Prioridad** P0 · **Esfuerzo** S · **Dependencias** ninguna
+- **Estado**: diagnosticada, **no ejecutada**. Requiere autorización explícita:
+  es una operación sobre la base de producción.
+- **Evidencia** (consulta de solo lectura sobre producción, 2026-11-04):
+
+  | Tabla | `max(id)` | `last_value` de la secuencia |
+  | --- | --- | --- |
+  | `Plan` | 3 | **0** (nunca usada) |
+  | `TiendaGlobalConfig` | 1 | **0** (nunca usada) |
+
+  Las filas se insertaron con `id` explícito y la secuencia nunca avanzó. Cualquier
+  `INSERT` sin `id` en esas tablas choca contra la PK.
+- **Impacto**: `prisma.plan.create()` falla. Eso rompe el auto-seeding de planes
+  que el README promete para instalaciones antiguas, y cualquier alta de plan
+  desde administración. `TiendaGlobalConfig` tiene el mismo problema.
+- **Alcance**: `setval` al máximo actual, en una ventana controlada.
+- **Aceptación**: `max(id) <= last_value` en ambas tablas; un `INSERT` de prueba en
+  una transacción con `ROLLBACK` no falla.
+- **Verificación**: la misma consulta del diagnóstico, antes y después.
+- **Nota**: el problema se detectó primero en el clúster restaurado, donde el
+  restore reproduce el estado real de las secuencias. No es un artefacto del dump.
 
 ### M05 — Alinear el `README.md` con la realidad del sistema
 
