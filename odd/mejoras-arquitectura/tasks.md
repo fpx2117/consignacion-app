@@ -524,6 +524,8 @@ stack cuando hay una sola.
 ### M14 — Mover la agregación del dashboard a SQL
 
 - **Prioridad** P1 · **Esfuerzo** M · **Dependencias** M13
+- **Estado**: **cerrada** (2026-11-04). Commit
+  `perf(dashboard): aggregate trend and top products in SQL`.
 - **Evidencia**: `getDashboardTendencia` (`kpi-logic.ts:499-570`) carga todas las
   ventas del período con `detalles` anidados y acumula en un `for`;
   `getDashboardTopProductos` (`kpi-logic.ts:597+`) trae todos los
@@ -538,6 +540,34 @@ stack cuando hay una sola.
   `kpi-logic.integration.test.ts` verde.
 - **Riesgo**: medio-alto. Si un decimal se redondea distinto, el dashboard miente.
   La paridad numérica es criterio de aceptación, no un extra.
+- **Resultado**:
+  - `getDashboardTendencia`: tres CTE (`por_dia`, `unidades`, `pagos`) agrupadas
+    por día calendario; la serie con días en cero se sigue armando en JS.
+  - `getDashboardTopProductos`: `UNION ALL` de consignación y POS, agrupado por
+    producto, ordenado y limitado en SQL.
+  - **Bucketing de fecha**: las fechas se guardan como hora local en una columna
+    `timestamp` sin zona, y Prisma las lee como UTC. El día calendario es
+    `fecha AT TIME ZONE 'UTC' AT TIME ZONE <tz>`, que reproduce exactamente lo
+    que hacía `formatDateInputAR(v.fecha, tz)`. Verificado empíricamente: hay
+    ventas en las 24 horas del día, así que son hora local, no UTC.
+  - **Filas que cruzan la frontera**: de O(ventas del período) a O(días), y de
+    O(detalles) a O(`limit`). Ese es el beneficio real; con 922 ventas no hay
+    diferencia de tiempo medible.
+- **Evidencia de paridad** (harness diferencial contra el dump restaurado, 42
+  escenarios = 3 alcances × 5 períodos × 3 salidas):
+  - **21/21 escenarios de `tendencia` idénticos al centavo.**
+  - **0 diferencias de valor** en `top*` (units, total y nombre por producto).
+  - Único cambio: qué producto entra cuando hay **empate en el corte** (10 casos)
+    y el orden entre empatados (6 escenarios). Ese orden nunca fue determinista:
+    la consulta original usaba `findMany` sin `ORDER BY`, así que dependía del
+    orden físico de Postgres. La versión SQL es determinista y desempata por
+    origen (consignación antes que POS) y luego por primer `id` que aportó.
+  - Herramientas agregadas: `scripts/kpi-parity.ts` (captura) y
+    `scripts/kpi-parity-compare.mjs` (compara con el criterio de arriba), para
+    poder repetir la verificación si se vuelve a tocar el dashboard.
+- **Deuda honesta**: no se pudo demostrar una mejora de p95 porque la base tiene
+  922 ventas. El criterio que sí se cumple y se mide es la cantidad de filas
+  transferidas, que escala con el histórico en la versión vieja y no en la nueva.
 
 ### M15 — Medir el bundle y fijar presupuesto por ruta
 
