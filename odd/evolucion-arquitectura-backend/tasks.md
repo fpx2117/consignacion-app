@@ -387,6 +387,13 @@ eventos procesados y transiciones de ítems de OCR condicionales (ver T24).
   aprobada, evidencia de cero tráfico o consumidores legacy, inventario sin
   lectores ni writers pendientes y una revisión final de compatibilidad y
   rollback.
+  **Bloqueada por evidencia, no por código (2026-11-04 05:45 UTC):** producción
+  tiene 922 ventas y la última es `2026-11-03T21:17Z` (18:17 local), **anterior a
+  la activación**. El dispatch `application` nunca procesó una venta real. Para
+  que la ventana sea medible se agregó una línea por venta:
+  `[ventas] sale {"mode":"application",...}`. Inventario de retiro, plan y costo
+  del rollback en `t25-retiro-legacy.md`. El único consumidor del legacy en
+  producción es `src/app/api/ventas/route.ts`.
 
 ## Gates obligatorios
 

@@ -114,6 +114,8 @@ export async function handlePostVenta(
       );
     }
 
+    const startedAt = Date.now();
+
     const { clienteId, descuentoGlobal, items, metodoPago } = parsed.data;
 
     // Punto único de dispatch (ADR 006): se resuelve antes de cualquier efecto
@@ -136,6 +138,19 @@ export async function handlePostVenta(
         : await registerSaleLegacy(command, auth, deps);
 
     await applyPostCommit(outcome, auth.activeSucursalId, deps);
+
+    // Evidencia para la ventana de observación de T25: qué dispatch atendió la
+    // venta y cuánto tardó. No cambia la respuesta.
+    console.info(
+      "[ventas] sale",
+      JSON.stringify({
+        mode: selection.name,
+        ventaId: outcome.sale.id,
+        numeroVenta: outcome.sale.numeroVenta,
+        total: String(outcome.sale.total),
+        ms: Date.now() - startedAt,
+      }),
+    );
 
     return NextResponse.json({ data: outcome.sale, pago: outcome.payment });
   } catch (error) {
