@@ -4,11 +4,20 @@ import { join } from "node:path";
 import test from "node:test";
 import ts from "typescript";
 
+// Escritores que pasan por `createVentaWithAuthority`.
+//
+// T25 (`9af282c`, "retire the legacy sale handler") sacó la creación directa de
+// `src/app/api/ventas/register-sale-handlers.ts`: ese adaptador hoy sólo arma las
+// dependencias y delega en `registerSale`, que crea la venta a través de
+// `prisma-register-sale.ts`. Ese archivo ya estaba en la lista, así que la
+// cobertura del límite de numeración es la misma; sólo cambió quién escribe.
+//
+// La invariante que importa sigue verificada aparte, al final del test:
+// `directCreates` debe ser únicamente `venta-numbering-authority.ts`.
 const expectedWriters = [
   "src/app/api/consignaciones/[id]/route.ts",
   "src/app/api/liquidaciones/[id]/route.ts",
   "src/app/api/liquidaciones/consignacion/[consignacionId]/route.ts",
-  "src/app/api/ventas/register-sale-handlers.ts",
   "src/app/api/webhooks/mercadopago/route.ts",
   "src/modules/ventas/infrastructure/prisma-register-sale.ts",
 ];
