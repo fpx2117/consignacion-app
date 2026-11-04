@@ -306,15 +306,43 @@ stack cuando hay una sola.
 ### M05 — Alinear el `README.md` con la realidad del sistema
 
 - **Prioridad** P0 · **Esfuerzo** S · **Dependencias** M02, M03
+- **Estado**: **cerrada** (2026-11-04).
 - **Evidencia**: Eje 6.
 - **Alcance**: (a) aclarar que la unidad de despliegue es una instalación por
   comercio; (b) ajustar la afirmación de auditoría al estado real o, si M02 ya
-  cerró, al alcance exacto cubierto; (c) corregir la tabla de stack (Server
-  Actions); (d) declarar el modelo de render.
+  cerró, al alcance exacto cubierto; (c) corregir la tabla de stack; (d) declarar
+  el modelo de render.
 - **Aceptación**: ninguna afirmación del README queda sin respaldo en el código.
 - **Verificación**: recorrer el README contra el código, ítem por ítem.
 - **Nota**: barata y de alto retorno. Va después de M02 para no documentar dos
   veces.
+- **Resultado** (7 cambios verificados uno por uno):
+  1. **Título e intro**: se quitó "B2B SaaS" del título y se agregó un bloque de
+     *Unidad de despliegue* que dice explícitamente que es una instalación por
+     comercio, que no hay tabla de organizaciones ni de tenants, y que varias
+     sucursales sí están aisladas.
+  2. **Auditoría**: la viñeta "Auditoría central de acciones por usuario y módulo"
+     pasó a describir el alcance real —usuarios, productos, anulación de ventas,
+     consignaciones y configuración— y a declarar que el resto todavía no audita,
+     con puntero a M18.
+  3. **Árbol de estructura**: listaba sólo `modules/invoices/`; ahora lista los
+     seis módulos reales y aclara que `modules/ventas/` es el patrón de
+     referencia, no el estado de todos.
+  4. **Modelo de render**: sección nueva. Dice que es una SPA sobre App Router
+     (42/47 páginas cliente, un solo `"use server"`), que el catálogo público sí
+     es SSR por SEO, y que no se usan Server Actions.
+  5. **Variable inexistente**: la tabla de entorno declaraba `SOCKET_DISPATCH_URL`,
+     que **no existe en el código**. Se reemplazó por `SOCKET_DISPATCH_SECRET`
+     (el real, con fallback a `CRON_SECRET`) y `APP_URL`, que es de donde
+     `socket-trigger.ts` toma la base.
+  6. **Scripts**: se agregaron `npm test`, `test:integration` y `test:all` con la
+     aclaración de que los de integración fallan cerrado sin `TEST_DATABASE_URL`.
+  7. **"tenant"**: quedaban dos usos (`auto-seeding` y setup inicial) que
+     contradecían la decisión 1; se cambiaron por "instalación" y "comercio".
+- **Corrección del alcance original**: el punto (c) decía "corregir la tabla de
+  stack (Server Actions)". El README **nunca** mencionó Server Actions — eso
+  estaba en `openspec/config.yaml`. La afirmación realmente falsa era la variable
+  `SOCKET_DISPATCH_URL`. Se corrigió esa.
 
 ### M06 — ADR: modelo de render (SPA vs RSC)
 
