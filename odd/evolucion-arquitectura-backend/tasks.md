@@ -24,6 +24,8 @@ deriva 0 (ver T19). **T20 desplegada el mismo día** (`1446ecc1`): la sesión de
 caja se bloquea dentro de la transacción y el cliente por defecto se resuelve en
 cada intento (ver T20). **T21 desplegada el mismo día** (`30d61fbe`): las
 liquidaciones reclaman las unidades pendientes de forma condicional (ver T21).
+**T22 desplegada el mismo día** (`fae1ce8`, `20e9e7e3`): apertura y cierre de caja
+en una sola unidad y la sesión de venta atada a su sucursal (ver T22).
 
 ## Diagnóstico
 
@@ -336,8 +338,20 @@ liquidaciones reclaman las unidades pendientes de forma condicional (ver T21).
   reclamo 1 fila, segundo 0, detalle nunca por encima de lo entregado). 13 suites
   de integración verdes desde base nueva; deploy `30d61fbe`, deriva 0 y 0 detalles
   sobreliquidados. Detalle en `t21-liquidaciones-condicionales.md`.
-- [ ] **T22 — Migrar caja y pagos.** Definir límites transaccionales e
+- [x] **T22 — Migrar caja y pagos.** Definir límites transaccionales e
   idempotencia.
+  **Ejecutada el 2026-11-04.** Apertura y cierre de caja quedaron en una sola
+  unidad: la apertura se serializa con `FOR UPDATE` sobre el usuario (antes dos
+  requests podían dejar dos sesiones abiertas) y los dos cierres hacen lock,
+  lectura, cálculo y reclamo condicional en una transacción (antes una venta
+  confirmada en el medio quedaba fuera del total y dos cierres se pisaban). La
+  búsqueda de sesión de venta ahora exige la sucursal de la caja —cierra el
+  hallazgo anotado en T20—. Pagos: el descuento de `saldoCuenta` ya es atómico;
+  la idempotencia requiere clave del cliente y columna única, y queda explícita
+  como próximo paso. Evidencia: cierre concurrente (el cierre espera la venta, la
+  incluye y el segundo no reclama) e integración de la ruta (esperado 175,
+  segundo cierre 404); 14 suites verdes; deploys `fae1ce8` y `20e9e7e3`, deriva 0.
+  Detalle en `t22-caja-pagos.md`.
 - [ ] **T23 — Aislar notificaciones y Socket.IO.** Salas, sesión vigente y efectos
   post-commit/outbox.
 - [ ] **T24 — Hacer OCR y webhooks idempotentes.** Transiciones condicionales y
