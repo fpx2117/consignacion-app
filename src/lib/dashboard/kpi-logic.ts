@@ -543,7 +543,9 @@ export async function getDashboardTendencia(
   for (const v of ventas) {
     const k = key(v.fecha);
     if (!seriesMap[k]) continue;
-    const totalNeto = Number(v.total) - Number(v.descuentoGlobal || 0);
+    // `Venta.total` ya viene neto de `descuentoGlobal` y del recargo: restarlo
+    // otra vez acá duplicaba el descuento en la tendencia.
+    const totalNeto = Number(v.total);
 
     // Sumar unidades vendidas
     const unitsVenta =

@@ -211,7 +211,9 @@ export async function GET(
           ventasTotal: 0,
           pagosTotal: 0,
         };
-        const totalNeto = Number(row.total) - Number(row.descuentoGlobal || 0);
+        // `total` ya es neto de `descuentoGlobal`: restarlo otra vez duplicaba el
+        // descuento en la tendencia del PDF.
+        const totalNeto = Number(row.total);
         existing.ventasTotal += totalNeto;
         tendenciaMap.set(dateStr, existing);
       }

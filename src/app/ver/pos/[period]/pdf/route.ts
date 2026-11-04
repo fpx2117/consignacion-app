@@ -258,7 +258,9 @@ export async function GET(
       const descGlobalVenta = Number(v.descuentoGlobal || 0);
       totalDescuentosGlob += descGlobalVenta;
 
-      const netoVenta = Number(v.total) - descGlobalVenta;
+      // `total` ya es neto: el descuento global se usa para la ganancia bruta
+      // (las líneas son brutas) y para el reporte, no para restarlo otra vez.
+      const netoVenta = Number(v.total);
 
       const gananciaVenta = calculateGrossProfit(
         v.detalles.map((d) => ({
@@ -386,7 +388,9 @@ export async function GET(
       catalogoVisitas: Number(catalogVisitsCount ?? 0),
       pagosPorMetodo: pagosPorMetodo.map((m) => ({
         metodo: m.metodoPago,
-        total: Number(m._sum.total ?? 0) - Number(m._sum.descuentoGlobal || 0),
+        // `_sum.total` ya descuenta el global por venta; restarlo de nuevo acá
+        // dejaba el total por método por debajo de lo cobrado.
+        total: Number(m._sum.total ?? 0),
         cantidad: m._count._all,
       })),
       topProductos,
