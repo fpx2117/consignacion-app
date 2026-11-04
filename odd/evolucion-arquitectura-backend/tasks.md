@@ -28,6 +28,8 @@ liquidaciones reclaman las unidades pendientes de forma condicional (ver T21).
 en una sola unidad y la sesión de venta atada a su sucursal (ver T22).
 **T23 desplegada el mismo día** (`63604a35`): Socket.IO exige sesión vigente y
 enruta por salas de sucursal/usuario (ver T23).
+**T24 desplegada el mismo día** (`34c705df`, `4caecb7e`): webhooks con registro de
+eventos procesados y transiciones de ítems de OCR condicionales (ver T24).
 
 ## Diagnóstico
 
@@ -369,8 +371,18 @@ enruta por salas de sucursal/usuario (ver T23).
   garantizada. Detalle en `t23-socket-rooms.md`. **Nota:** al correr las unitarias
   se detectó que `turno/route.test.ts` había quedado desactualizado por T22 (los
   mocks no tenían `$transaction`); quedó corregido en el mismo commit.
-- [ ] **T24 — Hacer OCR y webhooks idempotentes.** Transiciones condicionales y
+- [x] **T24 — Hacer OCR y webhooks idempotentes.** Transiciones condicionales y
   registro de eventos procesados.
+  **Ejecutada el 2026-11-04.** Tabla `WebhookEvent` con `(provider, eventId)`
+  única: el handler reclama el evento antes de procesar, un duplicado devuelve 200
+  sin efectos y un fallo libera el reclamo para el reintento. Mercado Pago usa
+  `data.id` y conserva su lock + chequeo de `PAID` como segunda capa; PayPal usa
+  `event.id`. En OCR, confirmar, confirmar en masa, ignorar y crear producto desde
+  un ítem usan `claimItemState` (UPDATE condicionado al estado) dentro de la
+  transacción que mueve stock o crea el producto: el perdedor revierte y recibe
+  409. Evidencia: unitarias del reclamo, prueba PostgreSQL de dos confirmaciones
+  concurrentes (una sola gana), batería completa verde, deploys `34c705df` y
+  `4caecb7e`, 36 migraciones y deriva 0. Detalle en `t24-idempotencia.md`.
 - [ ] **T25 — Retirar legacy.** Sólo después de T19, una ventana de observación
   aprobada, evidencia de cero tráfico o consumidores legacy, inventario sin
   lectores ni writers pendientes y una revisión final de compatibilidad y
