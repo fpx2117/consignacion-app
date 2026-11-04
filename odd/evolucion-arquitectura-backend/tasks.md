@@ -10,8 +10,10 @@ push y despliegue continúan sin autorización.
 `origin/main` (`5b41eb4..08eaf16`) y **desplegadas**: Railway auto-desplegó
 `c8df76d5` desde ese commit, `/login` 200, 32 migraciones sin pendientes y la suite
 de integración (13 archivos, 22 tests) verde sobre el HEAD rebaseado. El deploy
-ocurrió **sin fence ni ventana** porque Railway auto-despliega `main`: T15-R queda
-desplegado con el smoke autenticado pendiente. Producción ya no corre el T12-only.
+ocurrió **sin fence ni ventana** porque Railway auto-despliega `main`. **El smoke
+autenticado de T15-R se ejecutó el 2026-11-04** sobre un servidor real con base
+descartable en configuración de producción: los siete flujos con deriva 0 (ver
+T15-R). Producción ya no corre el T12-only.
 **T16 ejecutado el mismo día:** producción está en `DB_PROJECTION` con la
 proyección serializada, trigger presente y deriva 0 (ver T16).
 **T18 implementada el mismo día, sin desplegar:** el piloto `RegistrarVenta` está
@@ -205,14 +207,20 @@ dispatches verdes sobre el mismo contrato HTTP (ver T18).
   implementación completo:** el código y las pruebas están hechos; lo que falta es
   el despliegue, que es **T15-R**. La tarea queda marcada por su alcance de
   implementación, igual que T12 y T14-A frente a sus rollouts.
-- [ ] **T15-R — Rollout de los writers `B1` en producción.** **Parcialmente
-  ejecutada el 2026-11-03:** el push a `origin/main` (`5b41eb4..08eaf16`) disparó el
-  auto-deploy `c8df76d5`, SUCCESS, `/login` 200, 32 migraciones sin pendientes y sin
-  errores de arranque. **No se usó ventana ni fence** porque Railway despliega `main`
-  automáticamente. Verificado además: la suite de integración completa (13 archivos,
-  22 tests) pasa sobre el HEAD desplegado. **Falta el smoke autenticado** de POS,
-  anulación, consignación, liquidación, OCR, pedidos y checkout, y confirmar deriva 0
-  tras esas operaciones. Queda abierta por eso, no por el deploy.
+- [x] **T15-R — Rollout de los writers `B1` en producción.** **Ejecutada el
+  2026-11-03.** El push a `origin/main` (`5b41eb4..08eaf16`) disparó el auto-deploy
+  `c8df76d5`, SUCCESS, `/login` 200, 32 migraciones sin pendientes y sin errores de
+  arranque. **No se usó ventana ni fence** porque Railway despliega `main`
+  automáticamente. La suite de integración completa (13 archivos, 22 tests) pasó
+  sobre el HEAD desplegado. **Smoke autenticado ejecutado el 2026-11-04** sobre un
+  servidor real y una base descartable configurada como producción (33
+  migraciones, `DB_PROJECTION`, trigger serializado): login, POS efectivo y
+  tarjeta, anulación, consignación, liquidación, pedido esperado y confirmación de
+  ítem de OCR, con **deriva 0** al cierre en todos los productos. No se escribió
+  en producción a propósito (consumiría folios, stock y notificaciones reales); el
+  riesgo ambiental ya estaba cerrado con la sonda de rol runtime. El checkout de
+  Mercado Pago no se puede cerrar sin un pago real: su writer está cubierto por
+  T15-H. Scripts en `scripts/smoke/`; detalle y hallazgos en `t15r-smoke.md`.
 - [x] **T16 — Ejecutar cutover y rollback de stock.** Pausar escrituras,
   reconciliar, activar proyección y `DB_PROJECTION` en una transacción, verificar
   entrada/salida/restitución, observar `B1`, promover después a `C2` y ensayar los
