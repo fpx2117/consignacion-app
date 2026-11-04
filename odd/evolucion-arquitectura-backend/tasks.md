@@ -20,7 +20,9 @@ proyección serializada, trigger presente y deriva 0 (ver T16).
 extraído detrás de `SALES_REGISTER_USE_CASE`, con ambos dispatches verdes sobre el
 mismo contrato HTTP. **T19 activada el mismo día** (`b2a2d0b8`, variable
 `application` confirmada en el contenedor): producción corre la ruta nueva con
-deriva 0 (ver T19).
+deriva 0 (ver T19). **T20 desplegada el mismo día** (`1446ecc1`): la sesión de
+caja se bloquea dentro de la transacción y el cliente por defecto se resuelve en
+cada intento (ver T20).
 
 ## Diagnóstico
 
@@ -307,8 +309,20 @@ deriva 0 (ver T19).
   es único, así que no hubo instancia canary separada: la activación es al 100%
   del tráfico, con rollback de una variable. La observación con tráfico real queda
   como gate de T25. Detalle en `t19-rollout-controlado.md`.
-- [ ] **T20 — Endurecer límites transaccionales de ventas.** Cliente por defecto y
+- [x] **T20 — Endurecer límites transaccionales de ventas.** Cliente por defecto y
   sesión de caja dentro de cada intento, con aprobación de conducta observable.
+  **Ejecutada el 2026-11-04.** La sesión se revalida y se bloquea con
+  `FOR SHARE` dentro de la transacción, y el cliente "Consumidor Final" se
+  resuelve adentro de cada intento. Conducta observable: una venta que compite
+  con el cierre ya no queda ligada a una caja cerrada —el cierre gana, el
+  reclamo devuelve 0 filas y la venta responde `403` con el mismo mensaje— y un
+  intento descartado no deja un cliente huérfano. El adaptador `legacy` no
+  cambia. Evidencia: el escenario de concurrencia que estaba en `test.skip` ahora
+  corre contra PostgreSQL real; unitarias del caso de uso (14), borde por ruta en
+  ambos dispatches, caracterización HTTP completa y regresión de stock, OCR,
+  consignaciones y anulación, todo verde. Deploy `1446ecc1` SUCCESS, deriva 0.
+  Hallazgo derivado: la sesión no se filtra por sucursal (queda para T22). Detalle
+  en `t20-endurecimiento-ventas.md`.
 - [ ] **T21 — Migrar consignaciones y liquidaciones.** Incorporar locks,
   actualizaciones condicionales e invariantes puras.
 - [ ] **T22 — Migrar caja y pagos.** Definir límites transaccionales e
