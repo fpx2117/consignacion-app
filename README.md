@@ -213,9 +213,10 @@ La aplicación es una **SPA montada sobre el App Router**: 42 de 47 páginas son
 el cliente contra los route handlers de `/api`, salvo el **catálogo público**
 (`src/app/[slug]/page.tsx`), que sí renderiza en el servidor porque necesita SEO.
 
-No hay Server Actions en uso. Esto no es un pendiente: es cómo está construido
-hoy, y está registrado como decisión pendiente en
-`odd/mejoras-arquitectura/tasks.md` (M06).
+No hay Server Actions en uso. Esto no es un pendiente: es el modelo declarado en
+el [ADR 001](./odd/mejoras-arquitectura/adrs/001-modelo-de-render-spa.md), que
+también fija cuándo se revisa (si la medición de bundle de M15 muestra que una
+ruta crítica excede el presupuesto).
 
 ---
 

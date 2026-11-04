@@ -347,6 +347,8 @@ stack cuando hay una sola.
 ### M06 — ADR: modelo de render (SPA vs RSC)
 
 - **Prioridad** P1 · **Esfuerzo** S · **Dependencias** M05
+- **Estado**: **cerrada** (2026-11-04). Decisión: **A — SPA sobre el App Router**.
+  ADR: [`adrs/001-modelo-de-render-spa.md`](./adrs/001-modelo-de-render-spa.md).
 - **Evidencia**: Eje 5.
 - **Alcance**: decisión explícita con consecuencias. Si se elige SPA, se
   documenta y se cierra el tema. Si se elige RSC parcial, se listan las pantallas
@@ -354,11 +356,20 @@ stack cuando hay una sola.
 - **Aceptación**: ADR en `odd/mejoras-arquitectura/adrs/` con contexto, decisión,
   alternativas y consecuencias.
 - **Verificación**: revisión humana del ADR. No hay verificación automática.
+- **Resultado**: el ADR 001 declara la SPA como modelo oficial, con el catálogo
+  público como única excepción (SSR por SEO). Se descartaron explícitamente la
+  migración a RSC parcial (opción B) y el diferimiento (opción C). Incluye cinco
+  reglas operativas para trabajo futuro y una cláusula de reapertura atada al
+  baseline de bundle de M15.
+- **Consecuencia en el backlog**: M07 queda **cancelada**. Si M15 demuestra que
+  una ruta crítica excede el presupuesto de bundle, se reabre el ADR y con él M07.
 
 ### M07 — Migrar dashboard y listados a Server Components (condicional)
 
 - **Prioridad** P2 · **Esfuerzo** L · **Dependencias** M06 (solo si el ADR lo
   elige explícitamente)
+- **Estado**: **cancelada** por M06. El ADR 001 decidió SPA. Se reabre sólo si M15
+  demuestra que una ruta crítica excede el presupuesto de bundle.
 - **Evidencia**: 42 de 47 páginas `"use client"`; `src/app/apiService.ts` con
   ~205 métodos.
 - **Alcance**: una pantalla piloto (dashboard), con islas cliente para lo
@@ -589,7 +600,7 @@ como verificación pendiente de M03 y es la deuda honesta de esta tarea.
 | 2 | M02 | Cumple lo que la documentación ya promete |
 | 3 | M03 | Desbloquea la segunda sucursal con evidencia, no con fe |
 | 4 | M05 | Cierra la brecha doc/código una sola vez |
-| 5 | M06 | Decisión barata que evita meses de trabajo mal orientado |
+| 5 | M06 | Decisión barata que evita meses de trabajo mal orientado — **cerrada: SPA** |
 | 6 | M13 | Índices: la mejora más barata de todo el backlog |
 | 7 | M15 | Medir bundle antes de tocar render |
 | 8 | M14 | Aggregación en SQL, con paridad numérica como criterio |
@@ -600,7 +611,7 @@ como verificación pendiente de M03 y es la deuda honesta de esta tarea.
 | 13 | M11 | Después de saber cuántas rutas ya validan |
 | 14 | M16 | `force-dynamic`: al final, es el más delicado de render |
 | 15 | M17 | Necesita el baseline de M15 |
-| 16 | M07 | Solo si M06 lo elige |
+| 16 | ~~M07~~ | Cancelada por M06: el ADR eligió SPA |
 | 17 | M12 | El más grande; va último y con presupuesto propio |
 | 18 | M18 | Resto de los módulos sin auditar; mismo patrón que M02 |
 
