@@ -512,6 +512,11 @@ model Venta {
   @@index([sesionCajaId])
   @@index([tipo])
   @@index([sucursalId])
+  // Consulta caliente del dashboard: (sucursalId, fecha, anulada).
+  // Medido con EXPLAIN sobre un dump de producción: el planner pasa de usar
+  // (clienteId, fecha) con filtro de sucursal a este índice, y los buffers se
+  // reducen a la mitad. Ver odd/mejoras-arquitectura/tasks.md, M13.
+  @@index([sucursalId, fecha])
   @@unique([sucursalId, numeroVenta], map: "Venta_sucursalId_numeroVenta_key_t12")
 }
 
@@ -590,6 +595,9 @@ model Pago {
   @@index([clienteId, fecha])
   @@index([sesionCajaId])
   @@index([sucursalId])
+  // Misma consulta caliente que Venta: (sucursalId, fecha).
+  // Medido: 19 buffers -> 9 con el índice. Ver M13.
+  @@index([sucursalId, fecha])
   @@index([tipo])
 }
 
