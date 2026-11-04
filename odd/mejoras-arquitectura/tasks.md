@@ -204,6 +204,8 @@ stack cuando hay una sola.
 ### M02 — Cablear la auditoría en las mutaciones
 
 - **Prioridad** P0 · **Esfuerzo** M · **Dependencias** M01
+- **Estado**: **cerrada** (2026-11-04) para el alcance declarado. Los módulos
+  restantes quedan en M18.
 - **Evidencia**: `recordAuditLog` en `src/lib/security/audit.ts:34` con dos
   llamadas; `AuditModule` declara módulos sin uso (`audit.ts:13`).
 - **Alcance**: registrar `CREATE`/`UPDATE`/`DELETE` en las mutaciones que ya
@@ -215,6 +217,46 @@ stack cuando hay una sola.
 - **Verificación**: `npm run security:test` + los tests nuevos + una consulta
   manual a `/api/security/activity` mostrando los eventos.
 - **Fuera de alcance**: auditar lecturas, construir UI nueva de auditoría.
+- **Resultado**: se agregó `src/lib/security/audit-events.ts` con constructores
+  puros por evento, y se cableó en **9 mutaciones** de 6 handlers:
+
+  | Handler | Acciones auditadas |
+  | --- | --- |
+  | `settings/users/handlers.ts` | alta, modificación y baja de usuario |
+  | `productos/route.ts` | alta de producto |
+  | `productos/[id]/route.ts` | modificación y baja lógica |
+  | `ventas/[id]/route.ts` | anulación de venta (con motivo y roturas) |
+  | `consignaciones/route.ts` | alta de consignación |
+  | `settings/general/route.ts` | cambio de configuración |
+
+  Los cuatro handlers con dependencias inyectables recibieron `recordAuditLog`
+  en su objeto `deps`, así los tests pueden interceptarlo sin tocar la base.
+- **Diseño de seguridad**: `userUpdated` registra `passwordChanged: boolean`,
+  nunca el valor ni el hash. `settingsUpdated` aplica **lista blanca** de campos,
+  así `mpAccessTokenTienda`, `mpPublicKeyTienda` y `andreaniPassword` no pueden
+  llegar al log aunque vengan en el body.
+- **Tests**: `audit-events.test.ts` (10 casos sobre payload y filtrado de
+  secretos) y `audit-wiring.test.ts` (falla si alguien borra la llamada de un
+  handler cubierto). Suite: **243 tests, 243 pasan**; `tsc --noEmit` y `eslint`
+  sin errores.
+- **Efecto colateral**: `consignacion-numbering-wiring.test.ts` necesitó el stub
+  de `recordAuditLog` en sus deps falsas, porque el handler ganó esa dependencia.
+
+### M18 — Auditar los módulos que quedaron afuera de M02
+
+- **Prioridad** P2 · **Esfuerzo** M · **Dependencias** M02
+- **Evidencia**: fuera del alcance declarado de M02 quedan mutaciones sin
+  auditar: gastos, proveedores, pedidos esperados, facturas de proveedor,
+  liquidaciones, apertura/cierre de caja, pagos, clientes, categorías y
+  subcategorías, sucursales y códigos promocionales.
+- **Alcance**: reutilizar el patrón de M02 (`audit-events.ts` + `deps`
+  inyectable) sin inventar uno nuevo.
+- **Aceptación**: cada módulo listado registra sus altas, modificaciones y bajas;
+  el test de wiring se amplía con los archivos nuevos.
+- **Verificación**: suite verde + revisión de que ningún evento incluya
+  credenciales.
+- **Nota**: no es urgente para operar, sí para responder "quién cambió esto" en
+  cualquier módulo del sistema.
 
 ### M03 — Clasificar el aislamiento por sucursal de los 22 archivos
 
@@ -463,6 +505,7 @@ stack cuando hay una sola.
 | 15 | M17 | Necesita el baseline de M15 |
 | 16 | M07 | Solo si M06 lo elige |
 | 17 | M12 | El más grande; va último y con presupuesto propio |
+| 18 | M18 | Resto de los módulos sin auditar; mismo patrón que M02 |
 
 Bloque de mejor ROI: **M01 → M02 → M03 → M05 → M06 → M13**, aproximadamente una
 semana y media de trabajo efectivo. Los dos últimos cierran las dos brechas más
