@@ -350,6 +350,27 @@ stack cuando hay una sola.
 - **Nota**: el problema se detectó primero en el clúster restaurado, donde el
   restore reproduce el estado real de las secuencias. No es un artefacto del dump.
 
+### M20 — Reparar el preflight de migraciones
+
+- **Prioridad** P1 · **Esfuerzo** S · **Dependencias** ninguna
+- **Estado**: diagnosticada, no ejecutada. Bloquea el camino documentado de
+  despliegue (ver `deploy-2026-11-04.md`).
+- **Evidencia**: `npm run migrate:t11:deploy` falla con
+  `Unknown migration history row: 20261101040000_serialize_stock_projection`.
+  El script `scripts/migrations/preflight-t11.mjs` valida contra una lista cerrada
+  de migraciones conocidas y no incluye las cuatro posteriores a T11
+  (`20261101040000`, `20261101050000`, `20261101060000`, `20261101070000`), que ya
+  están aplicadas en producción. También fija `CURRENT_SCHEMA_HASH`, así que
+  cualquier cambio de `schema.prisma` (como los índices de M13) lo invalida.
+- **Impacto**: el comando que el README recomienda para desplegar migraciones no
+  se puede usar. Hoy el despliegue debe hacerse con `npx prisma migrate deploy`.
+- **Alcance**: reemplazar la lista cerrada por una validación que derive del
+  directorio `prisma/migrations`, o dejar el script explícitamente acotado a T11 y
+  documentar que no es el camino general.
+- **Aceptación**: `npm run migrate:t11:deploy` corre sobre una base con el
+  historial actual, o el README deja de recomendarlo para migraciones nuevas.
+- **Verificación**: ejecutarlo contra el clúster descartable.
+
 ### M05 — Alinear el `README.md` con la realidad del sistema
 
 - **Prioridad** P0 · **Esfuerzo** S · **Dependencias** M02, M03

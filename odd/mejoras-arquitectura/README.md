@@ -113,6 +113,12 @@ Ambos se tratan en `M05` y `M09`. No se propone introducir tenants.
 
 - [Tareas](./tasks.md): backlog accionable con evidencia, criterio de
   aceptación, verificación y secuencia propuesta.
+- [ADR 001 — modelo de render](./adrs/001-modelo-de-render-spa.md): la SPA sobre
+  el App Router como modelo oficial.
+- [ADR 002 — suscripción de la instalación](./adrs/002-suscripcion-de-la-instalacion.md):
+  `userId` como contacto de facturación, no como dueño.
+- [Despliegue pendiente 2026-11-04](./deploy-2026-11-04.md): qué hay para
+  desplegar, en qué orden, cómo se verifica y cómo se revierte.
 
 ## Restricciones de ejecución
 
