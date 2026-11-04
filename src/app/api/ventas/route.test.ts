@@ -55,6 +55,16 @@ function makeDeps(options: {
       sesionCaja: {
         findFirst: async () => options.sessionOpen === false ? null : { id: 15 },
       },
+      // El dispatch extraído revalida la sesión dentro de la transacción.
+      $transaction: async (callback: (tx: unknown) => Promise<unknown>) =>
+        callback({
+          $queryRaw: async () =>
+            options.sessionOpen === false ? [] : [{ id: 15 }],
+          cliente: {
+            findFirst: async () => ({ id: 22 }),
+            create: async () => ({ id: 22 }),
+          },
+        }),
     },
   } as unknown as Deps;
 }

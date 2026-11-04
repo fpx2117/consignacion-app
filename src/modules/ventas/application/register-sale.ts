@@ -170,6 +170,14 @@ export type RegisterSaleTransaction<
     sucursalId: number;
   }): Promise<{ id: number } | null>;
   lockStockAuthority(): Promise<StockAuthorityHandle>;
+  /**
+   * Bloquea la sesión de caja abierta del usuario para el resto del intento. Si
+   * el cierre de caja ganó la carrera, devuelve `null` y la venta no se registra
+   * contra una sesión ya cerrada.
+   */
+  lockOpenCashSession(usuarioId: number): Promise<{ id: number } | null>;
+  /** Resuelve o crea el cliente "Consumidor Final" dentro del intento. */
+  ensureDefaultCustomer(sucursalId: number): Promise<number>;
   findBranchProduct(input: {
     productoId: number;
     sucursalId: number;
@@ -197,8 +205,6 @@ export type RegisterSaleUnitOfWork<
   TSale extends SaleRecord,
   TPayment extends PaymentRecord,
 > = {
-  findOpenCashSession(usuarioId: number): Promise<{ id: number } | null>;
-  ensureDefaultCustomer(sucursalId: number): Promise<number>;
   runSerializable<T>(
     work: (tx: RegisterSaleTransaction<TSale, TPayment>) => Promise<T>,
   ): Promise<T>;
@@ -412,27 +418,27 @@ export async function registerSale<
   ]);
 
   const usesCashControl = configuration.usarControlDeCaja ?? true;
-  const openSession = await deps.unitOfWork.findOpenCashSession(
-    command.usuarioId,
-  );
-  if (usesCashControl && !openSession) {
-    throw new SaleDomainError(
-      "CASH_SESSION_REQUIRED",
-      CASH_SESSION_REQUIRED_MESSAGE,
-    );
-  }
-
-  // Etapa compatible (ADR 006): el cliente por defecto se resuelve antes de la
-  // transacción, como en el adaptador legacy. Moverlo dentro de cada intento es
-  // el endurecimiento posterior de la tarea T20.
-  const clienteId =
-    command.clienteId ??
-    (await deps.unitOfWork.ensureDefaultCustomer(command.sucursalId));
 
   for (let attempt = 1; attempt <= MAX_REGISTER_SALE_ATTEMPTS; attempt++) {
     try {
-      return await deps.unitOfWork.runSerializable((tx) =>
-        executeSale({
+      return await deps.unitOfWork.runSerializable(async (tx) => {
+        // T20: la sesión de caja se revalida y se bloquea dentro de cada
+        // intento. Si el cierre ganó la carrera, el intento no registra nada.
+        const openSession = await tx.lockOpenCashSession(command.usuarioId);
+        if (usesCashControl && !openSession) {
+          throw new SaleDomainError(
+            "CASH_SESSION_REQUIRED",
+            CASH_SESSION_REQUIRED_MESSAGE,
+          );
+        }
+
+        // T20: el cliente por defecto también se resuelve dentro del intento, así
+        // que un reintento no deja un cliente huérfano de una transacción fallida.
+        const clienteId =
+          command.clienteId ??
+          (await tx.ensureDefaultCustomer(command.sucursalId));
+
+        return executeSale({
           command,
           clienteId,
           openSession,
@@ -440,8 +446,8 @@ export async function registerSale<
           timezone,
           tx,
           deps,
-        }),
-      );
+        });
+      });
     } catch (error) {
       if (
         !deps.unitOfWork.isRetriable(error) ||

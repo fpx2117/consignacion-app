@@ -79,6 +79,7 @@ type HarnessOptions = {
   insufficientProductId?: number;
   alert?: FakeAlert | null;
   retriesBeforeSuccess?: number;
+  retryAfterWork?: boolean;
   failWith?: Error;
 };
 
@@ -98,6 +99,16 @@ function makeHarness(options: HarnessOptions = {}) {
   let remainingRetries = options.retriesBeforeSuccess ?? 0;
 
   const tx: RegisterSaleTransaction<FakeSale, FakePayment> = {
+    lockOpenCashSession: async () => {
+      journal.push("session");
+      if (options.hasOpenSession === false) return null;
+      return { id: 15 };
+    },
+    ensureDefaultCustomer: async (sucursalId) => {
+      journal.push("default-customer");
+      ensureDefaultCalls.push(sucursalId);
+      return 33;
+    },
     lockStockAuthority: async () => {
       journal.push("lock");
       return { mode: "APP_DUAL_WRITE", projection: false };
@@ -148,16 +159,13 @@ function makeHarness(options: HarnessOptions = {}) {
   };
 
   const unitOfWork: RegisterSaleUnitOfWork<FakeSale, FakePayment> = {
-    findOpenCashSession: async () =>
-      options.hasOpenSession === false ? null : { id: 15 },
-    ensureDefaultCustomer: async (sucursalId) => {
-      ensureDefaultCalls.push(sucursalId);
-      return 33;
-    },
     runSerializable: async (work) => {
       attempts += 1;
       if (remainingRetries > 0) {
         remainingRetries -= 1;
+        if (options.retryAfterWork) {
+          await work(tx).catch(() => undefined);
+        }
         throw new RetriableError();
       }
       if (options.failWith) throw options.failWith;
@@ -229,6 +237,7 @@ test("registra la venta con los totales, el orden y los efectos del contrato", a
   );
 
   assert.deepEqual(harness.journal, [
+    "session",
     "lock",
     "customer",
     "product:1",
@@ -335,7 +344,7 @@ test("el descuento manual manda sobre el de catálogo", async () => {
   assert.equal(sale.total, 9.75);
 });
 
-test("sin caja abierta rechaza antes de cualquier efecto", async () => {
+test("sin caja abierta rechaza dentro del intento antes de cualquier efecto", async () => {
   const harness = makeHarness({ hasOpenSession: false });
 
   await assert.rejects(
@@ -348,8 +357,10 @@ test("sin caja abierta rechaza antes de cualquier efecto", async () => {
     },
   );
 
-  assert.equal(harness.attempts(), 0);
-  assert.deepEqual(harness.journal, []);
+  // La transacción se abrió y la sesión se revalidó dentro de ella; no hubo
+  // efectos durables.
+  assert.equal(harness.attempts(), 1);
+  assert.deepEqual(harness.journal, ["session"]);
 });
 
 test("con el control de caja desactivado opera sin sesión", async () => {
@@ -443,6 +454,26 @@ test("reintenta conflictos serializables y registra una sola venta", async () =>
   assert.equal(harness.saleInputs.length, 1);
   assert.equal(harness.paymentInputs.length, 1);
   assert.equal(result.sale.id, 77);
+});
+
+test("revalida la sesión y el cliente por defecto en cada intento", async () => {
+  const harness = makeHarness({
+    retriesBeforeSuccess: 1,
+    retryAfterWork: true,
+  });
+
+  await registerSale(baseCommand({ clienteId: null }), harness.deps);
+
+  // Dos intentos: el segundo vuelve a bloquear la sesión y a resolver el
+  // cliente, en vez de arrastrar los valores del intento fallido. El fake no
+  // revierte, así que las escrituras del intento descartado quedan en el
+  // journal; lo que se afirma es la re-ejecución de las dos revalidaciones.
+  assert.equal(harness.attempts(), 2);
+  assert.equal(
+    harness.journal.filter((entry) => entry === "session").length,
+    2,
+  );
+  assert.deepEqual(harness.ensureDefaultCalls, [3, 3]);
 });
 
 test("agota los intentos y propaga el último conflicto", async () => {

@@ -16,8 +16,9 @@ import {
 // esas intercalaciones ya no pueden completarse: la segunda insercion espera al
 // indice unico y el test colgaba. Aca se afirma el invariante post-correccion.
 //
-// Los dos escenarios cuyo defecto sigue vigente se conservan como `test.skip`
-// con su unidad responsable (T20 caja, T21 liquidaciones).
+// Los escenarios ya corregidos se afirman como invariante post-correccion; el
+// unico defecto que sigue vigente se conserva como `test.skip` con su unidad
+// responsable (T21 liquidaciones).
 
 const databaseUrl = requireIsolatedDatabase();
 
@@ -176,53 +177,65 @@ test("una venta se anula una sola vez bajo concurrencia", async () => {
   }
 });
 
-test.skip(
-  "T20 pendiente: una venta validada antes del cierre queda ligada a una caja cerrada",
-  async () => {
-    const observer = await connect(databaseUrl);
-    const pos = await connect(databaseUrl);
-    const close = await connect(databaseUrl);
-    try {
-      await lockHarness(observer);
-      await reset(observer);
-      const fixture = await seedCore(observer);
-      const caja = await observer.query<{ id: number }>(
-        `INSERT INTO "Caja" (nombre, "sucursalId") VALUES ('T20 Caja', $1) RETURNING id`,
-        [fixture.sucursalA],
-      );
-      const session = await observer.query<{ id: number }>(
-        `INSERT INTO "SesionCaja" ("cajaId", "usuarioId", "montoInicial")
-         VALUES ($1, $2, 100) RETURNING id`,
-        [caja.rows[0].id, fixture.usuarioId],
-      );
+test("la venta espera al cierre y no queda ligada a una caja cerrada", async () => {
+  const observer = await connect(databaseUrl);
+  const pos = await connect(databaseUrl);
+  const close = await connect(databaseUrl);
+  try {
+    await lockHarness(observer);
+    await reset(observer);
+    const fixture = await seedCore(observer);
+    const caja = await observer.query<{ id: number }>(
+      `INSERT INTO "Caja" (nombre, "sucursalId") VALUES ('T20 Caja', $1) RETURNING id`,
+      [fixture.sucursalA],
+    );
+    const session = await observer.query<{ id: number }>(
+      `INSERT INTO "SesionCaja" ("cajaId", "usuarioId", "montoInicial")
+       VALUES ($1, $2, 100) RETURNING id`,
+      [caja.rows[0].id, fixture.usuarioId],
+    );
+    const posPid = await backendPid(pos);
 
-      await pos.query(
-        `SELECT estado FROM "SesionCaja" WHERE id = $1 AND estado = 'ABIERTA'`,
-        [session.rows[0].id],
-      );
-      const snapshot = await close.query<{ expected: string }>(
-        `SELECT (s."montoInicial" + COALESCE(SUM(v.total), 0))::text expected
-         FROM "SesionCaja" s
-         LEFT JOIN "Venta" v ON v."sesionCajaId" = s.id AND v.tipo = 'CASUAL'
-         WHERE s.id = $1 GROUP BY s.id`,
-        [session.rows[0].id],
-      );
-      await close.query(
-        `UPDATE "SesionCaja" SET estado = 'CERRADA', "fechaCierre" = now(),
-           "montoFinalEsperado" = $2, "montoFinalReal" = $2, diferencia = 0
-         WHERE id = $1`,
-        [session.rows[0].id, snapshot.rows[0].expected],
-      );
-      await pos.query(
-        `INSERT INTO "Venta" ("clienteId", "sucursalId", "sesionCajaId", total, tipo)
-         VALUES ($1, $2, $3, 50, 'CASUAL')`,
-        [fixture.clienteId, fixture.sucursalA, session.rows[0].id],
-      );
-    } finally {
-      await Promise.all([observer.end(), pos.end(), close.end()]);
-    }
-  },
-);
+    // El cierre reclama la sesión.
+    await close.query("BEGIN");
+    await close.query(
+      `SELECT "estado" FROM "SesionCaja" WHERE "id" = $1 FOR UPDATE`,
+      [session.rows[0].id],
+    );
+
+    // La venta bloquea la sesión con la misma consulta del adaptador (T20) y
+    // espera a que el cierre termine.
+    await pos.query("BEGIN");
+    const claim = pos.query<{ id: number }>(
+      `SELECT "id" FROM "SesionCaja"
+       WHERE "usuarioId" = $1 AND "estado" = 'ABIERTA'
+       LIMIT 1 FOR SHARE`,
+      [fixture.usuarioId],
+    );
+    await waitForLock(observer, posPid);
+
+    await close.query(
+      `UPDATE "SesionCaja"
+       SET "estado" = 'CERRADA', "fechaCierre" = now()
+       WHERE "id" = $1`,
+      [session.rows[0].id],
+    );
+    await close.query("COMMIT");
+
+    const claimed = (await claim).rows;
+    await pos.query("COMMIT");
+
+    // El cierre ganó: la fila ya no cumple el predicado y la venta no se asocia.
+    assert.equal(claimed.length, 0);
+    const ventas = await observer.query<{ count: number }>(
+      `SELECT COUNT(*)::int AS count FROM "Venta" WHERE "sesionCajaId" = $1`,
+      [session.rows[0].id],
+    );
+    assert.equal(ventas.rows[0].count, 0);
+  } finally {
+    await Promise.all([observer.end(), pos.end(), close.end()]);
+  }
+});
 
 test.skip(
   "T21 pendiente: dos liquidaciones exceden las unidades pendientes",

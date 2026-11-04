@@ -44,6 +44,38 @@ function createTransaction(
 
     lockStockAuthority: () => lockStockAuthority(tx),
 
+    // Bloquea la sesión abierta del usuario. `FOR SHARE` impide que el cierre la
+    // marque CERRADA mientras la venta se registra, y si el cierre ya commiteó la
+    // fila deja de cumplir `estado = 'ABIERTA'` y no se devuelve nada.
+    lockOpenCashSession: async (usuarioId) => {
+      const rows = await tx.$queryRaw<Array<{ id: number }>>`
+        SELECT "id" FROM public."SesionCaja"
+        WHERE "usuarioId" = ${usuarioId} AND "estado" = 'ABIERTA'
+        LIMIT 1
+        FOR SHARE
+      `;
+      return rows[0] ? { id: rows[0].id } : null;
+    },
+
+    ensureDefaultCustomer: async (sucursalId) => {
+      const existing = await tx.cliente.findFirst({
+        where: { nombre: "Consumidor Final", sucursalId },
+        select: { id: true },
+      });
+      if (existing) return existing.id;
+
+      const created = await tx.cliente.create({
+        data: {
+          nombre: "Consumidor Final",
+          direccion: "Venta Mostrador",
+          activo: true,
+          sucursalId,
+        },
+        select: { id: true },
+      });
+      return created.id;
+    },
+
     findBranchProduct: async ({
       productoId,
       sucursalId,
@@ -156,31 +188,6 @@ export function createPrismaRegisterSaleUnitOfWork(
   prisma: PrismaClientLike,
 ): RegisterSaleUnitOfWork<VentaCreada, PagoCreado> {
   return {
-    findOpenCashSession: (usuarioId) =>
-      prisma.sesionCaja.findFirst({
-        where: { usuarioId, estado: "ABIERTA" },
-        select: { id: true },
-      }),
-
-    ensureDefaultCustomer: async (sucursalId) => {
-      const existing = await prisma.cliente.findFirst({
-        where: { nombre: "Consumidor Final", sucursalId },
-        select: { id: true },
-      });
-      if (existing) return existing.id;
-
-      const created = await prisma.cliente.create({
-        data: {
-          nombre: "Consumidor Final",
-          direccion: "Venta Mostrador",
-          activo: true,
-          sucursalId,
-        },
-        select: { id: true },
-      });
-      return created.id;
-    },
-
     runSerializable: <T>(
       work: (tx: RegisterSaleTransaction<VentaCreada, PagoCreado>) => Promise<T>,
     ) =>

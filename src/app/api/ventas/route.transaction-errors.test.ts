@@ -46,7 +46,13 @@ const PRODUCT = {
 function makeHarness(failure: Failure) {
   let attempts = 0;
   const tx = {
-    $queryRaw: async () => [{ modo: "APP_DUAL_WRITE", projection: 0 }],
+    // El adaptador usa `$queryRaw` para la capacidad de stock y para bloquear la
+    // sesión de caja; el fake distingue por el texto de la consulta.
+    $queryRaw: async (strings: unknown) => {
+      const sql = Array.isArray(strings) ? strings.join("?") : String(strings);
+      if (sql.includes("SesionCaja")) return [{ id: 15 }];
+      return [{ modo: "APP_DUAL_WRITE", projection: 0 }];
+    },
     $executeRaw: async () => undefined,
     cliente: {
       findFirst: async () => ({ id: 22 }),
