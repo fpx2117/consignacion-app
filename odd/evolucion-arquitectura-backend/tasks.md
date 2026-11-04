@@ -22,7 +22,8 @@ mismo contrato HTTP. **T19 activada el mismo día** (`b2a2d0b8`, variable
 `application` confirmada en el contenedor): producción corre la ruta nueva con
 deriva 0 (ver T19). **T20 desplegada el mismo día** (`1446ecc1`): la sesión de
 caja se bloquea dentro de la transacción y el cliente por defecto se resuelve en
-cada intento (ver T20).
+cada intento (ver T20). **T21 desplegada el mismo día** (`30d61fbe`): las
+liquidaciones reclaman las unidades pendientes de forma condicional (ver T21).
 
 ## Diagnóstico
 
@@ -323,8 +324,18 @@ cada intento (ver T20).
   consignaciones y anulación, todo verde. Deploy `1446ecc1` SUCCESS, deriva 0.
   Hallazgo derivado: la sesión no se filtra por sucursal (queda para T22). Detalle
   en `t20-endurecimiento-ventas.md`.
-- [ ] **T21 — Migrar consignaciones y liquidaciones.** Incorporar locks,
+- [x] **T21 — Migrar consignaciones y liquidaciones.** Incorporar locks,
   actualizaciones condicionales e invariantes puras.
+  **Ejecutada el 2026-11-04.** Los tres escritores que consumen unidades de una
+  consignación (`liquidaciones/[id]`, `liquidaciones/consignacion/[id]` y
+  `consignaciones/[id]`) dejaron de validar sobre un snapshot y luego incrementar:
+  usan `claimSettlementUnits`, un `UPDATE` condicionado al pendiente. La
+  corrección además bloquea la fila de `Liquidacion` para que dos correcciones
+  concurrentes no reviertan dos veces. El escenario de sobreliquidación que estaba
+  en `test.skip` ahora corre contra PostgreSQL y afirma el invariante (primer
+  reclamo 1 fila, segundo 0, detalle nunca por encima de lo entregado). 13 suites
+  de integración verdes desde base nueva; deploy `30d61fbe`, deriva 0 y 0 detalles
+  sobreliquidados. Detalle en `t21-liquidaciones-condicionales.md`.
 - [ ] **T22 — Migrar caja y pagos.** Definir límites transaccionales e
   idempotencia.
 - [ ] **T23 — Aislar notificaciones y Socket.IO.** Salas, sesión vigente y efectos
