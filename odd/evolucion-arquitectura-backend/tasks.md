@@ -376,6 +376,24 @@ Una tarea de implementación no se considerará completa sin:
    para todo cambio de autoridad de datos;
 8. evidencia de observación aprobada antes de eliminar una implementación legacy.
 
+## Deuda técnica resuelta (2026-11-04)
+
+Las cuatro deudas que quedaban abiertas se cerraron antes de T23. Detalle en
+`deuda-tecnica-resuelta.md`:
+
+1. **Descuento global restado dos veces** en la tendencia del dashboard, su PDF y
+   los totales por método del POS. Cuatro puntos corregidos y una prueba de
+   integración que exige `90`, no `80`.
+2. **Dos cierres de caja con fórmulas distintas:** se eliminó el endpoint que
+   ningún cliente usaba (`POST /api/settings/pos/cajas/cerrar`).
+3. **Idempotencia de pagos:** `Pago.idempotencyKey` único + header
+   `Idempotency-Key`; el reintento devuelve el pago existente sin volver a
+   descontar el saldo. Se eliminó el segundo escritor de cobros
+   (`POST /api/clientes/[id]/pagos`), que además no exigía turno de caja.
+4. **Escaneo de secretos en rojo:** URLs de documentación y de los scripts de
+   smoke ahora son explícitamente locales, y el `.env` local dejó de apuntar al
+   proxy de producción. `npm run security:test` pasa (25 tests).
+
 ## Tooling
 
 - El **visual guard** (`scripts/check-visual-guard.mjs`, `visual-guard-*.mjs`,
