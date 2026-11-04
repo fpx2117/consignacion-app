@@ -6,6 +6,10 @@ interface NotificationPayload {
   title?: string;
   message: string;
   branch?: string;
+  /** Sucursal dueña del aviso: el servidor emite sólo a esa sala. */
+  sucursalId?: number | null;
+  /** Usuario destinatario, para avisos personales. */
+  userId?: number | null;
   data?: Record<string, unknown>;
 }
 
@@ -15,6 +19,8 @@ export async function sendNotification({
   title,
   message,
   branch,
+  sucursalId,
+  userId,
   data,
 }: NotificationPayload) {
   const baseUrl =
@@ -43,6 +49,8 @@ export async function sendNotification({
           title,
           message,
           branch,
+          sucursalId: sucursalId ?? null,
+          userId: userId ?? null,
           data,
           timestamp: new Date().toISOString(),
         },

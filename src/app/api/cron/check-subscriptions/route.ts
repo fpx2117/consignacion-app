@@ -55,7 +55,7 @@ export async function GET(request: Request) {
           type,
           title: `🎁 ${NOTIFICATION_CONFIG[type].label}`,
           message: `Atención ${sub.user.nombre}: Tu prueba gratuita termina el ${sub.trialEndsAt?.toLocaleDateString()}.`,
-          data: { id: savedNotif.id, userId: sub.userId },
+          userId: sub.userId, data: { id: savedNotif.id, userId: sub.userId },
         });
       }
     }
@@ -95,7 +95,7 @@ export async function GET(request: Request) {
           type,
           title: `💳 ${NOTIFICATION_CONFIG[type].label}`,
           message: `Hola ${sub.user.nombre}, recordá que tu suscripción vence el ${sub.currentPeriodEnd?.toLocaleDateString()}.`,
-          data: { id: savedNotif.id, userId: sub.userId },
+          userId: sub.userId, data: { id: savedNotif.id, userId: sub.userId },
         });
       }
     }

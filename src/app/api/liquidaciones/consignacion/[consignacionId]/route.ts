@@ -369,6 +369,7 @@ export async function handlePostLiquidacionByConsignacion(
         type: "NEW_ORDER",
         title: "Venta Exitosa (Liquidación)",
         message: `Venta #${result.venta.id} por $${result.venta.total}`,
+        sucursalId: result.venta.sucursalId,
         data: {
           ventaId: result.venta.id,
           notificationId: dbNotif?.id,

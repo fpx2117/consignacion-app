@@ -82,6 +82,7 @@ export async function GET(request: NextRequest) {
             title,
             message: desc,
             branch: sucursal.nombre,
+            sucursalId: sucursal.id,
             data: { consignacionId: cons.id },
           });
 

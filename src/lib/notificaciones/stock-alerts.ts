@@ -91,6 +91,8 @@ export async function processNotificationQueue(
         type: savedNotif.type,
         title: savedNotif.title,
         message: savedNotif.description,
+        sucursalId,
+        userId: savedNotif.userId,
         data: {
           id: savedNotif.id,
           productId: savedNotif.productoId,

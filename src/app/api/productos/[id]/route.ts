@@ -387,6 +387,7 @@ export async function handlePutProducto(
           title: "⚠️ Stock Agotado",
           message: `El producto "${updated.nombre}" se quedó sin unidades en esta sucursal.${fechaVencMsg}`,
           data: { productId: updated.id },
+          sucursalId: updated.sucursalId,
         });
       } else if (nuevoStock <= umbralAlerta) {
         await deps.sendNotification({
@@ -394,6 +395,7 @@ export async function handlePutProducto(
           title: "⚡ Stock Bajo",
           message: `"${updated.nombre}" alcanzó el nivel crítico con ${nuevoStock} u. en esta sucursal.${fechaVencMsg}`,
           data: { productId: updated.id },
+          sucursalId: updated.sucursalId,
         });
       }
     }

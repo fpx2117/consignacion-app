@@ -93,7 +93,7 @@ export async function POST(request: Request) {
           type: NOTIFICATION_TYPE.SUBSCRIPTION_ACTIVE,
           title: "Suscripción Activa (PayPal)",
           message: `El plan de ${subscription.user.nombre} se ha activado correctamente.`,
-          data: { userId: subscription.userId },
+          userId: subscription.userId, data: { userId: subscription.userId },
         });
 
         // Auto-seed de límites del plan

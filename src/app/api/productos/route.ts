@@ -407,6 +407,7 @@ export async function handlePostProducto(
         title: "Nuevo Producto Sin Stock",
         message: `Se ha creado "${created.nombre}" sin inventario.`,
         data: { productId: created.id },
+        sucursalId: created.sucursalId,
       });
     } else if (stockInicial <= umbralAlerta) {
       await deps.sendNotification({
@@ -414,6 +415,7 @@ export async function handlePostProducto(
         title: "Stock Bajo al Crear",
         message: `"${created.nombre}" inicia con ${stockInicial} u. (Mínimo: ${umbralAlerta}).`,
         data: { productId: created.id },
+        sucursalId: created.sucursalId,
       });
     }
 

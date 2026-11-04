@@ -416,6 +416,7 @@ export async function applyPostCommit(
       type: "NEW_ORDER",
       title: "Venta Exitosa",
       message: `Venta #${intent.ventaId} por $${intent.total}`,
+      sucursalId,
       data: {
         ventaId: intent.ventaId,
         notificationId: dbNotif?.id,

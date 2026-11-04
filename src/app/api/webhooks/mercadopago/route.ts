@@ -611,7 +611,7 @@ export async function POST(request: Request) {
           type: NOTIFICATION_TYPE.SUBSCRIPTION_ACTIVE,
           title: "Suscripción Mercado Pago",
           message: `La suscripción de ${subscription.user.nombre} está activa.`,
-          data: { userId: subscription.userId },
+          userId: subscription.userId, data: { userId: subscription.userId },
         });
 
         // Si es un downgrade, manejarlo

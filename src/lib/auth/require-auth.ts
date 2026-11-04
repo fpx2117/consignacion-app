@@ -1,6 +1,10 @@
 import { cache } from "react";
 import { NextResponse } from "next/server";
 import { getAuthTokenFromCookies, verifyUserJwt } from "@/lib/auth/core";
+import {
+  checkSessionValidity,
+  prismaSessionLookup,
+} from "@/lib/auth/session-validity";
 import { resolveEffectiveSucursalContext } from "@/lib/security/sucursalScope";
 
 /* ============================
@@ -13,13 +17,7 @@ import { resolveEffectiveSucursalContext } from "@/lib/security/sucursalScope";
  * sólo ejecutan 1 query a la DB. Seguro para multi-tenant.
  */
 const validateSession = cache(async (token: string) => {
-  const { prisma } = await import("@/lib/prisma");
-  const { getSessionHash } = await import("@/lib/security/session-hash");
-  const sessionToken = getSessionHash(token);
-  return prisma.userSession.findUnique({
-    where: { token: sessionToken },
-    select: { isActive: true, expiresAt: true },
-  });
+  return checkSessionValidity(token, prismaSessionLookup);
 });
 
 const getAllowedSucursalIdsForUser = cache(
@@ -71,9 +69,9 @@ export async function requireAuth() {
     const user = await verifyUserJwt(token);
 
     // ✅ VERIFICACIÓN DE SESIÓN EN BASE DE DATOS (memoizada por request)
-    const session = await validateSession(token);
+    const sessionValidity = await validateSession(token);
 
-    if (!session || !session.isActive || session.expiresAt < new Date()) {
+    if (sessionValidity !== "active") {
       const response = NextResponse.json(
         { error: "Sesión inválida o revocada" },
         { status: 401 },

@@ -6,6 +6,12 @@ import { Server } from "socket.io";
 // @ts-expect-error cookie viene como dep transitiva de socket.io/engine.io
 import { parse as parseCookie } from "cookie";
 import { jwtVerify } from "jose";
+import { checkSessionValidity, prismaSessionLookup } from "./src/lib/auth/session-validity";
+import {
+  resolveNotificationRoom,
+  resolveSocketRooms,
+} from "./src/lib/notificaciones/socket-rooms";
+import { resolveEffectiveSucursalContext } from "./src/lib/security/sucursalScope";
 import { startMemoryLogger } from "./src/lib/observability/memory-logger";
 
 const dev = process.env.NODE_ENV !== "production";
@@ -100,16 +106,21 @@ app.prepare().then(() => {
           const { notification } = json;
 
           if (io && notification) {
+            // ADR 005: destino mínimo. Una notificación de sucursal no puede
+            // llegar a otra sucursal de la misma instalación.
+            const room = resolveNotificationRoom(notification);
             console.log(
               "⚡ [Server] Despachando notificación:",
               notification.type,
               notification.title,
+              "→",
+              room,
             );
-            io.emit("new-notification", notification);
+            io.to(room).emit("new-notification", notification);
 
             res.statusCode = 200;
             res.setHeader("Content-Type", "application/json");
-            res.end(JSON.stringify({ success: true, emitted: true }));
+            res.end(JSON.stringify({ success: true, emitted: true, room }));
           } else {
             console.warn(
               "⚠️ [Server] Fallo en dispatch: io o notification ausente",
@@ -156,6 +167,8 @@ app.prepare().then(() => {
   });
 
   // 6. Middleware de autenticación para conexiones Socket.IO
+  //    Verifica la firma del JWT **y** que la sesión siga vigente en la base
+  //    (ADR 005). Un token firmado con la sesión revocada no conecta.
   io.use(async (socket, next) => {
     try {
       const cookieHeader = socket.handshake.headers.cookie || "";
@@ -169,8 +182,65 @@ app.prepare().then(() => {
         return next(new Error("Configuración de servidor inválida"));
       }
 
+      // `next/headers` no se puede importar en el servidor custom: se verifica la
+      // firma con jose y la vigencia con la misma regla que el guard HTTP.
       const secret = new TextEncoder().encode(JWT_SECRET_RAW);
-      await jwtVerify(token, secret);
+      const { payload } = await jwtVerify(token, secret);
+      const user = payload as unknown as {
+        sub: string;
+        rol: "ADMIN" | "EMPLEADO";
+        sucursalId: number | null;
+      };
+
+      const validity = await checkSessionValidity(token, prismaSessionLookup);
+      if (validity !== "active") {
+        return next(new Error("Sesión no vigente"));
+      }
+
+      const { prisma } = await import("./src/lib/prisma");
+      const allowedSucursalIds =
+        user.rol === "ADMIN"
+          ? (
+              await prisma.sucursal.findMany({
+                where: { activa: true },
+                select: { id: true },
+              })
+            ).map((sucursal) => sucursal.id)
+          : typeof user.sucursalId === "number"
+            ? (
+                await prisma.sucursal.findFirst({
+                  where: { id: user.sucursalId, activa: true },
+                  select: { id: true },
+                })
+              )
+              ? [user.sucursalId]
+              : []
+            : [];
+
+      const cookies = parseCookie(cookieHeader);
+      const context = resolveEffectiveSucursalContext({
+        user,
+        allowedSucursalIds,
+        cookieSucursalId: cookies["active_sucursal_id"] ?? null,
+        jwtSucursalId: user.sucursalId,
+      });
+
+      if (!context) {
+        return next(new Error("Sucursal activa no autorizada"));
+      }
+
+      const userId = Number(user.sub);
+      if (!Number.isInteger(userId) || userId <= 0) {
+        return next(new Error("Identidad inválida"));
+      }
+
+      socket.data.userId = userId;
+      // En una sucursal activa el socket escucha sólo esa; en vista global,
+      // todas las que el rol tiene permitidas (un admin puede monitorear).
+      socket.data.activeSucursalId = context.isGlobalView
+        ? null
+        : context.activeSucursalId;
+      socket.data.visibleSucursalIds = allowedSucursalIds;
       next();
     } catch {
       next(new Error("Token inválido o expirado"));
@@ -178,7 +248,15 @@ app.prepare().then(() => {
   });
 
   io.on("connection", (socket) => {
-    console.log(`🟢 Socket conectado (autenticado): ${socket.id}`);
+    const rooms = resolveSocketRooms({
+      userId: socket.data.userId,
+      activeSucursalId: socket.data.activeSucursalId,
+      visibleSucursalIds: socket.data.visibleSucursalIds,
+    });
+    for (const room of rooms) socket.join(room);
+    console.log(
+      `🟢 Socket conectado (autenticado): ${socket.id} → ${rooms.join(", ")}`,
+    );
 
     socket.on("disconnect", (reason) => {
       console.log(`🔴 Socket desconectado (${socket.id}): ${reason}`);

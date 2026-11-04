@@ -130,6 +130,7 @@ export async function GET(request: Request) {
             title: `🚫 ${NOTIFICATION_CONFIG[type].label}`,
             message: `Atención: "${prod.nombre}" caducó el ${fechaLegible}.`,
             branch: sucursal.nombre,
+            sucursalId: sucursal.id,
             data: {
               id: savedNotif.id,
               productId: prod.id,
@@ -181,6 +182,7 @@ export async function GET(request: Request) {
             title: `⚠️ ${NOTIFICATION_CONFIG[type].label}`,
             message: `Ojo: "${prod.nombre}" vence el ${fechaLegible}.`,
             branch: sucursal.nombre,
+            sucursalId: sucursal.id,
             data: {
               id: savedNotif.id,
               productId: prod.id,
@@ -325,6 +327,7 @@ export async function GET(request: Request) {
         type,
         title: "🚫 Suscripción Finalizada",
         message: `La suscripción de ${sub.user.nombre} ha caducado.`,
+        userId: sub.userId,
         data: {
           id: savedNotif.id,
           userId: sub.userId,

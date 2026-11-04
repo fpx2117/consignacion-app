@@ -71,17 +71,22 @@ test("handlePostTurno valida horario laboral con la timezone resuelta", async ()
         caja: {
           findUnique: async () => ({ id: 12, sucursalId: 4 }),
         },
-        sesionCaja: {
-          findFirst: async () => null,
-          create: async ({
-            data,
-          }: {
-            data: { cajaId: number; usuarioId: number };
-          }) => {
-            createdSessions.push(data);
-            return { id: 81, ...data };
-          },
-        },
+        // La apertura corre en una transacción con lock sobre el usuario (T22).
+        $transaction: async (callback: (tx: unknown) => Promise<unknown>) =>
+          callback({
+            $queryRaw: async () => [{ id: 9 }],
+            sesionCaja: {
+              findFirst: async () => null,
+              create: async ({
+                data,
+              }: {
+                data: { cajaId: number; usuarioId: number };
+              }) => {
+                createdSessions.push(data);
+                return { id: 81, ...data };
+              },
+            },
+          }),
       },
     } as unknown as TurnoPostDeps,
   );
@@ -172,20 +177,31 @@ test("handlePutTurno usa la timezone resuelta al fechar el cierre", async () => 
       prisma: {
         horarioLaboral: { findUnique: async () => null },
         caja: { findUnique: async () => null },
-        sesionCaja: {
-          findFirst: async () => ({
-            id: 77,
-            montoInicial: 1000,
-            observaciones: "Turno tarde",
-            ventas: [],
-            pagos: [],
-            movimientos: [],
+        // El cierre bloquea la sesión, suma y reclama en una transacción (T22).
+        $transaction: async (callback: (tx: unknown) => Promise<unknown>) =>
+          callback({
+            $queryRaw: async () => [{ id: 77 }],
+            sesionCaja: {
+              findUnique: async () => ({
+                id: 77,
+                estado: "ABIERTA",
+                montoInicial: 1000,
+                observaciones: "Turno tarde",
+                ventas: [],
+                pagos: [],
+                movimientos: [],
+              }),
+              updateMany: async ({
+                data,
+              }: {
+                data: { fechaCierre: Date };
+              }) => {
+                fechaCierre = data.fechaCierre;
+                return { count: 1 };
+              },
+              findUniqueOrThrow: async () => ({ id: 77 }),
+            },
           }),
-          update: async ({ data }: { data: { fechaCierre: Date } }) => {
-            fechaCierre = data.fechaCierre;
-            return { id: 77, ...data };
-          },
-        },
       },
     } as unknown as TurnoPutDeps,
   );
