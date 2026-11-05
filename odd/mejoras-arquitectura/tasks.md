@@ -403,23 +403,34 @@ stack cuando hay una sola.
 ### M20 — Reparar el preflight de migraciones
 
 - **Prioridad** P1 · **Esfuerzo** S · **Dependencias** ninguna
-- **Estado**: diagnosticada, no ejecutada. Bloquea el camino documentado de
-  despliegue (ver `deploy-2026-11-04.md`).
-- **Evidencia**: `npm run migrate:t11:deploy` falla con
+- **Estado**: **cerrada** (2026-11-04). Verificada contra el clúster descartable y
+  contra producción (solo lectura).
+- **Evidencia**: `npm run migrate:t11:deploy` fallaba con
   `Unknown migration history row: 20261101040000_serialize_stock_projection`.
-  El script `scripts/migrations/preflight-t11.mjs` valida contra una lista cerrada
-  de migraciones conocidas y no incluye las cuatro posteriores a T11
+  El script `scripts/migrations/preflight-t11.mjs` validaba contra una lista
+  cerrada de migraciones conocidas y no incluía las cuatro posteriores a T11
   (`20261101040000`, `20261101050000`, `20261101060000`, `20261101070000`), que ya
-  están aplicadas en producción. También fija `CURRENT_SCHEMA_HASH`, así que
-  cualquier cambio de `schema.prisma` (como los índices de M13) lo invalida.
+  están aplicadas en producción.
 - **Impacto**: el comando que el README recomienda para desplegar migraciones no
-  se puede usar. Hoy el despliegue debe hacerse con `npx prisma migrate deploy`.
-- **Alcance**: reemplazar la lista cerrada por una validación que derive del
-  directorio `prisma/migrations`, o dejar el script explícitamente acotado a T11 y
-  documentar que no es el camino general.
-- **Aceptación**: `npm run migrate:t11:deploy` corre sobre una base con el
-  historial actual, o el README deja de recomendarlo para migraciones nuevas.
-- **Verificación**: ejecutarlo contra el clúster descartable.
+  se podía usar.
+- **Resultado**:
+  - `knownNames` y `expectedChecksums` ahora se **derivan del directorio**
+    `prisma/migrations/`, además de la lista histórica. Una migración nueva deja
+    de romper el preflight.
+  - La validación "duplicate successful rows" comparaba el **total** de filas
+    contra la longitud de la lista histórica. Con migraciones nuevas ese conteo
+    nunca cierra. Se reemplazó por una verificación de unicidad por nombre, que
+    era la intención original.
+  - **Corrección de un supuesto mío**: había escrito que el cambio de schema de
+    M13 invalidaba `CURRENT_SCHEMA_HASH`. **Falso**: ese hash es del *diff* entre
+    la base y el schema, no del archivo de schema. Con la migración aplicada el
+    diff queda vacío y el hash coincide. No había nada que actualizar ahí.
+- **Verificación**: `node scripts/migrations/preflight-t11.mjs` y con
+  `--require-current` responden `current schema accepted` contra el clúster
+  descartable y contra producción. 246 tests verdes.
+- **Verificación pendiente**: ejecutar el `migrate:t11:deploy` completo. Se evitó
+  a propósito sobre producción porque implica la ruta de escritura y hoy no hay
+  migraciones pendientes; el preflight es la parte que estaba rota.
 
 ### M05 — Alinear el `README.md` con la realidad del sistema
 

@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { mkdtemp, readFile, readdir, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { spawnSync } from "node:child_process";
@@ -79,11 +79,13 @@ function hash(value) {
 
 export async function expectedChecksums() {
   const result = new Map();
-  for (const name of [
+  const repoMigrations = await listRepoMigrations();
+  for (const name of new Set([
     ...LEGACY_MIGRATIONS,
     T11_MIGRATION,
     ...POST_T11_MIGRATIONS,
-  ]) {
+    ...repoMigrations,
+  ])) {
     const sql = await readFile(
       join("prisma", "migrations", name, "migration.sql"),
     );
@@ -102,12 +104,30 @@ export async function expectedChecksums() {
   return result;
 }
 
+/**
+ * Migraciones presentes en el repo.
+ *
+ * La lista fija de arriba describe el estado histórico de T11 y sirve para sus
+ * invariantes. Pero una migración nueva —posterior a T11 y perfectamente
+ * válida— no está en esa lista, y el preflight la rechazaba como "unknown".
+ * Derivar del directorio evita que el comando se rompa cada vez que se agrega
+ * una migración.
+ */
+async function listRepoMigrations() {
+  const entries = await readdir(join("prisma", "migrations"), {
+    withFileTypes: true,
+  });
+  return entries.filter((entry) => entry.isDirectory()).map((entry) => entry.name);
+}
+
 export async function validateMigrationHistory(rows) {
   const checksums = await expectedChecksums();
+  const repoMigrations = await listRepoMigrations();
   const knownNames = new Set([
     ...LEGACY_MIGRATIONS,
     T11_MIGRATION,
     ...POST_T11_MIGRATIONS,
+    ...repoMigrations,
   ]);
 
   for (const row of rows) {
@@ -182,11 +202,17 @@ export async function validateMigrationHistory(rows) {
   if ((postT11Count > 0 || rolledBackPostT11Count > 0) && t11Count !== 1) {
     throw new Error("Post-T11 migration exists without a successful T11 row");
   }
-  if (
-    successful.length !==
-    LEGACY_MIGRATIONS.length + t11Count + postT11Count
-  ) {
-    throw new Error("Migration history contains duplicate successful rows");
+  // El objetivo original era detectar filas duplicadas, no exigir un total fijo:
+  // con migraciones nuevas agregadas al repo, el conteo contra la lista histórica
+  // deja de cerrar. Se valida unicidad por nombre.
+  const seenSuccessful = new Set();
+  for (const row of successful) {
+    if (seenSuccessful.has(row.migration_name)) {
+      throw new Error(
+        `Migration history contains duplicate successful rows for ${row.migration_name}`,
+      );
+    }
+    seenSuccessful.add(row.migration_name);
   }
   return { t11Applied: t11Count === 1 };
 }
