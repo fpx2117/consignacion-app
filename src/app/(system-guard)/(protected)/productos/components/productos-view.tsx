@@ -2,7 +2,6 @@
 
 import * as React from "react";
 import { toast } from "sonner";
-import type { Producto, Categoria } from "@/lib/types";
 import { apiService } from "@/lib/apiService";
 import { useSucursalStore } from "@/store/useSucursalStore";
 import { formatMoney } from "@/lib/date-format/utils-format";
@@ -47,6 +46,7 @@ import { FacturaProveedorDialog } from "./factura-proveedor-dialog";
 import { StatCard } from "./productos-stats";
 import { PaginationControls, SortableHead } from "./productos-table-chrome";
 import { MobileProductCard, ProductoRow } from "./producto-row";
+import { useProductosData } from "./use-productos-data";
 import {
   COLUMNA_VENCIMIENTO,
   type ProductoViewItem,
@@ -70,10 +70,6 @@ export function ProductosView() {
   const catalogoHref = activeSucursalId
     ? `/lista?sucursalId=${activeSucursalId}`
     : "/lista";
-  const [items, setItems] = React.useState<ProductoViewItem[]>([]);
-  const [statsItems, setStatsItems] = React.useState<ProductoViewItem[]>([]);
-  const [allCategories, setAllCategories] = React.useState<Categoria[]>([]);
-  const [loading, setLoading] = React.useState(true);
 
   // Estados para Filtros
   const [q, setQ] = React.useState("");
@@ -84,9 +80,6 @@ export function ProductosView() {
   const [expiryFilter, setExpiryFilter] = React.useState("all");
 
   // Paginación
-  const [serverPage, setServerPage] = React.useState(1);
-  const [serverTotal, setServerTotal] = React.useState(0);
-  const [serverTotalPages, setServerTotalPages] = React.useState(1);
   const [itemsPerPage, setItemsPerPage] = React.useState(10);
   const [sortConfig, setSortConfig] = React.useState<SortConfig>({
     key: "nombre",
@@ -108,6 +101,25 @@ export function ProductosView() {
   // saberlo no mostramos el nombre: evita que aparezca un frame y luego lo
   // reemplacen las columnas Marca/Línea/Concentración.
   const [configCargado, setConfigCargado] = React.useState(false);
+
+  const {
+    items,
+    statsItems,
+    allCategories,
+    loading,
+    serverTotal,
+    serverTotalPages,
+    serverPage,
+    setServerPage,
+    serverCategoriaId,
+    load,
+    reload,
+  } = useProductosData({
+    activeSucursalId,
+    itemsPerPage,
+    debouncedQ,
+    categoryFilter,
+  });
 
   React.useEffect(() => {
     setConfigCargado(false);
@@ -238,84 +250,7 @@ export function ProductosView() {
     return () => clearTimeout(timer);
   }, [q]);
 
-  // Obtener categoriaId para enviar al servidor
-  const serverCategoriaId = React.useMemo(() => {
-    if (categoryFilter === "all") return null;
-    const cat = allCategories.find((c) => c.nombre === categoryFilter);
-    return cat?.id ?? null;
-  }, [categoryFilter, allCategories]);
 
-  const load = React.useCallback(
-    async (
-      page: number = 1,
-      search: string = "",
-      categoriaId: number | null = null,
-      limit: number = 10,
-    ) => {
-      setLoading(true);
-      try {
-        // Cache buster para evitar respuestas stale al cambiar de sucursal
-        const bust = `_t=${Date.now()}`;
-        const sp = new URLSearchParams();
-        sp.set("page", String(page));
-        sp.set("limit", String(limit));
-        if (search) sp.set("search", search);
-        if (categoriaId) sp.set("categoriaId", String(categoriaId));
-        sp.set("_t", String(Date.now()));
-
-        const sid = activeSucursalId;
-        const sucursalHeaders: HeadersInit = sid
-          ? { "x-sucursal-id": String(sid) }
-          : {};
-
-        const [resPaginados, resCategorias, resStats] = await Promise.all([
-          fetch(`/api/productos?${sp.toString()}`, {
-            headers: { "Content-Type": "application/json", ...sucursalHeaders },
-            cache: "no-store",
-          }).then((r) => r.json()),
-          fetch(`/api/categorias?${bust}`, {
-            headers: sucursalHeaders,
-            cache: "no-store",
-          }).then((r) => r.json()),
-          fetch(`/api/productos?${bust}`, {
-            headers: sucursalHeaders,
-            cache: "no-store",
-          }).then((r) => r.json()),
-        ]);
-
-        const paginadosPayload = resPaginados;
-        const activos = Array.isArray(paginadosPayload?.data)
-          ? paginadosPayload.data.filter((p: Producto) => p.activo !== false)
-          : [];
-        setItems(activos);
-        setServerTotal(paginadosPayload.total ?? 0);
-        setServerTotalPages(paginadosPayload.totalPages ?? 1);
-        setServerPage(paginadosPayload.page ?? page);
-
-        const cats = Array.isArray(resCategorias)
-          ? resCategorias
-          : Array.isArray(resCategorias?.data)
-            ? resCategorias.data
-            : [];
-        setAllCategories(cats);
-
-        const statsRaw = Array.isArray(resStats)
-          ? resStats
-          : Array.isArray(resStats?.data)
-            ? resStats.data
-            : [];
-        setStatsItems(statsRaw);
-      } catch (e) {
-        console.error("Error loading data:", e);
-        toast.error("Error al sincronizar datos");
-        setItems([]);
-        setStatsItems([]);
-      } finally {
-        setLoading(false);
-      }
-    },
-    [activeSucursalId],
-  );
 
   // Al cambiar de sucursal: resetear filtros Y recargar en un solo efecto
   const prevSucursalRef = React.useRef(activeSucursalId);
@@ -334,18 +269,13 @@ export function ProductosView() {
       // Cargar con filtros limpios directamente (sin depender de estados recién seteados)
       load(1, "", null, itemsPerPage);
     }
-  }, [activeSucursalId, load, itemsPerPage]);
+  }, [activeSucursalId, load, itemsPerPage, setServerPage]);
 
   // Al cambiar filtros de búsqueda/categoría (sin cambio de sucursal)
   React.useEffect(() => {
     load(1, debouncedQ, serverCategoriaId, itemsPerPage);
     setServerPage(1);
-  }, [debouncedQ, serverCategoriaId, itemsPerPage, load]);
-
-  // Wrapper sin argumentos para subcomponentes (reload de la página actual)
-  const reload = React.useCallback(() => {
-    load(serverPage, debouncedQ, serverCategoriaId, itemsPerPage);
-  }, [load, serverPage, debouncedQ, serverCategoriaId, itemsPerPage]);
+  }, [debouncedQ, serverCategoriaId, itemsPerPage, load, setServerPage]);
 
   // --- Lógica de Negocio ---
   const isLowStock = React.useCallback((p: ProductoViewItem) => {
