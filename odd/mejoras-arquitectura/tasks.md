@@ -500,7 +500,7 @@ stack cuando hay una sola.
 ### M08 — Reducir `factura-proveedor-dialog.tsx` y `productos-view.tsx`
 
 - **Prioridad** P1 · **Esfuerzo** L · **Dependencias** M01
-- **Estado**: **en curso** (2026-11-04). `factura-proveedor-dialog.tsx` 1964 → 1747.
+- **Estado**: **en curso** (2026-11-04). `factura-proveedor-dialog.tsx` 1964 → 835.
 - **Evidencia**: Eje 4.
 - **Alcance**: extraer subcomponentes y hooks con responsabilidad única, sin
   cambiar comportamiento ni estilos. Una extracción por commit, cada una con su
@@ -512,21 +512,29 @@ stack cuando hay una sola.
 - **Riesgo**: medio-alto. Es el flujo con más lógica de UI del sistema; se hace
   por partes, nunca de una.
 - **Progreso**:
-  1. `factura-proveedor-helpers.ts` — 120 líneas de helpers puros
-     (`badgeEstado`, `nivelConfianza`, `bucketsDeItem`, constantes de UI y tipos).
-  2. `factura-upload-pane.tsx` — 136 líneas de la vista de carga/escáner, con 11
-     props explícitas.
-  - Sin cambios de comportamiento: el JSX se movió verbatim y solo se removieron
-    los imports que quedaron sin uso. `tsc` y `eslint` en cero tras cada slice.
+  1. `factura-proveedor-helpers.ts` — 142 líneas de helpers puros.
+  2. `factura-upload-pane.tsx` — 176 líneas, vista de carga/escáner.
+  3. `factura-item-row.tsx` — 493 líneas, la fila de ítem completa.
+  4. `factura-resumen-lateral.tsx` — 233 líneas, preview y resumen.
+  5. `factura-datos-generales.tsx` — 322 líneas, formulario de cabecera.
+  6. `factura-companion-dialogs.tsx` — 173 líneas, los tres diálogos que
+     acompañan la revisión.
+  - Sin cambios de comportamiento: cada bloque se movió con el JSX idéntico y las
+    dependencias del padre pasan por un objeto `ctx` tipado, así los nombres
+    internos se conservan y el diff es un movimiento, no una reescritura.
+  - Verificación por slice: `tsc` y `eslint` en cero. Build completo tras el
+    lote: `Compiled successfully`.
 - **Pendiente para cerrarla**:
-  3. La fila de ítem dentro del `.map()` (~430 líneas) — el bloque más grande.
-  4. El resumen lateral (~200 líneas).
-  5. El formulario de datos generales (~250 líneas).
-  6. Evaluar extraer los hooks de carga/proceso: sin eso, el componente no baja de
-     ~500 aunque se vacíe todo el JSX.
-  - Nota de criterio: la meta es cohesión, no el número. Si al terminar las
-    extracciones el archivo queda en ~600 con responsabilidades claras, el número
-    es el resultado y no la regla.
+  7. El panel de revisión restante (progreso + filtros + contenedor de la lista,
+     ~130 líneas de JSX con una dependencia de ~30 valores). Se evaluó y se dejó
+     para después: el costo del `ctx` supera el beneficio frente a la deuda que
+     queda.
+  8. **Los hooks de estado y efectos** (~450 líneas). Es el único camino para
+     bajar de 500 y el más delicado: mover efectos puede cambiar el orden de
+     ejecución.
+  9. `productos-view.tsx` (1829 líneas) sigue **intacto**. Es un trabajo
+     comparable al del diálogo y no se empezó.
+  - Nota de criterio: la meta es cohesión, no el número.
 
 ### M09 — Triar los 328 `TODO` y las menciones de `legacy`
 
