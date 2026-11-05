@@ -826,18 +826,29 @@ stack cuando hay una sola.
 ### M21 — Extraer los hooks de estado de las dos vistas
 
 - **Prioridad** P2 · **Esfuerzo** L · **Dependencias** M08
-- **Estado**: abierta. Es lo único que falta para cumplir el objetivo numérico de
-  M08 (< 500 líneas por archivo).
+- **Estado**: **en curso**. Diálogo terminado (835 → **469**, bajo el objetivo).
+  `productos-view.tsx` sigue en 932 y necesita su propia pasada.
 - **Evidencia**: tras M08, `factura-proveedor-dialog.tsx` quedó en 835 líneas y
   `productos-view.tsx` en 932. Todo el JSX ya está extraído; lo que queda es
-  estado, efectos y handlers: ~450 líneas en el diálogo y 45 hooks en la vista.
-- **Alcance**: extraer hooks con responsabilidad única.
-  - Diálogo: `useFacturaCarga` (selección de archivo, subida, análisis, reset) y
-    `useFacturaItems` (actualización, guardado, confirmar, ignorar, confirmar
-    todos).
-  - Vista: `useProductosData` (carga de productos y proveedores),
-    `useProductosFiltros` (búsqueda, orden, columnas, paginación) y
-    `useProductosModales`.
+  estado, efectos y handlers.
+- **Progreso — diálogo (completo)**:
+  - `use-factura-upload.ts` (141 líneas): selección de archivo, drag & drop, cupo
+    y análisis.
+  - `use-factura-items.ts` (214): estado de factura e ítems y las nueve
+    mutaciones (guardado optimista, conversión de moneda, confirmar, ignorar,
+    confirmar todo).
+  - `use-factura-derivados.ts` (163): totales memoizados, conteos por filtro,
+    progreso, conversión ARS y el efecto que sincroniza `totalDetectado`.
+  - `factura-revision-header.tsx` (97): barra de progreso y chips de filtro.
+  - `factura-proveedor-dialog.tsx`: **835 → 469 líneas** (−44 % sobre el estado
+    anterior, −76 % sobre las 1964 originales).
+- **Pendiente — vista**:
+  1. `useProductosData` (carga, efectos por sucursal, recarga).
+  2. `useProductosFiltros` (búsqueda, orden, columnas, paginación).
+  3. `useProductosModales` y el JSX restante.
+  - Estimado: tres pasos más con build entre cada uno. `productos-view.tsx` tiene
+    ~45 hooks y los efectos dependen de la sucursal activa, así que es más
+    delicado que el diálogo.
 - **Aceptación**: cada archivo por debajo de 500 líneas; cero cambios de
   comportamiento; efectos preservados en orden y dependencias.
 - **Verificación**: `tsc`, `eslint`, `npm run build`, y prueba manual de los dos
