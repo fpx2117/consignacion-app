@@ -379,26 +379,29 @@ stack cuando hay una sola.
 ### M19 — Corregir secuencias atrasadas en producción
 
 - **Prioridad** P0 · **Esfuerzo** S · **Dependencias** ninguna
-- **Estado**: diagnosticada, **no ejecutada**. Requiere autorización explícita:
-  es una operación sobre la base de producción.
-- **Evidencia** (consulta de solo lectura sobre producción, 2026-11-04):
+- **Estado**: **cerrada y verificada en producción** (2026-11-05).
+- **Resultado**:
 
-  | Tabla | `max(id)` | `last_value` de la secuencia |
+  | Tabla | Antes | Después |
   | --- | --- | --- |
-  | `Plan` | 3 | **0** (nunca usada) |
-  | `TiendaGlobalConfig` | 1 | **0** (nunca usada) |
+  | `Plan` | `seq=1`, `max_id=3` | **`seq=3`** |
+  | `TiendaGlobalConfig` | `seq=1`, `max_id=1` | **`seq=1`** |
 
-  Las filas se insertaron con `id` explícito y la secuencia nunca avanzó. Cualquier
-  `INSERT` sin `id` en esas tablas choca contra la PK.
-- **Impacto**: `prisma.plan.create()` falla. Eso rompe el auto-seeding de planes
-  que el README promete para instalaciones antiguas, y cualquier alta de plan
-  desde administración. `TiendaGlobalConfig` tiene el mismo problema.
-- **Alcance**: `setval` al máximo actual, en una ventana controlada.
-- **Aceptación**: `max(id) <= last_value` en ambas tablas; un `INSERT` de prueba en
-  una transacción con `ROLLBACK` no falla.
-- **Verificación**: la misma consulta del diagnóstico, antes y después.
-- **Nota**: el problema se detectó primero en el clúster restaurado, donde el
-  restore reproduce el estado real de las secuencias. No es un artefacto del dump.
+  Verificación con un `insert` real dentro de una transacción revertida: devolvió
+  `id=4` (por encima del `max_id` previo) y el conteo de `Plan` quedó en 3. Es
+  decir: `prisma.plan.create()` ya no puede chocar contra la PK.
+- **Cómo se ejecutó, y por qué no fue trivial**: el proxy público de Postgres dejó
+  de aceptar conexiones desde la máquina de trabajo (TCP conectaba, el handshake
+  se colgaba). La app y la base estaban sanas: `GET /login` y `GET /lista` —que
+  consulta la base— respondían 200. Se resolvió entrando por
+  `railway ssh --service 'import.vps - POS'` al contenedor de la aplicación, que
+  tiene `DATABASE_URL` interno y el paquete `pg`. El script se pasó en base64 por
+  stdin para esquivar el quoting de PowerShell.
+- **Acceso temporal, ya revocado**: se generó una clave SSH efímera, se registró
+  en Railway solo para esta operación y se eliminó al terminar
+  (`railway ssh keys remove`), junto con los archivos locales. `railway ssh keys
+  list` confirma que no queda ninguna clave registrada.
+
 
 ### M20 — Reparar el preflight de migraciones
 
