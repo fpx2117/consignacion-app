@@ -826,29 +826,38 @@ stack cuando hay una sola.
 ### M21 — Extraer los hooks de estado de las dos vistas
 
 - **Prioridad** P2 · **Esfuerzo** L · **Dependencias** M08
-- **Estado**: **en curso**. Diálogo terminado (835 → **469**, bajo el objetivo).
-  `productos-view.tsx` sigue en 932 y necesita su propia pasada.
-- **Evidencia**: tras M08, `factura-proveedor-dialog.tsx` quedó en 835 líneas y
-  `productos-view.tsx` en 932. Todo el JSX ya está extraído; lo que queda es
-  estado, efectos y handlers.
-- **Progreso — diálogo (completo)**:
-  - `use-factura-upload.ts` (141 líneas): selección de archivo, drag & drop, cupo
-    y análisis.
-  - `use-factura-items.ts` (214): estado de factura e ítems y las nueve
-    mutaciones (guardado optimista, conversión de moneda, confirmar, ignorar,
-    confirmar todo).
-  - `use-factura-derivados.ts` (163): totales memoizados, conteos por filtro,
-    progreso, conversión ARS y el efecto que sincroniza `totalDetectado`.
-  - `factura-revision-header.tsx` (97): barra de progreso y chips de filtro.
-  - `factura-proveedor-dialog.tsx`: **835 → 469 líneas** (−44 % sobre el estado
-    anterior, −76 % sobre las 1964 originales).
-- **Pendiente — vista**:
-  1. `useProductosData` (carga, efectos por sucursal, recarga).
-  2. `useProductosFiltros` (búsqueda, orden, columnas, paginación).
-  3. `useProductosModales` y el JSX restante.
-  - Estimado: tres pasos más con build entre cada uno. `productos-view.tsx` tiene
-    ~45 hooks y los efectos dependen de la sucursal activa, así que es más
-    delicado que el diálogo.
+- **Estado**: **cerrada** (2026-11-05). Ambos archivos por debajo de 500.
+- **Resultado**:
+
+  | Archivo | Antes de M08 | Después de M08 | Ahora |
+  | --- | --- | --- | --- |
+  | `factura-proveedor-dialog.tsx` | 1964 | 835 | **469** |
+  | `productos-view.tsx` | 1922 | 932 | **495** |
+
+  Hooks y componentes nuevos:
+
+  | Módulo | Líneas |
+  | --- | --- |
+  | `use-factura-upload.ts` | 141 |
+  | `use-factura-items.ts` | 201 |
+  | `use-factura-derivados.ts` | 163 |
+  | `use-productos-data.ts` | 119 |
+  | `use-productos-configuracion.ts` | 158 |
+  | `use-productos-derivados.ts` | 186 |
+  | `productos-header.tsx` | 142 |
+  | `factura-revision-header.tsx` | 97 |
+
+- **Cómo se movió**: código copiado verbatim; sólo cambió de dónde vienen las
+  dependencias. Los efectos conservan sus arrays originales.
+- **Ciclos de dependencia que hubo que romper**: dos.
+  1. El diálogo: `serverCategoriaId` necesitaba `allCategories`, que pasó a un
+     hook. Se resolvió calculándolo dentro del hook de datos.
+  2. Los productos: el estado de filtros y la carga se necesitan mutuamente. Se
+     partió en estado (vista) → datos (hook) → derivados (hook).
+- **Verificación**: `tsc`, `eslint`, 246 tests y build completo en verde después
+  de cada paso.
+- **Pendiente**: prueba manual en navegador de ambos flujos (cargar factura,
+  listar/filtrar productos). Sin credenciales no se pudo ejecutar.
 - **Aceptación**: cada archivo por debajo de 500 líneas; cero cambios de
   comportamiento; efectos preservados en orden y dependencias.
 - **Verificación**: `tsc`, `eslint`, `npm run build`, y prueba manual de los dos
