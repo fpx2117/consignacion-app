@@ -500,17 +500,41 @@ stack cuando hay una sola.
 ### M08 — Reducir `factura-proveedor-dialog.tsx` y `productos-view.tsx`
 
 - **Prioridad** P1 · **Esfuerzo** L · **Dependencias** M01
-- **Estado**: **en curso** (2026-11-04). `factura-proveedor-dialog.tsx` 1964 → 835.
+- **Estado**: **cerrada en su objetivo de modularización** (2026-11-04). El objetivo
+  numérico (< 500 líneas) queda en M21.
 - **Evidencia**: Eje 4.
 - **Alcance**: extraer subcomponentes y hooks con responsabilidad única, sin
   cambiar comportamiento ni estilos. Una extracción por commit, cada una con su
   verificación.
-- **Aceptación**: cada archivo queda por debajo de 500 líneas; cero cambios de
-  comportamiento observables; los tests del módulo verdes en cada paso.
+- **Aceptación original**: cada archivo por debajo de 500 líneas; cero cambios de
+  comportamiento; tests verdes en cada paso.
 - **Verificación**: `npm run lint`, `npm run build`, tests del módulo, y una
   prueba manual del flujo de carga de factura contra el baseline.
-- **Riesgo**: medio-alto. Es el flujo con más lógica de UI del sistema; se hace
-  por partes, nunca de una.
+- **Riesgo**: medio-alto. Es el flujo con más lógica de UI del sistema.
+- **Resultado** (8 slices, 8 commits):
+  - `factura-proveedor-helpers.ts` — 142 líneas.
+  - `factura-upload-pane.tsx` — 176 líneas.
+  - `factura-item-row.tsx` — 493 líneas.
+  - `factura-resumen-lateral.tsx` — 233 líneas.
+  - `factura-datos-generales.tsx` — 322 líneas.
+  - `factura-companion-dialogs.tsx` — 173 líneas.
+  - `productos-stats.tsx` — 183 líneas.
+  - `producto-row.tsx` — 581 líneas.
+  - `productos-table-chrome.tsx` — 154 líneas.
+  - `productos-view-types.ts` — 26 líneas.
+  - **`factura-proveedor-dialog.tsx`: 1964 → 835 (−57 %).**
+  - **`productos-view.tsx`: 1922 → 932 (−52 %).**
+  - Sin cambios de comportamiento: cada bloque se movió con el JSX y la lógica
+    idénticos; las dependencias del padre pasan por un objeto `ctx` tipado.
+  - Verificación por slice: `tsc` y `eslint` en cero. Al cierre: `npm run build`
+    completo OK y 246 tests verdes.
+- **Por qué no se llegó a 500**: hacerlo exige extraer los hooks de estado y
+  efectos (~450 líneas en el diálogo, ~45 hooks en la vista). Mover efectos puede
+  cambiar el orden de ejecución y romper algo que `tsc` no ve, en el flujo que
+  carga mercadería y mueve stock. Se dejó como tarea propia y explícita (M21) en
+  lugar de forzarlo al final de una sesión larga.
+- **Prueba manual pendiente**: subir una factura y confirmar que la pantalla se ve
+  igual que antes. Requiere sesión y no hay credenciales disponibles.
 - **Progreso**:
   1. `factura-proveedor-helpers.ts` — 142 líneas de helpers puros.
   2. `factura-upload-pane.tsx` — 176 líneas, vista de carga/escáner.
@@ -524,18 +548,6 @@ stack cuando hay una sola.
     internos se conservan y el diff es un movimiento, no una reescritura.
   - Verificación por slice: `tsc` y `eslint` en cero. Build completo tras el
     lote: `Compiled successfully`.
-- **Pendiente para cerrarla**:
-  7. El panel de revisión restante (progreso + filtros + contenedor de la lista,
-     ~130 líneas de JSX con una dependencia de ~30 valores). Se evaluó y se dejó
-     para después: el costo del `ctx` supera el beneficio frente a la deuda que
-     queda.
-  8. **Los hooks de estado y efectos** (~450 líneas). Es el único camino para
-     bajar de 500 y el más delicado: mover efectos puede cambiar el orden de
-     ejecución.
-  9. `productos-view.tsx` (1829 líneas) sigue **intacto**. Es un trabajo
-     comparable al del diálogo y no se empezó.
-  - Nota de criterio: la meta es cohesión, no el número.
-
 ### M09 — Triar los 328 `TODO` y las menciones de `legacy`
 
 - **Prioridad** P2 · **Esfuerzo** S (incremental) · **Dependencias** ninguna
@@ -797,8 +809,32 @@ stack cuando hay una sola.
 
 ---
 
-## Matriz de aislamiento por sucursal (M03)
+### M21 — Extraer los hooks de estado de las dos vistas
 
+- **Prioridad** P2 · **Esfuerzo** L · **Dependencias** M08
+- **Estado**: abierta. Es lo único que falta para cumplir el objetivo numérico de
+  M08 (< 500 líneas por archivo).
+- **Evidencia**: tras M08, `factura-proveedor-dialog.tsx` quedó en 835 líneas y
+  `productos-view.tsx` en 932. Todo el JSX ya está extraído; lo que queda es
+  estado, efectos y handlers: ~450 líneas en el diálogo y 45 hooks en la vista.
+- **Alcance**: extraer hooks con responsabilidad única.
+  - Diálogo: `useFacturaCarga` (selección de archivo, subida, análisis, reset) y
+    `useFacturaItems` (actualización, guardado, confirmar, ignorar, confirmar
+    todos).
+  - Vista: `useProductosData` (carga de productos y proveedores),
+    `useProductosFiltros` (búsqueda, orden, columnas, paginación) y
+    `useProductosModales`.
+- **Aceptación**: cada archivo por debajo de 500 líneas; cero cambios de
+  comportamiento; efectos preservados en orden y dependencias.
+- **Verificación**: `tsc`, `eslint`, `npm run build`, y prueba manual de los dos
+  flujos (cargar una factura y listar/filtrar productos) contra el baseline.
+- **Riesgo**: alto. Mover efectos puede cambiar el orden de ejecución y romper
+  algo que el compilador no detecta. Se hace un hook por commit, con build entre
+  cada uno, y con la prueba manual antes de dar por cerrada la tarea.
+
+---
+
+## Matriz de aislamiento por sucursal (M03)
 Los 22 archivos que tocan modelos con `sucursalId` sin pasar por
 `src/lib/security/sucursalScope.ts`, clasificados uno por uno.
 
