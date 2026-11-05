@@ -3,11 +3,8 @@
 import * as React from "react";
 import {
   apiService,
-  type FacturaProveedor,
   type FacturaProveedorItem,
   type Proveedor,
-  type UpdateFacturaProveedorInput,
-  type UpdateFacturaProveedorItemInput,
 } from "@/lib/apiService";
 import type { Producto } from "@/lib/types";
 import { useDolarBlue } from "@/hooks/useDolarBlue";
@@ -36,6 +33,7 @@ import { FacturaItemRow, type FacturaItemRowContext } from "./factura-item-row";
 import { FacturaResumenLateral } from "./factura-resumen-lateral";
 import { FacturaDatosGenerales } from "./factura-datos-generales";
 import { FacturaCompanionDialogs } from "./factura-companion-dialogs";
+import { useFacturaItems } from "./use-factura-items";
 import { useFacturaUpload } from "./use-factura-upload";
 import { cn } from "@/lib/utils";
 
@@ -77,13 +75,27 @@ export function FacturaProveedorDialog({
     [controlledOnOpenChange, controlledOpen],
   );
   // Carga de la factura a retomar (spinner mientras se trae del backend).
-  const [factura, setFactura] = React.useState<FacturaProveedor | null>(null);
-  const [items, setItems] = React.useState<FacturaProveedorItem[] | null>(null);
   const [productos, setProductos] = React.useState<Producto[]>([]);
   const [proveedores, setProveedores] = React.useState<Proveedor[]>([]);
-  const [busyItemId, setBusyItemId] = React.useState<number | null>(null);
   const { rate: cotizacionDolar } = useDolarBlue();
-  const [confirmandoTodos, setConfirmandoTodos] = React.useState(false);
+
+  const {
+    factura,
+    setFactura,
+    items,
+    setItems,
+    busyItemId,
+    confirmandoTodos,
+    monedaFactura,
+    updateItem,
+    updateFacturaLocal,
+    guardarCampoFactura,
+    guardarCampoItem,
+    cambiarMonedaFactura,
+    confirmarItem,
+    ignorarItem,
+    confirmarTodosSeguros,
+  } = useFacturaItems({ cotizacionDolar, onCreated });
   // El proveedor puede haberse asignado/creado automáticamente al procesar la
   // factura (ver process/route.ts) — antes de confirmar todo se le muestra al
   // usuario para que lo valide o lo corrija, en vez de darlo por sentado.
@@ -201,173 +213,6 @@ export function FacturaProveedorDialog({
     // eslint-disable-next-line react-hooks/exhaustive-deps -- setOpen es estable; sólo debe re-cargar cuando cambia open o la factura a retomar.
   }, [open, facturaIdInicial]);
 
-  function updateItem(itemId: number, patch: Partial<FacturaProveedorItem>) {
-    setItems(
-      (prev) =>
-        prev?.map((i) => (i.id === itemId ? { ...i, ...patch } : i)) ?? null,
-    );
-  }
-
-  // Todos los campos detectados por OCR/IA son editables antes de confirmar:
-  // guarda optimistamente en el estado local y persiste con un PATCH al perder foco.
-  function updateFacturaLocal(patch: Partial<FacturaProveedor>) {
-    setFactura((prev) => (prev ? { ...prev, ...patch } : prev));
-  }
-
-  async function guardarCampoFactura(patch: UpdateFacturaProveedorInput) {
-    if (!factura) return;
-    updateFacturaLocal(patch as Partial<FacturaProveedor>);
-    try {
-      const actualizada = await apiService.updateFacturaProveedor(
-        factura.id,
-        patch,
-      );
-      setFactura(actualizada);
-    } catch (err: unknown) {
-      toast.error(
-        err instanceof Error ? err.message : "Error al guardar el cambio",
-      );
-    }
-  }
-
-  async function guardarCampoItem(
-    item: FacturaProveedorItem,
-    patch: UpdateFacturaProveedorItemInput,
-  ) {
-    updateItem(item.id, patch as Partial<FacturaProveedorItem>);
-    try {
-      const actualizado = await apiService.updateFacturaProveedorItem(
-        item.id,
-        patch,
-      );
-      updateItem(item.id, actualizado);
-    } catch (err: unknown) {
-      toast.error(
-        err instanceof Error ? err.message : "Error al guardar el cambio",
-      );
-    }
-  }
-
-  // Al cambiar la moneda de la factura entre ARS y USD, los costos unitarios
-  // ya cargados quedan expresados en la moneda vieja — hay que re-expresarlos
-  // en la nueva usando la cotización del dólar blue, así el costo real no
-  // cambia, solo la moneda en la que se muestra/persiste.
-  async function cambiarMonedaFactura(nuevaMoneda: string) {
-    const monedaAnterior = monedaFactura;
-    if (nuevaMoneda === monedaAnterior) return;
-
-    const esConversionSoportada =
-      (monedaAnterior === "USD" && nuevaMoneda === "ARS") ||
-      (monedaAnterior === "ARS" && nuevaMoneda === "USD");
-
-    if (esConversionSoportada && items && items.length > 0) {
-      if (!cotizacionDolar) {
-        toast.warning(
-          "No se pudo obtener la cotización del dólar — los costos unitarios no se convirtieron.",
-        );
-      } else {
-        const factor =
-          monedaAnterior === "USD" ? cotizacionDolar : 1 / cotizacionDolar;
-        await Promise.all(
-          items.map((item) => {
-            if (item.precioUnitario == null) return Promise.resolve();
-            const convertido =
-              Math.round(item.precioUnitario * factor * 100) / 100;
-            return guardarCampoItem(item, { precioUnitario: convertido });
-          }),
-        );
-        toast.message(
-          `Costos unitarios convertidos de ${monedaAnterior} a ${nuevaMoneda}`,
-        );
-      }
-    }
-
-    await guardarCampoFactura({ moneda: nuevaMoneda });
-  }
-
-  async function confirmarItem(
-    item: FacturaProveedorItem,
-    productoIdElegido?: number,
-  ) {
-    const productoId = productoIdElegido ?? item.productoId;
-    if (!productoId) {
-      toast.error("Elegí un producto antes de confirmar");
-      return;
-    }
-    setBusyItemId(item.id);
-    try {
-      const resultado = await apiService.confirmFacturaProveedorItem(
-        item.id,
-        productoId,
-      );
-      updateItem(item.id, resultado.data);
-      if (resultado.variacionCosto.alerta === "alerta_fuerte") {
-        toast.warning(
-          `El costo varió más del 40% respecto al histórico para "${item.textoOriginal}"`,
-        );
-      } else if (resultado.variacionCosto.alerta === "advertencia") {
-        toast.message(
-          `El costo varió respecto al histórico para "${item.textoOriginal}"`,
-        );
-      }
-      if (resultado.tipoCambioAplicado) {
-        toast.message(
-          `Costo convertido a ARS con cotización $${resultado.tipoCambioAplicado.toLocaleString("es-AR")}`,
-        );
-      } else if (resultado.advertenciaConversion) {
-        toast.warning(resultado.advertenciaConversion);
-      }
-      onCreated?.();
-    } catch (err: unknown) {
-      toast.error(
-        err instanceof Error ? err.message : "Error al confirmar el item",
-      );
-    } finally {
-      setBusyItemId(null);
-    }
-  }
-
-  async function ignorarItem(item: FacturaProveedorItem) {
-    setBusyItemId(item.id);
-    try {
-      const actualizado = await apiService.ignoreFacturaProveedorItem(item.id);
-      updateItem(item.id, actualizado);
-    } catch (err: unknown) {
-      toast.error(
-        err instanceof Error ? err.message : "Error al ignorar el item",
-      );
-    } finally {
-      setBusyItemId(null);
-    }
-  }
-
-  async function confirmarTodosSeguros() {
-    if (!factura) return;
-    setConfirmandoTodos(true);
-    try {
-      const resultado = await apiService.confirmAllFacturaProveedor(factura.id);
-      if (resultado.confirmados > 0)
-        toast.success(`${resultado.confirmados} producto(s) confirmado(s)`);
-      if (resultado.errores.length > 0) {
-        resultado.errores.forEach((e) =>
-          toast.error(`Item ${e.itemId}: ${e.error}`),
-        );
-      }
-      const facturaActualizada = await apiService.getFacturaProveedor(
-        factura.id,
-      );
-      setFactura(facturaActualizada);
-      setItems(facturaActualizada.items ?? []);
-      onCreated?.();
-    } catch (err: unknown) {
-      toast.error(
-        err instanceof Error ? err.message : "Error al confirmar en lote",
-      );
-    } finally {
-      setConfirmandoTodos(false);
-    }
-  }
-
   function initialValuesParaNuevoProducto(
     item: FacturaProveedorItemConCatalogoGlobal,
   ): CreateProductoInitialValues {
@@ -397,7 +242,6 @@ export function FacturaProveedorDialog({
 
   const facturaBloqueada =
     factura?.estado === "CONFIRMADA" || factura?.estado === "CANCELADA";
-  const monedaFactura = (factura?.moneda ?? "ARS").trim().toUpperCase();
 
   // La factura puede venir en una moneda extranjera (ej. USD). Para que el
   // usuario vea siempre los precios en pesos, se convierte en vivo con la
